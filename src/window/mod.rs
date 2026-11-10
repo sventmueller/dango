@@ -9,6 +9,7 @@ mod files;
 mod files_header;
 mod frame;
 pub mod layout;
+mod new_tab_button;
 mod notice;
 pub mod panels;
 mod quick_open;
@@ -598,6 +599,7 @@ impl WindowController {
 
     /// A new window for `project`, even if another shows it, as a launch puts back the windows of the last run.
     pub fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
+        new_tab_button::install();
         let controller = WindowController::new(mtm, project);
         controller.bring_to_front();
         if let Some(tab) = controller.current_tab() {
@@ -1870,6 +1872,59 @@ impl WindowController {
     /// Whether the sidebar of the tab in front is folded away.
     pub fn sidebar_folded(&self) -> bool {
         self.current_tab().is_some_and(|tab| tab.sidebar_collapsed())
+    }
+
+    /// Clicks the tab bar's "+" with the mouse, a press and a release at once, as the user does.
+    pub fn click_plus(&self) -> bool {
+        let Some(window) = self.window() else { return false };
+        let Some(button) = new_tab_button::plus_button(&window) else {
+            return false;
+        };
+        let bounds = button.bounds();
+        let center = objc2_foundation::NSPoint::new(bounds.size.width / 2.0, bounds.size.height / 2.0);
+        let at = button.convertPoint_toView(center, None);
+        let app = objc2_app_kit::NSApplication::sharedApplication(self.mtm());
+        for kind in [
+            objc2_app_kit::NSEventType::LeftMouseDown,
+            objc2_app_kit::NSEventType::LeftMouseUp,
+        ] {
+            let event = objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+                kind,
+                at,
+                objc2_app_kit::NSEventModifierFlags::empty(),
+                0.0,
+                window.windowNumber(),
+                None,
+                0,
+                1,
+                1.0,
+            );
+            if let Some(event) = event {
+                app.postEvent_atStart(&event, false);
+            }
+        }
+        true
+    }
+
+    /// Whether a press on the "+" that nothing ends within its time counts as a click; it should not.
+    pub fn plus_held_is_click(&self) -> bool {
+        new_tab_button::released_within(self.mtm(), objc2_foundation::NSPoint::new(0.0, 0.0))
+    }
+
+    /// The entries of the held "+"'s menu.
+    pub fn plus_menu_titles(&self) -> Vec<String> {
+        menu_titles(&new_tab_button::menu_for(self), &[])
+    }
+
+    /// Chooses the entry `title` of the held "+"'s menu.
+    pub fn choose_from_plus_menu(&self, title: &str) -> bool {
+        let menu = new_tab_button::menu_for(self);
+        let index = menu.indexOfItemWithTitle(&ns(title));
+        if index < 0 {
+            return false;
+        }
+        menu.performActionForItemAtIndex(index);
+        true
     }
 
     /// The left document's share of the tab that shows the document `id` beside another.

@@ -134,7 +134,41 @@ fn variety(root: PathBuf) {
         replayed && icons.len() > 6 && icons.iter().all(|shown| *shown),
         format!("{icons:?} for {:?}", controller.window_tabs()),
     );
+    main_after(PAUSE, move || plus(root));
+}
+
+/// The tab bar's "+": a click opens the page of a new tab; a held press opens the menu of what a tab can show, whose
+/// entry opens in a new tab straight away.
+fn plus(root: PathBuf) {
+    let Some(controller) = window_of(&root) else { return };
+    let before = controller.tab_count();
+    let clicked = controller.click_plus();
     main_after(PAUSE, move || {
+        let Some(controller) = window_of(&root) else { return };
+        check(
+            "a click on the tab bar's + opens the page of a new tab",
+            clicked && controller.tab_count() == before + 1 && controller.new_tab_page_entries().is_some(),
+            tabs_of(&controller),
+        );
+        if let Some(page) = controller.selected_tab() {
+            controller.close_tab(page);
+        }
+        let held = !controller.plus_held_is_click();
+        let titles = controller.plus_menu_titles();
+        let before = controller.tab_count();
+        let chosen = controller.choose_from_plus_menu(t("Terminal"));
+        check(
+            "holding the + opens the menu of what a tab can show, whose entry opens a new tab straight away",
+            held && titles == controller.inspect().new_tab_items
+                && chosen
+                && controller.tab_count() == before + 1
+                && controller.new_tab_page_entries().is_none()
+                && controller
+                    .tab_titles()
+                    .last()
+                    .is_some_and(|title| title.starts_with(t("Terminal"))),
+            format!("held {held}, {titles:?}, {}", tabs_of(&controller)),
+        );
         super::git::pictures(root, "tabs-icons", |_| finish(SCENARIO));
     });
 }

@@ -36,9 +36,10 @@ are signed with the app's own key, which Sparkle checks before it installs anyth
    [Trust](#trust)).
 2. **The sidebar** on the left switches between Files (⌘1), Search (⌘2), AI (⌘3), Git (⌘4) and CI (⌘5); clicking the
    sidebar button in the toolbar or ⌃⌘S folds it away.
-3. **Every document is a tab** of the window, macOS's own tabs. The "+" at the end of the tab bar or ⌘T opens a new
-   tab that offers a new file, a terminal, a browser, an AI thread with a chosen agent, or a CLI thread (an agent's
-   own command-line interface in a terminal). "Open to the Side" in the file list's context menu shows a second
+3. **Every document is a tab** of the window, macOS's own tabs. A click on the "+" at the end of the tab bar or ⌘T opens
+   a new tab that offers a new file, a terminal, a browser, an AI thread with a chosen agent, or a CLI thread (an agent's
+   own command-line interface in a terminal); holding the "+" shows the same as a menu, whose entry opens at once.
+   "Open to the Side" in the file list's context menu shows a second
    document beside the one in front.
 4. **Quick open** with ⌘P, search and replace in the project with ⇧⌘F.
 5. **Talk to an agent** in an AI tab; ⌘Esc moves the keyboard focus into its message field and back.

@@ -395,6 +395,10 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Seitenleiste eingeklappt ist; ein Ordner ohne eigene Werte übernimmt die des zuletzt gesicherten Fensters, ein
   Stück versetzt, und ein Rahmen, den kein Bildschirm mehr zeigt, rückt auf den Hauptbildschirm. Ab dem Beenden wird
   nichts mehr nachgeschrieben, damit endende Terminals und Agenten den gesicherten Stand nicht verändern.
+- **E65 Das „+“ der Tableiste: Klick oder Halten** *(Entscheidung des Eigentümers, ergänzt E17 und E60)*: Ein Klick
+  öffnet die Neuer-Tab-Seite wie ⌘T. Wird das „+“ länger als 0,35 s gehalten oder mit gedrückter Taste verlassen,
+  öffnet sich darunter dasselbe Angebot als Menü; der gewählte Eintrag öffnet sofort in einem neuen Tab, ohne die
+  Seite, und wer nichts wählt, öffnet nichts.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
