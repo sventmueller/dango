@@ -87,6 +87,7 @@ pub struct CliThread {
 pub struct Launch {
     pub name: String,
     pub program: PathBuf,
+    pub args: Vec<String>,
 }
 
 /// What the terminal saw of a CLI, for its status.
@@ -144,6 +145,7 @@ fn mark(title: &str) -> Mark {
 pub struct CliState {
     pub name: String,
     pub program: PathBuf,
+    pub args: Vec<String>,
     pub started: SystemTime,
     status: Cell<CliStatus>,
     signals: Cell<Signals>,
@@ -161,6 +163,7 @@ impl CliState {
         CliState {
             name: launch.name,
             program: launch.program,
+            args: launch.args,
             started: SystemTime::now(),
             status: Cell::new(CliStatus::Working),
             signals: Cell::new(Signals::default()),
@@ -343,10 +346,72 @@ pub fn open(controller: &WindowController, name: &str) {
 
 /// Opens a CLI thread running `program` as the CLI `name` in `controller`'s folder.
 pub fn open_program(controller: &WindowController, name: &str, program: PathBuf) {
+    open_with(controller, name, program, Vec::new());
+}
+
+/// The arguments that start the CLI `name` continuing a session: `session` for Claude Code, else the CLI's latest in
+/// the folder; none for a CLI that cannot continue one.
+fn continuing(name: &str, session: Option<&str>) -> Option<Vec<String>> {
+    match (name, session) {
+        ("claude", Some(session)) => Some(vec!["--resume".into(), session.into()]),
+        ("codex", _) => Some(vec!["resume".into(), "--last".into()]),
+        ("gemini", _) => Some(vec!["--resume".into(), "latest".into()]),
+        _ => None,
+    }
+}
+
+/// Opens the CLI thread of `name` again in `controller`'s trusted folder, continuing its session without sending it
+/// anything; whether it did.
+pub fn reopen(controller: &WindowController, name: &str, session: Option<&str>) -> bool {
+    if !controller.is_trusted() {
+        return false;
+    }
+    let Some(args) = continuing(name, session) else {
+        return false;
+    };
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        let stand_in = ide_core::paths::home().join(format!("stand-in-{name}"));
+        let there = stand_in.is_file();
+        if there {
+            open_with(controller, name, stand_in, args);
+        }
+        return there;
+    }
+    let Some(program) = find(&login_path(), name) else {
+        return false;
+    };
+    open_with(controller, name, program, args);
+    true
+}
+
+/// The CLI thread in the tab `tab` of `controller`'s window: its CLI and, for Claude Code, the session it shows.
+pub fn of_tab(controller: &WindowController, tab: isize) -> Option<(String, Option<String>)> {
+    let (name, cwd, started) = super::cli_of_tab(controller, tab)?;
+    let session = (name == "claude").then(|| claude_session(&cwd, started)).flatten();
+    Some((name, session))
+}
+
+/// The Claude Code session of a CLI started at `started` in `cwd`: of the transcripts begun since, the one that
+/// changed last, as `/clear` begins a new one.
+fn claude_session(cwd: &Path, started: SystemTime) -> Option<String> {
+    let since = started.checked_sub(Duration::from_secs(2)).unwrap_or(started);
+    ide_claude::history::list(&crate::agent_panel::claude_config_dir(), cwd)
+        .into_iter()
+        .find(|session| {
+            std::fs::metadata(&session.path)
+                .and_then(|meta| meta.created())
+                .is_ok_and(|created| created >= since)
+        })
+        .map(|session| session.id)
+}
+
+fn open_with(controller: &WindowController, name: &str, program: PathBuf, args: Vec<String>) {
     let Some(root) = controller.project_root() else { return };
     let launch = Launch {
         name: name.to_string(),
         program,
+        args,
     };
     let (view, page) = TerminalView::new(controller.mtm(), controller, root, Some(launch));
     let tab = controller.add_tab(TabKind::Cli, None, name, page);

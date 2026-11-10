@@ -386,6 +386,15 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Größenänderung, nur Ziehen am Trennstrich ändert es. Kopfzeilen über den beiden entfallen, der Trennstrich reicht
   bis an die Tableiste; das zweite Dokument trägt oben rechts ein Schild mit Symbol, Namen (bei der Vorschau
   „Vorschau“) und ×, das nur dieses Dokument schließt; das erste schließt über den Tab.
+- **E64 Alles kommt nach einem Neustart wieder** *(Entscheidung des Eigentümers, ergänzt E24 und E60)*: Jedes
+  Ordnerfenster kommt mit seinen Tabs zurück, die Markdown-Vorschau mit ihrem Editor, AI-Threads als ihre Sitzung und
+  CLI-Threads, die ihre Sitzung fortsetzen: Claude Code die eigene (`--resume`, die Sitzung erkennt Dango an ihrem
+  Protokoll), Codex und Gemini die letzte des Ordners (`resume --last`, `--resume latest`); eine CLI ohne solche
+  Option kommt nicht wieder. Wie bei Terminals nur in einem vertrauten Ordner (E22), und keinem wird dabei etwas
+  geschickt. Je Ordner bleiben Fensterrahmen, Breite der Seitenleiste, das gezeigte Panel, ob es offen ist und ob die
+  Seitenleiste eingeklappt ist; ein Ordner ohne eigene Werte übernimmt die des zuletzt gesicherten Fensters, ein
+  Stück versetzt, und ein Rahmen, den kein Bildschirm mehr zeigt, rückt auf den Hauptbildschirm. Ab dem Beenden wird
+  nichts mehr nachgeschrieben, damit endende Terminals und Agenten den gesicherten Stand nicht verändern.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

@@ -42,6 +42,10 @@ pub(crate) fn arguments(scenario: &str) -> &'static [&'static str] {
 /// itself with `SIGKILL` once it has reported, and the second launch checks what survived it.
 pub(crate) const CRASHING: &[&str] = &["recovery"];
 
+/// Scenarios that run the app twice in the same home: the first launch quits as the user does, and the second checks
+/// what it put back.
+pub(crate) const QUITTING: &[&str] = &["restore"];
+
 /// The signal a crashing launch ends with, which neither runs any of the app's code nor asks macOS for a crash report.
 pub(crate) const SIGKILL: i32 = 9;
 
@@ -121,6 +125,20 @@ pub(crate) fn selftest_with(scenarios: &[String], env: &[(String, String)]) -> R
 fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(String, String)]) -> Result<(), String> {
     let home = fresh_home(scenario)?;
     let mut problems = Vec::new();
+    if QUITTING.contains(&scenario) {
+        let first = report_file.with_file_name(format!("{scenario}-quit.json"));
+        println!("  first launch, which quits:");
+        let (quit, focus) = launch(program, scenario, &first, &home, Some("quit"), env)?;
+        problems.extend(
+            focus
+                .into_iter()
+                .chain(judge(quit, Ended::Exited(0), &first, scenario))
+                .map(|problem| format!("first launch: {problem}")),
+        );
+        if problems.is_empty() {
+            println!("  second launch:");
+        }
+    }
     if CRASHING.contains(&scenario) {
         let first = report_file.with_file_name(format!("{scenario}-crash.json"));
         println!("  first launch, which crashes:");

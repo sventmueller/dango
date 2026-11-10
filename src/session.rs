@@ -50,11 +50,22 @@ pub enum TabRecord {
 
 thread_local! {
     static WRITE_PENDING: Cell<bool> = const { Cell::new(false) };
+    static QUITTING: Cell<bool> = const { Cell::new(false) };
+}
+
+/// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
+pub fn quitting() {
+    QUITTING.set(true);
+}
+
+/// Whether the app quits, after which nothing more is written down.
+pub fn is_quitting() -> bool {
+    QUITTING.get()
 }
 
 /// The windows or their tabs changed; the record follows a moment later.
 pub fn changed() {
-    if WRITE_PENDING.replace(true) {
+    if QUITTING.get() || WRITE_PENDING.replace(true) {
         return;
     }
     main_after(SETTLE, || {
@@ -65,6 +76,9 @@ pub fn changed() {
 
 /// Writes down what the windows show now, and each folder's panels.
 pub fn remember() {
+    if QUITTING.get() {
+        return;
+    }
     crate::window::save_layouts();
     let windows = crate::window::records();
     if let Err(error) = State::load_user().set(&OPEN_WINDOWS, &windows) {

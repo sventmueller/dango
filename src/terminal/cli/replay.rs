@@ -124,6 +124,7 @@ fn replay(fixture: &str) -> Vec<String> {
     let state = CliState::new(Launch {
         name: "cli".into(),
         program: "/usr/bin/true".into(),
+        args: Vec::new(),
     });
     let start = Instant::now();
     let at = |ms: u64| start + Duration::from_millis(ms);

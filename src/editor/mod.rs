@@ -818,6 +818,13 @@ fn unsaved_may_go(mtm: MainThreadMarker) -> bool {
     }
 }
 
+/// The editor of the document `tab` in `controller`'s window.
+pub fn editor_of_tab(controller: &WindowController, tab: isize) -> Option<Retained<EditorTextView>> {
+    editors_in(controller)
+        .into_iter()
+        .find(|view| view.ivars().tab.get() == tab)
+}
+
 /// The editors of `controller`'s window.
 fn editors_in(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
     open_editors()

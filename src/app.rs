@@ -176,6 +176,7 @@ fn remember_open_projects() {
     let open: Vec<PathBuf> = window::open_projects();
     let _ = State::load_user().set(&remembered::OPEN_PROJECTS, &open);
     crate::session::remember();
+    crate::session::quitting();
 }
 
 /// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in

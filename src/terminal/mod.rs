@@ -178,6 +178,33 @@ pub fn open_cli_program(controller: &WindowController, name: &str, program: std:
     cli::open_program(controller, name, program);
 }
 
+/// The CLI thread in the tab `tab` of `controller`'s window, as a layout keeps it: its CLI and, for Claude Code, its
+/// session.
+pub fn cli_thread_of_tab(controller: &WindowController, tab: isize) -> Option<(String, Option<String>)> {
+    cli::of_tab(controller, tab)
+}
+
+/// Opens a CLI thread of a layout again, continuing its session; whether it did.
+pub fn reopen_cli_thread(controller: &WindowController, name: &str, session: Option<&str>) -> bool {
+    cli::reopen(controller, name, session)
+}
+
+/// The CLI, working folder and start of the CLI thread in the tab `tab` of `controller`'s window.
+fn cli_of_tab(
+    controller: &WindowController,
+    tab: isize,
+) -> Option<(String, std::path::PathBuf, std::time::SystemTime)> {
+    use objc2::DefinedClass;
+    VIEWS.with(|views| {
+        views.borrow().values().filter_map(Weak::load).find_map(|view| {
+            let ivars = view.ivars();
+            let mine = ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller));
+            let cli = ivars.cli.as_ref()?;
+            (mine && ivars.tab.get() == Some(tab)).then(|| (cli.name.clone(), ivars.cwd.borrow().clone(), cli.started))
+        })
+    })
+}
+
 /// Starts the shell now if the login shell's environment is known, else once it is.
 fn start(view: &TerminalView) {
     if let Some(env) = crate::environment::get() {

@@ -1,8 +1,8 @@
 //! Saving a folder's window tabs and their documents, and opening them again when the folder opens (E24, E60).
 //!
 //! Documents come back by opening what they showed: files, a new shell in the terminal's last folder, a page, an AI
-//! session. Terminals and AI sessions run what the folder configures, so they come back only in a trusted folder
-//! (E22); a document whose file is gone stays away, and a tab left without documents with it. Editors open through
+//! session, a CLI that continues its session. Terminals, AI sessions and CLIs run what the folder configures, so they
+//! come back only in a trusted folder (E22); a document whose file is gone stays away, and a tab left without documents with it. Editors open through
 //! the caller, so a launch can put the copies a crash left in their places (`session::restore`).
 
 use std::cell::RefCell;
@@ -27,7 +27,7 @@ pub type Opener<'a> = dyn FnMut(&WindowController, Document) -> bool + 'a;
 /// Saves the window tabs of `controller`'s window for its folder; a window without a folder keeps nothing.
 pub fn save(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
-    if controller.ivars().closing.get() {
+    if controller.ivars().closing.get() || crate::session::is_quitting() {
         return;
     }
     let selected = controller.selected_tab();
@@ -74,7 +74,10 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
                 .and_then(|tab| tab.session_id())
                 .map(|session| Tab::Agent { session })
         }
-        TabKind::Diff | TabKind::Log | TabKind::Cli | TabKind::Plan | TabKind::Preview | TabKind::NewTab => None,
+        TabKind::Cli => {
+            crate::terminal::cli_thread_of_tab(controller, id).map(|(name, session)| Tab::Cli { name, session })
+        }
+        TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview | TabKind::NewTab => None,
     }
 }
 
@@ -94,6 +97,7 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
         root: &root,
         trusted: controller.is_trusted(),
         editor: RefCell::new(editor),
+        clis: RefCell::new(Vec::new()),
     };
     let mut firsts = Vec::with_capacity(layout.tabs.len());
     let mut shares = Vec::new();
@@ -113,6 +117,12 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
                     shares.push((anchor, window_tab.share));
                 }
             }
+        }
+        // A preview is not saved, as it opens with its Markdown editor when nothing else is beside it.
+        if window_tab.documents.len() == 1
+            && let Some(view) = anchor.and_then(|id| crate::editor::editor_of_tab(controller, id))
+        {
+            crate::markdown::opened(&view);
         }
         firsts.push(anchor);
     }
@@ -140,6 +150,9 @@ struct Documents<'a, 'b> {
     root: &'a Path,
     trusted: bool,
     editor: RefCell<&'a mut Opener<'b>>,
+    /// The CLI threads opened so far, which continue a session once: those without a session of their own continue
+    /// the CLI's latest.
+    clis: RefCell<Vec<(String, Option<String>)>>,
 }
 
 impl Documents<'_, '_> {
@@ -160,6 +173,14 @@ impl Documents<'_, '_> {
                 true
             }
             Tab::Agent { session } if trusted => resume_agent(controller, root, session),
+            Tab::Cli { name, session } if trusted => {
+                let thread = (name.clone(), session.clone());
+                if self.clis.borrow().contains(&thread) {
+                    return false;
+                }
+                self.clis.borrow_mut().push(thread);
+                crate::terminal::reopen_cli_thread(controller, name, session.as_deref())
+            }
             _ => false,
         }
     }

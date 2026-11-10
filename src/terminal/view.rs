@@ -621,7 +621,7 @@ impl TerminalView {
         if let Some(cli) = &self.ivars().cli {
             options.program = Program::Command {
                 program: cli.program.clone(),
-                args: Vec::new(),
+                args: cli.args.clone(),
             };
             options.shell_integration = None;
             options.interrupt_on_close = true;

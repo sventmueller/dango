@@ -719,6 +719,13 @@ impl TabWindow {
         }
     }
 
+    /// Folds the sidebar away or back, as the menu's command does.
+    #[cfg(feature = "selftest")]
+    pub fn toggle_sidebar(&self) {
+        // SAFETY: The action takes no sender.
+        unsafe { self.split.toggleSidebar(None) };
+    }
+
     /// Whether the tab shows the picture of the sidebar.
     #[cfg(feature = "selftest")]
     pub fn shows_picture(&self) -> bool {
@@ -741,7 +748,10 @@ impl TabWindow {
         if self.sidebar.isCollapsed() != collapsed {
             self.sidebar.setCollapsed(collapsed);
         }
-        self.split.splitView().setPosition_ofDividerAtIndex(width, 0);
+        // Setting the divider's position unfolds a folded sidebar.
+        if !collapsed {
+            self.split.splitView().setPosition_ofDividerAtIndex(width, 0);
+        }
     }
 
     /// Lets the user drag the sidebar between `min` and `max` again.

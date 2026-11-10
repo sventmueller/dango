@@ -180,6 +180,11 @@ pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
     past
 }
 
+/// The configuration folder of Claude Code, where it keeps its sessions.
+pub(crate) fn claude_config_dir() -> std::path::PathBuf {
+    config_dir()
+}
+
 fn config_dir() -> std::path::PathBuf {
     ide_claude::history::config_dir(crate::environment::get().unwrap_or_default())
 }

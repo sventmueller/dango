@@ -47,6 +47,14 @@ pub enum Tab {
         /// The agent's id for the session.
         session: String,
     },
+    /// A CLI thread, opened again by starting its CLI so that it continues its session.
+    Cli {
+        /// The CLI's name, such as `claude`.
+        name: String,
+        /// The CLI's id for the session, where the app could tell it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<String>,
+    },
 }
 
 /// A window tab: one document, or two side by side.
@@ -237,6 +245,25 @@ mod tests {
                 selected: Some(1),
             }
         );
+    }
+
+    #[test]
+    fn a_cli_thread_keeps_its_name_and_a_session_only_where_known() {
+        let known = Tab::Cli {
+            name: "claude".into(),
+            session: Some("s1".into()),
+        };
+        let unknown = Tab::Cli {
+            name: "codex".into(),
+            session: None,
+        };
+        let written = serde_json::to_string(&[&known, &unknown]).unwrap();
+        assert_eq!(
+            written,
+            r#"[{"kind":"cli","name":"claude","session":"s1"},{"kind":"cli","name":"codex"}]"#
+        );
+        let read: Vec<Tab> = serde_json::from_str(&written).unwrap();
+        assert_eq!(read, [known, unknown]);
     }
 
     #[test]

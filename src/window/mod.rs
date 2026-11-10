@@ -6,6 +6,7 @@ mod chooser;
 mod document_area;
 mod files;
 mod files_header;
+mod frame;
 pub mod layout;
 mod notice;
 pub mod panels;
@@ -599,7 +600,7 @@ impl WindowController {
         let controller = WindowController::new(mtm, project);
         controller.bring_to_front();
         if let Some(tab) = controller.current_tab() {
-            controller.fit_sidebar(&tab, false);
+            controller.fit_sidebar(&tab, controller.saved_sidebar().collapsed);
             show_tab_bar(&tab.window);
         }
         WINDOWS.with(|windows| windows.borrow_mut().push(controller.clone()));
@@ -619,10 +620,14 @@ impl WindowController {
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
         this.build();
         let tab = this.new_tab_window();
+        let sidebar = this.saved_sidebar();
         this.ivars().panel_open.set(true);
         this.restore_frame(&tab.window);
         this.make_current(&tab);
-        this.show_panel(Panel::Files);
+        this.show_panel(sidebar.panel);
+        if !sidebar.open {
+            this.set_panel_open(false);
+        }
         this.open_welcome();
         this.load_project();
         this
@@ -631,34 +636,6 @@ impl WindowController {
     /// The identifier that keeps the window tabs of this window together, and those of other windows out (E56).
     fn tabbing_identifier(&self) -> String {
         format!("folder {:p}", self)
-    }
-
-    /// Puts the window where it was for this folder, else at its default size in the middle; the sidebar gets the
-    /// width it had.
-    fn restore_frame(&self, window: &NSWindow) {
-        let name = ns(&self.frame_name());
-        if !window.setFrameUsingName(&name) {
-            window.setContentSize(tabs::default_size());
-            window.center();
-        }
-        let defaults = objc2_foundation::NSUserDefaults::standardUserDefaults();
-        let key = ns(&format!("Sidebar {}", self.frame_name()));
-        if defaults.objectForKey(&key).is_some() {
-            let width = defaults.doubleForKey(&key) - ACTIVITY_WIDTH;
-            self.ivars()
-                .panel_width
-                .set(width.clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
-        }
-    }
-
-    /// Keeps where the window is and how wide its sidebar is, for the next time the folder opens.
-    fn save_frame(&self) {
-        let Some(tab) = self.current_tab() else { return };
-        tab.window.saveFrameUsingName(&ns(&self.frame_name()));
-        self.remember_sidebar_width(&tab);
-        let defaults = objc2_foundation::NSUserDefaults::standardUserDefaults();
-        let width = ACTIVITY_WIDTH + self.ivars().panel_width.get();
-        defaults.setDouble_forKey(width, &ns(&format!("Sidebar {}", self.frame_name())));
     }
 
     /// Builds the sidebar, the activity bar and the panel beside it, which moves into the window tab in front.
@@ -1869,6 +1846,29 @@ impl WindowController {
         if let Some(files) = files.as_ref() {
             files.select(path);
         }
+    }
+
+    /// Gives the sidebar `width`, as a drag of its edge does.
+    pub fn set_sidebar_width(&self, width: f64) {
+        let ivars = self.ivars();
+        ivars
+            .panel_width
+            .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+        if let Some(tab) = self.current_tab() {
+            self.fit_sidebar(&tab, tab.sidebar_collapsed());
+        }
+    }
+
+    /// Folds the sidebar away or back, as ⌃⌘S does.
+    pub fn toggle_sidebar(&self) {
+        if let Some(tab) = self.current_tab() {
+            tab.toggle_sidebar();
+        }
+    }
+
+    /// Whether the sidebar of the tab in front is folded away.
+    pub fn sidebar_folded(&self) -> bool {
+        self.current_tab().is_some_and(|tab| tab.sidebar_collapsed())
     }
 
     /// The left document's share of the tab that shows the document `id` beside another.

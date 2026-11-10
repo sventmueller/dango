@@ -47,6 +47,7 @@ mod lsp;
 mod own_agent;
 mod recovery;
 mod replace;
+mod restore;
 mod search;
 mod search_replace;
 mod split;
@@ -138,6 +139,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "paste-cli" => paste_cli::run(),
         "cli-thread" => cli_thread::run(),
         "recovery" => recovery::run(),
+        "restore" => restore::run(),
         "conflict" => conflict::run(),
         #[cfg(feature = "dictation")]
         "dictation" => dictation::run(),
