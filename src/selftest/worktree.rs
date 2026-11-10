@@ -31,8 +31,8 @@ const README: &str = "README.md";
 const SECOND: &str = "Zweiter Thread";
 const SECOND_BRANCH: &str = "thread/zweiter-thread";
 const EXTRA: &str = "extra.txt";
-/// The place of Codex in the worktree menu, after Claude and the own agent.
-const CODEX: usize = 2;
+/// The place of Codex among the worktree menu's agents: Claude, the ACP agents, the own agent.
+const CODEX: usize = 1;
 
 /// The worktree the scenario made.
 static TREE: Mutex<Option<PathBuf>> = Mutex::new(None);
@@ -120,13 +120,16 @@ fn ready(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     let offered = controller.worktree_menu_titles();
-    let expected: Vec<String> = ["Claude".to_string(), splat_i18n::t("Eigener Agent").to_string()]
+    let installed = |agent: crate::agent::Agent| crate::agent::installed(&agent);
+    let expected: Vec<String> = installed(crate::agent::Agent::Claude)
+        .then(|| "Claude".to_string())
         .into_iter()
-        .chain(crate::agent::preset_menu().into_iter().map(|(name, _)| name))
+        .chain(crate::agent::installed_presets().into_iter().map(|(_, name)| name))
+        .chain(installed(crate::agent::Agent::Own).then(|| splat_i18n::t("Eigener Agent").to_string()))
         .map(|name| format!("{name} …"))
         .collect();
     check(
-        "the worktree menu offers Claude, the own agent and every ACP agent",
+        "the worktree menu offers the installed agents: Claude, the ACP agents, the own agent last",
         offered == expected && expected.len() > 3,
         offered.join(", "),
     );

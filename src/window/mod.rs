@@ -1916,15 +1916,62 @@ impl WindowController {
         menu_titles(&new_tab_button::menu_for(self), &[])
     }
 
-    /// Chooses the entry `title` of the held "+"'s menu.
-    pub fn choose_from_plus_menu(&self, title: &str) -> bool {
-        let menu = new_tab_button::menu_for(self);
-        let index = menu.indexOfItemWithTitle(&ns(title));
-        if index < 0 {
-            return false;
+    /// The entries of the held "+"'s menu that do something, each as the titles that lead to it and its action, with
+    /// whether it is enabled.
+    pub fn plus_menu_entries(&self) -> Vec<(Vec<String>, String, bool)> {
+        fn walk(menu: &objc2_app_kit::NSMenu, path: &mut Vec<String>, out: &mut Vec<(Vec<String>, String, bool)>) {
+            menu.update();
+            for item in menu.itemArray().iter() {
+                if item.isSeparatorItem() || item.isHidden() {
+                    continue;
+                }
+                path.push(item.title().to_string());
+                if let Some(submenu) = item.submenu() {
+                    walk(&submenu, path, out);
+                } else if let Some(action) = item.action() {
+                    out.push((
+                        path.clone(),
+                        action.name().to_string_lossy().into_owned(),
+                        item.isEnabled(),
+                    ));
+                }
+                path.pop();
+            }
         }
-        menu.performActionForItemAtIndex(index);
-        true
+        let mut out = Vec::new();
+        walk(&new_tab_button::menu_for(self), &mut Vec::new(), &mut out);
+        out
+    }
+
+    /// The title of the document in front.
+    pub fn front_title(&self) -> Option<String> {
+        let id = self.selected_tab()?;
+        self.documents()
+            .into_iter()
+            .find(|doc| doc.id == id)
+            .map(|doc| doc.title())
+    }
+
+    /// Chooses the entry that `path` names, by its title and those of its submenus, from the held "+"'s menu.
+    pub fn choose_from_plus_menu(&self, path: &[&str]) -> bool {
+        let mut menu = new_tab_button::menu_for(self);
+        for (n, title) in path.iter().enumerate() {
+            let index = menu.indexOfItemWithTitle(&ns(title));
+            let Some(item) = (index >= 0).then(|| menu.itemAtIndex(index)).flatten() else {
+                return false;
+            };
+            if n + 1 == path.len() {
+                menu.update();
+                if !item.isEnabled() {
+                    return false;
+                }
+                menu.performActionForItemAtIndex(index);
+                return true;
+            }
+            let Some(submenu) = item.submenu() else { return false };
+            menu = submenu;
+        }
+        false
     }
 
     /// The left document's share of the tab that shows the document `id` beside another.

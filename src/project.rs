@@ -100,6 +100,14 @@ pub fn is_trusted(folder: &Path) -> bool {
     TrustStore::open().is_trusted(folder)
 }
 
+/// Takes the trust in `folder` back, so a self-test can open an AI tab without its agent starting.
+#[cfg(feature = "selftest")]
+pub fn distrust(folder: &Path) {
+    if let Err(error) = TrustStore::open().revoke(folder) {
+        crate::diag::report("taking back the trust in a folder", error);
+    }
+}
+
 pub fn trust(folder: &Path) {
     if let Err(error) = TrustStore::open().trust(folder) {
         crate::diag::report("trusting a folder", error);

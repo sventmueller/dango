@@ -20,7 +20,10 @@ pub fn agents() -> Vec<(Agent, bool)> {
         .zip(crate::agent::preset_menu())
         .map(|(agent, (_, usable))| (Agent::Acp(agent), usable));
     let own = (Agent::Own, crate::own_agent::default_choice().is_some());
-    [(Agent::Claude, true), own].into_iter().chain(presets).collect()
+    std::iter::once((Agent::Claude, true))
+        .chain(presets)
+        .chain(std::iter::once(own))
+        .collect()
 }
 
 /// Whether the agent at `index` of [`agents`] can be opened now.

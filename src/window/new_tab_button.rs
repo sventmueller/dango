@@ -22,6 +22,8 @@ const SLOP: f64 = 4.0;
 
 thread_local! {
     static MONITOR: RefCell<Option<Retained<AnyObject>>> = const { RefCell::new(None) };
+    /// The menu shown last, kept until the next: AppKit sends the chosen entry's action after the menu closed.
+    static SHOWN: RefCell<Option<Retained<objc2_app_kit::NSMenu>>> = const { RefCell::new(None) };
 }
 
 /// Starts watching the presses on the "+" of the app's tab bars; once.
@@ -92,6 +94,7 @@ pub(super) fn released_within(mtm: MainThreadMarker, start: NSPoint) -> bool {
 /// Opens the menu of what a tab can show below the "+", which the held press then drags through.
 fn show_menu(controller: &WindowController, button: &NSView) {
     let menu = menu_for(controller);
+    SHOWN.with(|shown| *shown.borrow_mut() = Some(menu.clone()));
     let below = NSPoint::new(0.0, button.bounds().size.height + 4.0);
     menu.popUpMenuPositioningItem_atLocation_inView(None, below, Some(button));
 }

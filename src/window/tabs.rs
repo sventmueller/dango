@@ -826,20 +826,25 @@ pub(super) fn first_responder_in(view: &NSView) -> Option<Retained<NSView>> {
 
 /// The agents a thread in a worktree of its own can run (I1), each tagged with its place in
 /// `crate::worktrees::agents`; the window enables them as it does the agents above.
-fn worktree_menu(mtm: MainThreadMarker) -> Retained<NSMenuItem> {
-    let agents = crate::worktrees::agents()
+/// The installed agents' entries for a thread in a worktree of its own, if any agent is installed.
+fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
+    let agents: Vec<Retained<NSMenuItem>> = crate::worktrees::agents()
         .into_iter()
         .enumerate()
+        .filter(|(_, (agent, _))| crate::agent::installed(agent))
         .map(|(n, (agent, _))| {
             let entry = item(mtm, &tf("{} …", &[agent.name()]), Some(sel!(ideNewWorktreeThread:)), "");
             entry.setTag(isize::try_from(n).unwrap_or(-1));
             entry
         })
         .collect();
+    if agents.is_empty() {
+        return None;
+    }
     let (parent, menu) = submenu(mtm, t("In eigenem Worktree"), agents);
     menu.setAutoenablesItems(true);
     parent.setImage(symbol("arrow.triangle.branch", t("In eigenem Worktree")).as_deref());
-    parent
+    Some(parent)
 }
 
 /// What a new tab can show (E17): the page of a new tab lists it, and ⌘T and the tab bar's "+" open that page.
@@ -852,32 +857,32 @@ pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
         entry.setEnabled(action.is_some());
         entry
     };
-    // The own agent's endpoints and models are filled in each time the menu opens.
-    let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
-    own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
-    let agents = std::iter::once(entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))))
-        .chain(std::iter::once(own))
-        .chain(
-            crate::agent::preset_menu()
-                .into_iter()
-                .enumerate()
-                .map(|(n, (name, _))| {
-                    let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
-                    agent.setTag(isize::try_from(n).unwrap_or(-1));
-                    agent
-                }),
-        )
-        .chain([
-            separator(mtm),
-            worktree_menu(mtm),
-            separator(mtm),
-            entry(
-                t("Agenten verwalten …"),
-                "gearshape",
-                Some(sel!(ideOpenAgentsSettings:)),
-            ),
-        ])
-        .collect();
+    // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
+    let claude = crate::agent::installed(&crate::agent::Agent::Claude)
+        .then(|| entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
+    let presets = crate::agent::installed_presets().into_iter().map(|(index, name)| {
+        let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
+        agent.setTag(isize::try_from(index).unwrap_or(-1));
+        agent
+    });
+    let own = crate::agent::installed(&crate::agent::Agent::Own).then(|| {
+        let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
+        own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
+        own
+    });
+    let mut agents: Vec<Retained<NSMenuItem>> = claude.into_iter().chain(presets).chain(own).collect();
+    if let Some(worktree) = worktree_menu(mtm) {
+        agents.push(separator(mtm));
+        agents.push(worktree);
+    }
+    if !agents.is_empty() {
+        agents.push(separator(mtm));
+    }
+    agents.push(entry(
+        t("Agenten verwalten …"),
+        "gearshape",
+        Some(sel!(ideOpenAgentsSettings:)),
+    ));
     let (agent_item, agent_menu) = submenu(mtm, t("AI-Thread"), agents);
     // The agents are enabled as they are there or can be installed, which the window checks each time.
     agent_menu.setAutoenablesItems(true);

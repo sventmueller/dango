@@ -398,7 +398,10 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
 - **E65 Das „+“ der Tableiste: Klick oder Halten** *(Entscheidung des Eigentümers, ergänzt E17 und E60)*: Ein Klick
   öffnet die Neuer-Tab-Seite wie ⌘T. Wird das „+“ länger als 0,35 s gehalten oder mit gedrückter Taste verlassen,
   öffnet sich darunter dasselbe Angebot als Menü; der gewählte Eintrag öffnet sofort in einem neuen Tab, ohne die
-  Seite, und wer nichts wählt, öffnet nichts.
+  Seite, und wer nichts wählt, öffnet nichts. Das Menü wie die Seite bieten unter „AI-Thread“ (auch „In eigenem
+  Worktree“) nur Agenten an, die installiert und eingerichtet sind: Claude, wenn sein Programm da ist, ACP-Agenten,
+  die starten, statt sie erst zu installieren, und den eigenen Agenten zuletzt, sobald ein Anbieter ein Modell
+  anbietet. Installiert wird über „Agenten verwalten …“ (E58).
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

@@ -17,37 +17,51 @@ use crate::util::{item, main_soon, ns, separator};
 /// How many models of one endpoint the "+" menu lists.
 const MENU_MODELS: usize = 12;
 
-/// Fills the "+" menu's submenu of the own agent: each endpoint that can be asked with its models as last loaded,
-/// else the model it starts with, the default for new threads ticked; then the way to the settings.
+/// The endpoints the "+" menu offers, each that can be asked with its models as last loaded, else the model it
+/// starts with, and the model ticked as the default for new threads.
+fn offers() -> Vec<(ide_agent::Endpoint, Vec<String>, Option<String>)> {
+    let default = own_agent::default_choice();
+    own_agent::endpoints()
+        .into_iter()
+        .filter(own_agent::usable)
+        .filter_map(|endpoint| {
+            let chosen = default
+                .as_ref()
+                .filter(|c| c.endpoint == endpoint.id)
+                .map(|c| c.model.clone());
+            let mut models: Vec<String> = own_agent::models(&endpoint.id)
+                .into_iter()
+                .map(|m| m.id)
+                .take(MENU_MODELS)
+                .collect();
+            if models.is_empty() {
+                models.extend(endpoint.kind.default_model().map(str::to_string));
+            }
+            if let Some(model) = chosen.as_ref().filter(|m| !models.contains(m)) {
+                models.insert(0, model.clone());
+            }
+            (!models.is_empty()).then_some((endpoint, models, chosen))
+        })
+        .collect()
+}
+
+/// Whether the own agent is set up: an endpoint can be asked and has a model to pick.
+pub fn set_up() -> bool {
+    !offers().is_empty()
+}
+
+/// Fills the "+" menu's submenu of the own agent: each endpoint it offers with its models, the default for new
+/// threads ticked; then the way to the settings.
 pub fn fill_menu(mtm: MainThreadMarker, menu: &NSMenu) {
     menu.removeAllItems();
     menu.setAutoenablesItems(false);
-    let default = own_agent::default_choice();
-    let mut listed = false;
-    for endpoint in own_agent::endpoints().into_iter().filter(own_agent::usable) {
-        let chosen = default
-            .as_ref()
-            .filter(|c| c.endpoint == endpoint.id)
-            .map(|c| c.model.clone());
-        let mut models: Vec<String> = own_agent::models(&endpoint.id)
-            .into_iter()
-            .map(|m| m.id)
-            .take(MENU_MODELS)
-            .collect();
-        if models.is_empty() {
-            models.extend(endpoint.kind.default_model().map(str::to_string));
-        }
-        if let Some(model) = chosen.as_ref().filter(|m| !models.contains(m)) {
-            models.insert(0, model.clone());
-        }
-        if models.is_empty() {
-            continue;
-        }
+    let offers = offers();
+    for (endpoint, models, chosen) in &offers {
         let heading = item(mtm, &endpoint.name, None, "");
         heading.setEnabled(false);
         menu.addItem(&heading);
         for model in models {
-            let entry = item(mtm, &model, Some(objc2::sel!(ideNewOwnThread:)), "");
+            let entry = item(mtm, model, Some(objc2::sel!(ideNewOwnThread:)), "");
             entry.setIndentationLevel(1);
             // SAFETY: A menu item can represent an object of any type.
             unsafe { entry.setRepresentedObject(Some(&ns(&format!("{}\u{1f}{model}", endpoint.id)))) };
@@ -56,9 +70,8 @@ pub fn fill_menu(mtm: MainThreadMarker, menu: &NSMenu) {
             }
             menu.addItem(&entry);
         }
-        listed = true;
     }
-    if !listed {
+    if offers.is_empty() {
         let none = item(mtm, t("Noch kein Anbieter eingerichtet"), None, "");
         none.setEnabled(false);
         menu.addItem(&none);

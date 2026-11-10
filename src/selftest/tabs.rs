@@ -156,7 +156,7 @@ fn plus(root: PathBuf) {
         let held = !controller.plus_held_is_click();
         let titles = controller.plus_menu_titles();
         let before = controller.tab_count();
-        let chosen = controller.choose_from_plus_menu(t("Terminal"));
+        let chosen = controller.choose_from_plus_menu(&[t("Terminal")]);
         check(
             "holding the + opens the menu of what a tab can show, whose entry opens a new tab straight away",
             held && titles == controller.inspect().new_tab_items
@@ -169,6 +169,7 @@ fn plus(root: PathBuf) {
                     .is_some_and(|title| title.starts_with(t("Terminal"))),
             format!("held {held}, {titles:?}, {}", tabs_of(&controller)),
         );
+        every_plus_entry(&controller, &root);
         super::git::pictures(root, "tabs-icons", |_| finish(SCENARIO));
     });
 }
@@ -252,4 +253,76 @@ fn turned_off(controller: &WindowController, root: &Path) {
         controller.tab_count() == before + 1 && has(controller, "e.rs", false),
         tabs_of(controller),
     );
+}
+
+/// Every entry of the held "+"'s menu opens what it names, chosen in an untrusted folder, where no agent starts; the
+/// agents listed are the installed ones, the own agent last.
+fn every_plus_entry(controller: &WindowController, root: &Path) {
+    crate::project::distrust(root);
+    let entries = controller.plus_menu_entries();
+    let mut results = Vec::new();
+    for (path, action, enabled) in &entries {
+        if !enabled {
+            results.push((path.join(" ▸ "), "disabled".to_string(), true));
+            continue;
+        }
+        let tabs = controller.tab_count();
+        let titles: Vec<&str> = path.iter().map(String::as_str).collect();
+        let chosen = controller.choose_from_plus_menu(&titles);
+        let (outcome, ok) = match action.as_str() {
+            "ideOpenWelcome:" => {
+                let front = controller.front_title();
+                (format!("front {front:?}"), front.as_deref() == Some(t("Willkommen")))
+            }
+            "ideOpenAgentsSettings:" | "ideOpenAgentSettings:" => {
+                let shown = settings_shown();
+                close_settings();
+                (format!("settings shown {shown}"), shown)
+            }
+            _ => (
+                format!("{tabs} → {} tabs", controller.tab_count()),
+                controller.tab_count() == tabs + 1 && controller.new_tab_page_entries().is_none(),
+            ),
+        };
+        results.push((path.join(" ▸ "), outcome, chosen && ok));
+    }
+    crate::project::trust(root);
+    let failed: Vec<&(String, String, bool)> = results.iter().filter(|(_, _, ok)| !ok).collect();
+    check(
+        "every entry of the held +'s menu opens what it names in a new tab, the welcome page or the settings",
+        !entries.is_empty() && failed.is_empty(),
+        format!("{failed:?} of {results:?}"),
+    );
+    let agents: Vec<String> = entries
+        .iter()
+        .filter(|(path, _, _)| path.first().map(String::as_str) == Some(t("AI-Thread")) && path.len() >= 2)
+        .map(|(path, _, _)| path[1].clone())
+        .filter(|name| name != t("In eigenem Worktree") && name != t("Agenten verwalten …"))
+        .fold(Vec::new(), |mut names, name| {
+            if names.last() != Some(&name) {
+                names.push(name);
+            }
+            names
+        });
+    let installed: Vec<String> = crate::agent::installed(&crate::agent::Agent::Claude)
+        .then(|| "Claude".to_string())
+        .into_iter()
+        .chain(crate::agent::installed_presets().into_iter().map(|(_, name)| name))
+        .chain(crate::agent::installed(&crate::agent::Agent::Own).then(|| t("Eigener Agent").to_string()))
+        .collect();
+    check(
+        "the AI-Thread menu lists only installed agents, the own agent last",
+        agents == installed,
+        format!("{agents:?}, installed {installed:?}"),
+    );
+}
+
+fn settings_shown() -> bool {
+    crate::settings::window().is_some_and(|window| window.isVisible())
+}
+
+fn close_settings() {
+    if let Some(window) = crate::settings::window() {
+        window.close();
+    }
 }

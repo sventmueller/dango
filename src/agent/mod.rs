@@ -122,6 +122,30 @@ pub fn open_preset(controller: &WindowController, index: usize) -> Option<Rc<Age
     open_agent(controller, Agent::Acp(agent), None)
 }
 
+/// Whether `agent` is installed and set up, as the menus of new tabs list only such agents: Claude's program is
+/// there, an ACP agent starts, the own agent has a provider.
+pub fn installed(agent: &Agent) -> bool {
+    let env = crate::environment::get().unwrap_or_default();
+    match agent {
+        Agent::Claude => claude_program(env).is_some(),
+        Agent::Acp(acp) => matches!(
+            availability(acp, env, std::path::Path::new("/")),
+            Availability::Ready(_)
+        ),
+        Agent::Own => own::set_up(),
+    }
+}
+
+/// The ACP agents of the "+" menu that are installed, with their place among all presets.
+pub fn installed_presets() -> Vec<(usize, String)> {
+    AcpAgent::presets()
+        .into_iter()
+        .enumerate()
+        .filter(|(_, agent)| installed(&Agent::Acp(agent.clone())))
+        .map(|(index, agent)| (index, agent.name))
+        .collect()
+}
+
 /// The agents of the "+" menu, and whether each can be opened: it is there or can be installed.
 pub fn preset_menu() -> Vec<(String, bool)> {
     let env = crate::environment::get().unwrap_or_default();
