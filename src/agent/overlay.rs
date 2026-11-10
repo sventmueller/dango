@@ -19,36 +19,30 @@ fn centered(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSStackView> {
     stack
 }
 
-/// Claude's mark large on a soft ground, the name, and a tip.
-pub fn empty(mtm: MainThreadMarker) -> Retained<NSStackView> {
-    let mark = ui::icon(mtm, "sparkle", "Claude", 34.0, &style::terracotta());
-    let ground = ui::framed(
-        mtm,
-        &mark,
-        &NSColor::clearColor(),
-        Some(&style::terracotta().colorWithAlphaComponent(0.12)),
-        20.0,
-        ui::insets(20.0, 20.0, 20.0, 20.0),
-    );
-    ground.setBorderWidth(0.0);
+/// The name of the tab's agent, and for Claude a tip.
+pub fn empty(mtm: MainThreadMarker, agent: &super::Agent) -> Retained<NSStackView> {
     let name = ui::label(
         mtm,
-        "Claude",
+        agent.name(),
         &NSFont::systemFontOfSize_weight(26.0, crate::util::constant!(objc2_app_kit::NSFontWeightSemibold)),
         &NSColor::labelColor(),
     );
-    let tip = ui::wrapping(
-        mtm,
-        t("Tippe /model, um das passende Modell für die Aufgabe zu wählen."),
-        &style::body(),
-        &NSColor::secondaryLabelColor(),
-        320.0,
-    );
-    tip.setAlignment(NSTextAlignment::Center);
-    tip.setSelectable(false);
-    let stack = centered(mtm, &[&ground, &name, &tip]);
-    stack.setCustomSpacing_afterView(14.0, &ground);
-    stack
+    let mut views: Vec<Retained<NSView>> = vec![ui::view(&name)];
+    // `/model` is a command of Claude Code; the other agents choose their model elsewhere.
+    if *agent == super::Agent::Claude {
+        let tip = ui::wrapping(
+            mtm,
+            t("Tippe /model, um das passende Modell für die Aufgabe zu wählen."),
+            &style::body(),
+            &NSColor::secondaryLabelColor(),
+            320.0,
+        );
+        tip.setAlignment(NSTextAlignment::Center);
+        tip.setSelectable(false);
+        views.push(ui::view(&tip));
+    }
+    let views: Vec<&NSView> = views.iter().map(|view| &**view).collect();
+    centered(mtm, &views)
 }
 
 /// What keeps the session from starting, and what the user can do about it.

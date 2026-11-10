@@ -219,7 +219,7 @@ impl AgentTab {
             &composer.mic,
             &status.dictation,
         );
-        let empty = overlay::empty(mtm);
+        let empty = overlay::empty(mtm, &agent);
         let problem_holder = NSView::new(mtm);
         let queue_view = ui::column(mtm, 4.0, &[]);
         let suggestions = Suggestions::new(mtm, &target);
@@ -410,6 +410,21 @@ impl AgentTab {
         self.header.set_agent(self.agent.name(), &self.agent.colour());
         self.composer.set_agent(self.agent.name());
         self.refresh();
+    }
+
+    /// The texts of the empty state, top to bottom, with whether it holds anything else, such as an image.
+    #[cfg(feature = "selftest")]
+    pub fn empty_state(&self) -> (Vec<String>, bool) {
+        let views = self.empty.arrangedSubviews();
+        let texts = views
+            .iter()
+            .filter_map(|view| view.downcast::<objc2_app_kit::NSTextField>().ok())
+            .map(|field| field.stringValue().to_string())
+            .collect();
+        let other = views
+            .iter()
+            .any(|view| view.downcast_ref::<objc2_app_kit::NSTextField>().is_none());
+        (texts, other)
     }
 
     pub fn tab_key(&self) -> String {

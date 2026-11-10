@@ -109,6 +109,12 @@ fn ready(root: PathBuf, key: u64) {
         tab.agent_name() == "Gemini",
         tab.agent_name(),
     );
+    let (texts, other) = tab.empty_state();
+    check(
+        "the empty tab names its own agent, without an image and without Claude's /model tip",
+        texts == ["Gemini"] && !other,
+        format!("{texts:?}, more {other}"),
+    );
     let caps = tab.acp_capabilities().unwrap_or_default();
     check(
         "the agent's modes and model reach the tab",
