@@ -280,16 +280,14 @@ impl FileTree {
         FileTree { scroll, view, source }
     }
 
-    /// The files page: the row with the folder's name and its buttons above the tree.
-    pub fn page(&self, mtm: MainThreadMarker) -> Retained<NSView> {
-        let name = self
-            .source
-            .ivars()
-            .project
-            .root()
-            .file_name()
-            .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-        super::files_header::page(mtm, &name, &self.source, &self.scroll)
+    /// The tree in its scroll view, the files page.
+    pub fn page(&self) -> Retained<NSView> {
+        Retained::into_super(self.scroll.clone())
+    }
+
+    /// The buttons for the files panel's title row.
+    pub fn header_buttons(&self, mtm: MainThreadMarker) -> Retained<NSView> {
+        Retained::into_super(super::files_header::buttons(mtm, &self.source))
     }
 
     pub fn outline(&self) -> Retained<NSOutlineView> {

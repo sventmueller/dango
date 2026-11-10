@@ -74,6 +74,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     wait_until(
         move || controller(&probe).is_some_and(|c| c.tree_rows() > 0),
         move |_| {
+            title_row(&root, false);
             let rows = controller(&root).map_or(0, |c| c.tree_rows());
             if let Some(controller) = controller(&root) {
                 controller.click_in_tree(&root.join("src"), true);
@@ -84,6 +85,49 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 move |_| new_file(root, then),
             );
         },
+    );
+}
+
+/// "Dateien: <folder>" with the buttons on its line, the tree right below; checked again once a file opened, which
+/// moves the sidebar into the file's window tab.
+fn title_row(root: &Path, after_open: bool) {
+    let folder = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let row = controller(root).and_then(|c| c.panel_title_row());
+    let Some((title, row)) = row else {
+        return check(
+            "the files panel's title names the folder, its buttons on the same line",
+            false,
+            "no panel",
+        );
+    };
+    let gap = (row.title_middle - row.page_top).abs();
+    if !after_open {
+        check(
+            "the files panel's title names the folder, its buttons on the same line",
+            title == splat_i18n::tf("Dateien: {}", &[&folder])
+                && (row.title_middle - row.buttons_middle).abs() < 3.0
+                && gap < 20.0,
+            format!(
+                "{title:?}, title at {:.1}, buttons at {:.1}, tree {gap:.1} pt below",
+                row.title_middle, row.buttons_middle
+            ),
+        );
+    }
+    let name = if after_open {
+        "with a file open, the files panel's buttons still sit at the row's right end"
+    } else {
+        "the files panel's buttons sit at the row's right end, apart from the title"
+    };
+    check(
+        name,
+        row.width - row.buttons_end < 10.0 && row.buttons_start - row.text_end > 20.0,
+        format!(
+            "title ends at {:.1}, buttons from {:.1} to {:.1} of {:.1}",
+            row.text_end, row.buttons_start, row.buttons_end, row.width
+        ),
     );
 }
 
@@ -104,6 +148,7 @@ fn new_file(root: PathBuf, then: fn(PathBuf)) {
                 pressed && ok && opened(&root, "src/added.rs"),
                 "",
             );
+            title_row(&root, true);
             if let Some(window) = controller_window(&root) {
                 snapshot(&window, "files-header");
             }

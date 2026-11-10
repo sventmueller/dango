@@ -208,6 +208,16 @@ fn probe() {
     probe_app(mtm);
 }
 
+/// The sidebar's first symbol and title start level with the tabs' top edge, which sits on its safe area's top.
+fn check_sidebar_top(controller: &window::WindowController) {
+    let (tabs, safe, sidebar) = controller.sidebar_top();
+    check(
+        "the sidebar's symbols and title start level with the tabs",
+        (tabs - safe).abs() < 0.5 && (sidebar - (safe + window::SIDEBAR_RAISE)).abs() < 0.5,
+        format!("tabs at {tabs:.1}, safe area at {safe:.1}, sidebar at {sidebar:.1}"),
+    );
+}
+
 /// The panels, the sidebar and the tabs of the first window.
 fn probe_window(controller: &window::WindowController) {
     let seen = controller.inspect();
@@ -226,6 +236,7 @@ fn probe_window(controller: &window::WindowController) {
         seen.panel == Some(Panel::Files) && seen.panel_title == Panel::Files.title(),
         seen.panel_title.clone(),
     );
+    check_sidebar_top(controller);
     controller.activate_panel(Panel::Agents);
     let seen = controller.inspect();
     check(

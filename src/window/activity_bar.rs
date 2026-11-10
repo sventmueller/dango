@@ -88,19 +88,11 @@ impl ActivityBar {
 
         let view = NSView::new(mtm);
         view.setAccessibilityLabel(Some(&crate::util::ns(t("Seitenleisten-Auswahl"))));
-        let divider = NSBox::new(mtm);
-        divider.setBoxType(NSBoxType::Separator);
         view.addSubview(&stack);
         view.addSubview(&settings);
-        view.addSubview(&divider);
         stack.setTranslatesAutoresizingMaskIntoConstraints(false);
         settings.setTranslatesAutoresizingMaskIntoConstraints(false);
-        divider.setTranslatesAutoresizingMaskIntoConstraints(false);
         for constraint in [
-            divider.topAnchor().constraintEqualToAnchor(&view.topAnchor()),
-            divider.bottomAnchor().constraintEqualToAnchor(&view.bottomAnchor()),
-            divider.trailingAnchor().constraintEqualToAnchor(&view.trailingAnchor()),
-            divider.widthAnchor().constraintEqualToConstant(1.0),
             stack.topAnchor().constraintEqualToAnchor(&view.topAnchor()),
             stack.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
             settings.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),

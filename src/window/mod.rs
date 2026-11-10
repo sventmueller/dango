@@ -7,7 +7,7 @@ mod files;
 mod files_header;
 pub mod layout;
 mod notice;
-mod panels;
+pub mod panels;
 mod quick_open;
 mod replace;
 mod search;
@@ -43,6 +43,9 @@ pub use search::{buffer_edited, files_changed as files_changed_on_disk};
 pub use tabs::TabKind;
 use tabs::{Document, TabWindow};
 
+/// How far the activity bar and the panel reach above the sidebar's safe area, which puts their first symbol and title
+/// level with the top edge of the tabs, which start where the safe area does.
+pub const SIDEBAR_RAISE: f64 = 12.0;
 /// The width of the activity bar, which stays when the panel beside it is closed.
 const ACTIVITY_WIDTH: f64 = 44.0;
 const PANEL_MIN_WIDTH: f64 = 200.0;
@@ -670,7 +673,10 @@ impl WindowController {
                 .view()
                 .leadingAnchor()
                 .constraintEqualToAnchor(&sidebar_view.leadingAnchor()),
-            activity.view().topAnchor().constraintEqualToAnchor(&guide.topAnchor()),
+            activity
+                .view()
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE),
             activity
                 .view()
                 .bottomAnchor()
@@ -684,7 +690,10 @@ impl WindowController {
                 .view()
                 .trailingAnchor()
                 .constraintEqualToAnchor(&sidebar_view.trailingAnchor()),
-            panels.view().topAnchor().constraintEqualToAnchor(&guide.topAnchor()),
+            panels
+                .view()
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE),
             panels
                 .view()
                 .bottomAnchor()
@@ -720,7 +729,7 @@ impl WindowController {
         let tree = FileTree::new(self.mtm(), self, project.clone());
         let search = SearchPanel::new(self.mtm(), self, project.root());
         if let Some(panels) = ivars.panels.borrow().as_ref() {
-            panels.set_files(&tree.page(self.mtm()));
+            panels.set_files(&tree.page(), &tree.header_buttons(self.mtm()));
             if let Some(page) = search.page() {
                 panels.set_page(Panel::Search, page);
             }
@@ -1863,6 +1872,47 @@ impl WindowController {
         }
     }
 
+    /// The shown panel's title and the geometry of its title row.
+    pub fn panel_title_row(&self) -> Option<(String, panels::TitleRow)> {
+        let panels = self.ivars().panels.borrow();
+        let panels = panels.as_ref()?;
+        Some((panels.title(), panels.title_row()))
+    }
+
+    /// In window coordinates, y up: the top of the tab bar, of the sidebar's safe area, and of the activity bar.
+    pub fn sidebar_top(&self) -> (f64, f64, f64) {
+        fn tab_bar(view: &NSView) -> Option<Retained<NSView>> {
+            if view.class().name().to_bytes() == b"NSTabBar" {
+                return Some(objc2::Message::retain(view));
+            }
+            view.subviews().iter().find_map(|child| tab_bar(&child))
+        }
+        let top = |view: &NSView, rect: objc2_foundation::NSRect| {
+            let rect = view.convertRect_toView(rect, None);
+            rect.origin.y + rect.size.height
+        };
+        let window = self.window();
+        // SAFETY: Asking for the superview only reads; the frame view holds the content view while the window shows.
+        let frame = window
+            .as_ref()
+            .and_then(|w| w.contentView())
+            .and_then(|v| unsafe { v.superview() });
+        let tabs = frame
+            .and_then(|f| tab_bar(&f))
+            .map_or(f64::NAN, |bar| top(&bar, bar.bounds()));
+        let sidebar = self.ivars().sidebar.borrow();
+        let (safe, activity) = sidebar.as_ref().map_or((f64::NAN, f64::NAN), |sidebar| {
+            sidebar.layoutSubtreeIfNeeded();
+            let safe = top(sidebar, sidebar.safeAreaLayoutGuide().frame());
+            let activity = self.ivars().activity.borrow();
+            (
+                safe,
+                activity.as_ref().map_or(f64::NAN, |a| top(a.view(), a.view().bounds())),
+            )
+        });
+        (tabs, safe, activity)
+    }
+
     /// The button of the files panel's header that sends `action`.
     pub fn files_header_button(&self, action: objc2::runtime::Sel) -> Option<Retained<objc2_app_kit::NSButton>> {
         fn find(view: &NSView, action: objc2::runtime::Sel) -> Option<Retained<objc2_app_kit::NSButton>> {
@@ -1873,10 +1923,8 @@ impl WindowController {
             }
             view.subviews().iter().find_map(|child| find(&child, action))
         }
-        let scroll = self.file_tree_view()?.enclosingScrollView()?;
-        // SAFETY: Asking for the superview only reads; the page holds the scroll view while the window shows.
-        let page = unsafe { scroll.superview() }?;
-        find(&page, action)
+        let panels = self.ivars().panels.borrow();
+        find(panels.as_ref()?.view(), action)
     }
 
     /// Clicks the row of `path` in the folder tree, twice for a double click.

@@ -64,6 +64,7 @@
 "Das Register wurde nicht geladen" = "The registry was not loaded";
 "Das Terminal konnte nicht starten: {}" = "The terminal could not start: {}";
 "Dateien" = "Files";
+"Dateien: {}" = "Files: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "files, web requests and commands stay in the project and the allowed folders, without network";
 "Denktiefe:" = "Thinking:";
 "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an." = "The CI job “{}” of “{}” ({}) failed. Find the cause and suggest a fix; the log excerpt is attached.";
