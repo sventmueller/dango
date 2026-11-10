@@ -1507,14 +1507,9 @@ impl WindowController {
         }
     }
 
-    /// Shows `panel`; clicking the panel that already shows closes or reopens it, as in VS Code.
+    /// Shows `panel`, opening the sidebar if it is closed; the panel that already shows stays open (E61).
     pub fn activate_panel(&self, panel: Panel) {
-        let ivars = self.ivars();
-        if ivars.panel.get() == Some(panel) && ivars.panel_open.get() {
-            self.set_panel_open(false);
-            return;
-        }
-        if !ivars.panel_open.get() {
+        if !self.ivars().panel_open.get() {
             self.set_panel_open(true);
         }
         self.show_panel(panel);

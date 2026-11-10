@@ -97,6 +97,7 @@ fn preview_beside(root: PathBuf) {
     formats(&root, &view);
     pasting(&root, &view);
     menus(&root);
+    super::markdown_editor::run(&root);
     exports(root);
 }
 

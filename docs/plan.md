@@ -194,7 +194,7 @@ vibeedit/
   seit E60 je Tab ein `NSWindow` in der Tabgruppe des Ordners.
   Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler), Neues Terminal, Neuer AI-Thread.
 - **Symbolspalte:** Dateien, AI, Git (Badge), CI (Badge-Farbe), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
-  klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55.)*
+  klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55; das Einklappen per Klick entfällt, siehe E61.)*
 - **Dateien:** `NSOutlineView` Source-List, Git-Farben, Kontextmenü (Neu, Umbenennen, In Papierkorb, Im Finder zeigen,
   Pfad kopieren, Im Terminal öffnen, An Agent anhängen).
 - **AI-Panel nach Screenshot 2:** *Konto & Nutzung* (Konto; Nutzungsbalken 5 h / 7 Tage mit Rücksetzzeit, experimentell
@@ -371,6 +371,9 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   das andere allein. Die Seitenleiste gibt es je Ordner einmal; sie wandert in den Tab im Vordergrund und bleibt
   dabei, wie sie ist. Die Ansicht je Projekt (E24) speichert Tabs und Teilungen. Ersetzt die eigene Tableiste nach
   dem Vorbild von Xcode und die Panels aus I10.
+- **E61 Das aktive Symbol klappt nicht ein** *(Entscheidung des Eigentümers, Abweichung von der Symbolspalte oben)*:
+  Ein Klick auf das Symbol des Panels, das schon zu sehen ist, lässt die Seitenleiste offen. Ein- und ausgeklappt wird
+  sie über den Seitenleisten-Knopf der Toolbar oder ⌃⌘S; ein Symbol bei eingeklappter Seitenleiste klappt sie auf.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

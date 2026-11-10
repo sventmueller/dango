@@ -3,6 +3,7 @@
 mod changes;
 mod compare;
 mod conflict;
+mod context_menu;
 mod editing;
 mod fold;
 mod highlight;
@@ -377,6 +378,8 @@ fn add_tab(
     scroll.setAutohidesScrollers(true);
     scroll.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
     scroll.setDocumentView(Some(&view));
+    scroll.setHasHorizontalScroller(!wraps(&view));
+    follow_width(&scroll, &view);
     let (container, gutter) = editor_container(mtm, &scroll, &view);
     crate::lsp::follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
@@ -619,6 +622,62 @@ fn set_wrap(view: &EditorTextView, wrap: bool) {
         container.setContainerSize(NSSize::new(1.0e7, 1.0e7));
     }
     view.setHorizontallyResizable(!wrap);
+    if let Some(scroll) = view.enclosingScrollView() {
+        scroll.setHasHorizontalScroller(!wrap);
+    }
+    fit_width(view);
+}
+
+/// Keeps a wrapping view as wide as its scroll view shows, whenever that changes size.
+fn follow_width(scroll: &NSScrollView, view: &EditorTextView) {
+    use std::ptr::NonNull;
+
+    use block2::RcBlock;
+    use objc2_app_kit::NSViewFrameDidChangeNotification;
+    use objc2_foundation::{NSNotification, NSNotificationCenter};
+
+    let clip = scroll.contentView();
+    clip.setPostsFrameChangedNotifications(true);
+    let name = constant!(NSViewFrameDidChangeNotification);
+    let editor = Weak::from(view);
+    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+        if let Some(editor) = editor.load() {
+            fit_width(&editor);
+        }
+    });
+    // SAFETY: The block only resizes the editor; the weak reference makes it do nothing once the editor is gone.
+    let observer = unsafe {
+        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
+            Some(name),
+            Some(&clip),
+            None,
+            &block,
+        )
+    };
+    std::mem::forget(observer);
+    fit_width(view);
+}
+
+/// Gives a wrapping view the width its scroll view shows, at its left edge, so lines wrap where the view ends; a text
+/// view only follows its own frame, which nothing else narrows.
+fn fit_width(view: &EditorTextView) {
+    if !wraps(view) {
+        return;
+    }
+    let Some(scroll) = view.enclosingScrollView() else {
+        return;
+    };
+    let width = scroll.contentSize().width;
+    let frame = view.frame();
+    if (frame.size.width - width).abs() > 0.5 {
+        view.setFrameSize(NSSize::new(width, frame.size.height));
+    }
+    let clip = scroll.contentView();
+    let origin = clip.bounds().origin;
+    if origin.x != 0.0 {
+        clip.scrollToPoint(NSPoint::new(0.0, origin.y));
+        scroll.reflectScrolledClipView(&clip);
+    }
 }
 
 /// Looks at the files of open editors in `dirs` and takes what changed on disk.
@@ -983,7 +1042,6 @@ pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
 }
 
 /// Whether long lines wrap at the view's edge.
-#[cfg(feature = "selftest")]
 pub fn wraps(view: &EditorTextView) -> bool {
     // SAFETY: A text view keeps its text container alive as long as it lives.
     unsafe { view.textContainer() }.is_some_and(|c| c.widthTracksTextView())

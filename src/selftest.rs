@@ -11,6 +11,7 @@ pub mod application;
 mod browser_dev;
 mod cli_thread;
 mod markdown;
+mod markdown_editor;
 mod panels;
 mod paste_cli;
 mod preview;
@@ -245,17 +246,15 @@ fn probe_window(controller: &window::WindowController) {
         seen.panel_title.clone(),
     );
     controller.activate_panel(Panel::Agents);
-    let closed = controller.inspect().panel;
-    controller.activate_panel(Panel::Agents);
-    let reopened = controller.inspect().panel;
+    let again = controller.inspect().panel;
     let width = controller.inspect().sidebar_width;
     check(
-        "the active symbol closes and reopens its panel",
-        closed.is_none() && reopened == Some(Panel::Agents),
-        format!("{closed:?} then {reopened:?}"),
+        "a click on the active symbol keeps its panel open",
+        again == Some(Panel::Agents),
+        format!("{again:?}"),
     );
     check(
-        "a reopened panel keeps its width",
+        "the panel keeps its width",
         (width - 304.0).abs() < 2.0,
         format!("{width} pt"),
     );

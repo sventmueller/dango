@@ -229,6 +229,16 @@ define_class!(
             guarded((), || crate::lsp::mouse_moved(self, event));
         }
 
+        #[unsafe(method_id(menuForEvent:))]
+        fn menu_for_event(&self, event: &NSEvent) -> Option<Retained<objc2_app_kit::NSMenu>> {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let menu: Option<Retained<objc2_app_kit::NSMenu>> = unsafe { msg_send![super(self), menuForEvent: event] };
+            if let Some(menu) = &menu {
+                guarded((), || super::context_menu::extend(self, menu));
+            }
+            menu
+        }
+
         #[unsafe(method(mouseDown:))]
         fn mouse_down(&self, event: &NSEvent) {
             let handled = guarded(false, || {

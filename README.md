@@ -35,7 +35,7 @@ are signed with the app's own key, which Sparkle checks before it installs anyth
 1. **Open a folder** with ⌘O or `dango <folder>`. The first time, the app asks whether you trust the folder (see
    [Trust](#trust)).
 2. **The sidebar** on the left switches between Files (⌘1), Search (⌘2), AI (⌘3), Git (⌘4) and CI (⌘5); clicking the
-   active symbol folds the sidebar away (⌃⌘S).
+   sidebar button in the toolbar or ⌃⌘S folds it away.
 3. **Every document is a tab** of the window, macOS's own tabs. The "+" at the end of the tab bar or ⌘T opens a new
    tab that offers a new file, a terminal, a browser, an AI thread with a chosen agent, or a CLI thread (an agent's
    own command-line interface in a terminal). "Open to the Side" in the file list's context menu shows a second
