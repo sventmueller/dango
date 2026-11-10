@@ -24,6 +24,9 @@ use super::WindowController;
 use crate::project::Project;
 use crate::util::{constant, guarded, item, ns, separator, set_action, set_target};
 
+/// The height of every row, a folder's as a file's.
+const ROW_HEIGHT: f64 = 24.0;
+
 /// What the tree knows of a row besides its path.
 struct RowInfo {
     item: Retained<NSString>,
@@ -81,14 +84,21 @@ define_class!(
         #[unsafe(method_id(outlineView:viewForTableColumn:item:))]
         fn view_for(
             &self,
-            _view: &NSOutlineView,
+            view: &NSOutlineView,
             _column: Option<&NSTableColumn>,
             item: &AnyObject,
         ) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let path = path_of(item)?;
-                let ignored = self.ivars().rows.borrow().get(&path).is_some_and(|row| row.ignored);
-                Some(row_view(self.mtm(), &path, ignored))
+                let (ignored, folder) = self
+                    .ivars()
+                    .rows
+                    .borrow()
+                    .get(&path)
+                    .map_or((false, false), |row| (row.ignored, row.expandable));
+                // SAFETY: The item came from this outline view, which knows it.
+                let open = folder.then(|| unsafe { view.isItemExpanded(Some(item)) });
+                Some(row_view(self.mtm(), &path, ignored, open))
             })
         }
 
@@ -101,12 +111,18 @@ define_class!(
             });
         }
 
+        #[unsafe(method(outlineViewItemDidExpand:))]
+        fn did_expand(&self, notification: &NSNotification) {
+            guarded((), || turn_chevron(notification, true));
+        }
+
         #[unsafe(method(outlineViewItemDidCollapse:))]
         fn did_collapse(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(path) = expanded_path(notification) {
                     self.ivars().project.tree().collapse(&path);
                 }
+                turn_chevron(notification, false);
             });
         }
     }
@@ -244,7 +260,7 @@ impl FileTree {
         let source: Retained<FileTreeSource> =
             unsafe { msg_send![super(FileTreeSource::alloc(mtm).set_ivars(ivars)), init] };
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 600.0));
-        let view = NSOutlineView::initWithFrame(NSOutlineView::alloc(mtm), frame);
+        let view: Retained<NSOutlineView> = Retained::into_super(super::file_outline::FileOutline::new(mtm, frame));
         let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("name"));
         column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
         column.setWidth(frame.size.width);
@@ -254,6 +270,8 @@ impl FileTree {
         view.setHeaderView(None);
         view.setStyle(NSTableViewStyle::SourceList);
         view.setIndentationPerLevel(12.0);
+        view.setUsesAutomaticRowHeights(false);
+        view.setRowHeight(ROW_HEIGHT);
         view.setAutoresizesOutlineColumn(false);
         view.setColumnAutoresizingStyle(
             objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
@@ -352,24 +370,9 @@ fn extends_selection(mtm: MainThreadMarker) -> bool {
 }
 
 impl FileTreeSource {
-    /// A single click on a file opens it, in the preview tab if the user turned those on.
+    /// A single click opens a folder or closes it, as in VS Code, and opens a file, in the preview tab if the user
+    /// turned those on.
     fn row_clicked(&self, view: &NSOutlineView, row: isize) {
-        let Some(path) = (row >= 0)
-            .then(|| view.itemAtRow(row))
-            .flatten()
-            .and_then(|item| path_of(&item))
-        else {
-            return;
-        };
-        if !path.is_dir()
-            && let Some(controller) = self.ivars().controller.load()
-        {
-            controller.preview_file(&path);
-        }
-    }
-
-    /// A double click opens a folder, or a file in a tab of its own.
-    fn row_double_clicked(&self, view: &NSOutlineView, row: isize) {
         let Some(item) = (row >= 0).then(|| view.itemAtRow(row)).flatten() else {
             return;
         };
@@ -384,6 +387,22 @@ impl FileTreeSource {
                 }
             }
         } else if let Some(controller) = self.ivars().controller.load() {
+            controller.preview_file(&path);
+        }
+    }
+
+    /// A double click opens a file in a tab of its own; a folder's first click already opened or closed it.
+    fn row_double_clicked(&self, view: &NSOutlineView, row: isize) {
+        let Some(path) = (row >= 0)
+            .then(|| view.itemAtRow(row))
+            .flatten()
+            .and_then(|item| path_of(&item))
+        else {
+            return;
+        };
+        if !path.is_dir()
+            && let Some(controller) = self.ivars().controller.load()
+        {
             controller.open_file(&path);
         }
     }
@@ -556,6 +575,32 @@ fn path_of(item: &AnyObject) -> Option<PathBuf> {
     item.downcast_ref::<NSString>().map(|s| PathBuf::from(s.to_string()))
 }
 
+/// Points the chevron of the folder that opened or closed down or right.
+fn turn_chevron(notification: &NSNotification, open: bool) {
+    let Some(view) = notification
+        .object()
+        .and_then(|object| object.downcast::<NSOutlineView>().ok())
+    else {
+        return;
+    };
+    let Some(item) = notification
+        .userInfo()
+        .and_then(|info| info.objectForKey(&ns("NSObject")))
+    else {
+        return;
+    };
+    // SAFETY: The item came from this outline view's notification, so the view knows it.
+    let row = unsafe { view.rowForItem(Some(&item)) };
+    let cell = (row >= 0)
+        .then(|| view.viewAtColumn_row_makeIfNecessary(0, row, false))
+        .flatten()
+        .and_then(|cell| cell.downcast::<NSTableCellView>().ok());
+    // SAFETY: The cell is one this tree made, whose image view is the icon it set.
+    if let Some(image) = cell.and_then(|cell| unsafe { cell.imageView() }) {
+        image.setImage(super::file_outline::chevron(open).as_deref());
+    }
+}
+
 fn expanded_path(notification: &NSNotification) -> Option<PathBuf> {
     let info = notification.userInfo()?;
     let item = info.objectForKey(&ns("NSObject"))?;
@@ -572,9 +617,13 @@ fn copy_text(text: &str) {
     pasteboard.setString_forType(&ns(text), constant!(NSPasteboardTypeString));
 }
 
-fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool) -> Retained<NSView> {
+/// The row of `path`: its icon, or the chevron of a folder that is `open` or not, and its name.
+fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
-    let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, path, path.is_dir());
+    let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, path, open.is_some());
+    if let Some(open) = open {
+        image.setImage(super::file_outline::chevron(open).as_deref());
+    }
     let name = path
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
