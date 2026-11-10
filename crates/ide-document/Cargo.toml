@@ -1,0 +1,23 @@
+[package]
+name = "ide-document"
+version = "0.0.0"
+description = "One buffer per file: its text, edits in every unit, the file on disk, external changes, recovery and colours"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core = { path = "../ide-core" }
+splat-file-state = { path = "../../../splat/crates/splat-file-state" }
+splat-markdown = { path = "../../../splat/crates/splat-markdown" }
+# Language servers count lines at LF, CRLF and CR only, so Ropey's Unicode line breaks stay off.
+ropey = { version = "1.6.1", default-features = false, features = ["cr_lines", "simd"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+similar = { version = "3.2.1", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+rustix = { version = "1.1.6", features = ["time"] }

@@ -1,0 +1,259 @@
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use ide_core::settings::{State, remembered};
+use ide_process::Supervisor;
+use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, NSObject};
+use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2_app_kit::{
+    NSApplication, NSApplicationDelegate, NSApplicationTerminateReply, NSMenu, NSMenuDelegate, NSMenuItem,
+    NSModalResponseOK, NSOpenPanel,
+};
+use objc2_foundation::{NSArray, NSBundle, NSNotification, NSObjectProtocol, NSString, NSURL};
+
+use crate::util::{guarded, item, main_soon, ns, separator, set_target};
+use crate::window::{self, WindowController};
+use splat_i18n::t;
+
+/// How long the processes the app started get to end, per step, when it quits.
+const QUIT_GRACE: Duration = Duration::from_millis(700);
+
+/// How long a quit waits for the copies of unsaved text to be removed.
+const RECOVERY_GRACE: Duration = Duration::from_secs(2);
+
+/// The interface texts in the language macOS picks for the app, as a `.strings` file; empty outside a bundle.
+pub fn localized_strings() -> String {
+    NSBundle::mainBundle()
+        .pathForResource_ofType(Some(&ns("Localizable")), Some(&ns("strings")))
+        .and_then(|p| std::fs::read_to_string(p.to_string()).ok())
+        .unwrap_or_default()
+}
+
+define_class!(
+    // SAFETY: NSObject has no subclassing requirements and `AppDelegate` does not implement Drop.
+    #[unsafe(super(NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDEAppDelegate"]
+    pub struct AppDelegate;
+
+    unsafe impl NSObjectProtocol for AppDelegate {}
+
+    unsafe impl NSApplicationDelegate for AppDelegate {
+        #[unsafe(method(applicationDidFinishLaunching:))]
+        fn did_finish_launching(&self, _notification: &NSNotification) {
+            guarded((), || {
+                let mtm = self.mtm();
+                open_initial_windows(mtm);
+                #[cfg(feature = "dictation")]
+                crate::dictation::launched();
+                #[cfg(feature = "selftest")]
+                crate::selftest::after_launch(mtm);
+            });
+        }
+
+        #[unsafe(method(applicationShouldTerminate:))]
+        fn should_terminate(&self, _app: &NSApplication) -> NSApplicationTerminateReply {
+            guarded(NSApplicationTerminateReply::TerminateNow, || {
+                if !crate::editor::confirm_quit(self.mtm()) {
+                    return NSApplicationTerminateReply::TerminateCancel;
+                }
+                remember_open_projects();
+                crate::editor::recovery::quit(RECOVERY_GRACE);
+                if Supervisor::global().running().is_empty() {
+                    return NSApplicationTerminateReply::TerminateNow;
+                }
+                std::thread::spawn(|| {
+                    Supervisor::global().shutdown(QUIT_GRACE);
+                    main_soon(|| {
+                        if let Some(mtm) = MainThreadMarker::new() {
+                            NSApplication::sharedApplication(mtm).replyToApplicationShouldTerminate(true);
+                        }
+                    });
+                });
+                NSApplicationTerminateReply::TerminateLater
+            })
+        }
+
+        #[unsafe(method(applicationShouldHandleReopen:hasVisibleWindows:))]
+        fn should_reopen(&self, _app: &NSApplication, visible: bool) -> bool {
+            guarded(true, || {
+                if !visible {
+                    WindowController::open(self.mtm(), None);
+                }
+                true
+            })
+        }
+
+        #[unsafe(method(application:openURLs:))]
+        fn open_urls(&self, _app: &NSApplication, urls: &NSArray<NSURL>) {
+            guarded((), || {
+                // The first folder takes the place of the one in front, the others get windows of their own.
+                let mut target = window::frontmost(self.mtm());
+                for url in urls.iter() {
+                    if let Some(path) = url.path() {
+                        let folder = PathBuf::from(path.to_string());
+                        let opens = folder.is_dir();
+                        open_project_from(self.mtm(), folder, if opens { target.take() } else { None });
+                    }
+                }
+            });
+        }
+
+        #[unsafe(method(applicationSupportsSecureRestorableState:))]
+        fn supports_secure_restorable_state(&self, _app: &NSApplication) -> bool {
+            true
+        }
+    }
+
+    unsafe impl NSMenuDelegate for AppDelegate {
+        #[unsafe(method(menuNeedsUpdate:))]
+        fn menu_needs_update(&self, menu: &NSMenu) {
+            guarded((), || fill_recent_menu(self, menu));
+        }
+    }
+
+    impl AppDelegate {
+        #[unsafe(method(ideOpenFolder:))]
+        fn open_folder(&self, _sender: Option<&AnyObject>) {
+            guarded((), || ask_for_folder(self.mtm()));
+        }
+
+        #[unsafe(method(ideNewWindow:))]
+        fn new_window(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                WindowController::open(self.mtm(), None);
+            });
+        }
+
+        #[unsafe(method(ideOpenRecent:))]
+        fn open_recent(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let Some(item) = sender.and_then(|s| s.downcast_ref::<NSMenuItem>()) else { return };
+                let Some(path) = item.representedObject().and_then(|o| o.downcast::<NSString>().ok()) else {
+                    return;
+                };
+                open_project(self.mtm(), PathBuf::from(path.to_string()));
+            });
+        }
+
+        #[unsafe(method(ideClearRecent:))]
+        fn clear_recent(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                let _ = State::load_user().set(&remembered::RECENT_PROJECTS, &Vec::<PathBuf>::new());
+            });
+        }
+
+        #[unsafe(method(ideInstallCommand:))]
+        fn install_command(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::command_line::install(self.mtm()));
+        }
+
+        #[unsafe(method(ideShowSettings:))]
+        fn show_settings(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::settings::show(self.mtm()));
+        }
+    }
+);
+
+impl AppDelegate {
+    pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(());
+        // SAFETY: NSObject's initializer, called once on the newly allocated object.
+        unsafe { msg_send![super(this), init] }
+    }
+}
+
+/// The windows of the last run with their tabs, if the user wants them back, and what a crash left unsaved; else one
+/// empty window.
+fn open_initial_windows(mtm: MainThreadMarker) {
+    if crate::session::restore(mtm) == 0 {
+        WindowController::open(mtm, None);
+    }
+}
+
+fn remember_open_projects() {
+    let open: Vec<PathBuf> = window::open_projects();
+    let _ = State::load_user().set(&remembered::OPEN_PROJECTS, &open);
+    crate::session::remember();
+}
+
+/// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in
+/// an empty window or a new one.
+pub fn open_project(mtm: MainThreadMarker, folder: PathBuf) {
+    open_project_from(mtm, folder, window::frontmost(mtm));
+}
+
+/// `open_project` with `target` in place of the window in front, such as the window whose welcome tab was clicked.
+pub fn open_project_from(mtm: MainThreadMarker, folder: PathBuf, target: Option<Retained<WindowController>>) {
+    if !folder.is_dir() {
+        return;
+    }
+    let folder = folder.canonicalize().unwrap_or(folder);
+    let _ = State::load_user().note_recent(&folder);
+    let shown = window::open_projects().contains(&folder);
+    match target {
+        Some(target) if !shown && target.project().is_some() => target.open_in_place(folder),
+        _ => {
+            WindowController::open(mtm, Some(folder));
+        }
+    }
+}
+
+fn ask_for_folder(mtm: MainThreadMarker) {
+    let panel = NSOpenPanel::openPanel(mtm);
+    panel.setCanChooseDirectories(true);
+    panel.setCanChooseFiles(false);
+    panel.setAllowsMultipleSelection(false);
+    panel.setPrompt(Some(&ns(t("Öffnen"))));
+    if panel.runModal() != NSModalResponseOK {
+        return;
+    }
+    if let Some(path) = panel.URL().and_then(|url| url.path()) {
+        open_project(mtm, PathBuf::from(path.to_string()));
+    }
+}
+
+/// The recent folders, latest first, then the item that clears them.
+fn fill_recent_menu(delegate: &AppDelegate, menu: &NSMenu) {
+    let mtm = delegate.mtm();
+    menu.removeAllItems();
+    let recent = State::load_user().get(&remembered::RECENT_PROJECTS);
+    for folder in recent.iter().filter(|p| p.is_dir()) {
+        let entry = item(mtm, &display_path(folder), Some(sel!(ideOpenRecent:)), "");
+        // SAFETY: A menu item can represent an object of any type.
+        unsafe { entry.setRepresentedObject(Some(&ns(&folder.to_string_lossy()))) };
+        set_target(&entry, delegate);
+        menu.addItem(&entry);
+    }
+    if menu.numberOfItems() > 0 {
+        menu.addItem(&separator(mtm));
+    }
+    let clear = item(mtm, t("Liste löschen"), Some(sel!(ideClearRecent:)), "");
+    clear.setEnabled(!recent.is_empty());
+    set_target(&clear, delegate);
+    menu.addItem(&clear);
+}
+
+/// `path` with the home folder written as `~`.
+pub fn display_path(path: &Path) -> String {
+    let home = ide_core::paths::home();
+    match path.strip_prefix(&home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".into(),
+        Ok(rest) => format!("~/{}", rest.display()),
+        Err(_) => path.display().to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paths_in_the_home_folder_start_with_a_tilde() {
+        let home = ide_core::paths::home();
+        assert_eq!(display_path(&home.join("Repos/x")), "~/Repos/x");
+        assert_eq!(display_path(&home), "~");
+        assert_eq!(display_path(Path::new("/opt/x")), "/opt/x");
+    }
+}

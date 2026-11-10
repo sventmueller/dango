@@ -1,0 +1,22 @@
+# Antigravity CLI (agy) 1.5.3, a Go program. Not recorded: no output of a real session exists; its own log shows that
+# it starts a language server as a helper process and keeps it, and nothing documents its title or bell, so this
+# session sets neither. The spinner frames on its screen are a stand-in.
+0 programs agy
+0 out "\e[?25l\e[2J\e[H Antigravity CLI 1.5.3\r\n\r\n ▸ \e[?25h"
+500 programs agy language_server_macos_arm
+3000 expect working
+5000 expect waiting
+6000 key
+6050 out "\e[3;4Hdescribe the repo"
+7000 key
+7050 out "\e[?25l\e[2J\e[H ▸ describe the repo\r\n\r\n"
+7100 every 100 until 12000 out "\e[5;2H\e[2K⣾ Thinking" "\e[5;2H\e[2K⣽ Thinking" "\e[5;2H\e[2K⣻ Thinking" "\e[5;2H\e[2K⢿ Thinking"
+9000 expect working
+12000 out "\e[5;2H\e[2KThe repository holds a macOS editor.\r\n\r\n ▸ "
+# A test suite runs in front without printing for a while.
+13000 programs agy language_server_macos_arm npm node
+18000 expect working
+20000 programs agy language_server_macos_arm
+21000 expect waiting
+30000 exit
+30000 expect finished

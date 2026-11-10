@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "La dettatura trasforma ciò che dici in testo nell’editor e nel campo di inserimento dei pannelli AI.";

@@ -1,0 +1,425 @@
+//! The preview of one Markdown document: laid out off the main thread by `splat_preview`, set as native text by
+//! `splat_render`, with formulas and diagrams from the hidden renderer and pictures from files and the web.
+
+use std::cell::{Cell, OnceCell, RefCell};
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use objc2::rc::Retained;
+use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2_app_kit::NSAppearanceCustomization;
+use objc2_foundation::NSMutableAttributedString;
+use splat_file_state::Stamp;
+use splat_preview::layout::{Atom, Layout, RunMap, layout};
+use splat_preview::map::Index;
+use splat_render::Viewer;
+use splat_render::images::{self, ImageFile, ImageStore};
+use splat_render::js::{self, Key, Owner, Ready, Wanted};
+use splat_render::picture::Rendered;
+use splat_render::remote;
+use splat_render::render::{Drawn, RenderCtx};
+
+use super::page::Views;
+use crate::editor::EditorTextView;
+use crate::util::{main_after, main_soon};
+use crate::window::WindowController;
+
+/// The pause in typing after which the preview lays the text out again.
+const LAYOUT_PAUSE: Duration = Duration::from_millis(120);
+
+/// The pause in typing after which the formulas and diagrams the text holds are asked for, as splat waits.
+const REQUEST_PAUSE: Duration = Duration::from_millis(350);
+
+/// What the preview shows now.
+#[derive(Default)]
+pub struct Shown {
+    pub layout: Option<Layout>,
+    pub index: Index,
+    keys: Vec<Key>,
+    macros: Arc<str>,
+    dark: bool,
+    /// The addresses of the pictures from the web the document names.
+    web: Vec<String>,
+}
+
+pub struct Preview {
+    pub key: u64,
+    mtm: MainThreadMarker,
+    controller: objc2::rc::Weak<WindowController>,
+    editor: RefCell<objc2::rc::Weak<EditorTextView>>,
+    path: PathBuf,
+    pub views: Views,
+    tab: Cell<isize>,
+    text: RefCell<String>,
+    images: RefCell<ImageStore>,
+    viewer: OnceCell<Rc<dyn Viewer>>,
+    owner: Cell<Option<Owner>>,
+    pub shown: RefCell<Shown>,
+    /// Counts the changes of the text; a layout of an older one does not replace that of a newer one.
+    edits: Cell<u64>,
+    laid_out: Cell<u64>,
+    last_edit: Cell<Instant>,
+    requested: RefCell<Option<Vec<Key>>>,
+    render_due: Cell<bool>,
+    /// The user asked for the pictures from the web of this document although its folder is not trusted.
+    web_allowed: Cell<bool>,
+    closed: Cell<bool>,
+    /// It opened with its document and closes with its editor.
+    automatic: bool,
+    pub sync: super::sync::State,
+}
+
+impl Preview {
+    pub fn new(
+        controller: &WindowController,
+        editor: &EditorTextView,
+        path: &Path,
+        key: u64,
+        automatic: bool,
+    ) -> Rc<Preview> {
+        let mtm = controller.mtm();
+        let name = crate::editor::display_name(path);
+        let views = Views::new(mtm, key, &splat_i18n::tf("Vorschau: {}", &[&name]));
+        Rc::new(Preview {
+            key,
+            mtm,
+            controller: objc2::rc::Weak::from(controller),
+            editor: RefCell::new(objc2::rc::Weak::from(editor)),
+            path: path.to_path_buf(),
+            views,
+            tab: Cell::new(-1),
+            text: RefCell::new(editor.document().text().to_string()),
+            images: RefCell::default(),
+            viewer: OnceCell::new(),
+            owner: Cell::new(None),
+            shown: RefCell::default(),
+            edits: Cell::new(0),
+            laid_out: Cell::new(0),
+            last_edit: Cell::new(Instant::now()),
+            requested: RefCell::new(None),
+            render_due: Cell::new(false),
+            web_allowed: Cell::new(false),
+            closed: Cell::new(false),
+            automatic,
+            sync: super::sync::State::default(),
+        })
+    }
+
+    pub fn automatic(&self) -> bool {
+        self.automatic
+    }
+
+    #[cfg(feature = "selftest")]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn tab(&self) -> isize {
+        self.tab.get()
+    }
+
+    pub fn set_tab(&self, id: isize) {
+        self.tab.set(id);
+    }
+
+    pub fn controller(&self) -> Option<Retained<WindowController>> {
+        self.controller.load()
+    }
+
+    pub fn editor(&self) -> Option<Retained<EditorTextView>> {
+        self.editor.borrow().load()
+    }
+
+    /// Whether it follows `view`, or shows the file `view` has open now that its own editor is gone.
+    pub fn follows(&self, view: &EditorTextView) -> bool {
+        match self.editor() {
+            Some(editor) => std::ptr::eq(&*editor, view),
+            None => view.document().path() == Some(self.path.as_path()),
+        }
+    }
+
+    pub fn follow(&self, view: &EditorTextView) {
+        *self.editor.borrow_mut() = objc2::rc::Weak::from(view);
+    }
+
+    pub fn images(&self) -> &RefCell<ImageStore> {
+        &self.images
+    }
+
+    pub fn is_closed(&self) -> bool {
+        self.closed.get() || self.controller.load().is_none()
+    }
+
+    /// The preview as the render path knows it.
+    pub fn viewer(self: &Rc<Self>) -> Rc<dyn Viewer> {
+        self.viewer.get_or_init(|| Rc::new(Hears(Rc::downgrade(self)))).clone()
+    }
+
+    fn is_dark(&self) -> bool {
+        let appearance = self.views.page.effectiveAppearance();
+        matches!(
+            splat_render::style::appearance_of(&appearance),
+            splat_markdown::palette::Appearance::Dark | splat_markdown::palette::Appearance::DarkHighContrast
+        )
+    }
+
+    /// Pictures from the web load when the folder is trusted or the user asked for them in this document (E22).
+    pub fn loads_web_pictures(&self) -> bool {
+        self.web_allowed.get() || self.controller().is_some_and(|c| c.is_trusted())
+    }
+
+    pub fn allow_web_pictures(self: &Rc<Self>) {
+        self.web_allowed.set(true);
+        self.render();
+    }
+
+    /// The text changed: it is laid out again after a pause in typing.
+    pub fn text_changed(&self) {
+        let edits = self.edits.get() + 1;
+        self.edits.set(edits);
+        self.last_edit.set(Instant::now());
+        let key = self.key;
+        main_after(LAYOUT_PAUSE, move || {
+            super::with(key, |preview| {
+                if preview.edits.get() == edits {
+                    preview.lay_out();
+                }
+            });
+        });
+    }
+
+    /// Lays the text out on a background lane; what is ready of its formulas and diagrams shows as pictures.
+    pub fn lay_out(&self) {
+        if let Some(editor) = self.editor() {
+            *self.text.borrow_mut() = editor.document().text().to_string();
+        }
+        let text = self.text.borrow().clone();
+        let dark = self.is_dark();
+        let (key, edits) = (self.key, self.edits.get());
+        js::background(move || {
+            let doc = splat_markdown::reader::parse(&text);
+            let wanted = js::wanted(&doc, dark);
+            let ready = Ready {
+                dark,
+                macros: wanted.macros.clone(),
+            };
+            let laid = layout(&doc, &ready, None);
+            main_soon(move || super::with(key, move |preview| preview.laid_out(edits, laid, wanted, dark)));
+        });
+    }
+
+    fn laid_out(self: &Rc<Self>, edits: u64, laid: Layout, wanted: Wanted, dark: bool) {
+        if edits < self.laid_out.get() || self.closed.get() {
+            return;
+        }
+        self.laid_out.set(edits);
+        {
+            let mut shown = self.shown.borrow_mut();
+            shown.index = Index::new(&laid);
+            shown.web = web_pictures(&laid);
+            shown.layout = Some(laid);
+            shown.keys = wanted.keys;
+            shown.macros = wanted.macros;
+            shown.dark = dark;
+        }
+        self.render();
+        self.ask_when_quiet();
+    }
+
+    /// Asks for the formulas and diagrams of the text once typing has paused.
+    fn ask_when_quiet(self: &Rc<Self>) {
+        let quiet = self.last_edit.get().elapsed();
+        if quiet < REQUEST_PAUSE {
+            let (key, edits) = (self.key, self.edits.get());
+            main_after(REQUEST_PAUSE - quiet, move || {
+                super::with(key, |preview| {
+                    if preview.edits.get() == edits {
+                        preview.ask_when_quiet();
+                    }
+                });
+            });
+            return;
+        }
+        let keys = self.shown.borrow().keys.clone();
+        if self.requested.borrow().as_ref() == Some(&keys) {
+            return;
+        }
+        *self.requested.borrow_mut() = Some(keys.clone());
+        let viewer = self.viewer();
+        if keys.is_empty() {
+            js::asks_for_nothing(&viewer);
+            return;
+        }
+        let renderer = js::renderer(self.mtm);
+        let owner = self.owner.get().unwrap_or_else(|| renderer.listen(&viewer));
+        self.owner.set(Some(owner));
+        renderer.request(owner, keys);
+    }
+
+    /// Sets the text anew on a later turn of the run loop, once for any number of arrivals.
+    pub fn render_soon(&self) {
+        if self.render_due.replace(true) {
+            return;
+        }
+        let key = self.key;
+        main_soon(move || {
+            super::with(key, |preview| {
+                preview.render_due.set(false);
+                preview.render();
+            });
+        });
+    }
+
+    /// Sets the whole layout as text, keeping the place the reader is at.
+    pub fn render(self: &Rc<Self>) {
+        let viewer = self.viewer();
+        let web = self.loads_web_pictures();
+        let left_out = Cell::new(false);
+        let drawn = Pictures {
+            requester: &viewer,
+            web,
+            left_out: &left_out,
+        };
+        let out = NSMutableAttributedString::new();
+        let local = {
+            let shown = self.shown.borrow();
+            let Some(laid) = shown.layout.as_ref() else { return };
+            let ctx = RenderCtx {
+                mtm: self.mtm,
+                zoom: 1.0,
+                doc_dir: self.path.parent(),
+                images: &self.images,
+                max_image_width: self.views.picture_width(),
+                dark: shown.dark,
+                requester: Some(&viewer),
+                leaves_the_mac: None,
+                macros: shown.macros.clone(),
+                drawn: &drawn,
+            };
+            for block in &laid.blocks {
+                out.appendAttributedString(&ctx.render_block(block));
+            }
+            local_pictures(laid, self.path.parent())
+        };
+        super::sync::while_moving(self, || self.views.storage.setAttributedString(&out));
+        self.images.borrow_mut().keep_only(&local);
+        super::sync::keep_place(self);
+        self.views.offer_web_pictures(left_out.get());
+    }
+
+    pub fn close(self: &Rc<Self>) {
+        if self.closed.replace(true) {
+            return;
+        }
+        super::sync::stop(self);
+        splat_render::stops_showing(&self.viewer());
+    }
+
+    fn image_loaded(&self, path: PathBuf, file: ImageFile) {
+        self.images.borrow_mut().finish(path, file);
+        self.render_soon();
+    }
+
+    fn images_changed(self: &Rc<Self>, changed: Vec<(PathBuf, Stamp)>) {
+        let viewer = self.viewer();
+        for (path, now) in changed {
+            self.images.borrow_mut().note_seen(&path, now);
+            images::read_again(path, self.path.parent(), &viewer);
+        }
+    }
+}
+
+/// The remote addresses of the pictures in `laid`.
+fn web_pictures(laid: &Layout) -> Vec<String> {
+    picture_urls(laid).filter(|url| remote::is_remote(url)).collect()
+}
+
+/// The files of the local pictures in `laid`, which the store keeps.
+fn local_pictures(laid: &Layout, doc_dir: Option<&Path>) -> HashSet<PathBuf> {
+    picture_urls(laid)
+        .filter(|url| !remote::is_remote(url))
+        .filter_map(|url| images::resolve_path(&url, doc_dir))
+        .collect()
+}
+
+fn picture_urls(laid: &Layout) -> impl Iterator<Item = String> + '_ {
+    laid.blocks
+        .iter()
+        .flat_map(|block| block.paras.iter())
+        .flat_map(|para| para.runs.iter())
+        .filter_map(|run| match &run.map {
+            RunMap::Atom {
+                atom: Atom::Image(image),
+                ..
+            } => Some(image.url.to_string()),
+            _ => None,
+        })
+}
+
+/// What a render gets from others: pictures from the web only where they may load, and what the renderer drew.
+struct Pictures<'a> {
+    requester: &'a Rc<dyn Viewer>,
+    web: bool,
+    /// Set when a picture from the web was left out.
+    left_out: &'a Cell<bool>,
+}
+
+impl Drawn for Pictures<'_> {
+    fn web_picture(&self, url: &str) -> Option<Rendered> {
+        if self.web {
+            remote::get(url, Some(self.requester)).flatten()
+        } else {
+            self.left_out.set(true);
+            None
+        }
+    }
+
+    fn drawing(&self, key: &Key) -> Option<Rendered> {
+        js::cached(key)
+    }
+}
+
+/// The preview as the render path reaches it, which does not keep it alive.
+struct Hears(Weak<Preview>);
+
+impl Viewer for Hears {
+    fn renders_arrived(&self) {
+        if let Some(preview) = self.0.upgrade() {
+            let key = preview.key;
+            main_soon(move || super::with(key, |preview| preview.lay_out()));
+        }
+    }
+
+    fn image_arrived(&self, _url: String) {
+        if let Some(preview) = self.0.upgrade() {
+            preview.render_soon();
+        }
+    }
+
+    fn image_loaded(&self, path: PathBuf, file: ImageFile) {
+        if let Some(preview) = self.0.upgrade() {
+            preview.image_loaded(path, file);
+        }
+    }
+
+    fn images_changed(&self, changed: Vec<(PathBuf, Stamp)>) {
+        if let Some(preview) = self.0.upgrade() {
+            preview.images_changed(changed);
+        }
+    }
+
+    fn web_images_shown(&self) -> Vec<String> {
+        self.0
+            .upgrade()
+            .filter(|preview| preview.loads_web_pictures())
+            .map(|preview| preview.shown.borrow().web.clone())
+            .unwrap_or_default()
+    }
+
+    fn has_closed(&self) -> bool {
+        self.0.upgrade().is_none_or(|preview| preview.is_closed())
+    }
+}

@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "聽寫會將你說的話轉為編輯器和 AI 標籤頁輸入欄位中的文字。";

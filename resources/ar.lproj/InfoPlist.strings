@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "تحوّل ميزة الإملاء ما تقوله إلى نص في المحرر وفي حقل الإدخال في علامات تبويب AI.";

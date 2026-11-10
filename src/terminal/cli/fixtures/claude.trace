@@ -1,0 +1,46 @@
+# Claude Code 2.1 in a terminal without the OSC 7501 Program Status Protocol (Vibeedit does not answer its probe).
+# Not recorded: written from its documentation and from its installed code (2.1.321), as no output of a real session
+# exists. Its title is "✳ <title>" while it is idle and alternates "◐"/"◑" every 960 ms while it works; the spinner
+# above the input box redraws about every 120 ms; with the default notification setting it rings no bell in a
+# terminal it does not know. Tools run as its children, in its process group.
+#
+# Lines: <ms> out "<text>" | <ms> every <period> until <ms> out "<frame>" ... | <ms> key | <ms> programs <name>...
+#        | <ms> exit | <ms> expect working|waiting|finished. Escapes: \e \a \r \n \\ \"
+0 programs claude
+0 out "\e]0;✳ Claude Code\a"
+0 out "\e[?25l\e[2J\e[H╭────────────────────────────╮\r\n│ ✻ Welcome to Claude Code!  │\r\n╰────────────────────────────╯\r\n\r\n> \e[?25h"
+300 out "\e[?25l\e[6;1H\e[2K  ? for shortcuts\e[5;3H\e[?25h"
+1000 expect working
+4500 expect waiting
+# A prompt typed key by key; every key redraws the input line, which is only the echo of typing.
+5000 key
+5010 out "\e[?25l\e[5;3Hf\e[?25h"
+5200 key
+5210 out "\e[?25l\e[5;4Hi\e[?25h"
+5400 key
+5410 out "\e[?25l\e[5;5Hx\e[?25h"
+5600 expect waiting
+6000 key
+6050 out "\e[?25l\e[2J\e[H> fix\r\n\r\n\e[?25h"
+6100 every 120 until 14000 out "\e[3;1H\e[2K✢ Thinking… (esc to interrupt)" "\e[3;1H\e[2K✳ Thinking… (esc to interrupt)" "\e[3;1H\e[2K✶ Thinking… (esc to interrupt)" "\e[3;1H\e[2K✻ Thinking… (esc to interrupt)"
+6100 every 960 until 14000 out "\e]0;◐ Fix the failing test\a" "\e]0;◑ Fix the failing test\a"
+7000 expect working
+# The Bash tool runs the tests as a child of claude.
+8000 programs claude cargo
+11000 programs claude
+12000 expect working
+14000 out "\e[3;1H\e[2K⏺ The test passes now.\r\n\r\n> "
+14000 out "\e]0;✳ Fix the failing test\a"
+14500 expect working
+15200 expect waiting
+# A question for permission: the screen holds still under the idle title.
+16000 key
+16050 out "\e[2J\e[H> push it\r\n\r\n"
+16100 every 120 until 17000 out "\e[3;1H\e[2K✢ Thinking…" "\e[3;1H\e[2K✶ Thinking…"
+16100 every 960 until 17000 out "\e]0;◐ Fix the failing test\a" "\e]0;◑ Fix the failing test\a"
+16500 expect working
+17000 out "\e[3;1H\e[2K Bash command: git push\r\n Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No"
+17000 out "\e]0;✳ Fix the failing test\a"
+18200 expect waiting
+20000 exit
+20000 expect finished

@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "音声入力は、話した内容をエディタとAIタブの入力フィールドでテキストに変換します。";

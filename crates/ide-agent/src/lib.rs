@@ -1,0 +1,120 @@
+//! The app's own agent (E6): it talks to Anthropic, OpenAI, Gemini, OpenRouter, Ollama, LM Studio and servers that
+//! speak OpenAI's or Anthropic's protocol, with keys from the keychain and prices for what it spends.
+//!
+//! A `Provider` is an endpoint with its key. `Provider::stream` sends one request of the conversation and reads the
+//! answer as it streams; `Provider::models` lists what the endpoint offers. Every protocol is turned into the same
+//! `Reply` and `Delta`s, so the agent's loop does not know which one it talks to.
+//!
+//! A `Session` is one thread: it fills the shared thread model (`ide-thread`) with messages, reasoning, tool cards,
+//! permission requests, to-dos and usage, and is driven like an ACP session (`send`, `cancel`, `answer`). Its tools
+//! read, search, edit and write files, run commands through the supervisor, fetch web pages and read the language
+//! servers' diagnostics through the `Diagnostics` trait the app implements. The `Policy` decides what runs, asks or
+//! is refused (E27); with the thread's sandbox on, files, web requests and commands stay within the project and the
+//! allowed folders (E19). When the context window fills up, older turns are compacted into a summary (E42). What the
+//! agent tells the user comes as values the app words (`notes`, E41). `store` keeps a thread's conversation for
+//! resuming.
+
+#![forbid(unsafe_code)]
+#![warn(missing_docs, unreachable_pub)]
+
+mod anthropic;
+pub mod chat;
+mod compact;
+pub mod conversation;
+mod gemini;
+pub mod http;
+pub mod keys;
+pub mod models;
+pub mod notes;
+mod openai;
+pub mod policy;
+pub mod prices;
+pub mod prompt;
+pub mod provider;
+mod replay;
+pub mod session;
+mod sse;
+pub mod store;
+pub mod stub;
+mod tools;
+mod turn;
+pub mod workspace;
+
+pub use chat::{Cancel, Delta, ErrorKind, ProviderError, Reply, Request, Stop, ToolSpec, TurnUsage};
+pub use conversation::{Block, Message, Role};
+pub use http::Http;
+pub use keys::{ApiKey, Keychain, Memory, SecretStore};
+pub use models::ModelInfo;
+pub use notes::{Note, Plain, Problem, ToolNote, Wording};
+pub use policy::{Approval, Destructive, Policy, Profile, Reason, Refusal, Rule};
+pub use prices::{Price, PriceTable};
+pub use provider::{Endpoint, ProviderKind, Wire};
+pub use session::{Choice, Config, Event, Session, SessionError};
+pub use store::LoadError;
+pub use workspace::{Diagnostic, Diagnostics, Severity, Workspace};
+
+/// An endpoint with its key, ready for requests.
+#[derive(Clone)]
+pub struct Provider {
+    endpoint: Endpoint,
+    key: Option<ApiKey>,
+    http: Http,
+}
+
+impl Provider {
+    /// `endpoint` reached with `key` over `http`.
+    pub fn new(endpoint: Endpoint, key: Option<ApiKey>, http: Http) -> Provider {
+        Provider { endpoint, key, http }
+    }
+
+    /// The endpoint.
+    pub fn endpoint(&self) -> &Endpoint {
+        &self.endpoint
+    }
+
+    /// A service that needs a key and has none; an added endpoint may work without.
+    fn missing_key(&self) -> Option<ProviderError> {
+        let missing = self.key.is_none() && self.endpoint.kind.takes_key() && self.endpoint.is_first_party();
+        missing.then(|| ProviderError::new(ErrorKind::NoKey, self.endpoint.name.clone()))
+    }
+
+    /// Sends `request` and reads the answer as it streams, telling `on` about each part; returns early, with the
+    /// text so far, once `cancel` is cancelled.
+    pub fn stream(
+        &self,
+        request: &Request<'_>,
+        cancel: &Cancel,
+        on: &mut dyn FnMut(Delta),
+    ) -> Result<Reply, ProviderError> {
+        if let Some(error) = self.missing_key() {
+            return Err(error);
+        }
+        let key = self.key.as_ref();
+        match self.endpoint.kind.wire() {
+            Wire::Anthropic => anthropic::stream(&self.http, &self.endpoint, key, request, cancel, on),
+            Wire::OpenAiChat => openai::stream(&self.http, &self.endpoint, key, request, cancel, on),
+            Wire::Gemini => gemini::stream(&self.http, &self.endpoint, key, request, cancel, on),
+        }
+    }
+
+    /// The models the endpoint lists for this key.
+    pub fn models(&self) -> Result<Vec<ModelInfo>, ProviderError> {
+        if let Some(error) = self.missing_key() {
+            return Err(error);
+        }
+        let key = self.key.as_ref();
+        match self.endpoint.kind.wire() {
+            Wire::Anthropic => anthropic::models(&self.http, &self.endpoint, key),
+            Wire::OpenAiChat => openai::models(&self.http, &self.endpoint, key),
+            Wire::Gemini => gemini::models(&self.http, &self.endpoint, key),
+        }
+    }
+}
+
+/// Whether `model` at an endpoint of `kind` thinks adaptively and takes an effort level.
+pub fn takes_effort(kind: ProviderKind, model: &str) -> bool {
+    match kind.wire() {
+        Wire::Anthropic => anthropic::adaptive(model),
+        Wire::OpenAiChat | Wire::Gemini => true,
+    }
+}

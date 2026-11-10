@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "받아쓰기는 말한 내용을 편집기와 AI 탭의 입력 필드에서 텍스트로 변환합니다.";

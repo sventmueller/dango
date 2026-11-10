@@ -1,0 +1,35 @@
+{
+  "total_count": 2,
+  "workflow_runs": [
+    {
+      "id": 9001,
+      "name": "CI",
+      "display_title": "Fix the parser",
+      "run_number": 42,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "{{BRANCH}}",
+      "head_sha": "{{SHA}}",
+      "html_url": "https://github.com/acme/widget/actions/runs/9001",
+      "created_at": "2026-11-09T12:00:00Z",
+      "updated_at": "2026-11-09T12:04:30Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 9002,
+      "name": "Lint",
+      "display_title": "Fix the parser",
+      "run_number": 17,
+      "event": "push",
+      "status": "in_progress",
+      "conclusion": null,
+      "head_branch": "{{BRANCH}}",
+      "head_sha": "{{SHA}}",
+      "html_url": "https://github.com/acme/widget/actions/runs/9002",
+      "created_at": "2026-11-09T12:00:05Z",
+      "updated_at": "2026-11-09T12:01:00Z",
+      "run_attempt": 1
+    }
+  ]
+}

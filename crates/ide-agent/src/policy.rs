@@ -1,0 +1,543 @@
+//! Which calls run on their own, which ask the user first and which are refused (E27, E19): by the thread's profile
+//! and approval mode, the rules the user stored for the project, and the sandbox. Destructive git commands always
+//! ask, whatever the mode or the rules.
+
+use serde::{Deserialize, Serialize};
+
+/// Which tools the model is offered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Profile {
+    /// Tools that read: files, search, diagnostics, the web. "Nur fragen".
+    Ask,
+    /// Also editing files and running commands. "Schreiben".
+    Write,
+}
+
+/// How much runs without asking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Approval {
+    /// Everything but reading in the project asks; new threads start here.
+    Manual,
+    /// Edits in the project run on their own; commands and web requests ask.
+    Edits,
+    /// Everything runs on their own, except destructive git commands.
+    All,
+}
+
+/// A permission the user stored for a project.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Rule {
+    /// Commands that start with these words, each part of a chained command alike.
+    Command {
+        /// The words, such as `cargo test`.
+        prefix: String,
+    },
+    /// Edits and writes in the project.
+    Edits,
+    /// Web requests to this host.
+    Fetch {
+        /// The host, such as `docs.rs`.
+        host: String,
+    },
+}
+
+/// What a call does, as far as the decision needs it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Action {
+    /// Reads at a path; `inside` when it lies in the project or an allowed folder.
+    Read {
+        /// The path as the user reads it.
+        path: String,
+        /// Whether it lies in the project or an allowed folder.
+        inside: bool,
+    },
+    /// Writes at a path.
+    Write {
+        /// The path as the user reads it.
+        path: String,
+        /// Whether it lies in the project or an allowed folder.
+        inside: bool,
+    },
+    /// Runs a command line.
+    Command(String),
+    /// Requests a web page.
+    Fetch {
+        /// The page's host.
+        host: String,
+    },
+    /// Changes nothing outside the thread, such as the to-do list.
+    Internal,
+}
+
+/// What happens to a call.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Verdict {
+    /// It runs.
+    Allow,
+    /// The user decides first.
+    Ask {
+        /// The rule the user may store instead of answering each time; none for calls that always ask.
+        rule: Option<Rule>,
+        /// Why it asks, beyond the call itself.
+        reason: Option<Reason>,
+        /// The path outside the project that made it ask.
+        blocked_path: Option<String>,
+        /// Whether no answer may be preselected as allowing.
+        risky: bool,
+    },
+    /// It is refused, for this reason.
+    Deny(Refusal),
+}
+
+/// Why a call is refused.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Refusal {
+    /// The thread may only read.
+    ReadOnly,
+    /// The thread's sandbox has no network.
+    NoNetwork,
+    /// The path lies outside the project and the folders the thread's sandbox allows.
+    OutsideSandbox(String),
+}
+
+impl Refusal {
+    /// What the model reads.
+    pub(crate) fn for_model(&self) -> String {
+        match self {
+            Refusal::ReadOnly => "this thread may only read".into(),
+            Refusal::NoNetwork => "the thread's sandbox has no network".into(),
+            Refusal::OutsideSandbox(path) => {
+                format!("{path} lies outside the project and the folders the thread's sandbox allows")
+            }
+        }
+    }
+}
+
+/// Why a call asks, beyond the call itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reason {
+    /// The path lies outside the project.
+    Outside,
+    /// The command destroys work that git cannot bring back.
+    Destructive(Destructive),
+}
+
+/// A git command that destroys work git cannot bring back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Destructive {
+    /// `git push --force` rewrites the remote's history.
+    ForcePush,
+    /// `git reset --hard` discards uncommitted changes.
+    ResetHard,
+    /// `git clean -f` deletes untracked files.
+    Clean,
+}
+
+/// The thread's settings that decide.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Policy {
+    /// The tools offered.
+    pub profile: Profile,
+    /// How much runs without asking.
+    pub approval: Approval,
+    /// Whether the thread's sandbox is on: no paths beyond the project and the allowed folders, no network.
+    pub sandbox: bool,
+    /// The rules stored for the project.
+    pub rules: Vec<Rule>,
+}
+
+impl Policy {
+    /// What happens to a call that does `action`.
+    pub fn decide(&self, action: &Action) -> Verdict {
+        match action {
+            Action::Internal => Verdict::Allow,
+            Action::Read { inside: true, .. } => Verdict::Allow,
+            Action::Read { path, inside: false } => self.outside(path, None),
+            Action::Write { path, inside } => {
+                if self.profile == Profile::Ask {
+                    return Verdict::Deny(Refusal::ReadOnly);
+                }
+                if !inside {
+                    return self.outside(path, None);
+                }
+                if self.approval != Approval::Manual || self.rules.contains(&Rule::Edits) {
+                    Verdict::Allow
+                } else {
+                    ask(Some(Rule::Edits), None, None, false)
+                }
+            }
+            Action::Command(command) => self.command(command),
+            Action::Fetch { host } => {
+                if self.sandbox {
+                    return Verdict::Deny(Refusal::NoNetwork);
+                }
+                let stored = self.rules.contains(&Rule::Fetch { host: host.clone() });
+                if self.approval == Approval::All || stored {
+                    Verdict::Allow
+                } else {
+                    ask(Some(Rule::Fetch { host: host.clone() }), None, None, false)
+                }
+            }
+        }
+    }
+
+    fn outside(&self, path: &str, rule: Option<Rule>) -> Verdict {
+        if self.sandbox {
+            return Verdict::Deny(Refusal::OutsideSandbox(path.to_string()));
+        }
+        if self.approval == Approval::All {
+            return Verdict::Allow;
+        }
+        ask(rule, Some(Reason::Outside), Some(path.to_string()), false)
+    }
+
+    fn command(&self, command: &str) -> Verdict {
+        if self.profile == Profile::Ask {
+            return Verdict::Deny(Refusal::ReadOnly);
+        }
+        if let Some(why) = destructive_git(command) {
+            return ask(None, Some(Reason::Destructive(why)), None, true);
+        }
+        if self.approval == Approval::All {
+            return Verdict::Allow;
+        }
+        let prefixes: Vec<&str> = self
+            .rules
+            .iter()
+            .filter_map(|rule| match rule {
+                Rule::Command { prefix } => Some(prefix.as_str()),
+                _ => None,
+            })
+            .collect();
+        let parts = segments(command);
+        let covered = !parts.is_empty()
+            && parts.iter().all(|part| {
+                let words = words(part);
+                prefixes.iter().any(|prefix| starts_with_words(&words, prefix))
+            });
+        if covered {
+            Verdict::Allow
+        } else {
+            ask(suggested_rule(command), None, None, false)
+        }
+    }
+}
+
+fn ask(rule: Option<Rule>, reason: Option<Reason>, blocked_path: Option<String>, risky: bool) -> Verdict {
+    Verdict::Ask {
+        rule,
+        reason,
+        blocked_path,
+        risky,
+    }
+}
+
+/// The rule to offer for `command`: its program and, where the next word is a subcommand, that word too.
+fn suggested_rule(command: &str) -> Option<Rule> {
+    let parts = segments(command);
+    let [part] = parts.as_slice() else {
+        return None;
+    };
+    let words = words(part);
+    let program = words.iter().find(|w| !w.contains('='))?;
+    let at = words.iter().position(|w| w == program)?;
+    let prefix = match words.get(at + 1) {
+        Some(sub) if sub.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && !sub.contains('/') => {
+            format!("{program} {sub}")
+        }
+        _ => program.clone(),
+    };
+    Some(Rule::Command { prefix })
+}
+
+fn starts_with_words(words: &[String], prefix: &str) -> bool {
+    let prefix: Vec<&str> = prefix.split_whitespace().collect();
+    !prefix.is_empty() && words.len() >= prefix.len() && words.iter().zip(&prefix).all(|(w, p)| w == p)
+}
+
+/// The commands of a command line, split at `&&`, `||`, `;`, `|`, `&` and line breaks outside quotes; a command
+/// substitution counts as a command of its own.
+pub(crate) fn segments(command: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut chars = command.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (Some(q), c) if c == q => {
+                quote = None;
+                current.push(c);
+            }
+            (Some('"'), '$') if chars.peek() == Some(&'(') => {
+                parts.push(std::mem::take(&mut current));
+                chars.next();
+            }
+            (Some(_), c) => current.push(c),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                current.push(c);
+            }
+            (None, '\\') => {
+                current.push(c);
+                if let Some(next) = chars.next() {
+                    current.push(next);
+                }
+            }
+            (None, ';' | '|' | '&' | '\n' | '(' | ')' | '`') => parts.push(std::mem::take(&mut current)),
+            (None, '$') if chars.peek() == Some(&'(') => {
+                parts.push(std::mem::take(&mut current));
+                chars.next();
+            }
+            (None, c) => current.push(c),
+        }
+    }
+    parts.push(current);
+    parts
+        .into_iter()
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+        .collect()
+}
+
+/// The words of one command, with quotes removed.
+pub(crate) fn words(command: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut started = false;
+    let mut chars = command.chars();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), c) => current.push(c),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                started = true;
+            }
+            (None, '\\') => {
+                if let Some(next) = chars.next() {
+                    current.push(next);
+                }
+                started = true;
+            }
+            (None, c) if c.is_whitespace() => {
+                if started || !current.is_empty() {
+                    words.push(std::mem::take(&mut current));
+                }
+                started = false;
+            }
+            (None, c) => {
+                current.push(c);
+                started = true;
+            }
+        }
+    }
+    if started || !current.is_empty() {
+        words.push(current);
+    }
+    words
+}
+
+/// How `command` destroys work that git cannot bring back, if it does: a forced push, `reset --hard`, or `clean`
+/// with `-f`.
+pub fn destructive_git(command: &str) -> Option<Destructive> {
+    segments(command).iter().find_map(|part| destructive_part(&words(part)))
+}
+
+fn destructive_part(words: &[String]) -> Option<Destructive> {
+    let git = words.iter().position(|w| w == "git" || w.ends_with("/git"))?;
+    let mut rest = words[git + 1..].iter();
+    let sub = loop {
+        let word = rest.next()?;
+        match word.as_str() {
+            "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" => {
+                rest.next();
+            }
+            w if w.starts_with('-') => {}
+            w => break w,
+        }
+    };
+    let args: Vec<&str> = rest.map(String::as_str).collect();
+    let short = |flag: char| {
+        args.iter()
+            .any(|a| a.starts_with('-') && !a.starts_with("--") && a[1..].contains(flag))
+    };
+    match sub {
+        "push"
+            if args
+                .iter()
+                .any(|a| a.starts_with("--force") || (a.starts_with('+') && a.len() > 1) || *a == "--mirror")
+                || short('f') =>
+        {
+            Some(Destructive::ForcePush)
+        }
+        "reset" if args.contains(&"--hard") => Some(Destructive::ResetHard),
+        "clean" if (short('f') || args.contains(&"--force")) && !short('n') && !args.contains(&"--dry-run") => {
+            Some(Destructive::Clean)
+        }
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn policy(approval: Approval, rules: Vec<Rule>) -> Policy {
+        Policy {
+            profile: Profile::Write,
+            approval,
+            sandbox: false,
+            rules,
+        }
+    }
+
+    #[test]
+    fn destructive_git_commands_are_found_in_any_spelling() {
+        for command in [
+            "git push --force",
+            "git push -f origin main",
+            "git -C repo push origin +main",
+            "git push --force-with-lease",
+            "cd x && git reset --hard HEAD~1",
+            "git clean -fd",
+            "git clean -xdf",
+            "/usr/bin/git clean --force",
+            "echo ok; git push -uf origin x",
+        ] {
+            assert!(destructive_git(command).is_some(), "{command}");
+        }
+        for command in [
+            "git push origin main",
+            "git reset --soft HEAD~1",
+            "git clean -n",
+            "git clean -fn",
+            "echo 'git push --force'",
+            "git log --format=%f",
+        ] {
+            assert!(destructive_git(command).is_none(), "{command}");
+        }
+    }
+
+    #[test]
+    fn destructive_git_asks_even_when_everything_is_allowed_and_offers_no_rule() {
+        let all = policy(
+            Approval::All,
+            vec![Rule::Command {
+                prefix: "git push".into(),
+            }],
+        );
+        let Verdict::Ask { rule, risky, .. } = all.decide(&Action::Command("git push -f".into())) else {
+            panic!()
+        };
+        assert_eq!((rule, risky), (None, true));
+        assert_eq!(all.decide(&Action::Command("git push".into())), Verdict::Allow);
+    }
+
+    #[test]
+    fn a_stored_prefix_allows_only_commands_whose_every_part_it_covers() {
+        let manual = policy(
+            Approval::Manual,
+            vec![Rule::Command {
+                prefix: "cargo test".into(),
+            }],
+        );
+        assert_eq!(
+            manual.decide(&Action::Command("cargo test -p x".into())),
+            Verdict::Allow
+        );
+        assert_eq!(
+            manual.decide(&Action::Command("cargo test && cargo test --doc".into())),
+            Verdict::Allow
+        );
+        for command in [
+            "cargo test && rm -rf /",
+            "cargo test $(rm -rf /)",
+            "cargo testing",
+            "cargo",
+        ] {
+            assert!(
+                matches!(manual.decide(&Action::Command(command.into())), Verdict::Ask { .. }),
+                "{command}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_offered_rule_is_the_program_and_its_subcommand() {
+        let manual = policy(Approval::Manual, vec![]);
+        let offered = |command: &str| match manual.decide(&Action::Command(command.into())) {
+            Verdict::Ask { rule, .. } => rule,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(
+            offered("cargo test -p ide-agent"),
+            Some(Rule::Command {
+                prefix: "cargo test".into()
+            })
+        );
+        assert_eq!(
+            offered("RUST_LOG=1 ls -la"),
+            Some(Rule::Command { prefix: "ls".into() })
+        );
+        assert_eq!(offered("ls && pwd"), None);
+    }
+
+    #[test]
+    fn modes_profiles_and_the_sandbox_decide_edits_reads_and_fetches() {
+        let write = |inside| Action::Write {
+            path: "a".into(),
+            inside,
+        };
+        let read_outside = Action::Read {
+            path: "/etc/hosts".into(),
+            inside: false,
+        };
+        let fetch = Action::Fetch { host: "docs.rs".into() };
+        assert!(matches!(
+            policy(Approval::Manual, vec![]).decide(&write(true)),
+            Verdict::Ask { .. }
+        ));
+        assert_eq!(
+            policy(Approval::Manual, vec![Rule::Edits]).decide(&write(true)),
+            Verdict::Allow
+        );
+        assert_eq!(policy(Approval::Edits, vec![]).decide(&write(true)), Verdict::Allow);
+        assert!(matches!(
+            policy(Approval::Edits, vec![]).decide(&write(false)),
+            Verdict::Ask { .. }
+        ));
+        assert!(matches!(
+            policy(Approval::Manual, vec![]).decide(&read_outside),
+            Verdict::Ask {
+                blocked_path: Some(_),
+                ..
+            }
+        ));
+        assert!(matches!(
+            policy(Approval::Edits, vec![]).decide(&fetch),
+            Verdict::Ask { .. }
+        ));
+        assert_eq!(
+            policy(Approval::Manual, vec![Rule::Fetch { host: "docs.rs".into() }]).decide(&fetch),
+            Verdict::Allow
+        );
+        let sandboxed = Policy {
+            sandbox: true,
+            ..policy(Approval::All, vec![])
+        };
+        assert!(matches!(sandboxed.decide(&read_outside), Verdict::Deny(_)));
+        assert!(matches!(sandboxed.decide(&fetch), Verdict::Deny(_)));
+        assert!(matches!(sandboxed.decide(&write(false)), Verdict::Deny(_)));
+        let reader = Policy {
+            profile: Profile::Ask,
+            ..policy(Approval::All, vec![])
+        };
+        assert!(matches!(reader.decide(&write(true)), Verdict::Deny(_)));
+        assert!(matches!(reader.decide(&Action::Command("ls".into())), Verdict::Deny(_)));
+    }
+}

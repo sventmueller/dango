@@ -1,0 +1,78 @@
+//! The environment processes get: the user's login shell's, read once in the background at launch.
+
+use std::sync::{Condvar, Mutex, OnceLock};
+use std::time::Duration;
+
+use ide_process::Supervisor;
+use ide_process::shell_env::{self, CaptureError};
+
+/// How long a slow shell startup may take before the app falls back to its own environment.
+const CAPTURE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Where launchd's PATH lacks the usual places for developer tools on a Mac.
+const FALLBACK_PATHS: [&str; 6] = [
+    "/opt/homebrew/bin",
+    "/opt/homebrew/sbin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+];
+
+static ENVIRONMENT: OnceLock<Vec<(String, String)>> = OnceLock::new();
+static READY: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
+
+/// Reads the login shell's environment on a thread of its own.
+pub fn start() {
+    let _ = std::thread::Builder::new().name("login-env".into()).spawn(|| {
+        let home = ide_core::paths::home();
+        let environment =
+            match shell_env::capture(Supervisor::global(), &shell_env::user_shell(), &home, CAPTURE_TIMEOUT) {
+                Ok(environment) => environment,
+                Err(error) => {
+                    crate::diag::report("login shell environment", describe(&error));
+                    fallback()
+                }
+            };
+        let _ = ENVIRONMENT.set(environment);
+        let (lock, ready) = &READY;
+        *lock.lock().unwrap_or_else(|e| e.into_inner()) = true;
+        ready.notify_all();
+    });
+}
+
+/// The environment, once it is known.
+pub fn get() -> Option<&'static [(String, String)]> {
+    ENVIRONMENT.get().map(Vec::as_slice)
+}
+
+/// The environment, waiting up to `timeout` for it.
+pub fn wait(timeout: Duration) -> Option<&'static [(String, String)]> {
+    let (lock, ready) = &READY;
+    let guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = ready
+        .wait_timeout_while(guard, timeout, |done| !*done)
+        .unwrap_or_else(|e| e.into_inner());
+    get()
+}
+
+fn describe(error: &CaptureError) -> String {
+    match error {
+        CaptureError::Start(e) => format!("could not start the shell: {e}"),
+        CaptureError::Timeout => "the shell did not finish in time".into(),
+        CaptureError::NoEnvironment => "the shell printed no environment".into(),
+    }
+}
+
+/// The app's own environment with the usual tool folders on its PATH.
+fn fallback() -> Vec<(String, String)> {
+    let mut environment: Vec<(String, String)> = std::env::vars().filter(|(name, _)| name != "PATH").collect();
+    let home = ide_core::paths::home();
+    let mut path: Vec<String> = [".cargo/bin", ".local/bin", "go/bin"]
+        .iter()
+        .map(|dir| home.join(dir).to_string_lossy().into_owned())
+        .collect();
+    path.extend(FALLBACK_PATHS.iter().map(ToString::to_string));
+    environment.push(("PATH".into(), path.join(":")));
+    environment
+}

@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "El dictat converteix el que dius en text a l’editor i al camp d’entrada de les pestanyes d’IA.";

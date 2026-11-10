@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Sanelu muuttaa puheesi tekstiksi editorissa ja AI-välilehtien syöttökentässä.";

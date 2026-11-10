@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Diktování převádí mluvené slovo na text v editoru a ve vstupním poli panelů AI.";

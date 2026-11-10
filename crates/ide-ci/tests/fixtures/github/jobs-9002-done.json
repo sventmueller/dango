@@ -1,0 +1,20 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 81,
+      "run_id": 9002,
+      "name": "clippy",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/acme/widget/actions/runs/9002/job/81",
+      "started_at": "2026-11-09T12:00:20Z",
+      "completed_at": "2026-11-09T12:03:20Z",
+      "steps": [
+        { "name": "Set up job", "status": "completed", "conclusion": "success", "number": 1 },
+        { "name": "Run cargo clippy", "status": "completed", "conclusion": "success", "number": 2 },
+        { "name": "Post job cleanup", "status": "completed", "conclusion": "success", "number": 3 }
+      ]
+    }
+  ]
+}

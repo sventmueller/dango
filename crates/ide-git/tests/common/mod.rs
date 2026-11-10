@@ -1,0 +1,145 @@
+//! Temporary repositories for the tests, kept apart from the user's git configuration unless a test asks for it.
+
+#![allow(dead_code, reason = "each test file uses a different part")]
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+use ide_git::{Git, Repository};
+use ide_process::Supervisor;
+use ide_process::shell_env::{capture, user_shell};
+
+/// A folder of its own for one test, deleted at the end.
+pub struct Scratch {
+    pub dir: PathBuf,
+    /// The login shell's environment, for a test of the user's own git and configuration.
+    users: Option<Vec<(String, String)>>,
+    program: PathBuf,
+}
+
+impl Scratch {
+    pub fn new(name: &str) -> Scratch {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("ide-git-test-{name}-{}-{n}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("home")).unwrap();
+        Scratch {
+            dir: dir.canonicalize().unwrap(),
+            users: None,
+            program: PathBuf::from("/usr/bin/git"),
+        }
+    }
+
+    /// A folder whose git is the user's own: the git on the login shell's PATH, with their HOME and global
+    /// configuration, as the app runs it.
+    pub fn with_users_git(name: &str) -> Scratch {
+        let mut scratch = Scratch::new(name);
+        let env = capture(&Supervisor::new(), &user_shell(), &scratch.dir, Duration::from_secs(30))
+            .expect("the login shell's environment");
+        scratch.program = env
+            .iter()
+            .filter(|(key, _)| key == "PATH")
+            .flat_map(|(_, path)| path.split(':'))
+            .map(|dir| Path::new(dir).join("git"))
+            .find(|candidate| candidate.is_file())
+            .unwrap_or_else(|| PathBuf::from("/usr/bin/git"));
+        scratch.users = Some(env);
+        scratch
+    }
+
+    pub fn path(&self, name: &str) -> PathBuf {
+        self.dir.join(name)
+    }
+
+    /// The environment the app would pass, without the user's or the system's git configuration.
+    pub fn environment(&self) -> Vec<(String, String)> {
+        if let Some(env) = &self.users {
+            return env.clone();
+        }
+        vec![
+            ("PATH".into(), "/usr/bin:/bin:/usr/sbin:/sbin".into()),
+            ("HOME".into(), self.path("home").to_string_lossy().into_owned()),
+            ("GIT_CONFIG_GLOBAL".into(), "/dev/null".into()),
+            ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
+        ]
+    }
+
+    pub fn git(&self) -> Git {
+        Git::new(&Supervisor::new(), self.environment())
+    }
+
+    /// A new repository on `main` with a user, and a first commit of `files` unless there are none.
+    pub fn repository(&self, name: &str, files: &[(&str, &str)]) -> Repository {
+        let root = self.path(name);
+        std::fs::create_dir_all(&root).unwrap();
+        self.raw(&root, &["init", "--quiet", "--initial-branch=main"]);
+        self.raw(&root, &["config", "user.name", "Test"]);
+        self.raw(&root, &["config", "user.email", "test@example.org"]);
+        for (path, content) in files {
+            write(&root, path, content);
+        }
+        if !files.is_empty() {
+            self.raw(&root, &["add", "--all"]);
+            self.raw(&root, &["commit", "--quiet", "-m", "first"]);
+        }
+        self.git().discover(&root).unwrap()
+    }
+
+    /// Runs git directly, for setting up what the test then looks at; panics when git fails.
+    pub fn raw(&self, dir: &Path, args: &[&str]) -> String {
+        let output = Command::new(&self.program)
+            .args(args)
+            .current_dir(dir)
+            .env_clear()
+            .envs(self.environment())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    }
+
+    /// Like `raw`, but returns whether git succeeded.
+    pub fn try_raw(&self, dir: &Path, args: &[&str]) -> bool {
+        Command::new(&self.program)
+            .args(args)
+            .current_dir(dir)
+            .env_clear()
+            .envs(self.environment())
+            .output()
+            .unwrap()
+            .status
+            .success()
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
+}
+
+pub fn write(root: &Path, path: &str, content: &str) {
+    write_bytes(root, path, content.as_bytes());
+}
+
+pub fn write_bytes(root: &Path, path: &str, content: &[u8]) {
+    let full = root.join(path);
+    std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+    std::fs::write(full, content).unwrap();
+}
+
+pub fn read(root: &Path, path: &str) -> String {
+    std::fs::read_to_string(root.join(path)).unwrap()
+}
+
+/// Lines `1` to `n`, one per line.
+pub fn numbered(n: usize) -> String {
+    (1..=n).map(|i| format!("line {i}\n")).collect()
+}

@@ -1,0 +1,789 @@
+//! A running `claude` process: frames in, frames out, the thread it fills and the requests either side waits on.
+//!
+//! Everything that reads or writes the pipes runs on threads of its own; the methods only queue a line or take a
+//! short lock, so the UI never waits for the CLI.
+
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::marker::PhantomData;
+use std::path::PathBuf;
+use std::process::{ChildStdin, ChildStdout};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::sync::{Arc, Mutex, MutexGuard, Weak};
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant, SystemTime};
+
+use ide_process::tail::{self, Tail};
+use ide_process::{Kind, ProcessId, Supervisor};
+use ide_thread::{
+    Answer as QuestionAnswer, Change, Decision, EntryKind, ErrorKind, Lane, Notice, Thread, Update, UserMessage,
+};
+use serde_json::{Value, json};
+
+use crate::capabilities::Capabilities;
+use crate::control::{
+    self, Answer, ContextUsage, ControlError, Incoming, InitializeResult, InterruptResult, PermissionAnswer,
+    PermissionAsk, PlanAnswer, Request, RewindResult, TaskOutput, UsageReport,
+};
+use crate::input;
+use crate::launch::Launch;
+use crate::mapping::{self, Mapper};
+use crate::protocol::{self, ControlResponse, Message, System};
+
+/// What the stderr tail keeps.
+const STDERR_LIMIT: usize = 64 * 1024;
+
+/// Words in the CLI's output that mean it has no usable sign-in.
+const SIGN_IN_HINTS: [&str; 3] = ["Not logged in", "Please run /login", "Invalid API key"];
+
+/// What a session tells the UI, on the session's reader thread.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Event {
+    /// The thread changed; read it with `Session::with_thread`.
+    Changed(Vec<Change>),
+    /// The CLI reported its commands, tools, models or account anew.
+    Capabilities,
+    /// Something keeps the session from working, such as a missing sign-in.
+    Failed(SessionError),
+    /// The process ended; its last error output is attached.
+    Ended {
+        /// The end of what the CLI wrote to stderr.
+        stderr: String,
+    },
+}
+
+/// Why a session cannot do what was asked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SessionError {
+    /// The `claude` executable is not there.
+    NotFound(PathBuf),
+    /// The process did not start.
+    Start(String),
+    /// The CLI has no usable sign-in; the user signs in by running `claude` in a terminal, never through the app.
+    SignInRequired(String),
+    /// The CLI refused a guarded rewind (`Launch::rewind`) and ended; the same rewind fails again, so the session is
+    /// resumed without `resume_at`, `resume_drops_turn` and `fork_session`.
+    RewindRejected(String),
+    /// The CLI has no request with this id waiting for an answer.
+    UnknownRequest(String),
+    /// The process has ended.
+    Closed,
+}
+
+impl std::fmt::Display for SessionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SessionError::NotFound(path) => write!(f, "{} not found", path.display()),
+            SessionError::Start(why) => write!(f, "claude did not start: {why}"),
+            SessionError::SignInRequired(why) => write!(f, "sign in by running claude in a terminal: {why}"),
+            SessionError::RewindRejected(why) => write!(f, "the rewind was refused: {why}"),
+            SessionError::UnknownRequest(id) => write!(f, "no request {id} waits for an answer"),
+            SessionError::Closed => f.write_str("the claude process has ended"),
+        }
+    }
+}
+
+impl std::error::Error for SessionError {}
+
+enum Outgoing {
+    Line(String),
+    Close,
+}
+
+type After = Box<dyn FnOnce(&Value, &mut State) -> Vec<Update> + Send>;
+type Sink = Box<dyn Fn(Event) + Send + Sync>;
+
+struct Pending {
+    reply: Sender<Result<Value, ControlError>>,
+    after: Option<After>,
+}
+
+struct State {
+    mapper: Mapper,
+    thread: Thread,
+    asks: HashMap<String, PermissionAsk>,
+    capabilities: Capabilities,
+    /// The CLI refused `get_context_usage`, so it is not asked after turns any more.
+    context_refused: bool,
+}
+
+struct Shared {
+    supervisor: Supervisor,
+    process: ProcessId,
+    writer: Mutex<Option<Sender<Outgoing>>>,
+    state: Mutex<State>,
+    pending: Mutex<HashMap<String, Pending>>,
+    sink: Sink,
+    next: AtomicU64,
+    stderr: Arc<Mutex<Tail>>,
+    stderr_reader: Mutex<Option<JoinHandle<()>>>,
+    closed: AtomicBool,
+    end_expected: AtomicBool,
+    sign_in_reported: AtomicBool,
+}
+
+/// A running Claude session; clones share it. It runs until `stop`, `close_input` or the supervisor ends it.
+#[derive(Clone)]
+pub struct Session {
+    shared: Arc<Shared>,
+}
+
+/// The answer to a control request, once it comes; dropping it leaves the request running.
+pub struct Reply<T> {
+    rx: Receiver<Result<Value, ControlError>>,
+    id: String,
+    deadline: Instant,
+    shared: Weak<Shared>,
+    answer: PhantomData<fn() -> T>,
+}
+
+impl<T: Answer> Reply<T> {
+    /// Waits for the answer, at most until the request's timeout; a timed-out request is withdrawn.
+    pub fn wait(self) -> Result<T, ControlError> {
+        let left = self.deadline.saturating_duration_since(Instant::now());
+        match self.rx.recv_timeout(left) {
+            Ok(Ok(payload)) => T::read(payload),
+            Ok(Err(error)) => Err(error),
+            Err(RecvTimeoutError::Timeout) => {
+                if let Some(shared) = self.shared.upgrade() {
+                    shared.withdraw(&self.id);
+                }
+                Err(ControlError::Timeout)
+            }
+            Err(RecvTimeoutError::Disconnected) => Err(ControlError::Closed),
+        }
+    }
+
+    /// Waits on a thread of its own and hands the answer to `f` there.
+    pub fn then(self, f: impl FnOnce(Result<T, ControlError>) + Send + 'static) {
+        let _ = std::thread::Builder::new()
+            .name("claude-reply".into())
+            .spawn(move || f(self.wait()));
+    }
+
+    /// The request's id on the wire.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+impl Session {
+    /// Starts `claude` as `launch` describes, filling `thread`, and sends `initialize`.
+    pub fn start(
+        supervisor: &Supervisor,
+        launch: &Launch,
+        thread: Thread,
+        sink: impl Fn(Event) + Send + Sync + 'static,
+    ) -> Result<Session, SessionError> {
+        if !launch.executable.is_file() {
+            return Err(SessionError::NotFound(launch.executable.clone()));
+        }
+        let spawned = supervisor
+            .spawn(launch.command(), Kind::Agent, "claude")
+            .map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => SessionError::NotFound(launch.executable.clone()),
+                _ => SessionError::Start(e.to_string()),
+            })?;
+        let (Some(stdin), Some(stdout), Some(stderr)) = (spawned.stdin, spawned.stdout, spawned.stderr) else {
+            supervisor.stop(spawned.id, Duration::from_millis(500));
+            return Err(SessionError::Start("the pipes are missing".into()));
+        };
+        let (tx, rx) = channel();
+        let close = tx.clone();
+        let stderr_tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
+        let shared = Arc::new(Shared {
+            supervisor: supervisor.clone(),
+            process: spawned.id,
+            writer: Mutex::new(Some(tx)),
+            state: Mutex::new(State {
+                mapper: mapper_for(launch),
+                thread,
+                asks: HashMap::new(),
+                capabilities: Capabilities::default(),
+                context_refused: false,
+            }),
+            pending: Mutex::new(HashMap::new()),
+            sink: Box::new(sink),
+            next: AtomicU64::new(1),
+            stderr: stderr_tail.clone(),
+            stderr_reader: Mutex::new(None),
+            closed: AtomicBool::new(false),
+            end_expected: AtomicBool::new(false),
+            sign_in_reported: AtomicBool::new(false),
+        });
+        let weak = Arc::downgrade(&shared);
+        supervisor.on_stop(spawned.id, move || {
+            if let Some(shared) = weak.upgrade() {
+                shared.end_expected.store(true, Ordering::SeqCst);
+            }
+            let _ = close.send(Outgoing::Close);
+        });
+        let started = spawn_threads(&shared, stdin, rx, stdout, stderr, stderr_tail);
+        if let Err(e) = started {
+            supervisor.stop(spawned.id, Duration::from_millis(500));
+            return Err(SessionError::Start(e.to_string()));
+        }
+        let session = Session { shared };
+        session.initialize(launch);
+        if launch.resume.is_some() {
+            drop(session.usage());
+        }
+        Ok(session)
+    }
+
+    fn initialize(&self, launch: &Launch) {
+        let request = Request::Initialize {
+            per_task_stop: true,
+            progress_summaries: launch.progress_summaries,
+            forward_subagent_text: launch.forward_subagent_text,
+        };
+        let weak = Arc::downgrade(&self.shared);
+        let reply: Reply<InitializeResult> = self.request(
+            request,
+            Some(Box::new(move |payload, state| {
+                let Ok(result) = InitializeResult::read(payload.clone()) else {
+                    return Vec::new();
+                };
+                state.capabilities.learn_initialize(&result);
+                if let Some(shared) = weak.upgrade() {
+                    shared.emit_later(Event::Capabilities);
+                    if result.signed_out() {
+                        shared.sign_in_required("Not logged in".into());
+                    }
+                }
+                vec![result.billing()]
+            })),
+        );
+        drop(reply);
+    }
+
+    /// Sends `message` as a new prompt and returns the CLI's id for it, which rewinding names.
+    pub fn send(&self, message: UserMessage) -> Result<String, SessionError> {
+        if self.shared.closed.load(Ordering::SeqCst) {
+            return Err(SessionError::Closed);
+        }
+        let uuid = input::uuid();
+        let frame = input::user_frame(&message, &uuid);
+        let changes = {
+            let mut state = self.shared.lock_state();
+            let mut updates = Vec::new();
+            if state.thread.title().is_empty() {
+                let title: String = message
+                    .text
+                    .lines()
+                    .next()
+                    .unwrap_or_default()
+                    .chars()
+                    .take(80)
+                    .collect();
+                if !title.trim().is_empty() {
+                    updates.push(Update::Title(title.trim().to_string()));
+                }
+            }
+            updates.extend(state.mapper.user_message(message, &uuid, SystemTime::now()));
+            state.thread.apply_all(updates)
+        };
+        self.shared.write(&frame)?;
+        self.shared.emit_changes(changes);
+        Ok(uuid)
+    }
+
+    /// Answers the permission request `request_id`.
+    pub fn answer(&self, request_id: &str, answer: PermissionAnswer) -> Result<(), SessionError> {
+        let decision = |ask: &PermissionAsk| match &answer {
+            PermissionAnswer::Allow { updated_input, always } => Decision::Allowed {
+                always: !always.is_empty(),
+                edited: updated_input.as_ref().is_some_and(|input| *input != ask.input),
+            },
+            PermissionAnswer::Deny { message, .. } => Decision::Denied {
+                message: Some(message.clone()),
+            },
+        };
+        self.settle(request_id, |ask| (answer.payload(ask), decision(ask)))
+    }
+
+    /// Answers the AskUserQuestion request `request_id`; several labels of one question are joined by a comma.
+    pub fn answer_questions(&self, request_id: &str, answers: Vec<QuestionAnswer>) -> Result<(), SessionError> {
+        self.settle(request_id, |ask| {
+            let pairs: Vec<(String, String)> = answers.iter().map(|a| (a.question.clone(), a.answer.clone())).collect();
+            let allow = PermissionAnswer::Allow {
+                updated_input: Some(control::question_answer(&ask.input, &pairs)),
+                always: Vec::new(),
+            };
+            (allow.payload(ask), Decision::Answered(answers.clone()))
+        })
+    }
+
+    /// Answers the plan of the ExitPlanMode request `request_id`.
+    pub fn answer_plan(&self, request_id: &str, answer: PlanAnswer) -> Result<(), SessionError> {
+        self.settle(request_id, |ask| (answer.permission().payload(ask), answer.decision()))
+    }
+
+    fn settle(
+        &self,
+        request_id: &str,
+        f: impl FnOnce(&PermissionAsk) -> (Value, Decision),
+    ) -> Result<(), SessionError> {
+        let (frame, changes) = {
+            let mut state = self.shared.lock_state();
+            let Some(ask) = state.asks.remove(request_id) else {
+                return Err(SessionError::UnknownRequest(request_id.to_string()));
+            };
+            let (payload, decision) = f(&ask);
+            let updates = state.mapper.decided(request_id, decision);
+            (
+                control::success_frame(request_id, payload),
+                state.thread.apply_all(updates),
+            )
+        };
+        self.shared.write(&frame)?;
+        self.shared.emit_changes(changes);
+        Ok(())
+    }
+
+    /// Stops the current turn; background tasks keep running.
+    pub fn interrupt(&self) -> Reply<InterruptResult> {
+        self.request(Request::Interrupt, None)
+    }
+
+    /// Changes the permission mode.
+    pub fn set_permission_mode(&self, mode: &str) -> Reply<()> {
+        let mode = mode.to_string();
+        self.request(
+            Request::SetPermissionMode(mode.clone()),
+            Some(Box::new(move |_, _| vec![Update::Mode(mode)])),
+        )
+    }
+
+    /// Changes the model for the following turns; `None` returns to the default.
+    pub fn set_model(&self, model: Option<&str>) -> Reply<()> {
+        let update = model.map(|m| Update::Model(m.to_string()));
+        self.request(
+            Request::SetModel(model.map(str::to_string)),
+            Some(Box::new(move |_, _| update.into_iter().collect())),
+        )
+    }
+
+    /// Changes the reasoning effort of the running session.
+    pub fn set_effort(&self, level: &str) -> Reply<()> {
+        let level = level.to_string();
+        self.request(
+            Request::SetEffort(level.clone()),
+            Some(Box::new(move |_, _| vec![Update::Effort(Some(level))])),
+        )
+    }
+
+    /// Stops one background task or subagent.
+    pub fn stop_task(&self, task_id: &str) -> Reply<()> {
+        self.request(Request::StopTask(task_id.to_string()), None)
+    }
+
+    /// Moves the foreground task of `tool_use_id`, or all of them, to the background; tells whether any moved.
+    pub fn background(&self, tool_use_id: Option<&str>) -> Reply<bool> {
+        self.request(Request::BackgroundTasks(tool_use_id.map(str::to_string)), None)
+    }
+
+    /// Reads the end of a shell or monitor task's output and keeps it on the thread's background item.
+    pub fn task_output(&self, task_id: &str) -> Reply<TaskOutput> {
+        let task = task_id.to_string();
+        self.request(
+            Request::GetTaskOutput(task_id.to_string()),
+            Some(Box::new(move |payload, state| {
+                match TaskOutput::read(payload.clone()) {
+                    Ok(output) => state.mapper.task_output(&task, &output),
+                    Err(_) => Vec::new(),
+                }
+            })),
+        )
+    }
+
+    /// Reads what fills the context window and keeps it on the thread as its breakdown; `full` counts every
+    /// category exactly, which costs token-count calls. The session asks without `full` after every turn itself.
+    pub fn context_usage(&self, full: bool) -> Reply<ContextUsage> {
+        self.request(Request::GetContextUsage { full }, Some(context_after(full)))
+    }
+
+    /// Reads the session's cost and the plan's usage windows; experimental in the CLI. The session's totals in the
+    /// answer tell a resumed session what its next turn costs.
+    pub fn usage(&self) -> Reply<UsageReport> {
+        let prompts = self.shared.lock_state().mapper.prompts();
+        self.request(
+            Request::GetUsage,
+            Some(Box::new(move |payload, state| {
+                if let Ok(report) = <UsageReport as Answer>::read(payload.clone()) {
+                    state.mapper.baseline(&report, prompts);
+                }
+                Vec::new()
+            })),
+        )
+    }
+
+    /// Restores the files the file tools changed since the user message `user_message_id`; experimental in the CLI
+    /// and only with `Launch::file_checkpoints`.
+    pub fn rewind_files(&self, user_message_id: &str, dry_run: bool) -> Reply<RewindResult> {
+        self.request(
+            Request::RewindFiles {
+                user_message_id: user_message_id.to_string(),
+                dry_run,
+            },
+            None,
+        )
+    }
+
+    fn request<T: Answer>(&self, request: Request, after: Option<After>) -> Reply<T> {
+        self.shared.request(request, after)
+    }
+
+    /// Calls `f` with the thread as it is now.
+    pub fn with_thread<R>(&self, f: impl FnOnce(&Thread) -> R) -> R {
+        f(&self.shared.lock_state().thread)
+    }
+
+    /// A copy of the thread as it is now; entries are shared, not copied.
+    pub fn snapshot(&self) -> Thread {
+        self.shared.lock_state().thread.clone()
+    }
+
+    /// What the CLI reported about itself so far.
+    pub fn capabilities(&self) -> Capabilities {
+        self.shared.lock_state().capabilities.clone()
+    }
+
+    /// The supervisor's number for the process.
+    pub fn process(&self) -> ProcessId {
+        self.shared.process
+    }
+
+    /// Whether the process has ended.
+    pub fn is_ended(&self) -> bool {
+        self.shared.closed.load(Ordering::SeqCst)
+    }
+
+    /// Closes the CLI's input; it finishes what it has and ends.
+    pub fn close_input(&self) {
+        self.shared.end_expected.store(true, Ordering::SeqCst);
+        if let Some(writer) = self.shared.lock_writer().take() {
+            let _ = writer.send(Outgoing::Close);
+        }
+    }
+
+    /// Ends the process in the background: input closed, then SIGTERM and SIGKILL to its group after `grace` each.
+    pub fn stop(&self, grace: Duration) {
+        self.shared.end_expected.store(true, Ordering::SeqCst);
+        self.shared.supervisor.stop(self.shared.process, grace);
+    }
+}
+
+fn spawn_threads(
+    shared: &Arc<Shared>,
+    stdin: ChildStdin,
+    rx: Receiver<Outgoing>,
+    stdout: ChildStdout,
+    stderr: impl Read + Send + 'static,
+    stderr_tail: Arc<Mutex<Tail>>,
+) -> std::io::Result<()> {
+    std::thread::Builder::new()
+        .name("claude-writer".into())
+        .spawn(move || write_lines(stdin, &rx))?;
+    let stderr_reader = tail::collect(stderr, stderr_tail)?;
+    *shared.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()) = Some(stderr_reader);
+    let reader = shared.clone();
+    std::thread::Builder::new()
+        .name("claude-reader".into())
+        .spawn(move || reader.read(stdout))?;
+    Ok(())
+}
+
+fn write_lines(mut stdin: ChildStdin, rx: &Receiver<Outgoing>) {
+    while let Ok(Outgoing::Line(line)) = rx.recv() {
+        let written = stdin
+            .write_all(line.as_bytes())
+            .and_then(|()| stdin.write_all(b"\n"))
+            .and_then(|()| stdin.flush());
+        if written.is_err() {
+            break;
+        }
+    }
+}
+
+thread_local! {
+    static LATER: std::cell::RefCell<Vec<Event>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The mapper for a session `launch` starts; a resumed session's totals are not known yet.
+fn mapper_for(launch: &Launch) -> Mapper {
+    let mut mapper = Mapper::new();
+    if launch.resume.is_some() {
+        mapper.resumed();
+    }
+    mapper
+}
+
+/// Keeps a `get_context_usage` answer on the thread.
+fn context_after(full: bool) -> After {
+    Box::new(move |payload, state| match ContextUsage::read(payload.clone()) {
+        Ok(usage) => state.mapper.context(&usage, full, SystemTime::now()),
+        Err(_) => Vec::new(),
+    })
+}
+
+impl Shared {
+    fn request<T: Answer>(self: &Arc<Self>, request: Request, after: Option<After>) -> Reply<T> {
+        let id = format!("req-{}", self.next.fetch_add(1, Ordering::Relaxed));
+        let (tx, rx) = channel();
+        let deadline = Instant::now() + request.timeout();
+        if self.closed.load(Ordering::SeqCst) {
+            let _ = tx.send(Err(ControlError::Closed));
+        } else {
+            self.lock_pending().insert(id.clone(), Pending { reply: tx, after });
+            if self.write(&request.frame(&id)).is_err()
+                && let Some(pending) = self.lock_pending().remove(&id)
+            {
+                let _ = pending.reply.send(Err(ControlError::Closed));
+            }
+        }
+        Reply {
+            rx,
+            id,
+            deadline,
+            shared: Arc::downgrade(self),
+            answer: PhantomData,
+        }
+    }
+
+    /// Asks after a turn how full the context window is, unless the CLI refused before or the session ends.
+    fn ask_context(self: &Arc<Self>) {
+        if self.lock_state().context_refused
+            || self.closed.load(Ordering::SeqCst)
+            || self.end_expected.load(Ordering::SeqCst)
+        {
+            return;
+        }
+        let reply: Reply<ContextUsage> =
+            self.request(Request::GetContextUsage { full: false }, Some(context_after(false)));
+        let weak = Arc::downgrade(self);
+        reply.then(move |result| {
+            if let (Err(ControlError::Refused(_)), Some(shared)) = (result, weak.upgrade()) {
+                shared.lock_state().context_refused = true;
+            }
+        });
+    }
+
+    fn lock_state(&self) -> MutexGuard<'_, State> {
+        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn lock_pending(&self) -> MutexGuard<'_, HashMap<String, Pending>> {
+        self.pending.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn lock_writer(&self) -> MutexGuard<'_, Option<Sender<Outgoing>>> {
+        self.writer.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn write(&self, frame: &Value) -> Result<(), SessionError> {
+        let line = serde_json::to_string(frame).map_err(|e| SessionError::Start(e.to_string()))?;
+        match self.lock_writer().as_ref() {
+            Some(writer) => writer.send(Outgoing::Line(line)).map_err(|_| SessionError::Closed),
+            None => Err(SessionError::Closed),
+        }
+    }
+
+    fn emit(&self, event: Event) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (self.sink)(event)));
+    }
+
+    fn emit_changes(&self, changes: Vec<Change>) {
+        if !changes.is_empty() {
+            self.emit(Event::Changed(changes));
+        }
+    }
+
+    /// Queues `event` for after the state lock is released.
+    fn emit_later(&self, event: Event) {
+        LATER.with(|later| later.borrow_mut().push(event));
+    }
+
+    fn flush_later(&self) {
+        let events = LATER.with(|later| std::mem::take(&mut *later.borrow_mut()));
+        for event in events {
+            self.emit(event);
+        }
+    }
+
+    fn sign_in_required(&self, why: String) {
+        if !self.sign_in_reported.swap(true, Ordering::SeqCst) {
+            self.emit_later(Event::Failed(SessionError::SignInRequired(why)));
+        }
+    }
+
+    fn withdraw(&self, id: &str) {
+        if self.lock_pending().remove(id).is_some() {
+            let _ = self.write(&control::cancel_frame(id));
+        }
+    }
+
+    fn read(self: &Arc<Self>, stdout: ChildStdout) {
+        let mut reader = BufReader::with_capacity(256 * 1024, stdout);
+        let mut line = Vec::new();
+        loop {
+            line.clear();
+            match reader.read_until(b'\n', &mut line) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    let text = String::from_utf8_lossy(&line);
+                    if let Ok(message) = protocol::parse(text.trim_end()) {
+                        self.handle(message);
+                    }
+                    self.flush_later();
+                }
+            }
+        }
+        self.finish();
+    }
+
+    /// Waits briefly for the stderr reader, which may still drain the pipe when stdout ends; a grandchild that
+    /// keeps stderr open must not hold the session's end.
+    fn await_stderr(&self) {
+        let Some(reader) = self.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()).take() else {
+            return;
+        };
+        let deadline = Instant::now() + Duration::from_millis(500);
+        while !reader.is_finished() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn handle(self: &Arc<Self>, message: Message) {
+        match message {
+            Message::ControlResponse(response) => self.answered(response),
+            Message::ControlRequest { request_id, request } => self.incoming(&request_id, &request),
+            Message::ControlCancel { request_id } => {
+                let changes = {
+                    let mut state = self.lock_state();
+                    state.asks.remove(&request_id);
+                    let updates = state.mapper.withdrawn(&request_id);
+                    state.thread.apply_all(updates)
+                };
+                self.emit_changes(changes);
+            }
+            other => {
+                let now = SystemTime::now();
+                let changes = {
+                    let mut state = self.lock_state();
+                    match &other {
+                        Message::System(System::Init(init)) => {
+                            state.capabilities.learn_init(init);
+                            self.emit_later(Event::Capabilities);
+                        }
+                        Message::System(System::CommandsChanged(commands)) => {
+                            state.capabilities.slash_commands = commands
+                                .iter()
+                                .filter_map(|c| c.get("name").and_then(Value::as_str).map(str::to_string))
+                                .collect();
+                            self.emit_later(Event::Capabilities);
+                        }
+                        Message::Assistant(a) => {
+                            if let Some(why) = mapping::sign_in_problem(a) {
+                                self.sign_in_required(why);
+                            }
+                        }
+                        Message::Result(r) => {
+                            if let Some(why) = mapping::rewind_rejected(r) {
+                                self.end_expected.store(true, Ordering::SeqCst);
+                                self.emit_later(Event::Failed(SessionError::RewindRejected(why)));
+                            }
+                        }
+                        _ => {}
+                    }
+                    let updates = state.mapper.map(&other, now);
+                    state.thread.apply_all(updates)
+                };
+                self.emit_changes(changes);
+                if matches!(other, Message::Result(_)) {
+                    self.ask_context();
+                }
+            }
+        }
+    }
+
+    fn answered(&self, response: ControlResponse) {
+        let Some(pending) = self.lock_pending().remove(&response.request_id) else {
+            return;
+        };
+        if response.subtype != "success" {
+            let why = response.error.unwrap_or_else(|| response.subtype.clone());
+            let _ = pending.reply.send(Err(ControlError::Refused(why)));
+            return;
+        }
+        let payload = response.response.unwrap_or_else(|| json!({}));
+        if let Some(after) = pending.after {
+            let changes = {
+                let mut state = self.lock_state();
+                let updates = after(&payload, &mut state);
+                state.thread.apply_all(updates)
+            };
+            self.emit_changes(changes);
+        }
+        let _ = pending.reply.send(Ok(payload));
+    }
+
+    fn incoming(&self, request_id: &str, body: &Value) {
+        match Incoming::read(body) {
+            Incoming::CanUseTool(ask) => {
+                let changes = {
+                    let mut state = self.lock_state();
+                    let updates = state.mapper.permission(request_id, &ask, SystemTime::now());
+                    state.asks.insert(request_id.to_string(), *ask);
+                    state.thread.apply_all(updates)
+                };
+                self.emit_changes(changes);
+            }
+            // Requests the app does not serve, such as hook callbacks or dialogs, are refused rather than allowed.
+            Incoming::Other { subtype } => {
+                let _ = self.write(&control::error_frame(
+                    request_id,
+                    &format!("unsupported control request: {subtype}"),
+                ));
+            }
+        }
+    }
+
+    fn finish(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+        if let Some(writer) = self.lock_writer().take() {
+            let _ = writer.send(Outgoing::Close);
+        }
+        for (_, pending) in self.lock_pending().drain() {
+            let _ = pending.reply.send(Err(ControlError::Closed));
+        }
+        self.await_stderr();
+        let stderr = self.stderr.lock().unwrap_or_else(|e| e.into_inner()).text();
+        let changes = {
+            let mut state = self.lock_state();
+            state.asks.clear();
+            let now = SystemTime::now();
+            let mut updates = state.mapper.ended(now);
+            if !self.end_expected.load(Ordering::SeqCst) {
+                let last = stderr.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or_default();
+                updates.push(Update::Put {
+                    lane: Lane::Main,
+                    key: None,
+                    at: now,
+                    entry: EntryKind::Notice(Notice::Error {
+                        kind: ErrorKind::Process,
+                        message: last.trim().to_string(),
+                    }),
+                });
+            }
+            state.thread.apply_all(updates)
+        };
+        self.emit_changes(changes);
+        if let Some(hint) = SIGN_IN_HINTS.iter().find(|hint| stderr.contains(*hint)) {
+            self.sign_in_required((*hint).to_string());
+        }
+        self.flush_later();
+        self.emit(Event::Ended { stderr });
+    }
+}

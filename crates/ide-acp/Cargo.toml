@@ -1,0 +1,38 @@
+[package]
+name = "ide-acp"
+version = "0.0.0"
+description = "Agents over the Agent Client Protocol (E4, E5): the connection, the register of agents and their installation"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "acp-test-agent"
+path = "src/bin/acp-test-agent.rs"
+test = false
+
+[[bin]]
+name = "acp-record"
+path = "src/bin/acp-record.rs"
+test = false
+
+[dependencies]
+# Pinned on purpose (E4, R2): 2.2 is the release most adapters and clients build on, and the line has broken its
+# API with every major since; raising it is a decision of its own, see docs/acp.md.
+agent-client-protocol = "=2.2.0"
+blocking = "1.7.0"
+futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
+ide-core = { path = "../ide-core" }
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
+ide-thread = { path = "../ide-thread" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+ureq = { version = "3.5.1", default-features = false, features = ["rustls", "platform-verifier"] }
+
+[dev-dependencies]
+sha2 = "0.11.1"

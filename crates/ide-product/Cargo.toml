@@ -1,0 +1,10 @@
+[package]
+name = "ide-product"
+version = "0.0.0"
+description = "The product's name and the identifiers its stored data hangs on"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

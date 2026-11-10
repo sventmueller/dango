@@ -1,0 +1,143 @@
+[workspace]
+members = ["crates/*", "xtask"]
+default-members = [".", "crates/*"]
+
+# Splat's root carries this patch (reference links in short documents); a path dependency's patches do not reach here.
+[patch.crates-io]
+comrak = { path = "../splat/vendor/comrak" }
+
+[workspace.dependencies]
+ide-acp = { path = "crates/ide-acp" }
+ide-agent = { path = "crates/ide-agent" }
+ide-claude = { path = "crates/ide-claude" }
+ide-ci = { path = "crates/ide-ci" }
+ide-core = { path = "crates/ide-core" }
+ide-document = { path = "crates/ide-document" }
+ide-git = { path = "crates/ide-git" }
+ide-lsp = { path = "crates/ide-lsp" }
+ide-process = { path = "crates/ide-process" }
+ide-product = { path = "crates/ide-product" }
+ide-project = { path = "crates/ide-project" }
+ide-terminal = { path = "crates/ide-terminal" }
+ide-thread = { path = "crates/ide-thread" }
+splat-decoder = { path = "../splat/crates/splat-decoder" }
+splat-editor-state = { path = "../splat/crates/splat-editor-state" }
+splat-file-state = { path = "../splat/crates/splat-file-state" }
+splat-git = { path = "../splat/crates/splat-git" }
+splat-i18n = { path = "../splat/crates/splat-i18n" }
+splat-import = { path = "../splat/crates/splat-import" }
+splat-markdown = { path = "../splat/crates/splat-markdown" }
+splat-preview = { path = "../splat/crates/splat-preview" }
+lowspeak = { path = "../lowspeak" }
+splat-render = { path = "../splat/crates/splat-render" }
+block2 = "0.6.2"
+dispatch2 = "0.3"
+libc = "0.2"
+objc2 = "0.6.5"
+objc2-app-kit = "0.3.2"
+objc2-core-foundation = "0.3.2"
+objc2-application-services = "0.3.2"
+objc2-core-graphics = "0.3.2"
+objc2-core-text = "0.3.2"
+objc2-foundation = "0.3.2"
+objc2-user-notifications = { version = "0.3.2", default-features = false, features = ["std", "block2", "bitflags", "UNUserNotificationCenter", "UNNotificationRequest", "UNNotificationContent", "UNNotificationTrigger", "UNNotificationSound"] }
+objc2-security = { version = "0.3.2", default-features = false, features = ["std", "objc2", "SecBase", "SecTrust"] }
+objc2-web-kit = "0.3.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+too_many_lines = "warn"
+allow_attributes_without_reason = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+
+[package]
+name = "ide-app"
+# The app version is in VERSION; xtask writes it into Info.plist.
+version = "0.0.0"
+description = "Native macOS editor for working with coding agents"
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "ide"
+path = "src/main.rs"
+
+# The sandboxed service that decodes pictures; it uses splat-decoder alone, so it links no WebKit.
+[[bin]]
+name = "ide-decoder"
+path = "src/decoder_main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-acp.workspace = true
+ide-agent.workspace = true
+ide-claude.workspace = true
+ide-ci.workspace = true
+ide-core.workspace = true
+ide-document.workspace = true
+ide-git.workspace = true
+ide-lsp.workspace = true
+ide-process.workspace = true
+ide-product.workspace = true
+ide-project.workspace = true
+ide-terminal.workspace = true
+ide-thread.workspace = true
+splat-decoder.workspace = true
+splat-editor-state.workspace = true
+splat-file-state.workspace = true
+splat-git.workspace = true
+splat-i18n.workspace = true
+splat-import.workspace = true
+splat-markdown.workspace = true
+splat-preview.workspace = true
+lowspeak = { workspace = true, optional = true }
+splat-render.workspace = true
+block2.workspace = true
+dispatch2.workspace = true
+libc.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-foundation.workspace = true
+objc2-application-services = { workspace = true, optional = true }
+objc2-core-graphics.workspace = true
+objc2-core-text.workspace = true
+objc2-foundation.workspace = true
+objc2-security.workspace = true
+objc2-user-notifications.workspace = true
+objc2-web-kit.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+splat-i18n.workspace = true
+
+[features]
+selftest = ["splat-decoder/selftest", "splat-render/selftest"]
+# Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
+dictation = ["dep:lowspeak", "dep:objc2-application-services"]
+
+# The terminal emulator, ripgrep's searcher and JSON handling are too slow to judge without optimisation.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+overflow-checks = true
