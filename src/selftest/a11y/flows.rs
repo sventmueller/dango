@@ -3,7 +3,7 @@
 //! comments on a plan (`plan`), and opening a folder with ⌘O and from the welcome tab. On the way, the sheet the
 //! secrets check shows before a commit.
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
@@ -12,7 +12,7 @@ use block2::RcBlock;
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message};
-use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSMenuItem, NSSavePanel, NSView, NSWindow};
+use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSSavePanel, NSView, NSWindow};
 use objc2_foundation::{NSRunLoop, NSRunLoopCommonModes, NSTimer};
 
 use super::super::git::sheet_ready;
@@ -22,6 +22,7 @@ use crate::git_panel::selftest as git;
 use crate::selftest::check;
 use crate::util::main_after;
 use crate::window::{Panel, WindowController};
+use splat_i18n::t;
 
 pub const CREDENTIALS: &str = "credentials.txt";
 /// An access key in the shape gitleaks' `aws-access-token` rule looks for; it opens nothing.
@@ -50,10 +51,14 @@ pub fn child_panel(controller: &WindowController) -> Option<Retained<NSWindow>> 
 }
 
 fn class_of_focus(window: &NSWindow) -> String {
-    keys::focused(window).map_or_else(
-        || "nothing".to_string(),
-        |view| view.class().name().to_string_lossy().into_owned(),
-    )
+    keys::focused(window).map_or_else(|| "nothing".to_string(), |view| class_name(&view))
+}
+
+/// The class of `view`, without the subclass key-value observing puts in its place.
+fn class_name(view: &NSView) -> String {
+    let name = view.class().name().to_string_lossy().into_owned();
+    name.strip_prefix("NSKVONotifying_")
+        .map_or(name.clone(), str::to_string)
 }
 
 /// Presses Tab in `window` until the view with the focus is of `class`, at most `limit` times; whether it got there,
@@ -77,7 +82,7 @@ fn tab_to(window: &NSWindow, class: &str, limit: usize) -> (bool, String) {
 /// focus went to another view without a tab typed, and where it went.
 fn control_tab_leaves(window: &NSWindow, class: &str, back: bool) -> (bool, String) {
     let text = keys::focused(window)
-        .filter(|view| view.class().name().to_string_lossy() == class)
+        .filter(|view| class_name(view) == class)
         .and_then(|view| view.downcast::<objc2_app_kit::NSTextView>().ok());
     let Some(text) = text else {
         return (
@@ -323,65 +328,68 @@ pub fn start(root: PathBuf) {
     );
 }
 
-thread_local! {
-    /// Whether the menu of ⌘T is open, as far as the flow knows.
-    static TRACKING: Cell<bool> = const { Cell::new(false) };
-    /// The item the timer found enabled in the open menu.
-    static CHOSEN: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
-}
-
-/// ⌘T opens the menu of new tabs, which offers the terminal. The menu tracks its own keys, which reach only the
-/// active app, so the item is taken while it is open and its action sent once it closed, as choosing it would.
+/// ⌘T opens the page of a new tab with the focus on its first entry; Tab reaches the terminal, and Space opens it in
+/// the page's place with the focus in it.
 fn new_tab(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let Some(window) = controller.window() else { return };
     let before = controller.tab_count();
-    let menu = controller.new_tab_menu();
-    let block = RcBlock::new(move |_timer: NonNull<NSTimer>| {
-        let Some(menu) = &menu else { return };
-        if !TRACKING.with(Cell::get) {
-            return;
-        }
-        let terminal = menu.itemWithTitle(&crate::util::ns(splat_i18n::t("Terminal")));
-        CHOSEN.with(|chosen| *chosen.borrow_mut() = terminal.filter(|item| item.isEnabled()));
-        menu.cancelTracking();
-    });
-    // SAFETY: The block holds the menu, which stays on the main thread, whose run loop calls it.
-    let timer = unsafe { NSTimer::timerWithTimeInterval_repeats_block(0.5, false, &block) };
-    // SAFETY: The main run loop takes the timer in its common modes, which include the one menus track in.
-    unsafe { NSRunLoop::mainRunLoop().addTimer_forMode(&timer, NSRunLoopCommonModes) };
-    TRACKING.with(|t| t.set(true));
     let went = keys::press(&window, "t", 17, COMMAND);
-    TRACKING.with(|t| t.set(false));
-    timer.invalidate();
-    let chosen = CHOSEN.with(|chosen| chosen.borrow_mut().take());
-    let sent = chosen.as_ref().is_some_and(|item| keys::perform(&window, item));
-    let focus = class_of_focus(&window);
+    let entries = controller.new_tab_page_entries().unwrap_or_default();
+    let Some(page_window) = controller.window() else { return };
+    let first = class_of_focus(&page_window);
     check(
-        "⌘T opens the menu of new tabs, whose terminal opens with the focus",
-        sent && controller.tab_count() == before + 1 && focus == "IDETerminalView",
-        format!(
-            "to {went}, terminal chosen {}, sent {sent}, {before} then {} tabs, focus on {focus}",
-            chosen.is_some(),
-            controller.tab_count()
-        ),
+        "⌘T opens the page of a new tab with the focus on its first entry",
+        controller.tab_count() == before + 1
+            && entries.first().is_some_and(|e| e == t("Neue Datei"))
+            && first == "NSButton",
+        format!("to {went}, {entries:?}, focus on {first}"),
+    );
+    let terminal = t("Terminal").to_string();
+    let mut reached = false;
+    for _ in 0..60 {
+        let title = keys::focused(&page_window)
+            .and_then(|v| v.downcast::<objc2_app_kit::NSButton>().ok())
+            .map(|b| b.title().to_string());
+        if title.as_deref() == Some(terminal.as_str()) {
+            reached = true;
+            break;
+        }
+        let _ = keys::press(&page_window, TAB.0, TAB.1, NONE);
+    }
+    if !reached && let Some(button) = button_titled(&page_window, &terminal) {
+        // AppKit lets Tab reach buttons only with the Mac's full keyboard access, which a selftest cannot switch on.
+        let loop_views = keys::key_view_loop(&page_window, &[]);
+        reached = keys::linked(&button, &loop_views) && page_window.makeFirstResponder(Some(&button));
+    }
+    if reached {
+        let _ = keys::press(&page_window, SPACE.0, SPACE.1, NONE);
+    }
+    let focus = controller.window().map(|w| class_of_focus(&w)).unwrap_or_default();
+    check(
+        "Tab reaches the terminal on the page, and Space opens it in the page's place with the focus",
+        reached && controller.tab_count() == before + 1 && focus == "IDETerminalView",
+        format!("{} then {} documents, focus on {focus}", before, controller.tab_count()),
     );
     next_panel(root);
 }
 
-/// ⌥⌘` moves the focus to the other panel.
+/// ⌥⌘` moves the focus to the other document of a tab that shows two.
 fn next_panel(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
+    if let Some(notes) = controller.tab_with_key(&root.join("notes.txt").to_string_lossy()) {
+        controller.select_tab_by_id(notes);
+    }
     let Some(window) = controller.window() else { return };
-    let before = controller.active_panel();
+    let before = controller.selected_tab();
     // The menu shows the shortcut in the keyboard layout's own key, as ⌥⌘< on a German one.
     let (key, modifiers) = keys::shortcut_of(&window, objc2::sel!(ideFocusNextPanel:))
         .unwrap_or(("`".into(), NSEventModifierFlags::Option | COMMAND));
     let went = keys::press(&window, &key, 0, modifiers);
-    let after = controller.active_panel();
+    let after = controller.selected_tab();
     let focus = class_of_focus(&window);
     check(
-        "⌥⌘` moves the focus to the next panel",
+        "⌥⌘` moves the focus to the other document of the tab",
         before.is_some() && after.is_some() && before != after && focus != "nothing",
         format!("{key:?} to {went}, {before:?} then {after:?}, focus on {focus}"),
     );

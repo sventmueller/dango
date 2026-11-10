@@ -1,6 +1,7 @@
-//! The `panels` scenario (I10): tabs open in panels of their own to the right and below, move by the drag code path,
-//! a panel goes with its last tab, a terminal keeps its shell when it moves, and the layout comes back when the
-//! folder opens again.
+//! The `panels` scenario (E57): every document opens in a native tab of its own, the tabs of a folder share one tab
+//! bar, the sidebar follows the tab in front without changing, a document opens beside another in its tab and closing
+//! one side leaves the other, a terminal keeps its shell through all of it, and the tabs come back when the folder
+//! opens again.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicIsize, AtomicU32, AtomicU64, Ordering};
@@ -9,21 +10,22 @@ use std::time::{Duration, Instant};
 use ide_process::Supervisor;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use splat_i18n::tf;
 
 use super::{check, finish, snapshot};
 use crate::util::main_after;
-use crate::window::{self, Side, WindowController};
+use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "panels";
-const FILES: [&str; 3] = ["a.rs", "b.rs", "c.rs"];
+const FILES: [&str; 4] = ["a.rs", "b.rs", "c.rs", "d.rs"];
 /// A pause for the window to draw before a picture or a step that needs its layout.
 const PAUSE: Duration = Duration::from_millis(600);
+/// The share of the left document that the tab of a.rs keeps.
+const SHARE: f64 = 0.35;
 
 /// The session of the AI tab, which comes back by its id.
 const SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000bb";
 
-/// Opens an AI tab in the active panel that plays the start of the session `session`.
+/// Opens an AI tab that plays the start of the session `session`.
 pub(super) fn replay_agent(controller: &WindowController, session: &str) -> bool {
     let Some(tab) = crate::agent::open_replay(controller) else {
         return false;
@@ -44,15 +46,10 @@ fn has_session(controller: &WindowController, session: &str) -> bool {
         .any(|tab| tab.session_id().as_deref() == Some(session))
 }
 
-/// The terminal's number, its tab and its shell's process.
+/// The terminal's number, its document and its shell's process.
 static TERMINAL: AtomicU64 = AtomicU64::new(0);
 static TERMINAL_TAB: AtomicIsize = AtomicIsize::new(-1);
 static SHELL: AtomicU32 = AtomicU32::new(0);
-
-thread_local! {
-    /// The panels' sizes when the window closed.
-    static SHARES: std::cell::RefCell<Vec<f64>> = const { std::cell::RefCell::new(Vec::new()) };
-}
 
 fn window_of(root: &Path) -> Option<Retained<WindowController>> {
     let controller = window::open_windows()
@@ -65,14 +62,9 @@ fn window_of(root: &Path) -> Option<Retained<WindowController>> {
     controller
 }
 
-/// The place of the panel that holds the tab `id`.
-fn panel_of(controller: &WindowController, id: isize) -> Option<usize> {
-    controller.panel_tab_ids().iter().position(|ids| ids.contains(&id))
-}
-
 fn shown(controller: &WindowController) -> String {
     controller
-        .panel_titles()
+        .window_tabs()
         .iter()
         .map(|titles| format!("[{}]", titles.join(", ")))
         .collect::<Vec<_>>()
@@ -83,6 +75,14 @@ fn tab_of(controller: &WindowController, root: &Path, name: &str) -> isize {
     controller
         .tab_with_key(&root.join(name).to_string_lossy())
         .unwrap_or(-1)
+}
+
+/// Whether the sidebar is in the window of the tab in front.
+fn sidebar_in_front(controller: &WindowController) -> bool {
+    match (controller.sidebar_window(), controller.window()) {
+        (Some(sidebar), Some(front)) => std::ptr::eq(&*sidebar, &*front),
+        _ => false,
+    }
 }
 
 pub(super) fn run() {
@@ -101,7 +101,7 @@ pub(super) fn run() {
 fn opened(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let welcome = controller.selected_tab();
-    for name in FILES {
+    for name in &FILES[..3] {
         controller.open_file(&root.join(name));
     }
     if let Some(welcome) = welcome {
@@ -112,6 +112,18 @@ fn opened(root: PathBuf) {
     if let Some((id, _)) = crate::terminal::inspect::latest() {
         TERMINAL.store(id, Ordering::SeqCst);
     }
+    let tabs = controller.window_tabs();
+    let grouped = controller
+        .tab_windows()
+        .first()
+        .and_then(|window| window.tabbedWindows())
+        .map_or(0, |tabbed| tabbed.count());
+    check(
+        "each document opens in a native tab of its own, all in the window's one tab bar",
+        tabs.len() == 4 && tabs.iter().all(|docs| docs.len() == 1) && grouped == 4 && controller.tab_bar_visible(),
+        format!("{}, {grouped} in the group", shown(&controller)),
+    );
+    check("the tab in front has the sidebar", sidebar_in_front(&controller), "");
     wait_for_shell(root);
 }
 
@@ -124,7 +136,7 @@ fn wait_for_shell(root: PathBuf) {
     fn ask(root: PathBuf, deadline: Instant) {
         main_after(Duration::from_millis(200), move || {
             if shell_now().is_some() || Instant::now() > deadline {
-                split(root);
+                switching(root);
             } else {
                 ask(root, deadline);
             }
@@ -133,131 +145,148 @@ fn wait_for_shell(root: PathBuf) {
     ask(root, deadline);
 }
 
-fn split(root: PathBuf) {
+/// Bringing another tab to the front moves the sidebar along as it was.
+fn switching(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let shell = shell_now();
     check("the terminal's shell starts", shell.is_some(), format!("{shell:?}"));
     SHELL.store(shell.unwrap_or(0), Ordering::SeqCst);
-    let terminal = TERMINAL_TAB.load(Ordering::SeqCst);
-    controller.split_tab(terminal, Side::Right);
+    let before = controller.inspect();
+    let rows = controller.tree_rows();
+    controller.select_tab_by_id(tab_of(&controller, &root, "a.rs"));
+    let after = controller.inspect();
     check(
-        "a tab opens in a panel of its own on the right",
-        controller.panel_tab_ids().len() == 2 && panel_of(&controller, terminal) == Some(1),
+        "another tab in front gets the sidebar as it was: same panel, width and rows",
+        sidebar_in_front(&controller)
+            && before.panel == after.panel
+            && (before.sidebar_width - after.sidebar_width).abs() < 1.0
+            && rows == controller.tree_rows(),
+        format!(
+            "{:?} {:.0} {rows} then {:?} {:.0} {}",
+            before.panel,
+            before.sidebar_width,
+            after.panel,
+            after.sidebar_width,
+            controller.tree_rows()
+        ),
+    );
+    let ids = controller.window_tab_ids();
+    let a = tab_of(&controller, &root, "a.rs");
+    let next = ids
+        .iter()
+        .position(|docs| docs.contains(&a))
+        .and_then(|index| ids.get((index + 1) % ids.len()))
+        .and_then(|docs| docs.first().copied());
+    controller.select_next_tab();
+    check(
+        "⇧⌘] brings the next tab to the front, with the sidebar",
+        next.is_some() && controller.selected_tab() == next && sidebar_in_front(&controller),
+        format!("{:?} after {ids:?}", controller.selected_tab()),
+    );
+    dragged_out(&controller, &root);
+    controller.select_tab_by_id(tab_of(&controller, &root, "a.rs"));
+    main_after(PAUSE, move || beside(root));
+}
+
+/// A tab moved to a window of its own keeps the sidebar's picture while the other window has the sidebar, gets the
+/// sidebar back in front, and joins again with "Merge All Windows".
+fn dragged_out(controller: &WindowController, root: &Path) {
+    let c = tab_of(controller, root, "c.rs");
+    controller.select_tab_by_id(c);
+    let Some(window) = controller.window() else { return };
+    window.moveTabToNewWindow(None);
+    let alone = window.tabbedWindows().is_none_or(|tabbed| tabbed.count() == 1);
+    controller.select_tab_by_id(tab_of(controller, root, "a.rs"));
+    let pictures = controller.sidebar_pictures();
+    let apart_ok = alone && sidebar_in_front(controller) && pictures.iter().filter(|shown| !**shown).count() == 1;
+    controller.select_tab_by_id(c);
+    check(
+        "a tab moved to a window of its own keeps a picture of the sidebar and gets the sidebar in front",
+        apart_ok && sidebar_in_front(controller) && controller.tab_windows().len() == 4,
+        format!("alone {alone}, pictures {pictures:?}, {}", shown(controller)),
+    );
+    window.mergeAllWindows(None);
+    let grouped = window.tabbedWindows().map_or(0, |tabbed| tabbed.count());
+    check(
+        "\"Merge All Windows\" brings it back into the tab bar",
+        grouped == 4,
+        format!("{grouped} in the group"),
+    );
+}
+
+/// A file opens beside the one in front, and the focus moves between the two.
+fn beside(root: PathBuf) {
+    let Some(controller) = window_of(&root) else { return };
+    if let Some(window) = controller.window() {
+        snapshot(&window, "panels-tabs");
+    }
+    let a = tab_of(&controller, &root, "a.rs");
+    let windows = controller.tab_windows().len();
+    controller.open_file_beside(&root.join("d.rs"));
+    let d = tab_of(&controller, &root, "d.rs");
+    check(
+        "a file opens beside the one in front, in its tab",
+        controller.window_tabs().iter().any(|docs| docs == &["a.rs", "d.rs"])
+            && controller.tab_windows().len() == windows,
         shown(&controller),
     );
-    let still = shell_now();
+    controller.select_tab_by_id(a);
+    controller.focus_next_panel();
+    check(
+        "the focus moves on to the other document of the tab",
+        controller.selected_tab() == Some(d),
+        format!("{:?}", controller.selected_tab()),
+    );
+    controller.set_share_of(a, SHARE);
     let alive = crate::terminal::inspect::view(TERMINAL.load(Ordering::SeqCst)).is_some_and(|view| !view.has_exited());
     check(
-        "the moved terminal keeps its shell",
-        alive && still.is_some() && still == shell,
-        format!("{shell:?} then {still:?}"),
+        "the terminal keeps its shell while other tabs come to the front",
+        alive && shell_now() == Some(SHELL.load(Ordering::SeqCst)),
+        format!("{:?}", shell_now()),
     );
-    let marks = controller.panel_marks();
-    check(
-        "the active panel's bar shows the accent, the other does not",
-        marks.iter().filter(|on| **on).count() == 1,
-        format!("{marks:?}"),
-    );
-    let b = tab_of(&controller, &root, "b.rs");
-    controller.split_tab(b, Side::Below);
-    check(
-        "a tab opens in a panel of its own below",
-        controller.panel_tab_ids().len() == 3 && panel_of(&controller, b) == Some(1),
-        shown(&controller),
-    );
-    let labels = controller.panel_labels();
-    check(
-        "VoiceOver tells the panels apart",
-        labels.first() == Some(&tf("Panel {} von {}", &["1", "3"])),
-        labels.join(", "),
-    );
-    let before = controller.active_panel();
-    controller.focus_next_panel();
-    let after = controller.active_panel();
-    check(
-        "the focus moves on to the next panel",
-        before.is_some() && after.is_some() && before != after,
-        format!("{before:?} then {after:?}"),
-    );
-    main_after(PAUSE, move || dragged(root));
+    main_after(PAUSE, move || closing_side(root));
 }
 
-fn dragged(root: PathBuf) {
+/// Closing one of two documents leaves the other alone in its tab; closing a tab's only one closes the tab.
+fn closing_side(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     if let Some(window) = controller.window() {
-        snapshot(&window, "panels-split");
+        snapshot(&window, "panels-beside");
     }
-    let terminal = TERMINAL_TAB.load(Ordering::SeqCst);
-    let c = tab_of(&controller, &root, "c.rs");
-    let Some(target) = panel_of(&controller, terminal) else {
-        check("the terminal's panel is found", false, shown(&controller));
-        finish(SCENARIO);
-        return;
-    };
-    controller.drag_tab_onto(c, target, None, true);
-    check(
-        "a tab dropped on another panel's bar moves there",
-        panel_of(&controller, c) == panel_of(&controller, terminal),
-        shown(&controller),
-    );
-    controller.drag_tab_onto(c, target, Some(Side::Right), false);
-    main_after(PAUSE, move || dropped(root, c, target));
-}
-
-fn dropped(root: PathBuf, c: isize, target: usize) {
-    let Some(controller) = window_of(&root) else { return };
-    if let Some(window) = controller.window() {
-        snapshot(&window, "panels-dragging");
-    }
-    let terminal = TERMINAL_TAB.load(Ordering::SeqCst);
-    let panels = controller.panel_tab_ids().len();
-    controller.drag_tab_onto(c, target, Some(Side::Right), true);
-    check(
-        "a tab dropped on a panel's right edge opens a new panel there",
-        controller.panel_tab_ids().len() == panels + 1
-            && panel_of(&controller, c) == panel_of(&controller, terminal).map(|p| p + 1),
-        shown(&controller),
-    );
+    let windows = controller.tab_windows().len();
     let b = tab_of(&controller, &root, "b.rs");
-    let panels = controller.panel_tab_ids().len();
     controller.close_tab(b);
     check(
-        "closing a panel's last tab closes the panel",
-        controller.panel_tab_ids().len() == panels - 1,
+        "closing a tab's only document closes the tab",
+        controller.tab_windows().len() == windows - 1 && tab_of(&controller, &root, "b.rs") == -1,
         shown(&controller),
     );
-    let still = shell_now();
+    let windows = controller.tab_windows().len();
+    let d = tab_of(&controller, &root, "d.rs");
+    controller.close_tab(d);
     check(
-        "the terminal kept its shell through every move",
-        still.is_some() && still == Some(SHELL.load(Ordering::SeqCst)),
-        format!("{still:?}"),
+        "closing one of two documents leaves the other alone in the tab",
+        controller.window_tabs().iter().any(|docs| docs == &["a.rs"]) && controller.tab_windows().len() == windows,
+        shown(&controller),
     );
+    let a = tab_of(&controller, &root, "a.rs");
+    controller.select_tab_by_id(a);
+    controller.open_file_beside(&root.join("d.rs"));
+    controller.set_share_of(a, SHARE);
+    let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
+    check("an AI thread opens in a tab of its own", replayed, shown(&controller));
     main_after(PAUSE, move || closing(root));
 }
 
 fn closing(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
-    if let Some(window) = controller.window() {
-        snapshot(&window, "panels-moved");
-    }
-    let expected = controller.panel_tab_ids().len();
-    let c = tab_of(&controller, &root, "c.rs");
-    controller.select_tab_by_id(c);
-    let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
-    let with_two = controller.panel_tab_ids().iter().position(|ids| ids.len() == 2);
-    check(
-        "an AI tab joins the active panel",
-        replayed && with_two.is_some() && panel_of(&controller, c) == with_two,
-        shown(&controller),
-    );
-    SHARES.with(|shares| *shares.borrow_mut() = controller.panel_shares());
-    if let Some(window) = controller.window() {
-        window.performClose(None);
-    }
-    main_after(PAUSE * 3, move || reopen(root, expected));
+    let expected = controller.window_tabs();
+    let share = controller.tab_shares().into_iter().flatten().next();
+    controller.close_all_tabs();
+    main_after(PAUSE * 3, move || reopen(root, expected, share));
 }
 
-fn reopen(root: PathBuf, expected: usize) {
+fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     let shell = SHELL.load(Ordering::SeqCst);
     check(
         "closing the window ends its terminal's shell",
@@ -269,49 +298,44 @@ fn reopen(root: PathBuf, expected: usize) {
     );
     let saved = ide_core::layout::load(&root);
     check(
-        "closing the window saves its panels",
+        "closing the window saves its tabs",
         saved.as_ref().is_some_and(|layout| {
-            layout.tab_count() == 4
+            layout.tabs.len() == expected.len()
                 && layout.has(&ide_core::layout::Tab::Agent {
                     session: SESSION.into(),
                 })
+                && layout.tabs.iter().any(|tab| tab.documents.len() == 2)
         }),
         format!("{saved:?}"),
     );
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, root.clone());
-    main_after(PAUSE, move || restored(root, expected));
+    main_after(PAUSE, move || restored(root, expected, share));
 }
 
-fn restored(root: PathBuf, expected: usize) {
+fn restored(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     let Some(controller) = window_of(&root) else { return };
-    let titles = controller.panel_titles();
+    let tabs = controller.window_tabs();
     check(
-        "the panels come back when the folder opens again",
-        titles.len() == expected
-            && titles.first().is_some_and(|t| t == &["a.rs"])
-            && titles.last().is_some_and(|t| t.len() == 2 && t[0] == "c.rs")
-            && titles.get(1).is_some_and(|t| t.len() == 1),
-        shown(&controller),
+        "the tabs come back in their order when the folder opens again, a.rs with d.rs beside it",
+        tabs == expected && tabs.iter().any(|docs| docs == &["a.rs", "d.rs"]),
+        format!("{} after {expected:?}", shown(&controller)),
     );
     check(
-        "the AI tab comes back as its session, played from a recording here",
+        "the AI thread comes back as its session, played from a recording here",
         has_session(&controller, SESSION),
         shown(&controller),
     );
-    let before = SHARES.with(|shares| shares.borrow().clone());
-    let after = controller.panel_shares();
+    let now = controller.tab_shares().into_iter().flatten().next();
     check(
-        "the panels get back their sizes",
-        before.len() == after.len() && before.iter().zip(&after).all(|(a, b)| (a - b).abs() < 0.05),
-        format!("{before:.2?} then {after:.2?}"),
+        "the two documents get back their widths",
+        share.zip(now).is_some_and(|(before, now)| (before - now).abs() < 0.05),
+        format!("{share:.2?} then {now:.2?}"),
     );
     if let Some(window) = controller.window() {
         snapshot(&window, "panels-restored");
     }
-    if let Some(window) = controller.window() {
-        window.performClose(None);
-    }
+    controller.close_all_tabs();
     wind_down(Instant::now());
 }
 

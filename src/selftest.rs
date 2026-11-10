@@ -366,16 +366,25 @@ fn probe_project(root: PathBuf, rows_before: isize) {
         controller.tab_count() == tabs + 1,
         format!("{tabs} then {}", controller.tab_count()),
     );
-    let before = controller.tab_ids();
-    if let Some(window) = controller.window() {
-        window.layoutIfNeeded();
-    }
-    controller.drag_selected_tab_first();
-    let after = controller.tab_ids();
+    let windows = controller.tab_windows();
+    let front = controller.window();
+    let sidebar = controller.sidebar_window();
     check(
-        "dragging a tab to the left moves it first",
-        after.first() == before.last() && after.len() == before.len(),
-        format!("{before:?} then {after:?}"),
+        "the file opens in a native tab of its own, which has the sidebar, and the tab bar shows",
+        windows.len() == 2
+            && windows
+                .last()
+                .zip(front.as_ref())
+                .is_some_and(|(last, front)| std::ptr::eq(&**last, &**front))
+            && sidebar
+                .zip(front.as_ref())
+                .is_some_and(|(sidebar, front)| std::ptr::eq(&*sidebar, &**front))
+            && controller.tab_bar_visible()
+            && windows
+                .first()
+                .and_then(|w| w.tabbedWindows())
+                .is_some_and(|tabbed| tabbed.count() == 2),
+        format!("{:?}", controller.window_tabs()),
     );
     let file = root.join("src/main.rs");
     if let Some(editor) = crate::editor::editor_of(&controller, &file) {

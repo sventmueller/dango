@@ -193,7 +193,6 @@
 "Start:" = "Startup:";
 "Symbolleiste ausblenden" = "Hide Toolbar";
 "Tab schließen" = "Close Tab";
-"Tabs" = "Tabs";
 "Terminal leeren" = "Clear Terminal";
 "Terminal" = "Terminal";
 "Terminal: {}" = "Terminal: {}";
@@ -291,15 +290,12 @@
 
 /* Editor and tabs */
 "Alle sichern" = "Save All";
-"Andere Tabs schließen" = "Close Other Tabs";
 "Auswahl suchen" = "Use Selection for Find";
 "Dieser Editor hält die letzte Kopie der Datei. „Sichern“ stellt sie wieder her." = "This editor holds the last copy of the file. “Save” restores it.";
 "Ein Dokument wiederhergestellt" = "1 document restored";
 "Fassung auf der Platte" = "version on disk";
 "Gehe zu Zeile" = "Go to Line";
 "Gehe zu Zeile …" = "Go to Line…";
-"In eigenem Panel rechts öffnen" = "Open in Panel on the Right";
-"In eigenem Panel unten öffnen" = "Open in Panel Below";
 "Keine Unterschiede." = "No differences.";
 "Kommentar ein/aus" = "Toggle Comment";
 "Meine behalten" = "Keep Mine";
@@ -315,7 +311,6 @@
 "Suchen" = "Find";
 "Suchen und ersetzen …" = "Find and Replace…";
 "Suchen …" = "Find…";
-"Tabs rechts schließen" = "Close Tabs to the Right";
 "Ungesicherte Änderungen an „{}“ verwerfen?" = "Discard unsaved changes to “{}”?";
 "Unterschiede zeigen" = "Show Differences";
 "Unterschiede zwischen der Platte und dem Editor: {}" = "Differences between disk and editor: {}";
@@ -804,10 +799,8 @@
 "… {} weitere Zeilen" = "… {} more lines";
 "⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc to focus or unfocus Claude";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "A single click opens a file in a preview tab";
-"Tab behalten" = "Keep Tab";
 "Tabs:" = "Tabs:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Preview: the next file you open with a single click replaces this tab. A double click keeps it.";
-"{}, Vorschau" = "{}, Preview";
 
 /* Project search */
 "Im Projekt suchen …" = "Find in Project…";
@@ -979,8 +972,6 @@
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Only in trusted folders: CLIs run the project's hooks and settings.";
 
 /* Panels */
-"Nächstes Panel" = "Next Panel";
-"Panel {} von {}" = "Panel {} of {}";
 "⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc to focus or leave {}";
 
 /* Worktree threads (I1) */
@@ -1223,3 +1214,5 @@
 "„{}“ wird als HTML exportiert …" = "Exporting “{}” as HTML…";
 "„{}“ wird als Word-Dokument exportiert …" = "Exporting “{}” as a Word document…";
 "Der Export ließ sich nicht starten." = "The export could not be started.";
+"Daneben öffnen" = "Open to the Side";
+"Zum Dokument daneben" = "Go to the Document Beside";

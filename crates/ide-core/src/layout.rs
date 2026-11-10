@@ -1,25 +1,26 @@
-//! The panels of a project's window and the tabs they show (I10), kept per project in the app's data folder rather
-//! than in the project, since a layout is the user's and not the repository's.
+//! The window tabs of a project's window and the documents they show (E60), kept per project in the app's data folder
+//! rather than in the project, since a layout is the user's and not the repository's.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 
 use crate::paths;
 use crate::store::{Migration, Store};
 
 /// The migrations of a layout file.
-const MIGRATIONS: &[Migration] = &[];
+const MIGRATIONS: &[Migration] = &[panels_to_tabs];
 
-/// The field that holds the tree.
-const FIELD: &str = "panels";
+/// The field that holds the window tabs.
+const FIELD: &str = "tabs";
 
-/// A tab that can be opened again.
+/// A document that can be opened again.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Tab {
-    /// The welcome tab.
+    /// The welcome page.
     Welcome,
     /// A file in an editor.
     Editor {
@@ -36,55 +37,60 @@ pub enum Tab {
         /// The shell's working folder.
         folder: PathBuf,
     },
-    /// A browser tab at a page.
+    /// A browser at a page.
     Browser {
         /// The page.
         url: String,
     },
-    /// An AI tab, opened again by resuming its session.
+    /// An AI thread, opened again by resuming its session.
     Agent {
         /// The agent's id for the session.
         session: String,
     },
 }
 
-/// A panel, or panels beside or above each other.
+/// A window tab: one document, or two side by side.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Node {
-    /// A panel with its tabs, left to right, and which of them shows.
-    Panel {
-        /// The tabs.
-        tabs: Vec<Tab>,
-        /// The index of the tab in front.
-        selected: Option<usize>,
-    },
-    /// Panels split side by side or one above the other.
-    Split {
-        /// Whether the children sit side by side, else one above the other.
-        side_by_side: bool,
-        /// Each child's share of the room, adding up to about 1.
-        shares: Vec<f64>,
-        /// The parts, left to right or top to bottom.
-        children: Vec<Node>,
-    },
+pub struct WindowTab {
+    /// The documents, left to right.
+    pub documents: Vec<Tab>,
+    /// The left document's share of the width while there are two.
+    #[serde(default = "half")]
+    pub share: f64,
 }
 
-impl Node {
-    /// Whether the tree holds `tab`.
-    pub fn has(&self, tab: &Tab) -> bool {
-        match self {
-            Node::Panel { tabs, .. } => tabs.contains(tab),
-            Node::Split { children, .. } => children.iter().any(|child| child.has(tab)),
+fn half() -> f64 {
+    0.5
+}
+
+impl WindowTab {
+    /// A window tab with the one document `tab`.
+    pub fn single(tab: Tab) -> WindowTab {
+        WindowTab {
+            documents: vec![tab],
+            share: half(),
         }
     }
+}
 
-    /// How many tabs the tree holds.
-    pub fn tab_count(&self) -> usize {
-        match self {
-            Node::Panel { tabs, .. } => tabs.len(),
-            Node::Split { children, .. } => children.iter().map(Node::tab_count).sum(),
-        }
+/// The window tabs of a project's window, in the order of its tab bar, and the one in front.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Layout {
+    /// The window tabs.
+    pub tabs: Vec<WindowTab>,
+    /// The index of the window tab in front.
+    pub selected: Option<usize>,
+}
+
+impl Layout {
+    /// Whether a window tab shows `tab`.
+    pub fn has(&self, tab: &Tab) -> bool {
+        self.tabs.iter().any(|window_tab| window_tab.documents.contains(tab))
+    }
+
+    /// How many documents the window tabs show.
+    pub fn document_count(&self) -> usize {
+        self.tabs.iter().map(|window_tab| window_tab.documents.len()).sum()
     }
 }
 
@@ -96,21 +102,21 @@ pub fn file_of(root: &Path) -> PathBuf {
 }
 
 /// The layout saved for the project at `root`, if there is a readable one.
-pub fn load(root: &Path) -> Option<Node> {
+pub fn load(root: &Path) -> Option<Layout> {
     load_from(file_of(root))
 }
 
 /// Saves `layout` for the project at `root`.
-pub fn save(root: &Path, layout: &Node) -> io::Result<()> {
+pub fn save(root: &Path, layout: &Layout) -> io::Result<()> {
     save_to(file_of(root), layout)
 }
 
-fn load_from(file: PathBuf) -> Option<Node> {
+fn load_from(file: PathBuf) -> Option<Layout> {
     let store = Store::load(file, MIGRATIONS);
     serde_json::from_value(store.get(FIELD)?.clone()).ok()
 }
 
-fn save_to(file: PathBuf, layout: &Node) -> io::Result<()> {
+fn save_to(file: PathBuf, layout: &Layout) -> io::Result<()> {
     if let Some(folder) = file.parent() {
         std::fs::create_dir_all(folder)?;
     }
@@ -118,47 +124,74 @@ fn save_to(file: PathBuf, layout: &Node) -> io::Result<()> {
     Store::load(file, MIGRATIONS).set(FIELD, value, MIGRATIONS)
 }
 
+/// The panels of version 1, before every document got a window tab of its own.
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Panels {
+    Panel { tabs: Vec<Tab>, selected: Option<usize> },
+    Split { children: Vec<Panels> },
+}
+
+impl Panels {
+    /// The tabs of the panels, left to right and top to bottom, and the index of the first panel's tab in front.
+    fn flatten(self, into: &mut Layout) {
+        match self {
+            Panels::Panel { tabs, selected } => {
+                if into.selected.is_none() {
+                    into.selected = selected.map(|index| into.tabs.len() + index);
+                }
+                into.tabs.extend(tabs.into_iter().map(WindowTab::single));
+            }
+            Panels::Split { children } => {
+                for child in children {
+                    child.flatten(into);
+                }
+            }
+        }
+    }
+}
+
+/// Version 1 kept panels with tab bars of their own; each of their tabs becomes a window tab, in reading order.
+fn panels_to_tabs(values: &mut Map<String, Value>) {
+    let Some(panels) = values.remove("panels") else { return };
+    let Ok(panels) = serde_json::from_value::<Panels>(panels) else {
+        return;
+    };
+    let mut layout = Layout::default();
+    panels.flatten(&mut layout);
+    if let Ok(tabs) = serde_json::to_value(&layout) {
+        values.insert(FIELD.to_string(), tabs);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn sample() -> Node {
-        Node::Split {
-            side_by_side: true,
-            shares: vec![0.6, 0.4],
-            children: vec![
-                Node::Panel {
-                    tabs: vec![Tab::Editor {
-                        path: PathBuf::from("/p/src/main.rs"),
-                    }],
-                    selected: Some(0),
-                },
-                Node::Split {
-                    side_by_side: false,
-                    shares: vec![0.5, 0.5],
-                    children: vec![
-                        Node::Panel {
-                            tabs: vec![Tab::Terminal {
-                                folder: PathBuf::from("/p"),
-                            }],
-                            selected: Some(0),
+    fn sample() -> Layout {
+        Layout {
+            tabs: vec![
+                WindowTab {
+                    documents: vec![
+                        Tab::Editor {
+                            path: PathBuf::from("/p/src/main.rs"),
                         },
-                        Node::Panel {
-                            tabs: vec![
-                                Tab::Browser {
-                                    url: "http://localhost:5173".into(),
-                                },
-                                Tab::Agent { session: "abc".into() },
-                                Tab::Welcome,
-                                Tab::Untitled {
-                                    recovery: "a1-2-3".into(),
-                                },
-                            ],
-                            selected: Some(1),
+                        Tab::Browser {
+                            url: "http://localhost:5173".into(),
                         },
                     ],
+                    share: 0.6,
                 },
+                WindowTab::single(Tab::Terminal {
+                    folder: PathBuf::from("/p"),
+                }),
+                WindowTab::single(Tab::Agent { session: "abc".into() }),
+                WindowTab::single(Tab::Welcome),
+                WindowTab::single(Tab::Untitled {
+                    recovery: "a1-2-3".into(),
+                }),
             ],
+            selected: Some(1),
         }
     }
 
@@ -168,11 +201,42 @@ mod tests {
         assert_eq!(load_from(file.clone()), None);
         save_to(file.clone(), &sample()).unwrap();
         assert_eq!(load_from(file.clone()), Some(sample()));
-        assert_eq!(sample().tab_count(), 6);
+        assert_eq!(sample().document_count(), 6);
+        assert!(sample().has(&Tab::Welcome));
         let text = std::fs::read_to_string(&file).unwrap();
         assert!(text.contains(r#""kind": "terminal""#), "{text}");
         std::fs::write(&file, "{ not json").unwrap();
         assert_eq!(load_from(file), None, "a damaged file restores nothing");
+    }
+
+    #[test]
+    fn the_panels_of_version_one_become_window_tabs_in_reading_order() {
+        let file = crate::store::tests::scratch("layout-panels").join("layouts/shop.json");
+        let old = r#"{
+          "version": 1,
+          "panels": {"split": {"side_by_side": true, "shares": [0.6, 0.4], "children": [
+            {"panel": {"tabs": [{"kind": "editor", "path": "/p/a.rs"}, {"kind": "welcome"}], "selected": 1}},
+            {"panel": {"tabs": [{"kind": "terminal", "folder": "/p"}], "selected": 0}}
+          ]}}
+        }"#;
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, old).unwrap();
+        let layout = load_from(file).unwrap();
+        assert_eq!(
+            layout,
+            Layout {
+                tabs: vec![
+                    WindowTab::single(Tab::Editor {
+                        path: PathBuf::from("/p/a.rs")
+                    }),
+                    WindowTab::single(Tab::Welcome),
+                    WindowTab::single(Tab::Terminal {
+                        folder: PathBuf::from("/p")
+                    }),
+                ],
+                selected: Some(1),
+            }
+        );
     }
 
     #[test]

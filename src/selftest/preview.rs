@@ -90,18 +90,16 @@ fn open_preview(root: PathBuf) {
         return finish(SCENARIO);
     };
     controller.open_file(&root.join("doc.md"));
-    if editor(&controller, "doc.md").is_none() {
+    let Some(view) = editor(&controller, "doc.md") else {
         check("the file opens in an editor", false, controller.tab_titles().join(", "));
         return finish(SCENARIO);
-    }
-    let panels = controller.panel_titles();
+    };
+    let tabs = controller.window_tabs();
     check(
-        "a Markdown file opens with its preview in a panel right of the editor, which stays in front",
-        panels.len() == 2
-            && panels[0].contains(&"doc.md".to_string())
-            && panels[1] == ["Vorschau: doc.md"]
-            && controller.active_panel() == Some(0),
-        format!("{panels:?}, active {:?}", controller.active_panel()),
+        "a Markdown file opens with its preview right of the editor in its tab, and the editor stays the focused one",
+        tabs.iter().any(|docs| docs == &["doc.md", "Vorschau: doc.md"])
+            && controller.selected_tab() == Some(crate::editor::tab_of(&view)),
+        format!("{tabs:?}, focused {:?}", controller.selected_tab()),
     );
     let path = root.join("doc.md");
     let shown = path.clone();
@@ -252,8 +250,11 @@ fn pdf_and_html(root: PathBuf) {
             && seen
                 .iter()
                 .any(|tab| tab.url.as_deref().is_some_and(|url| url.ends_with("seite.html")))
-            && controller.panel_titles().len() == 3,
-        format!("{:?}", controller.panel_titles()),
+            && controller
+                .window_tabs()
+                .iter()
+                .any(|docs| docs.len() == 2 && docs[0] == "seite.html"),
+        format!("{:?}", controller.window_tabs()),
     );
     untrusted();
 }

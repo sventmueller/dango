@@ -19,7 +19,7 @@ use objc2_foundation::NSURL;
 
 use crate::editor::EditorTextView;
 use crate::util::{main_after, ns};
-use crate::window::{Side, TabKind, WindowController};
+use crate::window::{TabKind, WindowController};
 use markdown::Preview;
 pub use pdf::{is_pdf, open as open_pdf};
 
@@ -62,8 +62,8 @@ pub fn validate(view: &EditorTextView, action: Option<Sel>) -> Option<bool> {
     })
 }
 
-/// Opens the preview of the document `view` shows in a panel to its right, or closes the Markdown preview it has:
-/// Markdown rendered, an HTML file in a browser tab. The keyboard focus stays in the editor.
+/// Opens the preview of the document `view` shows beside it in its tab, or closes the Markdown preview it has:
+/// Markdown rendered, an HTML file in a browser. The keyboard focus stays in the editor.
 pub fn toggle_beside(view: &EditorTextView) {
     if !close_beside(view, false) {
         open_beside(view, false);
@@ -116,31 +116,25 @@ fn open_markdown(
     let preview = Preview::new(controller, view, path, key, automatic);
     let title = splat_i18n::tf("Vorschau: {}", &[&crate::editor::display_name(path)]);
     let page: Retained<objc2_app_kit::NSView> = Retained::into_super(preview.views.page.clone());
-    let id = controller.add_tab(TabKind::Preview, None, &title, page);
+    let mut id = -1;
+    controller.open_beside(editor_tab, || {
+        id = controller.add_tab(TabKind::Preview, None, &title, page)
+    });
     preview.set_tab(id);
     OPEN.with(|open| open.borrow_mut().push(preview.clone()));
-    beside(controller, id, editor_tab);
     sync::attach(&preview, view);
     preview.lay_out();
     look_at_images_later();
 }
 
-/// Opens an HTML file in a browser tab beside the editor; the browser shows only files of the window's folder.
+/// Opens an HTML file in a browser beside the editor; the browser shows only files of the window's folder.
 fn open_html(controller: &WindowController, path: &Path, editor_tab: isize) {
     let Some(url) = NSURL::fileURLWithPath(&ns(&path.to_string_lossy())).absoluteString() else {
         return;
     };
-    let before = controller.tab_ids();
-    crate::browser::open_tab(controller, Some(&url.to_string()));
-    if let Some(id) = controller.tab_ids().into_iter().find(|id| !before.contains(id)) {
-        beside(controller, id, editor_tab);
-    }
-}
-
-/// Moves the new tab `id` into a panel right of the editor's, whose tab stays in front.
-fn beside(controller: &WindowController, id: isize, editor_tab: isize) {
-    controller.split_tab(id, Side::Right);
-    controller.select_tab_by_id(editor_tab);
+    controller.open_beside(editor_tab, || {
+        crate::browser::open_tab(controller, Some(&url.to_string()))
+    });
 }
 
 /// The text of `view` changed: the previews that follow it lay it out again.

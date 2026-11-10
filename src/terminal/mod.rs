@@ -207,15 +207,21 @@ fn start(view: &TerminalView) {
 
 /// The terminals of `controller`'s window, the one in view first.
 fn of_window(controller: &WindowController) -> Vec<Retained<TerminalView>> {
-    let window = controller.window();
     let mut views: Vec<Retained<TerminalView>> =
         VIEWS.with(|views| views.borrow().values().filter_map(Weak::load).collect());
     views.retain(|view| {
-        view.window()
-            .is_some_and(|w| window.as_deref().is_some_and(|own| std::ptr::eq(&*w, own)))
+        view.ivars()
+            .controller
+            .load()
+            .is_some_and(|own| std::ptr::eq(&*own, controller))
     });
-    views.sort_by_key(|view| (view.isHiddenOrHasHiddenAncestor(), std::cmp::Reverse(view.id())));
+    views.sort_by_key(|view| (!in_view(view), std::cmp::Reverse(view.id())));
     views
+}
+
+/// Whether `view` shows: in the window tab in front and not behind another view.
+fn in_view(view: &TerminalView) -> bool {
+    !view.isHiddenOrHasHiddenAncestor() && view.window().is_some_and(|w| crate::window::in_front(&w))
 }
 
 /// The tab of the terminal in `controller`'s window whose shell is `pid` or started it, such as a dev server run

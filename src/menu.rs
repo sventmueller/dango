@@ -117,7 +117,7 @@ fn file_menu(delegate: &AppDelegate, mtm: MainThreadMarker, keys: &Keys) -> Reta
         .chain([
             separator(mtm),
             entry(t("Tab schließen"), sel!(ideCloseTab:), "tab.close"),
-            entry(t("Fenster schließen"), sel!(performClose:), "window.close"),
+            entry(t("Fenster schließen"), sel!(ideCloseWindow:), "window.close"),
         ])
         .collect(),
     )
@@ -358,7 +358,7 @@ fn window_menu(mtm: MainThreadMarker, keys: &Keys) -> (Retained<NSMenuItem>, Ret
             ),
             item(
                 mtm,
-                t("Nächstes Panel"),
+                t("Zum Dokument daneben"),
                 Some(sel!(ideFocusNextPanel:)),
                 &keys.get("window.nextPanel"),
             ),

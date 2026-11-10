@@ -15,7 +15,7 @@ checked by hand.
 
 | Area | What VoiceOver gets |
 |---|---|
-| Window | The sidebar's symbols (Files, AI, Git, CI, Settings) have names, and a status on a symbol is part of its name, such as "Git, 4 changes" or a failed CI run. Tabs are tab buttons with their title; they say which one is selected and can be pressed; a preview tab says so; each tab's close button is named. The short notices at the bottom of the window are announced. Decorative images (file icons, the app icon on the welcome page) are hidden. |
+| Window | The sidebar's symbols (Files, AI, Git, CI, Settings) have names, and a status on a symbol is part of its name, such as "Git, 4 changes" or a failed CI run. Documents are macOS's own window tabs, which VoiceOver reads with their title; the icon before it is decoration, and a preview tab says so in its help. Two documents side by side each have a header with their name and a named close button. The short notices at the bottom of the window are announced. Decorative images (file icons, the app icon on the welcome page) are hidden. |
 | Files | A standard outline view. |
 | Editor | A standard text view named "Editor: <file>", with lines, selection and text attributes as usual. Drawn-only layers (whitespace marks, overlays) are hidden from VoiceOver. The change marks name the committed version they compare against. When a file changes on disk while it is open, the bar that offers to reload or merge it is announced. |
 | Compare and diff views | Each line says whether it was added or removed; the table is named after the file. |
@@ -42,8 +42,8 @@ in the message field ⌃⇧Tab goes back.
 | Files, Search, AI, Git, CI in the sidebar, with the focus moving into the panel; again to fold the sidebar | ⌘1, ⌘2, ⌘3, ⌘4, ⌘5 |
 | Fold or show the sidebar | ⌃⌘S |
 | Next, previous tab | ⇧⌘], ⇧⌘[ |
-| Next panel, when the window is split | ⌥⌘` |
-| New tab ("+" menu), close tab | ⌘T, ⌘W |
+| The other document, when two share a tab | ⌥⌘` |
+| New tab (the page that offers what a tab can show), close tab, close all tabs | ⌘T, ⌘W, ⇧⌘W |
 | Into the AI tab's message field and back | ⌘Esc |
 | Comment on the plan in front, or on the passage selected in it | ⌥⌘K |
 | New terminal | ⌃` |

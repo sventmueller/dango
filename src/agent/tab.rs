@@ -494,7 +494,7 @@ impl AgentTab {
 
     /// Whether the tab is the one showing in its window.
     pub fn is_shown(&self) -> bool {
-        self.root.window().is_some_and(|w| w.isVisible()) && !self.root.isHiddenOrHasHiddenAncestor()
+        self.root.window().is_some_and(|w| crate::window::in_front(&w)) && !self.root.isHiddenOrHasHiddenAncestor()
     }
 
     pub fn select(&self) {

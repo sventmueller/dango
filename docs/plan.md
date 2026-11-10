@@ -86,8 +86,8 @@ eingearbeitet (markiert mit *Review*).
   über den Prozessbaum der Vordergrund-Prozessgruppe mit vollständigen Argumenten (`claude`/`codex` laufen oft als `node`
   oder unter `npx`), nicht nur über den Prozessnamen. SSH-Sitzung: Hinweis statt eines lokalen Pfads, der entfernt nicht
   existiert. Abnahme mit echten Bildanhängen in allen vier CLIs.
-- **E17 Browser-Tab und „+“** *(gewünscht)*. „+“ am Ende jeder Tableiste und ⌘T: Neue Datei, Terminal, Browser,
-  AI-Thread ▸, CLI-Thread ▸. Browser = `WKWebView` mit Adressfeld, Zurück/Vor/Neu laden, Suche, Web-Inspector; zugleich
+- **E17 Browser-Tab und „+“** *(gewünscht; „+“ seit E60 das native der Tableiste)*. „+“ am Ende jeder Tableiste und
+  ⌘T: Neue Datei, Terminal, Browser, AI-Thread ▸, CLI-Thread ▸. Browser = `WKWebView` mit Adressfeld, Zurück/Vor/Neu laden, Suche, Web-Inspector; zugleich
   Dev-Server-Vorschau (I7). Downloads in den Download-Ordner mit Rückfrage, keine Dateizugriffe aus Webseiten.
 - **E10 LSP** *(bestätigt: nachfragen + in den App-Ordner installieren)*: gopls, rust-analyzer, TypeScript.
   *Review:* TypeScript per Sondierung statt fest verdrahtet — kann das `tsc` im Projekt `--lsp`, wird es genutzt, sonst
@@ -190,7 +190,8 @@ vibeedit/
   `xtask/src`.
 
 ## Oberfläche
-- **Fenster:** `NSSplitViewController` mit Sidebar-Item (Symbolspalte + Panel) und Inhalts-Item (Tableiste + Tab).
+- **Fenster:** `NSSplitViewController` mit Sidebar-Item (Symbolspalte + Panel) und Inhalts-Item (Tableiste + Tab);
+  seit E60 je Tab ein `NSWindow` in der Tabgruppe des Ordners.
   Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler), Neues Terminal, Neuer AI-Thread.
 - **Symbolspalte:** Dateien, AI, Git (Badge), CI (Badge-Farbe), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
   klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55.)*
@@ -221,9 +222,10 @@ vibeedit/
   - *Eingabekarte* wie Screenshot: ⌘Esc-Hinweis, Mikrofon, `+`, `/`-Menü, `@datei`, `@datei#5-10`, `@terminal`,
     `@browser`, Auswahl-Chip, Modell-/Denktiefe-Pill, Modus-Pill, Sandbox-Schalter, Senden ↔ Stopp, Warteschlange.
   - Mehrere Sitzungen in Tabs mit Statuspunkt; Farbe je Agent (Claude Terrakotta), sonst Systemakzent.
-- **Tableiste:** Symbol je Art, Änderungspunkt, Schließen, Drag, Vorschau-Tab (kursiv), „+“ (E17), ⌘⇧[ ⌘⇧] ⌘W.
-- **I10 Panels** *(entschieden)*: Standard Tabs; Rechtsklick → „In eigenem Panel öffnen (rechts / unten)“, beliebig
-  viele, verschachtelte `NSSplitView`s, Tabs zwischen Panels ziehbar, Layout je Projekt gespeichert.
+- **Tableiste:** Symbol je Art, Änderungspunkt, Schließen, Drag, Vorschau-Tab (kursiv), „+“ (E17), ⌘⇧[ ⌘⇧] ⌘W;
+  seit E60 die native von macOS.
+- **I10 Panels** *(entschieden; durch E60 ersetzt)*: Standard Tabs; Rechtsklick → „In eigenem Panel öffnen (rechts /
+  unten)“, beliebig viele, verschachtelte `NSSplitView`s, Tabs zwischen Panels ziehbar, Layout je Projekt gespeichert.
 - **I6 Änderungen prüfen und zurückspulen** *(bestätigt; Review präzisiert)*: Vor jedem Prompt ein Checkpoint — auch
   bei Claude, weil `rewind_files` Bash- und Subagenten-Änderungen nicht erfasst. Erfasst werden versionierte und
   unversionierte (nicht ignorierte) Dateien, ungesicherte Puffer und der Index; Nicht-Git-Ordner über eine eigene
@@ -359,7 +361,16 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   (Link ⇧⌘K, weil ⌘K im Terminal leert, E30), Einsetzen aus Word und dem Web als Markdown (⌥⇧⌘V rein),
   Export als PDF, HTML und Word über splats Crates, „In Splat öffnen“, wenn Splat installiert ist. splat selbst bleibt
   unverändert.
-- **Tableiste** nach dem Vorbild von Xcode, angedockt über der Inhaltsfläche (macOS hat kein Standardelement dafür).
+- **E60 Native Fenstertabs** *(Entscheidung des Eigentümers, Abweichung von I10 und E17)*: Jedes Dokument —
+  Datei, Terminal, Browser, AI- und CLI-Thread, Diff, Vorschau, PDF — öffnet als eigener macOS-Tab, ein `NSWindow` in
+  der Tabgruppe des Ordners, mit einem kleinen Symbol vor dem Titel; die Tableiste ist immer sichtbar, gleich breite
+  Tabs, Ziehen, Herauslösen und „Fenster zusammenführen“ wie in Safari. „+“ und ⌘T öffnen eine Neuer-Tab-Seite mit
+  dem Angebot aus E17, die der gewählten Sache Platz macht; ⌘W schließt das Dokument mit der üblichen Rückfrage, ⇧⌘W
+  alle Tabs des Fensters. Geteilt wird nur nebeneinander: „Daneben öffnen“ (Kontextmenü der Dateiliste) und die
+  Vorschau (E59) zeigen ein zweites Dokument im selben Tab, jedes dann mit einer Kopfzeile; schließt eines, bleibt
+  das andere allein. Die Seitenleiste gibt es je Ordner einmal; sie wandert in den Tab im Vordergrund und bleibt
+  dabei, wie sie ist. Die Ansicht je Projekt (E24) speichert Tabs und Teilungen. Ersetzt die eigene Tableiste nach
+  dem Vorbild von Xcode und die Panels aus I10.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

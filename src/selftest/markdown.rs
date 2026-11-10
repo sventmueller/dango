@@ -55,12 +55,14 @@ fn preview_beside(root: PathBuf) {
     };
     controller.open_file(&root.join("notiz.md"));
     let preview = tf("Vorschau: {}", &["notiz.md"]);
-    let has_preview =
-        |c: &crate::window::WindowController| c.panel_titles().iter().any(|panel| panel.contains(&preview));
+    let has_preview = |c: &crate::window::WindowController| c.window_tabs().iter().any(|docs| docs.contains(&preview));
     check(
-        "a Markdown file opens with its preview beside it",
-        has_preview(&controller) && controller.panel_titles().len() == 2,
-        format!("{:?}", controller.panel_titles()),
+        "a Markdown file opens with its preview beside it in its tab",
+        controller
+            .window_tabs()
+            .iter()
+            .any(|docs| docs.len() == 2 && docs[0] == "notiz.md" && docs[1] == preview),
+        format!("{:?}", controller.window_tabs()),
     );
     let Some(view) = editor(&controller, "notiz.md") else {
         return finish(SCENARIO);
@@ -71,7 +73,7 @@ fn preview_beside(root: PathBuf) {
     check(
         "⇧⌘V closes the preview and opens it again",
         closed && has_preview(&controller),
-        format!("{:?}", controller.panel_titles()),
+        format!("{:?}", controller.window_tabs()),
     );
     controller.preview_file(&root.join("zweite.md"));
     controller.preview_file(&root.join("dritte.md"));

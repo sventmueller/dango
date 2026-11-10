@@ -18,7 +18,7 @@ use super::{flows, keys, name, picture, walk, window_of};
 use crate::git_panel::selftest as git;
 use crate::selftest::{check, finish};
 use crate::util::main_after;
-use crate::window::{Panel, Side, search_selftest};
+use crate::window::{Panel, search_selftest};
 
 /// The file of the editor state, in a language whose server is not installed, so its status bar offers it.
 pub const SCRIPT: &str = "src/app.ts";
@@ -334,22 +334,19 @@ fn browser(root: PathBuf, ok: bool) {
     check("the browser tab loads the page", ok, "");
     walk("the browser tab misses nothing");
     let Some(controller) = window_of(&root) else { return };
-    if let Some(id) = controller.selected_tab() {
-        controller.split_tab(id, Side::Right);
-    }
-    when(root, |c| c.panel_tab_ids().len() == 2, panels);
+    controller.open_file_beside(&root.join("notes.txt"));
+    when(root, |c| c.window_tab_ids().iter().any(|ids| ids.len() == 2), beside);
 }
 
-fn panels(root: PathBuf, ok: bool) {
-    check("a tab splits off into a second panel", ok, "");
-    walk("two panels miss nothing");
-    picture(&root, "panels");
+fn beside(root: PathBuf, ok: bool) {
+    check("a file opens beside the browser in its tab", ok, "");
+    walk("two documents side by side miss nothing");
+    picture(&root, "beside");
     if let Some(controller) = window_of(&root) {
-        let follows = controller.plus_follows_tabs();
         check(
-            "the \"+\" of each tab bar comes after its tabs in the reading direction",
-            follows.len() == 2 && follows.iter().all(|f| *f),
-            format!("{follows:?}"),
+            "the native tab bar shows",
+            controller.tab_bar_visible(),
+            format!("{:?}", controller.window_tabs()),
         );
     }
     let Some(mtm) = MainThreadMarker::new() else { return };

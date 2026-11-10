@@ -137,6 +137,15 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideOpenBesideClicked:))]
+        fn open_beside(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let (Some(path), Some(controller)) = (self.clicked(), self.ivars().controller.load()) {
+                    controller.open_file_beside(&path);
+                }
+            });
+        }
+
         #[unsafe(method(ideRevealInFinder:))]
         fn reveal(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
@@ -426,7 +435,10 @@ impl FileTreeSource {
             path.clone()
                 .unwrap_or_else(|| self.ivars().project.root().to_path_buf()),
         );
+        let file = path.as_deref().is_some_and(Path::is_file);
         let entries: Vec<(&str, objc2::runtime::Sel, bool)> = vec![
+            (t("Daneben öffnen"), sel!(ideOpenBesideClicked:), file),
+            ("", sel!(ideNewFile:), false),
             (t("Neue Datei …"), sel!(ideNewFile:), true),
             (t("Neuer Ordner …"), sel!(ideNewFolder:), true),
             ("", sel!(ideNewFile:), false),

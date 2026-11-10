@@ -375,9 +375,7 @@ fn cancelled_close() {
         deleted_question(),
         NSAlertThirdButtonReturn,
     );
-    if let Some(window) = controller.window() {
-        window.performClose(None);
-    }
+    controller.close_all_tabs();
     let asked = gone.get();
     let copies = copies_of(&[MERGED, KEPT, GONE]);
     wait_until(copies_kept(copies.clone()), move |ok| {

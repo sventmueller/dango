@@ -43,7 +43,8 @@ enum Action {
 
 pub struct ActivityIvars {
     controller: Weak<WindowController>,
-    item: RefCell<Option<Retained<NSToolbarItem>>>,
+    /// The item in the toolbar of each of the window's tabs.
+    items: RefCell<Vec<Weak<NSToolbarItem>>>,
     popover: RefCell<Option<Retained<NSPopover>>>,
     actions: RefCell<Vec<Action>>,
     scheduled: Cell<bool>,
@@ -107,7 +108,7 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
     let activity = of(controller).unwrap_or_else(|| {
         let ivars = ActivityIvars {
             controller: Weak::from(controller),
-            item: RefCell::new(None),
+            items: RefCell::new(Vec::new()),
             popover: RefCell::new(None),
             actions: RefCell::new(Vec::new()),
             scheduled: Cell::new(false),
@@ -129,7 +130,7 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
         item.setTarget(Some(&activity));
         item.setAction(Some(sel!(ideShowActivity:)));
     }
-    *activity.ivars().item.borrow_mut() = Some(item.clone());
+    activity.ivars().items.borrow_mut().push(Weak::from(&*item));
     activity.update_badge();
     item
 }
@@ -504,6 +505,13 @@ impl Activity {
         }
     }
 
+    /// The toolbar items of the window's tabs that are still there.
+    fn items(&self) -> Vec<Retained<NSToolbarItem>> {
+        let mut items = self.ivars().items.borrow_mut();
+        items.retain(|item| item.load().is_some());
+        items.iter().filter_map(Weak::load).collect()
+    }
+
     fn update_badge(&self) {
         let Some(controller) = self.controller() else { return };
         let tabs = crate::agent::of_window(&controller);
@@ -512,7 +520,7 @@ impl Activity {
             .filter(|thread| thread.status != crate::terminal::CliStatus::Finished)
             .count();
         let count = count(&tabs, &processes()) + clis;
-        if let Some(item) = self.ivars().item.borrow().as_ref() {
+        for item in self.items() {
             let badge = (count > 0).then(|| NSItemBadge::badgeWithCount(isize::try_from(count).unwrap_or(0)));
             item.setBadge(badge.as_deref());
             item.setToolTip(Some(&ns(&tf("Was gerade läuft: {}", &[&count.to_string()]))));
@@ -554,7 +562,12 @@ impl Activity {
             })
             .clone();
         self.fill();
-        let item = self.ivars().item.borrow().clone();
+        let toolbar = controller.window().and_then(|window| window.toolbar());
+        let item = self.items().into_iter().find(|item| {
+            item.toolbar()
+                .zip(toolbar.as_ref())
+                .is_some_and(|(own, front)| std::ptr::eq(&*own, &**front))
+        });
         match (anchor, item) {
             (Some(anchor), _) => {
                 popover.showRelativeToRect_ofView_preferredEdge(
@@ -834,15 +847,7 @@ impl Activity {
                 }
             }
             Action::StopProcess(id) => Supervisor::global().stop(id, Duration::from_secs(2)),
-            Action::ShowTerminal(tab) => {
-                // The window selects a tab by the tag of the control that asks.
-                let item = crate::util::item(controller.mtm(), "", None, "");
-                item.setTag(tab);
-                let app = objc2_app_kit::NSApplication::sharedApplication(controller.mtm());
-                // SAFETY: The window controller answers ideSelectTab: with a method that takes the sender, a menu
-                // item here.
-                unsafe { app.sendAction_to_from(sel!(ideSelectTab:), Some(&controller), Some(&item)) };
-            }
+            Action::ShowTerminal(tab) => controller.select_tab_by_id(tab),
         }
         self.changed();
     }
@@ -874,10 +879,8 @@ pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
         })
         .collect();
     let badge = activity
-        .ivars()
-        .item
-        .borrow()
-        .as_ref()
+        .items()
+        .first()
         .and_then(|i| i.badge())
         .map(|b| b.text().to_string())
         .unwrap_or_default();

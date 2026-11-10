@@ -8,7 +8,7 @@ use std::time::Duration;
 use ide_core::settings::{Settings, keys};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use splat_i18n::tf;
+use splat_i18n::t;
 
 use super::{check, finish, snapshot, type_into};
 use crate::util::main_after;
@@ -77,8 +77,11 @@ fn first_preview(root: PathBuf) {
         tabs_of(&controller),
     );
     check(
-        "VoiceOver hears that the tab is a preview",
-        spoken == tf("{}, Vorschau", &["a.rs"]),
+        "the preview tab's tooltip, which VoiceOver reads as its help, says that it is a preview",
+        spoken
+            == t(
+                "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn.",
+            ),
         spoken,
     );
     main_after(PAUSE, move || replaced(root));
@@ -103,12 +106,33 @@ fn replaced(root: PathBuf) {
         tabs_of(&controller),
     );
     keeping(&controller, &root);
+    new_tab_page(&controller, &root);
     turned_off(&controller, &root);
     main_after(PAUSE, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, "tabs-kept");
         }
-        finish(SCENARIO);
+        variety(root);
+    });
+}
+
+/// Documents of every kind show an icon before their title: files the icon of their type, the others a symbol.
+fn variety(root: PathBuf) {
+    let Some(controller) = window_of(&root) else { return };
+    let _ = std::fs::write(root.join("site.css"), "h1 { color: red }\n");
+    let _ = std::fs::write(root.join("notiz.md"), "# Notiz\n\nText.\n");
+    controller.open_file(&root.join("site.css"));
+    crate::browser::open_tab(&controller, None);
+    let replayed = super::panels::replay_agent(&controller, "51e1f7e5-0000-4000-8000-0000000000cc");
+    controller.open_file(&root.join("notiz.md"));
+    let icons = controller.tab_icons();
+    check(
+        "every tab shows a small icon before its title: files, the browser, the AI thread, the preview",
+        replayed && icons.len() > 6 && icons.iter().all(|shown| *shown),
+        format!("{icons:?} for {:?}", controller.window_tabs()),
+    );
+    main_after(PAUSE, move || {
+        super::git::pictures(root, "tabs-icons", |_| finish(SCENARIO));
     });
 }
 
@@ -125,15 +149,22 @@ fn keeping(controller: &WindowController, root: &Path) {
         controller.tab_count() == before + 1 && has(controller, "c.rs", false),
         tabs_of(controller),
     );
+    let native = controller.native_tabs();
+    check(
+        "the native tab names its document and shows its unsaved changes",
+        native.iter().any(|(title, _, edited)| title == "c.rs" && *edited),
+        format!("{native:?}"),
+    );
+
     // Quitting with unsaved changes would ask what to do with them.
     if let Some(editor) = &editor {
         crate::editor::save_view(editor);
     }
     controller.click_in_tree(&root.join("d.rs"), false);
     let previewed = has(controller, "d.rs", true);
-    controller.click_selected_tab(2);
+    controller.click_in_tree(&root.join("d.rs"), true);
     check(
-        "a double click on the tab keeps it",
+        "a double click in the tree keeps the previewed file's tab",
         previewed && controller.tab_count() == before + 2 && has(controller, "d.rs", false),
         tabs_of(controller),
     );
@@ -143,6 +174,32 @@ fn keeping(controller: &WindowController, root: &Path) {
         "opening the previewed file for good keeps its tab",
         controller.tab_count() == before + 3 && has(controller, "a.rs", false),
         tabs_of(controller),
+    );
+}
+
+/// ⌘T opens the page of a new tab, which offers what a tab can show and gives way to a file opened from it.
+fn new_tab_page(controller: &WindowController, root: &Path) {
+    let before = controller.tab_count();
+    controller.open_new_tab();
+    let entries = controller.new_tab_page_entries().unwrap_or_default();
+    let offered = controller.inspect().new_tab_items;
+    check(
+        "⌘T opens the page of a new tab with what a tab can show",
+        controller.tab_count() == before + 1 && !entries.is_empty() && entries == offered,
+        format!("{entries:?}"),
+    );
+    controller.open_file(&root.join("e.rs"));
+    check(
+        "a file opened from the page takes its place",
+        controller.tab_count() == before + 1
+            && has(controller, "e.rs", false)
+            && controller.new_tab_page_entries().is_none(),
+        tabs_of(controller),
+    );
+    controller.close_tab(
+        controller
+            .tab_with_key(&root.join("e.rs").to_string_lossy())
+            .unwrap_or(-1),
     );
 }
 

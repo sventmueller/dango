@@ -1,11 +1,11 @@
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, Sel};
-use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2::runtime::{AnyObject, Bool, Sel};
+use objc2::{MainThreadMarker, MainThreadOnly, Message};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSControl, NSEventModifierFlags, NSImage, NSImageSymbolConfiguration, NSMenu,
+    NSAccessibility, NSButton, NSColor, NSControl, NSEventModifierFlags, NSImage, NSImageSymbolConfiguration, NSMenu,
     NSMenuItem, NSTextField, NSView,
 };
-use objc2_foundation::NSString;
+use objc2_foundation::{NSRect, NSString};
 
 /// Reads a constant that AppKit or Foundation exports.
 macro_rules! constant {
@@ -57,6 +57,21 @@ pub fn set_target(item: &NSMenuItem, target: &AnyObject) {
 /// An SF Symbol, described for VoiceOver.
 pub fn symbol(name: &str, description: &str) -> Option<Retained<NSImage>> {
     NSImage::imageWithSystemSymbolName_accessibilityDescription(&ns(name), Some(&ns(description)))
+}
+
+/// `image`, a template, drawn in `color` as an image of its own, which follows the appearance where it is drawn.
+pub fn tinted(image: &NSImage, color: &NSColor) -> Retained<NSImage> {
+    let (image, color) = (image.retain(), color.retain());
+    let size = image.size();
+    let draw = block2::RcBlock::new(move |rect: NSRect| -> Bool {
+        super::guarded(Bool::NO, || {
+            image.drawInRect(rect);
+            color.set();
+            objc2_app_kit::NSRectFillUsingOperation(rect, objc2_app_kit::NSCompositingOperation::SourceAtop);
+            Bool::YES
+        })
+    });
+    NSImage::imageWithSize_flipped_drawingHandler(size, false, &draw)
 }
 
 /// A borderless button titled `title` that sends `action` along the responder chain, or to `target` when given.

@@ -1,8 +1,7 @@
-//! The window's toolbar; its activity item is `crate::activity`'s.
+//! The toolbar of each window tab; its activity item is `crate::activity`'s. New tabs come from the tab bar's "+".
 
 use ide_process::Kind;
 use objc2::rc::Retained;
-use objc2::{MainThreadOnly, sel};
 use objc2_app_kit::{
     NSToolbarFlexibleSpaceItemIdentifier, NSToolbarItem, NSToolbarItemIdentifier,
     NSToolbarSidebarTrackingSeparatorItemIdentifier, NSToolbarToggleSidebarItemIdentifier,
@@ -11,10 +10,9 @@ use objc2_foundation::NSArray;
 use splat_i18n::{t, tf};
 
 use super::WindowController;
-use crate::util::{constant, ns, symbol};
+use crate::util::{constant, ns};
 
 const ACTIVITY: &str = "ide.activity";
-const NEW_TAB: &str = "ide.newTab";
 
 pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
     let ids = [
@@ -22,29 +20,12 @@ pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
         constant!(NSToolbarSidebarTrackingSeparatorItemIdentifier).to_owned(),
         constant!(NSToolbarFlexibleSpaceItemIdentifier).to_owned(),
         ns(ACTIVITY),
-        ns(NEW_TAB),
     ];
     NSArray::from_retained_slice(&ids)
 }
 
 pub fn make(controller: &WindowController, id: &str) -> Option<Retained<NSToolbarItem>> {
-    let mtm = controller.mtm();
-    match id {
-        ACTIVITY => Some(crate::activity::toolbar_item(controller)),
-        NEW_TAB => {
-            let entry = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), &ns(NEW_TAB));
-            entry.setImage(symbol("plus", t("Neuer Tab")).as_deref());
-            entry.setLabel(&ns(t("Neuer Tab")));
-            entry.setToolTip(Some(&ns(t("Neuer Tab"))));
-            // SAFETY: The window controller answers ideNewTab: with a method that takes the sender.
-            unsafe {
-                entry.setTarget(Some(controller));
-                entry.setAction(Some(sel!(ideNewTab:)));
-            }
-            Some(entry)
-        }
-        _ => None,
-    }
+    (id == ACTIVITY).then(|| crate::activity::toolbar_item(controller))
 }
 
 /// What a process is there for, as the activity view names it.

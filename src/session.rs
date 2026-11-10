@@ -1,8 +1,8 @@
 //! What the windows show, written down while the app runs, and put back at launch together with the unsaved text a
 //! crash left behind (E24). The record follows each change of windows or tabs a moment later, so a crash leaves the
 //! latest one behind; the copies of unsaved text are `editor::recovery`'s. The record names each window's folder and
-//! editors; the panels and the tabs of every kind are the folder's layout (I10), which a launch builds first and then
-//! fills with the copies.
+//! editors; the tabs of every kind are the folder's layout (E60), which a launch builds first and then fills with the
+//! copies.
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
@@ -134,7 +134,7 @@ fn set_aside_damaged(recovery: &Recovery) {
 
 /// What a launch puts back while it opens the windows.
 struct Restore {
-    /// Whether the windows come back with their panels and tabs, or only with the copies.
+    /// Whether the windows come back with their tabs, or only with the copies.
     reopen: bool,
     recovery: Recovery,
     /// The copies not yet in a tab, by name.
@@ -145,8 +145,8 @@ struct Restore {
 }
 
 impl Restore {
-    /// Opens the window of `record`: the folder's panels and tabs, an editor's copy in place of its file, then the
-    /// record's other editors and copies, such as untitled ones, in the active panel.
+    /// Opens the window of `record`: the folder's tabs, an editor's copy in place of its file, then the
+    /// record's other editors and copies, such as untitled ones, in tabs of their own.
     fn window(&mut self, mtm: MainThreadMarker, record: &WindowRecord) {
         let shown = record.project.as_deref().and_then(crate::window::for_project);
         let controller = shown.unwrap_or_else(|| WindowController::open_new(mtm, record.project.clone()));

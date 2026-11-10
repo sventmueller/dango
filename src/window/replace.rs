@@ -1,15 +1,14 @@
 //! Opening a folder in a window that shows another one (E56): the new folder takes the old one's place in the window
-//! and its tab group; if that would lose unsaved changes or stop what runs in any of its tabs, a sheet offers a new
-//! window instead, closing everything, or cancelling.
+//! and its tabs; if that would lose unsaved changes or stop what runs in any of its tabs, a sheet offers a new window
+//! instead, closing everything, or cancelling.
 
 use std::path::PathBuf;
 
 use objc2::MainThreadOnly;
-use objc2::rc::Retained;
 use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle};
 use splat_i18n::{t, tf};
 
-use super::{WINDOWS, WindowController, folder_name, layout};
+use super::{WindowController, folder_name, layout};
 use crate::util::{guarded, ns};
 
 /// What replacing a window's folder would lose.
@@ -22,14 +21,13 @@ struct Losses {
 }
 
 impl Losses {
-    fn of(controllers: &[&WindowController]) -> Losses {
-        let mut losses = Losses::default();
-        for controller in controllers {
-            losses.unsaved.extend(crate::editor::unsaved_in(controller));
-            losses.running.extend(crate::agent::running_in(controller));
-            losses.running.extend(crate::terminal::running_in(controller));
+    fn of(controller: &WindowController) -> Losses {
+        let mut running = crate::agent::running_in(controller);
+        running.extend(crate::terminal::running_in(controller));
+        Losses {
+            unsaved: crate::editor::unsaved_in(controller),
+            running,
         }
-        losses
     }
 
     fn is_empty(&self) -> bool {
@@ -59,10 +57,7 @@ impl WindowController {
         if window.attachedSheet().is_some() {
             return open_beside(self, folder);
         }
-        let siblings = self.tab_siblings();
-        let mut group: Vec<&WindowController> = siblings.iter().map(|s| &**s).collect();
-        group.insert(0, self);
-        let losses = Losses::of(&group);
+        let losses = Losses::of(self);
         if losses.is_empty() {
             return self.replace_project(folder);
         }
@@ -91,19 +86,12 @@ impl WindowController {
     }
 
     /// Closes what the window shows of its folder, keeping the folder's layout for next time, and opens `folder`
-    /// with its own layout. Closing a tab ends its terminal or agent session.
+    /// with its own layout in the tab in front; the other tabs close. Closing a document ends its terminal or agent
+    /// session.
     fn replace_project(&self, folder: PathBuf) {
-        for sibling in self.tab_siblings() {
-            crate::editor::discard_changes(&sibling);
-            if let Some(window) = sibling.window() {
-                window.close();
-            }
-        }
         layout::save(self);
         crate::editor::discard_changes(self);
-        for id in self.tab_ids() {
-            self.close_tab_now(id);
-        }
+        self.clear_tabs();
         crate::agent::window_closed(self);
         crate::ci_panel::window_closed(self);
         if let Some(root) = self.project_root() {
@@ -115,25 +103,6 @@ impl WindowController {
             self.open_welcome();
         }
         crate::session::changed();
-    }
-}
-
-impl WindowController {
-    /// The other windows in this window's tab group.
-    pub(crate) fn tab_siblings(&self) -> Vec<Retained<WindowController>> {
-        let Some(own) = self.window() else { return vec![] };
-        let Some(tabbed) = own.tabbedWindows() else {
-            return vec![];
-        };
-        WINDOWS
-            .with(|windows| windows.borrow().clone())
-            .into_iter()
-            .filter(|other| {
-                other.window().is_some_and(|window| {
-                    !std::ptr::eq(&*window, &*own) && tabbed.iter().any(|tab| std::ptr::eq(&*tab, &*window))
-                })
-            })
-            .collect()
     }
 }
 

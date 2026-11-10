@@ -1,12 +1,13 @@
-//! A project window: the activity bar and panel on the left, tabs on the right.
+//! A folder's window: the activity bar and panel on the left, its documents on the right, each in a native window
+//! tab of its own (E60).
 
 mod activity_bar;
+mod chooser;
 mod files;
 mod files_header;
 pub mod layout;
 mod notice;
 mod panels;
-mod panes;
 mod quick_open;
 mod replace;
 mod search;
@@ -19,15 +20,14 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSBackingStoreType, NSColor, NSControl, NSControlStateValueOff, NSControlStateValueOn, NSMenuItem,
-    NSMenuItemValidation, NSSplitViewController, NSSplitViewItem, NSToolbar, NSToolbarDelegate, NSToolbarDisplayMode,
-    NSToolbarItem, NSToolbarItemIdentifier, NSView, NSViewController, NSWindow, NSWindowController, NSWindowDelegate,
-    NSWindowStyleMask, NSWindowToolbarStyle,
+    NSColor, NSControl, NSControlStateValueOff, NSControlStateValueOn, NSMenuItem, NSMenuItemValidation, NSToolbar,
+    NSToolbarDelegate, NSToolbarItem, NSToolbarItemIdentifier, NSView, NSWindow, NSWindowDelegate,
+    NSWindowOrderingMode,
 };
-use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
 
 use crate::util::{guarded, main_soon, ns};
@@ -35,23 +35,19 @@ use activity_bar::ActivityBar;
 use files::FileTree;
 pub use notice::announce;
 use panels::Panels;
-use panes::Panes;
-pub use panes::Side;
 use quick_open::QuickOpenPanel;
 pub use search::SearchPanel;
 #[cfg(feature = "selftest")]
 pub use search::{LIMIT as SEARCH_LIMIT, Toggle as SearchToggle, selftest as search_selftest};
 pub use search::{buffer_edited, files_changed as files_changed_on_disk};
-use tabs::TabBar;
 pub use tabs::TabKind;
+use tabs::{Document, TabWindow};
 
 /// The width of the activity bar, which stays when the panel beside it is closed.
 const ACTIVITY_WIDTH: f64 = 44.0;
 const PANEL_MIN_WIDTH: f64 = 200.0;
 const PANEL_MAX_WIDTH: f64 = 560.0;
 const PANEL_DEFAULT_WIDTH: f64 = 260.0;
-const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
-const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
 
 /// What the panel beside the activity bar shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,24 +106,32 @@ pub struct Ivars {
     panel_width: Cell<f64>,
     activity: RefCell<Option<ActivityBar>>,
     panels: RefCell<Option<Panels>>,
-    /// The panels of the content area, each with its tabs.
-    panes: RefCell<Option<Panes>>,
-    split: RefCell<Option<Retained<NSSplitViewController>>>,
-    sidebar: RefCell<Option<Retained<NSSplitViewItem>>>,
+    /// The activity bar and the panel beside it, which the window tab in front shows.
+    sidebar: RefCell<Option<Retained<NSView>>>,
+    /// The window tabs, in the order they opened.
+    tabs: RefCell<Vec<Rc<TabWindow>>>,
+    /// The window tab in front, which has the sidebar.
+    current: RefCell<Option<Rc<TabWindow>>>,
+    /// The number of the next document.
+    next_id: Cell<isize>,
+    /// The document a document about to open goes beside, instead of into a window tab of its own.
+    beside: Cell<Option<isize>>,
     workspace: RefCell<Option<Rc<crate::project::Project>>>,
     files: RefCell<Option<FileTree>>,
     search: RefCell<Option<Retained<SearchPanel>>>,
     quick_open: RefCell<Option<Retained<QuickOpenPanel>>>,
-    /// The note at the foot of the tab area and what it says.
+    /// The note at the foot of the documents and what it says.
     notice: RefCell<Option<(Retained<objc2_app_kit::NSBox>, String)>>,
     /// Whether the window closed; it stays among the open ones until the main queue gets to it, but has nothing left
     /// to write down.
     closed: Cell<bool>,
+    /// Whether all tabs of the window close at once, whose layout was kept before the first went.
+    closing: Cell<bool>,
 }
 
 define_class!(
-    // SAFETY: NSWindowController has no subclassing requirements and `WindowController` does not implement Drop.
-    #[unsafe(super(NSWindowController))]
+    // SAFETY: NSObject has no subclassing requirements and `WindowController` does not implement Drop.
+    #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEWindowController"]
     #[ivars = Ivars]
@@ -139,30 +143,35 @@ define_class!(
         #[unsafe(method(windowDidUpdate:))]
         fn did_update(&self, _notification: &NSNotification) {
             guarded((), || {
-                self.with_panes(Panes::follow_focus);
+                if let Some(tab) = self.current_tab() {
+                    tab.follow_focus();
+                }
+            });
+        }
+
+        #[unsafe(method(windowDidBecomeKey:))]
+        fn did_become_key(&self, notification: &NSNotification) {
+            guarded((), || {
+                if let Some(tab) = self.tab_of_notification(notification) {
+                    self.make_current(&tab);
+                }
             });
         }
 
         #[unsafe(method(windowShouldClose:))]
-        fn should_close(&self, _window: &NSWindow) -> bool {
-            guarded(true, || self.tabs_may_close())
+        fn should_close(&self, window: &NSWindow) -> bool {
+            guarded(true, || match self.tab_of_window(window) {
+                Some(tab) => self.documents_may_close(&tab.documents()),
+                None => true,
+            })
         }
 
         #[unsafe(method(windowWillClose:))]
-        fn will_close(&self, _notification: &NSNotification) {
-            guarded((), || layout::save(self));
-            self.ivars().closed.set(true);
+        fn will_close(&self, notification: &NSNotification) {
             guarded((), || {
-                if let Some(search) = self.ivars().search.borrow().as_ref() {
-                    search.stop();
+                if let Some(tab) = self.tab_of_notification(notification) {
+                    self.tab_closes(&tab);
                 }
-                if let Some(root) = self.project_root() {
-                    crate::lsp::window_closed(&root);
-                }
-                crate::agent::window_closed(self);
-                crate::ci_panel::window_closed(self);
-                let this: *const WindowController = self;
-                main_soon_unregister(this);
             });
         }
     }
@@ -211,54 +220,56 @@ define_class!(
         }
 
         #[unsafe(method(ideNewTab:))]
-        fn new_tab_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || {
-                let number = usize::try_from(tag_of(sender)).unwrap_or(0);
-                self.with_panes(|panes| {
-                    if let Some(pane) = panes.by_number(number) {
-                        panes.activate(&pane);
-                    }
-                });
-                self.with_tabs(TabBar::show_new_tab_menu);
-            });
+        fn new_tab_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.open_new_tab_page());
+        }
+
+        #[unsafe(method(newWindowForTab:))]
+        fn new_window_for_tab(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.open_new_tab_page());
         }
 
         #[unsafe(method(ideFocusNextPanel:))]
         fn focus_next_panel_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                self.with_panes(Panes::focus_next);
+                if let Some(tab) = self.current_tab() {
+                    tab.focus_other();
+                }
             });
         }
 
         #[unsafe(method(ideCloseTab:))]
         fn close_tab_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                let selected = self.selected_tab();
-                match selected {
-                    Some(id) => self.close_tab(id),
-                    None => {
-                        if let Some(window) = self.window() {
-                            window.performClose(None);
-                        }
-                    }
+                if let Some(id) = self.selected_tab() {
+                    self.close_tab(id);
+                }
+            });
+        }
+
+        #[unsafe(method(ideCloseWindow:))]
+        fn close_window_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                // The command reaches the folder's window also while another window, such as the settings, is the
+                // key one, which it closes then.
+                let key = objc2_app_kit::NSApplication::sharedApplication(self.mtm()).keyWindow();
+                match key {
+                    Some(key) if !self.owns_window(&key) => key.performClose(None),
+                    _ => self.close_window(),
                 }
             });
         }
 
         #[unsafe(method(ideNextTab:))]
         fn next_tab_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_tabs(|tabs| tabs.select_relative(1)));
+            guarded((), || self.select_relative(true));
         }
 
         #[unsafe(method(idePreviousTab:))]
         fn previous_tab_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_tabs(|tabs| tabs.select_relative(-1)));
+            guarded((), || self.select_relative(false));
         }
 
-        #[unsafe(method(ideSelectTab:))]
-        fn select_tab_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || self.select_tab_by_id(tag_of(sender)));
-        }
 
         #[unsafe(method(ideCloseTabButton:))]
         fn close_tab_button_action(&self, sender: Option<&AnyObject>) {
@@ -458,12 +469,6 @@ fn browser_commands() -> [Sel; 4] {
     ]
 }
 
-/// Whether macOS docks bars above a split view item's content (macOS 26 and later), where scroll views know them and
-/// leave room instead of covering them.
-fn split_accessories_available() -> bool {
-    objc2::runtime::AnyClass::get(c"NSSplitViewItemAccessoryViewController").is_some()
-}
-
 /// Shows the changed folders `dirs` in the tree of the window that has `root` open, and lets editors of files there
 /// take what changed on disk.
 pub fn tree_changed(root: &Path, dirs: &[PathBuf]) {
@@ -493,11 +498,12 @@ fn quick_open_answered(root: &Path, asked: u64, hits: Vec<ide_project::Hit>) {
     });
 }
 
-/// Saves the panels of every window for its folder, as the app quits.
+/// Saves the window tabs of every window for its folder, and where the window is, as the app quits.
 pub fn save_layouts() {
     for window in WINDOWS.with(|windows| windows.borrow().clone()) {
         if !window.ivars().closed.get() {
             layout::save(&window);
+            window.save_frame();
         }
     }
 }
@@ -520,12 +526,9 @@ pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
     });
     let mut order: Vec<Retained<NSWindow>> = app.mainWindow().into_iter().collect();
     order.extend(app.orderedWindows().iter());
-    order.iter().find_map(|window| {
-        controllers
-            .iter()
-            .find(|c| c.window().is_some_and(|own| std::ptr::eq(&*own, &**window)))
-            .cloned()
-    })
+    order
+        .iter()
+        .find_map(|window| controllers.iter().find(|c| c.owns_window(window)).cloned())
 }
 
 /// The window that shows `root`.
@@ -588,96 +591,72 @@ impl WindowController {
     pub fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         let controller = WindowController::new(mtm, project);
         controller.bring_to_front();
-        controller.settle_sidebar();
+        if let Some(tab) = controller.current_tab() {
+            controller.fit_sidebar(&tab, false);
+            show_tab_bar(&tab.window);
+        }
         WINDOWS.with(|windows| windows.borrow_mut().push(controller.clone()));
         crate::session::changed();
         controller
     }
 
     fn new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
-        let style = NSWindowStyleMask::Titled
-            | NSWindowStyleMask::Closable
-            | NSWindowStyleMask::Miniaturizable
-            | NSWindowStyleMask::Resizable
-            | NSWindowStyleMask::FullSizeContentView;
-        // SAFETY: releasedWhenClosed is switched off right below, so Rust's reference stays the owner.
-        let window = unsafe {
-            NSWindow::initWithContentRect_styleMask_backing_defer(
-                NSWindow::alloc(mtm),
-                NSRect::new(NSPoint::new(0.0, 0.0), WINDOW_SIZE),
-                style,
-                NSBackingStoreType::Buffered,
-                false,
-            )
-        };
-        // SAFETY: Switching it off keeps AppKit from releasing the window behind Rust's back.
-        unsafe { window.setReleasedWhenClosed(false) };
-        window.setMinSize(MIN_WINDOW_SIZE);
-        // Panels, tabs and their views come and go after the window shows, past the key view loop AppKit makes once.
-        window.setAutorecalculatesKeyViewLoop(true);
-        window.setToolbarStyle(NSWindowToolbarStyle::Unified);
         let ivars = Ivars {
             project: RefCell::new(project),
             panel_width: Cell::new(PANEL_DEFAULT_WIDTH),
+            next_id: Cell::new(1),
             ..Ivars::default()
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
-        // SAFETY: NSWindowController's initializer, called once on the newly allocated object.
-        let this: Retained<Self> = unsafe { msg_send![super(this), initWithWindow: Some(&*window)] };
-        window.setDelegate(Some(ProtocolObject::from_ref(&*this)));
-        this.build(&window);
-        let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), &ns("IDEProjectToolbar"));
-        toolbar.setDelegate(Some(ProtocolObject::from_ref(&*this)));
-        toolbar.setDisplayMode(NSToolbarDisplayMode::IconOnly);
-        window.setToolbar(Some(&toolbar));
-        this.update_title();
-        this.update_tabbing_identifier();
-        this.restore_frame(&window);
+        // SAFETY: NSObject's initializer, called once on the newly allocated object.
+        let this: Retained<Self> = unsafe { msg_send![super(this), init] };
+        this.build();
+        let tab = this.new_tab_window();
+        this.ivars().panel_open.set(true);
+        this.restore_frame(&tab.window);
+        this.make_current(&tab);
+        this.show_panel(Panel::Files);
+        this.open_welcome();
+        this.load_project();
         this
     }
 
-    /// Gives the window the tab group of its folder, so that macOS never merges windows of different folders, and a
-    /// window without a folder one of its own (E56).
-    fn update_tabbing_identifier(&self) {
-        let Some(window) = self.window() else { return };
-        let identifier = match self.project() {
-            Some(path) => format!("folder {}", path.display()),
-            None => format!("window {:p}", self),
-        };
-        window.setTabbingIdentifier(&ns(&identifier));
+    /// The identifier that keeps the window tabs of this window together, and those of other windows out (E56).
+    fn tabbing_identifier(&self) -> String {
+        format!("folder {:p}", self)
     }
 
-    /// Puts the window where it was for this folder, else at its default size in the middle, with the sidebar at its
-    /// default width; setting the split view shrank it to what its views need.
+    /// Puts the window where it was for this folder, else at its default size in the middle; the sidebar gets the
+    /// width it had.
     fn restore_frame(&self, window: &NSWindow) {
         let name = ns(&self.frame_name());
         if !window.setFrameUsingName(&name) {
-            window.setContentSize(WINDOW_SIZE);
+            window.setContentSize(tabs::default_size());
             window.center();
         }
-        let _ = window.setFrameAutosaveName(&name);
-    }
-
-    /// Gives the sidebar the width it had for this folder, else its default; the split view takes a divider position
-    /// only once the window shows.
-    fn settle_sidebar(&self) {
-        let name = format!("Sidebar {}", self.frame_name());
-        let saved = objc2_foundation::NSUserDefaults::standardUserDefaults()
-            .objectForKey(&ns(&format!("NSSplitView Subview Frames {name}")))
-            .is_some();
-        if let Some(split) = self.ivars().split.borrow().as_ref() {
-            let view = split.splitView();
-            if !saved {
-                view.setPosition_ofDividerAtIndex(ACTIVITY_WIDTH + PANEL_DEFAULT_WIDTH, 0);
-            }
-            view.setAutosaveName(Some(&ns(&name)));
+        let defaults = objc2_foundation::NSUserDefaults::standardUserDefaults();
+        let key = ns(&format!("Sidebar {}", self.frame_name()));
+        if defaults.objectForKey(&key).is_some() {
+            let width = defaults.doubleForKey(&key) - ACTIVITY_WIDTH;
+            self.ivars()
+                .panel_width
+                .set(width.clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
         }
     }
 
-    fn build(&self, window: &NSWindow) {
-        let mtm = self.mtm();
-        let split = NSSplitViewController::new(mtm);
+    /// Keeps where the window is and how wide its sidebar is, for the next time the folder opens.
+    fn save_frame(&self) {
+        let Some(tab) = self.current_tab() else { return };
+        tab.window.saveFrameUsingName(&ns(&self.frame_name()));
+        self.remember_sidebar_width(&tab);
+        let defaults = objc2_foundation::NSUserDefaults::standardUserDefaults();
+        let width = ACTIVITY_WIDTH + self.ivars().panel_width.get();
+        defaults.setDouble_forKey(width, &ns(&format!("Sidebar {}", self.frame_name())));
+    }
 
+    /// Builds the sidebar, the activity bar and the panel beside it, which moves into the window tab in front.
+    fn build(&self) {
+        let mtm = self.mtm();
         let sidebar_view = NSView::new(mtm);
         let activity = ActivityBar::new(mtm, self);
         let panels = Panels::new(mtm, self, self.project().as_deref());
@@ -713,32 +692,10 @@ impl WindowController {
         ] {
             constraint.setActive(true);
         }
-        let sidebar_controller = NSViewController::new(mtm);
-        sidebar_controller.setView(&sidebar_view);
-        let sidebar = NSSplitViewItem::sidebarWithViewController(&sidebar_controller);
-        sidebar.setMinimumThickness(ACTIVITY_WIDTH + PANEL_MIN_WIDTH);
-        sidebar.setMaximumThickness(ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
-        // Above the content's, so resizing the window resizes the content and the sidebar keeps its width.
-        sidebar.setHoldingPriority(260.0);
-
-        let panes = Panes::new(mtm, self, split_accessories_available());
-        let content = NSSplitViewItem::splitViewItemWithViewController(panes.controller());
-        content.setMinimumThickness(360.0);
-
-        split.addSplitViewItem(&sidebar);
-        split.addSplitViewItem(&content);
-        window.setContentViewController(Some(&split));
-
         let ivars = self.ivars();
         *ivars.activity.borrow_mut() = Some(activity);
         *ivars.panels.borrow_mut() = Some(panels);
-        *ivars.panes.borrow_mut() = Some(panes);
-        *ivars.split.borrow_mut() = Some(split);
-        *ivars.sidebar.borrow_mut() = Some(sidebar);
-        ivars.panel_open.set(true);
-        self.show_panel(Panel::Files);
-        self.open_welcome();
-        self.load_project();
+        *ivars.sidebar.borrow_mut() = Some(sidebar_view);
     }
 
     /// Reads the folder, shows its tree and asks once whether the user trusts it.
@@ -779,7 +736,7 @@ impl WindowController {
         }
     }
 
-    /// Opens the panels and tabs the folder's window had when it closed, as opening a folder does.
+    /// Opens the tabs the folder's window had when it closed, as opening a folder does.
     pub fn restore_layout(&self) {
         let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
         layout::restore(self, &mut |controller, document| match document {
@@ -788,8 +745,8 @@ impl WindowController {
         });
     }
 
-    /// `restore_layout` with `editor` opening each editor's document in the active panel, and saying whether it did,
-    /// so the launch can put the copies a crash left in their places (`session::restore`).
+    /// `restore_layout` with `editor` opening each editor's document, and saying whether it did, so the launch can put
+    /// the copies a crash left in their places (`session::restore`).
     pub(crate) fn restore_layout_with(&self, editor: &mut layout::Opener) {
         layout::restore(self, editor);
     }
@@ -884,79 +841,118 @@ impl WindowController {
         self.ivars().files.borrow().as_ref().map(FileTree::outline)
     }
 
-    /// Adds a tab of `kind` showing `view` to the active panel and selects it; `key` names what it shows, so
-    /// `select_tab` finds it again.
+    /// Shows `view` as a document of `kind` and brings it to the front: in a window tab of its own, or in the tab
+    /// in front if that one is empty or the page of a new tab, or beside a document for `open_beside`. `key` names
+    /// what it shows, so `select_tab` finds it again. The document's number.
     pub fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
-        let mut id = -1;
-        self.with_tabs(|tabs| id = tabs.add(kind, key, title, view));
+        let document = self.new_document(kind, key, title, view);
+        let id = document.id;
+        self.place(document);
         id
     }
 
-    /// Shows `view` in the active panel's preview tab, which takes the place of the one before, as a single click
-    /// opens a file; an ordinary tab when the user turned preview tabs off.
+    /// Shows `view` as the preview document, which takes the place of the one before, as a single click opens a
+    /// file; an ordinary document when the user turned preview tabs off.
     pub fn add_preview_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
         if !ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::PREVIEW_TABS) {
             return self.add_tab(kind, key, title, view);
         }
-        let mut old = None;
-        self.with_tabs(|tabs| old = tabs.preview_id());
-        let replace = old.filter(|id| crate::editor::may_close(self, *id));
-        if let Some(old) = replace {
-            // The replaced tab closes as any other does: its editor and the preview that opened with it go.
-            crate::editor::closing(self, old);
-            crate::preview::closing(self, old);
-        }
-        let mut id = -1;
-        self.with_tabs(|tabs| {
-            if let Some(old) = old
-                && replace.is_none()
-            {
-                tabs.keep(old);
+        let old = self.documents().into_iter().find(|doc| doc.is_preview());
+        if let Some(old) = old {
+            let tab = self.tab_of_document(old.id);
+            match tab {
+                Some(tab) if crate::editor::may_close(self, old.id) => {
+                    let index = tab.documents().iter().position(|doc| doc.id == old.id);
+                    self.forget_document(&tab, old.id);
+                    let document = self.new_document(kind, key, title, view);
+                    document.set_preview(true);
+                    let id = document.id;
+                    tab.insert(document, index);
+                    self.select(&tab);
+                    crate::session::changed();
+                    return id;
+                }
+                _ => self.keep_tab(old.id),
             }
-            id = tabs.add_preview(kind, key, title, view, replace);
-        });
+        }
+        let id = self.add_tab(kind, key, title, view);
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_preview(true);
+            tab.refresh();
+        }
         id
     }
 
-    /// Makes the tab `id` an ordinary one if it is its panel's preview tab.
+    /// Makes the document `id` an ordinary one if it is the preview document.
     pub fn keep_tab(&self, id: isize) {
-        self.with_tab(id, |tabs| tabs.keep(id));
+        if let Some((tab, document)) = self.find_document(id)
+            && document.is_preview()
+        {
+            document.set_preview(false);
+            tab.refresh();
+        }
     }
 
-    /// The tab showing `key`, in any panel.
+    /// The document showing `key`.
     pub fn tab_with_key(&self, key: &str) -> Option<isize> {
-        self.with_panes(|panes| panes.all().iter().find_map(|pane| pane.tabs.find_key(key)))
-            .flatten()
+        self.documents()
+            .into_iter()
+            .find(|doc| doc.key.as_deref() == Some(key))
+            .map(|doc| doc.id)
     }
 
-    /// Selects the tab showing `key` in its panel; whether there is one.
+    /// Brings the document showing `key` to the front; whether there is one.
     pub fn select_tab(&self, key: &str) -> bool {
-        self.with_panes(|panes| {
-            let found = panes
-                .all()
-                .into_iter()
-                .find_map(|pane| pane.tabs.find_key(key).map(|id| (pane, id)));
-            if let Some((pane, id)) = &found {
-                pane.tabs.select(*id);
-                panes.set_active(pane);
+        match self.tab_with_key(key) {
+            Some(id) => {
+                self.select_tab_by_id(id);
+                true
             }
-            found.is_some()
-        })
-        .unwrap_or(false)
+            None => false,
+        }
     }
 
     pub fn set_tab_title(&self, id: isize, title: &str) {
-        self.with_tab(id, |tabs| tabs.set_title(id, title));
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_title(title);
+            tab.refresh();
+        }
     }
 
-    /// Shows a dot of `color` on the tab `id`, or none.
+    /// Shows a dot of `color` on the tab of the document `id`, or none.
     pub fn set_tab_status(&self, id: isize, color: Option<&NSColor>) {
-        self.with_tab(id, |tabs| tabs.set_status(id, color));
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_status(color);
+            tab.refresh();
+        }
     }
 
-    /// Tints the symbol of the tab `id`.
+    /// Tints the symbol of the document `id`.
     pub fn set_tab_tint(&self, id: isize, color: &NSColor) {
-        self.with_tabs(|tabs| tabs.set_tint(id, color));
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_tint(color);
+            tab.refresh();
+        }
+    }
+
+    /// Runs `open`, which opens a document, so that the document shows beside the document `anchor` in its tab.
+    pub fn open_beside(&self, anchor: isize, open: impl FnOnce()) {
+        let before = self.ivars().beside.replace(Some(anchor));
+        open();
+        self.ivars().beside.set(before);
+    }
+
+    /// Opens `path` beside the document in front, as the folder tree's "Daneben öffnen" does; a file already open
+    /// comes to the front where it is.
+    pub fn open_file_beside(&self, path: &Path) {
+        if let Some(id) = self.tab_with_key(&path.to_string_lossy()) {
+            self.select_tab_by_id(id);
+            return;
+        }
+        match self.selected_tab() {
+            Some(anchor) => self.open_beside(anchor, || self.open_file(path)),
+            None => self.open_file(path),
+        }
     }
 
     /// The folder's root, if the window has one open.
@@ -1006,113 +1002,113 @@ impl WindowController {
         crate::editor::open_tab(self, path, size, true);
     }
 
+    /// Marks the document `id` as having unsaved changes, or not; the first change keeps a preview document.
     pub fn set_tab_dirty(&self, id: isize, dirty: bool) {
-        self.with_tab(id, |tabs| tabs.set_dirty(id, dirty));
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_dirty(dirty);
+            if dirty {
+                document.set_preview(false);
+            }
+            tab.refresh();
+        }
     }
 
-    /// Closes the tab `id` once its content agrees, such as an editor with unsaved changes or a pop-up whose page
-    /// closed itself; a panel left without tabs goes, unless it is the window's last.
+    /// Closes the document `id` once it agrees, such as an editor with unsaved changes or a pop-up whose page closed
+    /// itself; a window tab left without documents closes with it.
     pub fn close_tab(&self, id: isize) {
         if crate::editor::may_close(self, id) {
             self.close_tab_now(id);
         }
     }
 
-    /// Closes the tab `id` without asking.
+    /// Closes the document `id` without asking; its window tab goes with it when it was the tab's only one, and the
+    /// window with its last tab.
     fn close_tab_now(&self, id: isize) {
+        let Some(tab) = self.tab_of_document(id) else { return };
+        self.forget_document(&tab, id);
+        if tab.is_empty() {
+            // A closing window has left its tab group already when AppKit tells its delegate.
+            let next = self.neighbour(&tab);
+            tab.window.close();
+            let open = |next: &Rc<TabWindow>| self.ivars().tabs.borrow().iter().any(|t| Rc::ptr_eq(t, next));
+            if let Some(next) = next.filter(open) {
+                self.select(&next);
+            }
+        }
+        crate::session::changed();
+    }
+
+    /// Takes the document `id` out of `tab` and tells what showed it that it closes.
+    fn forget_document(&self, tab: &TabWindow, id: isize) {
         crate::editor::closing(self, id);
         crate::preview::closing(self, id);
-        self.with_panes(|panes| {
-            if let Some(pane) = panes.of_tab(id) {
-                pane.tabs.close(id);
-                panes.remove_if_empty(&pane);
-            }
-        });
+        tab.remove(id);
     }
 
-    /// Selects the tab `id` and makes its panel the active one; the keyboard focus stays where it is.
+    /// Brings the document `id` to the front; the keyboard focus stays where it is in its tab.
     pub(crate) fn select_tab_by_id(&self, id: isize) {
-        self.with_panes(|panes| {
-            if let Some(pane) = panes.of_tab(id) {
-                pane.tabs.select(id);
-                panes.set_active(&pane);
-            }
-        });
-    }
-
-    /// Selects the tab `id` as a click on it does: its panel becomes the active one and gets the keyboard focus.
-    pub(super) fn click_tab(&self, id: isize) {
-        self.with_panes(|panes| {
-            if let Some(pane) = panes.of_tab(id) {
-                pane.tabs.select(id);
-                panes.activate(&pane);
-            }
-        });
-    }
-
-    /// The tab ids, panel by panel, left to right.
-    pub fn tab_ids(&self) -> Vec<isize> {
-        self.with_panes(|panes| panes.all().iter().flat_map(|pane| pane.tabs.ids()).collect())
-            .unwrap_or_default()
-    }
-
-    /// Closes every tab without asking, for a window that is about to get the tabs of the last run; the panels close
-    /// with them.
-    pub(crate) fn clear_tabs(&self) {
-        for id in self.tab_ids() {
-            self.with_panes(|panes| {
-                if let Some(pane) = panes.of_tab(id) {
-                    pane.tabs.close(id);
-                    panes.remove_if_empty(&pane);
-                }
-            });
+        if let Some(tab) = self.tab_of_document(id) {
+            tab.mark_focused(id);
+            self.select(&tab);
         }
     }
 
-    /// Whether every tab may close: no editor holds unsaved changes the user wants to keep. When one refuses, the
-    /// window stays, and editors whose text the user already gave up keep it after all, with their copies back.
-    fn tabs_may_close(&self) -> bool {
-        let all = self.tab_ids().into_iter().all(|id| crate::editor::may_close(self, id));
+    /// The documents' numbers, tab by tab in the order of the tab bar, left to right in a tab.
+    pub fn tab_ids(&self) -> Vec<isize> {
+        self.documents().iter().map(|doc| doc.id).collect()
+    }
+
+    /// Closes every document without asking, for a window that is about to get the documents of the last run or of
+    /// another folder; the window keeps the tab in front, empty, and closes the others.
+    pub(crate) fn clear_tabs(&self) {
+        let tabs = self.ivars().tabs.borrow().clone();
+        let keep = self.current_tab().or_else(|| tabs.first().cloned());
+        for tab in &tabs {
+            for document in tab.documents() {
+                self.forget_document(tab, document.id);
+            }
+        }
+        for tab in tabs {
+            if keep.as_ref().is_some_and(|keep| !Rc::ptr_eq(keep, &tab)) {
+                tab.window.close();
+            }
+        }
+    }
+
+    /// Whether `documents` may close: no editor holds unsaved changes the user wants to keep. When one refuses, the
+    /// tab stays, and editors whose text the user already gave up keep it after all, with their copies back.
+    fn documents_may_close(&self, documents: &[Rc<Document>]) -> bool {
+        let all = documents
+            .iter()
+            .all(|document| crate::editor::may_close(self, document.id));
         if !all {
             crate::editor::store_copies(self);
         }
         all
     }
 
-    /// What the window shows, for the next launch: its folder, its editor and welcome tabs in every panel and which
-    /// tab is in front. The panels and the other tabs are the layout's, which `layout::restore` opens again.
+    /// What the window shows, for the next launch: its folder, its editors and welcome pages in every tab and which
+    /// one is in front. The tabs of the other documents are the layout's, which `layout::restore` opens again.
     pub fn record(&self) -> crate::session::WindowRecord {
         use crate::session::TabRecord;
-        let kinds: Vec<(isize, TabKind)> = self
-            .with_panes(|panes| panes.all().iter().flat_map(|pane| pane.tabs.kinds()).collect())
-            .unwrap_or_default();
         let selected = self.selected_tab();
         let mut record = crate::session::WindowRecord {
             project: self.project(),
             ..Default::default()
         };
-        for (id, kind) in kinds {
-            let tab = match kind {
+        for document in self.documents() {
+            let tab = match document.kind {
                 TabKind::Welcome => TabRecord::Welcome,
-                TabKind::Editor => match crate::editor::tab_document(self, id) {
+                TabKind::Editor => match crate::editor::tab_document(self, document.id) {
                     Some((path, recovery)) => TabRecord::Editor {
                         path,
                         recovery: recovery.as_str().to_string(),
                     },
                     None => continue,
                 },
-                TabKind::Terminal
-                | TabKind::Browser
-                | TabKind::Diff
-                | TabKind::Agent
-                | TabKind::Log
-                | TabKind::Cli
-                | TabKind::Plan
-                | TabKind::Preview => {
-                    continue;
-                }
+                _ => continue,
             };
-            if selected == Some(id) {
+            if selected == Some(document.id) {
                 record.selected = Some(record.tabs.len());
             }
             record.tabs.push(tab);
@@ -1120,56 +1116,67 @@ impl WindowController {
         record
     }
 
-    /// Shows `text` at the foot of the active panel's tab area for a few seconds.
+    /// Shows `text` at the foot of the documents of the tab in front for a few seconds.
     pub fn show_notice(&self, text: &str) {
-        let Some(note) = self.with_panes(|panes| notice::show(self.mtm(), panes.active().tabs.content(), text)) else {
-            return;
-        };
+        let Some(tab) = self.current_tab() else { return };
+        let note = notice::show(self.mtm(), tab.content(), text);
         *self.ivars().notice.borrow_mut() = Some((note, text.to_string()));
     }
 
-    /// The tab in front of the active panel.
+    /// The document commands act on: the focused one of the tab in front.
     pub fn selected_tab(&self) -> Option<isize> {
-        self.with_panes(|panes| panes.active().tabs.selected_id()).flatten()
+        self.current_tab()?.focused().map(|doc| doc.id)
     }
 
-    /// Follows a tab dragged to `point`, in window coordinates.
-    pub(super) fn drag_tab(&self, id: isize, point: NSPoint) {
-        self.with_panes(|panes| panes.drag(id, point));
+    /// Closes the tabs of the window in front once each of their documents agrees, asked one after the other; one
+    /// that refuses keeps them all. The layout is the one before the first tab closed.
+    fn close_window(&self) {
+        let Some(current) = self.current_tab() else { return };
+        let windows: Vec<Retained<NSWindow>> = current
+            .window
+            .tabbedWindows()
+            .map(|tabbed| tabbed.iter().collect())
+            .unwrap_or_else(|| vec![current.window.clone()]);
+        let documents: Vec<Rc<Document>> = windows
+            .iter()
+            .filter_map(|window| self.tab_of_window(window))
+            .flat_map(|tab| tab.documents())
+            .collect();
+        if !self.documents_may_close(&documents) {
+            return;
+        }
+        layout::save(self);
+        self.ivars().closing.set(true);
+        for window in windows {
+            window.close();
+        }
+        self.ivars().closing.set(false);
     }
 
-    /// Puts down a tab dragged to `point`: in its own bar, another panel's, or beside a panel.
-    pub(super) fn drop_tab(&self, id: isize, point: NSPoint) {
-        self.with_panes(|panes| panes.drop(id, point));
-    }
-
-    /// Moves the tab `id` into a new panel beside its own.
-    pub fn split_tab(&self, id: isize, side: Side) {
-        self.with_panes(|panes| panes.split(id, side));
-    }
-
-    /// Whether the tab `id` can move into a panel of its own.
-    pub(super) fn can_split(&self, id: isize) -> bool {
-        self.with_panes(|panes| panes.can_split(id)).unwrap_or(false)
-    }
-
-    pub(super) fn close_tab_by_id(&self, id: isize) {
-        self.close_tab(id);
-    }
-
-    /// Closes every tab of the panel of `id` but `id`, or only those right of it.
-    pub(super) fn close_other_tabs(&self, id: isize, right_only: bool) {
-        let ids = self
-            .with_panes(|panes| panes.of_tab(id).map(|pane| pane.tabs.ids()))
-            .flatten()
-            .unwrap_or_default();
-        let Some(position) = ids.iter().position(|other| *other == id) else {
+    /// Brings the next or the previous tab of the window in front to the front.
+    fn select_relative(&self, next: bool) {
+        let Some(current) = self.current_tab() else { return };
+        let Some(tabbed) = current.window.tabbedWindows() else {
             return;
         };
-        for (index, other) in ids.into_iter().enumerate() {
-            if other != id && (!right_only || index > position) {
-                self.close_tab(other);
-            }
+        let windows: Vec<Retained<NSWindow>> = tabbed.iter().collect();
+        let Some(index) = windows.iter().position(|w| std::ptr::eq(&**w, &*current.window)) else {
+            return;
+        };
+        let count = windows.len();
+        let step = if next { 1 } else { count - 1 };
+        let target = windows.get((index + step) % count).and_then(|w| self.tab_of_window(w));
+        if let Some(target) = target {
+            self.select(&target);
+        }
+    }
+
+    /// Opens the page of a new tab (E17), which gives way to what the user picks there.
+    fn open_new_tab_page(&self) {
+        let page = chooser::view(self.mtm(), self);
+        let id = self.add_tab(TabKind::NewTab, None, t("Neuer Tab"), page.into_super());
+        if let Some(tab) = self.tab_of_document(id) {
+            tab.activate(id);
         }
     }
 
@@ -1177,6 +1184,274 @@ impl WindowController {
         if let Some(window) = self.window() {
             window.makeKeyAndOrderFront(None);
         }
+    }
+
+    /// The window of the tab in front, which has the sidebar; sheets and the keyboard focus go there.
+    pub fn window(&self) -> Option<Retained<NSWindow>> {
+        self.ivars().current.borrow().as_ref().map(|tab| tab.window.clone())
+    }
+
+    /// The windows of the tabs, in the order of the tab bar.
+    pub fn tab_windows(&self) -> Vec<Retained<NSWindow>> {
+        self.ordered_tabs().iter().map(|tab| tab.window.clone()).collect()
+    }
+
+    /// Whether `window` is one of this window's tabs.
+    pub fn owns_window(&self, window: &NSWindow) -> bool {
+        self.tab_of_window(window).is_some()
+    }
+
+    fn current_tab(&self) -> Option<Rc<TabWindow>> {
+        self.ivars().current.borrow().clone()
+    }
+
+    fn tab_of_window(&self, window: &NSWindow) -> Option<Rc<TabWindow>> {
+        self.ivars()
+            .tabs
+            .borrow()
+            .iter()
+            .find(|tab| std::ptr::eq(&*tab.window, window))
+            .cloned()
+    }
+
+    fn tab_of_notification(&self, notification: &NSNotification) -> Option<Rc<TabWindow>> {
+        let object = notification.object()?;
+        let window = object.downcast_ref::<NSWindow>()?;
+        self.tab_of_window(window)
+    }
+
+    fn tab_of_document(&self, id: isize) -> Option<Rc<TabWindow>> {
+        self.ivars().tabs.borrow().iter().find(|tab| tab.holds(id)).cloned()
+    }
+
+    fn find_document(&self, id: isize) -> Option<(Rc<TabWindow>, Rc<Document>)> {
+        let tab = self.tab_of_document(id)?;
+        let document = tab.document(id)?;
+        Some((tab, document))
+    }
+
+    /// The window tabs in the order of their tab bars, tab group by tab group.
+    fn ordered_tabs(&self) -> Vec<Rc<TabWindow>> {
+        let tabs = self.ivars().tabs.borrow().clone();
+        let mut ordered: Vec<Rc<TabWindow>> = Vec::with_capacity(tabs.len());
+        for tab in &tabs {
+            let group: Vec<Retained<NSWindow>> = tab
+                .window
+                .tabbedWindows()
+                .map(|tabbed| tabbed.iter().collect())
+                .unwrap_or_else(|| vec![tab.window.clone()]);
+            for window in group {
+                let found = tabs.iter().find(|t| std::ptr::eq(&*t.window, &*window));
+                if let Some(found) = found
+                    && !ordered.iter().any(|o| Rc::ptr_eq(o, found))
+                {
+                    ordered.push(found.clone());
+                }
+            }
+            if !ordered.iter().any(|o| Rc::ptr_eq(o, tab)) {
+                ordered.push(tab.clone());
+            }
+        }
+        ordered
+    }
+
+    /// The documents, tab by tab in the order of the tab bar.
+    fn documents(&self) -> Vec<Rc<Document>> {
+        self.ordered_tabs().iter().flat_map(|tab| tab.documents()).collect()
+    }
+
+    fn new_document(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Rc<Document> {
+        let id = self.ivars().next_id.get();
+        self.ivars().next_id.set(id + 1);
+        Document::new(self, id, kind, key, title, view)
+    }
+
+    /// A new window tab of this window, not yet in its tab group.
+    fn new_tab_window(&self) -> Rc<TabWindow> {
+        let tab = TabWindow::new(self, &self.tabbing_identifier(), None);
+        self.update_title_of(&tab.window);
+        self.ivars().tabs.borrow_mut().push(tab.clone());
+        tab
+    }
+
+    /// Shows `document` where `add_tab` says.
+    fn place(&self, document: Rc<Document>) {
+        let anchor = self.ivars().beside.get();
+        if let Some((tab, _)) = anchor.and_then(|anchor| self.find_document(anchor)) {
+            self.put_beside(&tab, anchor.unwrap_or_default(), document);
+            crate::session::changed();
+            return;
+        }
+        let current = self.current_tab();
+        if let Some(tab) = &current {
+            let page = tab.focused().filter(|doc| doc.kind == TabKind::NewTab);
+            if tab.is_empty() || page.is_some() {
+                let index = page.map(|page| {
+                    let index = tab.documents().iter().position(|doc| doc.id == page.id);
+                    self.forget_document(tab, page.id);
+                    index
+                });
+                tab.insert(document, index.flatten());
+                self.select(tab);
+                crate::session::changed();
+                return;
+            }
+        }
+        let tab = self.new_tab_window();
+        tab.insert(document, None);
+        if let Some(current) = &current {
+            current
+                .window
+                .addTabbedWindow_ordered(&tab.window, NSWindowOrderingMode::Above);
+        }
+        self.select(&tab);
+        crate::session::changed();
+    }
+
+    /// Puts `document` right of the document `anchor` in `tab`; a document there before gets a tab of its own.
+    fn put_beside(&self, tab: &Rc<TabWindow>, anchor: isize, document: Rc<Document>) {
+        let others: Vec<Rc<Document>> = tab.documents().into_iter().filter(|doc| doc.id != anchor).collect();
+        for other in others {
+            tab.remove(other.id);
+            let own = self.new_tab_window();
+            own.insert(other, None);
+            tab.window
+                .addTabbedWindow_ordered(&own.window, NSWindowOrderingMode::Above);
+            own.refresh();
+        }
+        tab.insert(document, None);
+        tab.mark_focused(anchor);
+        self.select(tab);
+    }
+
+    /// Brings `tab` to the front of its tab group and gives it the sidebar.
+    fn select(&self, tab: &Rc<TabWindow>) {
+        if let Some(group) = tab.window.tabGroup() {
+            group.setSelectedWindow(Some(&tab.window));
+        }
+        // A tab draws the icon of its attributed title only when it gets the title in its tab group.
+        tab.refresh();
+        if self.current_tab().is_some_and(|current| current.window.isVisible()) || tab.window.isVisible() {
+            tab.window.makeKeyAndOrderFront(None);
+            show_tab_bar(&tab.window);
+        }
+        self.make_current(tab);
+        crate::session::changed();
+    }
+
+    /// Makes the tab the group shows the one in front, after AppKit picked another, as a closed tab leaves.
+    fn follow_selection(&self) {
+        let selected = self
+            .current_tab()
+            .and_then(|tab| tab.window.tabGroup()?.selectedWindow());
+        if let Some(tab) = selected.and_then(|window| self.tab_of_window(&window)) {
+            self.make_current(&tab);
+        }
+    }
+
+    /// Makes `tab` the one in front: the sidebar moves into it at the width it had. The tab it leaves keeps a picture
+    /// of it, for a window that stays on screen beside, after a tab was dragged out, and for the overview of all tabs.
+    fn make_current(&self, tab: &Rc<TabWindow>) {
+        let previous = self.current_tab();
+        if previous.as_ref().is_some_and(|previous| Rc::ptr_eq(previous, tab)) {
+            return;
+        }
+        let mut collapsed = false;
+        if let Some(previous) = &previous {
+            collapsed = previous.sidebar_collapsed();
+            self.remember_sidebar_width(previous);
+            if let Some(view) = self.ivars().sidebar.borrow().as_ref() {
+                previous.keep_picture_of(view);
+            }
+        }
+        *self.ivars().current.borrow_mut() = Some(tab.clone());
+        if let Some(view) = self.ivars().sidebar.borrow().as_ref() {
+            tab.adopt_sidebar(view);
+        }
+        self.fit_sidebar(tab, collapsed);
+    }
+
+    /// Keeps the width the user gave the sidebar in `tab`.
+    fn remember_sidebar_width(&self, tab: &TabWindow) {
+        let ivars = self.ivars();
+        let width = tab.sidebar_width();
+        if ivars.panel_open.get() && tab.window.isVisible() && width > ACTIVITY_WIDTH + PANEL_MIN_WIDTH - 1.0 {
+            ivars
+                .panel_width
+                .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+        }
+    }
+
+    /// Gives the sidebar of `tab` the width it has in the other tabs, which a tab that has not shown yet takes only
+    /// held there; the user may drag it again once the tab is laid out.
+    fn fit_sidebar(&self, tab: &TabWindow, collapsed: bool) {
+        let ivars = self.ivars();
+        let open = ivars.panel_open.get();
+        let width = if open {
+            ACTIVITY_WIDTH + ivars.panel_width.get()
+        } else {
+            ACTIVITY_WIDTH
+        };
+        tab.pin_sidebar(width, collapsed);
+        if open {
+            self.later(|controller| {
+                if controller.ivars().panel_open.get()
+                    && let Some(tab) = controller.current_tab()
+                {
+                    tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
+                }
+            });
+        }
+    }
+
+    /// A window tab closes: its documents go with it; the window goes with its last tab.
+    fn tab_closes(&self, tab: &Rc<TabWindow>) {
+        let last = self.ivars().tabs.borrow().len() == 1;
+        if last {
+            self.window_closes();
+        }
+        for document in tab.documents() {
+            self.forget_document(tab, document.id);
+        }
+        let neighbour = self.neighbour(tab);
+        self.ivars().tabs.borrow_mut().retain(|other| !Rc::ptr_eq(other, tab));
+        if self.current_tab().is_some_and(|current| Rc::ptr_eq(&current, tab)) {
+            *self.ivars().current.borrow_mut() = None;
+            let next = neighbour.or_else(|| self.ivars().tabs.borrow().first().cloned());
+            if let Some(next) = next {
+                self.make_current(&next);
+                self.later(WindowController::follow_selection);
+            }
+        }
+        crate::session::changed();
+    }
+
+    /// The tab that comes to the front when `tab` closes, as AppKit picks it: the next one in its tab bar, else the one
+    /// before.
+    fn neighbour(&self, tab: &TabWindow) -> Option<Rc<TabWindow>> {
+        let windows: Vec<Retained<NSWindow>> = tab.window.tabbedWindows()?.iter().collect();
+        let index = windows.iter().position(|w| std::ptr::eq(&**w, &*tab.window))?;
+        windows
+            .get(index + 1)
+            .or_else(|| index.checked_sub(1).and_then(|before| windows.get(before)))
+            .and_then(|window| self.tab_of_window(window))
+    }
+
+    /// The window's last tab closes: its layout is kept, and what runs for its folder ends.
+    fn window_closes(&self) {
+        layout::save(self);
+        self.save_frame();
+        self.ivars().closed.set(true);
+        if let Some(search) = self.ivars().search.borrow().as_ref() {
+            search.stop();
+        }
+        if let Some(root) = self.project_root() {
+            crate::lsp::window_closed(&root);
+        }
+        crate::agent::window_closed(self);
+        crate::ci_panel::window_closed(self);
+        let this: *const WindowController = self;
+        main_soon_unregister(this);
     }
 
     /// The folder this window shows.
@@ -1187,12 +1462,8 @@ impl WindowController {
     fn set_project(&self, project: Option<PathBuf>) {
         *self.ivars().project.borrow_mut() = project;
         self.update_title();
-        self.update_tabbing_identifier();
         if let Some(panels) = self.ivars().panels.borrow().as_ref() {
             panels.set_project(self.project().as_deref());
-        }
-        if let Some(window) = self.window() {
-            let _ = window.setFrameAutosaveName(&ns(&self.frame_name()));
         }
         self.load_project();
     }
@@ -1205,7 +1476,13 @@ impl WindowController {
     }
 
     fn update_title(&self) {
-        let Some(window) = self.window() else { return };
+        for tab in self.ivars().tabs.borrow().iter() {
+            self.update_title_of(&tab.window);
+        }
+    }
+
+    /// Names the folder in the title bar of `window`; the tabs name their documents.
+    fn update_title_of(&self, window: &NSWindow) {
         match self.project() {
             Some(path) => {
                 window.setTitle(&ns(&folder_name(&path)));
@@ -1252,7 +1529,7 @@ impl WindowController {
         let target = page
             .as_deref()
             .filter(|_| ivars.panel_open.get())
-            .and_then(panes::first_responder_in);
+            .and_then(tabs::first_responder_in);
         if let Some(view) = target {
             window.makeFirstResponder(Some(&view));
             return;
@@ -1265,50 +1542,39 @@ impl WindowController {
             .borrow()
             .as_ref()
             .is_some_and(|panels| focus.is_some_and(|focus| focus.isDescendantOf(panels.view())));
-        if in_panel {
-            self.with_panes(|panes| panes.activate(&panes.active()));
+        if in_panel
+            && let Some(tab) = self.current_tab()
+            && let Some(document) = tab.focused()
+        {
+            tab.activate(document.id);
         }
     }
 
     /// Opens or closes the panel beside the activity bar, which stays.
     fn set_panel_open(&self, open: bool) {
         let ivars = self.ivars();
-        let (Some(sidebar), Some(split)) = (ivars.sidebar.borrow().clone(), ivars.split.borrow().clone()) else {
-            return;
-        };
+        let Some(tab) = self.current_tab() else { return };
         if let Some(panels) = ivars.panels.borrow().as_ref() {
             panels.view().setHidden(!open);
         }
-        if open {
-            sidebar.setMaximumThickness(ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
-            sidebar.setMinimumThickness(ACTIVITY_WIDTH + PANEL_MIN_WIDTH);
-            split
-                .splitView()
-                .setPosition_ofDividerAtIndex(ACTIVITY_WIDTH + ivars.panel_width.get(), 0);
-        } else {
-            let current = sidebar.viewController(self.mtm()).view().frame().size.width;
-            if let Some(width) = Some(current).filter(|w| *w > ACTIVITY_WIDTH + 1.0) {
-                ivars.panel_width.set(width - ACTIVITY_WIDTH);
-            }
-            sidebar.setMinimumThickness(ACTIVITY_WIDTH);
-            sidebar.setMaximumThickness(ACTIVITY_WIDTH);
-            split.splitView().setPosition_ofDividerAtIndex(ACTIVITY_WIDTH, 0);
+        if !open {
+            self.remember_sidebar_width(&tab);
         }
         ivars.panel_open.set(open);
+        self.fit_sidebar(&tab, tab.sidebar_collapsed());
         if let Some(activity) = ivars.activity.borrow().as_ref() {
             activity.select(open.then(|| ivars.panel.get()).flatten());
         }
     }
 
-    /// Selects the welcome tab, or adds it to the active panel; its id.
+    /// Brings the welcome page to the front, or opens it; its number.
     pub(crate) fn open_welcome(&self) -> isize {
-        let open = self.with_panes(|panes| {
-            panes
-                .all()
-                .into_iter()
-                .find_map(|pane| pane.tabs.find(TabKind::Welcome))
-        });
-        match open.flatten() {
+        let open = self
+            .documents()
+            .into_iter()
+            .find(|doc| doc.kind == TabKind::Welcome)
+            .map(|doc| doc.id);
+        match open {
             Some(id) => {
                 self.select_tab_by_id(id);
                 id
@@ -1318,24 +1584,6 @@ impl WindowController {
                 self.add_tab(TabKind::Welcome, None, t("Willkommen"), view)
             }
         }
-    }
-
-    fn with_panes<R>(&self, f: impl FnOnce(&Panes) -> R) -> Option<R> {
-        self.ivars().panes.borrow().as_ref().map(f)
-    }
-
-    /// Runs `f` on the tab bar of the active panel.
-    fn with_tabs(&self, f: impl FnOnce(&TabBar)) {
-        self.with_panes(|panes| f(&panes.active().tabs));
-    }
-
-    /// Runs `f` on the tab bar of the panel that holds the tab `id`.
-    fn with_tab(&self, id: isize, f: impl FnOnce(&TabBar)) {
-        self.with_panes(|panes| {
-            if let Some(pane) = panes.of_tab(id) {
-                f(&pane.tabs);
-            }
-        });
     }
 
     fn validate(&self, item: &NSMenuItem) -> bool {
@@ -1372,25 +1620,20 @@ impl WindowController {
         }
         if action == Some(sel!(ideNextTab:)) || action == Some(sel!(idePreviousTab:)) {
             return self
-                .with_panes(|panes| panes.active().tabs.count() > 1)
-                .unwrap_or(false);
+                .window()
+                .and_then(|window| window.tabbedWindows())
+                .is_some_and(|tabbed| tabbed.count() > 1);
         }
         if action == Some(sel!(ideFocusNextPanel:)) {
-            return self.with_panes(|panes| panes.all().len() > 1).unwrap_or(false);
+            return self.current_tab().is_some_and(|tab| tab.documents().len() > 1);
         }
         true
     }
 
-    /// The agents "+" ▸ AI-Thread ▸ "In eigenem Worktree" lists.
+    /// The agents the menu of new tabs lists under AI-Thread ▸ "In eigenem Worktree".
     #[cfg(feature = "selftest")]
     pub fn worktree_menu_titles(&self) -> Vec<String> {
-        self.with_panes(|panes| {
-            panes
-                .active()
-                .tabs
-                .new_tab_submenu_titles(&[t("AI-Thread"), t("In eigenem Worktree")])
-        })
-        .unwrap_or_default()
+        menu_titles(&self.new_tab_menu(), &[t("AI-Thread"), t("In eigenem Worktree")])
     }
 
     #[cfg(feature = "selftest")]
@@ -1401,16 +1644,30 @@ impl WindowController {
             panel: ivars.panel_open.get().then(|| ivars.panel.get()).flatten(),
             panel_title: ivars.panels.borrow().as_ref().map(Panels::title).unwrap_or_default(),
             tabs: self.tab_count(),
-            new_tab_items: self
-                .with_panes(|panes| panes.active().tabs.new_tab_titles())
-                .unwrap_or_default(),
-            sidebar_width: ivars
-                .sidebar
-                .borrow()
-                .as_ref()
-                .map_or(0.0, |item| item.viewController(self.mtm()).view().frame().size.width),
+            new_tab_items: menu_titles(&self.new_tab_menu(), &[]),
+            sidebar_width: self.current_tab().map_or(0.0, |tab| tab.sidebar_width()),
         }
     }
+}
+
+/// The titles in the submenu of `menu` that `path` names by the titles of its parents.
+#[cfg(feature = "selftest")]
+fn menu_titles(menu: &objc2_app_kit::NSMenu, path: &[&str]) -> Vec<String> {
+    let mut menu = objc2::Message::retain(menu);
+    for title in path {
+        let next = menu
+            .itemArray()
+            .iter()
+            .find(|item| item.title().to_string() == *title)
+            .and_then(|item| item.submenu());
+        let Some(next) = next else { return Vec::new() };
+        menu = next;
+    }
+    menu.itemArray()
+        .iter()
+        .filter(|item| !item.isSeparatorItem())
+        .map(|item| item.title().to_string())
+        .collect()
 }
 
 #[cfg(feature = "selftest")]
@@ -1451,9 +1708,9 @@ impl WindowController {
             .unwrap_or_default()
     }
 
+    /// How many documents the window shows.
     pub fn tab_count(&self) -> usize {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.count()).sum())
-            .unwrap_or(0)
+        self.documents().len()
     }
 
     /// The number the badge on `panel`'s symbol shows; `None` while it is hidden.
@@ -1461,78 +1718,136 @@ impl WindowController {
         self.ivars().activity.borrow().as_ref().and_then(|a| a.badge(panel))
     }
 
-    /// The view of the tab in front of the active panel.
+    /// The view of the document commands act on.
     pub fn selected_view(&self) -> Option<Retained<NSView>> {
-        let mut view = None;
-        self.with_tabs(|tabs| view = tabs.selected_view());
-        view
+        self.current_tab()?.focused().map(|doc| doc.view.clone())
     }
 
-    /// The titles of all tabs, panel by panel.
+    /// The titles of all documents, tab by tab.
     pub fn tab_titles(&self) -> Vec<String> {
-        self.panel_titles().into_iter().flatten().collect()
+        self.documents().iter().map(|doc| doc.title()).collect()
     }
 
-    /// The titles of each panel's tabs, panels left to right and top to bottom.
-    pub fn panel_titles(&self) -> Vec<Vec<String>> {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.titles()).collect())
-            .unwrap_or_default()
+    /// The titles of each window tab's documents, in the order of the tab bar.
+    pub fn window_tabs(&self) -> Vec<Vec<String>> {
+        self.ordered_tabs()
+            .iter()
+            .map(|tab| tab.documents().iter().map(|doc| doc.title()).collect())
+            .collect()
     }
 
-    /// The tab ids of each panel.
-    pub fn panel_tab_ids(&self) -> Vec<Vec<isize>> {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.ids()).collect())
-            .unwrap_or_default()
+    /// The numbers of each window tab's documents.
+    pub fn window_tab_ids(&self) -> Vec<Vec<isize>> {
+        self.ordered_tabs()
+            .iter()
+            .map(|tab| tab.documents().iter().map(|doc| doc.id).collect())
+            .collect()
     }
 
-    /// The menu of new tabs of the active panel.
-    pub fn new_tab_menu(&self) -> Option<Retained<objc2_app_kit::NSMenu>> {
-        self.with_panes(|panes| panes.active().tabs.new_tab_menu())
+    /// What each native tab says: its title, its tooltip and whether it shows unsaved changes.
+    pub fn native_tabs(&self) -> Vec<(String, String, bool)> {
+        self.ordered_tabs()
+            .iter()
+            .map(|tab| {
+                let native = tab.window.tab();
+                (
+                    native.title().to_string(),
+                    native.toolTip().to_string(),
+                    tab.window.isDocumentEdited(),
+                )
+            })
+            .collect()
     }
 
-    /// Whether the "+" of each panel's tab bar comes after its tabs in the reading direction.
-    pub fn plus_follows_tabs(&self) -> Vec<bool> {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.plus_follows_tabs()).collect())
-            .unwrap_or_default()
+    /// Whether each tab, in the order of the tab bar, shows an icon before its title.
+    pub fn tab_icons(&self) -> Vec<bool> {
+        self.ordered_tabs()
+            .iter()
+            .map(|tab| {
+                tab.window
+                    .tab()
+                    .attributedTitle()
+                    .is_some_and(|title| title.string().to_string().starts_with('\u{fffc}'))
+            })
+            .collect()
     }
 
-    /// Moves the keyboard focus to the next panel, as the menu command does.
-    pub fn focus_next_panel(&self) {
-        self.with_panes(Panes::focus_next);
+    /// The left document's share of each window tab that shows two.
+    pub fn tab_shares(&self) -> Vec<Option<f64>> {
+        self.ordered_tabs().iter().map(|tab| tab.share()).collect()
     }
 
-    /// Which panel's bar shows itself as the active one.
-    pub fn panel_marks(&self) -> Vec<bool> {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.is_active()).collect())
-            .unwrap_or_default()
+    /// Whether each tab, in the order of the tab bar, shows the picture of the sidebar in its place.
+    pub fn sidebar_pictures(&self) -> Vec<bool> {
+        self.ordered_tabs().iter().map(|tab| tab.shows_picture()).collect()
     }
 
-    /// What VoiceOver calls each panel's tab bar.
-    pub fn panel_labels(&self) -> Vec<String> {
-        self.with_panes(|panes| panes.all().iter().map(|pane| pane.tabs.label()).collect())
-            .unwrap_or_default()
+    /// The window the sidebar is in now.
+    pub fn sidebar_window(&self) -> Option<Retained<NSWindow>> {
+        self.ivars().sidebar.borrow().as_ref()?.window()
     }
 
-    /// The place of the active panel among the panels.
-    pub fn active_panel(&self) -> Option<usize> {
-        self.with_panes(|panes| {
-            let active = panes.active();
-            panes.all().iter().position(|pane| std::rc::Rc::ptr_eq(pane, &active))
-        })
-        .flatten()
+    /// Whether the window in front shows its tab bar.
+    pub fn tab_bar_visible(&self) -> bool {
+        self.window()
+            .and_then(|window| window.tabGroup())
+            .is_some_and(|group| group.isTabBarVisible())
     }
 
-    /// The title of each tab, left to right, whether it is the preview tab, and what VoiceOver calls it.
-    pub fn tab_previews(&self) -> Vec<(String, bool, String)> {
-        self.with_panes(|panes| panes.all().iter().flat_map(|pane| pane.tabs.previews()).collect())
-            .unwrap_or_default()
+    /// Opens the page of a new tab, as ⌘T does.
+    pub fn open_new_tab(&self) {
+        self.open_new_tab_page();
     }
 
-    /// Clicks the selected tab `count` times.
-    pub fn click_selected_tab(&self, count: isize) {
-        if let Some(id) = self.selected_tab() {
-            self.with_tab(id, |tabs| tabs.click(id, count));
+    /// Brings the next tab to the front, as ⇧⌘] does.
+    pub fn select_next_tab(&self) {
+        self.select_relative(true);
+    }
+
+    /// Closes every tab of the window in front, as ⇧⌘W does.
+    pub fn close_all_tabs(&self) {
+        self.close_window();
+    }
+
+    /// Sets the left document's share of the tab that shows the document `id` beside another.
+    pub fn set_share_of(&self, id: isize, share: f64) {
+        if let Some(tab) = self.tab_of_document(id) {
+            tab.set_share(share);
         }
+    }
+
+    /// The menu of new tabs, filled as when the page of a new tab opens it.
+    pub fn new_tab_menu(&self) -> Retained<objc2_app_kit::NSMenu> {
+        let menu = tabs::new_tab_menu(self.mtm());
+        tabs::fill_new_tab_menu(self, &menu);
+        menu
+    }
+
+    /// The entries of the page of a new tab in front, if one is.
+    pub fn new_tab_page_entries(&self) -> Option<Vec<String>> {
+        let view = self.selected_view()?;
+        let page = view.downcast::<chooser::NewTabPage>().ok()?;
+        Some(page.titles())
+    }
+
+    /// Moves the keyboard focus to the other document of the tab in front, as the menu command does.
+    pub fn focus_next_panel(&self) {
+        if let Some(tab) = self.current_tab() {
+            tab.focus_other();
+        }
+    }
+
+    /// The title of each document, tab by tab, whether it is the preview document, and the tooltip of its tab.
+    pub fn tab_previews(&self) -> Vec<(String, bool, String)> {
+        self.ordered_tabs()
+            .iter()
+            .flat_map(|tab| {
+                let tip = tab.window.tab().toolTip().to_string();
+                tab.documents()
+                    .into_iter()
+                    .map(move |doc| (doc.title(), doc.is_preview(), tip.clone()))
+            })
+            .collect()
     }
 
     /// The view of the folder tree.
@@ -1572,56 +1887,17 @@ impl WindowController {
         }
     }
 
-    /// Whether each tab, panel by panel and left to right, shows the mark of unsaved changes.
+    /// Whether each document, tab by tab, has unsaved changes as its tab shows them.
     pub fn tab_dirty_marks(&self) -> Vec<bool> {
-        self.with_panes(|panes| panes.all().iter().flat_map(|pane| pane.tabs.dirty_marks()).collect())
-            .unwrap_or_default()
+        self.documents().iter().map(|doc| doc.is_dirty()).collect()
     }
 
-    /// The note at the foot of the tab area, while it shows.
+    /// The note at the foot of the documents, while it shows.
     pub fn notice(&self) -> Option<String> {
         let notice = self.ivars().notice.borrow();
         let (note, text) = notice.as_ref()?;
         // SAFETY: Asking for the superview only reads; the note is alive as the ivar holds it.
         unsafe { note.superview() }.map(|_| text.clone())
-    }
-
-    /// Drags the selected tab to the far left of its strip.
-    pub fn drag_selected_tab_first(&self) {
-        if let Some(id) = self.selected_tab() {
-            self.with_tab(id, |tabs| tabs.drag(id, 0.0));
-        }
-    }
-
-    /// The shares of the outermost split of the panels.
-    pub fn panel_shares(&self) -> Vec<f64> {
-        match self.with_panes(|panes| panes.layout(&|_| None)) {
-            Some(ide_core::layout::Node::Split { shares, .. }) => shares,
-            _ => vec![1.0],
-        }
-    }
-
-    /// Drags the tab `id` with the mouse onto the bar of the panel at `index`, or onto the part of its content at
-    /// `side`, and lets go there when `drop`.
-    pub fn drag_tab_onto(&self, id: isize, index: usize, side: Option<Side>, drop: bool) {
-        let point = self
-            .with_panes(|panes| {
-                let pane = panes.all().get(index).cloned()?;
-                let (view, x, y) = match side {
-                    None => (pane.tabs.view(), 0.5, 0.5),
-                    Some(Side::Right) => (pane.tabs.content(), 0.9, 0.5),
-                    Some(Side::Below) => (pane.tabs.content(), 0.5, 0.1),
-                };
-                let size = view.bounds().size;
-                Some(view.convertPoint_toView(NSPoint::new(size.width * x, size.height * y), None))
-            })
-            .flatten();
-        if let Some(point) = point {
-            self.drag_tab(id, point);
-            if drop {
-                self.drop_tab(id, point);
-            }
-        }
     }
 }
 
@@ -1634,6 +1910,22 @@ pub struct Inspection {
     pub tabs: usize,
     pub new_tab_items: Vec<String>,
     pub sidebar_width: f64,
+}
+
+/// Whether `window` is on screen and the tab in front of its tab group; the tabs behind count as visible to AppKit.
+pub fn in_front(window: &NSWindow) -> bool {
+    window.isVisible()
+        && window
+            .tabGroup()
+            .and_then(|group| group.selectedWindow())
+            .is_none_or(|selected| std::ptr::eq(&*selected, window))
+}
+
+/// Shows the tab bar of `window` also while it has one tab: a folder's documents always show as tabs (E60).
+fn show_tab_bar(window: &NSWindow) {
+    if window.tabGroup().is_some_and(|group| !group.isTabBarVisible()) {
+        window.toggleTabBar(None);
+    }
 }
 
 fn folder_name(path: &Path) -> String {

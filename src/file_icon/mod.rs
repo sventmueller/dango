@@ -11,7 +11,7 @@ use std::path::Path;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSImageScaling, NSImageView};
+use objc2_app_kit::{NSImage, NSImageScaling, NSImageView};
 
 pub use theme::Icon;
 
@@ -37,6 +37,15 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
     }
     crate::util::hide_from_voiceover(&view);
     view
+}
+
+/// The icon of the file at `path` drawn in its colour, for a place that takes an image rather than an image view,
+/// such as the title of a tab.
+pub fn image(path: &Path) -> Option<Retained<NSImage>> {
+    let name = path.file_name()?.to_string_lossy().into_owned();
+    let icon = icon_of(&name);
+    let image = glyph::image(icon.glyph)?;
+    Some(crate::util::tinted(&image, &glyph::color(&icon)))
 }
 
 #[cfg(test)]

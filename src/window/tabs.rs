@@ -1,31 +1,39 @@
-//! The tab bar of the content area, drawn like Xcode's editor tabs, with its "+" menu, and the view of the selected
-//! tab below it.
+//! Window tabs (E60): every document gets a native macOS tab, an `NSWindow` of its own in the folder's tab group with
+//! its own toolbar and split view; the folder's one sidebar moves into the tab in front. A window tab shows one
+//! document, or two side by side, each then under a header that names it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use objc2::rc::{Retained, Weak};
-use objc2::runtime::{AnyObject, Sel};
-use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::runtime::{ProtocolObject, Sel};
+use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAccessibilityRadioButtonRole, NSAccessibilityTabButtonSubrole, NSAccessibilityTabGroupRole,
-    NSBezierPath, NSBox, NSBoxType, NSButton, NSColor, NSEvent, NSFont, NSFontManager, NSFontTraitMask,
-    NSImageSymbolConfiguration, NSImageView, NSLineBreakMode, NSMenu, NSMenuItem, NSStackView, NSStackViewDistribution,
-    NSTextField, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSBackingStoreType, NSButton, NSColor, NSFont, NSFontManager, NSFontTraitMask, NSImage,
+    NSImageAlignment, NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLayoutConstraint, NSLineBreakMode,
+    NSMenu, NSMenuItem, NSResponder, NSSplitView, NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem,
+    NSStackView, NSTextField, NSToolbar, NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView,
+    NSViewController, NSWindow, NSWindowStyleMask, NSWindowToolbarStyle,
 };
-use objc2_foundation::{NSNumber, NSObjectProtocol, NSPoint, NSRect};
+use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSTextAttachment};
+use objc2_foundation::{
+    NSAttributedString, NSDictionary, NSMutableAttributedString, NSPoint, NSRect, NSSize, NSString,
+};
 use splat_i18n::{t, tf};
 
 use super::WindowController;
-use super::panes::Side;
-use crate::util::{constant, guarded, item, ns, pin_edges, separator, set_target, submenu, symbol, symbol_button};
+use crate::util::{item, ns, pin_edges, separator, submenu, symbol, symbol_button};
 
-const BAR_HEIGHT: f64 = 32.0;
-const TAB_HEIGHT: f64 = 24.0;
-const MIN_TAB_WIDTH: f64 = 90.0;
-const TITLE_POINTS: f64 = 12.0;
+const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
+const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
+/// The height of a document's header while its window tab shows two documents.
+const HEADER_HEIGHT: f64 = 26.0;
+/// The height of the icon before a tab's title.
+const ICON_HEIGHT: f64 = 14.0;
+/// The narrowest a document gets beside another.
+const MIN_SIDE: f64 = 220.0;
 
-/// What a tab shows.
+/// What a document shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabKind {
     Welcome,
@@ -41,6 +49,8 @@ pub enum TabKind {
     Plan,
     /// A document as it reads, beside its editor: Markdown rendered, or a PDF file.
     Preview,
+    /// The page of a new tab, which offers what it can show (E17) and gives way to it.
+    NewTab,
 }
 
 impl TabKind {
@@ -56,997 +66,684 @@ impl TabKind {
             TabKind::Cli => "apple.terminal",
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
+            TabKind::NewTab => "plus",
         }
     }
 }
 
-pub struct ItemIvars {
-    id: isize,
-    target: Weak<WindowController>,
-    title: Retained<NSTextField>,
+/// A document of a window tab: its view and what its tab and header say about it.
+pub struct Document {
+    pub id: isize,
+    pub kind: TabKind,
+    /// What the document shows, such as a file's path, so it opens once.
+    pub key: Option<String>,
+    pub view: Retained<NSView>,
+    /// The header above `view` and `view`, which sit side by side with another document's.
+    host: Retained<NSView>,
+    header_height: Retained<NSLayoutConstraint>,
+    header: Retained<NSView>,
+    header_title: Retained<NSTextField>,
+    header_icon: Option<Retained<NSImageView>>,
     close: Retained<NSButton>,
-    /// The dot that tells whether an agent works or waits, before the close button.
-    status: Retained<NSImageView>,
-    /// The symbol of the tab's kind, tinted in an agent's colour.
-    icon: std::cell::RefCell<Option<Retained<NSImageView>>>,
-    selected: Cell<bool>,
-    hovered: Cell<bool>,
-    dirty: Cell<bool>,
-    /// Whether the tab is its panel's preview tab, which the next file opened by a single click replaces.
+    title: RefCell<String>,
     preview: Cell<bool>,
-    /// Whether the mouse moved since it went down on the tab, so letting go drops it.
-    dragged: Cell<bool>,
-    /// Whether the tab's bar belongs to the active one of several panels, where its selected tab shows the accent.
-    active_bar: Cell<bool>,
+    dirty: Cell<bool>,
+    status: RefCell<Option<Retained<NSColor>>>,
+    tint: RefCell<Option<Retained<NSColor>>>,
+    /// The view in the document that had the keyboard focus last, which gets it back when the document is activated.
+    focus: RefCell<Option<Weak<NSView>>>,
 }
 
-define_class!(
-    // SAFETY: NSView has no subclassing requirements and `TabItem` does not implement Drop.
-    #[unsafe(super(NSView))]
-    #[thread_kind = MainThreadOnly]
-    #[name = "IDETabItem"]
-    #[ivars = ItemIvars]
-    pub struct TabItem;
-
-    unsafe impl NSObjectProtocol for TabItem {}
-
-    impl TabItem {
-        #[unsafe(method(drawRect:))]
-        fn draw_rect(&self, _rect: NSRect) {
-            guarded((), || self.draw_background());
-        }
-
-        #[unsafe(method(mouseDown:))]
-        fn mouse_down(&self, event: &NSEvent) {
-            guarded((), || {
-                self.ivars().dragged.set(false);
-                self.clicked(event.clickCount());
-            });
-        }
-
-        #[unsafe(method(mouseDragged:))]
-        fn mouse_dragged(&self, event: &NSEvent) {
-            guarded((), || {
-                self.ivars().dragged.set(true);
-                let point = event.locationInWindow();
-                self.with_target(|target, id| target.drag_tab(id, point));
-            });
-        }
-
-        #[unsafe(method(mouseUp:))]
-        fn mouse_up(&self, event: &NSEvent) {
-            guarded((), || {
-                if self.ivars().dragged.replace(false) {
-                    let point = event.locationInWindow();
-                    self.with_target(|target, id| target.drop_tab(id, point));
-                }
-            });
-        }
-
-        #[unsafe(method(otherMouseUp:))]
-        fn other_mouse_up(&self, _event: &NSEvent) {
-            guarded((), || {
-                if let Some(target) = self.ivars().target.load() {
-                    target.close_tab_by_id(self.ivars().id);
-                }
-            });
-        }
-
-        #[unsafe(method(mouseEntered:))]
-        fn mouse_entered(&self, _event: &NSEvent) {
-            guarded((), || self.set_hovered(true));
-        }
-
-        #[unsafe(method(mouseExited:))]
-        fn mouse_exited(&self, _event: &NSEvent) {
-            guarded((), || self.set_hovered(false));
-        }
-
-        #[unsafe(method(updateTrackingAreas))]
-        fn update_tracking_areas(&self) {
-            guarded((), || self.track());
-            // SAFETY: The superclass's implementation, with this method's signature.
-            let _: () = unsafe { msg_send![super(self), updateTrackingAreas] };
-        }
-
-        #[unsafe(method_id(menuForEvent:))]
-        fn menu_for_event(&self, _event: &NSEvent) -> Option<Retained<NSMenu>> {
-            guarded(None, || self.context_menu())
-        }
-
-        #[unsafe(method(ideKeepThisTab:))]
-        fn keep_this(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.keep_tab(id)));
-        }
-
-        #[unsafe(method(ideCloseThisTab:))]
-        fn close_this(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.close_tab_by_id(id)));
-        }
-
-        #[unsafe(method(ideCloseOtherTabs:))]
-        fn close_others(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.close_other_tabs(id, false)));
-        }
-
-        #[unsafe(method(ideCloseTabsToTheRight:))]
-        fn close_right(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.close_other_tabs(id, true)));
-        }
-
-        #[unsafe(method(ideSplitRight:))]
-        fn split_right(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.split_tab(id, Side::Right)));
-        }
-
-        #[unsafe(method(ideSplitBelow:))]
-        fn split_below(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.split_tab(id, Side::Below)));
-        }
-
-        #[unsafe(method(accessibilityPerformPress))]
-        fn accessibility_press(&self) -> bool {
-            guarded(false, || {
-                self.clicked(1);
-                true
-            })
-        }
-    }
-);
-
-impl TabItem {
-    fn new(
-        mtm: MainThreadMarker,
-        target: &WindowController,
+impl Document {
+    pub fn new(
+        controller: &WindowController,
         id: isize,
         kind: TabKind,
+        key: Option<String>,
         title: &str,
-    ) -> Retained<TabItem> {
-        let label = NSTextField::labelWithString(&ns(title), mtm);
-        label.setFont(Some(&NSFont::systemFontOfSize(TITLE_POINTS)));
-        label.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
+        view: Retained<NSView>,
+    ) -> Rc<Document> {
+        let mtm = controller.mtm();
+        let host = NSView::new(mtm);
+        let header = NSView::new(mtm);
+        let header_title = NSTextField::labelWithString(&ns(title), mtm);
+        header_title.setFont(Some(&NSFont::systemFontOfSize(12.0)));
+        header_title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
+        header_title.setContentCompressionResistancePriority_forOrientation(
+            200.0,
+            objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+        );
         let close = symbol_button(
             mtm,
             "xmark",
             &tf("{} schließen", &[title]),
             9.0,
-            Some(target),
+            Some(controller),
             sel!(ideCloseTabButton:),
         );
         close.setTag(id);
-        let status = NSImageView::new(mtm);
-        status.setImage(symbol("circle.fill", "").as_deref());
-        status.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
-            6.0,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightRegular },
-        )));
-        status.setHidden(true);
-        let ivars = ItemIvars {
-            id,
-            target: Weak::from(target),
-            title: label,
-            close,
-            status,
-            icon: std::cell::RefCell::new(None),
-            selected: Cell::new(false),
-            hovered: Cell::new(false),
-            dirty: Cell::new(false),
-            preview: Cell::new(false),
-            dragged: Cell::new(false),
-            active_bar: Cell::new(false),
-        };
-        let this = Self::alloc(mtm).set_ivars(ivars);
-        // SAFETY: NSView's initializer, called once on the newly allocated object.
-        let this: Retained<Self> = unsafe { msg_send![super(this), init] };
-        let icon = symbol(kind.symbol(), "").map(|image| NSImageView::imageViewWithImage(&image, mtm));
-        let ivars = this.ivars();
-        let mut views: Vec<&NSView> = vec![&ivars.close];
-        if let Some(icon) = &icon {
-            let tint = if kind == TabKind::Agent {
-                crate::agent::style::terracotta()
-            } else {
-                NSColor::secondaryLabelColor()
-            };
-            icon.setContentTintColor(Some(&tint));
-            views.push(icon);
+        close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+        let header_icon = symbol(kind.symbol(), "").map(|image| NSImageView::imageViewWithImage(&image, mtm));
+        let row = NSStackView::new(mtm);
+        row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        row.setSpacing(6.0);
+        if let Some(icon) = &header_icon {
+            icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+            row.addArrangedSubview(icon);
         }
-        ivars.icon.replace(icon.clone());
-        views.push(&ivars.title);
-        views.push(&ivars.status);
-        let stack = NSStackView::new(mtm);
-        stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        stack.setSpacing(5.0);
-        for view in views {
-            stack.addArrangedSubview(view);
+        row.addArrangedSubview(&header_title);
+        let spacer = NSView::new(mtm);
+        spacer.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
+        row.addArrangedSubview(&spacer);
+        row.addArrangedSubview(&close);
+        header.addSubview(&row);
+        row.setTranslatesAutoresizingMaskIntoConstraints(false);
+        host.addSubview(&header);
+        host.addSubview(&view);
+        for item in [&*header as &NSView, &view] {
+            item.setTranslatesAutoresizingMaskIntoConstraints(false);
         }
-        this.addSubview(&stack);
-        stack.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let header_height = header.heightAnchor().constraintEqualToConstant(0.0);
         for constraint in [
-            stack.centerYAnchor().constraintEqualToAnchor(&this.centerYAnchor()),
-            stack.centerXAnchor().constraintEqualToAnchor(&this.centerXAnchor()),
-            stack
-                .leadingAnchor()
-                .constraintGreaterThanOrEqualToAnchor_constant(&this.leadingAnchor(), 6.0),
-            stack
-                .trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&this.trailingAnchor(), -6.0),
-            this.heightAnchor().constraintEqualToConstant(TAB_HEIGHT),
-            this.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_TAB_WIDTH),
+            row.leadingAnchor()
+                .constraintEqualToAnchor_constant(&header.leadingAnchor(), 10.0),
+            row.trailingAnchor()
+                .constraintEqualToAnchor_constant(&header.trailingAnchor(), -8.0),
+            row.centerYAnchor().constraintEqualToAnchor(&header.centerYAnchor()),
+            header.topAnchor().constraintEqualToAnchor(&host.topAnchor()),
+            header.leadingAnchor().constraintEqualToAnchor(&host.leadingAnchor()),
+            header.trailingAnchor().constraintEqualToAnchor(&host.trailingAnchor()),
+            header_height.clone(),
+            view.topAnchor().constraintEqualToAnchor(&header.bottomAnchor()),
+            loose(view.topAnchor().constraintEqualToAnchor(&host.topAnchor())),
+            view.leadingAnchor().constraintEqualToAnchor(&host.leadingAnchor()),
+            view.trailingAnchor().constraintEqualToAnchor(&host.trailingAnchor()),
+            view.bottomAnchor().constraintEqualToAnchor(&host.bottomAnchor()),
         ] {
             constraint.setActive(true);
         }
-        ivars.title.setContentCompressionResistancePriority_forOrientation(
-            200.0,
-            objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
-        );
-        this.setAccessibilityElement(true);
-        this.setAccessibilityRole(Some(constant!(NSAccessibilityRadioButtonRole)));
-        this.setAccessibilitySubrole(Some(constant!(NSAccessibilityTabButtonSubrole)));
-        this.setAccessibilityLabel(Some(&ns(title)));
-        this.speak_selected(false);
-        this.refresh();
-        this
+        header.setHidden(true);
+        Rc::new(Document {
+            id,
+            kind,
+            key,
+            view,
+            host,
+            header_height,
+            header,
+            header_title,
+            header_icon,
+            close,
+            title: RefCell::new(title.to_string()),
+            preview: Cell::new(false),
+            dirty: Cell::new(false),
+            status: RefCell::new(None),
+            tint: RefCell::new(None),
+            focus: RefCell::new(None),
+        })
     }
 
-    /// A click selects the tab; a double click also keeps a preview tab.
-    fn clicked(&self, count: isize) {
-        self.with_target(|target, id| {
-            if count >= 2 {
-                target.keep_tab(id);
-            }
-            target.click_tab(id);
-        });
+    pub fn title(&self) -> String {
+        self.title.borrow().clone()
     }
 
-    fn with_target(&self, f: impl FnOnce(&WindowController, isize)) {
-        if let Some(target) = self.ivars().target.load() {
-            f(&target, self.ivars().id);
-        }
+    pub fn is_preview(&self) -> bool {
+        self.preview.get()
     }
 
-    fn set_hovered(&self, hovered: bool) {
-        self.ivars().hovered.set(hovered);
-        self.refresh();
+    #[cfg(feature = "selftest")]
+    pub fn is_dirty(&self) -> bool {
+        self.dirty.get()
     }
 
-    fn set_selected(&self, selected: bool) {
-        self.ivars().selected.set(selected);
-        self.speak_selected(selected);
-        self.refresh();
+    pub fn set_title(&self, title: &str) {
+        *self.title.borrow_mut() = title.to_string();
+        self.header_title.setStringValue(&ns(title));
+        let close = tf("{} schließen", &[title]);
+        self.close.setToolTip(Some(&ns(&close)));
+        crate::util::set_label(&self.close, Some(&close));
     }
 
-    /// VoiceOver reads a tab as on or off from its value, as it reads AppKit's own tabs.
-    fn speak_selected(&self, selected: bool) {
-        self.setAccessibilitySelected(selected);
-        // SAFETY: A radio button's value is a number, the type AppKit expects of it.
-        unsafe { self.setAccessibilityValue(Some(&NSNumber::new_bool(selected))) };
+    pub fn set_preview(&self, preview: bool) {
+        self.preview.set(preview);
     }
 
-    fn set_dirty(&self, dirty: bool) {
-        self.ivars().dirty.set(dirty);
-        self.refresh();
+    pub fn set_dirty(&self, dirty: bool) {
+        self.dirty.set(dirty);
     }
 
-    fn set_status(&self, color: Option<&NSColor>) {
-        let status = &self.ivars().status;
-        status.setHidden(color.is_none());
-        if let Some(color) = color {
-            status.setContentTintColor(Some(color));
-        }
+    pub fn set_status(&self, color: Option<&NSColor>) {
+        *self.status.borrow_mut() = color.map(objc2::Message::retain);
     }
 
-    fn set_tint(&self, color: &NSColor) {
-        if let Some(icon) = self.ivars().icon.borrow().as_ref() {
+    pub fn set_tint(&self, color: &NSColor) {
+        *self.tint.borrow_mut() = Some(objc2::Message::retain(color));
+        if let Some(icon) = &self.header_icon {
             icon.setContentTintColor(Some(color));
         }
     }
 
-    fn set_title(&self, title: &str) {
-        let ivars = self.ivars();
-        ivars.title.setStringValue(&ns(title));
-        let close = tf("{} schließen", &[title]);
-        ivars.close.setToolTip(Some(&ns(&close)));
-        crate::util::set_label(&ivars.close, Some(&close));
-        self.describe();
+    /// The small picture before the title of its tab: a file's icon, else a symbol of what it shows in the colour of
+    /// its agent or worktree.
+    fn icon(&self) -> Option<Retained<NSImage>> {
+        let tint = self.tint.borrow().clone();
+        let path = self.key.as_deref().map(std::path::Path::new);
+        let name = match self.kind {
+            TabKind::Editor => {
+                if let Some(image) = path.and_then(crate::file_icon::image) {
+                    return Some(image);
+                }
+                "doc.text"
+            }
+            TabKind::Preview if path.is_some_and(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"))) => {
+                "doc.richtext"
+            }
+            kind => kind.symbol(),
+        };
+        let agent = matches!(self.kind, TabKind::Agent | TabKind::Plan)
+            || (self.kind == TabKind::Cli && self.title().starts_with("claude"));
+        let color = match tint {
+            Some(tint) => tint,
+            None if agent => crate::agent::style::terracotta(),
+            None => NSColor::secondaryLabelColor(),
+        };
+        let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            11.0,
+            // SAFETY: AppKit sets its font weight constants when it loads.
+            unsafe { objc2_app_kit::NSFontWeightRegular },
+        )
+        .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(&color));
+        symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
     }
 
-    /// Shows the title in italics while the tab is the preview tab, which VoiceOver and the tooltip name.
-    fn set_preview(&self, preview: bool) {
-        let ivars = self.ivars();
-        ivars.preview.set(preview);
-        let regular = NSFont::systemFontOfSize(TITLE_POINTS);
-        let font = if preview {
-            NSFontManager::sharedFontManager(self.mtm())
-                .convertFont_toHaveTrait(&regular, NSFontTraitMask::ItalicFontMask)
+    /// Whether `view` is the document's or inside it.
+    fn holds(&self, view: &NSView) -> bool {
+        view.isDescendantOf(&self.host)
+    }
+
+    /// Shows the header, which names the document and closes it, while it shares its window tab; above the document
+    /// when `above`, else in the docked bar.
+    fn set_header(&self, shown: bool, above: bool, focused: bool) {
+        self.header.setHidden(!shown);
+        self.header_height
+            .setConstant(if shown || !above { HEADER_HEIGHT } else { 0.0 });
+        let color = if focused {
+            NSColor::labelColor()
         } else {
-            regular
+            NSColor::secondaryLabelColor()
         };
-        ivars.title.setFont(Some(&font));
-        self.describe();
+        self.header_title.setTextColor(Some(&color));
     }
 
-    fn describe(&self) {
-        let ivars = self.ivars();
-        let title = ivars.title.stringValue().to_string();
-        if ivars.preview.get() {
-            self.setAccessibilityLabel(Some(&ns(&tf("{}, Vorschau", &[&title]))));
-            self.setToolTip(Some(&ns(t(
-                "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn.",
-            ))));
-        } else {
-            self.setAccessibilityLabel(Some(&ns(&title)));
-            self.setToolTip(None);
-        }
+    /// The view to give the keyboard focus: the one that had it last, else the first in the document that takes it.
+    fn focus_target(&self) -> Option<Retained<NSView>> {
+        let remembered = self
+            .focus
+            .borrow()
+            .as_ref()
+            .and_then(Weak::load)
+            .filter(|view| view.isDescendantOf(&self.view));
+        remembered.or_else(|| first_responder_in(&self.view))
     }
+}
 
-    /// The close symbol shows on hover; a dot stands for unsaved changes otherwise; the title is fainter when the tab
-    /// is in the background.
-    fn refresh(&self) {
-        let ivars = self.ivars();
-        let hovered = ivars.hovered.get();
-        let (name, visible) = match (hovered, ivars.dirty.get()) {
-            (true, _) => ("xmark", true),
-            (false, true) => ("circle.fill", true),
-            (false, false) => ("xmark", false),
-        };
-        ivars.close.setImage(symbol(name, t("Schließen")).as_deref());
-        ivars.close.setHidden(!visible);
-        ivars.close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        let color = match (ivars.selected.get(), ivars.active_bar.get()) {
-            (true, true) => NSColor::controlAccentColor(),
-            (true, false) => NSColor::labelColor(),
-            (false, _) => NSColor::secondaryLabelColor(),
-        };
-        ivars.title.setTextColor(Some(&color));
-        self.setNeedsDisplay(true);
-    }
+/// Holds the view's top at the host's while the header is in the bar above the documents instead.
+fn loose(constraint: Retained<NSLayoutConstraint>) -> Retained<NSLayoutConstraint> {
+    constraint.setPriority(250.0);
+    constraint
+}
 
-    fn set_active_bar(&self, active: bool) {
-        if self.ivars().active_bar.replace(active) != active {
-            self.refresh();
-        }
-    }
+/// Whether macOS docks bars above a split view item's content (macOS 26 and later), where the bars of the title, the
+/// tabs and the toolbar fade what lies right below them, so a header there has to be such a bar.
+fn accessories_available() -> bool {
+    objc2::runtime::AnyClass::get(c"NSSplitViewItemAccessoryViewController").is_some()
+}
 
-    fn draw_background(&self) {
-        let ivars = self.ivars();
-        let fill = if ivars.selected.get() && ivars.active_bar.get() {
-            NSColor::controlAccentColor().colorWithAlphaComponent(0.16)
-        } else if ivars.selected.get() {
-            NSColor::quaternaryLabelColor()
-        } else if ivars.hovered.get() {
-            NSColor::quinaryLabelColor()
-        } else {
-            return;
-        };
-        fill.setFill();
-        NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(self.bounds(), 6.0, 6.0).fill();
-    }
+/// A window tab: its window and the documents it shows, left to right.
+pub struct TabWindow {
+    pub window: Retained<NSWindow>,
+    split: Retained<NSSplitViewController>,
+    sidebar: Retained<NSSplitViewItem>,
+    /// Where the folder's sidebar goes while the tab is in front.
+    slot: Retained<NSView>,
+    /// What the sidebar looked like when it left, for a window that stays on screen beside the one in front.
+    picture: Retained<NSImageView>,
+    /// The documents' area and the notes over it.
+    content: Retained<NSView>,
+    /// The bar docked above the documents that holds their headers while two share the tab, where macOS has it.
+    bar: Option<(
+        Retained<objc2_app_kit::NSSplitViewItemAccessoryViewController>,
+        Retained<NSView>,
+    )>,
+    area: Retained<NSSplitView>,
+    documents: RefCell<Vec<Rc<Document>>>,
+    focused: Cell<usize>,
+    /// The dot of the tab's state beside its title.
+    status: Retained<NSImageView>,
+}
 
-    fn track(&self) {
-        for area in self.trackingAreas().iter() {
-            self.removeTrackingArea(&area);
-        }
-        let options = NSTrackingAreaOptions::MouseEnteredAndExited
-            | NSTrackingAreaOptions::ActiveInKeyWindow
-            | NSTrackingAreaOptions::InVisibleRect;
-        // SAFETY: The tracking area sends its events to this view, which answers them, and lives as long as the view.
-        let area = unsafe {
-            NSTrackingArea::initWithRect_options_owner_userInfo(
-                NSTrackingArea::alloc(),
-                self.bounds(),
-                options,
-                Some(self),
-                None,
+impl TabWindow {
+    pub fn new(controller: &WindowController, identifier: &str, frame: Option<NSRect>) -> Rc<TabWindow> {
+        let mtm = controller.mtm();
+        let style = NSWindowStyleMask::Titled
+            | NSWindowStyleMask::Closable
+            | NSWindowStyleMask::Miniaturizable
+            | NSWindowStyleMask::Resizable
+            | NSWindowStyleMask::FullSizeContentView;
+        let rect = frame.unwrap_or(NSRect::new(NSPoint::new(0.0, 0.0), WINDOW_SIZE));
+        // SAFETY: releasedWhenClosed is switched off right below, so Rust's reference stays the owner.
+        let window = unsafe {
+            NSWindow::initWithContentRect_styleMask_backing_defer(
+                NSWindow::alloc(mtm),
+                rect,
+                style,
+                NSBackingStoreType::Buffered,
+                false,
             )
         };
-        self.addTrackingArea(&area);
-    }
+        // SAFETY: Switching it off keeps AppKit from releasing the window behind Rust's back.
+        unsafe { window.setReleasedWhenClosed(false) };
+        window.setMinSize(MIN_WINDOW_SIZE);
+        // Documents and their views come and go after the window shows, past the key view loop AppKit makes once.
+        window.setAutorecalculatesKeyViewLoop(true);
+        window.setToolbarStyle(NSWindowToolbarStyle::Unified);
+        window.setTabbingIdentifier(&ns(identifier));
+        window.setDelegate(Some(ProtocolObject::from_ref(controller)));
 
-    fn context_menu(&self) -> Option<Retained<NSMenu>> {
-        let mtm = self.mtm();
-        let menu = NSMenu::new(mtm);
-        menu.setAutoenablesItems(false);
-        if self.ivars().preview.get() {
-            let keep = item(mtm, t("Tab behalten"), Some(sel!(ideKeepThisTab:)), "");
-            set_target(&keep, self);
-            menu.addItem(&keep);
-            menu.addItem(&separator(mtm));
-        }
-        for (title, action) in [
-            (t("Tab schließen"), sel!(ideCloseThisTab:)),
-            (t("Andere Tabs schließen"), sel!(ideCloseOtherTabs:)),
-            (t("Tabs rechts schließen"), sel!(ideCloseTabsToTheRight:)),
-        ] {
-            let entry = item(mtm, title, Some(action), "");
-            set_target(&entry, self);
-            menu.addItem(&entry);
-        }
-        menu.addItem(&separator(mtm));
-        let movable = self
-            .ivars()
-            .target
-            .load()
-            .is_some_and(|target| target.can_split(self.ivars().id));
-        for (title, action) in [
-            (t("In eigenem Panel rechts öffnen"), sel!(ideSplitRight:)),
-            (t("In eigenem Panel unten öffnen"), sel!(ideSplitBelow:)),
-        ] {
-            let entry = item(mtm, title, Some(action), "");
-            set_target(&entry, self);
-            entry.setEnabled(movable);
-            menu.addItem(&entry);
-        }
-        let path = self
-            .ivars()
-            .target
-            .load()
-            .and_then(|target| crate::editor::tab_document(&target, self.ivars().id)?.0);
-        if let Some(entry) = path.and_then(|path| crate::markdown::open_in_splat_item(mtm, &path)) {
-            menu.addItem(&separator(mtm));
-            menu.addItem(&entry);
-        }
-        Some(menu)
-    }
-}
+        let split = NSSplitViewController::new(mtm);
+        let slot = NSView::new(mtm);
+        let picture = NSImageView::new(mtm);
+        picture.setImageScaling(NSImageScaling::ScaleNone);
+        picture.setImageAlignment(NSImageAlignment::AlignTopLeft);
+        picture.setHidden(true);
+        crate::util::hide_from_voiceover(&picture);
+        slot.addSubview(&picture);
+        pin_edges(&picture, &slot);
+        let sidebar_controller = NSViewController::new(mtm);
+        sidebar_controller.setView(&slot);
+        let sidebar = NSSplitViewItem::sidebarWithViewController(&sidebar_controller);
+        // Above the content's, so resizing the window resizes the content and the sidebar keeps its width.
+        sidebar.setHoldingPriority(260.0);
 
-/// A tab of a bar, which moves to another bar whole, its view still running.
-pub struct Tab {
-    id: isize,
-    kind: TabKind,
-    /// What the tab shows, such as a file's path, so it opens once.
-    key: Option<String>,
-    item: Retained<TabItem>,
-    view: Retained<NSView>,
-}
-
-pub struct TabBar {
-    mtm: MainThreadMarker,
-    target: Weak<WindowController>,
-    bar: Retained<NSView>,
-    strip: Retained<NSStackView>,
-    plus: Retained<NSButton>,
-    content: Retained<NSView>,
-    menu: Retained<NSMenu>,
-    tabs: RefCell<Vec<Tab>>,
-    selected: Cell<Option<isize>>,
-    /// The numbers of the tabs of the window, shared by its bars, so a tab keeps its number in another panel.
-    next: Rc<Cell<isize>>,
-    /// The accent the bar shows while a dragged tab would drop into it.
-    drop: Retained<NSBox>,
-    /// Whether the bar belongs to the active one of several panels.
-    active: Cell<bool>,
-}
-
-impl TabBar {
-    /// The bar of the panel numbered `panel`, whose "+" says so in its tag; `next` numbers its tabs.
-    pub fn new(mtm: MainThreadMarker, target: &WindowController, panel: usize, next: Rc<Cell<isize>>) -> TabBar {
-        let bar = NSView::new(mtm);
-        bar.setAccessibilityElement(true);
-        bar.setAccessibilityRole(Some(constant!(NSAccessibilityTabGroupRole)));
-        bar.setAccessibilityLabel(Some(&ns(t("Tabs"))));
-        let strip = NSStackView::new(mtm);
-        strip.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        strip.setDistribution(NSStackViewDistribution::FillEqually);
-        strip.setSpacing(4.0);
-        let plus = symbol_button(mtm, "plus", t("Neuer Tab"), 13.0, Some(target), sel!(ideNewTab:));
-        plus.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        plus.setTag(isize::try_from(panel).unwrap_or(0));
-        // A stack view, so the "+" follows the tabs in the reading direction, as the tabs in the strip do.
-        let row = NSStackView::new(mtm);
-        row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        row.setDistribution(NSStackViewDistribution::Fill);
-        row.setAlignment(objc2_app_kit::NSLayoutAttribute::CenterY);
-        row.setSpacing(6.0);
-        row.addArrangedSubview(&strip);
-        row.addArrangedSubview(&plus);
-        strip.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
-        let drop = drop_highlight(mtm);
-        bar.addSubview(&drop);
-        bar.addSubview(&row);
-        for view in [&*row as &NSView, &drop] {
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        }
+        let content = NSView::new(mtm);
+        let area = NSSplitView::new(mtm);
+        area.setVertical(true);
+        area.setDividerStyle(NSSplitViewDividerStyle::Thin);
+        content.addSubview(&area);
+        area.setTranslatesAutoresizingMaskIntoConstraints(false);
+        // Below the title bar and the tab bar, which the content reaches under, so the headers of two documents show.
         for constraint in [
-            drop.leadingAnchor()
-                .constraintEqualToAnchor_constant(&bar.leadingAnchor(), 4.0),
-            drop.trailingAnchor()
-                .constraintEqualToAnchor_constant(&bar.trailingAnchor(), -4.0),
-            drop.topAnchor().constraintEqualToAnchor_constant(&bar.topAnchor(), 2.0),
-            drop.bottomAnchor()
-                .constraintEqualToAnchor_constant(&bar.bottomAnchor(), -2.0),
-            bar.heightAnchor().constraintEqualToConstant(BAR_HEIGHT),
-            row.leadingAnchor()
-                .constraintEqualToAnchor_constant(&bar.leadingAnchor(), 8.0),
-            row.centerYAnchor().constraintEqualToAnchor(&bar.centerYAnchor()),
-            row.trailingAnchor()
-                .constraintEqualToAnchor_constant(&bar.trailingAnchor(), -10.0),
+            area.topAnchor()
+                .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
+            area.leadingAnchor().constraintEqualToAnchor(&content.leadingAnchor()),
+            area.trailingAnchor().constraintEqualToAnchor(&content.trailingAnchor()),
+            area.bottomAnchor().constraintEqualToAnchor(&content.bottomAnchor()),
         ] {
             constraint.setActive(true);
         }
-        TabBar {
-            mtm,
-            target: Weak::from(target),
+        let content_controller = NSViewController::new(mtm);
+        content_controller.setView(&content);
+        let content_item = NSSplitViewItem::splitViewItemWithViewController(&content_controller);
+        content_item.setMinimumThickness(360.0);
+        let bar = accessories_available().then(|| {
+            let view = NSView::new(mtm);
+            view.heightAnchor()
+                .constraintEqualToConstant(HEADER_HEIGHT)
+                .setActive(true);
+            // AppKit exposes a docked bar to VoiceOver whatever it holds; a group passes its headers on.
+            view.setAccessibilityRole(Some(crate::util::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
+            let accessory = objc2_app_kit::NSSplitViewItemAccessoryViewController::new(mtm);
+            accessory.setView(&view);
+            accessory.setHidden(true);
+            content_item.addTopAlignedAccessoryViewController(&accessory);
+            (accessory, view)
+        });
+        split.addSplitViewItem(&sidebar);
+        split.addSplitViewItem(&content_item);
+        window.setContentViewController(Some(&split));
+
+        let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), &ns("IDEProjectToolbar"));
+        toolbar.setDelegate(Some(ProtocolObject::from_ref(controller)));
+        toolbar.setDisplayMode(NSToolbarDisplayMode::IconOnly);
+        window.setToolbar(Some(&toolbar));
+
+        let status = status_dot(mtm);
+        Rc::new(TabWindow {
+            window,
+            split,
+            sidebar,
+            slot,
+            picture,
+            content,
             bar,
-            strip,
-            plus,
-            content: NSView::new(mtm),
-            menu: new_tab_menu(mtm),
-            tabs: RefCell::new(vec![]),
-            selected: Cell::new(None),
-            next,
-            drop,
-            active: Cell::new(false),
-        }
+            area,
+            documents: RefCell::new(Vec::new()),
+            focused: Cell::new(0),
+            status,
+        })
     }
 
-    /// Names the bar for VoiceOver, such as "Panel 2 von 3".
-    pub fn set_label(&self, label: &str) {
-        self.bar.setAccessibilityLabel(Some(&ns(label)));
+    pub fn documents(&self) -> Vec<Rc<Document>> {
+        self.documents.borrow().clone()
     }
 
-    /// Marks the bar as the active one of several panels: its selected tab shows the accent colour.
-    pub fn set_active(&self, active: bool) {
-        self.active.set(active);
-        for tab in self.tabs.borrow().iter() {
-            tab.item.set_active_bar(active);
-        }
+    pub fn is_empty(&self) -> bool {
+        self.documents.borrow().is_empty()
     }
 
-    /// Shows or hides the accent that tells a dragged tab would drop into this bar.
-    pub fn highlight(&self, on: bool) {
-        self.drop.setHidden(!on);
+    pub fn holds(&self, id: isize) -> bool {
+        self.documents.borrow().iter().any(|doc| doc.id == id)
     }
 
-    /// Whether `point`, in window coordinates, lies on the bar.
-    pub fn holds(&self, point: NSPoint) -> bool {
-        let local = self.bar.convertPoint_fromView(point, None);
-        self.bar.window().is_some() && objc2_foundation::NSPointInRect(local, self.bar.bounds())
+    pub fn document(&self, id: isize) -> Option<Rc<Document>> {
+        self.documents.borrow().iter().find(|doc| doc.id == id).cloned()
     }
 
-    /// Where in the strip a tab dropped at `point`, in window coordinates, goes.
-    pub fn index_at(&self, point: NSPoint) -> usize {
-        let x = self.strip.convertPoint_fromView(point, None).x;
-        self.tabs
-            .borrow()
-            .iter()
-            .filter(|tab| {
-                let frame = tab.item.frame();
-                x > frame.origin.x + frame.size.width / 2.0
-            })
-            .count()
+    /// The document commands act on: the one with the keyboard focus, else the one that had it last.
+    pub fn focused(&self) -> Option<Rc<Document>> {
+        let documents = self.documents.borrow();
+        documents.get(self.focused.get()).or_else(|| documents.first()).cloned()
     }
 
-    /// Takes the tab `id` out of the bar, its view still where it was until another bar adopts it, and selects a
-    /// neighbour.
-    pub fn take(&self, id: isize) -> Option<Tab> {
-        let (tab, next) = {
-            let mut tabs = self.tabs.borrow_mut();
-            let position = tabs.iter().position(|tab| tab.id == id)?;
-            let tab = tabs.remove(position);
-            let next = tabs.get(position).or_else(|| tabs.last()).map(|tab| tab.id);
-            (tab, next)
-        };
-        self.strip.removeArrangedSubview(&tab.item);
-        tab.item.removeFromSuperview();
-        tab.item.set_hovered(false);
-        if self.selected.get() == Some(id) {
-            self.selected.set(None);
-            if let Some(next) = next {
-                self.select(next);
-            }
-        }
-        Some(tab)
-    }
-
-    /// Takes in `tab` from another bar at `position`, or at the end, and selects it; a moved preview tab is kept.
-    pub fn adopt(&self, tab: Tab, position: Option<usize>) {
-        let id = tab.id;
-        tab.item.set_preview(false);
-        tab.item.set_active_bar(self.active.get());
-        let position = position.unwrap_or(usize::MAX).min(self.tabs.borrow().len());
-        self.strip
-            .insertArrangedSubview_atIndex(&tab.item, isize::try_from(position).unwrap_or(0));
-        self.content.addSubview(&tab.view);
-        pin_edges(&tab.view, &self.content);
-        self.tabs.borrow_mut().insert(position, tab);
-        self.select(id);
-    }
-
-    /// The tabs, left to right: their number, kind and key.
-    pub fn entries(&self) -> Vec<(isize, TabKind, Option<String>)> {
-        self.tabs
-            .borrow()
-            .iter()
-            .map(|tab| (tab.id, tab.kind, tab.key.clone()))
-            .collect()
-    }
-
-    /// The view of the selected tab.
-    pub fn selected_view(&self) -> Option<Retained<NSView>> {
-        let selected = self.selected.get()?;
-        self.tabs
-            .borrow()
-            .iter()
-            .find(|tab| tab.id == selected)
-            .map(|tab| tab.view.clone())
-    }
-
-    pub fn view(&self) -> &NSView {
-        &self.bar
-    }
-
+    /// The area under the documents, where notes show.
     pub fn content(&self) -> &NSView {
         &self.content
     }
 
-    pub fn count(&self) -> usize {
-        self.tabs.borrow().len()
-    }
-
-    pub fn selected_id(&self) -> Option<isize> {
-        self.selected.get()
-    }
-
-    pub fn find(&self, kind: TabKind) -> Option<isize> {
-        self.tabs.borrow().iter().find(|tab| tab.kind == kind).map(|tab| tab.id)
-    }
-
-    pub fn find_key(&self, key: &str) -> Option<isize> {
-        self.tabs
-            .borrow()
-            .iter()
-            .find(|tab| tab.key.as_deref() == Some(key))
-            .map(|tab| tab.id)
-    }
-
-    /// The ids of all tabs, left to right.
-    pub fn ids(&self) -> Vec<isize> {
-        self.tabs.borrow().iter().map(|tab| tab.id).collect()
-    }
-
-    /// The ids and kinds of all tabs, left to right.
-    pub fn kinds(&self) -> Vec<(isize, TabKind)> {
-        self.tabs.borrow().iter().map(|tab| (tab.id, tab.kind)).collect()
-    }
-
-    /// Adds a tab titled `title` that shows `view`, and selects it.
-    pub fn add(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
-        self.insert(kind, key, title, view, None)
-    }
-
-    /// Adds the preview tab, in place of the tab `replace` when given, and selects it.
-    pub fn add_preview(
-        &self,
-        kind: TabKind,
-        key: Option<String>,
-        title: &str,
-        view: Retained<NSView>,
-        replace: Option<isize>,
-    ) -> isize {
-        let position = replace.and_then(|id| self.remove(id));
-        let id = self.insert(kind, key, title, view, position);
-        if let Some(tab) = self.tabs.borrow().iter().find(|tab| tab.id == id) {
-            tab.item.set_preview(true);
+    /// Puts `document` at `index` of the documents, or last; two at most share a window tab.
+    pub fn insert(&self, document: Rc<Document>, index: Option<usize>) {
+        let count = self.documents.borrow().len();
+        let index = index.unwrap_or(count).min(count);
+        let share = self.share();
+        match self.documents.borrow().get(index) {
+            Some(after) => self.area.addSubview_positioned_relativeTo(
+                &document.host,
+                objc2_app_kit::NSWindowOrderingMode::Below,
+                Some(&after.host),
+            ),
+            None => self.area.addSubview(&document.host),
         }
-        id
-    }
-
-    fn insert(
-        &self,
-        kind: TabKind,
-        key: Option<String>,
-        title: &str,
-        view: Retained<NSView>,
-        position: Option<usize>,
-    ) -> isize {
-        let id = self.next.get();
-        self.next.set(id + 1);
-        let Some(target) = self.target.load() else { return id };
-        let item = TabItem::new(self.mtm, &target, id, kind, title);
-        item.set_active_bar(self.active.get());
-        let position = position.unwrap_or_else(|| self.tabs.borrow().len());
-        self.strip
-            .insertArrangedSubview_atIndex(&item, isize::try_from(position).unwrap_or(0));
-        self.content.addSubview(&view);
-        pin_edges(&view, &self.content);
-        view.setHidden(true);
-        let tab = Tab {
-            id,
-            kind,
-            key,
-            item,
-            view,
-        };
-        let mut tabs = self.tabs.borrow_mut();
-        let position = position.min(tabs.len());
-        tabs.insert(position, tab);
-        drop(tabs);
-        self.select(id);
-        id
-    }
-
-    /// The window's preview tab, if it has one.
-    pub fn preview_id(&self) -> Option<isize> {
-        self.tabs
-            .borrow()
-            .iter()
-            .find(|tab| tab.item.ivars().preview.get())
-            .map(|tab| tab.id)
-    }
-
-    /// Makes the tab `id` an ordinary one, which no other file replaces.
-    pub fn keep(&self, id: isize) {
-        if let Some(tab) = self
-            .tabs
-            .borrow()
-            .iter()
-            .find(|tab| tab.id == id && tab.item.ivars().preview.get())
-        {
-            tab.item.set_preview(false);
-        }
-    }
-
-    /// Moves the tab `id` into the gap the pointer at `point`, in window coordinates, falls into.
-    pub fn drag_to(&self, id: isize, point: NSPoint) {
-        self.drag(id, self.strip.convertPoint_fromView(point, None).x);
-    }
-
-    /// Moves the tab `id` into the gap the pointer at `x`, in the strip's coordinates, falls into; a dragged preview
-    /// tab is kept.
-    pub fn drag(&self, id: isize, x: f64) {
-        self.keep(id);
-        let mut tabs = self.tabs.borrow_mut();
-        let Some(from) = tabs.iter().position(|tab| tab.id == id) else {
-            return;
-        };
-        let to = tabs
-            .iter()
-            .filter(|tab| tab.id != id)
-            .filter(|tab| {
-                let frame = tab.item.frame();
-                x > frame.origin.x + frame.size.width / 2.0
-            })
-            .count();
-        if to == from {
-            return;
-        }
-        let tab = tabs.remove(from);
-        self.strip.removeArrangedSubview(&tab.item);
-        self.strip
-            .insertArrangedSubview_atIndex(&tab.item, isize::try_from(to).unwrap_or(0));
-        tabs.insert(to, tab);
-        crate::session::changed();
-    }
-
-    /// Shows a dot of `color` on the tab `id`, or none.
-    pub fn set_status(&self, id: isize, color: Option<&NSColor>) {
-        if let Some(tab) = self.tabs.borrow().iter().find(|tab| tab.id == id) {
-            tab.item.set_status(color);
-        }
-    }
-
-    /// Tints the symbol of the tab `id`, such as in its agent's colour.
-    pub fn set_tint(&self, id: isize, color: &NSColor) {
-        if let Some(tab) = self.tabs.borrow().iter().find(|tab| tab.id == id) {
-            tab.item.set_tint(color);
-        }
-    }
-
-    /// Gives the tab `id` a new title, such as the terminal's.
-    pub fn set_title(&self, id: isize, title: &str) {
-        if let Some(tab) = self.tabs.borrow().iter().find(|tab| tab.id == id) {
-            tab.item.set_title(title);
-        }
-    }
-
-    /// Shows a dot instead of the close symbol while the tab has unsaved changes; the first change keeps a preview
-    /// tab.
-    pub fn set_dirty(&self, id: isize, dirty: bool) {
-        if dirty {
-            self.keep(id);
-        }
-        if let Some(tab) = self.tabs.borrow().iter().find(|tab| tab.id == id) {
-            tab.item.set_dirty(dirty);
-        }
-    }
-
-    pub fn select(&self, id: isize) {
-        let tabs = self.tabs.borrow();
-        if !tabs.iter().any(|tab| tab.id == id) {
-            return;
-        }
-        for tab in tabs.iter() {
-            let selected = tab.id == id;
-            tab.view.setHidden(!selected);
-            tab.item.set_selected(selected);
-        }
-        self.selected.set(Some(id));
-        crate::session::changed();
-    }
-
-    /// Selects the tab `step` places from the selected one, wrapping around.
-    pub fn select_relative(&self, step: isize) {
-        let next = {
-            let tabs = self.tabs.borrow();
-            let Some(position) = tabs.iter().position(|tab| Some(tab.id) == self.selected.get()) else {
-                return;
-            };
-            let count = isize::try_from(tabs.len()).unwrap_or(1);
-            let index = (isize::try_from(position).unwrap_or(0) + step).rem_euclid(count);
-            usize::try_from(index).ok().and_then(|i| tabs.get(i)).map(|tab| tab.id)
-        };
-        if let Some(id) = next {
-            self.select(id);
-        }
-    }
-
-    /// Takes the tab `id` out of the bar; where it was.
-    fn remove(&self, id: isize) -> Option<usize> {
-        let mut tabs = self.tabs.borrow_mut();
-        let position = tabs.iter().position(|tab| tab.id == id)?;
-        let tab = tabs.remove(position);
-        tab.item.removeFromSuperview();
-        tab.view.removeFromSuperview();
-        Some(position)
-    }
-
-    pub fn close(&self, id: isize) {
-        let next = {
-            let Some(position) = self.remove(id) else { return };
-            let tabs = self.tabs.borrow();
-            tabs.get(position).or_else(|| tabs.last()).map(|tab| tab.id)
-        };
-        if self.selected.get() == Some(id) {
-            self.selected.set(None);
-            if let Some(next) = next {
-                self.select(next);
+        if let Some((_, bar)) = &self.bar {
+            document.header.removeFromSuperview();
+            bar.addSubview(&document.header);
+            for constraint in [
+                document.header.topAnchor().constraintEqualToAnchor(&bar.topAnchor()),
+                document
+                    .header
+                    .bottomAnchor()
+                    .constraintEqualToAnchor(&bar.bottomAnchor()),
+                document
+                    .header
+                    .leadingAnchor()
+                    .constraintEqualToAnchor(&document.host.leadingAnchor()),
+                document
+                    .header
+                    .trailingAnchor()
+                    .constraintEqualToAnchor(&document.host.trailingAnchor()),
+            ] {
+                constraint.setActive(true);
             }
         }
-        crate::session::changed();
-    }
-
-    /// Opens the "+" menu below its button.
-    pub fn show_new_tab_menu(&self) {
-        let clis = self
-            .menu
-            .itemWithTitle(&ns(t("CLI-Thread")))
-            .and_then(|item| item.submenu());
-        if let (Some(target), Some(clis)) = (self.target.load(), clis) {
-            crate::terminal::fill_cli_menu(&target, &clis);
+        self.documents.borrow_mut().insert(index, document);
+        self.focused.set(index);
+        self.area.adjustSubviews();
+        if count == 1 {
+            self.set_share(share.unwrap_or(0.5));
         }
-        let own = self
-            .menu
-            .itemWithTitle(&ns(t("AI-Thread")))
-            .and_then(|item| item.submenu())
-            .and_then(|agents| agents.itemWithTitle(&ns(t("Eigener Agent"))))
-            .and_then(|item| item.submenu());
-        if let Some(own) = own {
-            crate::agent::fill_own_menu(self.mtm, &own);
+        self.refresh();
+    }
+
+    /// Takes the document `id` out of the window tab.
+    pub fn remove(&self, id: isize) -> Option<Rc<Document>> {
+        let index = self.documents.borrow().iter().position(|doc| doc.id == id)?;
+        let document = self.documents.borrow_mut().remove(index);
+        if self.bar.is_some() {
+            document.header.removeFromSuperview();
         }
-        let below = NSPoint::new(0.0, self.plus.frame().size.height + 4.0);
-        self.menu
-            .popUpMenuPositioningItem_atLocation_inView(None, below, Some(&self.plus));
+        document.host.removeFromSuperview();
+        let focused = self.focused.get();
+        if focused >= index && focused > 0 {
+            self.focused.set(focused - 1);
+        }
+        self.area.adjustSubviews();
+        self.refresh();
+        Some(document)
     }
 
-    /// The menu of new tabs, which ⌘T and the "+" button open.
-    #[cfg(feature = "selftest")]
-    pub fn new_tab_menu(&self) -> Retained<NSMenu> {
-        self.menu.clone()
+    /// The left document's share of the width while there are two.
+    pub fn share(&self) -> Option<f64> {
+        let documents = self.documents.borrow();
+        let (Some(left), Some(_)) = (documents.first(), documents.get(1)) else {
+            return None;
+        };
+        let total = self.area.bounds().size.width;
+        (total > 1.0).then(|| (left.host.frame().size.width / total).clamp(0.1, 0.9))
     }
 
-    /// Whether the "+" comes after the tabs in the reading direction: right of them, or left right to left.
-    #[cfg(feature = "selftest")]
-    pub fn plus_follows_tabs(&self) -> bool {
-        self.bar.layoutSubtreeIfNeeded();
-        let (strip, plus) = (self.strip.frame(), self.plus.frame());
-        if self.bar.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft {
-            plus.origin.x + plus.size.width <= strip.origin.x + 1.0
+    pub fn set_share(&self, share: f64) {
+        if self.documents.borrow().len() < 2 {
+            return;
+        }
+        let total = self.area.bounds().size.width;
+        if total > 1.0 {
+            let position = (total * share).clamp(MIN_SIDE, (total - MIN_SIDE).max(MIN_SIDE));
+            self.area.setPosition_ofDividerAtIndex(position, 0);
+        }
+    }
+
+    /// Makes the document at `index` the one commands act on, as the keyboard focus moves into it.
+    fn set_focused(&self, index: usize) {
+        if self.focused.replace(index) != index {
+            self.refresh();
+        }
+    }
+
+    /// Follows the keyboard focus: the document that has it becomes the focused one and remembers where it was.
+    pub fn follow_focus(&self) {
+        let responder = self.window.firstResponder();
+        let Some(view) = responder.and_then(|r| Retained::downcast::<NSView>(r).ok()) else {
+            return;
+        };
+        let found = self.documents.borrow().iter().position(|doc| doc.holds(&view));
+        if let Some(index) = found {
+            if let Some(doc) = self.documents.borrow().get(index) {
+                *doc.focus.borrow_mut() = Some(Weak::from(&*view));
+            }
+            self.set_focused(index);
+        }
+    }
+
+    /// Makes the document `id` the one commands act on, without moving the keyboard focus.
+    pub fn mark_focused(&self, id: isize) {
+        let found = self.documents.borrow().iter().position(|doc| doc.id == id);
+        if let Some(index) = found {
+            self.set_focused(index);
+        }
+    }
+
+    /// Gives the keyboard focus to the document `id`.
+    pub fn activate(&self, id: isize) {
+        let found = self.documents.borrow().iter().position(|doc| doc.id == id);
+        let Some(index) = found else { return };
+        self.set_focused(index);
+        let target = self.documents.borrow().get(index).and_then(|doc| doc.focus_target());
+        match target {
+            Some(view) => self.window.makeFirstResponder(Some(&view)),
+            None => self.window.makeFirstResponder(None),
+        };
+    }
+
+    /// Gives the keyboard focus to the other document of two.
+    pub fn focus_other(&self) {
+        let documents = self.documents();
+        if documents.len() < 2 {
+            return;
+        }
+        let next = (self.focused.get() + 1) % documents.len();
+        self.activate(documents[next].id);
+    }
+
+    /// Says on the tab what the focused document is and whether a document has unsaved changes, and shows the
+    /// headers while two documents share the tab.
+    pub fn refresh(&self) {
+        let documents = self.documents.borrow();
+        let focused = self.focused.get().min(documents.len().saturating_sub(1));
+        let two = documents.len() > 1;
+        let docked = self.bar.is_some();
+        for (index, doc) in documents.iter().enumerate() {
+            doc.set_header(two, !docked, index == focused);
+        }
+        if let Some((accessory, _)) = &self.bar {
+            accessory.setHidden(!two);
+        }
+        let Some(doc) = documents.get(focused) else { return };
+        let title = doc.title();
+        let tab = self.window.tab();
+        let font = NSFont::systemFontOfSize(NSFont::systemFontSize());
+        let font = if doc.preview.get() {
+            NSFontManager::sharedFontManager(self.window.mtm())
+                .convertFont_toHaveTrait(&font, NSFontTraitMask::ItalicFontMask)
         } else {
-            plus.origin.x >= strip.origin.x + strip.size.width - 1.0
+            font
+        };
+        tab.setAttributedTitle(Some(&titled(doc.icon().as_deref(), &title, &font)));
+        tab.setTitle(Some(&ns(&title)));
+        let names: Vec<String> = documents.iter().map(|doc| doc.title()).collect();
+        let tip = if doc.preview.get() {
+            t("Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn.")
+                .to_string()
+        } else {
+            names.join(" | ")
+        };
+        tab.setToolTip(Some(&ns(&tip)));
+        self.window
+            .setDocumentEdited(documents.iter().any(|doc| doc.dirty.get()));
+        let status = documents.iter().find_map(|doc| doc.status.borrow().clone());
+        if let Some(color) = &status {
+            self.status.setContentTintColor(Some(color));
+        }
+        let current = tab.accessoryView(self.window.mtm());
+        if status.is_some() && current.is_none() {
+            tab.setAccessoryView(Some(&self.status));
+        } else if status.is_none() && current.is_some() {
+            tab.setAccessoryView(None);
         }
     }
 
-    /// The title of each tab, left to right, whether it is the preview tab, and what VoiceOver calls it.
-    #[cfg(feature = "selftest")]
-    pub fn previews(&self) -> Vec<(String, bool, String)> {
-        self.tabs
-            .borrow()
-            .iter()
-            .map(|tab| {
-                let ivars = tab.item.ivars();
-                let spoken = tab.item.accessibilityLabel().map(|l| l.to_string()).unwrap_or_default();
-                (ivars.title.stringValue().to_string(), ivars.preview.get(), spoken)
-            })
-            .collect()
+    /// Puts the folder's sidebar `view` into the tab, in place of its picture.
+    pub fn adopt_sidebar(&self, view: &NSView) {
+        self.picture.setHidden(true);
+        self.picture.setImage(None);
+        self.slot.addSubview(view);
+        pin_edges(view, &self.slot);
     }
 
-    /// Clicks the tab `id` `count` times, as the mouse does.
+    /// Shows what `view`, the sidebar about to leave, looks like now, for a window that stays on screen.
+    pub fn keep_picture_of(&self, view: &NSView) {
+        let bounds = view.bounds();
+        let Some(rep) = view.bitmapImageRepForCachingDisplayInRect(bounds) else {
+            return;
+        };
+        view.cacheDisplayInRect_toBitmapImageRep(bounds, &rep);
+        let image = NSImage::initWithSize(NSImage::alloc(), bounds.size);
+        image.addRepresentation(&rep);
+        self.picture.setImage(Some(&image));
+        self.picture.setHidden(false);
+    }
+
+    /// Whether the tab shows the picture of the sidebar.
     #[cfg(feature = "selftest")]
-    pub fn click(&self, id: isize, count: isize) {
-        let item = self
-            .tabs
-            .borrow()
-            .iter()
-            .find(|tab| tab.id == id)
-            .map(|tab| tab.item.clone());
-        if let Some(item) = item {
-            item.clicked(count);
+    pub fn shows_picture(&self) -> bool {
+        !self.picture.isHidden()
+    }
+
+    /// The width of the sidebar now.
+    pub fn sidebar_width(&self) -> f64 {
+        self.sidebar.viewController(self.window.mtm()).view().frame().size.width
+    }
+
+    pub fn sidebar_collapsed(&self) -> bool {
+        self.sidebar.isCollapsed()
+    }
+
+    /// Holds the sidebar at `width`, which a window tab that has not shown yet takes only this way.
+    pub fn pin_sidebar(&self, width: f64, collapsed: bool) {
+        self.sidebar.setMinimumThickness(width);
+        self.sidebar.setMaximumThickness(width);
+        if self.sidebar.isCollapsed() != collapsed {
+            self.sidebar.setCollapsed(collapsed);
         }
+        self.split.splitView().setPosition_ofDividerAtIndex(width, 0);
     }
 
-    /// Whether the bar shows itself as the active panel's.
-    #[cfg(feature = "selftest")]
-    pub fn is_active(&self) -> bool {
-        self.active.get()
-    }
-
-    /// What VoiceOver calls the bar.
-    #[cfg(feature = "selftest")]
-    pub fn label(&self) -> String {
-        self.bar.accessibilityLabel().map(|l| l.to_string()).unwrap_or_default()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn titles(&self) -> Vec<String> {
-        self.tabs
-            .borrow()
-            .iter()
-            .map(|tab| tab.item.ivars().title.stringValue().to_string())
-            .collect()
-    }
-
-    /// Whether each tab, left to right, shows the mark of unsaved changes.
-    #[cfg(feature = "selftest")]
-    pub fn dirty_marks(&self) -> Vec<bool> {
-        self.tabs
-            .borrow()
-            .iter()
-            .map(|tab| tab.item.ivars().dirty.get())
-            .collect()
-    }
-
-    /// The titles in the submenu of "+" that `path` names by the titles of its parents.
-    #[cfg(feature = "selftest")]
-    pub fn new_tab_submenu_titles(&self, path: &[&str]) -> Vec<String> {
-        let mut menu = self.menu.clone();
-        for title in path {
-            let next = menu
-                .itemArray()
-                .iter()
-                .find(|item| item.title().to_string() == *title)
-                .and_then(|item| item.submenu());
-            let Some(next) = next else { return Vec::new() };
-            menu = next;
-        }
-        menu.itemArray()
-            .iter()
-            .filter(|item| !item.isSeparatorItem())
-            .map(|item| item.title().to_string())
-            .collect()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn new_tab_titles(&self) -> Vec<String> {
-        self.menu
-            .itemArray()
-            .iter()
-            .filter(|item| !item.isSeparatorItem())
-            .map(|item| item.title().to_string())
-            .collect()
+    /// Lets the user drag the sidebar between `min` and `max` again.
+    pub fn release_sidebar(&self, min: f64, max: f64) {
+        self.sidebar.setMinimumThickness(min);
+        self.sidebar.setMaximumThickness(max);
     }
 }
 
-/// The accent behind a bar or over a panel that a dragged tab would drop into.
-pub fn drop_highlight(mtm: MainThreadMarker) -> Retained<NSBox> {
-    let drop = NSBox::new(mtm);
-    drop.setBoxType(NSBoxType::Custom);
-    drop.setBorderWidth(0.0);
-    drop.setCornerRadius(6.0);
-    drop.setFillColor(&NSColor::controlAccentColor().colorWithAlphaComponent(0.18));
-    drop.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
-    drop.setHidden(true);
-    drop
+/// A tab's title after its icon, which sits on the text's baseline like a letter and is left out for VoiceOver, which
+/// reads the title.
+fn titled(icon: Option<&NSImage>, title: &str, font: &NSFont) -> Retained<NSAttributedString> {
+    let text = NSMutableAttributedString::new();
+    if let Some(icon) = icon {
+        let size = icon.size();
+        let height = ICON_HEIGHT.min(size.height.max(1.0));
+        let width = size.width * height / size.height.max(1.0);
+        let attachment = NSTextAttachment::new();
+        attachment.setImage(Some(icon));
+        attachment.setBounds(NSRect::new(
+            NSPoint::new(0.0, font.descender()),
+            NSSize::new(width, height),
+        ));
+        text.appendAttributedString(&NSAttributedString::attributedStringWithAttachment(&attachment));
+        text.appendAttributedString(&attributed("\u{2002}", font));
+    }
+    text.appendAttributedString(&attributed(title, font));
+    text.into_super()
+}
+
+fn attributed(text: &str, font: &NSFont) -> Retained<NSAttributedString> {
+    // SAFETY: NSFontAttributeName is a constant AppKit sets when it loads.
+    let key = unsafe { objc2_app_kit::NSFontAttributeName };
+    let attributes =
+        NSDictionary::<NSString, objc2::runtime::AnyObject>::from_slices(&[key], &[font as &objc2::runtime::AnyObject]);
+    // SAFETY: The attributes map an attribute name to a font, which the font attribute takes.
+    unsafe { NSAttributedString::initWithString_attributes(NSAttributedString::alloc(), &ns(text), Some(&attributes)) }
+}
+
+/// The dot of a document's state, such as an agent's turn, beside its tab's title.
+fn status_dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
+    let status = NSImageView::new(mtm);
+    status.setImage(symbol("circle.fill", "").as_deref());
+    status.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
+        7.0,
+        // SAFETY: AppKit sets its font weight constants when it loads.
+        unsafe { objc2_app_kit::NSFontWeightRegular },
+    )));
+    crate::util::hide_from_voiceover(&status);
+    status
+}
+
+/// The view at or under `view` to give the keyboard focus: a text view if there is one, as an editor or a composer
+/// has, else the first that takes the focus.
+pub(super) fn first_responder_in(view: &NSView) -> Option<Retained<NSView>> {
+    fn find(view: &NSView, want: &dyn Fn(&NSView) -> bool) -> Option<Retained<NSView>> {
+        if want(view) {
+            return Some(objc2::Message::retain(view));
+        }
+        view.subviews().iter().find_map(|sub| find(&sub, want))
+    }
+    let takes = |view: &NSView| {
+        let responder: &NSResponder = view;
+        responder.acceptsFirstResponder()
+    };
+    let text = |view: &NSView| {
+        let object: &objc2::runtime::AnyObject = view;
+        object.downcast_ref::<objc2_app_kit::NSTextView>().is_some()
+    };
+    find(view, &|view| text(view) && takes(view)).or_else(|| find(view, &|view| takes(view)))
 }
 
 /// The agents a thread in a worktree of its own can run (I1), each tagged with its place in
@@ -1067,8 +764,8 @@ fn worktree_menu(mtm: MainThreadMarker) -> Retained<NSMenuItem> {
     parent
 }
 
-/// The kinds of tab "+" offers; those not built yet are shown, disabled.
-fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
+/// What a new tab can show (E17): the page of a new tab lists it, and ⌘T and the tab bar's "+" open that page.
+pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);
     let entry = |title: &str, symbol_name: &str, action: Option<Sel>| {
@@ -1122,4 +819,25 @@ fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
         menu.addItem(&entry);
     }
     menu
+}
+
+/// Fills the parts of `menu` that change: the CLIs on the login PATH and the own agent's endpoints.
+pub fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
+    let clis = menu.itemWithTitle(&ns(t("CLI-Thread"))).and_then(|item| item.submenu());
+    if let Some(clis) = clis {
+        crate::terminal::fill_cli_menu(controller, &clis);
+    }
+    let own = menu
+        .itemWithTitle(&ns(t("AI-Thread")))
+        .and_then(|item| item.submenu())
+        .and_then(|agents| agents.itemWithTitle(&ns(t("Eigener Agent"))))
+        .and_then(|item| item.submenu());
+    if let Some(own) = own {
+        crate::agent::fill_own_menu(controller.mtm(), &own);
+    }
+}
+
+/// The documents' default size, for a window that has no saved frame.
+pub fn default_size() -> NSSize {
+    WINDOW_SIZE
 }

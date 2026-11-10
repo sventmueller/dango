@@ -87,10 +87,12 @@ fn settle(key: u64, selection: Option<String>) {
 /// handed to `done` once the page answered or did not in time.
 pub fn browser(controller: &WindowController, done: impl FnOnce(Option<Attachment>) + 'static) {
     let mut found = Vec::new();
-    if let Some(content) = controller.window().and_then(|w| w.contentView()) {
-        web_views(&content, &mut found);
+    for window in controller.tab_windows() {
+        if let Some(content) = window.contentView() {
+            web_views(&content, &mut found);
+        }
     }
-    found.sort_by_key(|w| w.isHiddenOrHasHiddenAncestor());
+    found.sort_by_key(|w| w.isHiddenOrHasHiddenAncestor() || !w.window().is_some_and(|w| crate::window::in_front(&w)));
     let Some(web) = found.into_iter().next() else {
         done(None);
         return;

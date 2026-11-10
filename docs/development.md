@@ -207,10 +207,10 @@ it closes, `main_after` included.
 ### Accessibility audit
 The `a11y` scenario is the VoiceOver check of each phase (E3). It opens the main states with fixtures, recordings and
 stand-ins and walks what VoiceOver gets from every window: controls without a name, images without a description,
-names that say nothing (an SF Symbol's name, "Button") or repeat beside each other, roles that do not fit (a tab is a
-radio button with the tab button subrole in a tab group, with a value and a press action), controls Tab never
-reaches, and code and terminal views that turn with a right-to-left interface. Then it goes through the main tasks
-with key presses to the window alone: staging and commit, Open Quickly, ⌘T, the next panel, a prompt, comments on a
+names that say nothing (an SF Symbol's name, "Button") or repeat beside each other, roles that do not fit, controls
+Tab never reaches, and code and terminal views that turn with a right-to-left interface. Then it goes through the
+main tasks with key presses to the window alone: staging and commit, Open Quickly, ⌘T and the page of a new tab, the
+document beside, a prompt, comments on a
 plan in its card and its document, the activity popover as its rows change, opening a folder. Each finding is
 reported once, in the first state that shows it, and is a line of `target/selftest/a11y-findings.txt`:
 state, problem, element, path; the window pictures are `target/selftest/a11y-*.png`.
@@ -296,16 +296,34 @@ with their tabs if `reopenProjects` is set; the copies come back in any case, ea
 per window. A copy of a file that changed on disk since gets the bar described below. A text whose description a crash
 kept from being written comes back untitled; a copy that cannot be read moves to `recovery/damaged/` and is logged.
 
+## Window tabs
+Every document is a native macOS tab (E60): `window::tabs::TabWindow` is an `NSWindow` with its own toolbar and split
+view, and a folder's window (`WindowController`, a plain object that is the delegate of all its tab windows) keeps them
+in one tab group under a tabbing identifier of its own, so "Merge All Windows" never mixes folders. The tab bar shows
+even with one tab; each tab's title starts with an icon, drawn as a text attachment of its attributed title
+(public `NSWindowTab` API): a file the icon of its type (`file_icon::image`), any other document a symbol
+in its agent's or worktree's colour. The browser shows a globe, not the page's icon, which would take a fetch beside
+WebKit's own. The sidebar exists once per folder and moves into the tab in front, held at the width it has in the others
+until the new tab is laid out; a window of the same folder left on screen beside it, after a tab was dragged out, shows
+a picture of the sidebar until it comes to the front itself; so does every tab behind, for the overview of all tabs.
+`controller.window()` is the tab in front, where sheets and the keyboard focus go. A tab shows one document or two side
+by side (`open_beside`); with two, each gets a header with its name and a close button, docked above the documents on
+macOS 26 and later, where the bars of the title and tabs fade what lies right below them. "+" and ⌘T open the page of a
+new tab (`window::chooser`), which the next document takes the place of. Closing a tab's last document closes the tab,
+and the last tab the window; ⇧⌘W asks about every document first, so one that refuses keeps all tabs, and keeps the
+layout of all tabs before closing them. The layout file (E24) keeps the tabs in the order of the tab bar with their
+documents and the left one's share; version 1 files with panels are read as one tab per panel tab. The `panels` and
+`tabs` scenarios cover this.
+
 ## Opening a folder
-A folder opened while the window in front shows another one replaces that folder (E56): the window closes the other
-windows of its tab group, saves the old folder's layout, closes its tabs, ends their terminals and agent sessions and
+A folder opened while the window in front shows another one replaces that folder (E56): the window saves the old
+folder's layout, closes its documents and all tabs but the one in front, ends their terminals and agent sessions and
 its language servers, and opens the new folder with its own layout. Unsaved text, a file gone from disk, an agent
-turn, subagent or background task that runs, or a terminal whose foreground is not its shell, in any window of the
-tab group, first gets a sheet; "Alles schließen" gives the text up and ends the programs, "In neuem Fenster öffnen"
-leaves the window as it is. A window that waits for the answer to a sheet keeps its folder, and the new one gets a
-window of its own. A folder open in another window brings that window forward; of several folders handed to the app
-at once, the first replaces and the others open beside. Each folder's windows share a tabbing identifier of their own,
-so macOS never merges windows of different folders. The `replace-folder` scenario goes through each case.
+turn, subagent or background task that runs, or a terminal whose foreground is not its shell, in any tab, first gets
+a sheet; "Alles schließen" gives the text up and ends the programs, "In neuem Fenster öffnen" leaves the window as it
+is. A window that waits for the answer to a sheet keeps its folder, and the new one gets a window of its own. A folder
+open in another window brings that window forward; of several folders handed to the app at once, the first replaces
+and the others open beside. The `replace-folder` scenario goes through each case.
 
 ## Changes on disk
 An editor without unsaved text takes a change of its file at once. One with unsaved text gets a bar above the text

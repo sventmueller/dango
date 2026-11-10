@@ -11,7 +11,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{
     NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertThirdButtonReturn, NSButton, NSModalResponse,
-    NSTextField, NSView, NSWindow, NSWindowOrderingMode,
+    NSTextField, NSView, NSWindow,
 };
 use objc2_foundation::NSRange;
 use splat_i18n::t;
@@ -300,32 +300,27 @@ fn folders_apart(f: &Folders) {
     );
 }
 
-/// Merges a second window of B into the tab group of B's window, with unsaved text in that tab, then opens C in the
-/// window of B.
+/// Opens a second file of B in a tab of its own, with unsaved text there too, then opens C in the window of B.
 fn tab_group(f: Folders) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let Some(first) = window_of(&f.b) else {
+    let Some(controller) = window_of(&f.b) else {
         return finish(SCENARIO);
     };
-    let second = WindowController::open_new(mtm, Some(f.b.clone()));
-    let (Some(window), Some(tab)) = (first.window(), second.window()) else {
-        return finish(SCENARIO);
-    };
-    window.mergeAllWindows(None);
-    let merged = first.tab_siblings().iter().any(|s| std::ptr::eq(&**s, &*second));
-    check(
-        "„Fenster zusammenführen“ puts the windows of one folder into one tab group",
-        merged,
-        format!("{} tabs", window.tabbedWindows().map_or(0, |tabs| tabs.count())),
-    );
-    if !merged {
-        window.addTabbedWindow_ordered(&tab, NSWindowOrderingMode::Above);
-    }
-    second.open_file(&f.b.join("more.rs"));
-    if let Some(view) = editor(&second, "more.rs") {
+    controller.open_file(&f.b.join("more.rs"));
+    if let Some(view) = editor(&controller, "more.rs") {
         type_at(&view, NSRange::new(0, 0), EDIT);
     }
-    crate::app::open_project_from(mtm, f.c.clone(), Some(first));
+    let tabs = controller.tab_windows();
+    check(
+        "the folder's files are tabs of one window",
+        tabs.len() >= 3
+            && tabs
+                .first()
+                .and_then(|window| window.tabbedWindows())
+                .is_some_and(|tabbed| tabbed.count() == tabs.len()),
+        format!("{:?}", controller.window_tabs()),
+    );
+    crate::app::open_project_from(mtm, f.c.clone(), Some(controller));
     let b = f.b.clone();
     wait_until(move || sheet_buttons(&b).len() == 3, move |ok| close_all(f, ok));
 }
@@ -355,6 +350,7 @@ fn closed_all(f: Folders, asked: bool, before: String) {
         asked
             && window_of(&f.b).is_none()
             && window::open_windows().len() == 1
+            && controller.tab_windows().len() == 1
             && crate::editor::unsaved_in(&controller).is_empty()
             && !on_disk.contains(EDIT)
             && !titles.iter().any(|title| title == "b.rs"),
