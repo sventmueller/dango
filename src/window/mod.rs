@@ -45,7 +45,7 @@ use tabs::{Document, TabWindow};
 
 /// How far the activity bar and the panel reach above the sidebar's safe area, which puts their first symbol and title
 /// level with the top edge of the tabs, which start where the safe area does.
-pub const SIDEBAR_RAISE: f64 = 12.0;
+pub const SIDEBAR_RAISE: f64 = 11.0;
 /// The width of the activity bar, which stays when the panel beside it is closed.
 const ACTIVITY_WIDTH: f64 = 44.0;
 const PANEL_MIN_WIDTH: f64 = 200.0;
