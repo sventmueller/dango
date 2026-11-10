@@ -576,6 +576,7 @@ impl EditorTextView {
         if (change.start.line != change.new_end.line || change.start.line != change.old_end.line)
             && let Some(gutter) = self.ivars().gutter.borrow().as_ref().and_then(Weak::load)
         {
+            gutter.fit();
             gutter.setNeedsDisplay(true);
         }
     }

@@ -431,7 +431,6 @@ fn editor_container(
         gutter.leftAnchor().constraintEqualToAnchor(&container.leftAnchor()),
         gutter.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
         gutter.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
-        gutter.widthAnchor().constraintEqualToConstant(ruler::WIDTH),
         scroll.leftAnchor().constraintEqualToAnchor(&gutter.rightAnchor()),
         scroll.rightAnchor().constraintEqualToAnchor(&container.rightAnchor()),
         scroll.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
@@ -449,6 +448,9 @@ fn editor_container(
     ] {
         constraint.setActive(true);
     }
+    let width = gutter.widthAnchor().constraintEqualToConstant(0.0);
+    width.setActive(true);
+    gutter.set_width_constraint(width);
     *view.ivars().bar.borrow_mut() = Some(bar);
     (container, gutter)
 }

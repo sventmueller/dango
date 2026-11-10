@@ -19,17 +19,41 @@ use objc2_foundation::{
 use super::view::EditorTextView;
 use crate::util::{constant, guarded, ns};
 
-/// The width of the line number column: diagnostic dots, fold triangles, numbers of four digits and change marks.
-pub const WIDTH: f64 = 60.0;
+/// Where the numbers begin, level with the left edge of the tab bar; diagnostic dots sit in the margin before.
+const NUMBERS_LEFT: f64 = 6.0;
+
+/// Between the numbers and the strip of fold triangles.
+const NUMBERS_GAP: f64 = 3.0;
 
 /// The strip at the column's right edge that shows and answers change marks.
 const CHANGE_STRIP: f64 = 8.0;
 
-/// Where the strip of fold triangles starts, right of the diagnostic dots and left of the numbers.
-const FOLD_LEFT: f64 = 13.0;
-
-/// The width of the strip of fold triangles.
+/// The width of the strip of fold triangles, between the numbers and the change marks.
 const FOLD_WIDTH: f64 = 12.0;
+
+/// The size of the numbers for an editor whose text has `font_size`.
+fn number_font(font_size: f64) -> Retained<NSFont> {
+    NSFont::monospacedDigitSystemFontOfSize_weight(font_size * 0.85, constant!(objc2_app_kit::NSFontWeightRegular))
+}
+
+fn number_attributes(font_size: f64) -> Retained<NSDictionary<NSString, objc2::runtime::AnyObject>> {
+    NSDictionary::<NSString, objc2::runtime::AnyObject>::from_retained_objects(
+        &[
+            constant!(NSFontAttributeName),
+            constant!(NSForegroundColorAttributeName),
+        ],
+        &[number_font(font_size).into(), NSColor::tertiaryLabelColor().into()],
+    )
+}
+
+/// The column's width for a text of `lines` lines in `font_size`: as wide as its highest number needs.
+pub fn width_for(lines: usize, font_size: f64) -> f64 {
+    let digits = lines.max(1).to_string();
+    let widest = ns(&"0".repeat(digits.len()));
+    // SAFETY: The attributes hold a font and a colour, as the method expects.
+    let numbers = unsafe { widest.sizeWithAttributes(Some(&number_attributes(font_size))) }.width;
+    (NUMBERS_LEFT + numbers + NUMBERS_GAP + FOLD_WIDTH + CHANGE_STRIP).ceil()
+}
 
 pub struct GutterIvars {
     editor: Weak<EditorTextView>,
@@ -37,6 +61,8 @@ pub struct GutterIvars {
     tips: std::cell::RefCell<Vec<Retained<NSString>>>,
     /// Whether the mouse is over the column, which then shows every fold's triangle.
     hovered: std::cell::Cell<bool>,
+    /// The constraint that holds the column's width, which follows the number of lines.
+    width: std::cell::RefCell<Option<Retained<objc2_app_kit::NSLayoutConstraint>>>,
 }
 
 define_class!(
@@ -89,10 +115,36 @@ impl LineNumbers {
     /// A click on the change strip opens a change mark's committed lines, one on the fold strip folds or unfolds.
     fn clicked(&self, event: &NSEvent) {
         let x = self.convertPoint_fromView(event.locationInWindow(), None).x;
+        let fold = self.fold_left();
         if x >= self.bounds().size.width - CHANGE_STRIP {
             let _ = self.click_change(event);
-        } else if (FOLD_LEFT - 3.0..FOLD_LEFT + FOLD_WIDTH + 2.0).contains(&x) {
+        } else if (fold - 3.0..fold + FOLD_WIDTH).contains(&x) {
             self.fold_click(event);
+        }
+    }
+
+    /// Where the strip of fold triangles begins, right of the numbers.
+    fn fold_left(&self) -> f64 {
+        self.bounds().size.width - CHANGE_STRIP - FOLD_WIDTH
+    }
+
+    /// Holds the column at `constraint`'s width, which `fit` sets.
+    pub fn set_width_constraint(&self, constraint: Retained<objc2_app_kit::NSLayoutConstraint>) {
+        *self.ivars().width.borrow_mut() = Some(constraint);
+        self.fit();
+    }
+
+    /// Makes the column as wide as the editor's highest line number needs.
+    pub fn fit(&self) {
+        let Some(editor) = self.ivars().editor.load() else {
+            return;
+        };
+        let width = width_for(editor.document().text().line_count(), editor.ivars().font_size.get());
+        if let Some(constraint) = self.ivars().width.borrow().as_ref()
+            && (constraint.constant() - width).abs() > 0.5
+        {
+            constraint.setConstant(width);
+            self.setNeedsDisplay(true);
         }
     }
 
@@ -161,9 +213,12 @@ impl LineNumbers {
 
     /// Draws a diagnostic's dot in `row` and gives it the message as its tooltip.
     fn mark(&self, row: NSRect, severity: crate::lsp::Severity, message: &str) {
-        let size = 7.0;
+        let size = 5.0;
         let dot = NSRect::new(
-            NSPoint::new(5.0, row.origin.y + (row.size.height - size) / 2.0),
+            NSPoint::new(
+                (NUMBERS_LEFT - size) / 2.0,
+                row.origin.y + (row.size.height - size) / 2.0,
+            ),
             NSSize::new(size, size),
         );
         severity.color().setFill();
@@ -217,9 +272,12 @@ impl LineNumbers {
             editor: Weak::from(editor),
             tips: std::cell::RefCell::new(vec![]),
             hovered: std::cell::Cell::new(false),
+            width: std::cell::RefCell::new(None),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
+        // Since macOS 14 a view may draw past its bounds, which let a number spill onto the status bar below.
+        this.setClipsToBounds(true);
         let clip = scroll.contentView();
         clip.setPostsBoundsChangedNotifications(true);
         editor.setPostsFrameChangedNotifications(true);
@@ -252,15 +310,7 @@ impl LineNumbers {
         let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
             return;
         };
-        let size = editor.ivars().font_size.get() * 0.85;
-        let font = NSFont::monospacedDigitSystemFontOfSize_weight(size, constant!(objc2_app_kit::NSFontWeightRegular));
-        let attributes = NSDictionary::<NSString, objc2::runtime::AnyObject>::from_retained_objects(
-            &[
-                constant!(NSFontAttributeName),
-                constant!(NSForegroundColorAttributeName),
-            ],
-            &[font.into(), NSColor::tertiaryLabelColor().into()],
-        );
+        let attributes = number_attributes(editor.ivars().font_size.get());
         let origin = editor.textContainerOrigin();
         let visible = editor.visibleRect();
         let start = layout
@@ -291,19 +341,19 @@ impl LineNumbers {
                 // SAFETY: The attributes hold a font and a colour, as the method expects.
                 let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
                 let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
-                let at = NSPoint::new(width - label_width - CHANGE_STRIP - 2.0, point.y + 1.0);
+                let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
                 // SAFETY: As above.
                 unsafe { label.drawAtPoint_withAttributes(at, Some(&attributes)) };
                 let height = fragment.layoutFragmentFrame().size.height;
                 if let Some(folded) = folds.get(&(line - 1)) {
                     self.fold_mark(
-                        NSRect::new(NSPoint::new(FOLD_LEFT, point.y), NSSize::new(FOLD_WIDTH, height)),
+                        NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height)),
                         *folded,
                     );
                 }
                 if let Some((severity, message)) = marks.get(&(line - 1)) {
                     self.mark(
-                        NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(14.0, height)),
+                        NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height)),
                         *severity,
                         message,
                     );
