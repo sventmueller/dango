@@ -46,6 +46,9 @@ use tabs::{Document, TabWindow};
 /// How far the activity bar and the panel reach above the sidebar's safe area, which puts their first symbol and title
 /// level with the top edge of the tabs, which start where the safe area does.
 pub const SIDEBAR_RAISE: f64 = 11.0;
+/// How far the panel reaches under the activity bar, so that its content keeps the same distance from the symbols as
+/// the symbols keep from the window's edge.
+const PANEL_UNDER_ACTIVITY: f64 = 8.5;
 /// The width of the activity bar, which stays when the panel beside it is closed.
 const ACTIVITY_WIDTH: f64 = 44.0;
 const PANEL_MIN_WIDTH: f64 = 200.0;
@@ -663,8 +666,8 @@ impl WindowController {
         let sidebar_view = NSView::new(mtm);
         let activity = ActivityBar::new(mtm, self);
         let panels = Panels::new(mtm, self, self.project().as_deref());
-        sidebar_view.addSubview(activity.view());
         sidebar_view.addSubview(panels.view());
+        sidebar_view.addSubview(activity.view());
         let guide = sidebar_view.safeAreaLayoutGuide();
         activity.view().setTranslatesAutoresizingMaskIntoConstraints(false);
         panels.view().setTranslatesAutoresizingMaskIntoConstraints(false);
@@ -685,7 +688,7 @@ impl WindowController {
             panels
                 .view()
                 .leadingAnchor()
-                .constraintEqualToAnchor(&activity.view().trailingAnchor()),
+                .constraintEqualToAnchor_constant(&activity.view().trailingAnchor(), -PANEL_UNDER_ACTIVITY),
             panels
                 .view()
                 .trailingAnchor()

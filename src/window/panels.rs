@@ -19,6 +19,9 @@ use crate::util::{borderless_button, label, ns, symbol};
 const HEADER_INSET: f64 = 8.0;
 /// How far the title's vertical centre sits below the panel's top.
 const HEADER_MIDDLE: f64 = 17.0;
+/// How far the folder tree reaches past the panel's leading edge, which its source list style indents more than the
+/// other panels' content.
+const TREE_OUTDENT: f64 = 5.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
@@ -130,7 +133,7 @@ impl Panels {
 
     /// Shows `view`, the folder tree, on the files page, and `buttons` at the end of its title row.
     pub fn set_files(&self, view: &NSView, buttons: &NSView) {
-        self.set_page(Panel::Files, view);
+        self.place(Panel::Files, view, -TREE_OUTDENT);
         let mut accessories = self.accessories.borrow_mut();
         accessories.retain(|(panel, _)| *panel != Panel::Files);
         accessories.push((Panel::Files, objc2::Message::retain(buttons)));
@@ -140,6 +143,11 @@ impl Panels {
 
     /// Shows `view` on the page of `panel`, in place of what it showed.
     pub fn set_page(&self, panel: Panel, view: &NSView) {
+        self.place(panel, view, 0.0);
+    }
+
+    /// Fills the page of `panel` with `view`, its leading edge `leading` from the page's.
+    fn place(&self, panel: Panel, view: &NSView, leading: f64) {
         let pages = self.pages.borrow();
         let Some((_, page)) = pages.iter().find(|(candidate, _)| *candidate == panel) else {
             return;
@@ -148,7 +156,16 @@ impl Panels {
             subview.removeFromSuperview();
         }
         page.addSubview(view);
-        crate::util::pin_edges(view, page);
+        view.setTranslatesAutoresizingMaskIntoConstraints(false);
+        for constraint in [
+            view.leadingAnchor()
+                .constraintEqualToAnchor_constant(&page.leadingAnchor(), leading),
+            view.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
+            view.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
+            view.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
+        ] {
+            constraint.setActive(true);
+        }
     }
 
     pub fn show(&self, panel: Panel) {
