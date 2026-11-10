@@ -64,6 +64,7 @@
 "Das Register wurde nicht geladen" = "Registry tidak dimuatkan";
 "Das Terminal konnte nicht starten: {}" = "Terminal tidak dapat dimulakan: {}";
 "Dateien" = "Fail";
+"Dateien: {}" = "Fail: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "fail, permintaan web dan perintah kekal dalam projek dan folder yang dibenarkan, tanpa rangkaian";
 "Denktiefe:" = "Kedalaman pemikiran:";
 "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an." = "Job CI “{}” daripada “{}” ({}) gagal. Cari puncanya dan cadangkan pembetulan; petikan log dilampirkan.";
@@ -238,6 +239,8 @@
 "{} pt" = "{} pt";
 "{} s" = "{} saat";
 "{} schließen" = "Tutup {}";
+"Vorschau" = "Pratonton";
+"Vorschau schließen" = "Tutup pratonton";
 "{} spricht die Protokollversion {}, diese App Version 1" = "{} menggunakan versi protokol {}, app ini versi 1";
 "{} startet nur in Ordnern, denen du vertraust: Agenten führen Befehle aus und lesen die Regeln des Projekts." = "{} hanya dimulakan dalam folder yang anda percayai: ejen menjalankan perintah dan membaca peraturan projek.";
 "{} vorhanden, Adapter fehlt" = "{} ada, tetapi penyesuai tiada";

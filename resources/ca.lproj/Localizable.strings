@@ -64,6 +64,7 @@
 "Das Register wurde nicht geladen" = "No s’ha carregat el registre";
 "Das Terminal konnte nicht starten: {}" = "No s’ha pogut iniciar el terminal: {}";
 "Dateien" = "Fitxers";
+"Dateien: {}" = "Fitxers: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "els fitxers, les consultes web i les ordres es queden dins del projecte i de les carpetes permeses, sense xarxa";
 "Denktiefe:" = "Raonament:";
 "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an." = "El job de CI “{}” de “{}” ({}) ha fallat. Troba’n la causa i suggereix una correcció; el fragment del log s’adjunta.";
@@ -238,6 +239,8 @@
 "{} pt" = "{} pt";
 "{} s" = "{} s";
 "{} schließen" = "Tanca {}";
+"Vorschau" = "Previsualització";
+"Vorschau schließen" = "Tanca la previsualització";
 "{} spricht die Protokollversion {}, diese App Version 1" = "{} utilitza la versió {} del protocol, i aquesta app, la versió 1";
 "{} startet nur in Ordnern, denen du vertraust: Agenten führen Befehle aus und lesen die Regeln des Projekts." = "{} només s’inicia en carpetes de confiança: els agents executen ordres i llegeixen les regles del projecte.";
 "{} vorhanden, Adapter fehlt" = "{} hi és, però falta l’adaptador";

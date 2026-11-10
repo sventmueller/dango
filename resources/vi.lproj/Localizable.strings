@@ -64,6 +64,7 @@
 "Das Register wurde nicht geladen" = "Sổ đăng ký chưa được tải";
 "Das Terminal konnte nicht starten: {}" = "Không thể khởi động terminal: {}";
 "Dateien" = "Tệp";
+"Dateien: {}" = "Tệp: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "tệp, yêu cầu web và lệnh chỉ ở trong dự án và các thư mục được phép, không có mạng";
 "Denktiefe:" = "Mức độ suy nghĩ:";
 "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an." = "Job CI “{}” của “{}” ({}) đã thất bại. Hãy tìm nguyên nhân và đề xuất cách sửa; đoạn nhật ký được đính kèm.";
@@ -238,6 +239,8 @@
 "{} pt" = "{} pt";
 "{} s" = "{} giây";
 "{} schließen" = "Đóng {}";
+"Vorschau" = "Xem trước";
+"Vorschau schließen" = "Đóng xem trước";
 "{} spricht die Protokollversion {}, diese App Version 1" = "{} dùng giao thức phiên bản {}, ứng dụng này dùng phiên bản 1";
 "{} startet nur in Ordnern, denen du vertraust: Agenten führen Befehle aus und lesen die Regeln des Projekts." = "{} chỉ khởi động trong thư mục bạn tin cậy: tác nhân chạy lệnh và đọc các quy tắc của dự án.";
 "{} vorhanden, Adapter fehlt" = "Có {} nhưng thiếu bộ chuyển đổi";

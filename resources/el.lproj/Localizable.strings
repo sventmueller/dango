@@ -64,6 +64,7 @@
 "Das Register wurde nicht geladen" = "Το μητρώο δεν φορτώθηκε";
 "Das Terminal konnte nicht starten: {}" = "Δεν ήταν δυνατή η εκκίνηση του τερματικού: {}";
 "Dateien" = "Αρχεία";
+"Dateien: {}" = "Αρχεία: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "αρχεία, αιτήματα web και εντολές μένουν στο έργο και στους επιτρεπόμενους φακέλους, χωρίς δίκτυο";
 "Denktiefe:" = "Βάθος σκέψης:";
 "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an." = "Το job CI «{}» του «{}» ({}) απέτυχε. Βρες την αιτία και πρότεινε μια διόρθωση· το απόσπασμα του αρχείου καταγραφής επισυνάπτεται.";
@@ -238,6 +239,8 @@
 "{} pt" = "{} στ.";
 "{} s" = "{} δευτ.";
 "{} schließen" = "Κλείσιμο {}";
+"Vorschau" = "Προεπισκόπηση";
+"Vorschau schließen" = "Κλείσιμο προεπισκόπησης";
 "{} spricht die Protokollversion {}, diese App Version 1" = "Το {} χρησιμοποιεί την έκδοση πρωτοκόλλου {}, ενώ αυτή η εφαρμογή την έκδοση 1";
 "{} startet nur in Ordnern, denen du vertraust: Agenten führen Befehle aus und lesen die Regeln des Projekts." = "Το {} ξεκινά μόνο σε φακέλους που εμπιστεύεστε: οι πράκτορες εκτελούν εντολές και διαβάζουν τους κανόνες του έργου.";
 "{} vorhanden, Adapter fehlt" = "Το {} υπάρχει, λείπει ο προσαρμογέας";
