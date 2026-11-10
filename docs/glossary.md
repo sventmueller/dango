@@ -61,7 +61,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Window and editor** | | |
 | Tab | tab | one document, terminal, browser page or AI thread in a panel |
 | AI-Tab | AI tab | the tab of an agent's thread |
-| Panel | panel | a part of the window that holds tabs; panels split the window |
+| Panel | panel | a part of the window beside the editor, such as the Git panel |
 | Seitenleiste | sidebar | files, agents, Git, CI on the left |
 | Vorschau | preview | a tab opened by a single click, replaced by the next one; also the rendered view of a Markdown, diagram or PDF file |
 | Aktivität | Activity | the list of running processes, sessions and tasks |
@@ -72,10 +72,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | merge | of changes, also Git's merge |
 | Konflikt | conflict | |
 | Treffer | match | of a search |
+| Suche | search | the sidebar panel that searches the project |
+| Ersetzen | replace | in the search panel and in a file |
 | Sprachserver | language server | LSP |
 | Hinweis (Schweregrad) | hint | the language server's lowest severity, after Fehler, Warnung and Info |
 | Lesezeichen / Verlauf / Adresse | bookmark / history / address | of the browser tab |
 | Bytes | bytes | the unit |
+| Exportieren | export | the submenu that writes Markdown as PDF, HTML or Word |
+| Format | format | the menu of Markdown formatting |
 | Diktat | dictation | speech to text |
 | **Agents** | | |
 | Agent | agent | a coding agent such as Claude, Codex or Gemini |
@@ -109,9 +113,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens | |
 | API-Schlüssel | API key | |
 | Register | registry | the ACP registry of agents |
+| Adapter | adapter | the program that connects an agent's CLI over ACP |
+| Bereit | ready | an agent whose program is there and can start |
 | Prüfsumme | checksum | |
 | Anmeldung, anmelden | sign-in, sign in | with an agent's or a forge's service |
 | Konto | account | |
+| Abo | subscription | a paid plan of an agent's service, used up against its limits rather than per token |
 | **Git and CI** | | |
 | Repository | repository | |
 | Commit, committen | commit | |
@@ -186,10 +193,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | دمج |
 | Konflikt | تعارض |
 | Treffer | نتيجة، نتائج |
+| Suche | بحث |
+| Ersetzen | استبدال |
 | Sprachserver | خادم اللغة |
 | Hinweis (Schweregrad) | تلميح |
 | Lesezeichen / Verlauf / Adresse | إشارة مرجعية / السجل / العنوان |
 | Bytes | بايت |
+| Exportieren | تصدير |
+| Format | التنسيق |
 | Diktat | الإملاء |
 | Agent | وكيل |
 | Eigener Agent | الوكيل المدمج |
@@ -222,9 +233,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | رمز مميز، رموز مميزة |
 | API-Schlüssel | مفتاح API |
 | Register | فهرس (فهرس ACP) |
+| Adapter | المحوّل |
+| Bereit | جاهز |
 | Prüfsumme | المجموع الاختباري |
 | Anmeldung, anmelden | تسجيل الدخول |
 | Konto | حساب |
+| Abo | الاشتراك |
 | Repository | مستودع |
 | Commit, committen | Commit، إنشاء Commit |
 | Secrets | بيانات سرية |
@@ -292,10 +306,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | fusionar (“Fusiona”) |
 | Konflikt | conflicte |
 | Treffer | resultat |
+| Suche | Cerca |
+| Ersetzen | Substitueix |
 | Sprachserver | servidor de llenguatge |
 | Hinweis (Schweregrad) | Suggeriment |
 | Lesezeichen / Verlauf / Adresse | marcador / historial / adreça |
 | Bytes | bytes |
+| Exportieren | Exporta |
+| Format | Format |
 | Diktat | dictat |
 | Agent | agent |
 | Eigener Agent | agent propi |
@@ -328,9 +346,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | clau d’API |
 | Register | registre |
+| Adapter | adaptador |
+| Bereit | A punt |
 | Prüfsumme | suma de verificació |
 | Anmeldung, anmelden | inici de sessió, iniciar la sessió |
 | Konto | compte |
+| Abo | Subscripció |
 | Repository | repositori |
 | Commit, committen | commit, fer commit |
 | Secrets | secrets |
@@ -397,10 +418,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | sloučit, sloučení |
 | Konflikt | konflikt |
 | Treffer | výsledek |
+| Suche | Hledání |
+| Ersetzen | Nahradit |
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápověda |
 | Lesezeichen / Verlauf / Adresse | záložka / historie / adresa |
 | Bytes | B |
+| Exportieren | Exportovat |
+| Format | Formát |
 | Diktat | diktování |
 | Agent | agent |
 | Eigener Agent | vlastní agent |
@@ -433,9 +458,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokeny |
 | API-Schlüssel | klíč API |
 | Register | registr |
+| Adapter | adaptér |
+| Bereit | Připraveno |
 | Prüfsumme | kontrolní součet |
 | Anmeldung, anmelden | přihlášení, přihlásit se |
 | Konto | účet |
+| Abo | Předplatné |
 | Repository | repozitář |
 | Commit, committen | commit, commitnout |
 | Secrets | tajné údaje |
@@ -500,10 +528,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | merge (merge, merget, merge-konflikt) |
 | Konflikt | konflikt |
 | Treffer | resultat |
+| Suche | Søgning |
+| Ersetzen | Erstat |
 | Sprachserver | sprogserver |
 | Hinweis (Schweregrad) | Tip |
 | Lesezeichen / Verlauf / Adresse | bogmærke / historik / adresse |
 | Bytes | byte |
+| Exportieren | Eksporter |
+| Format | Format |
 | Diktat | diktering |
 | Agent | agent |
 | Eigener Agent | Egen agent (in a sentence: appens egen agent) |
@@ -536,9 +568,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | API-nøgle |
 | Register | register |
+| Adapter | adapter |
+| Bereit | Klar |
 | Prüfsumme | kontrolsum |
 | Anmeldung, anmelden | login, log ind |
 | Konto | konto |
+| Abo | Abonnement |
 | Repository | repository |
 | Commit, committen | commit, committe |
 | Secrets | secrets |
@@ -606,10 +641,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | συγχώνευση |
 | Konflikt | διένεξη |
 | Treffer | αποτέλεσμα |
+| Suche | Αναζήτηση |
+| Ersetzen | Αντικατάσταση |
 | Sprachserver | διακομιστής γλώσσας |
 | Hinweis (Schweregrad) | Υπόδειξη |
 | Lesezeichen / Verlauf / Adresse | σελιδοδείκτης / ιστορικό / διεύθυνση |
 | Bytes | byte |
+| Exportieren | Εξαγωγή |
+| Format | Μορφή |
 | Diktat | υπαγόρευση |
 | Agent | πράκτορας |
 | Eigener Agent | ενσωματωμένος πράκτορας |
@@ -642,9 +681,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token (indeclinable) |
 | API-Schlüssel | κλειδί API |
 | Register | μητρώο |
+| Adapter | προσαρμογέας |
+| Bereit | Έτοιμο |
 | Prüfsumme | άθροισμα ελέγχου |
 | Anmeldung, anmelden | σύνδεση, συνδέομαι |
 | Konto | λογαριασμός |
+| Abo | Συνδρομή |
 | Repository | αποθετήριο |
 | Commit, committen | commit, κάνω commit |
 | Secrets | μυστικά |
@@ -712,10 +754,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | fusionar |
 | Konflikt | conflicto |
 | Treffer | resultado |
+| Suche | Búsqueda |
+| Ersetzen | Reemplazar |
 | Sprachserver | servidor de lenguaje |
 | Hinweis (Schweregrad) | Sugerencia |
 | Lesezeichen / Verlauf / Adresse | marcador / historial / dirección |
 | Bytes | bytes |
+| Exportieren | Exportar |
+| Format | Formato |
 | Diktat | dictado |
 | Agent | agente |
 | Eigener Agent | agente propio |
@@ -748,9 +794,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | clave de API |
 | Register | registro |
+| Adapter | adaptador |
+| Bereit | Listo |
 | Prüfsumme | suma de comprobación |
 | Anmeldung, anmelden | inicio de sesión, iniciar sesión |
 | Konto | cuenta |
+| Abo | Suscripción |
 | Repository | repositorio |
 | Commit, committen | commit, hacer commit |
 | Secrets | secretos |
@@ -819,10 +868,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | yhdistäminen, yhdistää |
 | Konflikt | ristiriita |
 | Treffer | tulos (as splat: "Ei tuloksia") |
+| Suche | Haku |
+| Ersetzen | Korvaa |
 | Sprachserver | kielipalvelin |
 | Hinweis (Schweregrad) | Vihje |
 | Lesezeichen / Verlauf / Adresse | kirjanmerkki / historia / osoite |
 | Bytes | tavua |
+| Exportieren | Vie |
+| Format | Muoto |
 | Diktat | sanelu |
 | Agent | agentti |
 | Eigener Agent | oma agentti |
@@ -855,9 +908,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokenit ("{} tokenia") |
 | API-Schlüssel | API-avain |
 | Register | rekisteri |
+| Adapter | sovitin |
+| Bereit | Valmis |
 | Prüfsumme | tarkistussumma |
 | Anmeldung, anmelden | kirjautuminen, kirjautua sisään |
 | Konto | tili |
+| Abo | Tilaus |
 | Repository | repositorio |
 | Commit, committen | commit, commitoida |
 | Secrets | salaisuudet |
@@ -923,10 +979,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | fusionner, fusion |
 | Konflikt | conflit |
 | Treffer | résultat |
+| Suche | Recherche |
+| Ersetzen | Remplacer |
 | Sprachserver | serveur de langage |
 | Hinweis (Schweregrad) | Suggestion |
 | Lesezeichen / Verlauf / Adresse | signet / historique / adresse |
 | Bytes | octets |
+| Exportieren | Exporter |
+| Format | Format |
 | Diktat | dictée |
 | Agent | agent |
 | Eigener Agent | agent intégré |
@@ -959,9 +1019,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | jeton, jetons |
 | API-Schlüssel | clé d’API |
 | Register | registre |
+| Adapter | adaptateur |
+| Bereit | Prêt |
 | Prüfsumme | somme de contrôle |
 | Anmeldung, anmelden | connexion, se connecter |
 | Konto | compte |
+| Abo | Abonnement |
 | Repository | dépôt |
 | Commit, committen | commit, commiter |
 | Secrets | secrets |
@@ -1031,10 +1094,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | מיזוג |
 | Konflikt | התנגשות |
 | Treffer | תוצאה |
+| Suche | חיפוש |
+| Ersetzen | החלפה |
 | Sprachserver | שרת שפה |
 | Hinweis (Schweregrad) | רמז |
 | Lesezeichen / Verlauf / Adresse | סימניה / היסטוריה / כתובת |
 | Bytes | בתים |
+| Exportieren | ייצוא |
+| Format | עיצוב |
 | Diktat | הכתבה |
 | Agent | סוכן |
 | Eigener Agent | סוכן מובנה |
@@ -1067,9 +1134,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | טוקן, טוקנים |
 | API-Schlüssel | מפתח API |
 | Register | מרשם |
+| Adapter | מתאם |
+| Bereit | מוכן |
 | Prüfsumme | סכום ביקורת |
 | Anmeldung, anmelden | התחברות, להתחבר |
 | Konto | חשבון |
+| Abo | מינוי |
 | Repository | מאגר |
 | Commit, committen | Commit, ביצוע Commit |
 | Secrets | סודות |
@@ -1135,10 +1205,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | मर्ज करना |
 | Konflikt | कॉन्फ़्लिक्ट |
 | Treffer | परिणाम |
+| Suche | खोज |
+| Ersetzen | बदलें |
 | Sprachserver | लैंग्वेज सर्वर |
 | Hinweis (Schweregrad) | संकेत |
 | Lesezeichen / Verlauf / Adresse | बुकमार्क / इतिहास / पता |
 | Bytes | बाइट |
+| Exportieren | एक्सपोर्ट करें |
+| Format | फ़ॉर्मैट |
 | Diktat | डिक्टेशन |
 | Agent | एजेंट |
 | Eigener Agent | बिल्ट-इन एजेंट |
@@ -1171,9 +1245,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | टोकन |
 | API-Schlüssel | API कुंजी |
 | Register | रजिस्ट्री |
+| Adapter | एडैप्टर |
+| Bereit | तैयार |
 | Prüfsumme | चेकसम |
 | Anmeldung, anmelden | साइन इन, साइन इन करें |
 | Konto | खाता |
+| Abo | सब्सक्रिप्शन |
 | Repository | रिपॉज़िटरी |
 | Commit, committen | कमिट, कमिट करें |
 | Secrets | सीक्रेट |
@@ -1240,10 +1317,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | spajanje |
 | Konflikt | konflikt |
 | Treffer | rezultat |
+| Suche | Pretraga |
+| Ersetzen | Zamijeni |
 | Sprachserver | jezični poslužitelj |
 | Hinweis (Schweregrad) | Savjet |
 | Lesezeichen / Verlauf / Adresse | knjižna oznaka / povijest / adresa |
 | Bytes | B |
+| Exportieren | Eksportiraj |
+| Format | Formatiraj |
 | Diktat | diktat |
 | Agent | agent |
 | Eigener Agent | vlastiti agent |
@@ -1276,9 +1357,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokeni |
 | API-Schlüssel | API ključ |
 | Register | registar |
+| Adapter | adapter |
+| Bereit | Spremno |
 | Prüfsumme | kontrolni zbroj |
 | Anmeldung, anmelden | prijava, prijaviti se |
 | Konto | račun |
+| Abo | Pretplata |
 | Repository | repozitorij |
 | Commit, committen | commit, izraditi commit |
 | Secrets | tajni podaci |
@@ -1347,10 +1431,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | összefésülés |
 | Konflikt | ütközés |
 | Treffer | találat |
+| Suche | Keresés |
+| Ersetzen | Csere |
 | Sprachserver | nyelvi szerver |
 | Hinweis (Schweregrad) | Tipp |
 | Lesezeichen / Verlauf / Adresse | könyvjelző / előzmények / cím |
 | Bytes | bájt |
+| Exportieren | Exportálás |
+| Format | Formátum |
 | Diktat | diktálás |
 | Agent | ügynök |
 | Eigener Agent | beépített ügynök |
@@ -1383,9 +1471,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokenek |
 | API-Schlüssel | API-kulcs |
 | Register | jegyzék |
+| Adapter | adapter |
+| Bereit | Kész |
 | Prüfsumme | ellenőrzőösszeg |
 | Anmeldung, anmelden | bejelentkezés, bejelentkezik |
 | Konto | fiók |
+| Abo | Előfizetés |
 | Repository | tároló |
 | Commit, committen | commit, commitol |
 | Secrets | titkos adatok |
@@ -1452,10 +1543,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | gabungkan (penggabungan) |
 | Konflikt | konflik |
 | Treffer | hasil |
+| Suche | Pencarian |
+| Ersetzen | Ganti |
 | Sprachserver | server bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Lesezeichen / Verlauf / Adresse | penanda / riwayat / alamat |
 | Bytes | byte |
+| Exportieren | Ekspor |
+| Format | Format |
 | Diktat | dikte |
 | Agent | agen |
 | Eigener Agent | agen bawaan |
@@ -1488,9 +1583,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token |
 | API-Schlüssel | kunci API |
 | Register | registri |
+| Adapter | adaptor |
+| Bereit | Siap |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | masuk (Masuk ke {}), proses masuk |
 | Konto | akun |
+| Abo | Langganan |
 | Repository | repositori |
 | Commit, committen | commit, melakukan commit |
 | Secrets | rahasia |
@@ -1557,10 +1655,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | unire (unione) |
 | Konflikt | conflitto |
 | Treffer | risultato |
+| Suche | Ricerca |
+| Ersetzen | Sostituisci |
 | Sprachserver | server di linguaggio |
 | Hinweis (Schweregrad) | Suggerimento |
 | Lesezeichen / Verlauf / Adresse | segnalibro / cronologia / indirizzo |
 | Bytes | byte |
+| Exportieren | Esporta |
+| Format | Formato |
 | Diktat | dettatura |
 | Agent | agente |
 | Eigener Agent | agente integrato |
@@ -1593,9 +1695,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token |
 | API-Schlüssel | chiave API |
 | Register | registro |
+| Adapter | adattatore |
+| Bereit | Pronto |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | accesso, accedere |
 | Konto | account |
+| Abo | Abbonamento |
 | Repository | repository |
 | Commit, committen | commit, fare il commit |
 | Secrets | segreti |
@@ -1663,10 +1768,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | マージ |
 | Konflikt | 競合 |
 | Treffer | 結果 (検索結果) |
+| Suche | 検索 |
+| Ersetzen | 置換 |
 | Sprachserver | 言語サーバ |
 | Hinweis (Schweregrad) | ヒント |
 | Lesezeichen / Verlauf / Adresse | ブックマーク / 履歴 / アドレス |
 | Bytes | バイト |
+| Exportieren | 書き出す |
+| Format | フォーマット |
 | Diktat | 音声入力 |
 | Agent | エージェント |
 | Eigener Agent | 内蔵エージェント |
@@ -1699,9 +1808,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | トークン |
 | API-Schlüssel | APIキー |
 | Register | レジストリ |
+| Adapter | アダプタ |
+| Bereit | 準備完了 |
 | Prüfsumme | チェックサム |
 | Anmeldung, anmelden | サインイン, サインインする |
 | Konto | アカウント |
+| Abo | サブスクリプション |
 | Repository | リポジトリ |
 | Commit, committen | コミット, コミットする |
 | Secrets | シークレット |
@@ -1768,10 +1880,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | 병합 |
 | Konflikt | 충돌 |
 | Treffer | 결과 |
+| Suche | 검색 |
+| Ersetzen | 대치 |
 | Sprachserver | 언어 서버 |
 | Hinweis (Schweregrad) | 힌트 |
 | Lesezeichen / Verlauf / Adresse | 북마크 / 방문 기록 / 주소 |
 | Bytes | 바이트 |
+| Exportieren | 내보내기 |
+| Format | 포맷 |
 | Diktat | 받아쓰기 |
 | Agent | 에이전트 |
 | Eigener Agent | 내장 에이전트 |
@@ -1804,9 +1920,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | 토큰 |
 | API-Schlüssel | API 키 |
 | Register | 레지스트리 |
+| Adapter | 어댑터 |
+| Bereit | 준비됨 |
 | Prüfsumme | 체크섬 |
 | Anmeldung, anmelden | 로그인, 로그인하다 |
 | Konto | 계정 |
+| Abo | 구독 |
 | Repository | 저장소 |
 | Commit, committen | 커밋, 커밋하다 |
 | Secrets | 시크릿 |
@@ -1872,10 +1991,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | gabung (penggabungan) |
 | Konflikt | konflik |
 | Treffer | hasil |
+| Suche | Carian |
+| Ersetzen | Ganti |
 | Sprachserver | pelayan bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Lesezeichen / Verlauf / Adresse | penanda buku / sejarah / alamat |
 | Bytes | bait |
+| Exportieren | Eksport |
+| Format | Format |
 | Diktat | perencanaan (as Malay macOS names Dictation) |
 | Agent | ejen |
 | Eigener Agent | ejen terbina dalam |
@@ -1908,9 +2031,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token |
 | API-Schlüssel | kunci API |
 | Register | registry |
+| Adapter | penyesuai |
+| Bereit | Sedia |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | daftar masuk, daftar masuk ke |
 | Konto | akaun |
+| Abo | Langganan |
 | Repository | repositori |
 | Commit, committen | commit, buat commit |
 | Secrets | rahsia |
@@ -1977,10 +2103,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | samenvoegen (button: Voeg samen) |
 | Konflikt | conflict |
 | Treffer | resultaat |
+| Suche | Zoeken |
+| Ersetzen | Vervang |
 | Sprachserver | taalserver |
 | Hinweis (Schweregrad) | Hint |
 | Lesezeichen / Verlauf / Adresse | bladwijzer / geschiedenis / adres |
 | Bytes | bytes |
+| Exportieren | Exporteer |
+| Format | Opmaak |
 | Diktat | dicteerfunctie (dicteren) |
 | Agent | agent |
 | Eigener Agent | ingebouwde agent |
@@ -2013,9 +2143,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | API-sleutel |
 | Register | register |
+| Adapter | adapter |
+| Bereit | Gereed |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | inloggen (button: Log in) |
 | Konto | account |
+| Abo | Abonnement |
 | Repository | repository |
 | Commit, committen | commit, committen |
 | Secrets | geheimen |
@@ -2082,10 +2215,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | slå sammen (sammenslåing) |
 | Konflikt | konflikt |
 | Treffer | treff |
+| Suche | Søk |
+| Ersetzen | Erstatt |
 | Sprachserver | språktjener (macOS says tjener for server) |
 | Hinweis (Schweregrad) | Tips |
 | Lesezeichen / Verlauf / Adresse | bokmerke / logg (as Safari) / adresse |
 | Bytes | byte |
+| Exportieren | Eksporter |
+| Format | Format |
 | Diktat | diktering |
 | Agent | agent |
 | Eigener Agent | innebygd agent |
@@ -2118,9 +2255,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokener |
 | API-Schlüssel | API-nøkkel |
 | Register | register |
+| Adapter | adapter |
+| Bereit | Klar |
 | Prüfsumme | sjekksum |
 | Anmeldung, anmelden | pålogging, logge på |
 | Konto | konto |
+| Abo | Abonnement |
 | Repository | repository |
 | Commit, committen | commit, committe |
 | Secrets | hemmeligheter |
@@ -2187,10 +2327,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | scalanie, scalić |
 | Konflikt | konflikt |
 | Treffer | wynik |
+| Suche | Wyszukiwanie |
+| Ersetzen | Zastąp |
 | Sprachserver | serwer języka |
 | Hinweis (Schweregrad) | Wskazówka |
 | Lesezeichen / Verlauf / Adresse | zakładka / historia / adres |
 | Bytes | bajty |
+| Exportieren | Eksportuj |
+| Format | Format |
 | Diktat | dyktowanie |
 | Agent | agent |
 | Eigener Agent | wbudowany agent |
@@ -2223,9 +2367,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokeny |
 | API-Schlüssel | klucz API |
 | Register | rejestr |
+| Adapter | adapter |
+| Bereit | Gotowy |
 | Prüfsumme | suma kontrolna |
 | Anmeldung, anmelden | logowanie, zalogować się |
 | Konto | konto |
+| Abo | Subskrypcja |
 | Repository | repozytorium |
 | Commit, committen | commit, commitować |
 | Secrets | sekrety |
@@ -2293,10 +2440,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | mesclar (mesclagem) |
 | Konflikt | conflito |
 | Treffer | resultado |
+| Suche | Busca |
+| Ersetzen | Substituir |
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Dica |
 | Lesezeichen / Verlauf / Adresse | favorito (as Safari) / histórico / endereço |
 | Bytes | bytes |
+| Exportieren | Exportar |
+| Format | Formatar |
 | Diktat | ditado |
 | Agent | agente |
 | Eigener Agent | agente integrado |
@@ -2329,9 +2480,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | chave de API |
 | Register | registro |
+| Adapter | adaptador |
+| Bereit | Pronto |
 | Prüfsumme | soma de verificação |
 | Anmeldung, anmelden | início de sessão, iniciar sessão |
 | Konto | conta |
+| Abo | Assinatura |
 | Repository | repositório |
 | Commit, committen | commit, fazer commit |
 | Secrets | segredos |
@@ -2399,10 +2553,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | fundir (fusão) |
 | Konflikt | conflito |
 | Treffer | resultado |
+| Suche | Pesquisa |
+| Ersetzen | Substituir |
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Sugestão |
 | Lesezeichen / Verlauf / Adresse | marcador / histórico / endereço |
 | Bytes | bytes |
+| Exportieren | Exportar |
+| Format | Formatação |
 | Diktat | ditado |
 | Agent | agente |
 | Eigener Agent | agente integrado |
@@ -2435,9 +2593,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | chave da API |
 | Register | registo |
+| Adapter | adaptador |
+| Bereit | Pronto |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | início de sessão, iniciar sessão |
 | Konto | conta |
+| Abo | Subscrição |
 | Repository | repositório |
 | Commit, committen | commit, fazer commit |
 | Secrets | segredos |
@@ -2505,10 +2666,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | comasare, a comasa |
 | Konflikt | conflict |
 | Treffer | rezultat |
+| Suche | Căutare |
+| Ersetzen | Înlocuiți |
 | Sprachserver | server de limbaj |
 | Hinweis (Schweregrad) | Sugestie |
 | Lesezeichen / Verlauf / Adresse | marcaj / istoric / adresă |
 | Bytes | octeți |
+| Exportieren | Exportați |
+| Format | Format |
 | Diktat | dictare |
 | Agent | agent |
 | Eigener Agent | agent propriu |
@@ -2541,9 +2706,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokenuri |
 | API-Schlüssel | cheie API |
 | Register | registru |
+| Adapter | adaptor |
+| Bereit | Gata |
 | Prüfsumme | sumă de control |
 | Anmeldung, anmelden | autentificare, a se autentifica |
 | Konto | cont |
+| Abo | Abonament |
 | Repository | depozit |
 | Commit, committen | commit, a face commit |
 | Secrets | secrete |
@@ -2611,10 +2779,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | слияние, слить |
 | Konflikt | конфликт |
 | Treffer | результат |
+| Suche | Поиск |
+| Ersetzen | Заменить |
 | Sprachserver | языковой сервер |
 | Hinweis (Schweregrad) | Подсказка |
 | Lesezeichen / Verlauf / Adresse | закладка / история / адрес |
 | Bytes | байт |
+| Exportieren | Экспортировать |
+| Format | Формат |
 | Diktat | диктовка |
 | Agent | агент |
 | Eigener Agent | собственный агент |
@@ -2647,9 +2819,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | токен, токены |
 | API-Schlüssel | ключ API |
 | Register | реестр |
+| Adapter | адаптер |
+| Bereit | Готов |
 | Prüfsumme | контрольная сумма |
 | Anmeldung, anmelden | вход, войти |
 | Konto | учетная запись |
+| Abo | Подписка |
 | Repository | репозиторий |
 | Commit, committen | коммит, закоммитить |
 | Secrets | секреты |
@@ -2717,10 +2892,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | zlúčenie, zlúčiť |
 | Konflikt | konflikt |
 | Treffer | výsledok |
+| Suche | Vyhľadávanie |
+| Ersetzen | Nahradiť |
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápoveda |
 | Lesezeichen / Verlauf / Adresse | záložka / história / adresa |
 | Bytes | B |
+| Exportieren | Exportovať |
+| Format | Formát |
 | Diktat | diktovanie |
 | Agent | agent |
 | Eigener Agent | vlastný agent |
@@ -2753,9 +2932,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokeny |
 | API-Schlüssel | kľúč API |
 | Register | register |
+| Adapter | adaptér |
+| Bereit | Pripravené |
 | Prüfsumme | kontrolný súčet |
 | Anmeldung, anmelden | prihlásenie, prihlásiť sa |
 | Konto | účet |
+| Abo | Predplatné |
 | Repository | repozitár |
 | Commit, committen | commit, commitnúť |
 | Secrets | tajné údaje |
@@ -2824,10 +3006,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | združitev, združiti |
 | Konflikt | konflikt |
 | Treffer | rezultat |
+| Suche | Iskanje |
+| Ersetzen | Zamenjaj |
 | Sprachserver | jezikovni strežnik |
 | Hinweis (Schweregrad) | Namig |
 | Lesezeichen / Verlauf / Adresse | zaznamek / zgodovina / naslov |
 | Bytes | bajti |
+| Exportieren | Izvozi |
+| Format | Oblikovanje |
 | Diktat | narekovanje |
 | Agent | agent |
 | Eigener Agent | lastni agent |
@@ -2860,9 +3046,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | žeton, žetoni |
 | API-Schlüssel | ključ API |
 | Register | register |
+| Adapter | adapter |
+| Bereit | Pripravljeno |
 | Prüfsumme | kontrolna vsota |
 | Anmeldung, anmelden | vpis, vpisati se |
 | Konto | račun |
+| Abo | Naročnina |
 | Repository | repozitorij |
 | Commit, committen | commit, narediti commit |
 | Secrets | skrivnosti |
@@ -2929,10 +3118,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | slå ihop, sammanslagning |
 | Konflikt | konflikt |
 | Treffer | träff |
+| Suche | Sök |
+| Ersetzen | Ersätt |
 | Sprachserver | språkserver |
 | Hinweis (Schweregrad) | Tips |
 | Lesezeichen / Verlauf / Adresse | bokmärke / historik / adress |
 | Bytes | byte |
+| Exportieren | Exportera |
+| Format | Format |
 | Diktat | diktering |
 | Agent | agent |
 | Eigener Agent | egen agent |
@@ -2965,9 +3158,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, tokens |
 | API-Schlüssel | API-nyckel |
 | Register | register |
+| Adapter | adapter |
+| Bereit | Redo |
 | Prüfsumme | kontrollsumma |
 | Anmeldung, anmelden | inloggning, logga in |
 | Konto | konto |
+| Abo | Abonnemang |
 | Repository | repo |
 | Commit, committen | commit, committa |
 | Secrets | hemligheter |
@@ -3035,10 +3231,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | ผสาน, การผสาน |
 | Konflikt | ความขัดแย้ง |
 | Treffer | ผลการค้นหา |
+| Suche | ค้นหา |
+| Ersetzen | แทนที่ |
 | Sprachserver | เซิร์ฟเวอร์ภาษา |
 | Hinweis (Schweregrad) | คำแนะนำ |
 | Lesezeichen / Verlauf / Adresse | ที่คั่นหน้า / ประวัติ / ที่อยู่ |
 | Bytes | ไบต์ |
+| Exportieren | ส่งออก |
+| Format | รูปแบบ |
 | Diktat | การป้อนตามคำบอก |
 | Agent | เอเจนต์ |
 | Eigener Agent | เอเจนต์ในตัว |
@@ -3071,9 +3271,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | โทเค็น |
 | API-Schlüssel | คีย์ API |
 | Register | รีจิสทรี |
+| Adapter | อะแดปเตอร์ |
+| Bereit | พร้อม |
 | Prüfsumme | เช็คซัม |
 | Anmeldung, anmelden | การลงชื่อเข้า, ลงชื่อเข้า |
 | Konto | บัญชี |
+| Abo | การสมัครใช้บริการ |
 | Repository | Repository |
 | Commit, committen | Commit, ทำ Commit |
 | Secrets | ข้อมูลลับ |
@@ -3142,10 +3345,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | birleştirme, birleştir |
 | Konflikt | çakışma |
 | Treffer | sonuç |
+| Suche | Arama |
+| Ersetzen | Değiştir |
 | Sprachserver | dil sunucusu |
 | Hinweis (Schweregrad) | İpucu |
 | Lesezeichen / Verlauf / Adresse | yer işareti / geçmiş / adres |
 | Bytes | bayt |
+| Exportieren | Dışa Aktar |
+| Format | Biçim |
 | Diktat | dikte |
 | Agent | ajan |
 | Eigener Agent | yerleşik ajan |
@@ -3178,9 +3385,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token, token’lar |
 | API-Schlüssel | API anahtarı |
 | Register | kayıt defteri |
+| Adapter | bağdaştırıcı |
+| Bereit | Hazır |
 | Prüfsumme | sağlama toplamı |
 | Anmeldung, anmelden | giriş, giriş yap |
 | Konto | hesap |
+| Abo | Abonelik |
 | Repository | depo |
 | Commit, committen | commit, commit et |
 | Secrets | gizli bilgiler |
@@ -3247,10 +3457,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | злиття, злити |
 | Konflikt | конфлікт |
 | Treffer | результат |
+| Suche | Пошук |
+| Ersetzen | Замінити |
 | Sprachserver | мовний сервер |
 | Hinweis (Schweregrad) | Підказка |
 | Lesezeichen / Verlauf / Adresse | закладка / історія / адреса |
 | Bytes | Б |
+| Exportieren | Експортувати |
+| Format | Формат |
 | Diktat | диктування |
 | Agent | агент |
 | Eigener Agent | власний агент |
@@ -3283,9 +3497,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | токен, токени |
 | API-Schlüssel | ключ API |
 | Register | реєстр |
+| Adapter | адаптер |
+| Bereit | Готово |
 | Prüfsumme | контрольна сума |
 | Anmeldung, anmelden | вхід, увійти |
 | Konto | обліковий запис |
+| Abo | Підписка |
 | Repository | репозиторій |
 | Commit, committen | коміт, закомітити |
 | Secrets | секрети |
@@ -3352,10 +3569,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | hợp nhất |
 | Konflikt | xung đột |
 | Treffer | kết quả |
+| Suche | Tìm kiếm |
+| Ersetzen | Thay thế |
 | Sprachserver | máy chủ ngôn ngữ |
 | Hinweis (Schweregrad) | Gợi ý |
 | Lesezeichen / Verlauf / Adresse | dấu trang / lịch sử / địa chỉ |
 | Bytes | byte |
+| Exportieren | Xuất |
+| Format | Định dạng |
 | Diktat | đọc chính tả |
 | Agent | tác nhân |
 | Eigener Agent | tác nhân tích hợp |
@@ -3388,9 +3609,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | token |
 | API-Schlüssel | khóa API |
 | Register | sổ đăng ký |
+| Adapter | bộ chuyển đổi |
+| Bereit | Sẵn sàng |
 | Prüfsumme | tổng kiểm tra |
 | Anmeldung, anmelden | đăng nhập |
 | Konto | tài khoản |
+| Abo | Gói đăng ký |
 | Repository | kho lưu trữ |
 | Commit, committen | commit |
 | Secrets | thông tin bí mật |
@@ -3456,10 +3680,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | 合并 |
 | Konflikt | 冲突 |
 | Treffer | 结果 |
+| Suche | 搜索 |
+| Ersetzen | 替换 |
 | Sprachserver | 语言服务器 |
 | Hinweis (Schweregrad) | 提示 |
 | Lesezeichen / Verlauf / Adresse | 书签 / 历史记录 / 地址 |
 | Bytes | 字节 |
+| Exportieren | 导出 |
+| Format | 格式 |
 | Diktat | 听写 |
 | Agent | 智能体 |
 | Eigener Agent | 内置智能体 |
@@ -3492,9 +3720,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | Token |
 | API-Schlüssel | API 密钥 |
 | Register | 注册表 |
+| Adapter | 适配器 |
+| Bereit | 就绪 |
 | Prüfsumme | 校验和 |
 | Anmeldung, anmelden | 登录 |
 | Konto | 账户 |
+| Abo | 订阅 |
 | Repository | 仓库 |
 | Commit, committen | 提交 |
 | Secrets | 机密信息 |
@@ -3561,10 +3792,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Zusammenführen | 合併 |
 | Konflikt | 衝突 |
 | Treffer | 結果 |
+| Suche | 搜尋 |
+| Ersetzen | 取代 |
 | Sprachserver | 語言伺服器 |
 | Hinweis (Schweregrad) | 提示 |
 | Lesezeichen / Verlauf / Adresse | 書籤 / 瀏覽記錄 / 網址 |
 | Bytes | 位元組 |
+| Exportieren | 輸出 |
+| Format | 格式 |
 | Diktat | 聽寫 |
 | Agent | 代理程式 |
 | Eigener Agent | 內建代理程式 |
@@ -3597,9 +3832,12 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Token, Tokens | Token |
 | API-Schlüssel | API 金鑰 |
 | Register | 登錄庫 |
+| Adapter | 轉接器 |
+| Bereit | 就緒 |
 | Prüfsumme | 核對碼 |
 | Anmeldung, anmelden | 登入 |
 | Konto | 帳號 |
+| Abo | 訂閱 |
 | Repository | 儲存庫 |
 | Commit, committen | 提交 |
 | Secrets | 機密資訊 |
