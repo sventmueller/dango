@@ -81,8 +81,9 @@ pub mod keys {
     /// Shows spaces, tabs and whitespace at the end of lines in editors.
     pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", || false);
 
-    /// Whether a single click opens a file in the window's preview tab, which the next one replaces.
-    pub const PREVIEW_TABS: Key<bool> = Key::user("previewTabs", || true);
+    /// Whether a single click opens a file in the window's preview tab, which the next one replaces; off, every file
+    /// gets a tab of its own (E62).
+    pub const PREVIEW_TABS: Key<bool> = Key::user("previewTabs", || false);
 
     /// Whether a Markdown file opens with its preview beside it, which closes with its editor.
     pub const MARKDOWN_PREVIEW: Key<bool> = Key::user("markdownPreviewBeside", || true);

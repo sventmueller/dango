@@ -223,7 +223,7 @@ vibeedit/
     `@browser`, Auswahl-Chip, Modell-/Denktiefe-Pill, Modus-Pill, Sandbox-Schalter, Senden ↔ Stopp, Warteschlange.
   - Mehrere Sitzungen in Tabs mit Statuspunkt; Farbe je Agent (Claude Terrakotta), sonst Systemakzent.
 - **Tableiste:** Symbol je Art, Änderungspunkt, Schließen, Drag, Vorschau-Tab (kursiv), „+“ (E17), ⌘⇧[ ⌘⇧] ⌘W;
-  seit E60 die native von macOS.
+  seit E60 die native von macOS; den Vorschau-Tab gibt es seit E62 nur noch auf Wunsch.
 - **I10 Panels** *(entschieden; durch E60 ersetzt)*: Standard Tabs; Rechtsklick → „In eigenem Panel öffnen (rechts /
   unten)“, beliebig viele, verschachtelte `NSSplitView`s, Tabs zwischen Panels ziehbar, Layout je Projekt gespeichert.
 - **I6 Änderungen prüfen und zurückspulen** *(bestätigt; Review präzisiert)*: Vor jedem Prompt ein Checkpoint — auch
@@ -340,7 +340,8 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Dateibaum, mit Ersetzen: alle Treffer nach Rückfrage, die einer Datei oder einer Zeile über Knopf bei Mauszeiger oder
   Kontextmenü. Geöffnete Dateien ersetzen über das Dokumentmodell als ein Widerrufschritt je Datei (E24), geschlossene
   werden wie beim Sichern geschrieben, mit Kodierung, BOM und Zeilenenden. Die Dateiliste bekommt eine Kopfzeile mit
-  Ordnername, Neue Datei, Neuer Ordner und Alle einklappen; die Symbolspalte ist 44 pt breit.
+  Ordnername, Neue Datei, Neuer Ordner und Alle einklappen; die Symbolspalte ist 44 pt breit. *(Seit E63 steht der
+  Ordnername als „Dateien: <Ordner>“ in der Titelzeile des Panels, die Knöpfe rechts daneben.)*
 - **E56 Ordner öffnen ersetzt den Ordner des Fensters:** Ein Ordner, der in einem Fenster mit Ordner geöffnet wird
   (Menü, Willkommen-Tab, Zuletzt geöffnet, Befehlszeile), tritt an dessen Stelle; ist er schon in einem anderen Fenster
   offen, kommt dieses nach vorn. Gingen dabei in einem Tab der Tabgruppe des Ordners ungesicherte Änderungen oder
@@ -367,13 +368,24 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Tabs, Ziehen, Herauslösen und „Fenster zusammenführen“ wie in Safari. „+“ und ⌘T öffnen eine Neuer-Tab-Seite mit
   dem Angebot aus E17, die der gewählten Sache Platz macht; ⌘W schließt das Dokument mit der üblichen Rückfrage, ⇧⌘W
   alle Tabs des Fensters. Geteilt wird nur nebeneinander: „Daneben öffnen“ (Kontextmenü der Dateiliste) und die
-  Vorschau (E59) zeigen ein zweites Dokument im selben Tab, jedes dann mit einer Kopfzeile; schließt eines, bleibt
-  das andere allein. Die Seitenleiste gibt es je Ordner einmal; sie wandert in den Tab im Vordergrund und bleibt
+  Vorschau (E59) zeigen ein zweites Dokument im selben Tab, jedes dann mit einer Kopfzeile (seit E63 ein Schild);
+  schließt eines, bleibt das andere allein. Die Seitenleiste gibt es je Ordner einmal; sie wandert in den Tab im Vordergrund und bleibt
   dabei, wie sie ist. Die Ansicht je Projekt (E24) speichert Tabs und Teilungen. Ersetzt die eigene Tableiste nach
   dem Vorbild von Xcode und die Panels aus I10.
 - **E61 Das aktive Symbol klappt nicht ein** *(Entscheidung des Eigentümers, Abweichung von der Symbolspalte oben)*:
   Ein Klick auf das Symbol des Panels, das schon zu sehen ist, lässt die Seitenleiste offen. Ein- und ausgeklappt wird
   sie über den Seitenleisten-Knopf der Toolbar oder ⌃⌘S; ein Symbol bei eingeklappter Seitenleiste klappt sie auf.
+- **E62 Jede Datei in einem eigenen Tab** *(Entscheidung des Eigentümers, Abweichung vom Vorschau-Tab der Tableiste)*:
+  Ein Klick auf eine Datei, einen Diff oder ein PDF öffnet einen neuen Tab, oder holt den Tab nach vorn, der die
+  Sache schon zeigt. Der Vorschau-Tab, den der nächste Klick ersetzt, ist eine Einstellung, die standardmäßig aus ist.
+- **E63 Seitenleiste und Teilung, aufgeräumt** *(Entscheidungen des Eigentümers)*: Die Titelzeile des Dateien-Panels
+  lautet „Dateien: <Ordner>“, die Knöpfe Neue Datei, Neuer Ordner und Alle einklappen stehen rechts in derselben
+  Zeile; die eigene Ordnerzeile entfällt, ebenso der Trennstrich neben der Symbolspalte. Symbolspalte und Titel
+  beginnen auf der Höhe der Tab-Oberkante, der Inhalt hält von den Symbolen denselben Abstand wie die Symbole vom
+  Fensterrand. Zwei Dokumente nebeneinander teilen sich den Tab zur Hälfte; das Verhältnis bleibt bei jeder
+  Größenänderung, nur Ziehen am Trennstrich ändert es. Kopfzeilen über den beiden entfallen, der Trennstrich reicht
+  bis an die Tableiste; das zweite Dokument trägt oben rechts ein Schild mit Symbol, Namen (bei der Vorschau
+  „Vorschau“) und ×, das nur dieses Dokument schließt; das erste schließt über den Tab.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

@@ -3,6 +3,7 @@
 
 mod activity_bar;
 mod chooser;
+mod document_area;
 mod files;
 mod files_header;
 pub mod layout;
@@ -1868,6 +1869,28 @@ impl WindowController {
         if let Some(files) = files.as_ref() {
             files.select(path);
         }
+    }
+
+    /// The left document's share of the tab that shows the document `id` beside another.
+    pub fn share_of(&self, id: isize) -> Option<f64> {
+        self.tab_of_document(id)?.share()
+    }
+
+    /// What the badges in the tab of the document `id` say, left to right.
+    pub fn badges_of(&self, id: isize) -> Vec<Option<(String, String)>> {
+        self.tab_of_document(id).map(|tab| tab.badges()).unwrap_or_default()
+    }
+
+    /// Moves the divider of the tab of the document `id` to `share`, as a drag does.
+    pub fn drag_share_of(&self, id: isize, share: f64) {
+        if let Some(tab) = self.tab_of_document(id) {
+            tab.drag_share(share);
+        }
+    }
+
+    /// The close button on the badge of the document `id`.
+    pub fn badge_close(&self, id: isize) -> Option<Retained<objc2_app_kit::NSButton>> {
+        self.tab_of_document(id)?.badge_close(id)
     }
 
     /// The shown panel's title and the geometry of its title row.

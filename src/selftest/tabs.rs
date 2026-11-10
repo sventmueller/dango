@@ -1,6 +1,6 @@
-//! The `tabs` scenario: preview tabs. A single click in the folder tree opens a file in the preview tab, the next one
-//! replaces it, a double click, typing or a double click on the tab keeps it, and with the setting off every file
-//! gets a tab of its own.
+//! The `tabs` scenario: preview tabs, which the user turns on (E62). A single click in the folder tree opens a file in
+//! the preview tab, the next one replaces it, a double click, typing or a double click on the tab keeps it, and with
+//! the setting off every file gets a tab of its own.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -42,6 +42,9 @@ pub(super) fn run() {
         let _ = std::fs::write(folder.join(name), format!("// {name}\nfn main() {{}}\n"));
     }
     crate::project::trust(&folder);
+    if let Err(error) = Settings::load_user().set(&keys::PREVIEW_TABS, &true) {
+        check("preview tabs can be turned on", false, error.to_string());
+    }
     crate::app::open_project(mtm, folder.clone());
     let root = folder.canonicalize().unwrap_or(folder);
     main_after(PAUSE, move || first_preview(root));

@@ -1,6 +1,6 @@
 //! Window tabs (E60): every document gets a native macOS tab, an `NSWindow` of its own in the folder's tab group with
 //! its own toolbar and split view; the folder's one sidebar moves into the tab in front. A window tab shows one
-//! document, or two side by side, each then under a header that names it.
+//! document, or two side by side, the second then with a small badge at its top that names it and closes it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -8,28 +8,31 @@ use std::rc::Rc;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
+use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSLayoutConstraint, NSTextAttachment};
 use objc2_app_kit::{
-    NSAccessibility, NSBackingStoreType, NSButton, NSColor, NSFont, NSFontManager, NSFontTraitMask, NSImage,
-    NSImageAlignment, NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLayoutConstraint, NSLineBreakMode,
-    NSMenu, NSMenuItem, NSResponder, NSSplitView, NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem,
-    NSStackView, NSTextField, NSToolbar, NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView,
-    NSViewController, NSWindow, NSWindowStyleMask, NSWindowToolbarStyle,
+    NSBackingStoreType, NSBox, NSButton, NSColor, NSFont, NSFontManager, NSFontTraitMask, NSImage, NSImageAlignment,
+    NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLineBreakMode, NSMenu, NSMenuItem, NSResponder,
+    NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem, NSStackView, NSTextField, NSToolbar,
+    NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView, NSViewController, NSWindow, NSWindowStyleMask,
+    NSWindowToolbarStyle,
 };
-use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSTextAttachment};
 use objc2_foundation::{
     NSAttributedString, NSDictionary, NSMutableAttributedString, NSPoint, NSRect, NSSize, NSString,
 };
 use splat_i18n::{t, tf};
 
 use super::WindowController;
+use super::document_area::DocumentArea;
 use crate::util::{item, ns, pin_edges, separator, submenu, symbol, symbol_button};
 
 const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
 const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
-/// The height of a document's header while its window tab shows two documents.
-const HEADER_HEIGHT: f64 = 26.0;
+/// How far the badge of the second of two documents keeps from its top and trailing edge.
+const BADGE_INSET: f64 = 8.0;
 /// The height of the icon before a tab's title.
 const ICON_HEIGHT: f64 = 14.0;
+/// The priority that holds the share: above the split view's holding priority, below a drag of its divider.
+const SHARE_PRIORITY: f32 = 260.0;
 /// The narrowest a document gets beside another.
 const MIN_SIDE: f64 = 220.0;
 
@@ -71,19 +74,18 @@ impl TabKind {
     }
 }
 
-/// A document of a window tab: its view and what its tab and header say about it.
+/// A document of a window tab: its view and what its tab and badge say about it.
 pub struct Document {
     pub id: isize,
     pub kind: TabKind,
     /// What the document shows, such as a file's path, so it opens once.
     pub key: Option<String>,
     pub view: Retained<NSView>,
-    /// The header above `view` and `view`, which sit side by side with another document's.
+    /// `view` with the badge over it, which sit side by side with another document's.
     host: Retained<NSView>,
-    header_height: Retained<NSLayoutConstraint>,
-    header: Retained<NSView>,
-    header_title: Retained<NSTextField>,
-    header_icon: Option<Retained<NSImageView>>,
+    badge: Retained<NSBox>,
+    badge_title: Retained<NSTextField>,
+    badge_icon: Retained<NSImageView>,
     close: Retained<NSButton>,
     title: RefCell<String>,
     preview: Cell<bool>,
@@ -105,74 +107,37 @@ impl Document {
     ) -> Rc<Document> {
         let mtm = controller.mtm();
         let host = NSView::new(mtm);
-        let header = NSView::new(mtm);
-        let header_title = NSTextField::labelWithString(&ns(title), mtm);
-        header_title.setFont(Some(&NSFont::systemFontOfSize(12.0)));
-        header_title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-        header_title.setContentCompressionResistancePriority_forOrientation(
-            200.0,
-            objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
-        );
-        let close = symbol_button(
-            mtm,
-            "xmark",
-            &tf("{} schließen", &[title]),
-            9.0,
-            Some(controller),
-            sel!(ideCloseTabButton:),
-        );
+        let close = symbol_button(mtm, "xmark", "", 9.0, Some(controller), sel!(ideCloseTabButton:));
         close.setTag(id);
         close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        let header_icon = symbol(kind.symbol(), "").map(|image| NSImageView::imageViewWithImage(&image, mtm));
-        let row = NSStackView::new(mtm);
-        row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        row.setSpacing(6.0);
-        if let Some(icon) = &header_icon {
-            icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-            row.addArrangedSubview(icon);
-        }
-        row.addArrangedSubview(&header_title);
-        let spacer = NSView::new(mtm);
-        spacer.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
-        row.addArrangedSubview(&spacer);
-        row.addArrangedSubview(&close);
-        header.addSubview(&row);
-        row.setTranslatesAutoresizingMaskIntoConstraints(false);
-        host.addSubview(&header);
+        let (badge, badge_title, badge_icon) = badge(mtm, &close);
         host.addSubview(&view);
-        for item in [&*header as &NSView, &view] {
-            item.setTranslatesAutoresizingMaskIntoConstraints(false);
-        }
-        let header_height = header.heightAnchor().constraintEqualToConstant(0.0);
+        host.addSubview(&badge);
+        pin_edges(&view, &host);
+        badge.setTranslatesAutoresizingMaskIntoConstraints(false);
         for constraint in [
-            row.leadingAnchor()
-                .constraintEqualToAnchor_constant(&header.leadingAnchor(), 10.0),
-            row.trailingAnchor()
-                .constraintEqualToAnchor_constant(&header.trailingAnchor(), -8.0),
-            row.centerYAnchor().constraintEqualToAnchor(&header.centerYAnchor()),
-            header.topAnchor().constraintEqualToAnchor(&host.topAnchor()),
-            header.leadingAnchor().constraintEqualToAnchor(&host.leadingAnchor()),
-            header.trailingAnchor().constraintEqualToAnchor(&host.trailingAnchor()),
-            header_height.clone(),
-            view.topAnchor().constraintEqualToAnchor(&header.bottomAnchor()),
-            loose(view.topAnchor().constraintEqualToAnchor(&host.topAnchor())),
-            view.leadingAnchor().constraintEqualToAnchor(&host.leadingAnchor()),
-            view.trailingAnchor().constraintEqualToAnchor(&host.trailingAnchor()),
-            view.bottomAnchor().constraintEqualToAnchor(&host.bottomAnchor()),
+            badge
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&host.topAnchor(), BADGE_INSET),
+            badge
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&host.trailingAnchor(), -BADGE_INSET),
+            badge
+                .leadingAnchor()
+                .constraintGreaterThanOrEqualToAnchor_constant(&host.leadingAnchor(), BADGE_INSET),
         ] {
             constraint.setActive(true);
         }
-        header.setHidden(true);
+        badge.setHidden(true);
         Rc::new(Document {
             id,
             kind,
             key,
             view,
             host,
-            header_height,
-            header,
-            header_title,
-            header_icon,
+            badge,
+            badge_title,
+            badge_icon,
             close,
             title: RefCell::new(title.to_string()),
             preview: Cell::new(false),
@@ -198,10 +163,7 @@ impl Document {
 
     pub fn set_title(&self, title: &str) {
         *self.title.borrow_mut() = title.to_string();
-        self.header_title.setStringValue(&ns(title));
-        let close = tf("{} schließen", &[title]);
-        self.close.setToolTip(Some(&ns(&close)));
-        crate::util::set_label(&self.close, Some(&close));
+        self.name_badge();
     }
 
     pub fn set_preview(&self, preview: bool) {
@@ -218,9 +180,7 @@ impl Document {
 
     pub fn set_tint(&self, color: &NSColor) {
         *self.tint.borrow_mut() = Some(objc2::Message::retain(color));
-        if let Some(icon) = &self.header_icon {
-            icon.setContentTintColor(Some(color));
-        }
+        self.name_badge();
     }
 
     /// The small picture before the title of its tab: a file's icon, else a symbol of what it shows in the colour of
@@ -261,18 +221,38 @@ impl Document {
         view.isDescendantOf(&self.host)
     }
 
-    /// Shows the header, which names the document and closes it, while it shares its window tab; above the document
-    /// when `above`, else in the docked bar.
-    fn set_header(&self, shown: bool, above: bool, focused: bool) {
-        self.header.setHidden(!shown);
-        self.header_height
-            .setConstant(if shown || !above { HEADER_HEIGHT } else { 0.0 });
+    /// Shows the badge, which names the document and closes it, while it is the second of two in its window tab.
+    fn set_badge(&self, shown: bool, focused: bool) {
+        self.badge.setHidden(!shown);
         let color = if focused {
             NSColor::labelColor()
         } else {
             NSColor::secondaryLabelColor()
         };
-        self.header_title.setTextColor(Some(&color));
+        self.badge_title.setTextColor(Some(&color));
+        if shown {
+            self.name_badge();
+        }
+    }
+
+    /// Puts the document's name and icon on its badge: a preview is "Vorschau" with an eye, as it sits beside the
+    /// document it shows.
+    fn name_badge(&self) {
+        let (text, close, image) = if self.kind == TabKind::Preview {
+            (
+                t("Vorschau").to_string(),
+                t("Vorschau schließen").to_string(),
+                symbol("eye", ""),
+            )
+        } else {
+            let title = self.title();
+            let close = tf("{} schließen", &[&title]);
+            (title, close, self.icon())
+        };
+        self.badge_title.setStringValue(&ns(&text));
+        self.badge_icon.setImage(image.as_deref());
+        self.close.setToolTip(Some(&ns(&close)));
+        crate::util::set_label(&self.close, Some(&close));
     }
 
     /// The view to give the keyboard focus: the one that had it last, else the first in the document that takes it.
@@ -287,16 +267,42 @@ impl Document {
     }
 }
 
-/// Holds the view's top at the host's while the header is in the bar above the documents instead.
-fn loose(constraint: Retained<NSLayoutConstraint>) -> Retained<NSLayoutConstraint> {
-    constraint.setPriority(250.0);
-    constraint
-}
-
-/// Whether macOS docks bars above a split view item's content (macOS 26 and later), where the bars of the title, the
-/// tabs and the toolbar fade what lies right below them, so a header there has to be such a bar.
-fn accessories_available() -> bool {
-    objc2::runtime::AnyClass::get(c"NSSplitViewItemAccessoryViewController").is_some()
+/// The badge of a document beside another: its icon, its name and `close`, on a rounded plate.
+fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<NSTextField>, Retained<NSImageView>) {
+    let title = NSTextField::labelWithString(&ns(""), mtm);
+    title.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
+    title.setContentCompressionResistancePriority_forOrientation(
+        200.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    let icon = NSImageView::new(mtm);
+    icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+    crate::util::hide_from_voiceover(&icon);
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(5.0);
+    row.addArrangedSubview(&icon);
+    row.addArrangedSubview(&title);
+    row.addArrangedSubview(close);
+    row.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+        top: 3.0,
+        left: 8.0,
+        bottom: 3.0,
+        right: 6.0,
+    });
+    let plate = NSBox::new(mtm);
+    plate.setBoxType(objc2_app_kit::NSBoxType::Custom);
+    plate.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
+    plate.setCornerRadius(7.0);
+    plate.setBorderColor(&NSColor::separatorColor());
+    plate.setFillColor(&NSColor::windowBackgroundColor());
+    plate.setContentViewMargins(NSSize::new(0.0, 0.0));
+    if let Some(content) = plate.contentView() {
+        content.addSubview(&row);
+        pin_edges(&row, &content);
+    }
+    (plate, title, icon)
 }
 
 /// A window tab: its window and the documents it shows, left to right.
@@ -310,12 +316,11 @@ pub struct TabWindow {
     picture: Retained<NSImageView>,
     /// The documents' area and the notes over it.
     content: Retained<NSView>,
-    /// The bar docked above the documents that holds their headers while two share the tab, where macOS has it.
-    bar: Option<(
-        Retained<objc2_app_kit::NSSplitViewItemAccessoryViewController>,
-        Retained<NSView>,
-    )>,
-    area: Retained<NSSplitView>,
+    /// The left document's share of the width while there are two, which a resize keeps and only a drag changes.
+    ratio: Cell<f64>,
+    /// The constraints that hold the share and the documents' least width.
+    holding: RefCell<Vec<Retained<NSLayoutConstraint>>>,
+    area: Retained<DocumentArea>,
     documents: RefCell<Vec<Rc<Document>>>,
     focused: Cell<usize>,
     /// The dot of the tab's state beside its title.
@@ -366,12 +371,12 @@ impl TabWindow {
         sidebar.setHoldingPriority(260.0);
 
         let content = NSView::new(mtm);
-        let area = NSSplitView::new(mtm);
+        let area = DocumentArea::new(mtm);
         area.setVertical(true);
         area.setDividerStyle(NSSplitViewDividerStyle::Thin);
         content.addSubview(&area);
         area.setTranslatesAutoresizingMaskIntoConstraints(false);
-        // Below the title bar and the tab bar, which the content reaches under, so the headers of two documents show.
+        // Below the title bar and the tab bar, which the content reaches under, so the badge of a second document shows.
         for constraint in [
             area.topAnchor()
                 .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
@@ -385,19 +390,6 @@ impl TabWindow {
         content_controller.setView(&content);
         let content_item = NSSplitViewItem::splitViewItemWithViewController(&content_controller);
         content_item.setMinimumThickness(360.0);
-        let bar = accessories_available().then(|| {
-            let view = NSView::new(mtm);
-            view.heightAnchor()
-                .constraintEqualToConstant(HEADER_HEIGHT)
-                .setActive(true);
-            // AppKit exposes a docked bar to VoiceOver whatever it holds; a group passes its headers on.
-            view.setAccessibilityRole(Some(crate::util::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-            let accessory = objc2_app_kit::NSSplitViewItemAccessoryViewController::new(mtm);
-            accessory.setView(&view);
-            accessory.setHidden(true);
-            content_item.addTopAlignedAccessoryViewController(&accessory);
-            (accessory, view)
-        });
         split.addSplitViewItem(&sidebar);
         split.addSplitViewItem(&content_item);
         window.setContentViewController(Some(&split));
@@ -408,19 +400,22 @@ impl TabWindow {
         window.setToolbar(Some(&toolbar));
 
         let status = status_dot(mtm);
-        Rc::new(TabWindow {
+        let tab = Rc::new(TabWindow {
             window,
             split,
             sidebar,
             slot,
             picture,
             content,
-            bar,
+            ratio: Cell::new(0.5),
+            holding: RefCell::new(Vec::new()),
             area,
             documents: RefCell::new(Vec::new()),
             focused: Cell::new(0),
             status,
-        })
+        });
+        TabWindow::follow_drags(&tab);
+        tab
     }
 
     pub fn documents(&self) -> Vec<Rc<Document>> {
@@ -454,7 +449,6 @@ impl TabWindow {
     pub fn insert(&self, document: Rc<Document>, index: Option<usize>) {
         let count = self.documents.borrow().len();
         let index = index.unwrap_or(count).min(count);
-        let share = self.share();
         match self.documents.borrow().get(index) {
             Some(after) => self.area.addSubview_positioned_relativeTo(
                 &document.host,
@@ -463,32 +457,11 @@ impl TabWindow {
             ),
             None => self.area.addSubview(&document.host),
         }
-        if let Some((_, bar)) = &self.bar {
-            document.header.removeFromSuperview();
-            bar.addSubview(&document.header);
-            for constraint in [
-                document.header.topAnchor().constraintEqualToAnchor(&bar.topAnchor()),
-                document
-                    .header
-                    .bottomAnchor()
-                    .constraintEqualToAnchor(&bar.bottomAnchor()),
-                document
-                    .header
-                    .leadingAnchor()
-                    .constraintEqualToAnchor(&document.host.leadingAnchor()),
-                document
-                    .header
-                    .trailingAnchor()
-                    .constraintEqualToAnchor(&document.host.trailingAnchor()),
-            ] {
-                constraint.setActive(true);
-            }
-        }
         self.documents.borrow_mut().insert(index, document);
         self.focused.set(index);
         self.area.adjustSubviews();
         if count == 1 {
-            self.set_share(share.unwrap_or(0.5));
+            self.set_share(0.5);
         }
         self.refresh();
     }
@@ -497,14 +470,12 @@ impl TabWindow {
     pub fn remove(&self, id: isize) -> Option<Rc<Document>> {
         let index = self.documents.borrow().iter().position(|doc| doc.id == id)?;
         let document = self.documents.borrow_mut().remove(index);
-        if self.bar.is_some() {
-            document.header.removeFromSuperview();
-        }
         document.host.removeFromSuperview();
         let focused = self.focused.get();
         if focused >= index && focused > 0 {
             self.focused.set(focused - 1);
         }
+        self.hold_share();
         self.area.adjustSubviews();
         self.refresh();
         Some(document)
@@ -520,15 +491,49 @@ impl TabWindow {
         (total > 1.0).then(|| (left.host.frame().size.width / total).clamp(0.1, 0.9))
     }
 
+    /// Gives the left of two documents `share` of the width, which it keeps as the tab changes size.
     pub fn set_share(&self, share: f64) {
-        if self.documents.borrow().len() < 2 {
+        self.ratio.set(share.clamp(0.1, 0.9));
+        self.hold_share();
+    }
+
+    /// Holds the left document at the kept share of the width, above the split view's own sizing, which shrinks one
+    /// side only, and below a drag of the divider.
+    fn hold_share(&self) {
+        for constraint in self.holding.borrow_mut().drain(..) {
+            constraint.setActive(false);
+        }
+        let documents = self.documents.borrow();
+        let (Some(left), Some(right)) = (documents.first(), documents.get(1)) else {
             return;
+        };
+        let share = left
+            .host
+            .widthAnchor()
+            .constraintEqualToAnchor_multiplier(&self.area.widthAnchor(), self.ratio.get());
+        share.setPriority(SHARE_PRIORITY);
+        let mut holding = vec![share];
+        for side in [left, right] {
+            let least = side.host.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_SIDE);
+            least.setPriority(SHARE_PRIORITY + 10.0);
+            holding.push(least);
         }
-        let total = self.area.bounds().size.width;
-        if total > 1.0 {
-            let position = (total * share).clamp(MIN_SIDE, (total - MIN_SIDE).max(MIN_SIDE));
-            self.area.setPosition_ofDividerAtIndex(position, 0);
+        for constraint in &holding {
+            constraint.setActive(true);
         }
+        *self.holding.borrow_mut() = holding;
+    }
+
+    /// Takes the share the user drags the divider to.
+    fn follow_drags(tab: &Rc<TabWindow>) {
+        let dragged = Rc::downgrade(tab);
+        tab.area.on_drag(move || {
+            if let Some(tab) = dragged.upgrade()
+                && let Some(share) = tab.share()
+            {
+                tab.set_share(share);
+            }
+        });
     }
 
     /// Makes the document at `index` the one commands act on, as the keyboard focus moves into it.
@@ -584,17 +589,13 @@ impl TabWindow {
     }
 
     /// Says on the tab what the focused document is and whether a document has unsaved changes, and shows the
-    /// headers while two documents share the tab.
+    /// badge of the second document while two share the tab.
     pub fn refresh(&self) {
         let documents = self.documents.borrow();
         let focused = self.focused.get().min(documents.len().saturating_sub(1));
         let two = documents.len() > 1;
-        let docked = self.bar.is_some();
         for (index, doc) in documents.iter().enumerate() {
-            doc.set_header(two, !docked, index == focused);
-        }
-        if let Some((accessory, _)) = &self.bar {
-            accessory.setHidden(!two);
+            doc.set_badge(two && index > 0, index == focused);
         }
         let Some(doc) = documents.get(focused) else { return };
         let title = doc.title();
@@ -649,6 +650,73 @@ impl TabWindow {
         image.addRepresentation(&rep);
         self.picture.setImage(Some(&image));
         self.picture.setHidden(false);
+    }
+
+    /// What the documents' badges say, left to right: the name and the close button's label of those that show.
+    #[cfg(feature = "selftest")]
+    pub fn badges(&self) -> Vec<Option<(String, String)>> {
+        use objc2_app_kit::NSAccessibility;
+        self.documents
+            .borrow()
+            .iter()
+            .map(|doc| {
+                (!doc.badge.isHidden()).then(|| {
+                    let label = doc
+                        .close
+                        .accessibilityLabel()
+                        .map(|l| l.to_string())
+                        .unwrap_or_default();
+                    (doc.badge_title.stringValue().to_string(), label)
+                })
+            })
+            .collect()
+    }
+
+    /// The close button on the badge of the document `id`.
+    #[cfg(feature = "selftest")]
+    pub fn badge_close(&self, id: isize) -> Option<Retained<NSButton>> {
+        self.document(id).map(|doc| doc.close.clone())
+    }
+
+    /// Drags the divider to `share` with the mouse: the drag and the release wait in the event queue, which the split
+    /// view's tracking of the press reads.
+    #[cfg(feature = "selftest")]
+    pub fn drag_share(&self, share: f64) {
+        use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType};
+
+        let Some(left) = self.documents.borrow().first().map(|doc| doc.host.frame().size.width) else {
+            return;
+        };
+        let bounds = self.area.bounds();
+        let target = bounds.size.width * share;
+        let y = bounds.size.height / 2.0;
+        let event = |kind: NSEventType, x: f64| {
+            NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+                kind,
+                self.area.convertPoint_toView(NSPoint::new(x, y), None),
+                NSEventModifierFlags::empty(),
+                0.0,
+                self.window.windowNumber(),
+                None,
+                0,
+                1,
+                1.0,
+            )
+        };
+        let app = NSApplication::sharedApplication(self.window.mtm());
+        for (kind, x) in [
+            (NSEventType::LeftMouseDragged, (left + target) / 2.0),
+            (NSEventType::LeftMouseDragged, target),
+            (NSEventType::LeftMouseUp, target),
+        ] {
+            if let Some(event) = event(kind, x) {
+                app.postEvent_atStart(&event, false);
+            }
+        }
+        if let Some(down) = event(NSEventType::LeftMouseDown, left + 0.5) {
+            // SAFETY: The split view takes the press, which lives for the call.
+            let () = unsafe { objc2::msg_send![&*self.area, mouseDown: &*down] };
+        }
     }
 
     /// Whether the tab shows the picture of the sidebar.

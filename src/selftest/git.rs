@@ -328,12 +328,10 @@ fn listed(root: PathBuf, ok: bool) {
         .map(|(title, preview, _)| if *preview { format!("[{title}]") } else { title.clone() })
         .collect();
     check(
-        "a single click on a change shows its diff in the preview tab",
-        controller.tab_count() == tabs + 1
-            && previews.iter().filter(|(_, preview, _)| *preview).count() == 1
-            && previews
-                .iter()
-                .any(|(title, preview, _)| *preview && title.starts_with("lib.rs")),
+        "a single click on a change opens its diff in a tab of its own",
+        controller.tab_count() == tabs + 2
+            && previews.iter().all(|(_, preview, _)| !*preview)
+            && previews.iter().any(|(title, _, _)| title.starts_with("lib.rs")),
         shown.join(", "),
     );
     panel::stage(&controller, Path::new(README));

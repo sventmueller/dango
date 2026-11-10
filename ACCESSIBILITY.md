@@ -15,7 +15,7 @@ checked by hand.
 
 | Area | What VoiceOver gets |
 |---|---|
-| Window | The sidebar's symbols (Files, AI, Git, CI, Settings) have names, and a status on a symbol is part of its name, such as "Git, 4 changes" or a failed CI run. Documents are macOS's own window tabs, which VoiceOver reads with their title; the icon before it is decoration, and a preview tab says so in its help. Two documents side by side each have a header with their name and a named close button. The short notices at the bottom of the window are announced. Decorative images (file icons, the app icon on the welcome page) are hidden. |
+| Window | The sidebar's symbols (Files, AI, Git, CI, Settings) have names, and a status on a symbol is part of its name, such as "Git, 4 changes" or a failed CI run. Documents are macOS's own window tabs, which VoiceOver reads with their title; the icon before it is decoration, and a preview tab says so in its help. Of two documents side by side, the second has a small badge with its name, or "Preview", and a named close button that closes only it; the first closes with its tab. The short notices at the bottom of the window are announced. Decorative images (file icons, the app icon on the welcome page) are hidden. |
 | Files | A standard outline view. |
 | Editor | A standard text view named "Editor: <file>", with lines, selection and text attributes as usual. Drawn-only layers (whitespace marks, overlays) are hidden from VoiceOver. The change marks name the committed version they compare against. When a file changes on disk while it is open, the bar that offers to reload or merge it is announced. |
 | Compare and diff views | Each line says whether it was added or removed; the table is named after the file. |

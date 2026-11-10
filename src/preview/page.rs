@@ -188,6 +188,13 @@ fn bar(mtm: MainThreadMarker, page: &Page) -> Retained<NSStackView> {
     );
     text.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
     text.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    // The bar is there, at no height, while it is hidden too, so a text that cannot shorten would hold the preview wide.
+    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    text.setContentCompressionResistancePriority_forOrientation(
+        200.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    text.setToolTip(Some(&text.stringValue()));
     // SAFETY: The page implements the action, and the button lives inside the page, which it targets.
     let button = unsafe {
         NSButton::buttonWithTitle_target_action(

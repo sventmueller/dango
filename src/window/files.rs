@@ -352,7 +352,7 @@ fn extends_selection(mtm: MainThreadMarker) -> bool {
 }
 
 impl FileTreeSource {
-    /// A single click on a file shows it in the preview tab.
+    /// A single click on a file opens it, in the preview tab if the user turned those on.
     fn row_clicked(&self, view: &NSOutlineView, row: isize) {
         let Some(path) = (row >= 0)
             .then(|| view.itemAtRow(row))

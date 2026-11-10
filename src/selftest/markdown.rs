@@ -84,20 +84,21 @@ fn preview_beside(root: PathBuf) {
             .filter(|title| title != "zweite.md" && title != "dritte.md")
             .collect::<Vec<_>>()
     };
-    let replaced = previews(&controller);
+    let opened = previews(&controller);
     if let Some(tab) = super::helpers::tab(&controller, "dritte.md") {
         controller.close_tab(tab);
     }
     let closed = previews(&controller);
     check(
-        "the preview that opened with a document goes with its editor, also when a single click replaced it",
-        replaced == [tf("Vorschau: {}", &["dritte.md"])] && closed.is_empty(),
-        format!("{replaced:?} / {closed:?}"),
+        "each clicked file opens in a tab of its own, and the preview that opened with it goes with its editor",
+        opened.len() == 2 && closed == [tf("Vorschau: {}", &["zweite.md"])],
+        format!("{opened:?} / {closed:?}"),
     );
     formats(&root, &view);
     pasting(&root, &view);
     menus(&root);
     super::markdown_editor::run(&root);
+    super::split::run(&root);
     exports(root);
 }
 

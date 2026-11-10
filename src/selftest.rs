@@ -49,6 +49,7 @@ mod recovery;
 mod replace;
 mod search;
 mod search_replace;
+mod split;
 mod worktree;
 
 struct Check {
