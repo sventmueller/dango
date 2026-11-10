@@ -31,7 +31,7 @@ pub const FAKE_KEY: &str = "aws_access_key_id = AKIAQYLPMN5HHHFPZAM2\n";
 pub const RECENT: &str = "a11y-recent";
 const MESSAGE: &str = "Commit by keyboard";
 const REGISTRY: &str = include_str!("../../../crates/ide-acp/tests/fixtures/registry.json");
-/// The place of Gemini CLI in the "+" menu, played by the test agent.
+/// The place of Gemini in the "+" menu, played by the test agent.
 const GEMINI: usize = 1;
 const PROMPT: &str = "hello";
 

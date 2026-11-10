@@ -258,6 +258,17 @@ fn turned_off(controller: &WindowController, root: &Path) {
 /// Every entry of the held "+"'s menu opens what it names, chosen in an untrusted folder, where no agent starts; the
 /// agents listed are the installed ones, the own agent last.
 fn every_plus_entry(controller: &WindowController, root: &Path) {
+    let clis: Vec<(String, bool)> = controller
+        .plus_menu_entries()
+        .into_iter()
+        .filter(|(path, _, _)| path.first().map(String::as_str) == Some(t("CLI-Thread")))
+        .map(|(path, _, enabled)| (path.join(" ▸ "), enabled))
+        .collect();
+    check(
+        "in a trusted folder the CLI threads of the held + are enabled",
+        !clis.is_empty() && clis.iter().all(|(_, enabled)| *enabled),
+        format!("{clis:?}"),
+    );
     crate::project::distrust(root);
     let entries = controller.plus_menu_entries();
     let mut results = Vec::new();

@@ -1,7 +1,7 @@
 # Dango
 
 A native macOS editor for working with coding agents. One window holds the editor, terminals, a browser, git, CI and
-AI threads; agents such as Claude, Codex or Gemini CLI run beside the code they change. Dictation turns speech into
+AI threads; agents such as Claude, Codex or Gemini run beside the code they change. Dictation turns speech into
 text in the AI message field and the editor. It is written in Rust on AppKit
 (no Electron, no Swift); WebKit is used only in the browser tab.
 
@@ -54,7 +54,7 @@ checkpointed before each prompt and can be reviewed and rewound per message.
 |---|---|---|
 | Claude | the `claude` CLI, spoken to directly over its stream-json protocol | `claude` installed and signed in; the app looks on the login shell's `PATH`, in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and `/usr/local/bin`. Sign-in happens only in `claude` itself |
 | Codex | `codex-acp` over the Agent Client Protocol (ACP) | Node.js and npm; the app installs the pinned package on request |
-| Gemini CLI | `gemini --acp` | Node.js 20 or later; installed on request, or your own `gemini` on the `PATH` |
+| Gemini | `gemini --acp` | Node.js 20 or later; installed on request, or your own `gemini` on the `PATH` |
 | Antigravity | `agy acp` | your own `agy` on the `PATH`, or the pinned download, installed on request |
 | OpenCode | `opencode acp` | your own `opencode` on the `PATH`, or the pinned download, installed on request |
 | Other ACP agents | from the ACP registry, fetched only when you ask for it | whatever the registry entry names; entries without a checksum install only after you confirm |
@@ -131,7 +131,7 @@ depends on the agent, and the switch's tooltip says so:
 |---|---|
 | Claude | shell commands run in Claude's own sandbox; its file and web tools do not |
 | Codex | commands and changes write only in the project, without network |
-| Gemini CLI | writes only in the project; reading everywhere and the network stay open |
+| Gemini | writes only in the project; reading everywhere and the network stay open |
 | Own agent | files, web requests and commands stay within the project and the allowed folders, without network (`sandbox-exec`) |
 | Antigravity, OpenCode | no sandbox that the app can switch on |
 

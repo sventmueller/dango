@@ -358,7 +358,7 @@ pub const PRESETS: &[Preset] = &[
     },
     Preset {
         id: "gemini",
-        name: "Gemini CLI",
+        name: "Gemini",
         colour: Some("#4796E3"),
         on_path: Some(("gemini", &["--acp"])),
         cli: None,

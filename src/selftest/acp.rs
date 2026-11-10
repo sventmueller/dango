@@ -82,7 +82,7 @@ pub fn run() {
         let names: Vec<String> = crate::agent::preset_menu().into_iter().map(|(n, _)| n).collect();
         check(
             "the new tab menu offers the ACP agents",
-            names == ["Codex", "Gemini CLI", "Antigravity", "OpenCode"],
+            names == ["Codex", "Gemini", "Antigravity", "OpenCode"],
             names.join(", "),
         );
         let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
@@ -106,7 +106,7 @@ fn ready(root: PathBuf, key: u64) {
     };
     check(
         "the tab runs the agent it was opened with",
-        tab.agent_name() == "Gemini CLI",
+        tab.agent_name() == "Gemini",
         tab.agent_name(),
     );
     let caps = tab.acp_capabilities().unwrap_or_default();
@@ -356,14 +356,13 @@ fn panel(root: PathBuf) {
     let sessions = seen.as_ref().map(|s| s.sessions.clone()).unwrap_or_default();
     check(
         "the session list names the agent",
-        sessions.iter().any(|s| s.ends_with("· Gemini CLI")),
+        sessions.iter().any(|s| s.ends_with("· Gemini")),
         sessions.join(" | "),
     );
     let offered = seen.map(|s| s.new_session).unwrap_or_default();
     check(
         "a new session offers the agents that are ready and the way to manage them",
-        offered.iter().any(|t| t == "Gemini CLI")
-            && offered.last().map(String::as_str) == Some(t("Agenten verwalten …")),
+        offered.iter().any(|t| t == "Gemini") && offered.last().map(String::as_str) == Some(t("Agenten verwalten …")),
         offered.join(" | "),
     );
     main_after(Duration::from_millis(400), move || {
@@ -375,7 +374,7 @@ fn panel(root: PathBuf) {
         let lines = crate::settings::agents_lines();
         check(
             "the settings list every agent's state and the loaded registry",
-            lines.iter().any(|l| l.starts_with("Gemini CLI Bereit"))
+            lines.iter().any(|l| l.starts_with("Gemini Bereit"))
                 && lines.iter().any(|l| l.starts_with("Claude über ACP"))
                 && lines.iter().any(|l| l.starts_with("ACP-Register 9 Agenten")),
             lines.join(" | "),
