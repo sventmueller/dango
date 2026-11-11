@@ -2,7 +2,7 @@
 //! scope: ACP implementations currently use both. The `quota` extension in Codex and Gemini is token usage,
 //! not a subscription's remaining allowance.
 
-use agent_client_protocol::schema::v1 as acp;
+use agent_client_protocol::v1::schema as acp;
 use ide_thread::{ReportedCost, TokenReport, Update, UsagePatch};
 use serde_json::Value;
 

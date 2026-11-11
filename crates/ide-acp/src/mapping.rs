@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
-use agent_client_protocol::schema::v1 as acp;
+use agent_client_protocol::v1::schema as acp;
 use ide_thread::{
     AgentMessage, EntryKind, ErrorKind, Lane, Notice, PermissionOption, PermissionRequest, RequestState, Status,
     TextEdit, Thought, Todo, TodoStatus, ToolCall, ToolKind, ToolOutput, ToolPatch, ToolStatus, ToolView, Update,

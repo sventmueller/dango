@@ -2,7 +2,7 @@
 //! content, modes, configuration options such as the model, and commands. Only what the agent said is here; nothing
 //! is assumed, and extension fields the app does not read are kept as text to be shown.
 
-use agent_client_protocol::schema::v1 as acp;
+use agent_client_protocol::v1::schema as acp;
 use serde_json::Value;
 
 /// How the agent signs in in a terminal: its arguments and variables for its environment.

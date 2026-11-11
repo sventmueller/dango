@@ -12,8 +12,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, SystemTime};
 
 use agent_client_protocol::schema::ProtocolVersion;
-use agent_client_protocol::schema::v1 as acp;
-use agent_client_protocol::{Agent, ByteStreams, Client, ConnectionTo, JsonRpcRequest, Responder};
+use agent_client_protocol::v1::schema as acp;
+use agent_client_protocol::{Agent, Builder, ByteStreams, Client, ConnectionTo, JsonRpcRequest, Responder};
 use futures::channel::oneshot;
 use ide_process::tail::{self, Tail};
 use ide_process::{Kind, ProcessId, Supervisor};
@@ -530,8 +530,9 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
     let asks = shared.clone();
     let main = shared.clone();
     let result = futures::executor::block_on(
-        Client
-            .builder()
+        // Unguarded, as the v1 guard turns an agent of another protocol version into an error that names the
+        // version only in its text; `initialize` checks the version itself.
+        Builder::new(Client)
             .name(ide_product::NAME)
             .on_receive_notification(
                 async move |notification: acp::SessionNotification, _cx| {
@@ -545,14 +546,6 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
                     asks.on_permission(request, responder);
                     Ok(())
                 },
-                agent_client_protocol::on_receive_request!(),
-            )
-            // Every other request is refused, files and terminals too, which this client does not offer; SDK 2.2
-            // would otherwise hold a request that names a session unanswered, and the agent's turn with it.
-            .on_receive_request(
-                async move |_request: agent_client_protocol::UntypedMessage,
-                            responder: Responder<serde_json::Value>,
-                            _cx| { responder.respond_with_error(acp::Error::method_not_found()) },
                 agent_client_protocol::on_receive_request!(),
             )
             .connect_with(transport, async move |connection: ConnectionTo<Agent>| {

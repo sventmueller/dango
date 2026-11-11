@@ -283,7 +283,7 @@ impl<W: Write> Agent<W> {
             let allowed = outcome["outcome"] == "selected" && chosen != "reject";
             self.steps = closing(allowed).into();
         } else {
-            self.steps = ending(message.get("error").is_some()).into();
+            self.steps = ending(message["error"]["code"] == -32601).into();
         }
         self.play();
     }

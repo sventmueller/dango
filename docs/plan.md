@@ -273,7 +273,7 @@ VoiceOver-Prüfung der neuen Ansichten.
 ## Risiken
 - **R1 Claude im AI-Tab zählt als Agent-SDK-Nutzung**; die angekündigte getrennte Abrechnung ist seit 2026-06-15
   pausiert. CLI-Threads (I5) bleiben unberührt.
-- **R2 ACP-Crate bricht fast monatlich**; Version erst zur ACP-Phase festlegen, gekapselt.
+- **R2 ACP-Crate bricht fast monatlich**; Version erst zur ACP-Phase festlegen, gekapselt. *(Seit 5.0 folgt die stabile v1-API semver; Dango nutzt 5.2.0, siehe docs/acp.md.)*
 - **R3 Eingriffe in splat und lowspeak** betreffen ausgelieferte Apps; deshalb spät (Phase 9), eigener Branch, deren
   Testsuites plus Tests für die neue Fremdnutzung.
 - **R4 Schlüsselbund:** jeder Zugriff auf fremde Einträge löst Systemdialoge aus; deshalb einmalige Übernahme (E13).

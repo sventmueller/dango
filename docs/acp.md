@@ -7,18 +7,21 @@ line without the SDK, so the tests also check what the client puts on the wire.
 
 ## Crate version (E4, R2)
 
-`agent-client-protocol = "=2.2.0"` (schema 1.9.1), chosen on 2026-11-09:
+`agent-client-protocol = "=5.2.0"` (schema 1.17.0), chosen on 2026-11-11, replacing 2.2.0 (chosen 2026-11-09):
 
 | Release | Date | Why not / why |
 |---|---|---|
-| 5.1.0 | 2026-11-09 | Released the day of the choice; 5.0 a week before restructured the whole SDK (v1/v2 modules, proxy chains, 30+ breaking changes). Zed pins it, as its authors. |
-| 3.0–3.6 | 2026-10-06 – 10-28 | Seven minors in three weeks; opt-in transports, MCP binding and connection drivers changed; little uptake (20–50 k downloads per release). |
-| **2.2.0** | 2026-09-18 | Last release of the 2.x line, which held 2½ months; the most used recent release (≈314 k downloads), most downstream crates require `^2.2`. ACP v1 on the wire is the same as in 5.x; what changed since is SDK structure and the draft v2. |
+| **5.2.0** | 2026-11-10 | Since 5.0 the stable v1 API follows semver, so breaks wait for a major release; only `unstable_*` features may change in a minor, which is why the pin is exact. Zed, the protocol's authors, builds on 5.x. ACP v1 on the wire is the same as in 2.2. |
+| 3.0–3.6 | 2026-10-06 – 10-28 | Seven minors in three weeks; skipped. |
+| 2.2.0 | 2026-09-18 | The first choice: the most used release then. Held a request from the agent that names a session and has no handler unanswered, which a handler of our own had to answer. |
 
-Known gap of 2.2, handled in `session.rs`: a request from the agent that names a session and has no handler is
-held instead of answered (fixed in 5.0, #485); the client answers every request it does not handle with
-`method not found`. Raising the version means re-reading the migration guides and running the tests here and
-`make test-integration` against the real agents.
+What the move to 5.x changed here: the connection is built with `Builder::new(Client)`, without the SDK's v1
+guard, because the guard turns an agent of another protocol version into `-32600` that names the version only in
+its text; `initialize` checks the version itself and reports `SessionError::Version(n)`. Requests without a handler
+(`fs/*`, `terminal/*`, unknown) are answered `-32601` by the SDK, so the handler of our own is gone. A responder the
+client drops is answered `-32603` by the SDK. Raising the version means re-reading the migration guides
+(`md/migration-v5.md` in the SDK's repository and later ones) and running the tests here and `make test-integration`
+against the real agents.
 
 ## Process
 
