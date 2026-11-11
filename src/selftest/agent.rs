@@ -248,10 +248,33 @@ pub fn run() {
     );
     picture(&controller, "agent-empty");
     let key = tab.key;
-    subagent_asks(&controller, root.clone(), move || {
-        if let Some(tab) = tab_of(key) {
-            tab.select();
-        }
+    subagent_asks(&controller, root.clone(), move || sidebar_let_go(root, key));
+}
+
+/// The AI tab comes to the front and another one right after, before the sidebar the first got held at is let go, as
+/// when AppKit gives the window of a closing menu the focus back for a moment: the AI tab's sidebar is free to drag
+/// all the same.
+fn sidebar_let_go(root: PathBuf, key: u64) {
+    let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+        return finish(NAME);
+    };
+    let ai = controller.tab_with_key(&tab.tab_key());
+    let other = controller.tab_ids().into_iter().find(|id| Some(*id) != ai);
+    if let (Some(ai), Some(other)) = (ai, other) {
+        controller.select_tab_by_id(ai);
+        controller.select_tab_by_id(other);
+    }
+    main_after(Duration::from_millis(600), move || {
+        let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+            return finish(NAME);
+        };
+        let range = ai.and_then(|id| controller.sidebar_range_of(id));
+        check(
+            "an AI tab that was in front only for a moment leaves its sidebar free to drag",
+            other.is_some() && range.is_some_and(|(min, max)| max - min > 1.0),
+            format!("{range:?}"),
+        );
+        tab.select();
         main_after(Duration::from_millis(300), move || permission(root, key));
     });
 }

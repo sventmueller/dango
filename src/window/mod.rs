@@ -1387,9 +1387,19 @@ impl WindowController {
         };
         tab.pin_sidebar(width, collapsed);
         if open {
-            self.later(|controller| {
+            // The tab itself, not the one in front then: another may come to the front meanwhile, and the held one
+            // would stay held.
+            let window = Retained::as_ptr(&tab.window) as usize;
+            self.later(move |controller| {
+                let held = controller
+                    .ivars()
+                    .tabs
+                    .borrow()
+                    .iter()
+                    .find(|tab| Retained::as_ptr(&tab.window) as usize == window)
+                    .cloned();
                 if controller.ivars().panel_open.get()
-                    && let Some(tab) = controller.current_tab()
+                    && let Some(tab) = held
                 {
                     tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
                 }
@@ -1860,6 +1870,12 @@ impl WindowController {
         if let Some(tab) = self.current_tab() {
             self.fit_sidebar(&tab, tab.sidebar_collapsed());
         }
+    }
+
+    /// The narrowest and widest the user may drag the sidebar of the window tab of document `id` to now.
+    #[cfg(feature = "selftest")]
+    pub fn sidebar_range_of(&self, id: isize) -> Option<(f64, f64)> {
+        self.tab_of_document(id).map(|tab| tab.sidebar_range())
     }
 
     /// Folds the sidebar away or back, as ⌃⌘S does.

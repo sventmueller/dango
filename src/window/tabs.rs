@@ -720,6 +720,12 @@ impl TabWindow {
         }
     }
 
+    /// The narrowest and widest the user may drag the sidebar to now.
+    #[cfg(feature = "selftest")]
+    pub fn sidebar_range(&self) -> (f64, f64) {
+        (self.sidebar.minimumThickness(), self.sidebar.maximumThickness())
+    }
+
     /// Folds the sidebar away or back, as the menu's command does.
     #[cfg(feature = "selftest")]
     pub fn toggle_sidebar(&self) {
