@@ -20,6 +20,8 @@ pub struct Header {
     focus: Retained<NSButton>,
     /// Opens the overview of the session's subagents and background tasks.
     pub tasks: Retained<NSButton>,
+    /// The agent's colour, which marks what is on.
+    accent: std::cell::RefCell<Retained<NSColor>>,
 }
 
 impl Header {
@@ -108,11 +110,13 @@ impl Header {
             bookmark,
             focus,
             tasks,
+            accent: std::cell::RefCell::new(style::terracotta()),
         }
     }
 
     /// Shows the agent's mark in `colour`, described as `agent`.
     pub fn set_agent(&self, agent: &str, colour: &objc2_app_kit::NSColor) {
+        *self.accent.borrow_mut() = objc2::Message::retain(colour);
         self.mark.setContentTintColor(Some(colour));
         crate::util::set_label(&self.mark, Some(agent));
         self.mark.setToolTip(Some(&ns(agent)));
@@ -125,7 +129,7 @@ impl Header {
     /// Marks the focus view as on or off.
     pub fn set_focus_view(&self, on: bool) {
         let (name, color) = if on {
-            ("text.bubble.fill", style::terracotta())
+            ("text.bubble.fill", self.accent.borrow().clone())
         } else {
             ("text.bubble", NSColor::secondaryLabelColor())
         };
@@ -141,7 +145,7 @@ impl Header {
 
     pub fn set_bookmarked(&self, on: bool) {
         let (name, color) = if on {
-            ("bookmark.fill", style::terracotta())
+            ("bookmark.fill", self.accent.borrow().clone())
         } else {
             ("bookmark", NSColor::secondaryLabelColor())
         };

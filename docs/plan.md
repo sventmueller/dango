@@ -402,6 +402,12 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Worktree“) nur Agenten an, die installiert und eingerichtet sind: Claude, wenn sein Programm da ist, ACP-Agenten,
   die starten, statt sie erst zu installieren, und den eigenen Agenten zuletzt, sobald ein Anbieter ein Modell
   anbietet. Installiert wird über „Agenten verwalten …“ (E58).
+- **E66 Akzentfarbe je Agent, nach Apples Richtlinien** *(Entscheidung des Eigentümers)*: Ein Chat nimmt die Farbe
+  seines Agenten als Akzent – Claude Terrakotta, ACP-Agenten ihre Farbe aus dem Register, der eigene Agent die
+  Systemakzentfarbe –, auch für Laufpunkt, offene Fragen, Pläne, Eingabefeld und Knöpfe. Jede Farbe passt sich an
+  Hell, Dunkel und erhöhten Kontrast an: Symbole und Rahmen halten 3:1 zum Hintergrund, mit erhöhtem Kontrast 4,5:1;
+  Knöpfe mit weißer Schrift sind dunkel genug für 4,5:1, mit erhöhtem Kontrast 7:1. Statusfarben bleiben die des
+  Systems.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

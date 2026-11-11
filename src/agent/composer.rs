@@ -147,9 +147,27 @@ pub struct Composer {
     pub sandbox: Retained<NSButton>,
     pub send_box: Retained<NSBox>,
     pub send: Retained<NSButton>,
+    /// The agent's colour, for the border while the composer has the focus.
+    accent: std::cell::RefCell<Retained<NSColor>>,
+    /// The agent's colour as the send button's fill, dark enough for its white arrow.
+    fill: std::cell::RefCell<Retained<NSColor>>,
     /// The microphone, which dictates into the text view.
     #[cfg(feature = "dictation")]
     pub mic: crate::dictation::Mic,
+}
+
+/// The composer's card around `column`, which VoiceOver reads as the input.
+fn card(mtm: MainThreadMarker, column: &NSView) -> Retained<NSBox> {
+    let card = ui::framed(
+        mtm,
+        column,
+        &NSColor::separatorColor(),
+        Some(&NSColor::controlBackgroundColor()),
+        10.0,
+        ui::insets(10.0, 12.0, 8.0, 10.0),
+    );
+    ui::group(&card, t("Eingabe"));
+    card
 }
 
 /// A borderless button with a title and a chevron, as the pills of the composer read.
@@ -244,16 +262,7 @@ impl Composer {
                 &parts.send_box,
             ],
         );
-        let column = ui::column(mtm, 8.0, &[&chips, &editor, &footer]);
-        let card = ui::framed(
-            mtm,
-            &column,
-            &NSColor::separatorColor(),
-            Some(&NSColor::controlBackgroundColor()),
-            10.0,
-            ui::insets(10.0, 12.0, 8.0, 10.0),
-        );
-        ui::group(&card, t("Eingabe"));
+        let card = card(mtm, &ui::column(mtm, 8.0, &[&chips, &editor, &footer]));
         Composer {
             card,
             text,
@@ -266,6 +275,8 @@ impl Composer {
             sandbox: parts.sandbox,
             send_box: parts.send_box,
             send: parts.send,
+            accent: std::cell::RefCell::new(style::terracotta()),
+            fill: std::cell::RefCell::new(style::fill(style::TERRACOTTA)),
             #[cfg(feature = "dictation")]
             mic,
         }
@@ -294,9 +305,15 @@ impl Composer {
 
     /// Shows `text` while the composer is empty.
     /// Names the agent the message goes to, for VoiceOver.
-    pub fn set_agent(&self, agent: &str) {
+    /// Names the agent the composer writes to, and takes its colours.
+    pub fn set_agent(&self, agent: &str, accent: Retained<NSColor>, fill: Retained<NSColor>) {
         self.text
             .setAccessibilityLabel(Some(&ns(&tf("Nachricht an {}", &[agent]))));
+        *self.accent.borrow_mut() = accent;
+        *self.fill.borrow_mut() = fill;
+        if self.send.isEnabled() {
+            self.send_box.setFillColor(&self.fill.borrow());
+        }
     }
 
     pub fn set_placeholder(&self, text: &str) {
@@ -318,10 +335,10 @@ impl Composer {
         self.fit();
     }
 
-    /// The border of the card, in Claude's colour while the composer has the keyboard focus.
+    /// The border of the card, in the agent's colour while the composer has the keyboard focus.
     pub fn show_focus(&self, focused: bool) {
         let color = if focused {
-            style::terracotta()
+            self.accent.borrow().clone()
         } else {
             NSColor::separatorColor()
         };
@@ -340,7 +357,7 @@ impl Composer {
         crate::util::set_label(&self.send, Some(label));
         let active = running || can_send;
         let fill = if active {
-            style::terracotta()
+            self.fill.borrow().clone()
         } else {
             NSColor::quaternaryLabelColor()
         };
@@ -424,7 +441,7 @@ impl Footer {
             mtm,
             &send,
             &NSColor::clearColor(),
-            Some(&style::terracotta()),
+            Some(&style::fill(style::TERRACOTTA)),
             6.0,
             ui::insets(0.0, 0.0, 0.0, 0.0),
         );

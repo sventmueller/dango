@@ -176,7 +176,7 @@ impl PlanDoc {
         text.setSelectable(true);
         text.setTextContainerInset(NSSize::new(28.0, 22.0));
         let rendered = markdown::render(mtm, plan, style::BODY + 1.0, Tone::Primary);
-        let icon = ui::icon(mtm, "list.bullet.clipboard", t("Plan"), 15.0, &style::terracotta());
+        let icon = ui::icon(mtm, "list.bullet.clipboard", t("Plan"), 15.0, &tab.agent.colour());
         let title = ui::label(mtm, t("Plan zur Freigabe"), &style::bold(15.0), &NSColor::labelColor());
         let state = ui::label(mtm, "", &style::small(), &NSColor::secondaryLabelColor());
         let tag = |what: u8| super::entry_tag(entry, what);
@@ -201,7 +201,7 @@ impl PlanDoc {
             tag(PLAN_REVISE),
         );
         let approve = ui::button(mtm, t("Plan annehmen"), target, sel!(ideAgentPlan:), tag(PLAN_APPROVE));
-        approve.setBezelColor(Some(&style::terracotta()));
+        approve.setBezelColor(Some(&tab.agent.fill()));
         let spacer = ui::spacer(mtm);
         let head = ui::row(
             mtm,
@@ -331,7 +331,7 @@ pub fn open(tab: &AgentTab, id: u64) {
     let view: Retained<NSView> = Retained::into_super(doc.root.clone());
     let title = tf("Plan · {}", &[&super::super::format::first_line(&tab.title(), 32)]);
     let tab_id = controller.add_tab(TabKind::Plan, Some(key), &title, view);
-    controller.set_tab_tint(tab_id, &style::terracotta());
+    controller.set_tab_tint(tab_id, &tab.agent.colour());
     focus(&controller, tab.key, id);
 }
 

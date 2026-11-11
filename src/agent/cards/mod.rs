@@ -136,6 +136,16 @@ pub struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
+    /// The colour of the thread's agent, the accent of its cards.
+    pub fn accent(&self) -> Retained<NSColor> {
+        crate::agent::Agent::of_thread(self.thread.agent()).colour()
+    }
+
+    /// The colour of the thread's agent as the fill of a button with white text.
+    pub fn fill(&self) -> Retained<NSColor> {
+        crate::agent::Agent::of_thread(self.thread.agent()).fill()
+    }
+
     pub fn is_open(&self, id: EntryId, part: Part) -> bool {
         self.expanded.contains(&(id.get(), part))
     }
@@ -239,7 +249,7 @@ pub fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Re
 }
 
 /// The colour of the dot of `entry` in the timeline; `None` for entries without one.
-fn dot(entry: &Entry) -> Option<Retained<NSColor>> {
+fn dot(entry: &Entry, accent: &NSColor) -> Option<Retained<NSColor>> {
     Some(match &entry.kind {
         EntryKind::UserMessage(_) => return None,
         EntryKind::AgentMessage(_) => NSColor::labelColor(),
@@ -255,8 +265,8 @@ fn dot(entry: &Entry) -> Option<Retained<NSColor>> {
             RequestState::Decided(Decision::Denied { .. }) => NSColor::systemRedColor(),
             _ => NSColor::tertiaryLabelColor(),
         },
-        EntryKind::Question(q) if q.state == RequestState::Pending => style::terracotta(),
-        EntryKind::PlanApproval(p) if p.state == RequestState::Pending => style::terracotta(),
+        EntryKind::Question(q) if q.state == RequestState::Pending => objc2::Message::retain(accent),
+        EntryKind::PlanApproval(p) if p.state == RequestState::Pending => objc2::Message::retain(accent),
         EntryKind::Question(_) | EntryKind::PlanApproval(_) => NSColor::tertiaryLabelColor(),
         EntryKind::Notice(Notice::Error { .. }) => NSColor::systemRedColor(),
         EntryKind::Notice(Notice::Retrying { .. } | Notice::RateLimit(_)) => NSColor::systemOrangeColor(),
@@ -266,7 +276,7 @@ fn dot(entry: &Entry) -> Option<Retained<NSColor>> {
 
 /// How the row at `index` of `entries` is marked: its dot, and whether the line joins it to its neighbours. A user
 /// message stands apart and breaks the line.
-pub fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
+pub fn mark(entries: &[std::sync::Arc<Entry>], index: usize, accent: &NSColor) -> Mark {
     let is_user = |i: usize| {
         entries
             .get(i)
@@ -279,7 +289,7 @@ pub fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
         return Mark::default();
     }
     Mark {
-        dot: dot(entry),
+        dot: dot(entry, accent),
         line_above: index > 0 && !is_user(index - 1),
         line_below: index + 1 < entries.len() && !is_user(index + 1),
     }

@@ -253,8 +253,13 @@ impl Timeline {
         cards::estimate(entry, width - Self::leading(entry) - TRAILING) + TOP + BOTTOM
     }
 
+    /// The colour of the thread's agent, which marks the entries waiting for an answer.
+    fn accent(&self) -> Retained<objc2_app_kit::NSColor> {
+        crate::agent::Agent::of_thread(self.thread.borrow().agent()).colour()
+    }
+
     pub fn row_view(&self, row: usize) -> Retained<NSTableRowView> {
-        let mark = cards::mark(&self.list.borrow(), row);
+        let mark = cards::mark(&self.list.borrow(), row, &self.accent());
         Retained::into_super(TimelineRow::new(self.mtm, mark))
     }
 
@@ -455,6 +460,7 @@ impl Timeline {
 
     /// Gives the rows in view the marks of their place, which change as rows are added after them.
     fn refresh_marks(&self) {
+        let accent = self.accent();
         let entries = self.list.borrow();
         let range = self.table.rowsInRect(self.table.visibleRect());
         for row in range.location..range.location + range.length {
@@ -465,7 +471,7 @@ impl Timeline {
                 continue;
             };
             if let Ok(view) = view.downcast::<TimelineRow>() {
-                view.set_mark(cards::mark(&entries, row));
+                view.set_mark(cards::mark(&entries, row, &accent));
             }
         }
     }

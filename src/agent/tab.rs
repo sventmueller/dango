@@ -408,7 +408,8 @@ impl AgentTab {
         self.tab_id.set(id);
         controller.set_tab_tint(id, &self.agent.colour());
         self.header.set_agent(self.agent.name(), &self.agent.colour());
-        self.composer.set_agent(self.agent.name());
+        self.composer
+            .set_agent(self.agent.name(), self.agent.colour(), self.agent.fill());
         self.refresh();
     }
 
@@ -864,7 +865,7 @@ impl AgentTab {
         let Some(controller) = self.controller() else { return };
         let state = self.state.borrow();
         let color = match state.status {
-            Status::Running => Some(style::terracotta()),
+            Status::Running => Some(self.agent.colour()),
             Status::RequiresAction => Some(NSColor::systemOrangeColor()),
             Status::Idle if state.unseen => Some(NSColor::controlAccentColor()),
             Status::Idle => None,

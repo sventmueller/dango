@@ -240,7 +240,7 @@ pub fn todos(ctx: &Ctx<'_>, todos: &[Todo]) -> Retained<NSView> {
             ),
             TodoStatus::InProgress => (
                 "circle.lefthalf.filled",
-                style::terracotta(),
+                ctx.accent(),
                 todo.active_form.clone().unwrap_or_else(|| todo.content.clone()),
             ),
             TodoStatus::Pending => ("circle", NSColor::tertiaryLabelColor(), todo.content.clone()),

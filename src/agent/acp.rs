@@ -117,16 +117,27 @@ impl Agent {
         }
     }
 
-    /// Its colour; the system's accent colour for an agent without one.
+    /// Its colour as the chat's accent, with enough contrast in every appearance; the system's accent colour for an
+    /// agent without one.
     pub fn colour(&self) -> Retained<NSColor> {
+        match (self, self.rgb()) {
+            (Agent::Claude, _) => super::style::terracotta(),
+            (_, Some(rgb)) => super::style::accent(rgb),
+            (_, None) => NSColor::controlAccentColor(),
+        }
+    }
+
+    /// Its colour as the fill of a button with white text.
+    pub fn fill(&self) -> Retained<NSColor> {
+        self.rgb().map_or_else(NSColor::controlAccentColor, super::style::fill)
+    }
+
+    /// Its own colour, if it has one.
+    fn rgb(&self) -> Option<splat_markdown::palette::Rgb> {
         match self {
-            Agent::Claude => super::style::terracotta(),
-            Agent::Own => NSColor::controlAccentColor(),
-            Agent::Acp(agent) => agent
-                .colour
-                .as_deref()
-                .and_then(colour_of)
-                .unwrap_or_else(NSColor::controlAccentColor),
+            Agent::Claude => Some(super::style::TERRACOTTA),
+            Agent::Own => None,
+            Agent::Acp(agent) => agent.colour.as_deref().and_then(rgb_of),
         }
     }
 
@@ -144,16 +155,11 @@ pub fn agent_name(agent: &str) -> String {
     Agent::of_thread(agent).name().to_string()
 }
 
-fn colour_of(hex: &str) -> Option<Retained<NSColor>> {
+fn rgb_of(hex: &str) -> Option<splat_markdown::palette::Rgb> {
     let hex = hex.strip_prefix('#')?;
     let value = u32::from_str_radix(hex, 16).ok().filter(|_| hex.len() == 6)?;
-    let part = |shift: u32| f64::from((value >> shift) & 0xff) / 255.0;
-    Some(NSColor::colorWithSRGBRed_green_blue_alpha(
-        part(16),
-        part(8),
-        part(0),
-        1.0,
-    ))
+    let part = |shift: u32| u8::try_from((value >> shift) & 0xff).unwrap_or(0);
+    Some(splat_markdown::palette::Rgb(part(16), part(8), part(0)))
 }
 
 /// The register the self-test uses instead of the one last fetched; process-wide, since lookups run on any thread.
