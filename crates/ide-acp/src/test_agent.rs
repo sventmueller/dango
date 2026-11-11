@@ -2,7 +2,8 @@
 //! checks what the client puts on the wire, and plays a fixed turn with every kind of update the app shows.
 //!
 //! Scenarios: `basic`; `auth`, which wants a sign-in before a session; `v2`, which only speaks protocol version 2.
-//! A prompt containing `slow` streams one chunk and waits to be cancelled.
+//! A prompt containing `slow` streams one chunk and waits to be cancelled. Every prompt comes back as a user message
+//! chunk first, as Antigravity sends it.
 
 use std::collections::VecDeque;
 use std::io::{BufRead, Write};
@@ -217,6 +218,7 @@ impl<W: Write> Agent<W> {
             .filter_map(|b| b["text"].as_str())
             .collect();
         self.prompt = Some(id);
+        self.notify(json!({"sessionUpdate": "user_message_chunk", "content": {"type": "text", "text": text}}));
         if text.contains("slow") {
             self.notify(json!({"sessionUpdate": "agent_message_chunk",
                                "content": {"type": "text", "text": "Working on it"}}));

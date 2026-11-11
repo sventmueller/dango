@@ -35,6 +35,8 @@ pub struct Mapper {
     open: Option<(String, Streaming, Option<String>)>,
     /// A user message the agent replays while loading a session: its key and its text so far.
     user: Option<(String, String)>,
+    /// A prompt the user sent is being answered; the thread shows it already, so the agent's echo of it is left out.
+    prompting: bool,
     next: u64,
     turn: u64,
     /// The tool calls so far by the agent's id: their name, title and input, which a permission request may leave out.
@@ -259,6 +261,7 @@ impl Mapper {
     /// A prompt the user sent, which starts a turn.
     pub(crate) fn begin_turn(&mut self, message: &UserMessage, at: SystemTime) -> Vec<Update> {
         self.turn += 1;
+        self.prompting = true;
         let mut out = self.settle(at);
         let key = self.key("user");
         out.push(put(key, at, EntryKind::UserMessage(message.clone())));
@@ -268,6 +271,7 @@ impl Mapper {
 
     /// The turn ended for `reason`, the agent's stop reason as it named it on the wire.
     pub(crate) fn end_turn(&mut self, reason: &str, at: SystemTime) -> Vec<Update> {
+        self.prompting = false;
         let mut out = self.settle(at);
         out.push(Update::Status(Status::Idle));
         let notice = match reason {
@@ -287,6 +291,7 @@ impl Mapper {
 
     /// A failure to show in the thread, such as a prompt the agent rejected.
     pub(crate) fn error(&mut self, kind: ErrorKind, message: String, at: SystemTime) -> Vec<Update> {
+        self.prompting = false;
         let mut out = self.settle(at);
         let key = self.key("notice");
         out.push(put(key, at, EntryKind::Notice(Notice::Error { kind, message })));
@@ -328,7 +333,7 @@ impl Mapper {
     }
 
     fn replayed_user(&mut self, chunk: &acp::ContentChunk, at: SystemTime) -> Vec<Update> {
-        let Some(text) = block_text(&chunk.content) else {
+        let Some(text) = block_text(&chunk.content).filter(|_| !self.prompting) else {
             return Vec::new();
         };
         let mut out = Vec::new();
