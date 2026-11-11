@@ -10,7 +10,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-base64 = "0.22.1"
+base64 = "0.23.1"
 globset = "0.4.21"
 ide-core = { path = "../ide-core" }
 ide-process = { path = "../ide-process" }
