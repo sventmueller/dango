@@ -6,18 +6,19 @@ use std::cell::{OnceCell, RefCell};
 use ide_ci::{HostRule, Kind};
 use ide_core::settings::Settings;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSBezelStyle, NSButton, NSColor, NSControlTextEditingDelegate,
-    NSFont, NSLayoutAttribute, NSLineBreakMode, NSPopUpButton, NSScrollView, NSStackView, NSTableColumn, NSTableView,
+    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSButton, NSColor, NSControlTextEditingDelegate, NSFont,
+    NSLayoutAttribute, NSLineBreakMode, NSPopUpButton, NSScrollView, NSStackView, NSTableColumn, NSTableView,
     NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
+use super::list_bar;
 use crate::ci_panel::{CI_HOSTS, CI_OAUTH_CLIENTS};
-use crate::util::{guarded, label, ns, set_action, symbol};
+use crate::util::{guarded, label, ns};
 
 const TABLE_WIDTH: f64 = 420.0;
 const TABLE_HEIGHT: f64 = 110.0;
@@ -280,9 +281,9 @@ impl CiSettings {
         let mtm = self.mtm();
         let (hosts, hosts_scroll) = table(mtm, self, [t("Host"), t("Dienst")]);
         let (apps, apps_scroll) = table(mtm, self, [t("Host"), t("App-ID")]);
-        let add_host = list_button(mtm, self, "plus", t("CI-Host hinzufügen"), sel!(ideAddCiHost:));
-        let remove_host = list_button(mtm, self, "minus", t("CI-Host entfernen"), sel!(ideRemoveCiHost:));
-        let remove_app = list_button(mtm, self, "minus", t("OAuth-App entfernen"), sel!(ideRemoveCiApp:));
+        let add_host = list_bar::button(mtm, true, t("CI-Host hinzufügen"), self, sel!(ideAddCiHost:));
+        let remove_host = list_bar::button(mtm, false, t("CI-Host entfernen"), self, sel!(ideRemoveCiHost:));
+        let remove_app = list_bar::button(mtm, false, t("OAuth-App entfernen"), self, sel!(ideRemoveCiApp:));
         let problem = NSTextField::wrappingLabelWithString(&ns(""), mtm);
         problem.setTextColor(Some(&NSColor::systemRedColor()));
         problem.setPreferredMaxLayoutWidth(TABLE_WIDTH);
@@ -300,7 +301,7 @@ impl CiSettings {
                 ),
             ),
             hosts_scroll,
-            button_row(mtm, &[&add_host, &remove_host]),
+            list_bar::bar(mtm, &[&add_host, &remove_host], &[]),
             problem.clone().into_super().into_super(),
             heading(mtm, t("OAuth-Apps für die Browser-Anmeldung")),
             note(
@@ -310,12 +311,13 @@ impl CiSettings {
                 ),
             ),
             apps_scroll,
-            button_row(mtm, &[&remove_app]),
+            list_bar::bar(mtm, &[&remove_app], &[]),
         ];
         for view in &views {
             stack.addArrangedSubview(view);
         }
         stack.setCustomSpacing_afterView(18.0, &views[4]);
+        list_bar::attach(&stack);
         let _ = self.ivars().views.set(Views {
             hosts,
             apps,
@@ -400,34 +402,6 @@ fn table(mtm: MainThreadMarker, owner: &CiSettings, titles: [&str; 2]) -> (Retai
         .constraintEqualToConstant(TABLE_HEIGHT)
         .setActive(true);
     (table, scroll.into_super())
-}
-
-/// A small square button with the symbol `name` under a list.
-fn list_button(
-    mtm: MainThreadMarker,
-    owner: &CiSettings,
-    name: &str,
-    description: &str,
-    action: Sel,
-) -> Retained<NSButton> {
-    let image = symbol(name, description).unwrap_or_default();
-    // SAFETY: A nil target sends nothing until `set_action` gives the button its target and action.
-    let button = unsafe { NSButton::buttonWithImage_target_action(&image, None, None, mtm) };
-    set_action(&button, owner, action);
-    button.setBezelStyle(NSBezelStyle::SmallSquare);
-    button.setToolTip(Some(&ns(description)));
-    button.widthAnchor().constraintEqualToConstant(24.0).setActive(true);
-    button
-}
-
-fn button_row(mtm: MainThreadMarker, buttons: &[&NSButton]) -> Retained<NSView> {
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(0.0);
-    for button in buttons {
-        row.addArrangedSubview(button);
-    }
-    row.into_super()
 }
 
 /// What the self-test reads from and does with the CI tab, through the code its controls run.

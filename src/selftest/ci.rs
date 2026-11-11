@@ -6,6 +6,7 @@
 //! `ci-live` reads, and never changes, the runs of the owner's real repository when `gh` or `glab` are logged in.
 
 mod hosts;
+pub(super) use hosts::native_bar;
 mod login;
 pub(super) mod stub;
 

@@ -196,6 +196,12 @@ fn settings(root: PathBuf, url: String) {
                 if let Some(tab) = crate::settings::agent_tab() {
                     crate::settings::agent_selftest::reveal_folders(&tab);
                 }
+                let bars = super::helpers::list_bars(&window);
+                check(
+                    "each list of the agent settings has its + and − right under it with macOS's own pictures",
+                    bars.len() == 4 && bars.iter().all(|(gap, names)| super::ci::native_bar(*gap, names)),
+                    format!("{bars:?}"),
+                );
                 super::snapshot(&window, "own-agent-settings-folders");
                 window.orderOut(None);
             }

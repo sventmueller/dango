@@ -20,8 +20,9 @@ use objc2_app_kit::{
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
+use super::list_bar;
 use crate::own_agent::{self, ModelChoice};
-use crate::util::{guarded, label, ns, set_action, symbol};
+use crate::util::{guarded, label, ns, set_action};
 
 const TABLE_WIDTH: f64 = 480.0;
 /// The height of the endpoints' table, which lists the services and the user's endpoints.
@@ -699,16 +700,16 @@ impl AgentSettings {
         );
         let (rules, rules_scroll) = table(mtm, self, &[(t("Projekt"), 280.0), (t("Regel"), 180.0)], SHORT_TABLE);
         let (folders, folders_scroll) = table(mtm, self, &[(t("Ordner"), 460.0)], SHORT_TABLE);
-        let button = |symbol: &str, title: &str, action: Sel| list_button(mtm, self, symbol, title, action);
-        let add_endpoint = button("plus", t("Endpunkt hinzufügen"), sel!(ideAddAgentEndpoint:));
-        let remove_endpoint = button("minus", t("Endpunkt entfernen"), sel!(ideRemoveAgentEndpoint:));
+        let button = |add: bool, title: &str, action: Sel| list_bar::button(mtm, add, title, self, action);
+        let add_endpoint = button(true, t("Endpunkt hinzufügen"), sel!(ideAddAgentEndpoint:));
+        let remove_endpoint = button(false, t("Endpunkt entfernen"), sel!(ideRemoveAgentEndpoint:));
         let key = text_button(mtm, self, t("Schlüssel …"), sel!(ideAgentKey:));
         let address = text_button(mtm, self, t("Adresse …"), sel!(ideAgentAddress:));
-        let add_price = button("plus", t("Preis eintragen"), sel!(ideAddAgentPrice:));
-        let remove_price = button("minus", t("Preis entfernen"), sel!(ideRemoveAgentPrice:));
-        let remove_rule = button("minus", t("Regel entfernen"), sel!(ideRemoveAgentRule:));
-        let add_folder = button("plus", t("Ordner erlauben …"), sel!(ideAddAgentFolder:));
-        let remove_folder = button("minus", t("Ordner entfernen"), sel!(ideRemoveAgentFolder:));
+        let add_price = button(true, t("Preis eintragen"), sel!(ideAddAgentPrice:));
+        let remove_price = button(false, t("Preis entfernen"), sel!(ideRemoveAgentPrice:));
+        let remove_rule = button(false, t("Regel entfernen"), sel!(ideRemoveAgentRule:));
+        let add_folder = button(true, t("Ordner erlauben …"), sel!(ideAddAgentFolder:));
+        let remove_folder = button(false, t("Ordner entfernen"), sel!(ideRemoveAgentFolder:));
         let (endpoint, model, effort) = self.default_controls();
         let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
         status.setPreferredMaxLayoutWidth(TABLE_WIDTH);
@@ -722,7 +723,7 @@ impl AgentSettings {
         );
         views.extend([
             endpoints_scroll,
-            row(mtm, &[&add_endpoint, &remove_endpoint, &key, &address]),
+            list_bar::bar(mtm, &[&add_endpoint, &remove_endpoint], &[&key, &address]),
             status.clone().into_super().into_super(),
             heading(mtm, t("Neue Threads")),
             row(mtm, &[&endpoint, &model]),
@@ -733,19 +734,19 @@ impl AgentSettings {
             t("Eigene Preise (US-$ je Million Tokens)"),
             t("Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier."),
         ));
-        views.extend([prices_scroll, row(mtm, &[&add_price, &remove_price])]);
+        views.extend([prices_scroll, list_bar::bar(mtm, &[&add_price, &remove_price], &[])]);
         views.extend(section(
             mtm,
             t("Gespeicherte Regeln"),
             t("Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal."),
         ));
-        views.extend([rules_scroll, row(mtm, &[&remove_rule])]);
+        views.extend([rules_scroll, list_bar::bar(mtm, &[&remove_rule], &[])]);
         views.extend(section(
             mtm,
             t("Ordner für die Sandbox"),
             t("Mit eingeschalteter Sandbox erreichen die Datei- und Webwerkzeuge des eigenen Agenten nur das Projekt, den temporären Ordner und diese Ordner; Befehle schreiben nirgends sonst hin, und es gibt kein Netzwerk. Gilt für Threads, die danach starten."),
         ));
-        views.extend([folders_scroll, row(mtm, &[&add_folder, &remove_folder])]);
+        views.extend([folders_scroll, list_bar::bar(mtm, &[&add_folder, &remove_folder], &[])]);
         let _ = self.ivars().views.set(Views {
             endpoints,
             prices,
@@ -799,6 +800,7 @@ fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView
     for view in views {
         stack.addArrangedSubview(view);
     }
+    list_bar::attach(&stack);
     let document = crate::agent_panel::flipped(mtm);
     document.addSubview(&stack);
     stack.setTranslatesAutoresizingMaskIntoConstraints(false);
@@ -892,23 +894,6 @@ fn table(
         .setActive(true);
     scroll.heightAnchor().constraintEqualToConstant(height).setActive(true);
     (table, scroll.into_super())
-}
-
-fn list_button(
-    mtm: MainThreadMarker,
-    owner: &AgentSettings,
-    name: &str,
-    description: &str,
-    action: Sel,
-) -> Retained<NSButton> {
-    let image = symbol(name, description).unwrap_or_default();
-    // SAFETY: A nil target sends nothing until `set_action` gives the button its target and action.
-    let button = unsafe { NSButton::buttonWithImage_target_action(&image, None, None, mtm) };
-    set_action(&button, owner, action);
-    button.setBezelStyle(NSBezelStyle::SmallSquare);
-    button.setToolTip(Some(&ns(description)));
-    button.widthAnchor().constraintEqualToConstant(24.0).setActive(true);
-    button
 }
 
 fn text_button(mtm: MainThreadMarker, owner: &AgentSettings, title: &str, action: Sel) -> Retained<NSButton> {

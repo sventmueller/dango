@@ -53,6 +53,14 @@ fn listed(root: PathBuf) {
             && apps[0][1] == "selftest-app",
         format!("{hosts:?} {apps:?}"),
     );
+    let bars = crate::settings::window()
+        .map(|w| super::super::helpers::list_bars(&w))
+        .unwrap_or_default();
+    check(
+        "each list's + and − sit right under it with macOS's own pictures",
+        bars.len() == 2 && bars.iter().all(|(gap, names)| native_bar(*gap, names)),
+        format!("{bars:?}"),
+    );
     settings_pictures("settings-ci", move || {
         if let Some(owner) = crate::settings::ci_tab() {
             let (hosts, _) = tab::rows(&owner, CiList::Hosts);
@@ -148,6 +156,17 @@ fn remove_app() {
         format!("{kept:?}"),
     );
     finish(SCENARIO);
+}
+
+/// Whether a list's buttons touch its border or overlap it, and the first ones show AppKit's add and remove pictures.
+pub(crate) fn native_bar(gap: f64, names: &[String]) -> bool {
+    (-2.5..=0.5).contains(&gap)
+        && !names.is_empty()
+        && names
+            .iter()
+            .take_while(|name| name.ends_with("Template"))
+            .all(|name| name == "NSAddTemplate" || name == "NSRemoveTemplate")
+        && names.first().is_some_and(|name| name.ends_with("Template"))
 }
 
 /// Pictures of the settings window in light and dark appearance, then `then`.

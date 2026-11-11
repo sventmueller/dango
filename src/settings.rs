@@ -5,6 +5,7 @@ mod agents;
 mod ci;
 #[cfg(feature = "dictation")]
 mod dictation;
+mod list_bar;
 
 use std::cell::RefCell;
 

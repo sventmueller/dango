@@ -186,3 +186,65 @@ fn post_event() {
         NSApplication::sharedApplication(mtm).postEvent_atStart(&event, true);
     }
 }
+
+/// For every table in `window`, how far the buttons below it stand from it and the names of their pictures, left to
+/// right; tables without buttons below are left out.
+pub fn list_bars(window: &objc2_app_kit::NSWindow) -> Vec<(f64, Vec<String>)> {
+    fn collect(
+        view: &NSView,
+        tables: &mut Vec<Retained<NSView>>,
+        buttons: &mut Vec<Retained<objc2_app_kit::NSButton>>,
+    ) {
+        if view.isHidden() {
+            return;
+        }
+        if let Some(scroll) = view.downcast_ref::<objc2_app_kit::NSScrollView>()
+            && scroll
+                .documentView()
+                .is_some_and(|document| document.downcast_ref::<objc2_app_kit::NSTableView>().is_some())
+        {
+            tables.push(objc2::Message::retain(view));
+            return;
+        }
+        if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+            buttons.push(objc2::Message::retain(button));
+            return;
+        }
+        for child in view.subviews().iter() {
+            collect(&child, tables, buttons);
+        }
+    }
+    let Some(content) = window.contentView() else {
+        return Vec::new();
+    };
+    content.layoutSubtreeIfNeeded();
+    let (mut tables, mut buttons) = (Vec::new(), Vec::new());
+    collect(&content, &mut tables, &mut buttons);
+    let frame = |view: &NSView| view.convertRect_toView(view.bounds(), None);
+    tables
+        .iter()
+        .filter_map(|table| {
+            let table = frame(table);
+            let mut below: Vec<(objc2_foundation::NSRect, String)> = buttons
+                .iter()
+                .map(|button| {
+                    let name = button
+                        .image()
+                        .and_then(|image| image.name())
+                        .map_or_else(|| button.title().to_string(), |name| name.to_string());
+                    (frame(button), name)
+                })
+                .filter(|(rect, _)| {
+                    let gap = table.origin.y - (rect.origin.y + rect.size.height);
+                    (-2.0..12.0).contains(&gap)
+                        && rect.origin.x >= table.origin.x - 1.0
+                        && rect.origin.x < table.origin.x + table.size.width
+                })
+                .collect();
+            below.sort_by(|a, b| a.0.origin.x.total_cmp(&b.0.origin.x));
+            let first = below.first()?.0;
+            let gap = table.origin.y - (first.origin.y + first.size.height);
+            Some((gap, below.into_iter().map(|(_, name)| name).collect()))
+        })
+        .collect()
+}
