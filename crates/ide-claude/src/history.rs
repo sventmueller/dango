@@ -11,7 +11,7 @@ use serde_json::Value;
 use ide_thread::Thread;
 
 use crate::mapping::Mapper;
-use crate::protocol::Message;
+use crate::protocol::{Message, System};
 
 /// How many lines from the start of a transcript are searched for the first prompt.
 const HEAD_LINES: usize = 400;
@@ -159,13 +159,51 @@ pub fn load(path: &Path) -> std::io::Result<Vec<Message>> {
         .map_while(Result::ok)
         .filter_map(|line| serde_json::from_str::<Value>(&line).ok())
         .filter(|record| {
-            matches!(record.get("type").and_then(Value::as_str), Some("user" | "assistant"))
-                && record.get("isSidechain").and_then(Value::as_bool) != Some(true)
+            record.get("isSidechain").and_then(Value::as_bool) != Some(true)
                 && record.get("isMeta").and_then(Value::as_bool) != Some(true)
         })
-        .map(Message::from_value)
+        .filter_map(frame)
         .filter(|message| !matches!(message, Message::Unknown(_)))
         .collect())
+}
+
+/// The frame a transcript record stands for: a slash command as the user typed it, and its output as the CLI sent
+/// it while the session ran.
+fn frame(mut record: Value) -> Option<Message> {
+    match record.get("type").and_then(Value::as_str)? {
+        "user" => {
+            let typed = record
+                .pointer("/message/content")
+                .and_then(Value::as_str)
+                .and_then(command);
+            if let (Some(typed), Some(message)) = (typed, record.get_mut("message")) {
+                message["content"] = Value::String(typed);
+            }
+            Some(Message::from_value(record))
+        }
+        "assistant" => Some(Message::from_value(record)),
+        "system" if record.get("subtype").and_then(Value::as_str) == Some("local_command") => {
+            let content = record.get("content").and_then(Value::as_str)?;
+            let output = between(content, "<local-command-stdout>", "</local-command-stdout>")
+                .or_else(|| between(content, "<local-command-stderr>", "</local-command-stderr>"))?
+                .trim();
+            (!output.is_empty()).then(|| Message::System(System::LocalCommandOutput(output.to_string())))
+        }
+        _ => None,
+    }
+}
+
+/// `/name args` of a slash command, which the transcript keeps as `<command-name>` and `<command-args>` tags.
+fn command(content: &str) -> Option<String> {
+    let name = between(content, "<command-name>", "</command-name>")?;
+    let args = between(content, "<command-args>", "</command-args>").unwrap_or_default();
+    Some(format!("{name} {args}").trim().to_string())
+}
+
+fn between<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> {
+    let start = text.find(open)? + open.len();
+    let end = start + text[start..].find(close)?;
+    Some(&text[start..end])
 }
 
 /// `thread` with the main conversation of the transcript at `path`, to show before resuming the session.
@@ -242,6 +280,40 @@ mod tests {
             .map(|e| (e.uuid.as_deref(), e.follows.as_deref()))
             .collect();
         assert_eq!(frames, [(Some("u1"), None), (Some("a1"), Some("u1"))]);
+    }
+
+    #[test]
+    fn a_slash_command_comes_back_as_typed_with_its_output() {
+        let folder = scratch("command");
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("s2.jsonl");
+        let transcript = [
+            r#"{"type":"user","isMeta":true,"uuid":"c0","message":{"role":"user","content":"<local-command-caveat>The command below was run directly.</local-command-caveat>"}}"#,
+            r#"{"type":"user","uuid":"c1","message":{"role":"user","content":"<command-name>/mcp</command-name>\n            <command-message>mcp</command-message>\n            <command-args></command-args>"}}"#,
+            r#"{"type":"system","subtype":"local_command","isMeta":false,"level":"info","uuid":"c2","content":"<local-command-stdout>8 MCP server(s): 5 connected.</local-command-stdout>"}"#,
+            r#"{"type":"user","uuid":"c3","message":{"role":"user","content":"<command-name>/model</command-name>\n<command-message>model</command-message>\n<command-args>opus</command-args>"}}"#,
+            r#"{"type":"system","subtype":"local_command","uuid":"c4","content":"<local-command-stdout></local-command-stdout>"}"#,
+        ];
+        std::fs::write(&path, transcript.join("\n")).unwrap();
+        let thread = rebuild(Thread::new(ide_thread::ThreadId::from("t"), "claude", &folder), &path).unwrap();
+        let texts: Vec<String> = thread
+            .entries(&ide_thread::Lane::Main)
+            .iter()
+            .map(|e| match &e.kind {
+                ide_thread::EntryKind::UserMessage(m) => format!("user: {}", m.text),
+                ide_thread::EntryKind::AgentMessage(m) => format!("output: {}", m.markdown),
+                other => format!("{other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            texts,
+            [
+                "user: /mcp",
+                "output: 8 MCP server(s): 5 connected.",
+                "user: /model opus"
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&folder);
     }
 
     #[test]
