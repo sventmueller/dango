@@ -1216,6 +1216,28 @@ impl AgentTab {
             .collect()
     }
 
+    /// The size of each picture tile above the composer's text, with the width of the picture it shows.
+    #[cfg(feature = "selftest")]
+    pub fn thumbnails(&self) -> Vec<(objc2_foundation::NSSize, f64)> {
+        fn picture(view: &objc2_app_kit::NSView) -> Option<f64> {
+            if let Some(image) = view
+                .downcast_ref::<objc2_app_kit::NSImageView>()
+                .and_then(|v| v.image())
+                .filter(|image| !image.isTemplate())
+            {
+                return Some(image.size().width);
+            }
+            view.subviews().iter().find_map(|child| picture(&child))
+        }
+        let chips = &self.composer.chips;
+        chips.layoutSubtreeIfNeeded();
+        chips
+            .arrangedSubviews()
+            .iter()
+            .filter_map(|chip| picture(&chip).map(|width| (chip.frame().size, width)))
+            .collect()
+    }
+
     /// Whether a rewind waits for the agent to accept it.
     pub fn rewind_pending(&self) -> bool {
         self.state.borrow().fork.is_some()

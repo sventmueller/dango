@@ -194,7 +194,7 @@ vibeedit/
 ## Oberfläche
 - **Fenster:** `NSSplitViewController` mit Sidebar-Item (Symbolspalte + Panel) und Inhalts-Item (Tableiste + Tab);
   seit E60 je Tab ein `NSWindow` in der Tabgruppe des Ordners.
-  Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler), Neues Terminal, Neuer AI-Thread.
+  Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler im Tooltip), Neues Terminal, Neuer AI-Thread.
 - **Symbolspalte:** Dateien, AI, Git (Badge), CI (Badge-Farbe), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
   klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55; das Einklappen per Klick entfällt, siehe E61.)*
 - **Dateien:** `NSOutlineView` Source-List, Git-Farben, Kontextmenü (Neu, Umbenennen, In Papierkorb, Im Finder zeigen,
@@ -202,7 +202,7 @@ vibeedit/
 - **AI-Panel** *(E68 ersetzt die Gliederung nach Screenshot 2)*: Titel „Agenten“ mit „+ Neue Sitzung“ (Agentwahl),
   darunter eine Liste aller Sitzungen des Ordners, AI und CLI gleich, mit Kreis (grün gefüllt, wenn offen), Titel und
   Alter; Kontextmenü mit Umbenennen, Lesezeichen, Archiv.
-- **Aktivität** *(gewünscht)*: Toolbar-Symbol mit Zähler, Übersicht über alles, was läuft — aus dem Supervisor (E23)
+- **Aktivität** *(gewünscht)*: Toolbar-Symbol ohne Badge, Zähler im Tooltip, Übersicht über alles, was läuft — aus dem Supervisor (E23)
   und den Agenten-Meldungen: Sitzungen mit Status, Subagenten (Laufzeit, Tokens, letzte Aktion), Hintergrund-Shells
   und Monitore (letzte Ausgabe, ganze Ausgabe im Tab), Terminal-Vordergrundprozesse, Dev-Server, Language Server.
   Jeder Eintrag mit Stopp, „Zeigen“, Laufzeit, Herkunft. Claude vollständig; ACP-Agenten so weit, wie sie melden.

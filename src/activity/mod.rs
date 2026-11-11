@@ -12,8 +12,8 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSItemBadge, NSLayoutAttribute, NSPopover, NSPopoverBehavior, NSScrollView,
-    NSStackView, NSToolbarItem, NSView, NSViewController,
+    NSAccessibility, NSButton, NSColor, NSLayoutAttribute, NSPopover, NSPopoverBehavior, NSScrollView, NSStackView,
+    NSToolbarItem, NSView, NSViewController,
 };
 use objc2_foundation::{NSObjectProtocol, NSSize};
 use splat_i18n::{t, tf};
@@ -131,7 +131,7 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
         item.setAction(Some(sel!(ideShowActivity:)));
     }
     activity.ivars().items.borrow_mut().push(Weak::from(&*item));
-    activity.update_badge();
+    activity.update_count();
     item
 }
 
@@ -293,7 +293,7 @@ fn same_or_next<T: PartialEq>(old: &[T], row: usize, new: &[T]) -> Option<usize>
         .or_else(|| old.get(..row).into_iter().flatten().rev().find_map(place))
 }
 
-/// How many things run, for the badge: busy sessions, running subagents and background work, and processes.
+/// How many things run, for the tooltip: busy sessions, running subagents and background work, and processes.
 fn count(tabs: &[std::rc::Rc<AgentTab>], processes: &[ide_process::ProcessInfo]) -> usize {
     let agents: usize = tabs
         .iter()
@@ -489,9 +489,9 @@ impl Activity {
         self.ivars().controller.load()
     }
 
-    /// Updates the badge now and the popover soon, if it shows.
+    /// Updates the count in the tooltip now and the popover soon, if it shows.
     fn changed(&self) {
-        self.update_badge();
+        self.update_count();
         let shown = self.ivars().popover.borrow().as_ref().is_some_and(|p| p.isShown());
         if shown && !self.ivars().scheduled.replace(true) {
             let address = self as *const Activity as usize;
@@ -512,7 +512,7 @@ impl Activity {
         items.iter().filter_map(Weak::load).collect()
     }
 
-    fn update_badge(&self) {
+    fn update_count(&self) {
         let Some(controller) = self.controller() else { return };
         let tabs = crate::agent::of_window(&controller);
         let clis = crate::terminal::cli_threads(&controller)
@@ -521,8 +521,6 @@ impl Activity {
             .count();
         let count = count(&tabs, &processes()) + clis;
         for item in self.items() {
-            let badge = (count > 0).then(|| NSItemBadge::badgeWithCount(isize::try_from(count).unwrap_or(0)));
-            item.setBadge(badge.as_deref());
             item.setToolTip(Some(&ns(&tf("Was gerade läuft: {}", &[&count.to_string()]))));
         }
     }
@@ -861,7 +859,7 @@ pub fn show_tab(controller: &WindowController, key: u64, anchor: &NSView) {
     }
 }
 
-/// What the self-test reads from the popover: its lines.
+/// What the self-test reads from the popover and the toolbar item: the popover's lines and the item's tooltip.
 #[cfg(feature = "selftest")]
 pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
     let Some(activity) = of(controller) else {
@@ -878,13 +876,13 @@ pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
             format!("{} — {} [{}]", l.title, l.detail, buttons.join(", "))
         })
         .collect();
-    let badge = activity
+    let tooltip = activity
         .items()
         .first()
-        .and_then(|i| i.badge())
-        .map(|b| b.text().to_string())
+        .and_then(|i| i.toolTip())
+        .map(|t| t.to_string())
         .unwrap_or_default();
-    (lines, badge)
+    (lines, tooltip)
 }
 
 /// Closes the popover, for the self-test's later pictures.

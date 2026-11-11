@@ -463,16 +463,19 @@ fn activity(root: PathBuf, key: u64) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
-    let (lines, badge) = crate::activity::inspect(&controller);
+    let (lines, tooltip) = crate::activity::inspect(&controller);
     check(
         "the activity popover lists the background shell",
         lines.iter().any(|l| l.contains("30-tick")),
         lines.join(" | "),
     );
     check(
-        "the activity item counts what runs",
-        !badge.is_empty() && badge != "0",
-        badge,
+        "the activity item counts what runs in its tooltip",
+        tooltip
+            .rsplit(' ')
+            .next()
+            .is_some_and(|n| n.parse::<usize>().is_ok_and(|n| n > 0)),
+        tooltip,
     );
     let key = tab.key;
     main_after(Duration::from_millis(500), move || {

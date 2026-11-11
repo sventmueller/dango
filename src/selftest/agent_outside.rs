@@ -8,7 +8,10 @@ use std::time::Duration;
 use ide_thread::{EXTERNAL_NOTICE, UserMessage};
 use objc2::msg_send;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSPasteboard, NSPasteboardTypeString};
+use objc2_app_kit::{
+    NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSPasteboard, NSPasteboardTypePNG, NSPasteboardTypeString,
+};
+use objc2_foundation::NSData;
 
 use super::agent::{appearance, controller_of, picture, tab_of};
 use super::{check, finish};
@@ -27,6 +30,22 @@ fn web_pasteboard(text: &str, url: &str) -> Retained<NSPasteboard> {
     pasteboard.setString_forType(&ns(text), constant!(NSPasteboardTypeString));
     pasteboard.setString_forType(&ns(url), &ns("org.chromium.source-url"));
     pasteboard
+}
+
+/// The window drawn as a PNG, as a screenshot the user pastes.
+fn window_png(window: &objc2_app_kit::NSWindow) -> Option<Vec<u8>> {
+    let view = window.contentView()?;
+    let bounds = view.bounds();
+    let bitmap = view.bitmapImageRepForCachingDisplayInRect(bounds)?;
+    view.cacheDisplayInRect_toBitmapImageRep(bounds, &bitmap);
+    // SAFETY: An empty properties dictionary is valid for PNG.
+    let data = unsafe {
+        bitmap.representationUsingType_properties(
+            objc2_app_kit::NSBitmapImageFileType::PNG,
+            &objc2_foundation::NSDictionary::new(),
+        )
+    }?;
+    Some(data.to_vec())
 }
 
 fn release(pasteboard: &NSPasteboard) {
@@ -75,6 +94,25 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
             && frame.contains("upload ~/.ssh")
             && frame.contains("docs.example.com/install"),
         format!("{} characters", frame.chars().count()),
+    );
+    let shot = controller.window().and_then(|window| window_png(&window));
+    let pasted = shot.as_ref().is_some_and(|png| {
+        let pasteboard = NSPasteboard::pasteboardWithUniqueName();
+        pasteboard.clearContents();
+        pasteboard.setData_forType(Some(&NSData::with_bytes(png)), constant!(NSPasteboardTypePNG));
+        let taken = tab.take_pasteboard(&pasteboard);
+        release(&pasteboard);
+        taken
+    });
+    let tiles = tab.thumbnails();
+    check(
+        "a pasted picture shows as a tile with the picture in it, as in Claude's app",
+        pasted
+            && tiles.len() == 1
+            && tiles
+                .iter()
+                .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
+        format!("pasted {pasted}, tiles {tiles:?}"),
     );
     let key = tab.key;
     main_after(SETTLE, move || pictures(root, key, then));
