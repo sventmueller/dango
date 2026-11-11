@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Alles op voorgrond";
 "Alles auswählen" = "Selecteer alles";
 "Alles erlauben" = "Sta alles toe";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Alles toestaan zonder sandbox: de ingebouwde agent wijzigt bestanden en voert commando's uit zonder te vragen; alleen destructieve Git-commando's vragen nog.";
 "Allgemein" = "Algemeen";
 "Anbieter" = "Aanbieder";
 "Anbieter und Endpunkte" = "Aanbieders en endpoints";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "To-do's: {} van {} gedaan";
 "Trotzdem überschreiben" = "Overschrijf toch";
 "Umgehen" = "Omzeil";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Omzeilen zonder sandbox: Claude voert elk commando uit zonder te vragen en zonder bescherming.";
 "Unterbrochen" = "Onderbroken";
 "Unterhaltung bis hierher zurückspulen" = "Spoel gesprek terug tot hier";
 "Verdichte …" = "Compacteren…";

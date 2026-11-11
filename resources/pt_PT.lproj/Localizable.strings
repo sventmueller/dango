@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Passar tudo para a frente";
 "Alles auswählen" = "Selecionar tudo";
 "Alles erlauben" = "Permitir tudo";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Permitir tudo sem sandbox: o agente integrado altera ficheiros e executa comandos sem perguntar; só os comandos destrutivos do Git ainda perguntam.";
 "Allgemein" = "Geral";
 "Anbieter" = "Fornecedor";
 "Anbieter und Endpunkte" = "Fornecedores e endpoints";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Tarefas pendentes: {} de {} concluídas";
 "Trotzdem überschreiben" = "Substituir na mesma";
 "Umgehen" = "Ignorar";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Ignorar sem sandbox: o Claude executa todos os comandos sem perguntar e sem proteção.";
 "Unterbrochen" = "Interrompido";
 "Unterhaltung bis hierher zurückspulen" = "Retroceder a conversa até aqui";
 "Verdichte …" = "A compactar…";

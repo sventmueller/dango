@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "นำทั้งหมดมาด้านหน้า";
 "Alles auswählen" = "เลือกทั้งหมด";
 "Alles erlauben" = "อนุญาตทั้งหมด";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "อนุญาตทั้งหมดโดยไม่มีแซนด์บ็อกซ์: เอเจนต์ในตัวจะเปลี่ยนแปลงไฟล์และเรียกใช้คำสั่งโดยไม่ถามก่อน มีเพียงคำสั่ง Git ที่ทำลายข้อมูลเท่านั้นที่ยังถาม";
 "Allgemein" = "ทั่วไป";
 "Anbieter" = "ผู้ให้บริการ";
 "Anbieter und Endpunkte" = "ผู้ให้บริการและเอนด์พอยต์";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "สิ่งที่ต้องทำ: เสร็จแล้ว {} จาก {}";
 "Trotzdem überschreiben" = "เขียนทับอยู่ดี";
 "Umgehen" = "ข้ามสิทธิ์";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "ข้ามสิทธิ์โดยไม่มีแซนด์บ็อกซ์: Claude จะเรียกใช้ทุกคำสั่งโดยไม่ถามก่อนและไม่มีการป้องกัน";
 "Unterbrochen" = "ถูกขัดจังหวะ";
 "Unterhaltung bis hierher zurückspulen" = "กรอกบทสนทนากลับมาถึงตรงนี้";
 "Verdichte …" = "กำลังบีบอัด…";

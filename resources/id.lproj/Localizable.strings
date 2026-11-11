@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Pindahkan Semua ke Depan";
 "Alles auswählen" = "Pilih Semua";
 "Alles erlauben" = "Izinkan Semua";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Izinkan semua tanpa sandbox: agen bawaan mengubah file dan menjalankan perintah tanpa bertanya; hanya perintah Git yang merusak yang masih meminta izin.";
 "Allgemein" = "Umum";
 "Anbieter" = "Penyedia";
 "Anbieter und Endpunkte" = "Penyedia dan Endpoint";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Daftar tugas: {} dari {} selesai";
 "Trotzdem überschreiben" = "Tetap Timpa";
 "Umgehen" = "Lewati";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Lewati tanpa sandbox: Claude menjalankan setiap perintah tanpa bertanya dan tanpa perlindungan.";
 "Unterbrochen" = "Terputus";
 "Unterhaltung bis hierher zurückspulen" = "Putar Balik Percakapan sampai Sini";
 "Verdichte …" = "Memadatkan…";

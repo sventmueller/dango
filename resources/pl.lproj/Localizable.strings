@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Umieść wszystko na wierzchu";
 "Alles auswählen" = "Zaznacz wszystko";
 "Alles erlauben" = "Pozwól na wszystko";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Pozwól na wszystko bez piaskownicy: wbudowany agent zmienia pliki i wykonuje polecenia bez pytania; pytają jeszcze tylko niszczące polecenia Git.";
 "Allgemein" = "Ogólne";
 "Anbieter" = "Dostawca";
 "Anbieter und Endpunkte" = "Dostawcy i punkty końcowe";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Do zrobienia: {} z {} gotowe";
 "Trotzdem überschreiben" = "Nadpisz mimo to";
 "Umgehen" = "Pomiń";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Pomiń bez piaskownicy: Claude wykonuje każde polecenie bez pytania i bez ochrony.";
 "Unterbrochen" = "Przerwano";
 "Unterhaltung bis hierher zurückspulen" = "Przewiń rozmowę do tego miejsca";
 "Verdichte …" = "Kompaktowanie…";

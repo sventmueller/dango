@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Đưa tất cả lên Phía trước";
 "Alles auswählen" = "Chọn Tất cả";
 "Alles erlauben" = "Cho phép mọi thứ";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Cho phép mọi thứ, không có sandbox: tác nhân tích hợp thay đổi tệp và chạy lệnh mà không hỏi; chỉ các lệnh git mang tính phá hủy vẫn hỏi.";
 "Allgemein" = "Cài đặt chung";
 "Anbieter" = "Nhà cung cấp";
 "Anbieter und Endpunkte" = "Nhà cung cấp và điểm cuối";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Việc cần làm: đã xong {} trong số {}";
 "Trotzdem überschreiben" = "Vẫn ghi đè";
 "Umgehen" = "Bỏ qua quyền";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Bỏ qua quyền, không có sandbox: Claude chạy mọi lệnh mà không hỏi và không có bảo vệ.";
 "Unterbrochen" = "Đã bị gián đoạn";
 "Unterhaltung bis hierher zurückspulen" = "Tua lại cuộc hội thoại đến đây";
 "Verdichte …" = "Đang thu gọn…";

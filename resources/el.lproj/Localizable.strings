@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Μεταφορά όλων σε πρώτο πλάνο";
 "Alles auswählen" = "Επιλογή όλων";
 "Alles erlauben" = "Επιτρέπονται όλα";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Επιτρέπονται όλα χωρίς sandbox: ο ενσωματωμένος πράκτορας αλλάζει αρχεία και εκτελεί εντολές χωρίς να ρωτά. Μόνο οι καταστροφικές εντολές Git ρωτούν ακόμη.";
 "Allgemein" = "Γενικά";
 "Anbieter" = "Πάροχος";
 "Anbieter und Endpunkte" = "Πάροχοι και τελικά σημεία";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Εκκρεμότητες: {} από {} ολοκληρώθηκαν";
 "Trotzdem überschreiben" = "Αντικατάσταση παρ’ όλα αυτά";
 "Umgehen" = "Παράκαμψη";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Παράκαμψη χωρίς sandbox: το Claude εκτελεί κάθε εντολή χωρίς να ρωτά και χωρίς προστασία.";
 "Unterbrochen" = "Διακόπηκε";
 "Unterhaltung bis hierher zurückspulen" = "Επιστροφή της συνομιλίας ως εδώ";
 "Verdichte …" = "Συμπύκνωση…";

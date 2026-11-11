@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Aduceți tot în față";
 "Alles auswählen" = "Selectați tot";
 "Alles erlauben" = "Permiteți tot";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Permiteți tot fără sandbox: agentul propriu modifică fișiere și execută comenzi fără să întrebe; doar comenzile Git distructive mai cer permisiunea.";
 "Allgemein" = "General";
 "Anbieter" = "Furnizor";
 "Anbieter und Endpunkte" = "Furnizori și endpointuri";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "De făcut: {} din {} finalizate";
 "Trotzdem überschreiben" = "Suprascrieți oricum";
 "Umgehen" = "Ocolire";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Ocolire fără sandbox: Claude execută orice comandă fără să întrebe și fără protecție.";
 "Unterbrochen" = "Întrerupt";
 "Unterhaltung bis hierher zurückspulen" = "Derulați discuția înapoi până aici";
 "Verdichte …" = "Se compactează…";

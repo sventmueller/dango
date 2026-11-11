@@ -14,7 +14,7 @@ use ide_process::Supervisor;
 use ide_thread::{Attachment, Change, Status, Thread, ThreadId, ThreadIndex, UserMessage};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSBox, NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
+use objc2_app_kit::{NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
 use objc2_foundation::{NSObjectProtocol, NSRect};
 use splat_i18n::{t, tf};
 
@@ -28,7 +28,7 @@ use super::status::StatusLine;
 use super::suggest::Suggestions;
 use super::target::AgentTarget;
 use super::timeline::Timeline;
-use super::{notify, overlay, style, ui};
+use super::{notify, overlay, ui};
 use crate::util::{guarded, main_after, main_soon};
 use crate::window::{TabKind, WindowController};
 
@@ -41,8 +41,6 @@ pub(crate) const INPUT_INSET: f64 = 14.0;
 /// How strongly the composer fills the conversation's width up to `INPUT_WIDTH`: above the content's hugging and the
 /// holding priority of the window's content, below the sidebar's, so a wide window neither narrows nor moves it.
 const FILL_PRIORITY: f32 = 255.0;
-/// The width the sandbox warning wraps at.
-const WARNING_WIDTH: f64 = 800.0;
 
 static NEXT_KEY: AtomicU64 = AtomicU64::new(1);
 
@@ -189,8 +187,6 @@ pub struct AgentTab {
     problem_holder: Retained<NSView>,
     pub(super) queue_view: Retained<NSStackView>,
     pub(super) suggestions: Suggestions,
-    warning: Retained<NSBox>,
-    warning_text: Retained<objc2_app_kit::NSTextField>,
     pub(super) state: RefCell<State>,
     inbox: RefCell<Arc<Inbox>>,
     pub(super) store: Store,
@@ -253,30 +249,6 @@ impl AgentTab {
         let problem_holder = NSView::new(mtm);
         let queue_view = ui::column(mtm, 4.0, &[]);
         let suggestions = Suggestions::new(mtm, &target);
-        let warning_text = ui::wrapping(
-            mtm,
-            t("Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus."),
-            &style::small(),
-            &NSColor::labelColor(),
-            WARNING_WIDTH,
-        );
-        let warning_icon = ui::icon(
-            mtm,
-            "exclamationmark.triangle.fill",
-            "",
-            12.0,
-            &NSColor::systemOrangeColor(),
-        );
-        let warning_row = ui::row(mtm, 6.0, &[&warning_icon, &warning_text]);
-        let warning = ui::framed(
-            mtm,
-            &warning_row,
-            &NSColor::systemOrangeColor(),
-            Some(&NSColor::systemOrangeColor().colorWithAlphaComponent(0.1)),
-            8.0,
-            ui::insets(6.0, 10.0, 6.0, 10.0),
-        );
-        warning.setHidden(true);
         let tab = AgentTab {
             key,
             mtm,
@@ -295,8 +267,6 @@ impl AgentTab {
             problem_holder,
             queue_view,
             suggestions,
-            warning,
-            warning_text,
             agent,
             state: RefCell::new(State {
                 source,
@@ -344,7 +314,6 @@ impl AgentTab {
             &[
                 &self.queue_view,
                 &self.suggestions.view,
-                &self.warning,
                 &self.composer.card,
                 &self.status.view,
             ],
@@ -858,17 +827,6 @@ impl AgentTab {
         tick(self.key);
     }
 
-    /// Shows the warning that tools run unasked and unshielded (E27).
-    pub(super) fn set_warning(&self, visible: bool) {
-        self.warning.setHidden(!visible);
-    }
-
-    /// Replaces the warning's text, which speaks of Claude unless the agent says otherwise.
-    pub(super) fn set_warning_text(&self, text: &str) {
-        self.warning_text
-            .setStringValue(&objc2_foundation::NSString::from_str(text));
-    }
-
     pub fn set_problem(&self, problem: Option<Problem>) {
         self.state.borrow_mut().problem = problem;
         self.refresh();
@@ -1102,6 +1060,35 @@ impl AgentTab {
     /// Picks the model for the next start.
     pub fn use_model(&self, model: &str) {
         self.state.borrow_mut().model = Some(model.to_string());
+    }
+
+    /// Switches to the permission mode `mode`, as the mode pill's menu does.
+    #[cfg(feature = "selftest")]
+    pub fn use_mode(&self, mode: &str) {
+        self.state.borrow().source.set_mode(mode);
+        self.state.borrow_mut().mode = mode.to_string();
+        self.refresh_composer();
+    }
+
+    /// The views that show at the foot of the tab besides the composer and its status line, with their heights.
+    #[cfg(feature = "selftest")]
+    pub fn foot_extras(&self) -> Option<Vec<(String, f64)>> {
+        // SAFETY: Asking for the superview only reads; the foot holds the composer while the tab lives.
+        let foot = unsafe { self.composer.card.superview() }.and_then(|v| v.downcast::<NSStackView>().ok())?;
+        foot.layoutSubtreeIfNeeded();
+        let own: [&NSView; 2] = [&self.composer.card, &self.status.view];
+        Some(
+            foot.arrangedSubviews()
+                .iter()
+                .filter(|view| !view.isHidden() && !own.iter().any(|o| std::ptr::eq(*o, &**view)))
+                .map(|view| {
+                    (
+                        view.class().name().to_string_lossy().into_owned(),
+                        view.frame().size.height,
+                    )
+                })
+                .collect(),
+        )
     }
 
     /// Types `text` into the composer and sends it, as Return would.

@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Převést vše do popředí";
 "Alles auswählen" = "Vybrat vše";
 "Alles erlauben" = "Povolit vše";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Povolit vše bez sandboxu: vlastní agent mění soubory a spouští příkazy bez dotazu; jen destruktivní příkazy Gitu se stále ptají.";
 "Allgemein" = "Obecné";
 "Anbieter" = "Poskytovatel";
 "Anbieter und Endpunkte" = "Poskytovatelé a koncové body";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Úkoly: hotovo {} z {}";
 "Trotzdem überschreiben" = "Přesto přepsat";
 "Umgehen" = "Obejít";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Obejít bez sandboxu: Claude spustí každý příkaz bez dotazu a bez ochrany.";
 "Unterbrochen" = "Přerušeno";
 "Unterhaltung bis hierher zurückspulen" = "Přetočit konverzaci zpět sem";
 "Verdichte …" = "Zestručňování…";

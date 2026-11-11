@@ -225,6 +225,16 @@ pub fn run() {
         seen.rows == 0 && seen.composer,
         format!("{} rows", seen.rows),
     );
+    tab.use_mode("bypassPermissions");
+    let extras = tab.foot_extras();
+    tab.use_mode("default");
+    check(
+        "Umgehen shows no warning box at the composer",
+        extras
+            .as_ref()
+            .is_some_and(|views| views.iter().all(|(_, height)| *height < 1.0)),
+        format!("{extras:?}"),
+    );
     let hits = tab.composer_clicks();
     check(
         "a click on the empty composer, its placeholder or its margin puts the keyboard focus into its text",

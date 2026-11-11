@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Tout ramener au premier plan";
 "Alles auswählen" = "Tout sélectionner";
 "Alles erlauben" = "Tout autoriser";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Tout autoriser sans sandbox : l’agent intégré modifie les fichiers et exécute les commandes sans demander ; seules les commandes Git destructives demandent encore confirmation.";
 "Allgemein" = "Général";
 "Anbieter" = "Fournisseur";
 "Anbieter und Endpunkte" = "Fournisseurs et points de terminaison";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "À faire : {} sur {} terminés";
 "Trotzdem überschreiben" = "Écraser quand même";
 "Umgehen" = "Contourner";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Contournement sans sandbox : Claude exécute chaque commande sans demander et sans protection.";
 "Unterbrochen" = "Interrompu";
 "Unterhaltung bis hierher zurückspulen" = "Ramener la conversation à ce point";
 "Verdichte …" = "Compactage…";

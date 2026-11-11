@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "إحضار الكل إلى الأمام";
 "Alles auswählen" = "تحديد الكل";
 "Alles erlauben" = "السماح بكل شيء";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "السماح بكل شيء بدون بيئة معزولة: يعدّل الوكيل المدمج الملفات وينفّذ الأوامر دون أن يسأل، ولا تطلب الإذن إلا أوامر Git المدمِّرة.";
 "Allgemein" = "عام";
 "Anbieter" = "المزوّد";
 "Anbieter und Endpunkte" = "المزوّدون ونقاط النهاية";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "قائمة المهام: تم إنجاز {} من {}";
 "Trotzdem überschreiben" = "استبدال على أي حال";
 "Umgehen" = "تجاوز";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "تجاوز بدون بيئة معزولة: ينفّذ Claude كل أمر دون أن يسأل ودون حماية.";
 "Unterbrochen" = "تمت المقاطعة";
 "Unterhaltung bis hierher zurückspulen" = "إرجاع المحادثة إلى هذه النقطة";
 "Verdichte …" = "جارٍ الضغط…";

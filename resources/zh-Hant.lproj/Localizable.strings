@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "將此程式所有視窗移至最前";
 "Alles auswählen" = "全選";
 "Alles erlauben" = "全部允許";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "全部允許且不使用沙盒：內建代理程式會修改檔案並執行指令，不會先詢問；只有具破壞性的 Git 指令仍會詢問。";
 "Allgemein" = "一般";
 "Anbieter" = "供應商";
 "Anbieter und Endpunkte" = "供應商與端點";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "待辦事項：已完成 {}/{}";
 "Trotzdem überschreiben" = "仍要覆寫";
 "Umgehen" = "略過權限";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "略過權限且不使用沙盒：Claude 會執行每個指令，既不先詢問，也沒有任何保護。";
 "Unterbrochen" = "已中斷";
 "Unterhaltung bis hierher zurückspulen" = "將對話內容回溯到此處";
 "Verdichte …" = "正在壓縮⋯";

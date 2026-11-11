@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "すべてを手前に移動";
 "Alles auswählen" = "すべてを選択";
 "Alles erlauben" = "すべてを許可";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "サンドボックスなしですべてを許可: 内蔵エージェントは確認なしでファイルを変更し、コマンドを実行します。確認するのは破壊的なGitコマンドだけです。";
 "Allgemein" = "一般";
 "Anbieter" = "プロバイダ";
 "Anbieter und Endpunkte" = "プロバイダとエンドポイント";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "To-do: {}/{}件完了";
 "Trotzdem überschreiben" = "このまま上書き";
 "Umgehen" = "バイパス";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "サンドボックスなしでバイパス: Claudeは確認も保護もなしにすべてのコマンドを実行します。";
 "Unterbrochen" = "中断";
 "Unterhaltung bis hierher zurückspulen" = "ここまで会話を巻き戻す";
 "Verdichte …" = "圧縮中…";

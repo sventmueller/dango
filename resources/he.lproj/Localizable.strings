@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "הבאת כל החלונות קדימה";
 "Alles auswählen" = "בחירת הכול";
 "Alles erlauben" = "הכול מותר";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "הכול מותר ללא ארגז חול: הסוכן המובנה משנה קבצים ומריץ פקודות בלי לשאול; רק פקודות Git הרסניות עדיין מחייבות אישור.";
 "Allgemein" = "כללי";
 "Anbieter" = "ספק";
 "Anbieter und Endpunkte" = "ספקים ונקודות קצה";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "משימות לביצוע: {} מתוך {} הושלמו";
 "Trotzdem überschreiben" = "דריסה בכל זאת";
 "Umgehen" = "עקיפה";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "עקיפה ללא ארגז חול: Claude מריץ כל פקודה בלי לשאול ובלי הגנה.";
 "Unterbrochen" = "הופסק";
 "Unterhaltung bis hierher zurückspulen" = "החזרת השיחה לאחור עד לכאן";
 "Verdichte …" = "דוחס…";

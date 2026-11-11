@@ -245,12 +245,6 @@ impl AgentTab {
             .setImage(crate::util::symbol(symbol, &tip).as_deref());
         self.composer.sandbox.setContentTintColor(Some(&tint));
         self.composer.sandbox.setToolTip(Some(&ns(&tip)));
-        let unguarded = approval == Approval::All && profile == Profile::Write && !state.sandbox;
-        drop(state);
-        self.set_warning_text(t(
-            "Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch.",
-        ));
-        self.set_warning(unguarded);
     }
 
     /// The model pill's menu: the endpoint's models as last loaded, then the effort levels.

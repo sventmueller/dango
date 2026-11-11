@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Összes előtérbe hozása";
 "Alles auswählen" = "Összes kijelölése";
 "Alles erlauben" = "Minden engedélyezése";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Minden engedélyezése homokozó nélkül: a beépített ügynök kérdés nélkül módosítja a fájlokat és futtat parancsokat; csak a romboló Git-parancsoknál kérdez még.";
 "Allgemein" = "Általános";
 "Anbieter" = "Szolgáltató";
 "Anbieter und Endpunkte" = "Szolgáltatók és végpontok";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Teendők: {} / {} kész";
 "Trotzdem überschreiben" = "Felülírás mégis";
 "Umgehen" = "Megkerülés";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Megkerülés homokozó nélkül: a Claude kérdés és védelem nélkül futtat minden parancsot.";
 "Unterbrochen" = "Megszakítva";
 "Unterhaltung bis hierher zurückspulen" = "Beszélgetés visszatekerése eddig";
 "Verdichte …" = "Tömörítés…";

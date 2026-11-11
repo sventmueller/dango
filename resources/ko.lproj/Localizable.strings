@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "모두 앞으로 가져오기";
 "Alles auswählen" = "전체 선택";
 "Alles erlauben" = "모두 허용";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "샌드박스 없이 모두 허용: 내장 에이전트가 묻지 않고 파일을 변경하고 명령을 실행합니다. 파괴적인 Git 명령만 계속 묻습니다.";
 "Allgemein" = "일반";
 "Anbieter" = "제공자";
 "Anbieter und Endpunkte" = "제공자 및 엔드포인트";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "할 일: {}/{}개 완료";
 "Trotzdem überschreiben" = "그래도 덮어쓰기";
 "Umgehen" = "우회";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "샌드박스 없이 우회: Claude가 묻지 않고 보호 없이 모든 명령을 실행합니다.";
 "Unterbrochen" = "중단됨";
 "Unterhaltung bis hierher zurückspulen" = "여기까지 대화 되감기";
 "Verdichte …" = "압축 중…";

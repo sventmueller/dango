@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Усі наперед";
 "Alles auswählen" = "Вибрати всі";
 "Alles erlauben" = "Дозволити все";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Дозволити все без пісочниці: власний агент змінює файли й виконує команди без запитань; дозволу питають лише руйнівні команди Git.";
 "Allgemein" = "Загальні";
 "Anbieter" = "Провайдер";
 "Anbieter und Endpunkte" = "Провайдери й кінцеві точки";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Список справ: виконано {} з {}";
 "Trotzdem überschreiben" = "Усе одно перезаписати";
 "Umgehen" = "Обхід";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Обхід без пісочниці: Claude виконує будь-яку команду без запитань і без захисту.";
 "Unterbrochen" = "Перервано";
 "Unterhaltung bis hierher zurückspulen" = "Відкотити діалог до цього місця";
 "Verdichte …" = "Стиснення…";

@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Anbring alle forrest";
 "Alles auswählen" = "Vælg alt";
 "Alles erlauben" = "Tillad alt";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Tillad alt uden sandbox: appens egen agent ændrer arkiver og kører kommandoer uden at spørge; kun destruktive Git-kommandoer spørger stadig.";
 "Allgemein" = "Generelt";
 "Anbieter" = "Udbyder";
 "Anbieter und Endpunkte" = "Udbydere og slutpunkter";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Gøremål: {} af {} udført";
 "Trotzdem überschreiben" = "Overskriv alligevel";
 "Umgehen" = "Omgå";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Omgå uden sandbox: Claude kører alle kommandoer uden at spørge og uden beskyttelse.";
 "Unterbrochen" = "Afbrudt";
 "Unterhaltung bis hierher zurückspulen" = "Spol samtalen tilbage hertil";
 "Verdichte …" = "Komprimerer…";

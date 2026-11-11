@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Tümünü Öne Getir";
 "Alles auswählen" = "Tümünü Seç";
 "Alles erlauben" = "Her Şeye İzin Ver";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Korumalı alan olmadan her şeye izin ver: Yerleşik ajan dosyaları değiştirir ve komutları sormadan çalıştırır; yalnızca yıkıcı Git komutları hâlâ sorar.";
 "Allgemein" = "Genel";
 "Anbieter" = "Sağlayıcı";
 "Anbieter und Endpunkte" = "Sağlayıcılar ve Uç Noktalar";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "Yapılacaklar: {} / {} tamamlandı";
 "Trotzdem überschreiben" = "Yine de Üzerine Yaz";
 "Umgehen" = "Atla";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Korumalı alan olmadan atla: Claude her komutu sormadan ve korumasız çalıştırır.";
 "Unterbrochen" = "Kesildi";
 "Unterhaltung bis hierher zurückspulen" = "Konuşmayı Buraya Kadar Geri Sar";
 "Verdichte …" = "Sıkıştırılıyor…";

@@ -206,8 +206,6 @@ impl AgentTab {
             let running = state.status != Status::Idle || state.sending;
             let can_send = !self.composer.text().trim().is_empty() || !state.attachments.is_empty();
             self.composer.show_running(running, can_send);
-            drop(state);
-            self.set_warning(false);
             return;
         }
         let state = self.state.borrow();
@@ -282,9 +280,6 @@ impl AgentTab {
         let running = state.status != Status::Idle || state.sending;
         let can_send = !self.composer.text().trim().is_empty() || !state.attachments.is_empty();
         self.composer.show_running(running, can_send);
-        let bypass = mode_id == "bypassPermissions" && !state.sandbox;
-        drop(state);
-        self.set_warning(bypass);
     }
 
     /// The queued messages above the composer, each with a button that drops it.

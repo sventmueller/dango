@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "Bring All to Front";
 "Alles auswählen" = "Select All";
 "Alles erlauben" = "Allow Everything";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "Allow everything without a sandbox: the own agent changes files and runs commands without asking; only destructive git commands still ask.";
 "Allgemein" = "General";
 "Anbieter" = "Provider";
 "Anbieter und Endpunkte" = "Providers and Endpoints";
@@ -737,7 +736,6 @@
 "To-dos: {} von {} erledigt" = "To-dos: {} of {} done";
 "Trotzdem überschreiben" = "Overwrite Anyway";
 "Umgehen" = "Bypass";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "Bypass without sandbox: Claude runs every command without asking and without protection.";
 "Unterbrochen" = "Interrupted";
 "Unterhaltung bis hierher zurückspulen" = "Rewind Conversation to Here";
 "Verdichte …" = "Compacting…";

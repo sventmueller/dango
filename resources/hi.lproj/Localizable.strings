@@ -20,7 +20,6 @@
 "Alle nach vorne bringen" = "सभी आगे लाएँ";
 "Alles auswählen" = "सभी चुनें";
 "Alles erlauben" = "सभी की अनुमति दें";
-"Alles erlauben ohne Sandbox: Der eigene Agent ändert Dateien und führt Befehle ohne Rückfrage aus; nur zerstörerische Git-Befehle fragen noch." = "सैंडबॉक्स के बिना सभी की अनुमति : बिल्ट-इन एजेंट बिना पूछे फ़ाइलें बदलता है और कमांड चलाता है; केवल विनाशकारी Git कमांड अब भी पूछती हैं।";
 "Allgemein" = "सामान्य";
 "Anbieter" = "प्रदाता";
 "Anbieter und Endpunkte" = "प्रदाता और एंडपॉइंट";
@@ -723,7 +722,6 @@
 "To-dos: {} von {} erledigt" = "टू-डू : {} / {} पूरे";
 "Trotzdem überschreiben" = "फिर भी ओवरराइट करें";
 "Umgehen" = "बायपास";
-"Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus." = "सैंडबॉक्स के बिना बायपास : Claude हर कमांड बिना पूछे और बिना सुरक्षा के चलाता है।";
 "Unterbrochen" = "बाधित";
 "Unterhaltung bis hierher zurückspulen" = "बातचीत को यहाँ तक रिवाइंड करें";
 "Verdichte …" = "कॉम्पैक्ट हो रहा है…";
