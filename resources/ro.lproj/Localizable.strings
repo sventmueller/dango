@@ -2,6 +2,7 @@
 "1 Fehler" = "1 eroare";
 "1 Verwendung" = "1 utilizare";
 "1 Warnung" = "1 avertisment";
+"5-Stundenlimit" = "Limită de 5 ore";
 "Abo" = "Abonament";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Abonament: utilizarea se socotește în limitele planului, nu pe tokenuri.";
 "ACP-Register" = "Registru ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Acces complet";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ce ați permis cu „Permiteți întotdeauna”, pentru fiecare proiect. Comenzile Git distructive cer totuși permisiunea de fiecare dată.";
 "Wie der Anbieter" = "Ca la furnizor";
+"Wochenlimit" = "Limită săptămânală";
 "im Schlüsselbund" = "în portchei";
 "nicht nötig" = "nu este necesară";
 "npm-Paket" = "Pachet npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · resetare la {}";
 "(keine Ausgabe)" = "(fără ieșire)";
 "+ Neue Sitzung" = "+ Sesiune nouă";
-"5 Stunden" = "5 ore";
-"7 Tage" = "7 zile";
 "7 Tage Opus" = "7 zile Opus";
 "7 Tage Sonnet" = "7 zile Sonnet";
 "< 1 s" = "< 1 s";

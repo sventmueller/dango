@@ -2,6 +2,7 @@
 "1 Fehler" = "1 hata";
 "1 Verwendung" = "1 kullanım";
 "1 Warnung" = "1 uyarı";
+"5-Stundenlimit" = "5 saatlik sınır";
 "Abo" = "Abonelik";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Abonelik: Kullanım token başına değil, planın sınırlarına göre sayılır.";
 "ACP-Register" = "ACP Kayıt Defteri";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Tam Erişim";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“Her Zaman İzin Ver” ile izin verdikleriniz, proje başına. Yıkıcı Git komutları yine de her seferinde sorar.";
 "Wie der Anbieter" = "Sağlayıcıya Göre";
+"Wochenlimit" = "Haftalık sınır";
 "im Schlüsselbund" = "Anahtar Zinciri’nde";
 "nicht nötig" = "gerekmiyor";
 "npm-Paket" = "npm paketi";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · sıfırlanma: {}";
 "(keine Ausgabe)" = "(çıktı yok)";
 "+ Neue Sitzung" = "+ Yeni Oturum";
-"5 Stunden" = "5 saat";
-"7 Tage" = "7 gün";
 "7 Tage Opus" = "7 gün Opus";
 "7 Tage Sonnet" = "7 gün Sonnet";
 "< 1 s" = "< 1 sn";

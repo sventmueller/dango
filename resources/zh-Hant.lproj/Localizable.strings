@@ -2,6 +2,7 @@
 "1 Fehler" = "1 個錯誤";
 "1 Verwendung" = "1 處使用";
 "1 Warnung" = "1 個警告";
+"5-Stundenlimit" = "5 小時限額";
 "Abo" = "訂閱";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "訂閱：用量計入方案限制，而不是按 Token 計算。";
 "ACP-Register" = "ACP 登錄庫";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "完整存取";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "你以「永遠允許」允許的項目，依專案列出。具破壞性的 Git 指令仍會每次詢問。";
 "Wie der Anbieter" = "供應商預設值";
+"Wochenlimit" = "每週限額";
 "im Schlüsselbund" = "在鑰匙圈中";
 "nicht nötig" = "不需要";
 "npm-Paket" = "npm 套件";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · {} 重設";
 "(keine Ausgabe)" = "（沒有輸出）";
 "+ Neue Sitzung" = "+ 新增工作階段";
-"5 Stunden" = "5 小時";
-"7 Tage" = "7 天";
 "7 Tage Opus" = "7 天 Opus";
 "7 Tage Sonnet" = "7 天 Sonnet";
 "< 1 s" = "< 1 秒";

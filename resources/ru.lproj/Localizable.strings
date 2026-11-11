@@ -2,6 +2,7 @@
 "1 Fehler" = "1 ошибка";
 "1 Verwendung" = "1 использование";
 "1 Warnung" = "1 предупреждение";
+"5-Stundenlimit" = "5-часовой лимит";
 "Abo" = "Подписка";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Подписка: использование учитывается в лимитах тарифа, а не по токенам.";
 "ACP-Register" = "Реестр ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Полный доступ";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "То, что Вы разрешили с помощью «Разрешать всегда», по проектам. Для разрушительных команд Git подтверждение все равно запрашивается каждый раз.";
 "Wie der Anbieter" = "Как у провайдера";
+"Wochenlimit" = "Недельный лимит";
 "im Schlüsselbund" = "в связке ключей";
 "nicht nötig" = "не требуется";
 "npm-Paket" = "Пакет npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · сброс в {}";
 "(keine Ausgabe)" = "(нет вывода)";
 "+ Neue Sitzung" = "+ Новый сеанс";
-"5 Stunden" = "5 часов";
-"7 Tage" = "7 дней";
 "7 Tage Opus" = "7 дней Opus";
 "7 Tage Sonnet" = "7 дней Sonnet";
 "< 1 s" = "< 1 с";

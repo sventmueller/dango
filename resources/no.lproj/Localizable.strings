@@ -2,6 +2,7 @@
 "1 Fehler" = "1 feil";
 "1 Verwendung" = "1 bruk";
 "1 Warnung" = "1 advarsel";
+"5-Stundenlimit" = "5-timersgrense";
 "Abo" = "Abonnement";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Abonnement: Bruken telles mot grensene i abonnementet, ikke per token.";
 "ACP-Register" = "ACP-register";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Full tilgang";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Det du har tillatt med «Tillat alltid», per prosjekt. Destruktive Git-kommandoer spør likevel hver gang.";
 "Wie der Anbieter" = "Leverandørens standard";
+"Wochenlimit" = "Ukesgrense";
 "im Schlüsselbund" = "i nøkkelringen";
 "nicht nötig" = "ikke nødvendig";
 "npm-Paket" = "npm-pakke";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · nullstilles {}";
 "(keine Ausgabe)" = "(ingen utdata)";
 "+ Neue Sitzung" = "+ Ny økt";
-"5 Stunden" = "5 timer";
-"7 Tage" = "7 dager";
 "7 Tage Opus" = "7 dager Opus";
 "7 Tage Sonnet" = "7 dager Sonnet";
 "< 1 s" = "< 1 s";

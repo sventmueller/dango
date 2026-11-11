@@ -2,6 +2,7 @@
 "1 Fehler" = "1件のエラー";
 "1 Verwendung" = "1件の使用箇所";
 "1 Warnung" = "1件の警告";
+"5-Stundenlimit" = "5時間上限";
 "Abo" = "サブスクリプション";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "サブスクリプション: 使用量はトークン単位ではなく、プランの上限に対して計上されます。";
 "ACP-Register" = "ACPレジストリ";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "フルアクセス";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“常に許可”で許可したもの（プロジェクトごと）。破壊的なGitコマンドはそれでも毎回確認します。";
 "Wie der Anbieter" = "プロバイダのデフォルト";
+"Wochenlimit" = "週間上限";
 "im Schlüsselbund" = "キーチェーン内";
 "nicht nötig" = "不要";
 "npm-Paket" = "npmパッケージ";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · {}にリセット";
 "(keine Ausgabe)" = "（出力なし）";
 "+ Neue Sitzung" = "+ 新規セッション";
-"5 Stunden" = "5時間";
-"7 Tage" = "7日間";
 "7 Tage Opus" = "7日間 Opus";
 "7 Tage Sonnet" = "7日間 Sonnet";
 "< 1 s" = "< 1秒";

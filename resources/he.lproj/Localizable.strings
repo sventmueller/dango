@@ -2,6 +2,7 @@
 "1 Fehler" = "שגיאה אחת";
 "1 Verwendung" = "שימוש אחד";
 "1 Warnung" = "אזהרה אחת";
+"5-Stundenlimit" = "מגבלת 5 שעות";
 "Abo" = "מינוי";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "מינוי: השימוש נספר במסגרת המגבלות של התוכנית, לא לפי טוקנים.";
 "ACP-Register" = "מרשם ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "גישה מלאה";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "מה שאישרת באמצעות ״הרשאה קבועה״, לפי פרויקט. פקודות Git הרסניות מחייבות אישור בכל פעם בכל זאת.";
 "Wie der Anbieter" = "ברירת המחדל של הספק";
+"Wochenlimit" = "מגבלה שבועית";
 "im Schlüsselbund" = "בצרור המפתחות";
 "nicht nötig" = "לא נדרש";
 "npm-Paket" = "חבילת npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · איפוס ב-{}";
 "(keine Ausgabe)" = "(אין פלט)";
 "+ Neue Sitzung" = "+ סשן חדש";
-"5 Stunden" = "5 שעות";
-"7 Tage" = "7 ימים";
 "7 Tage Opus" = "7 ימים (Opus)";
 "7 Tage Sonnet" = "7 ימים (Sonnet)";
 "< 1 s" = "פחות משנייה";

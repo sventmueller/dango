@@ -2,6 +2,7 @@
 "1 Fehler" = "1 ralat";
 "1 Verwendung" = "1 penggunaan";
 "1 Warnung" = "1 amaran";
+"5-Stundenlimit" = "Had 5 jam";
 "Abo" = "Langganan";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Langganan: penggunaan dikira berdasarkan had pelan, bukan mengikut token.";
 "ACP-Register" = "Registry ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Akses Penuh";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Perkara yang anda benarkan dengan “Sentiasa Benarkan”, mengikut projek. Perintah Git yang memusnahkan tetap bertanya setiap kali.";
 "Wie der Anbieter" = "Lalai Penyedia";
+"Wochenlimit" = "Had mingguan";
 "im Schlüsselbund" = "dalam Rantai Kunci";
 "nicht nötig" = "tidak diperlukan";
 "npm-Paket" = "Pakej npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · ditetapkan semula {}";
 "(keine Ausgabe)" = "(tiada output)";
 "+ Neue Sitzung" = "+ Sesi Baharu";
-"5 Stunden" = "5 jam";
-"7 Tage" = "7 hari";
 "7 Tage Opus" = "7 hari Opus";
 "7 Tage Sonnet" = "7 hari Sonnet";
 "< 1 s" = "< 1 saat";

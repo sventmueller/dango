@@ -2,6 +2,7 @@
 "1 Fehler" = "1 chyba";
 "1 Verwendung" = "1 použitie";
 "1 Warnung" = "1 upozornenie";
+"5-Stundenlimit" = "Päťhodinový limit";
 "Abo" = "Predplatné";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Predplatné: využitie sa započítava do limitov plánu, nie podľa tokenov.";
 "ACP-Register" = "Register ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Plný prístup";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Čo ste povolili pomocou „Vždy povoliť“, pre každý projekt zvlášť. Deštruktívne príkazy Gitu sa aj tak pýtajú zakaždým.";
 "Wie der Anbieter" = "Podľa poskytovateľa";
+"Wochenlimit" = "Týždenný limit";
 "im Schlüsselbund" = "v kľúčenke";
 "nicht nötig" = "nie je potrebný";
 "npm-Paket" = "Balík npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · obnoví sa o {}";
 "(keine Ausgabe)" = "(žiadny výstup)";
 "+ Neue Sitzung" = "+ Nová relácia";
-"5 Stunden" = "5 hodín";
-"7 Tage" = "7 dní";
 "7 Tage Opus" = "7 dní Opus";
 "7 Tage Sonnet" = "7 dní Sonnet";
 "< 1 s" = "< 1 s";

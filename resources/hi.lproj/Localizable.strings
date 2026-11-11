@@ -2,6 +2,7 @@
 "1 Fehler" = "1 त्रुटि";
 "1 Verwendung" = "1 उपयोग";
 "1 Warnung" = "1 चेतावनी";
+"5-Stundenlimit" = "5 घंटे की सीमा";
 "Abo" = "सब्सक्रिप्शन";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "सब्सक्रिप्शन : उपयोग प्लान की सीमाओं में गिना जाता है, टोकन के हिसाब से नहीं।";
 "ACP-Register" = "ACP रजिस्ट्री";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "पूर्ण एक्सेस";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“हमेशा अनुमति दें” से दी गई अनुमतियाँ, हर प्रोजेक्ट के लिए अलग। विनाशकारी Git कमांड फिर भी हर बार पूछती हैं।";
 "Wie der Anbieter" = "प्रदाता का डिफ़ॉल्ट";
+"Wochenlimit" = "साप्ताहिक सीमा";
 "im Schlüsselbund" = "कीचेन में";
 "nicht nötig" = "ज़रूरी नहीं";
 "npm-Paket" = "npm पैकेज";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · रीसेट : {}";
 "(keine Ausgabe)" = "(कोई आउटपुट नहीं)";
 "+ Neue Sitzung" = "+ नया सेशन";
-"5 Stunden" = "5 घंटे";
-"7 Tage" = "7 दिन";
 "7 Tage Opus" = "7 दिन Opus";
 "7 Tage Sonnet" = "7 दिन Sonnet";
 "< 1 s" = "< 1 से॰";

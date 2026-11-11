@@ -2,6 +2,7 @@
 "1 Fehler" = "1 hiba";
 "1 Verwendung" = "1 használat";
 "1 Warnung" = "1 figyelmeztetés";
+"5-Stundenlimit" = "5 órás korlát";
 "Abo" = "Előfizetés";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Előfizetés: a használat a csomag korlátaiba számít bele, nem tokenenként.";
 "ACP-Register" = "ACP-jegyzék";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Teljes hozzáférés";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Amit az „Engedélyezés mindig” gombbal engedélyezett, projektenként. A romboló Git-parancsok ennek ellenére minden alkalommal kérdeznek.";
 "Wie der Anbieter" = "A szolgáltató alapértéke";
+"Wochenlimit" = "Heti korlát";
 "im Schlüsselbund" = "a kulcskarikában";
 "nicht nötig" = "nem szükséges";
 "npm-Paket" = "npm-csomag";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · visszaállítás: {}";
 "(keine Ausgabe)" = "(nincs kimenet)";
 "+ Neue Sitzung" = "+ Új munkamenet";
-"5 Stunden" = "5 óra";
-"7 Tage" = "7 nap";
 "7 Tage Opus" = "7 nap Opus";
 "7 Tage Sonnet" = "7 nap Sonnet";
 "< 1 s" = "< 1 mp";

@@ -2,6 +2,7 @@
 "1 Fehler" = "1 σφάλμα";
 "1 Verwendung" = "1 χρήση";
 "1 Warnung" = "1 προειδοποίηση";
+"5-Stundenlimit" = "Όριο 5 ωρών";
 "Abo" = "Συνδρομή";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Συνδρομή: η χρήση μετράει στα όρια του προγράμματος, όχι ανά token.";
 "ACP-Register" = "Μητρώο ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Πλήρης πρόσβαση";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ό,τι επιτρέψατε με το «Να επιτρέπεται πάντα», ανά έργο. Οι καταστροφικές εντολές Git ρωτούν παρ’ όλα αυτά κάθε φορά.";
 "Wie der Anbieter" = "Προεπιλογή παρόχου";
+"Wochenlimit" = "Εβδομαδιαίο όριο";
 "im Schlüsselbund" = "στην κλειδοθήκη";
 "nicht nötig" = "δεν χρειάζεται";
 "npm-Paket" = "Πακέτο npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · επαναφορά {}";
 "(keine Ausgabe)" = "(καμία έξοδος)";
 "+ Neue Sitzung" = "+ Νέα συνεδρία";
-"5 Stunden" = "5 ώρες";
-"7 Tage" = "7 ημέρες";
 "7 Tage Opus" = "7 ημέρες Opus";
 "7 Tage Sonnet" = "7 ημέρες Sonnet";
 "< 1 s" = "< 1 δευτ.";

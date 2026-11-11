@@ -2,6 +2,7 @@
 "1 Fehler" = "1 erro";
 "1 Verwendung" = "1 uso";
 "1 Warnung" = "1 aviso";
+"5-Stundenlimit" = "Limite de 5 horas";
 "Abo" = "Assinatura";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Assinatura: o uso conta para os limites do plano, não por token.";
 "ACP-Register" = "Registro ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Acesso Total";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "O que você permitiu com “Permitir Sempre”, por projeto. Comandos destrutivos do Git ainda perguntam toda vez.";
 "Wie der Anbieter" = "Padrão do Provedor";
+"Wochenlimit" = "Limite semanal";
 "im Schlüsselbund" = "nas Chaves";
 "nicht nötig" = "não é necessária";
 "npm-Paket" = "Pacote npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · redefine {}";
 "(keine Ausgabe)" = "(sem saída)";
 "+ Neue Sitzung" = "+ Nova Sessão";
-"5 Stunden" = "5 horas";
-"7 Tage" = "7 dias";
 "7 Tage Opus" = "7 dias Opus";
 "7 Tage Sonnet" = "7 dias Sonnet";
 "< 1 s" = "< 1 s";

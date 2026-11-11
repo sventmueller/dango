@@ -2,6 +2,7 @@
 "1 Fehler" = "1 virhe";
 "1 Verwendung" = "1 käyttökohta";
 "1 Warnung" = "1 varoitus";
+"5-Stundenlimit" = "5 tunnin raja";
 "Abo" = "Tilaus";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Tilaus: käyttö lasketaan tilauksen rajoihin, ei tokenien mukaan.";
 "ACP-Register" = "ACP-rekisteri";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Täysi pääsy";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Mitä olet sallinut valinnalla ”Salli aina”, projekteittain. Tuhoavat Git-komennot kysyvät silti joka kerta.";
 "Wie der Anbieter" = "Palveluntarjoajan oletus";
+"Wochenlimit" = "Viikkoraja";
 "im Schlüsselbund" = "avainnipussa";
 "nicht nötig" = "ei tarpeen";
 "npm-Paket" = "npm-paketti";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · nollautuu {}";
 "(keine Ausgabe)" = "(ei tulostetta)";
 "+ Neue Sitzung" = "+ Uusi istunto";
-"5 Stunden" = "5 tuntia";
-"7 Tage" = "7 päivää";
 "7 Tage Opus" = "7 päivää Opus";
 "7 Tage Sonnet" = "7 päivää Sonnet";
 "< 1 s" = "< 1 s";

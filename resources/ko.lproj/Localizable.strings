@@ -2,6 +2,7 @@
 "1 Fehler" = "오류 1개";
 "1 Verwendung" = "사용 1개";
 "1 Warnung" = "경고 1개";
+"5-Stundenlimit" = "5시간 한도";
 "Abo" = "구독";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "구독: 사용량은 토큰 단위가 아니라 플랜의 한도에 따라 계산됩니다.";
 "ACP-Register" = "ACP 레지스트리";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "전체 접근";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "‘항상 허용’으로 허용한 항목(프로젝트별). 파괴적인 Git 명령은 그래도 매번 묻습니다.";
 "Wie der Anbieter" = "제공자 기본값";
+"Wochenlimit" = "주간 한도";
 "im Schlüsselbund" = "키체인에 있음";
 "nicht nötig" = "필요 없음";
 "npm-Paket" = "npm 패키지";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · {}에 재설정";
 "(keine Ausgabe)" = "(출력 없음)";
 "+ Neue Sitzung" = "+ 새로운 세션";
-"5 Stunden" = "5시간";
-"7 Tage" = "7일";
 "7 Tage Opus" = "7일 Opus";
 "7 Tage Sonnet" = "7일 Sonnet";
 "< 1 s" = "< 1초";

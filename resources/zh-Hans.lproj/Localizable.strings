@@ -2,6 +2,7 @@
 "1 Fehler" = "1 个错误";
 "1 Verwendung" = "1 个引用";
 "1 Warnung" = "1 个警告";
+"5-Stundenlimit" = "5 小时限额";
 "Abo" = "订阅";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "订阅：用量计入套餐限额，而不是按 Token 计算。";
 "ACP-Register" = "ACP 注册表";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "完全访问";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "你通过“始终允许”授予的权限，按项目列出。破坏性的 Git 命令仍会每次询问。";
 "Wie der Anbieter" = "提供商默认";
+"Wochenlimit" = "每周限额";
 "im Schlüsselbund" = "在钥匙串中";
 "nicht nötig" = "不需要";
 "npm-Paket" = "npm 包";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · {} 重置";
 "(keine Ausgabe)" = "（无输出）";
 "+ Neue Sitzung" = "+ 新会话";
-"5 Stunden" = "5 小时";
-"7 Tage" = "7 天";
 "7 Tage Opus" = "7 天 Opus";
 "7 Tage Sonnet" = "7 天 Sonnet";
 "< 1 s" = "< 1 秒";

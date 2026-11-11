@@ -2,6 +2,7 @@
 "1 Fehler" = "ข้อผิดพลาด 1 รายการ";
 "1 Verwendung" = "การใช้งาน 1 แห่ง";
 "1 Warnung" = "คำเตือน 1 รายการ";
+"5-Stundenlimit" = "ขีดจำกัด 5 ชั่วโมง";
 "Abo" = "การสมัครใช้บริการ";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "การสมัครใช้บริการ: การใช้งานนับรวมในขีดจำกัดของแผน ไม่ได้คิดตามโทเค็น";
 "ACP-Register" = "รีจิสทรี ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "สิทธิ์เข้าถึงเต็มรูปแบบ";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "สิ่งที่คุณอนุญาตด้วย “อนุญาตเสมอ” แยกตามโปรเจ็กต์ คำสั่ง Git ที่ทำลายข้อมูลยังคงถามทุกครั้ง";
 "Wie der Anbieter" = "ค่าเริ่มต้นของผู้ให้บริการ";
+"Wochenlimit" = "ขีดจำกัดรายสัปดาห์";
 "im Schlüsselbund" = "อยู่ในพวงกุญแจ";
 "nicht nötig" = "ไม่จำเป็น";
 "npm-Paket" = "แพ็กเกจ npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · รีเซ็ต {}";
 "(keine Ausgabe)" = "(ไม่มีเอาต์พุต)";
 "+ Neue Sitzung" = "+ เซสชันใหม่";
-"5 Stunden" = "5 ชั่วโมง";
-"7 Tage" = "7 วัน";
 "7 Tage Opus" = "7 วัน Opus";
 "7 Tage Sonnet" = "7 วัน Sonnet";
 "< 1 s" = "< 1 วินาที";

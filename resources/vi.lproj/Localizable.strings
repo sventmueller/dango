@@ -2,6 +2,7 @@
 "1 Fehler" = "1 lỗi";
 "1 Verwendung" = "1 chỗ sử dụng";
 "1 Warnung" = "1 cảnh báo";
+"5-Stundenlimit" = "Giới hạn 5 giờ";
 "Abo" = "Gói đăng ký";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Gói đăng ký: mức sử dụng được tính vào giới hạn của gói, không tính theo token.";
 "ACP-Register" = "Sổ đăng ký ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Toàn quyền truy cập";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Những gì bạn đã cho phép bằng “Luôn cho phép”, theo từng dự án. Các lệnh git mang tính phá hủy vẫn hỏi mỗi lần.";
 "Wie der Anbieter" = "Theo nhà cung cấp";
+"Wochenlimit" = "Giới hạn tuần";
 "im Schlüsselbund" = "trong Chuỗi khóa";
 "nicht nötig" = "không cần";
 "npm-Paket" = "Gói npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · đặt lại vào {}";
 "(keine Ausgabe)" = "(không có đầu ra)";
 "+ Neue Sitzung" = "+ Phiên mới";
-"5 Stunden" = "5 giờ";
-"7 Tage" = "7 ngày";
 "7 Tage Opus" = "7 ngày Opus";
 "7 Tage Sonnet" = "7 ngày Sonnet";
 "< 1 s" = "< 1 giây";

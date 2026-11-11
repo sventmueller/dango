@@ -16,8 +16,8 @@ use super::{Ctx, Part, disclosure, is_auth, mono_text, notice_color, pack};
 /// The window of a plan limit as the user reads it.
 pub fn window_name(window: &str) -> String {
     match window {
-        "five_hour" => t("5 Stunden").to_string(),
-        "seven_day" => t("7 Tage").to_string(),
+        "five_hour" => t("5-Stundenlimit").to_string(),
+        "seven_day" => t("Wochenlimit").to_string(),
         "seven_day_opus" => t("7 Tage Opus").to_string(),
         "seven_day_sonnet" => t("7 Tage Sonnet").to_string(),
         other => other.replace('_', " "),

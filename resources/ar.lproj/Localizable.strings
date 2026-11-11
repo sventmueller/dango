@@ -2,6 +2,7 @@
 "1 Fehler" = "خطأ واحد";
 "1 Verwendung" = "استخدام واحد";
 "1 Warnung" = "تحذير واحد";
+"5-Stundenlimit" = "حد الخمس ساعات";
 "Abo" = "الاشتراك";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "الاشتراك: يُحتسب الاستخدام ضمن حدود الباقة، لا حسب الرموز المميزة.";
 "ACP-Register" = "فهرس ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "وصول كامل";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "ما سمحت به عبر “السماح دائمًا”، لكل مشروع. ومع ذلك تسأل أوامر Git المدمِّرة في كل مرة.";
 "Wie der Anbieter" = "حسب المزوّد";
+"Wochenlimit" = "الحد الأسبوعي";
 "im Schlüsselbund" = "في سلسلة المفاتيح";
 "nicht nötig" = "غير مطلوب";
 "npm-Paket" = "حزمة npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · يُعاد التعيين في {}";
 "(keine Ausgabe)" = "(لا توجد مخرجات)";
 "+ Neue Sitzung" = "+ جلسة جديدة";
-"5 Stunden" = "5 ساعات";
-"7 Tage" = "7 أيام";
 "7 Tage Opus" = "7 أيام Opus";
 "7 Tage Sonnet" = "7 أيام Sonnet";
 "< 1 s" = "< 1 ث";

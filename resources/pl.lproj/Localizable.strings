@@ -2,6 +2,7 @@
 "1 Fehler" = "1 błąd";
 "1 Verwendung" = "1 użycie";
 "1 Warnung" = "1 ostrzeżenie";
+"5-Stundenlimit" = "Limit 5-godzinny";
 "Abo" = "Subskrypcja";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Subskrypcja: użycie liczy się do limitów planu, a nie według tokenów.";
 "ACP-Register" = "Rejestr ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Pełny dostęp";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "To, na co pozwolono przyciskiem „Zawsze pozwalaj”, dla każdego projektu. Niszczące polecenia Git i tak pytają za każdym razem.";
 "Wie der Anbieter" = "Domyślne dostawcy";
+"Wochenlimit" = "Limit tygodniowy";
 "im Schlüsselbund" = "w pęku kluczy";
 "nicht nötig" = "niepotrzebny";
 "npm-Paket" = "Pakiet npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · reset {}";
 "(keine Ausgabe)" = "(brak wyjścia)";
 "+ Neue Sitzung" = "+ Nowa sesja";
-"5 Stunden" = "5 godzin";
-"7 Tage" = "7 dni";
 "7 Tage Opus" = "7 dni Opus";
 "7 Tage Sonnet" = "7 dni Sonnet";
 "< 1 s" = "< 1 s";

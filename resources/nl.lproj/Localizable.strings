@@ -2,6 +2,7 @@
 "1 Fehler" = "1 fout";
 "1 Verwendung" = "1 gebruik";
 "1 Warnung" = "1 waarschuwing";
+"5-Stundenlimit" = "5-uurslimiet";
 "Abo" = "Abonnement";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Abonnement: gebruik telt mee voor de limieten van het abonnement, niet per token.";
 "ACP-Register" = "ACP-register";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Volledige toegang";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Wat je met 'Sta altijd toe' hebt toegestaan, per project. Destructieve Git-commando's vragen toch elke keer.";
 "Wie der Anbieter" = "Standaard van aanbieder";
+"Wochenlimit" = "Weeklimiet";
 "im Schlüsselbund" = "in de sleutelhanger";
 "nicht nötig" = "niet nodig";
 "npm-Paket" = "npm-pakket";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · reset {}";
 "(keine Ausgabe)" = "(geen uitvoer)";
 "+ Neue Sitzung" = "+ Nieuwe sessie";
-"5 Stunden" = "5 uur";
-"7 Tage" = "7 dagen";
 "7 Tage Opus" = "7 dagen Opus";
 "7 Tage Sonnet" = "7 dagen Sonnet";
 "< 1 s" = "< 1 s";

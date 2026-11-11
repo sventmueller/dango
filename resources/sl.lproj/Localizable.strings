@@ -2,6 +2,7 @@
 "1 Fehler" = "1 napaka";
 "1 Verwendung" = "1 uporaba";
 "1 Warnung" = "1 opozorilo";
+"5-Stundenlimit" = "5-urna omejitev";
 "Abo" = "Naročnina";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Naročnina: poraba se šteje v omejitve paketa, ne po žetonih.";
 "ACP-Register" = "Register ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Poln dostop";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Kar ste dovolili z »Vedno dovoli«, po projektih. Uničujoči ukazi Git kljub temu vprašajo vsakič.";
 "Wie der Anbieter" = "Kot pri ponudniku";
+"Wochenlimit" = "Tedenska omejitev";
 "im Schlüsselbund" = "v verigi ključev";
 "nicht nötig" = "ni potreben";
 "npm-Paket" = "Paket npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · ponastavitev: {}";
 "(keine Ausgabe)" = "(ni izhoda)";
 "+ Neue Sitzung" = "+ Nova seja";
-"5 Stunden" = "5 ur";
-"7 Tage" = "7 dni";
 "7 Tage Opus" = "7 dni, Opus";
 "7 Tage Sonnet" = "7 dni, Sonnet";
 "< 1 s" = "< 1 s";

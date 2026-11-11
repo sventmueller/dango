@@ -2,6 +2,7 @@
 "1 Fehler" = "1 помилка";
 "1 Verwendung" = "1 використання";
 "1 Warnung" = "1 попередження";
+"5-Stundenlimit" = "5-годинний ліміт";
 "Abo" = "Підписка";
 "Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens." = "Підписка: використання враховується в лімітах тарифу, а не за токенами.";
 "ACP-Register" = "Реєстр ACP";
@@ -174,6 +175,7 @@
 "Voller Zugriff" = "Повний доступ";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Те, що ви дозволили через «Завжди дозволяти», окремо для кожного проєкту. Руйнівні команди Git однаково питають дозволу щоразу.";
 "Wie der Anbieter" = "Як у провайдера";
+"Wochenlimit" = "Тижневий ліміт";
 "im Schlüsselbund" = "у вʼязці";
 "nicht nötig" = "не потрібен";
 "npm-Paket" = "Пакет npm";
@@ -613,8 +615,6 @@
 " · zurückgesetzt {}" = " · скидання: {}";
 "(keine Ausgabe)" = "(немає виводу)";
 "+ Neue Sitzung" = "+ Новий сеанс";
-"5 Stunden" = "5 годин";
-"7 Tage" = "7 днів";
 "7 Tage Opus" = "7 днів Opus";
 "7 Tage Sonnet" = "7 днів Sonnet";
 "< 1 s" = "< 1 с";
