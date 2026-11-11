@@ -427,15 +427,7 @@ impl AgentsSettings {
         let env = env.unwrap_or_default();
         let waiting = || (Mark::Busy, t("Umgebung der Login-Shell wird gelesen …").to_string());
         let (mark, claude) = if env.is_empty() { waiting() } else { claude_state(env) };
-        let mut lines = vec![
-            self.line(Some(mark), "Claude", &claude, &[]),
-            self.line(
-                Some(Mark::Blank),
-                t("Eigener Agent"),
-                t("Anbieter, Modelle und Schlüssel im Tab „Eigener Agent“"),
-                &[(t("Öffnen").to_string(), sel!(ideAgentsOwnSettings:), 0)],
-            ),
-        ];
+        let mut lines = vec![self.line(Some(mark), "Claude", &claude, &[])];
         for (n, preset) in PRESETS.iter().enumerate().filter(|(_, preset)| preset.offered) {
             let (mark, state, actions) = if env.is_empty() {
                 let (mark, state) = waiting();
@@ -453,6 +445,12 @@ impl AgentsSettings {
         for (name, state) in registry_installed() {
             lines.push(self.line(Some(Mark::Ready), &name, &state, &[]));
         }
+        lines.push(self.line(
+            Some(Mark::Blank),
+            t("Eigener Agent"),
+            t("Anbieter, Modelle und Schlüssel im Tab „Eigener Agent“"),
+            &[(t("Öffnen").to_string(), sel!(ideAgentsOwnSettings:), 0)],
+        ));
         fill(agents, &lines);
         let (state, actions) = register_state();
         fill(register, &[self.line(None, t("ACP-Register"), &state, &actions)]);
