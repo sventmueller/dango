@@ -8,24 +8,26 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
+use std::ptr::NonNull;
 use std::rc::Rc;
 use std::time::SystemTime;
 
+use block2::RcBlock;
 use ide_thread::{Change, Entry, EntryId, EntryKind, Lane, Thread};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSAnimationContext, NSEvent, NSScrollView, NSTableCellView, NSTableColumn, NSTableRowView,
-    NSTableView, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSView,
+    NSAccessibility, NSAnimationContext, NSEvent, NSScrollView, NSScrollerStyle, NSTableCellView, NSTableColumn,
+    NSTableRowView, NSTableView, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSView,
 };
-use objc2_foundation::{NSIndexSet, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSIndexSet, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::cards::{self, Ctx, Inputs, Live, Part};
 use super::row::TimelineRow;
 use super::target::AgentTarget;
-use crate::util::{guarded, main_soon, ns};
+use crate::util::{constant, guarded, main_soon, ns};
 
 /// Room on the leading side for the line and its dots.
 const LEADING: f64 = 30.0;
@@ -159,6 +161,14 @@ pub struct Timeline {
     built: Cell<usize>,
     /// Only the conversation shows: no tools, thinking or status lines.
     focus: Cell<bool>,
+    scrolled: Retained<ProtocolObject<dyn NSObjectProtocol>>,
+}
+
+impl Drop for Timeline {
+    fn drop(&mut self) {
+        // SAFETY: An observer this center handed out.
+        unsafe { NSNotificationCenter::defaultCenter().removeObserver(self.scrolled.as_ref()) };
+    }
 }
 
 impl Timeline {
@@ -199,6 +209,7 @@ impl Timeline {
         let list = shown(&thread, false);
         let rows: Vec<_> = list.iter().map(|e| e.id).collect();
         let positions = rows.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+        let scrolled = show_scroller_away_from_end(&scroll);
         Timeline {
             mtm,
             key,
@@ -221,6 +232,7 @@ impl Timeline {
             corrections: RefCell::new(BTreeMap::new()),
             built: Cell::new(0),
             focus: Cell::new(false),
+            scrolled,
         }
     }
 
@@ -709,9 +721,7 @@ impl Timeline {
 
     /// Whether the view shows the end of the timeline.
     pub fn is_at_bottom(&self) -> bool {
-        let clip = self.scroll.contentView().bounds();
-        let height = self.table.frame().size.height;
-        clip.origin.y + clip.size.height >= height - 40.0
+        at_bottom(&self.scroll)
     }
 
     pub fn scroll_to_end(&self) {
@@ -721,6 +731,10 @@ impl Timeline {
         }
         // After a reload or height change the table sizes itself only on its next layout pass, too late to find the end.
         self.table.tile();
+        // An overlay scroller shows itself on every scroll, which would blink at each streamed line.
+        if self.scroll.scrollerStyle() == NSScrollerStyle::Overlay && self.scroll.hasVerticalScroller() {
+            self.scroll.setHasVerticalScroller(false);
+        }
         let clip = self.scroll.contentView();
         let height = self.table.frame().size.height;
         let y = (height - clip.bounds().size.height).max(0.0);
@@ -996,4 +1010,38 @@ fn measure(cell: &NSTableCellView, width: f64) -> f64 {
 
 fn ui_summary(view: &NSView, entry: &Entry, thread: &Thread) {
     super::ui::group(view, &cards::summary(thread, entry));
+}
+
+fn at_bottom(scroll: &NSScrollView) -> bool {
+    let clip = scroll.contentView().bounds();
+    let height = scroll.documentView().map_or(0.0, |table| table.frame().size.height);
+    clip.origin.y + clip.size.height >= height - 40.0
+}
+
+/// Gives the timeline its scroller back once it no longer shows its end, which `Timeline::scroll_to_end` hides it at.
+fn show_scroller_away_from_end(scroll: &NSScrollView) -> Retained<ProtocolObject<dyn NSObjectProtocol>> {
+    let clip = scroll.contentView();
+    clip.setPostsBoundsChangedNotifications(true);
+    let weak = objc2::rc::Weak::from(scroll);
+    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+        guarded((), || {
+            if let Some(scroll) = weak.load()
+                && !scroll.hasVerticalScroller()
+                && !at_bottom(&scroll)
+            {
+                scroll.setHasVerticalScroller(true);
+            }
+        });
+    });
+    let name = constant!(objc2_app_kit::NSViewBoundsDidChangeNotification);
+    // SAFETY: The block holds the scroll view weakly and does nothing once it is gone; the timeline removes the
+    // observer when it goes.
+    unsafe {
+        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
+            Some(name),
+            Some(&clip),
+            None,
+            &block,
+        )
+    }
 }
