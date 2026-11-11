@@ -186,16 +186,30 @@ impl Documents<'_, '_> {
     }
 }
 
-/// Opens the AI tab of the session `session` again, which resumes it with `claude`; a self-test plays a recording
-/// instead, since it runs no agent.
+/// Opens the AI tab of the session `session` again with the agent that ran it, which resumes it; a self-test plays a
+/// recording instead, since it runs no agent.
 fn resume_agent(controller: &WindowController, root: &Path, session: &str) -> bool {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return crate::selftest::replay_agent(controller, session);
     }
-    crate::agent_panel::past_sessions(root, 500)
+    past_session(root, session)
+        .is_some_and(|(agent, resume)| crate::agent::open_agent(controller, agent, Some(resume)).is_some())
+}
+
+/// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
+/// sessions started in a terminal have no thread.
+pub(crate) fn past_session(root: &Path, session: &str) -> Option<(crate::agent::Agent, crate::agent::Resume)> {
+    let (resume, _) = crate::agent_panel::past_sessions(root, 500)
         .into_iter()
-        .find(|(resume, _)| resume.session == session)
-        .and_then(|(resume, _)| crate::agent::open_tab(controller, Some(resume)))
-        .is_some()
+        .find(|(resume, _)| resume.session == session)?;
+    let index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
+    let agent = resume
+        .thread
+        .as_ref()
+        .and_then(|id| index.get(id))
+        .map_or(crate::agent::Agent::Claude, |entry| {
+            crate::agent::Agent::of_thread(&entry.agent)
+        });
+    Some((agent, resume))
 }

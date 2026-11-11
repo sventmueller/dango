@@ -205,6 +205,12 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         sessions.iter().any(|session| session == SESSION),
         format!("{sessions:?}"),
     );
+    let agent = other_agents_session(&a);
+    check(
+        "a session another agent ran comes back with that agent, not with Claude",
+        agent.as_deref() == Some("antigravity-acp"),
+        format!("{agent:?}"),
+    );
     let wanted = (
         Some(PICKS.0.to_string()),
         Some(PICKS.1.to_string()),
@@ -278,6 +284,19 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
             finish(SCENARIO);
         },
     );
+}
+
+/// The agent the window's layout would resume an Antigravity session of `folder` with, by its id.
+fn other_agents_session(folder: &Path) -> Option<String> {
+    let session = "51e1f7e5-0000-4000-8000-0000000000ff";
+    let mut thread = ide_thread::Thread::new(ide_thread::ThreadId::new(), "antigravity-acp", folder);
+    thread.apply(ide_thread::Update::Session(session.into()));
+    let recorded = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir())
+        .record(&thread, std::time::SystemTime::now());
+    if let Err(error) = recorded {
+        return Some(format!("not recorded: {error}"));
+    }
+    crate::window::layout::past_session(folder, session).map(|(agent, _)| agent.id().to_string())
 }
 
 /// A folder without a frame of its own opens as large as the window saved last, a step aside of it.
