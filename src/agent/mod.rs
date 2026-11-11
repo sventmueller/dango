@@ -55,6 +55,8 @@ pub use format::{age, elapsed, iso_time, percent, time_of_day, tokens};
 pub use outside::ci_log;
 pub use source::Resume;
 pub use tab::AgentTab;
+#[cfg(feature = "selftest")]
+pub(crate) use tab::MAX_COLUMN;
 
 thread_local! {
     /// Every open AI tab, in the order they were opened; a tab leaves when it is closed.

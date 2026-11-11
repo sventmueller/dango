@@ -33,7 +33,10 @@ use crate::util::{guarded, main_after, main_soon};
 use crate::window::{TabKind, WindowController};
 
 /// The widest the conversation gets; wider lines read badly.
-const MAX_COLUMN: f64 = 880.0;
+pub(crate) const MAX_COLUMN: f64 = 880.0;
+/// How strongly the column fills the tab up to `MAX_COLUMN`: above the content's hugging and the holding priority of
+/// the window's content, below the sidebar's, which keeps its width.
+const FILL_PRIORITY: f32 = 255.0;
 
 static NEXT_KEY: AtomicU64 = AtomicU64::new(1);
 
@@ -339,7 +342,7 @@ impl AgentTab {
         self.empty.setTranslatesAutoresizingMaskIntoConstraints(false);
         self.problem_holder.setTranslatesAutoresizingMaskIntoConstraints(false);
         let wide = column.widthAnchor().constraintEqualToAnchor(&root.widthAnchor());
-        wide.setPriority(750.0);
+        wide.setPriority(FILL_PRIORITY);
         let scroll = self.timeline.view();
         let constraints: Vec<Retained<NSLayoutConstraint>> = vec![
             self.header.view.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
@@ -437,6 +440,13 @@ impl AgentTab {
 
     pub fn timeline(&self) -> &Timeline {
         &self.timeline
+    }
+
+    /// The width of the column the conversation reads in.
+    #[cfg(feature = "selftest")]
+    pub fn column_width(&self) -> f64 {
+        // SAFETY: Asking for the superview only reads; the column holds the timeline while the tab lives.
+        unsafe { self.timeline.view().superview() }.map_or(0.0, |column| column.frame().size.width)
     }
 
     pub fn controller(&self) -> Option<Retained<WindowController>> {

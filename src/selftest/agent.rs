@@ -10,6 +10,7 @@ use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
     NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
 };
+use objc2_foundation::{NSRect, NSSize};
 use serde_json::json;
 
 use super::{check, finish, snapshot};
@@ -200,11 +201,24 @@ pub fn run() {
         return;
     };
     check("a trusted folder does not ask again", !controller.has_sheet(), "");
+    let before = controller.window().map(|w| w.frame());
     let Some(tab) = crate::agent::open_replay(&controller) else {
         check("an AI tab opens", false, "");
         finish(NAME);
         return;
     };
+    let after = controller.window().map(|w| {
+        w.layoutIfNeeded();
+        w.frame()
+    });
+    check(
+        "an AI tab opens in a window of the same size",
+        before
+            .zip(after)
+            .is_some_and(|(a, b)| same(a.size.width, b.size.width) && same(a.size.height, b.size.height)),
+        format!("{before:?} → {after:?}"),
+    );
+    follows_window(&controller, &tab);
     let seen = tab.inspect();
     check(
         "an AI tab opens empty with its composer",
@@ -219,6 +233,49 @@ pub fn run() {
     picture(&controller, "agent-empty");
     let key = tab.key;
     main_after(Duration::from_millis(300), move || permission(root, key));
+}
+
+fn same(a: f64, b: f64) -> bool {
+    (a - b).abs() < 1.0
+}
+
+/// Widens and narrows the window of `tab`: the sidebar keeps its width, the AI tab takes the change and its column
+/// fills it up to its widest.
+fn follows_window(controller: &WindowController, tab: &AgentTab) {
+    let Some(window) = controller.window() else { return };
+    let start = window.frame();
+    let measure = |width: f64| {
+        let frame = NSRect::new(start.origin, NSSize::new(width, start.size.height));
+        window.setFrame_display(frame, true);
+        window.layoutIfNeeded();
+        (
+            window.frame().size.width,
+            controller.inspect().sidebar_width,
+            tab.root().frame().size.width,
+            tab.column_width(),
+        )
+    };
+    let first = measure(start.size.width);
+    let (_, sidebar, root, _) = first;
+    let wider = measure(start.size.width + 400.0);
+    let narrower = measure(760.0);
+    window.setFrame_display(start, true);
+    check(
+        "a wider or narrower window changes the AI tab, the sidebar keeps its width",
+        same(wider.0, start.size.width + 400.0)
+            && same(narrower.0, 760.0)
+            && same(wider.1, sidebar)
+            && same(narrower.1, sidebar)
+            && same(wider.2, root + 400.0)
+            && same(narrower.2, root - (start.size.width - 760.0)),
+        format!("{first:?} in {start:?}; wider {wider:?}, narrower {narrower:?}"),
+    );
+    let fills = |(_, _, root, column): (f64, f64, f64, f64)| same(column, root.min(crate::agent::MAX_COLUMN));
+    check(
+        "the conversation's column fills the AI tab up to its widest",
+        fills(first) && fills(wider) && fills(narrower),
+        format!("{first:?}, wider {wider:?}, narrower {narrower:?}"),
+    );
 }
 
 /// A rich answer, file changes, and a permission that waits.
