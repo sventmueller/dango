@@ -512,7 +512,6 @@
 "Inhalt" = "Content";
 "Kein Git-Repository" = "No Git Repository";
 "Konflikt" = "conflict";
-"Letzte Commits" = "Recent Commits";
 "Letzten Commit ändern" = "Amend last commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Local changes would be overwritten. Commit or discard them first.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "The local and remote branches have diverged; a fast-forward is not possible.";
@@ -1224,6 +1223,19 @@
 "Daneben öffnen" = "Open to the Side";
 "Als Vorschau öffnen" = "Open as Preview";
 "Zum Dokument daneben" = "Go to the Document Beside";
+"Branch hier anlegen …" = "Create Branch Here…";
+"Commit {}" = "Commit {}";
+"Commit-ID kopieren" = "Copy Commit ID";
+"Commit-Nachricht kopieren" = "Copy Commit Message";
+"Committen und pushen" = "Commit & Push";
+"Committen und synchronisieren" = "Commit & Sync";
+"Er beginnt bei Commit {}, und Git wechselt gleich zu ihm." = "It starts at commit {}, and Git switches to it right away.";
+"Graph" = "Graph";
+"Weitere Commit-Aktionen" = "More Commit Actions";
+"{} ({})" = "{} ({})";
+"{} weitere laden …" = "Load {} More…";
+"{}, {} ({})" = "{}, {} ({})";
+"{}, {} Einfügungen (+), {} Löschungen (−)" = "{}, {} insertions (+), {} deletions (−)";
 "{} fehlt – installieren mit „{}“" = "{} is missing – install it with “{}”";
 "{} fehlt – im Editor installierbar" = "{} is missing – can be installed from the editor";
 "Eingebaute Sprachserver" = "Built-in Language Servers";

@@ -494,7 +494,6 @@
 "Inhalt" = "เนื้อหา";
 "Kein Git-Repository" = "ไม่มี Git Repository";
 "Konflikt" = "ความขัดแย้ง";
-"Letzte Commits" = "Commit ล่าสุด";
 "Letzten Commit ändern" = "แก้ไข Commit ล่าสุด";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "การเปลี่ยนแปลงในเครื่องจะถูกเขียนทับ ให้ทำ Commit หรือละทิ้งการเปลี่ยนแปลงก่อน";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Branch ในเครื่องและ Branch ของ Remote แยกออกจากกันแล้ว จึงไม่สามารถ Fast-Forward ได้";

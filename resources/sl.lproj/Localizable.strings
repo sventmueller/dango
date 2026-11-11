@@ -494,7 +494,6 @@
 "Inhalt" = "Vsebina";
 "Kein Git-Repository" = "Ni repozitorija Git";
 "Konflikt" = "konflikt";
-"Letzte Commits" = "Nedavni commiti";
 "Letzten Commit ändern" = "Spremeni zadnji commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Lokalne spremembe bi bile prepisane. Najprej zanje naredite commit ali jih zavrzite.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Lokalna in oddaljena veja sta se razšli; fast-forward ni mogoč.";

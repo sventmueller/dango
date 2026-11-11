@@ -494,7 +494,6 @@
 "Inhalt" = "内容";
 "Kein Git-Repository" = "Gitリポジトリがありません";
 "Konflikt" = "競合";
-"Letzte Commits" = "最近のコミット";
 "Letzten Commit ändern" = "最後のコミットを修正";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "ローカルの変更が上書きされます。先にコミットするか破棄してください。";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "ローカルとリモートのブランチが分岐しているため、早送りできません。";

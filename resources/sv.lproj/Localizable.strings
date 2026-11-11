@@ -494,7 +494,6 @@
 "Inhalt" = "Innehåll";
 "Kein Git-Repository" = "Inget Git-repo";
 "Konflikt" = "konflikt";
-"Letzte Commits" = "Senaste commits";
 "Letzten Commit ändern" = "Ändra senaste commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Lokala ändringar skulle skrivas över. Committa eller förkasta dem först.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Den lokala grenen och remote-grenen har divergerat; en fast-forward är inte möjlig.";

@@ -494,7 +494,6 @@
 "Inhalt" = "Nội dung";
 "Kein Git-Repository" = "Không có kho lưu trữ Git";
 "Konflikt" = "xung đột";
-"Letzte Commits" = "Commit gần đây";
 "Letzten Commit ändern" = "Sửa commit gần nhất";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Các thay đổi cục bộ sẽ bị ghi đè. Hãy commit hoặc loại bỏ chúng trước.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Nhánh cục bộ và nhánh remote đã phân kỳ; không thể fast-forward.";

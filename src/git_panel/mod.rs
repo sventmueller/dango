@@ -4,6 +4,8 @@
 mod commit_field;
 mod diff;
 mod diff_view;
+mod graph;
+mod history;
 mod model;
 mod ops;
 mod panel;
@@ -85,7 +87,7 @@ pub mod selftest {
         pub staged: Vec<PathBuf>,
         pub changes: Vec<PathBuf>,
         pub commits: usize,
-        /// The subject and the number of parents of the newest commit.
+        /// The subject and the number of parents of the commit HEAD is at.
         pub top: Option<(String, usize)>,
         pub rows: isize,
         pub problem: Option<String>,
@@ -112,8 +114,10 @@ pub mod selftest {
             top: state
                 .model
                 .commits
-                .first()
-                .map(|c| (c.subject.clone(), c.parents.len())),
+                .iter()
+                .zip(&state.model.graph)
+                .find(|(_, row)| row.head)
+                .map(|(c, _)| (c.subject.clone(), c.parents.len())),
             rows: ui.outline.numberOfRows(),
             problem: state.problem.as_ref().map(|p| p.message.clone()),
             branch: state.branch.head.clone(),
@@ -314,6 +318,58 @@ pub mod selftest {
     /// Rows and hunks of the diff tab of the worktree's `file`, once it has read its diff.
     pub fn tree_diff_counts(controller: &WindowController, tree: &Path, file: &Path) -> Option<(usize, usize)> {
         super::diff::find(controller, &super::diff::since_key(tree, file)).map(|tab| tab.counts())
+    }
+
+    /// The hash of the commit titled `subject` in the graph.
+    fn commit_hash(controller: &WindowController, subject: &str) -> Option<String> {
+        let panel = panel::of(controller)?;
+        let state = panel.read();
+        state
+            .model
+            .commits
+            .iter()
+            .find(|c| c.subject == subject)
+            .map(|c| c.hash.clone())
+    }
+
+    /// Opens the row of the commit titled `subject`, as a click on it does.
+    pub fn open_commit(controller: &WindowController, subject: &str) {
+        let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {
+            return;
+        };
+        let item = panel.item_for(&RowKey::Commit(hash));
+        // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+        let row = unsafe { panel.ui().outline.rowForItem(Some(&item)) };
+        panel.preview_row(row);
+    }
+
+    /// The files the list shows below the commit titled `subject`.
+    pub fn commit_rows(controller: &WindowController, subject: &str) -> Vec<PathBuf> {
+        let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {
+            return Vec::new();
+        };
+        let outline = &panel.ui().outline;
+        (0..outline.numberOfRows())
+            .filter_map(|row| outline.itemAtRow(row))
+            .filter_map(|item| match panel::key_of(&item)? {
+                RowKey::CommitFile(at, file) if at == hash => Some(file),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Shows what the commit titled `subject` changed in `file`, as a click on the file's row does.
+    pub fn show_commit_diff(controller: &WindowController, subject: &str, file: &Path) {
+        let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {
+            return;
+        };
+        panel.show_diff(&RowKey::CommitFile(hash, file.to_path_buf()), true);
+    }
+
+    /// Rows and hunks of the diff tab of what the commit titled `subject` changed in `file`.
+    pub fn commit_diff_counts(controller: &WindowController, subject: &str, file: &Path) -> Option<(usize, usize)> {
+        let hash = commit_hash(controller, subject)?;
+        super::diff::find(controller, &super::diff::commit_key(&hash, file)).map(|tab| tab.counts())
     }
 
     /// Stages the hunk at `index` in the diff tab of `path`, as its button does.

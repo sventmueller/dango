@@ -494,7 +494,6 @@
 "Inhalt" = "Tartalom";
 "Kein Git-Repository" = "Nincs Git-tároló";
 "Konflikt" = "ütközés";
-"Letzte Commits" = "Legutóbbi commitok";
 "Letzten Commit ändern" = "Utolsó commit módosítása";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "A helyi módosítások felülíródnának. Előbb commitolja vagy vesse el őket.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "A helyi és a távoli ág eltávolodott egymástól; fast-forward nem lehetséges.";

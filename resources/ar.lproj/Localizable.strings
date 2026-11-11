@@ -494,7 +494,6 @@
 "Inhalt" = "المحتوى";
 "Kein Git-Repository" = "لا يوجد مستودع Git";
 "Konflikt" = "تعارض";
-"Letzte Commits" = "آخر عمليات Commit";
 "Letzten Commit ändern" = "تعديل آخر Commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "ستتم الكتابة فوق التغييرات المحلية. أنشئ لها Commit أو تجاهلها أولًا.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "تباعد الفرع المحلي والفرع البعيد؛ لا يمكن تنفيذ Fast-Forward.";

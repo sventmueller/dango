@@ -26,8 +26,8 @@ use crate::window::{Panel, WindowController};
 /// How long changes on disk gather before the panel reads git again.
 const DEBOUNCE: Duration = Duration::from_millis(300);
 
-/// How many commits the list shows.
-const RECENT_COMMITS: usize = 20;
+/// How many commits the graph shows at first, and how many more each time the user asks.
+pub const HISTORY_PAGE: usize = 50;
 
 /// How often the ages of the commits on view are said again.
 const AGE_INTERVAL: Duration = Duration::from_secs(60);
@@ -83,6 +83,18 @@ pub struct State {
     pub collapsed: HashSet<Section>,
     /// The thread worktrees whose files show.
     pub open_trees: HashSet<PathBuf>,
+    /// The commits whose files show.
+    pub open_commits: HashSet<String>,
+    /// What commits changed, by hash, as far as read.
+    pub commit_changes: HashMap<String, ide_git::CommitChanges>,
+    /// The commits whose changes are being read.
+    pub reading_changes: HashSet<String>,
+    /// How many more pages of history the user asked for.
+    pub more_pages: usize,
+    /// What follows the commit that runs: a push, or a pull and then a push.
+    pub after_commit: Option<Task>,
+    /// Whether a push follows the pull that runs.
+    pub push_after_pull: bool,
     pub busy: Option<Busy>,
     pub problem: Option<Problem>,
     /// The rows the open context menu acts on.
@@ -147,6 +159,7 @@ define_class!(
             guarded(false, || match key_of(item) {
                 Some(RowKey::Section(_)) => true,
                 Some(RowKey::Worktree(path)) => !self.read().model.tree_keys(&path).is_empty(),
+                Some(RowKey::Commit(_)) => true,
                 _ => false,
             })
         }
@@ -260,6 +273,31 @@ define_class!(
         #[unsafe(method(ideGitRemoveTree:))]
         fn remove_tree_action(&self, sender: Option<&AnyObject>) {
             guarded((), || self.remove_tree(&self.keys_for(sender)));
+        }
+
+        #[unsafe(method(ideGitCopyHash:))]
+        fn copy_hash_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.run_history_action(objc2::sel!(ideGitCopyHash:), &self.keys_for(sender)));
+        }
+
+        #[unsafe(method(ideGitCopyMessage:))]
+        fn copy_message_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.run_history_action(objc2::sel!(ideGitCopyMessage:), &self.keys_for(sender)));
+        }
+
+        #[unsafe(method(ideGitBranchHere:))]
+        fn branch_here_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.run_history_action(objc2::sel!(ideGitBranchHere:), &self.keys_for(sender)));
+        }
+
+        #[unsafe(method(ideGitCommitPush:))]
+        fn commit_push_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.commit_then(Some(Task::Push)));
+        }
+
+        #[unsafe(method(ideGitCommitSync:))]
+        fn commit_sync_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.commit_then(Some(Task::Pull)));
         }
 
         #[unsafe(method(ideGitRowClicked:))]
@@ -471,6 +509,11 @@ impl GitPanel {
         self.ivars().controller.load()
     }
 
+    /// How many commits the graph reads.
+    pub fn history_limit(&self) -> usize {
+        HISTORY_PAGE * (self.read().more_pages + 1)
+    }
+
     pub fn repo(&self) -> Option<Repository> {
         self.ivars().state.borrow().repo.clone()
     }
@@ -510,7 +553,11 @@ impl GitPanel {
         }
         let root = self.root().to_path_buf();
         let id = self.id();
-        let queued = work::local(move || load(&root), move |loaded| with_panel(id, |p| p.loaded(loaded)));
+        let limit = self.history_limit();
+        let queued = work::local(
+            move || load(&root, limit),
+            move |loaded| with_panel(id, |p| p.loaded(loaded)),
+        );
         if !queued {
             self.state().refresh.running = false;
             self.schedule_refresh();
@@ -552,7 +599,12 @@ impl GitPanel {
                     ..
                 } = &loaded
             {
-                let model = Model::new(status, log.clone(), worktrees.clone());
+                let model = Model::new(
+                    status,
+                    log.clone(),
+                    worktrees.clone(),
+                    HISTORY_PAGE * (state.more_pages + 1),
+                );
                 if state.model == model
                     && state.branch == status.branch
                     && state.branches == *branches
@@ -579,7 +631,7 @@ impl GitPanel {
                     state.repo = Some(repo);
                     state.branch = status.branch.clone();
                     state.branches = branches;
-                    state.model = Model::new(&status, log, worktrees);
+                    state.model = Model::new(&status, log, worktrees, HISTORY_PAGE * (state.more_pages + 1));
                 }
             }
             if state.phase != Phase::Ready {
@@ -619,6 +671,13 @@ impl GitPanel {
             None if item.is_none() => state.model.sections().into_iter().map(RowKey::Section).collect(),
             Some(RowKey::Section(section)) => state.model.keys(section),
             Some(RowKey::Worktree(path)) => state.model.tree_keys(&path),
+            Some(RowKey::Commit(hash)) => state.commit_changes.get(&hash).map_or_else(Vec::new, |changes| {
+                changes
+                    .files
+                    .iter()
+                    .map(|f| RowKey::CommitFile(hash.clone(), f.path.clone()))
+                    .collect()
+            }),
             _ => vec![],
         }
     }
@@ -656,6 +715,14 @@ impl GitPanel {
                     state.open_trees.remove(&path);
                 }
             }
+            Some(RowKey::Commit(hash)) => {
+                if expanded {
+                    self.state().open_commits.insert(hash.clone());
+                    self.read_changes(&hash);
+                } else {
+                    self.state().open_commits.remove(&hash);
+                }
+            }
             _ => {}
         }
     }
@@ -690,8 +757,8 @@ pub fn key_of(item: &AnyObject) -> Option<RowKey> {
         .and_then(|text| RowKey::decode(&text.to_string()))
 }
 
-/// Everything the panel shows, read on the git lane.
-fn load(root: &Path) -> Loaded {
+/// Everything the panel shows, with up to `limit` commits, read on the git lane.
+fn load(root: &Path, limit: usize) -> Loaded {
     let Some(git) = work::git() else { return Loaded::NoGit };
     if git.program().is_none() {
         return Loaded::NoGit;
@@ -707,7 +774,9 @@ fn load(root: &Path) -> Loaded {
         Err(error) => return Loaded::Failed(problem(&error)),
     };
     let branches = repo.branches().unwrap_or_default();
-    let log = repo.log(RECENT_COMMITS).unwrap_or_default();
+    let log = repo
+        .history(limit, status.branch.upstream.as_deref())
+        .unwrap_or_default();
     let operation = repo.operation().unwrap_or(None);
     let worktrees = crate::worktrees::read(&git, &repo, root, &branches);
     Loaded::Ready {

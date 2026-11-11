@@ -494,7 +494,6 @@
 "Inhalt" = "Περιεχόμενο";
 "Kein Git-Repository" = "Δεν είναι αποθετήριο Git";
 "Konflikt" = "διένεξη";
-"Letzte Commits" = "Πρόσφατα commit";
 "Letzten Commit ändern" = "Τροποποίηση τελευταίου commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Οι τοπικές αλλαγές θα αντικατασταθούν. Κάντε πρώτα commit των αλλαγών ή απορρίψτε τες.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Το τοπικό και το απομακρυσμένο branch έχουν αποκλίνει, οπότε δεν είναι δυνατό fast-forward.";

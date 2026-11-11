@@ -98,14 +98,13 @@ pub fn pull_mode(window: &NSWindow, then: impl FnOnce(Option<PullMode>) + 'stati
     });
 }
 
-/// Asks for the name of a new branch; `then` gets it unless the user cancels or leaves it empty.
-pub fn branch_name(window: &NSWindow, then: impl FnOnce(String) + 'static) {
+/// Asks for the name of a new branch that starts where `info` says; `then` gets it unless the user cancels or leaves
+/// it empty.
+pub fn branch_name(window: &NSWindow, info: &str, then: impl FnOnce(String) + 'static) {
     let mtm = window.mtm();
     let alert = NSAlert::new(mtm);
     alert.setMessageText(&ns(t("Neuer Branch")));
-    alert.setInformativeText(&ns(t(
-        "Er beginnt beim aktuellen Commit, und Git wechselt gleich zu ihm.",
-    )));
+    alert.setInformativeText(&ns(info));
     alert.addButtonWithTitle(&ns(t("Anlegen")));
     alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(""), mtm);

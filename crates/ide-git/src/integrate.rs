@@ -135,7 +135,7 @@ impl Repository {
 
 /// The files of `git diff --name-status -z`: a status letter with a score, then one path, or two for a rename or
 /// copy.
-fn name_status(output: &[u8]) -> Vec<ChangedFile> {
+pub(crate) fn name_status(output: &[u8]) -> Vec<ChangedFile> {
     let mut fields = output.split(|&b| b == 0).filter(|f| !f.is_empty());
     let mut files = Vec::new();
     while let Some(status) = fields.next() {

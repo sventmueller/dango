@@ -494,7 +494,6 @@
 "Inhalt" = "Contingut";
 "Kein Git-Repository" = "Cap repositori de Git";
 "Konflikt" = "conflicte";
-"Letzte Commits" = "Commits recents";
 "Letzten Commit ändern" = "Modifica l’últim commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Se sobreescriurien canvis locals. Primer fes‑ne commit o descarta’ls.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "La branca local i la remota han divergit; no es pot fer un fast-forward.";

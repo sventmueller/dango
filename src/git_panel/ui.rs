@@ -447,16 +447,41 @@ fn commit_row(
     set_action(&amend, panel, sel!(ideGitAmend:));
     amend.setControlSize(NSControlSize::Small);
     amend.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    amend.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
     let commit = unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Commit")), None, None, mtm) };
     set_action(&commit, panel, sel!(ideGitCommit:));
     commit.setBezelStyle(NSBezelStyle::Push);
     commit.setControlSize(NSControlSize::Small);
+    commit.setBezelColor(Some(&NSColor::controlAccentColor()));
     commit.setToolTip(Some(&ns(t("Committen (⌘↩)"))));
+    let more = NSPopUpButton::initWithFrame_pullsDown(
+        NSPopUpButton::alloc(mtm),
+        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(28.0, 22.0)),
+        true,
+    );
+    more.setControlSize(NSControlSize::Small);
+    more.setTranslatesAutoresizingMaskIntoConstraints(false);
+    more.widthAnchor().constraintEqualToConstant(34.0).setActive(true);
+    crate::util::set_label(&more, Some(t("Weitere Commit-Aktionen")));
+    more.setToolTip(Some(&ns(t("Weitere Commit-Aktionen"))));
+    if let Some(menu) = more.menu() {
+        menu.addItem(&crate::util::item(mtm, "", None, ""));
+        for (title, action) in [
+            (t("Committen und pushen"), sel!(ideGitCommitPush:)),
+            (t("Committen und synchronisieren"), sel!(ideGitCommitSync:)),
+        ] {
+            let entry = crate::util::item(mtm, title, Some(action), "");
+            crate::util::set_target(&entry, panel);
+            menu.addItem(&entry);
+        }
+    }
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(2.0);
     row.addView_inGravity(&amend, NSStackViewGravity::Leading);
     row.addView_inGravity(&commit, NSStackViewGravity::Trailing);
+    row.addView_inGravity(&more, NSStackViewGravity::Trailing);
     (row, amend, commit)
 }
 
@@ -471,7 +496,9 @@ fn outline(mtm: MainThreadMarker, panel: &GitPanel) -> (Retained<NSScrollView>, 
     unsafe { view.setOutlineTableColumn(Some(&column)) };
     view.setHeaderView(None);
     view.setStyle(NSTableViewStyle::SourceList);
-    view.setIndentationPerLevel(4.0);
+    view.setIndentationPerLevel(12.0);
+    // Without a gap between rows the graph's lines run on from one commit to the next.
+    view.setIntercellSpacing(NSSize::new(3.0, 0.0));
     view.setAllowsMultipleSelection(true);
     view.setAutoresizesOutlineColumn(false);
     view.setColumnAutoresizingStyle(

@@ -494,7 +494,6 @@
 "Inhalt" = "Вміст";
 "Kein Git-Repository" = "Немає репозиторію Git";
 "Konflikt" = "конфлікт";
-"Letzte Commits" = "Останні коміти";
 "Letzten Commit ändern" = "Змінити останній коміт";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Локальні зміни буде перезаписано. Спершу закомітьте або відкиньте їх.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Локальна й віддалена гілки розійшлися; fast-forward неможливий.";

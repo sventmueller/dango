@@ -55,7 +55,7 @@ pub(super) fn fixture_git() -> Result<Git, String> {
     Ok(Git::new(Supervisor::global(), environment))
 }
 
-/// A repository with a first commit, then a changed line in the README, two changed regions in the library and an
+/// A repository with a history that branches and merges, then a changed line in the README, two changed regions in the library and an
 /// untracked file, and a remote beside it that takes pushes to its checked-out branch.
 fn make_repository(folder: &Path) -> Result<(), String> {
     let git = fixture_git()?;
@@ -92,6 +92,21 @@ fn make_repository(folder: &Path) -> Result<(), String> {
     repo.stage_all().map_err(|e| e.to_string())?;
     repo.commit("First state", CommitOptions::default())
         .map_err(|e| e.to_string())?;
+    let main = repo
+        .current_branch()
+        .map_err(|e| e.to_string())?
+        .ok_or("no branch after the first commit")?;
+    repo.create_branch("topic", None, true).map_err(|e| e.to_string())?;
+    write(folder, "topic.txt", "topic\n")?;
+    repo.stage_all().map_err(|e| e.to_string())?;
+    repo.commit("Topic work", CommitOptions::default())
+        .map_err(|e| e.to_string())?;
+    repo.switch_branch(&main).map_err(|e| e.to_string())?;
+    write(folder, "second.txt", "second\n")?;
+    repo.stage_all().map_err(|e| e.to_string())?;
+    repo.commit("Second state", CommitOptions::default())
+        .map_err(|e| e.to_string())?;
+    repo.merge_branch("topic", "Merge topic").map_err(|e| e.to_string())?;
     write(
         folder,
         README,
@@ -468,7 +483,7 @@ fn discarded(root: PathBuf, ok: bool) {
 }
 
 fn committed_twice(controller: &WindowController) -> bool {
-    panel::seen(controller).is_some_and(|seen| seen.commits == 2 && seen.staged.is_empty() && !seen.busy)
+    panel::seen(controller).is_some_and(|seen| seen.commits == 5 && seen.staged.is_empty() && !seen.busy)
 }
 
 fn committed(root: PathBuf, ok: bool) {
@@ -499,8 +514,47 @@ fn committed(root: PathBuf, ok: bool) {
     if !ok {
         return finish(SCENARIO);
     }
-    panel::click(&controller, panel::Control::Push);
-    wait_for(root, idle_with_upstream, pushed);
+    panel::open_commit(&controller, TOPIC_WORK);
+    wait_for(root, |c| !panel::commit_rows(c, TOPIC_WORK).is_empty(), commit_opened);
+}
+
+/// The commit of the side branch the fixture merges.
+const TOPIC_WORK: &str = "Topic work";
+
+fn commit_opened(root: PathBuf, ok: bool) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let rows = panel::commit_rows(&controller, TOPIC_WORK);
+    check(
+        "a click on a commit in the graph lists the files it changed below it",
+        ok && rows == [PathBuf::from("topic.txt")],
+        names(&rows),
+    );
+    panel::show_commit_diff(&controller, TOPIC_WORK, Path::new("topic.txt"));
+    wait_for(
+        root,
+        |c| panel::commit_diff_counts(c, TOPIC_WORK, Path::new("topic.txt")).is_some_and(|(rows, _)| rows > 0),
+        commit_diff,
+    );
+}
+
+fn commit_diff(root: PathBuf, ok: bool) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let counts = panel::commit_diff_counts(&controller, TOPIC_WORK, Path::new("topic.txt"));
+    check(
+        "a file below a commit shows what the commit changed in it",
+        ok && counts == Some((2, 1)),
+        format!("{counts:?}"),
+    );
+    pictures(root, "git-graph", |root| {
+        if let Some(controller) = window_of(&root) {
+            panel::click(&controller, panel::Control::Push);
+        }
+        wait_for(root, idle_with_upstream, pushed);
+    });
 }
 
 fn idle_with_upstream(controller: &WindowController) -> bool {

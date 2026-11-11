@@ -494,7 +494,6 @@
 "Inhalt" = "Konten";
 "Kein Git-Repository" = "Tidak Ada Repositori Git";
 "Konflikt" = "konflik";
-"Letzte Commits" = "Commit Terbaru";
 "Letzten Commit ändern" = "Ubah commit terakhir";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Perubahan lokal akan ditimpa. Lakukan commit atau buang terlebih dahulu.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Branch lokal dan remote telah menyimpang; fast-forward tidak mungkin dilakukan.";

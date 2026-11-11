@@ -1,5 +1,6 @@
 //! The diff tab: one file's staged or unstaged changes, read only, with buttons that stage, unstage or discard a single
-//! hunk (E11); or what a thread's worktree changed in a file since its branch left the base (I1), without buttons.
+//! hunk (E11); or, without buttons, what a thread's worktree changed in a file since its branch left the base (I1) or
+//! what a commit of the history changed in it.
 
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -52,6 +53,8 @@ pub struct DiffIvars {
     /// The commit a worktree's changes are shown against, which moves as its branch and the base do, and the thread's
     /// title; `None` for the index's sides.
     since: Option<(RefCell<String>, String)>,
+    /// The commit whose change of the file shows.
+    commit: Option<String>,
     ui: OnceCell<Ui>,
     state: RefCell<State>,
 }
@@ -89,7 +92,7 @@ define_class!(
                         diff,
                         index,
                         self.ivars().staged,
-                        self.ivars().since.is_some(),
+                        self.ivars().since.is_some() || self.ivars().commit.is_some(),
                     )),
                     (Row::Line(hunk, line), Some(column)) => {
                         let line = diff.hunks.get(hunk)?.lines.get(line)?;
@@ -241,6 +244,7 @@ pub fn show(controller: &WindowController, repo_root: &Path, path: &Path, staged
         path.to_path_buf(),
         staged,
         None,
+        None,
     );
     let name = path
         .file_name()
@@ -280,11 +284,47 @@ pub fn show_since(controller: &WindowController, tree: &Path, path: &Path, base:
         path.to_path_buf(),
         false,
         since,
+        None,
     );
     let name = path
         .file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
     place(controller, tab, key, &tf("{} (Thread)", &[&name]), preview);
+}
+
+/// The key of the tab that shows what the commit `hash` changed in `path`.
+pub fn commit_key(hash: &str, path: &Path) -> String {
+    format!("diff:commit:{hash}:{}", path.display())
+}
+
+/// Shows what the commit `hash` changed in `path`, relative to `repo_root`, like [`show`].
+pub fn show_commit(controller: &WindowController, repo_root: &Path, hash: &str, path: &Path, preview: bool) {
+    let key = commit_key(hash, path);
+    if let Some(id) = controller.tab_with_key(&key) {
+        if !preview {
+            controller.keep_tab(id);
+        }
+        controller.select_tab(&key);
+        return;
+    }
+    let Some(window_root) = controller.project_root() else {
+        return;
+    };
+    let window_root = window_root.canonicalize().unwrap_or(window_root);
+    let tab = DiffTab::new(
+        controller,
+        window_root,
+        repo_root.to_path_buf(),
+        path.to_path_buf(),
+        false,
+        None,
+        Some(hash.to_string()),
+    );
+    let name = path
+        .file_name()
+        .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
+    let short: String = hash.chars().take(7).collect();
+    place(controller, tab, key, &tf("{} ({})", &[&name, &short]), preview);
 }
 
 fn place(controller: &WindowController, tab: Retained<DiffTab>, key: String, title: &str, preview: bool) {
@@ -305,6 +345,7 @@ impl DiffTab {
         path: PathBuf,
         staged: bool,
         since: Option<(RefCell<String>, String)>,
+        commit: Option<String>,
     ) -> Retained<DiffTab> {
         static NEXT: AtomicU64 = AtomicU64::new(1);
         let mtm: MainThreadMarker = controller.mtm();
@@ -316,6 +357,7 @@ impl DiffTab {
             path,
             staged,
             since,
+            commit,
             ui: OnceCell::new(),
             state: RefCell::new(State::default()),
         };
@@ -324,10 +366,11 @@ impl DiffTab {
         let tab: Retained<DiffTab> =
             unsafe { msg_send![super(DiffTab::alloc(mtm).set_ivars(ivars)), initWithFrame: frame] };
         let ivars = tab.ivars();
-        let side = match &ivars.since {
-            Some((_, title)) => tf("Was der Thread „{}“ geändert hat", &[title]),
-            None if ivars.staged => t("Vorgemerkte Änderungen").to_string(),
-            None => t("Nicht vorgemerkte Änderungen").to_string(),
+        let side = match (&ivars.since, &ivars.commit) {
+            (_, Some(hash)) => tf("Commit {}", &[&hash.chars().take(7).collect::<String>()]),
+            (Some((_, title)), None) => tf("Was der Thread „{}“ geändert hat", &[title]),
+            (None, None) if ivars.staged => t("Vorgemerkte Änderungen").to_string(),
+            (None, None) => t("Nicht vorgemerkte Änderungen").to_string(),
         };
         let _ = ivars.ui.set(Ui::new(mtm, &tab, &ivars.path, &side));
         tab
@@ -363,10 +406,12 @@ impl DiffTab {
         let ivars = self.ivars();
         let (root, path, staged, id) = (ivars.repo_root.clone(), ivars.path.clone(), ivars.staged, ivars.id);
         let since = ivars.since.as_ref().map(|(base, _)| base.borrow().clone());
+        let commit = ivars.commit.clone();
         let queued = work::local(
-            move || match since {
-                Some(base) => load_since(&root, &path, &base),
-                None => load(&root, &path, staged),
+            move || match (since, commit) {
+                (_, Some(hash)) => load_commit(&root, &path, &hash),
+                (Some(base), None) => load_since(&root, &path, &base),
+                (None, None) => load(&root, &path, staged),
             },
             move |result| with_tab(id, |tab| tab.loaded(result)),
         );
@@ -541,6 +586,15 @@ fn load_since(root: &Path, path: &Path, base: &str) -> Result<Option<FileDiff>, 
     read().map_err(|error| problem(&error))
 }
 
+/// What the commit `hash` changed in `path`.
+fn load_commit(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>, Problem> {
+    let read = || -> ide_git::Result<Option<FileDiff>> {
+        let repo = work::git().ok_or(Error::GitMissing)?.discover(root)?;
+        repo.diff_commit(hash, path)
+    };
+    read().map_err(|error| problem(&error))
+}
+
 /// Whether the unstaged side of `diff` can drop a hunk: a new file goes to the Trash as a whole instead.
 pub fn can_discard(diff: &FileDiff) -> bool {
     diff.change != Change::Added
@@ -560,9 +614,10 @@ impl DiffTab {
 pub fn find(controller: &WindowController, key: &str) -> Option<Retained<DiffTab>> {
     live_tabs().into_iter().find(|tab| {
         let ivars = tab.ivars();
-        let own = match &ivars.since {
-            Some(_) => since_key(&ivars.repo_root, &ivars.path),
-            None => self::key(&ivars.path, ivars.staged),
+        let own = match (&ivars.since, &ivars.commit) {
+            (_, Some(hash)) => commit_key(hash, &ivars.path),
+            (Some(_), None) => since_key(&ivars.repo_root, &ivars.path),
+            (None, None) => self::key(&ivars.path, ivars.staged),
         };
         own == key && ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller))
     })

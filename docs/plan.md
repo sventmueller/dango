@@ -454,6 +454,19 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Rechts stehen der Branch als Auswahl mit allen Branches und „Neuer Branch …“ (nur wo git läuft, E22), die Lupe für
   „Schnell öffnen“ und die Aktivität. „Neues Terminal“ und „Neuer AI-Thread“ entfallen; das „+“ der Tableiste deckt
   sie ab (E65).
+- **E70 Datei-Icons nach macOS-Art** *(Entscheidung des Eigentümers, ersetzt VS Codes Seti)*: Dateibaum, Suche,
+  Open Quickly und Tabs zeigen für die häufigen Sprachen das Logo aus Simple Icons (einfarbig, `assets/simple-icons`),
+  für alles andere ein SF Symbol der Dateiart, beide in Apples Systemfarben mit 3:1 Kontrast (E66). Logos mit
+  nicht-kommerzieller Lizenz (Sass, Vue) entfallen; Ordner behalten ihren Pfeil statt eines Icons.
+- **E74 Git-Panel nach VS-Code-Art** *(Entscheidung des Eigentümers, ergänzt E11)*: Abschnitte heißen in normaler
+  Schreibung mit der Zahl als Pille rechts; Dateien stehen nicht eingerückt, ihr Datei-Icon (E70) bündig mit dem Pfeil
+  ihres Abschnitts, der Statusbuchstabe rechts. „Letzte Commits“ wird zum „Graph“: HEAD und sein Upstream, 50 Commits
+  und „50 weitere laden …“, je Commit ein Punkt in seiner Spur unter dem Pfeil des Abschnitts, Linien zu den Eltern in
+  Spurfarben (Akzentfarbe zuerst, E66), HEAD als Ring, Merges als Ring mit Punkt, Branches, Remote-Branches und Tags
+  als Pillen. Ein Klick klappt den Commit auf und listet seine Dateien, deren Klick den Diff des Commits zeigt; der
+  Tooltip nennt Autor, Datum, die ganze Nachricht und die geänderten Dateien und Zeilen. Das Kontextmenü kopiert
+  Commit-ID und Nachricht und legt dort einen Branch an. Neben „Commit“ bietet ein Menü „Committen und pushen“ und
+  „Committen und synchronisieren“ (Pull, dann Push).
 - **E75 Dokumente in Quick Look** *(Wunsch des Eigentümers, ergänzt Phase 9 und E62)*: Bilder, Audio, Video,
   Schriften und Office-/iWork-Dokumente öffnen wie PDFs in einem eigenen Tab, gezeigt von Quick Look
   (`QLPreviewView`) wie im Finder; PDFs bleiben bei PDFKit. Welche Dateien das sind, entscheidet eine feste Liste

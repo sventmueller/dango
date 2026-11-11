@@ -40,6 +40,8 @@ pub struct Commit {
     pub parents: Vec<String>,
     /// The first line of the message.
     pub subject: String,
+    /// The message after its first line, empty unless read by [`Repository::history`].
+    pub body: String,
     /// The author's name.
     pub author_name: String,
     /// The author's email address.
@@ -204,16 +206,17 @@ fn parse_branch(line: &str) -> Option<Branch> {
     })
 }
 
-fn parse_commit(record: &[u8]) -> Option<Commit> {
+pub(crate) fn parse_commit(record: &[u8]) -> Option<Commit> {
     let text = String::from_utf8_lossy(record);
-    let fields: Vec<&str> = text.trim_start_matches('\n').splitn(7, '\u{1f}').collect();
-    let [hash, parents, author_name, author_email, time, refs, subject] = fields[..] else {
+    let fields: Vec<&str> = text.trim_start_matches('\n').splitn(8, '\u{1f}').collect();
+    let (&[hash, parents, author_name, author_email, time, refs, subject], body) = fields.split_at_checked(7)? else {
         return None;
     };
     Some(Commit {
         hash: hash.to_string(),
         parents: parents.split_whitespace().map(String::from).collect(),
         subject: subject.to_string(),
+        body: body.first().map_or_else(String::new, |b| b.trim().to_string()),
         author_name: author_name.to_string(),
         author_email: author_email.to_string(),
         author_time: time.parse().unwrap_or(0),

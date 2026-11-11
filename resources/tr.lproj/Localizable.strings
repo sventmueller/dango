@@ -494,7 +494,6 @@
 "Inhalt" = "İçerik";
 "Kein Git-Repository" = "Git Deposu Yok";
 "Konflikt" = "çakışma";
-"Letzte Commits" = "Son Commit’ler";
 "Letzten Commit ändern" = "Son commit’i değiştir";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Yerel değişikliklerin üzerine yazılır. Önce commit edin veya atın.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Yerel ve uzak dal birbirinden ayrıldı; fast-forward yapılamıyor.";

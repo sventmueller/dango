@@ -494,7 +494,6 @@
 "Inhalt" = "Conținut";
 "Kein Git-Repository" = "Niciun depozit Git";
 "Konflikt" = "conflict";
-"Letzte Commits" = "Commituri recente";
 "Letzten Commit ändern" = "Modificați ultimul commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Modificările locale ar fi suprascrise. Faceți mai întâi commit sau renunțați la ele.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Ramura locală și cea remote au evoluat diferit; un fast-forward nu este posibil.";

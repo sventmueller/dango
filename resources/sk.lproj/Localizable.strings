@@ -494,7 +494,6 @@
 "Inhalt" = "Obsah";
 "Kein Git-Repository" = "Žiadny repozitár Gitu";
 "Konflikt" = "konflikt";
-"Letzte Commits" = "Posledné commity";
 "Letzten Commit ändern" = "Upraviť posledný commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Lokálne zmeny by sa prepísali. Najprv ich commitnite alebo zahoďte.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Lokálna a vzdialená vetva sa rozišli; fast-forward nie je možný.";

@@ -494,7 +494,6 @@
 "Inhalt" = "תוכן";
 "Kein Git-Repository" = "אין מאגר Git";
 "Konflikt" = "התנגשות";
-"Letzte Commits" = "‏Commits אחרונים";
 "Letzten Commit ändern" = "תיקון ה-Commit האחרון";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "שינויים מקומיים עלולים להידרס. יש לבצע להם Commit או לבטל אותם תחילה.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "ה-Branch המקומי וה-Branch המרוחק התפצלו; Fast-Forward אינו אפשרי.";

@@ -494,7 +494,6 @@
 "Inhalt" = "Zawartość";
 "Kein Git-Repository" = "Brak repozytorium Git";
 "Konflikt" = "konflikt";
-"Letzte Commits" = "Ostatnie commity";
 "Letzten Commit ändern" = "Popraw ostatni commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Lokalne zmiany zostałyby nadpisane. Najpierw je commituj lub odrzuć.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Lokalna i zdalna gałąź się rozeszły; przewinięcie (fast-forward) nie jest możliwe.";

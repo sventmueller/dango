@@ -494,7 +494,6 @@
 "Inhalt" = "Conteúdo";
 "Kein Git-Repository" = "Nenhum repositório Git";
 "Konflikt" = "conflito";
-"Letzte Commits" = "Commits recentes";
 "Letzten Commit ändern" = "Corrigir o último commit";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "As alterações locais seriam substituídas. Faça primeiro commit delas ou descarte-as.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "O branch local e o remoto divergiram; não é possível um fast-forward.";

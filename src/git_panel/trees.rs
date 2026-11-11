@@ -43,7 +43,7 @@ pub fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
 }
 
 /// The letter and the words for `change`.
-fn mark(change: Change) -> super::model::Mark {
+pub(super) fn mark(change: Change) -> super::model::Mark {
     use super::model::Mark;
     match change {
         Change::Added => Mark::Added,
@@ -173,7 +173,7 @@ impl GitPanel {
     }
 
     /// The menu entries of `key` as actions for VoiceOver, which reaches no context menu.
-    fn custom_actions(
+    pub(super) fn custom_actions(
         &self,
         key: &RowKey,
         entries: &[(&'static str, Option<Sel>)],

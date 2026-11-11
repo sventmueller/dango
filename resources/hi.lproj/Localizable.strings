@@ -494,7 +494,6 @@
 "Inhalt" = "कॉन्टेंट";
 "Kein Git-Repository" = "कोई Git रिपॉज़िटरी नहीं";
 "Konflikt" = "कॉन्फ़्लिक्ट";
-"Letzte Commits" = "हाल के कमिट";
 "Letzten Commit ändern" = "पिछला कमिट संशोधित करें";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "लोकल बदलाव ओवरराइट हो जाएँगे। पहले उन्हें कमिट करें या त्यागें।";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "लोकल और रिमोट ब्रांच अलग-अलग हो गई हैं; फ़ास्ट-फ़ॉरवर्ड संभव नहीं है।";

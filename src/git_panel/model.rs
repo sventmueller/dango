@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use ide_git::{Commit, EntryKind, FileState, Status, StatusEntry};
 use splat_i18n::t;
 
+use super::graph::GraphRow;
 use crate::worktrees::TreeState;
 
 /// A group of rows in the list.
@@ -19,7 +20,7 @@ pub enum Section {
     Changes,
     /// Threads that work in worktrees of their own (I1).
     Worktrees,
-    /// The latest commits of HEAD.
+    /// The history of HEAD and its upstream as a graph.
     Commits,
 }
 
@@ -38,7 +39,7 @@ impl Section {
             Section::Staged => t("Vorgemerkt"),
             Section::Changes => t("Änderungen"),
             Section::Worktrees => t("Worktree-Threads"),
-            Section::Commits => t("Letzte Commits"),
+            Section::Commits => t("Graph"),
         }
     }
 
@@ -144,11 +145,18 @@ pub struct Model {
     pub changes: Vec<FileRow>,
     pub worktrees: Vec<TreeState>,
     pub commits: Vec<Commit>,
+    /// The graph's row of each commit.
+    pub graph: Vec<GraphRow>,
+    /// Whether the history goes on past the commits read.
+    pub more: bool,
 }
 
 impl Model {
-    pub fn new(status: &Status, commits: Vec<Commit>, worktrees: Vec<TreeState>) -> Model {
+    /// The rows of `status`, `worktrees` and `commits`, read up to `limit` of them.
+    pub fn new(status: &Status, commits: Vec<Commit>, worktrees: Vec<TreeState>, limit: usize) -> Model {
         let mut model = Model {
+            graph: super::graph::layout(&commits),
+            more: commits.len() >= limit,
             commits,
             worktrees,
             ..Model::default()
@@ -220,7 +228,12 @@ impl Model {
     /// The keys of the rows in `section`.
     pub fn keys(&self, section: Section) -> Vec<RowKey> {
         match section {
-            Section::Commits => self.commits.iter().map(|c| RowKey::Commit(c.hash.clone())).collect(),
+            Section::Commits => self
+                .commits
+                .iter()
+                .map(|c| RowKey::Commit(c.hash.clone()))
+                .chain(self.more.then_some(RowKey::More))
+                .collect(),
             Section::Worktrees => self
                 .worktrees
                 .iter()
@@ -240,6 +253,17 @@ impl Model {
 
     pub fn commit(&self, hash: &str) -> Option<&Commit> {
         self.commits.iter().find(|c| c.hash == hash)
+    }
+
+    /// The commit `hash` with its row of the graph.
+    pub fn commit_row(&self, hash: &str) -> Option<(&Commit, &GraphRow)> {
+        let index = self.commits.iter().position(|c| c.hash == hash)?;
+        Some((&self.commits[index], self.graph.get(index)?))
+    }
+
+    /// The lanes that run past the end of the history read, for the row that reads more.
+    pub fn last_lanes(&self) -> GraphRow {
+        self.graph.last().map(GraphRow::through).unwrap_or_default()
     }
 
     /// The thread worktree at `path`.
@@ -282,6 +306,10 @@ pub enum RowKey {
     Worktree(PathBuf),
     /// A file a thread's worktree changed: the worktree's folder, the file relative to it.
     WorktreeFile(PathBuf, PathBuf),
+    /// A file a commit changed: the commit's hash, the file relative to the repository's root.
+    CommitFile(String, PathBuf),
+    /// The row that reads more of the history.
+    More,
 }
 
 impl RowKey {
@@ -292,6 +320,8 @@ impl RowKey {
             RowKey::Commit(hash) => format!("commit:{hash}"),
             RowKey::Worktree(path) => format!("tree:{}", path.display()),
             RowKey::WorktreeFile(tree, file) => format!("treefile:{}\0{}", tree.display(), file.display()),
+            RowKey::CommitFile(hash, file) => format!("commitfile:{hash}\0{}", file.display()),
+            RowKey::More => "more:".to_string(),
         }
     }
 
@@ -301,6 +331,11 @@ impl RowKey {
             "section" => Section::from_word(rest).map(RowKey::Section),
             "commit" => Some(RowKey::Commit(rest.to_string())),
             "tree" => Some(RowKey::Worktree(PathBuf::from(rest))),
+            "more" => Some(RowKey::More),
+            "commitfile" => {
+                let (hash, file) = rest.split_once('\0')?;
+                Some(RowKey::CommitFile(hash.to_string(), PathBuf::from(file)))
+            }
             "treefile" => {
                 let (tree, file) = rest.split_once('\0')?;
                 Some(RowKey::WorktreeFile(PathBuf::from(tree), PathBuf::from(file)))
@@ -360,6 +395,7 @@ mod tests {
             ]),
             vec![],
             vec![],
+            50,
         );
         let staged: Vec<_> = model.staged.iter().map(|f| (f.path().to_path_buf(), f.mark)).collect();
         assert_eq!(staged, [("a.rs".into(), Mark::Added), ("b.rs".into(), Mark::Modified)]);
@@ -382,6 +418,8 @@ mod tests {
             RowKey::Commit("abc123".into()),
             RowKey::Worktree(PathBuf::from("/data/worktrees/app-1/fix: it")),
             RowKey::WorktreeFile(PathBuf::from("/data/w/fix"), PathBuf::from("src/a:b.rs")),
+            RowKey::CommitFile("abc123".into(), PathBuf::from("src/a:b.rs")),
+            RowKey::More,
         ] {
             assert_eq!(RowKey::decode(&key.encode()), Some(key));
         }

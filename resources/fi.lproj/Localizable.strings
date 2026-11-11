@@ -494,7 +494,6 @@
 "Inhalt" = "Sisältö";
 "Kein Git-Repository" = "Ei Git-repositoriota";
 "Konflikt" = "ristiriita";
-"Letzte Commits" = "Viimeisimmät commitit";
 "Letzten Commit ändern" = "Muuta viimeisintä commitia";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "Paikalliset muutokset korvattaisiin. Commitoi tai hylkää ne ensin.";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "Paikallinen haara ja etähaara ovat erkaantuneet; pikakelaus (fast-forward) ei onnistu.";

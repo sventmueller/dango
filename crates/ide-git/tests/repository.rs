@@ -261,6 +261,55 @@ fn the_log_lists_the_newest_commits_with_refs() {
 }
 
 #[test]
+fn the_history_takes_in_a_second_line_and_a_commit_tells_what_it_changed() {
+    let scratch = Scratch::new("history");
+    let repository = scratch.repository("r", &[("a.txt", "1\n2\n")]);
+    let root = repository.root();
+    scratch.raw(root, &["branch", "side"]);
+    write(root, "a.txt", "1\nzwei\n");
+    write(root, "b.txt", "neu\n");
+    scratch.raw(root, &["add", "."]);
+    scratch.raw(
+        root,
+        &["commit", "--quiet", "-m", "main work", "-m", "Why it was done."],
+    );
+    scratch.raw(root, &["switch", "--quiet", "side"]);
+    write(root, "c.txt", "c\n");
+    scratch.raw(root, &["add", "."]);
+    scratch.raw(root, &["commit", "--quiet", "-m", "side work"]);
+    scratch.raw(root, &["switch", "--quiet", "main"]);
+    let only_head = repository.history(10, None).unwrap();
+    assert_eq!(only_head.len(), 2);
+    let both = repository.history(10, Some("side")).unwrap();
+    assert_eq!(both.len(), 3);
+    let root_commit = both.last().unwrap();
+    assert!(root_commit.parents.is_empty());
+    let work = both.iter().find(|c| c.subject == "main work").unwrap();
+    assert_eq!(work.body, "Why it was done.");
+    let changes = repository.commit_changes(&work.hash).unwrap();
+    let files: Vec<_> = changes.files.iter().map(|f| (f.path.clone(), f.change)).collect();
+    assert_eq!(
+        files,
+        [
+            (PathBuf::from("a.txt"), Change::Modified),
+            (PathBuf::from("b.txt"), Change::Added)
+        ]
+    );
+    assert_eq!((changes.insertions, changes.deletions), (2, 1));
+    let first = repository.commit_changes(&root_commit.hash).unwrap();
+    assert_eq!(first.files.len(), 1);
+    let diff = repository.diff_commit(&work.hash, Path::new("a.txt")).unwrap().unwrap();
+    assert_eq!(diff.hunks.len(), 1);
+    assert!(
+        repository
+            .diff_commit(&work.hash, Path::new("c.txt"))
+            .unwrap()
+            .is_none()
+    );
+    assert!(repository.history(10, Some("--all")).is_err());
+}
+
+#[test]
 fn remotes_list_their_urls() {
     let scratch = Scratch::new("remotes");
     let repository = scratch.repository("r", &[("a.txt", "a\n")]);

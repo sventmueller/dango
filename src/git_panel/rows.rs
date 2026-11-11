@@ -1,5 +1,6 @@
 //! The rows of the Git list: section headers with their "all" buttons, files with status letters and buttons that show
-//! on hover, commits; and the list itself, which takes keyboard commands.
+//! on hover; and the list itself, which lines its rows up as VS Code does and takes keyboard commands. The graph's
+//! rows are in `history`.
 
 use std::cell::OnceCell;
 
@@ -20,9 +21,12 @@ use super::panel::{GitPanel, with_panel};
 use crate::util::{label, ns, symbol_button};
 
 const SECTION_HEIGHT: f64 = 26.0;
-const FILE_HEIGHT: f64 = 24.0;
-const COMMIT_HEIGHT: f64 = 36.0;
+/// The height of a file's or a commit's row, the same as in the folder tree.
+const ROW_HEIGHT: f64 = 22.0;
+const TREE_HEIGHT: f64 = 36.0;
 const ACTION_POINTS: f64 = 12.0;
+/// How far a status letter keeps from the list's edge.
+const LETTER_INSET: f64 = 8.0;
 
 /// Return and the Return of the number block.
 const RETURN_KEYS: [u16; 2] = [36, 76];
@@ -33,8 +37,8 @@ const DELETE_KEY: u16 = 51;
 pub fn height(key: Option<&RowKey>) -> f64 {
     match key {
         Some(RowKey::Section(_)) => SECTION_HEIGHT,
-        Some(RowKey::Commit(_) | RowKey::Worktree(_)) => COMMIT_HEIGHT,
-        _ => FILE_HEIGHT,
+        Some(RowKey::Worktree(_)) => TREE_HEIGHT,
+        _ => ROW_HEIGHT,
     }
 }
 
@@ -52,15 +56,22 @@ define_class!(
     unsafe impl NSObjectProtocol for GitOutlineView {}
 
     impl GitOutlineView {
-        /// The disclosure triangle where the panel's title begins, not in the source list's margin.
+        /// The disclosure triangle where the panel's title begins, not in the source list's margin; a row below a
+        /// section has its triangle where the section has its own, and a commit has none, as its dot is there.
         #[unsafe(method(frameOfOutlineCellAtRow:))]
         fn outline_cell_frame(&self, row: isize) -> NSRect {
             // SAFETY: The superclass's implementation, with this method's signature.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
-            crate::window::file_outline::outdent(self, frame, OUTDENT, false)
+            let frame = crate::window::file_outline::outdent(self, frame, OUTDENT, false);
+            match self.key_at(row) {
+                Some(RowKey::Commit(_)) => NSRect::ZERO,
+                _ if self.levelForRow(row) > 0 => self.toward_leading(frame, false),
+                _ => frame,
+            }
         }
 
-        /// The rows moved along with the triangle.
+        /// The rows moved along with the triangles: a section's files begin where its triangle does, the graph's
+        /// rows below the section's triangle.
         #[unsafe(method(frameOfCellAtColumn:row:))]
         fn cell_frame(&self, column: isize, row: isize) -> NSRect {
             // SAFETY: The superclass's implementation, with this method's signature.
@@ -68,7 +79,15 @@ define_class!(
             if column != 0 {
                 return frame;
             }
-            crate::window::file_outline::outdent(self, frame, OUTDENT, true)
+            let frame = crate::window::file_outline::outdent(self, frame, OUTDENT, true);
+            if self.levelForRow(row) <= 0 {
+                return frame;
+            }
+            match self.key_at(row) {
+                Some(RowKey::Commit(_) | RowKey::CommitFile(..) | RowKey::More) => self.under_chevron(frame, row),
+                Some(RowKey::File(..)) => self.flush_with_chevron(frame, row),
+                _ => self.toward_leading(frame, true),
+            }
         }
 
         #[unsafe(method(keyDown:))]
@@ -106,6 +125,73 @@ impl GitOutlineView {
         unsafe { msg_send![GitOutlineView::alloc(mtm), initWithFrame: frame] }
     }
 
+    fn key_at(&self, row: isize) -> Option<RowKey> {
+        self.itemAtRow(row).and_then(|item| super::panel::key_of(&item))
+    }
+
+    /// `frame` moved one level toward the leading edge; a cell keeps its far edge.
+    fn toward_leading(&self, frame: NSRect, cell: bool) -> NSRect {
+        let by = self.indentationPerLevel();
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let x = match (rtl, cell) {
+            (false, _) => (frame.origin.x - by).max(0.0),
+            (true, false) => frame.origin.x + by,
+            (true, true) => frame.origin.x,
+        };
+        let width = if cell { frame.size.width + by } else { frame.size.width };
+        NSRect::new(NSPoint::new(x, frame.origin.y), NSSize::new(width, frame.size.height))
+    }
+
+    /// The chevron of the section that holds `row`, if it shows one.
+    fn section_chevron(&self, row: isize) -> Option<NSRect> {
+        let mut item = self.itemAtRow(row)?;
+        // SAFETY: The items come from this outline view, which knows them.
+        let section = unsafe {
+            while let Some(parent) = self.parentForItem(Some(&item)) {
+                item = parent;
+            }
+            self.rowForItem(Some(&item))
+        };
+        // SAFETY: This class's own method, with its signature.
+        let chevron: NSRect = unsafe { msg_send![self, frameOfOutlineCellAtRow: section] };
+        (chevron.size.width > 0.0).then_some(chevron)
+    }
+
+    /// The cell of a section's file at `row`, beginning at the leading edge of the section's chevron.
+    fn flush_with_chevron(&self, frame: NSRect, row: isize) -> NSRect {
+        let Some(chevron) = self.section_chevron(row) else {
+            return self.toward_leading(frame, true);
+        };
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let (left, right) = if rtl {
+            (frame.origin.x, chevron.origin.x + chevron.size.width)
+        } else {
+            (chevron.origin.x, frame.origin.x + frame.size.width)
+        };
+        NSRect::new(
+            NSPoint::new(left, frame.origin.y),
+            NSSize::new((right - left).max(0.0), frame.size.height),
+        )
+    }
+
+    /// The cell of a graph row at `row`, beginning so that the first lane runs below its section's chevron.
+    fn under_chevron(&self, frame: NSRect, row: isize) -> NSRect {
+        let Some(chevron) = self.section_chevron(row) else {
+            return frame;
+        };
+        let middle = chevron.origin.x + chevron.size.width / 2.0;
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let (left, right) = if rtl {
+            (frame.origin.x, middle + super::graph::LANE / 2.0)
+        } else {
+            (middle - super::graph::LANE / 2.0, frame.origin.x + frame.size.width)
+        };
+        NSRect::new(
+            NSPoint::new(left, frame.origin.y),
+            NSSize::new((right - left).max(0.0), frame.size.height),
+        )
+    }
+
     fn panel(&self) -> Option<Retained<GitPanel>> {
         // SAFETY: Only `ui::outline` makes this view, and it sets the panel as the data source.
         let source = unsafe { self.dataSource() }?;
@@ -116,6 +202,8 @@ impl GitOutlineView {
 
 #[derive(Default)]
 pub struct HoverIvars {
+    /// What runs when the mouse comes over the row.
+    entered: OnceCell<Box<dyn Fn()>>,
     actions: OnceCell<Retained<NSView>>,
     /// Keeps the text clear of the buttons while they show.
     beside_actions: OnceCell<Retained<NSLayoutConstraint>>,
@@ -124,7 +212,7 @@ pub struct HoverIvars {
 
 define_class!(
     // SAFETY: NSTableCellView has no subclassing requirements and `HoverCell` does not implement Drop.
-    /// A file row whose buttons show while the mouse is over it.
+    /// A row whose buttons show while the mouse is over it.
     #[unsafe(super(NSTableCellView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitHoverCell"]
@@ -136,7 +224,12 @@ define_class!(
     impl HoverCell {
         #[unsafe(method(mouseEntered:))]
         fn mouse_entered(&self, _event: &NSEvent) {
-            crate::util::guarded((), || self.show_actions(true));
+            crate::util::guarded((), || {
+                self.show_actions(true);
+                if let Some(entered) = self.ivars().entered.get() {
+                    entered();
+                }
+            });
         }
 
         #[unsafe(method(mouseExited:))]
@@ -147,9 +240,14 @@ define_class!(
 );
 
 impl HoverCell {
-    fn new(mtm: MainThreadMarker) -> Retained<HoverCell> {
+    /// Runs `entered` whenever the mouse comes over the row.
+    pub fn on_enter(&self, entered: impl Fn() + 'static) {
+        let _ = self.ivars().entered.set(Box::new(entered));
+    }
+
+    pub fn new(mtm: MainThreadMarker) -> Retained<HoverCell> {
         let this = HoverCell::alloc(mtm).set_ivars(HoverIvars::default());
-        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(200.0, FILE_HEIGHT));
+        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(200.0, ROW_HEIGHT));
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
         let cell: Retained<HoverCell> = unsafe { msg_send![super(this), initWithFrame: frame] };
         let options = NSTrackingAreaOptions::MouseEnteredAndExited
@@ -194,8 +292,17 @@ impl GitPanel {
                 Some(self.file_cell(mtm, *section, &row))
             }
             RowKey::Commit(hash) => {
-                let commit = state.model.commit(hash)?;
-                Some(commit_cell(mtm, commit))
+                drop(state);
+                self.commit_cell(mtm, hash)
+            }
+            RowKey::CommitFile(hash, path) => {
+                drop(state);
+                self.commit_file_cell(mtm, hash, path)
+            }
+            RowKey::More => {
+                let lanes = state.model.last_lanes();
+                drop(state);
+                Some(self.more_cell(mtm, lanes))
             }
             RowKey::Worktree(path) => {
                 let tree = state.model.tree(path)?.clone();
@@ -212,65 +319,33 @@ impl GitPanel {
 
     fn file_cell(&self, mtm: MainThreadMarker, section: Section, row: &FileRow) -> Retained<NSView> {
         let cell = HoverCell::new(mtm);
-        let letter = label(mtm, row.mark.letter());
-        letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
-            11.0,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightBold },
-        )));
-        letter.setTextColor(Some(&mark_color(row.mark)));
-        letter.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-        let path = row.path();
-        let name = label(
-            mtm,
-            &path
-                .file_name()
-                .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
-        );
-        name.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-        if row.mark == Mark::Deleted {
-            name.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        }
-        let folder = label(
-            mtm,
-            &path.parent().map_or_else(String::new, |p| p.display().to_string()),
-        );
-        folder.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-        folder.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        folder.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
-        folder.setContentCompressionResistancePriority_forOrientation(
-            100.0,
-            objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
-        );
-        let text = NSStackView::new(mtm);
-        text.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        text.setSpacing(5.0);
-        for view in [&*letter as &NSView, &name, &folder] {
-            text.addArrangedSubview(view);
-        }
-        letter.widthAnchor().constraintEqualToConstant(12.0).setActive(true);
+        let (text, name) = file_text(mtm, row.path(), row.mark == Mark::Deleted);
+        let letter = letter_label(mtm, row.mark);
         let actions = self.row_actions(mtm, section);
         actions.setHidden(true);
-        cell.addSubview(&text);
-        cell.addSubview(&actions);
-        // SAFETY: The label is a subview of the cell, which keeps it.
-        unsafe { cell.setTextField(Some(&name)) };
-        for view in [&*text as &NSView, &actions] {
+        for view in [&*text as &NSView, &letter, &actions] {
+            cell.addSubview(view);
             view.setTranslatesAutoresizingMaskIntoConstraints(false);
             view.centerYAnchor()
                 .constraintEqualToAnchor(&cell.centerYAnchor())
                 .setActive(true);
         }
+        // SAFETY: The label is a subview of the cell, which keeps it.
+        unsafe { cell.setTextField(Some(&name)) };
         text.leadingAnchor()
             .constraintEqualToAnchor(&cell.leadingAnchor())
             .setActive(true);
+        letter
+            .trailingAnchor()
+            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -LETTER_INSET)
+            .setActive(true);
         actions
             .trailingAnchor()
-            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0)
+            .constraintEqualToAnchor_constant(&letter.leadingAnchor(), -4.0)
             .setActive(true);
         let to_edge = text
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0);
+            .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0);
         let beside = text
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&actions.leadingAnchor(), -4.0);
@@ -354,6 +429,8 @@ impl GitPanel {
             self.keep_branch(&keys);
         } else if action == sel!(ideGitRemoveTree:) {
             self.remove_tree(&keys);
+        } else {
+            self.run_history_action(action, &keys);
         }
     }
 }
@@ -400,28 +477,47 @@ pub(super) fn mark_color(mark: Mark) -> Retained<NSColor> {
 
 fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count: usize) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
-    let title = label(mtm, &section.title().to_uppercase());
-    title.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize())));
-    title.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    let number = label(mtm, &count.to_string());
-    number.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-        NSFont::smallSystemFontSize(),
+    let title = label(mtm, section.title());
+    title.setFont(Some(&NSFont::systemFontOfSize_weight(
+        NSFont::systemFontSize(),
         // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        unsafe { objc2_app_kit::NSFontWeightSemibold },
     )));
-    number.setTextColor(Some(&NSColor::tertiaryLabelColor()));
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(5.0);
-    row.addArrangedSubview(&title);
-    row.addArrangedSubview(&number);
-    cell.addSubview(&row);
-    row.setTranslatesAutoresizingMaskIntoConstraints(false);
-    row.leadingAnchor()
+    title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    title.setContentCompressionResistancePriority_forOrientation(
+        100.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    cell.addSubview(&title);
+    title.setTranslatesAutoresizingMaskIntoConstraints(false);
+    title
+        .leadingAnchor()
         .constraintEqualToAnchor(&cell.leadingAnchor())
         .setActive(true);
-    row.centerYAnchor()
+    title
+        .centerYAnchor()
         .constraintEqualToAnchor(&cell.centerYAnchor())
+        .setActive(true);
+    let number = pill(
+        mtm,
+        &count.to_string(),
+        &NSColor::quaternaryLabelColor(),
+        &NSColor::secondaryLabelColor(),
+    );
+    number.setHidden(section == Section::Commits);
+    cell.addSubview(&number);
+    number.setTranslatesAutoresizingMaskIntoConstraints(false);
+    number
+        .trailingAnchor()
+        .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0)
+        .setActive(true);
+    number
+        .centerYAnchor()
+        .constraintEqualToAnchor(&cell.centerYAnchor())
+        .setActive(true);
+    title
+        .trailingAnchor()
+        .constraintLessThanOrEqualToAnchor_constant(&number.leadingAnchor(), -30.0)
         .setActive(true);
     let all = match section {
         Section::Staged => Some(("minus", t("Alle zurücknehmen"), sel!(ideGitUnstageAll:))),
@@ -435,7 +531,7 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
         button.setTranslatesAutoresizingMaskIntoConstraints(false);
         button
             .trailingAnchor()
-            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0)
+            .constraintEqualToAnchor_constant(&number.leadingAnchor(), -4.0)
             .setActive(true);
         button
             .centerYAnchor()
@@ -451,53 +547,6 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
     // SAFETY: The label is a subview of the cell, which keeps it.
     unsafe { cell.setTextField(Some(&title)) };
     cell.into_super()
-}
-
-fn commit_cell(mtm: MainThreadMarker, commit: &ide_git::Commit) -> Retained<NSView> {
-    let cell = NSTableCellView::new(mtm);
-    let subject = label(mtm, &commit.subject);
-    subject.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    let age = super::text::ago(now() - commit.author_time);
-    let byline = label(mtm, &tf("{} · {}", &[&commit.author_name, &age]));
-    byline.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    byline.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    byline.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    let lines = NSStackView::new(mtm);
-    lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-    lines.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
-    lines.setSpacing(1.0);
-    lines.addArrangedSubview(&subject);
-    lines.addArrangedSubview(&byline);
-    cell.addSubview(&lines);
-    lines.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        lines.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
-        lines
-            .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
-        lines.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
-    let short: String = commit.hash.chars().take(8).collect();
-    cell.setToolTip(Some(&ns(&format!(
-        "{short}  {}\n{} <{}>",
-        commit.subject, commit.author_name, commit.author_email
-    ))));
-    cell.setAccessibilityLabel(Some(&ns(&tf(
-        "Commit {}: {}, von {}, {}",
-        &[&short, &commit.subject, &commit.author_name, &age],
-    ))));
-    // SAFETY: The label is a subview of the cell, which keeps it.
-    unsafe { cell.setTextField(Some(&subject)) };
-    cell.into_super()
-}
-
-/// Seconds since 1970.
-fn now() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
 }
 
 impl GitPanel {
@@ -547,8 +596,29 @@ impl GitPanel {
         let extends = modifiers.is_some_and(|flags| {
             flags.intersects(objc2_app_kit::NSEventModifierFlags::Shift | objc2_app_kit::NSEventModifierFlags::Command)
         });
-        if !extends && let Some(key @ (RowKey::File(..) | RowKey::WorktreeFile(..))) = super::panel::key_of(&item) {
-            self.show_diff(&key, true);
+        if extends {
+            return;
+        }
+        match super::panel::key_of(&item) {
+            Some(key @ (RowKey::File(..) | RowKey::WorktreeFile(..) | RowKey::CommitFile(..))) => {
+                self.show_diff(&key, true);
+            }
+            Some(RowKey::Commit(_)) => self.toggle(&item),
+            Some(RowKey::More) => self.read_more(),
+            _ => {}
+        }
+    }
+
+    /// Opens `item` when it is closed, else closes it.
+    fn toggle(&self, item: &AnyObject) {
+        let outline = &self.ui().outline;
+        // SAFETY: The item came from this outline view, which knows it.
+        unsafe {
+            if outline.isItemExpanded(Some(item)) {
+                outline.collapseItem(Some(item));
+            } else {
+                outline.expandItem(Some(item));
+            }
         }
     }
 
@@ -560,19 +630,11 @@ impl GitPanel {
         };
         match super::panel::key_of(&item) {
             Some(key @ RowKey::File(Section::Conflicts, _)) => self.open(vec![key]),
-            Some(key @ RowKey::File(..)) => self.show_diff(&key, false),
+            Some(key @ (RowKey::File(..) | RowKey::CommitFile(..))) => self.show_diff(&key, false),
             Some(RowKey::WorktreeFile(tree, file)) => self.show_tree_diff(&tree, &file, false),
-            Some(RowKey::Section(_) | RowKey::Worktree(_)) => {
-                // SAFETY: The item came from this outline view, which knows it.
-                unsafe {
-                    if outline.isItemExpanded(Some(&item)) {
-                        outline.collapseItem(Some(&item));
-                    } else {
-                        outline.expandItem(Some(&item));
-                    }
-                }
-            }
-            _ => {}
+            Some(RowKey::Section(_) | RowKey::Worktree(_) | RowKey::Commit(_)) => self.toggle(&item),
+            Some(RowKey::More) => self.read_more(),
+            None => {}
         }
     }
 
@@ -609,9 +671,20 @@ impl GitPanel {
             // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
             unsafe { outline.expandItem(Some(&item)) };
         }
-        let open: Vec<_> = self.read().open_trees.iter().cloned().collect();
-        for path in open {
-            let item = self.item_for(&RowKey::Worktree(path));
+        let (open, commits): (Vec<_>, Vec<_>) = {
+            let state = self.read();
+            let shown = |hash: &&String| state.model.commit(hash).is_some();
+            (
+                state.open_trees.iter().cloned().collect(),
+                state.open_commits.iter().filter(shown).cloned().collect(),
+            )
+        };
+        let keys = open
+            .into_iter()
+            .map(RowKey::Worktree)
+            .chain(commits.into_iter().map(RowKey::Commit));
+        for key in keys {
+            let item = self.item_for(&key);
             // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
             unsafe { outline.expandItem(Some(&item)) };
         }
@@ -665,6 +738,9 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
     if let [RowKey::Worktree(_) | RowKey::WorktreeFile(..)] = keys {
         return super::trees::menu(keys);
     }
+    if let [RowKey::Commit(_) | RowKey::CommitFile(..)] = keys {
+        return super::history::menu(keys);
+    }
     if files.is_empty() {
         return vec![];
     }
@@ -691,4 +767,123 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
         entries.push((t("Verwerfen …"), Some(sel!(ideGitDiscard:))));
     }
     entries
+}
+
+/// A file's icon, name and folder in a row; the name is the stack's label for VoiceOver.
+pub(super) fn file_text(
+    mtm: MainThreadMarker,
+    path: &std::path::Path,
+    deleted: bool,
+) -> (Retained<NSStackView>, Retained<objc2_app_kit::NSTextField>) {
+    let icon = crate::file_icon::image_view(mtm, path, false);
+    icon.widthAnchor().constraintEqualToConstant(16.0).setActive(true);
+    let name = label(
+        mtm,
+        &path
+            .file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
+    );
+    name.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
+    if deleted {
+        name.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    }
+    let folder = label(
+        mtm,
+        &path.parent().map_or_else(String::new, |p| p.display().to_string()),
+    );
+    folder.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    folder.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    folder.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
+    folder.setContentCompressionResistancePriority_forOrientation(
+        100.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    let text = NSStackView::new(mtm);
+    text.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    text.setSpacing(5.0);
+    for view in [&*icon as &NSView, &name, &folder] {
+        text.addArrangedSubview(view);
+    }
+    (text, name)
+}
+
+/// A file's status letter in its colour.
+pub(super) fn letter_label(mtm: MainThreadMarker, mark: Mark) -> Retained<objc2_app_kit::NSTextField> {
+    let letter = label(mtm, mark.letter());
+    letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
+        11.0,
+        // SAFETY: AppKit sets its font weight constants when it loads.
+        unsafe { objc2_app_kit::NSFontWeightBold },
+    )));
+    letter.setTextColor(Some(&mark_color(mark)));
+    letter.setAlignment(objc2_app_kit::NSTextAlignment::Center);
+    letter.widthAnchor().constraintEqualToConstant(12.0).setActive(true);
+    letter.setContentHuggingPriority_forOrientation(750.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
+    letter
+}
+
+/// A rounded label in `fill`, as a count or a branch beside a commit.
+pub(super) fn pill(mtm: MainThreadMarker, text: &str, fill: &NSColor, color: &NSColor) -> Retained<NSView> {
+    pill_with(mtm, None, text, fill, color)
+}
+
+/// A pill with the symbol `symbol_name` before its text, or only the symbol when `text` is empty.
+pub(super) fn pill_with(
+    mtm: MainThreadMarker,
+    symbol_name: Option<&str>,
+    text: &str,
+    fill: &NSColor,
+    color: &NSColor,
+) -> Retained<NSView> {
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(2.0);
+    let side = if symbol_name.is_some() { 4.0 } else { 6.0 };
+    row.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+        top: 1.0,
+        left: side,
+        bottom: 1.0,
+        right: side,
+    });
+    if let Some(image) = symbol_name.and_then(|name| crate::util::symbol(name, "")) {
+        let icon = objc2_app_kit::NSImageView::imageViewWithImage(&image, mtm);
+        icon.setSymbolConfiguration(Some(
+            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+                8.0,
+                // SAFETY: AppKit sets its font weight constants when it loads.
+                unsafe { objc2_app_kit::NSFontWeightSemibold },
+            ),
+        ));
+        icon.setContentTintColor(Some(color));
+        crate::util::hide_from_voiceover(&icon);
+        row.addArrangedSubview(&icon);
+    }
+    if !text.is_empty() {
+        let words = label(mtm, text);
+        words.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
+            NSFont::smallSystemFontSize(),
+            // SAFETY: AppKit sets its font weight constants when it loads.
+            unsafe { objc2_app_kit::NSFontWeightMedium },
+        )));
+        words.setTextColor(Some(color));
+        words.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        row.addArrangedSubview(&words);
+    }
+    let pill = objc2_app_kit::NSBox::new(mtm);
+    pill.setBoxType(objc2_app_kit::NSBoxType::Custom);
+    pill.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
+    pill.setBorderWidth(0.0);
+    pill.setCornerRadius(7.0);
+    pill.setFillColor(fill);
+    pill.setContentViewMargins(NSSize::new(0.0, 0.0));
+    if let Some(content) = pill.contentView() {
+        content.addSubview(&row);
+        crate::util::pin_edges(&row, &content);
+    }
+    pill.setContentHuggingPriority_forOrientation(750.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
+    pill.setContentCompressionResistancePriority_forOrientation(
+        740.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    pill.into_super()
 }

@@ -494,7 +494,6 @@
 "Inhalt" = "內容";
 "Kein Git-Repository" = "沒有 Git 儲存庫";
 "Konflikt" = "衝突";
-"Letzte Commits" = "最近的提交";
 "Letzten Commit ändern" = "修改上次的提交";
 "Lokale Änderungen würden überschrieben. Committe oder verwirf sie zuerst." = "本機變更將被覆寫。請先提交或捨棄這些變更。";
 "Lokaler und entfernter Branch sind auseinandergelaufen; ein Fast-Forward geht nicht." = "本機分支和遠端分支已分歧；無法快轉合併。";

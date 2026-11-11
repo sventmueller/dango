@@ -134,6 +134,7 @@ impl GitPanel {
 
     pub fn open(&self, keys: Vec<RowKey>) {
         self.open_tree_files(&keys);
+        self.open_commit_files(&keys);
         let (Some(controller), Some(repo)) = (self.controller(), self.repo()) else {
             return;
         };
@@ -150,6 +151,9 @@ impl GitPanel {
     pub fn show_diff(&self, key: &RowKey, preview: bool) {
         if let RowKey::WorktreeFile(tree, file) = key {
             return self.show_tree_diff(tree, file, preview);
+        }
+        if let RowKey::CommitFile(hash, file) = key {
+            return self.show_commit_diff(hash, file, preview);
         }
         let (Some(controller), Some(repo), RowKey::File(section, path)) = (self.controller(), self.repo(), key) else {
             return;
@@ -203,6 +207,11 @@ impl GitPanel {
 
     /// Commits what is staged once the secrets check found nothing, or the user goes on anyway.
     pub fn commit(&self) {
+        self.commit_then(None);
+    }
+
+    /// Commits, then pushes for `Task::Push`, or pulls and pushes for `Task::Pull`.
+    pub fn commit_then(&self, after: Option<Task>) {
         let message = self.ui().message.text();
         let amend = self.ui().amend.state() == NSControlStateValueOn;
         let staged = !self.read().model.staged.is_empty();
@@ -220,6 +229,7 @@ impl GitPanel {
         if !self.begin(Task::Scan, None) {
             return;
         }
+        self.state().after_commit = after;
         let id = self.id();
         work::long(
             move || repo.scan_staged(),
@@ -240,6 +250,8 @@ impl GitPanel {
                 panel.end();
                 if agreed {
                     panel.proceed(next, message, amend);
+                } else {
+                    panel.state().after_commit = None;
                 }
             });
         };
@@ -282,11 +294,17 @@ impl GitPanel {
 
     fn committed(&self, result: Option<ide_git::Result<String>>) {
         self.end();
+        let after = self.state().after_commit.take();
         match result {
             Some(Ok(_)) => {
                 self.ui().message.setString(&ns(""));
                 self.ui().amend.setState(NSControlStateValueOff);
                 self.update_placeholder();
+                if let Some(task) = after {
+                    self.state().push_after_pull = task == Task::Pull;
+                    self.remote(task);
+                    return;
+                }
             }
             Some(Err(error)) => self.report(&error),
             None => self.set_problem(Some(Problem::plain(t("Git ist unerwartet abgebrochen.")))),
@@ -352,13 +370,21 @@ impl GitPanel {
         sheets::pull_mode(&window, move |mode| {
             with_panel(id, |panel| match mode {
                 Some(mode) => panel.start_remote(Task::Pull, mode),
-                None => panel.start_refresh(),
+                None => {
+                    panel.state().push_after_pull = false;
+                    panel.start_refresh();
+                }
             });
         });
     }
 
     fn remote_done(&self, result: Option<ide_git::Result<()>>) {
         self.end();
+        let push = std::mem::take(&mut self.state().push_after_pull);
+        if push && matches!(result, Some(Ok(()))) {
+            self.remote(Task::Push);
+            return;
+        }
         match result {
             Some(Ok(())) | Some(Err(Error::Cancelled)) => {}
             Some(Err(error)) => self.report(&error),
@@ -408,7 +434,8 @@ impl GitPanel {
             return;
         };
         let id = self.id();
-        sheets::branch_name(&window, move |name| {
+        let info = t("Er beginnt beim aktuellen Commit, und Git wechselt gleich zu ihm.");
+        sheets::branch_name(&window, info, move |name| {
             with_panel(id, |panel| {
                 let Some(repo) = panel.repo() else { return };
                 if !panel.begin(Task::Switch, None) {
