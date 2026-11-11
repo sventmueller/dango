@@ -1081,6 +1081,12 @@ pub mod selftest {
         }
     }
 
+    /// The distance from one result row to the next.
+    pub fn row_pitch(panel: &SearchPanel) -> Option<f64> {
+        let outline = &panel.ivars().views.get()?.outline;
+        (outline.numberOfRows() > 1).then(|| outline.rectOfRow(1).origin.y - outline.rectOfRow(0).origin.y)
+    }
+
     /// The chevron that opens the replace field.
     pub fn replace_chevron(panel: &SearchPanel) -> Option<objc2::rc::Retained<objc2_app_kit::NSButton>> {
         panel.ivars().views.get().map(|views| views.replace_toggle.clone())

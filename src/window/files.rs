@@ -25,7 +25,7 @@ use crate::project::Project;
 use crate::util::{constant, guarded, item, ns, separator, set_action, set_target};
 
 /// The height of every row, a folder's as a file's.
-const ROW_HEIGHT: f64 = 24.0;
+const ROW_HEIGHT: f64 = 22.0;
 
 /// What the tree knows of a row besides its path.
 struct RowInfo {

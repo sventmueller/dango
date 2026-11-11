@@ -207,6 +207,22 @@ fn chevrons_line_up(root: &Path) {
         .as_ref()
         .and_then(|c| c.file_tree_outline())
         .and_then(|outline| closed_folder_chevron(&outline));
+    let pitches = (
+        controller
+            .as_ref()
+            .and_then(|c| c.file_tree_outline())
+            .filter(|outline| outline.numberOfRows() > 1)
+            .map(|outline| outline.rectOfRow(1).origin.y - outline.rectOfRow(0).origin.y),
+        controller
+            .as_ref()
+            .and_then(|c| c.search_panel())
+            .and_then(|p| search::row_pitch(&p)),
+    );
+    check(
+        "the folder tree's rows are as tall as the search panel's",
+        matches!(pitches, (Some(tree), Some(search)) if (tree - search).abs() < 0.5),
+        format!("{pitches:?}"),
+    );
     check(
         "a closed folder's chevron in the files panel begins where the search panel's does",
         search
