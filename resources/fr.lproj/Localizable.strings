@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Demander des modifications";
 "„{}“" = "« {} »";
 "… {} weitere Zeilen" = "… {} lignes de plus";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc pour passer à Claude ou en revenir";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc pour y passer ou en revenir";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Un simple clic sur un fichier l’ouvre dans un onglet d’aperçu";
 "Tabs:" = "Onglets :";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Aperçu : le prochain fichier que vous ouvrez d’un simple clic remplace cet onglet. Un double-clic le conserve.";
@@ -949,7 +949,6 @@
 "Beendet" = "Terminé";
 "Nicht im PATH der Login-Shell gefunden" = "Introuvable dans le PATH du shell de connexion";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Uniquement dans les dossiers de confiance : les CLI exécutent les hooks et les réglages du projet.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc pour passer à {} ou en revenir";
 "1 Datei geändert" = "1 fichier modifié";
 "Als Branch behalten" = "Conserver comme branche";
 "Auch den Branch {} löschen" = "Supprimer aussi la branche {}";

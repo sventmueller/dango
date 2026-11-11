@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "संशोधित करवाएँ";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} और पंक्तियाँ";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "Claude पर फ़ोकस करने या उससे बाहर आने के लिए ⌘Esc";
+"⌘Esc zum Fokussieren oder Verlassen" = "फ़ोकस करने या बाहर आने के लिए ⌘Esc";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "फ़ाइल पर एक क्लिक करने से वह प्रीव्यू टैब में खुलती है";
 "Tabs:" = "टैब :";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "प्रीव्यू : अगली फ़ाइल, जिसे आप एक क्लिक से खोलेंगे, इस टैब की जगह ले लेगी। डबल-क्लिक करने पर यह टैब बना रहता है।";
@@ -949,7 +949,6 @@
 "Beendet" = "समाप्त";
 "Nicht im PATH der Login-Shell gefunden" = "लॉगिन शेल के PATH में नहीं मिला";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "केवल भरोसेमंद फ़ोल्डरों में : CLI प्रोजेक्ट के हुक और सेटिंग्ज़ लागू करते हैं।";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "{} पर फ़ोकस करने या उससे बाहर आने के लिए ⌘Esc";
 "1 Datei geändert" = "1 फ़ाइल बदली गई";
 "Als Branch behalten" = "ब्रांच के रूप में रखें";
 "Auch den Branch {} löschen" = "ब्रांच {} भी डिलीट करें";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "ขอให้แก้ไข";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… อีก {} บรรทัด";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc เพื่อโฟกัสหรือออกจาก Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc เพื่อโฟกัสหรือออก";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "การคลิกครั้งเดียวที่ไฟล์จะเปิดไฟล์ในแถบแสดงตัวอย่าง";
 "Tabs:" = "แถบ:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "แสดงตัวอย่าง: ไฟล์ถัดไปที่คุณเปิดด้วยการคลิกครั้งเดียวจะแทนที่แถบนี้ การคลิกสองครั้งจะเก็บแถบนี้ไว้";
@@ -949,7 +949,6 @@
 "Beendet" = "สิ้นสุดแล้ว";
 "Nicht im PATH der Login-Shell gefunden" = "ไม่พบใน PATH ของ login shell";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "เฉพาะในโฟลเดอร์ที่เชื่อถือ: CLI จะเรียกใช้ Hook และการตั้งค่าของโปรเจ็กต์";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc เพื่อโฟกัสหรือออกจาก {}";
 "1 Datei geändert" = "เปลี่ยนแปลงไฟล์ 1 รายการ";
 "Als Branch behalten" = "เก็บไว้เป็น Branch";
 "Auch den Branch {} löschen" = "ลบ Branch {} ด้วย";

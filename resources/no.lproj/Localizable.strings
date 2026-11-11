@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Be om endringer";
 "„{}“" = "«{}»";
 "… {} weitere Zeilen" = "… {} linjer til";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc for å fokusere på eller forlate Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc for å fokusere eller forlate";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Ett klikk på en fil åpner den i en forhåndsvisningsfane";
 "Tabs:" = "Faner:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Forhåndsvisning: Den neste filen du åpner med ett klikk, erstatter denne fanen. Et dobbeltklikk beholder den.";
@@ -949,7 +949,6 @@
 "Beendet" = "Avsluttet";
 "Nicht im PATH der Login-Shell gefunden" = "Ikke funnet i PATH for påloggingsskallet";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Bare i mapper du stoler på: CLI-er kjører prosjektets hooks og innstillinger.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc for å fokusere på eller forlate {}";
 "1 Datei geändert" = "1 fil endret";
 "Als Branch behalten" = "Behold som branch";
 "Auch den Branch {} löschen" = "Slett også branchen {}";

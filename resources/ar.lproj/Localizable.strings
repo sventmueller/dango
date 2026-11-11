@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "طلب تعديلات";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… أسطر إضافية: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "اضغط ⌘Esc للتركيز على Claude أو مغادرته";
+"⌘Esc zum Fokussieren oder Verlassen" = "اضغط ⌘Esc للتركيز أو المغادرة";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "تفتح نقرة واحدة على ملف في علامة تبويب معاينة";
 "Tabs:" = "علامات التبويب:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "معاينة: الملف التالي الذي تفتحه بنقرة واحدة سيحل محل علامة التبويب هذه. النقر مرتين يحتفظ بها.";
@@ -949,7 +949,6 @@
 "Beendet" = "انتهى";
 "Nicht im PATH der Login-Shell gefunden" = "غير موجود في PATH الخاص بصدفة تسجيل الدخول";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "في المجلدات الموثوقة فقط: تنفّذ واجهات CLI خطافات المشروع وإعداداته.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "اضغط ⌘Esc للتركيز على {} أو مغادرته";
 "1 Datei geändert" = "تم تغيير ملف واحد";
 "Als Branch behalten" = "الاحتفاظ كفرع";
 "Auch den Branch {} löschen" = "حذف الفرع {} أيضًا";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Pedir Alterações";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… mais {} linhas";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc para focar ou sair do Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc para focar ou sair";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Um clique em um arquivo abre-o em uma aba de pré-visualização";
 "Tabs:" = "Abas:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Pré-visualização: o próximo arquivo que você abrir com um clique substitui esta aba. Um clique duplo a mantém.";
@@ -949,7 +949,6 @@
 "Beendet" = "Encerrado";
 "Nicht im PATH der Login-Shell gefunden" = "Não encontrado no PATH do shell de início de sessão";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Só em pastas confiáveis: as CLIs executam os hooks e os ajustes do projeto.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc para focar ou sair de {}";
 "1 Datei geändert" = "1 arquivo alterado";
 "Als Branch behalten" = "Manter como Branch";
 "Auch den Branch {} löschen" = "Apagar também a branch {}";

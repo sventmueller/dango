@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Be om ändringar";
 "„{}“" = "”{}”";
 "… {} weitere Zeilen" = "… {} rader till";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc för att fokusera på eller lämna Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc för att fokusera eller lämna";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Ett klick på en fil öppnar den i en förhandsvisningsflik";
 "Tabs:" = "Flikar:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Förhandsvisning: nästa fil som du öppnar med ett klick ersätter den här fliken. Ett dubbelklick behåller den.";
@@ -949,7 +949,6 @@
 "Beendet" = "Avslutad";
 "Nicht im PATH der Login-Shell gefunden" = "Hittades inte i inloggningsskalets PATH";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Bara i betrodda mappar: CLI:er kör projektets hooks och inställningar.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc för att fokusera på eller lämna {}";
 "1 Datei geändert" = "1 fil ändrad";
 "Als Branch behalten" = "Behåll som gren";
 "Auch den Branch {} löschen" = "Radera även grenen {}";

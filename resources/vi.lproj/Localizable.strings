@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Yêu cầu chỉnh sửa";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} dòng nữa";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc để đặt tiêu điểm vào hoặc rời khỏi Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc để đặt tiêu điểm hoặc rời khỏi";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Bấm một lần vào tệp sẽ mở tệp trong tab xem trước";
 "Tabs:" = "Tab:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Xem trước: tệp tiếp theo bạn mở bằng một lần bấm sẽ thay thế tab này. Bấm đúp để giữ tab.";
@@ -949,7 +949,6 @@
 "Beendet" = "Đã kết thúc";
 "Nicht im PATH der Login-Shell gefunden" = "Không tìm thấy trong PATH của shell đăng nhập";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Chỉ trong thư mục được tin cậy: CLI chạy hook và cài đặt của dự án.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc để đặt tiêu điểm vào hoặc rời khỏi {}";
 "1 Datei geändert" = "Đã thay đổi 1 tệp";
 "Als Branch behalten" = "Giữ làm nhánh";
 "Auch den Branch {} löschen" = "Xóa luôn nhánh {}";

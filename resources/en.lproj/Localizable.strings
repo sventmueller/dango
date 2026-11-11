@@ -804,7 +804,7 @@
 "Überarbeiten lassen" = "Ask for Changes";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} more lines";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc to focus or unfocus Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc to focus or leave";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "A single click opens a file in a preview tab";
 "Tabs:" = "Tabs:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Preview: the next file you open with a single click replaces this tab. A double click keeps it.";
@@ -979,7 +979,6 @@
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Only in trusted folders: CLIs run the project's hooks and settings.";
 
 /* Panels */
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc to focus or leave {}";
 
 /* Worktree threads (I1) */
 "1 Datei geändert" = "1 file changed";

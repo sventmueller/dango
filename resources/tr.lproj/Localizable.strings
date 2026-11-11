@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Değişiklik İste";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} satır daha";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "Claude’a odaklanmak veya Claude’dan ayrılmak için ⌘Esc";
+"⌘Esc zum Fokussieren oder Verlassen" = "Odaklanmak veya ayrılmak için ⌘Esc";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Bir dosyaya tek tıklamak onu bir önizleme sekmesinde açar";
 "Tabs:" = "Sekmeler:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Önizleme: Tek tıklamayla açtığınız bir sonraki dosya bu sekmenin yerini alır. Çift tıklama sekmeyi korur.";
@@ -949,7 +949,6 @@
 "Beendet" = "Sona Erdi";
 "Nicht im PATH der Login-Shell gefunden" = "Oturum açma kabuğunun PATH’inde bulunamadı";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Yalnızca güvenilen klasörlerde: CLI’lar projenin hook’larını ve ayarlarını çalıştırır.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc ile odaklan veya ayrıl: {}";
 "1 Datei geändert" = "1 dosya değiştirildi";
 "Als Branch behalten" = "Dal Olarak Koru";
 "Auch den Branch {} löschen" = "{} dalını da sil";

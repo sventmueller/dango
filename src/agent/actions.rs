@@ -200,7 +200,7 @@ impl AgentTab {
                 if state.sending {
                     t("Sicherungspunkt wird angelegt …").to_string()
                 } else {
-                    tf("⌘Esc zum Fokussieren oder Verlassen von {}", &[&agent.name])
+                    t("⌘Esc zum Fokussieren oder Verlassen").to_string()
                 }
                 .as_str(),
             );
@@ -276,7 +276,7 @@ impl AgentTab {
         self.composer.set_placeholder(if state.sending {
             t("Sicherungspunkt wird angelegt …")
         } else {
-            t("⌘Esc zum Fokussieren oder Verlassen von Claude")
+            t("⌘Esc zum Fokussieren oder Verlassen")
         });
         let running = state.status != Status::Idle || state.sending;
         let can_send = !self.composer.text().trim().is_empty() || !state.attachments.is_empty();

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Попросить доработать";
 "„{}“" = "«{}»";
 "… {} weitere Zeilen" = "… еще строк: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc — перейти к Claude или выйти из него";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc — перейти сюда или выйти";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Одно нажатие на файл открывает его во вкладке просмотра";
 "Tabs:" = "Вкладки:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Просмотр: следующий файл, открытый одним нажатием, заменит эту вкладку. Двойное нажатие оставляет ее.";
@@ -949,7 +949,6 @@
 "Beendet" = "Завершено";
 "Nicht im PATH der Login-Shell gefunden" = "Не найдено в PATH оболочки входа";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Только в доверенных папках: CLI выполняют хуки и настройки проекта.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc — перейти к {} или выйти из него";
 "1 Datei geändert" = "Изменен 1 файл";
 "Als Branch behalten" = "Оставить как ветку";
 "Auch den Branch {} löschen" = "Также удалить ветку {}";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Αίτημα αλλαγών";
 "„{}“" = "«{}»";
 "… {} weitere Zeilen" = "… {} ακόμη γραμμές";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc για εστίαση στο Claude ή έξοδο από αυτό";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc για εστίαση ή έξοδο";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Ένα κλικ σε αρχείο το ανοίγει σε καρτέλα προεπισκόπησης";
 "Tabs:" = "Καρτέλες:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Προεπισκόπηση: το επόμενο αρχείο που θα ανοίξετε με ένα κλικ θα αντικαταστήσει αυτήν την καρτέλα. Με διπλό κλικ η καρτέλα διατηρείται.";
@@ -949,7 +949,6 @@
 "Beendet" = "Τερματίστηκε";
 "Nicht im PATH der Login-Shell gefunden" = "Δεν βρέθηκε στο PATH του κελύφους σύνδεσης";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Μόνο σε φακέλους που εμπιστεύεστε: τα CLI εκτελούν τα hook και τις ρυθμίσεις του έργου.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc για εστίαση στο {} ή έξοδο από αυτό";
 "1 Datei geändert" = "Άλλαξε 1 αρχείο";
 "Als Branch behalten" = "Διατήρηση ως branch";
 "Auch den Branch {} löschen" = "Διαγραφή και του branch {}";

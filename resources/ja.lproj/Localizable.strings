@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "修正を依頼";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… さらに{}行";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Escでフォーカスを移動またはClaudeから離れる";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Escでフォーカスを移動または離れる";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "ファイルを1回クリックするとプレビュータブで開きます";
 "Tabs:" = "タブ:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "プレビュー: 次に1回のクリックで開いたファイルがこのタブを置き換えます。ダブルクリックするとタブが保持されます。";
@@ -949,7 +949,6 @@
 "Beendet" = "終了";
 "Nicht im PATH der Login-Shell gefunden" = "ログインシェルのPATHに見つかりません";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "信頼済みのフォルダでのみ: CLIはプロジェクトのフックと設定を実行します。";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Escで{}にフォーカスを移動または離れる";
 "1 Datei geändert" = "1個のファイルを変更";
 "Als Branch behalten" = "ブランチとして保持";
 "Auch den Branch {} löschen" = "ブランチ{}も削除";

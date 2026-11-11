@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Požiadať o zmeny";
 "„{}“" = "„{}“";
 "… {} weitere Zeilen" = "… ďalšie riadky: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc presunie fokus na Claude alebo späť";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc presunie fokus sem alebo späť";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Kliknutím sa súbor otvorí v tabe náhľadu";
 "Tabs:" = "Taby:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Náhľad: ďalší súbor, ktorý otvoríte jedným kliknutím, nahradí tento tab. Dvojitým kliknutím ho ponecháte.";
@@ -949,7 +949,6 @@
 "Beendet" = "Ukončené";
 "Nicht im PATH der Login-Shell gefunden" = "Nenašiel sa v PATH prihlasovacieho shellu";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Iba v dôveryhodných priečinkoch: CLI spúšťajú hooky a nastavenia projektu.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc presunie fokus na {} alebo späť";
 "1 Datei geändert" = "1 zmenený súbor";
 "Als Branch behalten" = "Ponechať ako vetvu";
 "Auch den Branch {} löschen" = "Vymazať aj vetvu {}";

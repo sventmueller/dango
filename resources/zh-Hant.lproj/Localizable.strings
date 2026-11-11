@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "要求修改";
 "„{}“" = "「{}」";
 "… {} weitere Zeilen" = "⋯ 還有 {} 行";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "按 ⌘Esc 將焦點移至 Claude 或離開";
+"⌘Esc zum Fokussieren oder Verlassen" = "按 ⌘Esc 移入焦點或離開";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "按一下檔案即可在預覽標籤頁中打開";
 "Tabs:" = "標籤頁：";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "預覽：你下一個按一下打開的檔案會取代此標籤頁。按兩下則會保留它。";
@@ -949,7 +949,6 @@
 "Beendet" = "已結束";
 "Nicht im PATH der Login-Shell gefunden" = "在登入 Shell 的 PATH 中找不到";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "僅限信任的檔案夾：CLI 會執行專案的掛鉤和設定。";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "按 ⌘Esc 將焦點移至 {} 或離開";
 "1 Datei geändert" = "已修改 1 個檔案";
 "Als Branch behalten" = "保留為分支";
 "Auch den Branch {} löschen" = "同時刪除分支 {}";

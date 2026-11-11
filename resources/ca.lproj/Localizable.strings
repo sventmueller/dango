@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Demana canvis";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} línies més";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc per anar a Claude o sortir‑ne";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc per anar-hi o sortir‑ne";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Un sol clic en un fitxer l’obre en una pestanya de previsualització";
 "Tabs:" = "Pestanyes:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Previsualització: el proper fitxer que obris amb un sol clic substituirà aquesta pestanya. Amb un doble clic, es conserva.";
@@ -949,7 +949,6 @@
 "Beendet" = "Finalitzat";
 "Nicht im PATH der Login-Shell gefunden" = "No s’ha trobat al PATH de l’intèrpret d’ordres d’inici de sessió";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Només en carpetes de confiança: les CLI executen els hooks i la configuració del projecte.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc per anar a {} o sortir‑ne";
 "1 Datei geändert" = "1 fitxer modificat";
 "Als Branch behalten" = "Conserva com a branca";
 "Auch den Branch {} löschen" = "Elimina també la branca {}";

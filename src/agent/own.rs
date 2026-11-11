@@ -190,7 +190,7 @@ impl AgentTab {
         let placeholder = if state.sending {
             t("Sicherungspunkt wird angelegt …").to_string()
         } else {
-            tf("⌘Esc zum Fokussieren oder Verlassen von {}", &[self.agent.name()])
+            t("⌘Esc zum Fokussieren oder Verlassen").to_string()
         };
         self.composer.set_placeholder(&placeholder);
         let running = state.status != ide_thread::Status::Idle || state.sending;

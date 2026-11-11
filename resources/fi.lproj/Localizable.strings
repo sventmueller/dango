@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Pyydä muutoksia";
 "„{}“" = "”{}”";
 "… {} weitere Zeilen" = "… {} riviä lisää";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc: siirry Claudeen tai pois siitä";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc: siirry tähän tai pois";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Yksi osoitus avaa tiedoston esikatseluvälilehteen";
 "Tabs:" = "Välilehdet:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Esikatselu: seuraava tiedosto, jonka avaat yhdellä osoituksella, korvaa tämän välilehden. Kaksoisosoitus säilyttää sen.";
@@ -949,7 +949,6 @@
 "Beendet" = "Päättynyt";
 "Nicht im PATH der Login-Shell gefunden" = "Ei löytynyt kirjautumiskomentotulkin PATH-muuttujasta";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Vain luotetuissa kansioissa: CLI-työkalut suorittavat projektin hookit ja asetukset.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc: siirry agenttiin {} tai pois siitä";
 "1 Datei geändert" = "1 tiedosto muutettu";
 "Als Branch behalten" = "Säilytä haarana";
 "Auch den Branch {} löschen" = "Poista myös haara {}";

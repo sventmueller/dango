@@ -197,7 +197,7 @@ impl Composer {
         height.setActive(true);
         let placeholder = ui::label(
             mtm,
-            t("⌘Esc zum Fokussieren oder Verlassen von Claude"),
+            t("⌘Esc zum Fokussieren oder Verlassen"),
             &style::body(),
             &NSColor::placeholderTextColor(),
         );

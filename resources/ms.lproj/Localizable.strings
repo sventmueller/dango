@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Minta Perubahan";
 "„{}“" = "“{}”";
 "… {} weitere Zeilen" = "… {} baris lagi";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc untuk memfokuskan atau meninggalkan Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc untuk memfokuskan atau meninggalkan";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Satu klik membuka fail dalam tab pratonton";
 "Tabs:" = "Tab:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Pratonton: fail seterusnya yang anda buka dengan satu klik akan menggantikan tab ini. Dwiklik mengekalkannya.";
@@ -949,7 +949,6 @@
 "Beendet" = "Tamat";
 "Nicht im PATH der Login-Shell gefunden" = "Tidak ditemui dalam PATH shell log masuk";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Hanya dalam folder yang dipercayai: CLI menjalankan hook dan seting projek.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc untuk memfokuskan atau meninggalkan {}";
 "1 Datei geändert" = "1 fail diubah";
 "Als Branch behalten" = "Kekalkan sebagai Branch";
 "Auch den Branch {} löschen" = "Padam juga branch {}";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Zahtevaj popravke";
 "„{}“" = "»{}«";
 "… {} weitere Zeilen" = "… dodatne vrstice: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc: fokus na Claude ali nazaj";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc: fokus sem ali nazaj";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Klik na datoteko jo odpre v zavihku za predogled";
 "Tabs:" = "Zavihki:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Predogled: naslednja datoteka, ki jo odprete s klikom, zamenja ta zavihek. Dvoklik ga obdrži.";
@@ -949,7 +949,6 @@
 "Beendet" = "Končano";
 "Nicht im PATH der Login-Shell gefunden" = "Ni najdeno v poti PATH prijavne lupine";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Samo v mapah, ki jim zaupate: CLI-ji izvajajo hooke in nastavitve projekta.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc: fokus na {} ali nazaj";
 "1 Datei geändert" = "1 spremenjena datoteka";
 "Als Branch behalten" = "Obdrži kot vejo";
 "Auch den Branch {} löschen" = "Izbriši tudi vejo {}";

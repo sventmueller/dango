@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Cereți modificări";
 "„{}“" = "„{}”";
 "… {} weitere Zeilen" = "… linii suplimentare: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc pentru a focaliza sau a părăsi Claude";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc pentru a focaliza sau a părăsi";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Un clic pe un fișier îl deschide într-o filă de previzualizare";
 "Tabs:" = "File:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Previzualizare: următorul fișier pe care îl deschideți cu un clic înlocuiește această filă. Un dublu clic o păstrează.";
@@ -949,7 +949,6 @@
 "Beendet" = "Încheiat";
 "Nicht im PATH der Login-Shell gefunden" = "Nu a fost găsit în PATH-ul shellului de login";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Doar în dosare de încredere: CLI-urile execută hookurile și configurările proiectului.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc pentru a focaliza sau a părăsi {}";
 "1 Datei geändert" = "1 fișier modificat";
 "Als Branch behalten" = "Păstrați ca ramură";
 "Auch den Branch {} löschen" = "Ștergeți și ramura {}";

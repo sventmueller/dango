@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "בקשת שינויים";
 "„{}“" = "״{}״";
 "… {} weitere Zeilen" = "… עוד {} שורות";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "‏‎⌘Esc למיקוד ב-Claude או ליציאה ממנו";
+"⌘Esc zum Fokussieren oder Verlassen" = "‏‎⌘Esc למיקוד או ליציאה";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "לחיצה על קובץ פותחת אותו בכרטיסיית תצוגה מקדימה";
 "Tabs:" = "כרטיסיות:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "תצוגה מקדימה: הקובץ הבא שייפתח בלחיצה אחת יחליף כרטיסיה זו. לחיצה כפולה תשאיר אותה.";
@@ -949,7 +949,6 @@
 "Beendet" = "הסתיים";
 "Nicht im PATH der Login-Shell gefunden" = "לא נמצא ב-PATH של מעטפת ההתחברות";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "רק בתיקיות מהימנות: כלי CLI מריצים Hooks והגדרות של הפרויקט.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "‏‎⌘Esc למיקוד ב-{} או ליציאה ממנו";
 "1 Datei geändert" = "קובץ אחד שונה";
 "Als Branch behalten" = "השארה כ-Branch";
 "Auch den Branch {} löschen" = "מחיקת ה-Branch {} גם כן";

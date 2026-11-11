@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Повернути на доопрацювання";
 "„{}“" = "«{}»";
 "… {} weitere Zeilen" = "… ще рядків: {}";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc — фокус на Claude або вихід із нього";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc — фокус сюди або вихід";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Одне клацання відкриває файл у вкладці попереднього перегляду";
 "Tabs:" = "Вкладки:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Попередній перегляд: наступний файл, який ви відкриєте одним клацанням, замінить цю вкладку. Подвійне клацання залишає її.";
@@ -949,7 +949,6 @@
 "Beendet" = "Завершено";
 "Nicht im PATH der Login-Shell gefunden" = "Не знайдено в PATH оболонки входу";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Лише в папках, яким ви довіряєте: CLI виконують хуки й параметри проєкту.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc — фокус на {} або вихід із нього";
 "1 Datei geändert" = "Змінено 1 файл";
 "Als Branch behalten" = "Залишити як гілку";
 "Auch den Branch {} löschen" = "Також видалити гілку {}";

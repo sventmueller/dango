@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Vraag om wijzigingen";
 "„{}“" = "'{}'";
 "… {} weitere Zeilen" = "… nog {} regels";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc om Claude te focussen of te verlaten";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc om te focussen of te verlaten";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Eén klik op een bestand opent het in een voorvertoningstabblad";
 "Tabs:" = "Tabbladen:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Voorvertoning: het volgende bestand dat je met één klik opent, vervangt dit tabblad. Een dubbelklik behoudt het.";
@@ -949,7 +949,6 @@
 "Beendet" = "Beëindigd";
 "Nicht im PATH der Login-Shell gefunden" = "Niet gevonden in het PATH van de login-shell";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Alleen in vertrouwde mappen: CLI's voeren hooks en instellingen van het project uit.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc om {} te focussen of te verlaten";
 "1 Datei geändert" = "1 bestand gewijzigd";
 "Als Branch behalten" = "Behoud als branch";
 "Auch den Branch {} löschen" = "Verwijder ook branch {}";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "수정 요청";
 "„{}“" = "‘{}’";
 "… {} weitere Zeilen" = "… {}줄 더 있음";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc로 Claude에 초점을 맞추거나 벗어나기";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc로 초점을 맞추거나 벗어나기";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "파일을 한 번 클릭하면 미리보기 탭에서 열림";
 "Tabs:" = "탭:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "미리보기: 다음에 한 번 클릭으로 여는 파일이 이 탭을 대체합니다. 이중 클릭하면 탭이 유지됩니다.";
@@ -949,7 +949,6 @@
 "Beendet" = "종료됨";
 "Nicht im PATH der Login-Shell gefunden" = "로그인 셸의 PATH에서 찾을 수 없음";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "신뢰하는 폴더에서만: CLI는 프로젝트의 훅과 설정을 실행합니다.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc로 {}에 초점을 맞추거나 벗어나기";
 "1 Datei geändert" = "파일 1개 변경됨";
 "Als Branch behalten" = "브랜치로 유지";
 "Auch den Branch {} löschen" = "브랜치 {}도 삭제";

@@ -784,7 +784,7 @@
 "Überarbeiten lassen" = "Átdolgoztatás";
 "„{}“" = "„{}”";
 "… {} weitere Zeilen" = "… további {} sor";
-"⌘Esc zum Fokussieren oder Verlassen von Claude" = "⌘Esc: fókusz a Claude-ra vagy a fókusz elhagyása";
+"⌘Esc zum Fokussieren oder Verlassen" = "⌘Esc: fókusz ide vagy a fókusz elhagyása";
 "Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab" = "Egy kattintás a fájlra előnézeti lapon nyitja meg";
 "Tabs:" = "Lapok:";
 "Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn." = "Előnézet: a következő, egy kattintással megnyitott fájl lecseréli ezt a lapot. Dupla kattintással megmarad.";
@@ -949,7 +949,6 @@
 "Beendet" = "Befejeződött";
 "Nicht im PATH der Login-Shell gefunden" = "Nem található a bejelentkezési shell PATH-jában";
 "Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Csak megbízható mappákban: a CLI-k futtatják a projekt hookjait és beállításait.";
-"⌘Esc zum Fokussieren oder Verlassen von {}" = "⌘Esc: fókusz erre: {}, vagy a fókusz elhagyása";
 "1 Datei geändert" = "1 fájl módosítva";
 "Als Branch behalten" = "Megtartás ágként";
 "Auch den Branch {} löschen" = "A(z) {} ág törlése is";
