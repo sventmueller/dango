@@ -30,7 +30,9 @@ pub struct Window {
 /// The plan's weekly and five-hour window, in that order and where known: from the latest report, else from what
 /// `thread`'s session reported.
 pub fn windows(thread: &Thread) -> Vec<Window> {
-    let report = REPORT.with(|r| r.borrow().as_ref().and_then(|(_, r)| r.clone()));
+    let report = (thread.agent() == ide_claude::AGENT)
+        .then(|| REPORT.with(|r| r.borrow().as_ref().and_then(|(_, r)| r.clone())))
+        .flatten();
     let mut windows: Vec<Window> = match report.filter(|r| !r.windows.is_empty()) {
         Some(report) => report
             .windows
@@ -84,5 +86,36 @@ pub fn inject(report: UsageReport) {
     REPORT.with(|r| *r.borrow_mut() = Some((SystemTime::now(), Some(report))));
     for tab in super::all() {
         tab.refresh();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ide_thread::{LimitStatus, RateLimit, ThreadId, Update};
+
+    use super::*;
+
+    #[test]
+    fn a_claude_account_report_cannot_override_an_acp_threads_limits() {
+        let report = UsageReport {
+            windows: vec![ide_claude::control::UsageWindow {
+                name: "five_hour".into(),
+                utilization: Some(80.0),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let previous = REPORT.with(|r| r.replace(Some((SystemTime::now(), Some(report)))));
+        let mut acp = Thread::new(ThreadId::from("acp"), "codex-acp", "/work");
+        acp.apply(Update::RateLimit(RateLimit {
+            window: "five_hour".into(),
+            status: LimitStatus::Allowed,
+            utilization: Some(0.2),
+            resets_at: None,
+        }));
+        assert_eq!(windows(&acp)[0].used, 0.2);
+        let claude = Thread::new(ThreadId::from("claude"), ide_claude::AGENT, "/work");
+        assert_eq!(windows(&claude)[0].used, 0.8);
+        REPORT.with(|r| *r.borrow_mut() = previous);
     }
 }

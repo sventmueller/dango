@@ -2,6 +2,7 @@
 //! them as code until they are drawn, then its card is built again.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -22,13 +23,28 @@ struct Asked {
     viewer: Rc<dyn Viewer>,
     owner: Option<Owner>,
     keys: Vec<Key>,
-    /// How many of `keys` were drawn when the cards were last built for them.
-    drawn: usize,
+    ready: HashSet<Key>,
 }
 
 thread_local! {
     static ASKED: RefCell<Option<Asked>> = const { RefCell::new(None) };
     static ASKING: Cell<bool> = const { Cell::new(false) };
+    static COLLECT: RefCell<Option<Vec<Key>>> = const { RefCell::new(None) };
+}
+
+/// Records the figures a card uses, including those it finds in the renderer's cache.
+pub fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
+    struct Capture(Option<Vec<Key>>);
+    impl Drop for Capture {
+        fn drop(&mut self) {
+            COLLECT.with(|slot| *slot.borrow_mut() = self.0.take());
+        }
+    }
+    let capture = Capture(COLLECT.with(|slot| slot.replace(Some(Vec::new()))));
+    let result = build();
+    let keys = COLLECT.with(|slot| slot.borrow_mut().take().unwrap_or_default());
+    drop(capture);
+    (result, keys)
 }
 
 /// Whether the app shows itself dark, which the pictures of formulas and diagrams follow.
@@ -42,6 +58,11 @@ pub fn is_dark(mtm: MainThreadMarker) -> bool {
 
 /// Asks for `keys` beside what earlier answers asked for, on a later turn: a card is built while the table lays out.
 pub fn want(keys: Vec<Key>) {
+    COLLECT.with(|slot| {
+        if let Some(collected) = slot.borrow_mut().as_mut() {
+            collected.extend(keys.iter().cloned());
+        }
+    });
     if keys.is_empty() {
         return;
     }
@@ -51,7 +72,7 @@ pub fn want(keys: Vec<Key>) {
             viewer: Rc::new(Answers),
             owner: None,
             keys: Vec::new(),
-            drawn: 0,
+            ready: HashSet::new(),
         });
         let before = asked.keys.len();
         for key in keys {
@@ -61,6 +82,8 @@ pub fn want(keys: Vec<Key>) {
         }
         let excess = asked.keys.len().saturating_sub(KEPT);
         asked.keys.drain(..excess);
+        let kept: HashSet<_> = asked.keys.iter().collect();
+        asked.ready.retain(|key| kept.contains(key));
         asked.keys.len() != before || excess > 0
     });
     if added && !ASKING.replace(true) {
@@ -94,15 +117,17 @@ fn ask(mtm: MainThreadMarker) {
 /// Builds the cards anew when more of the answers' figures are drawn than when they were last built; the renderer
 /// tells every document when it has run empty, also when it drew only for a preview.
 fn arrived() {
-    let more = ASKED.with(|asked| {
+    let changed = ASKED.with(|asked| {
         let mut asked = asked.borrow_mut();
-        let Some(asked) = asked.as_mut() else { return false };
-        let drawn = asked.keys.iter().filter(|key| js::ready(key)).count();
-        drawn != std::mem::replace(&mut asked.drawn, drawn)
+        let Some(asked) = asked.as_mut() else { return Vec::new() };
+        let ready: HashSet<_> = asked.keys.iter().filter(|key| js::ready(key)).cloned().collect();
+        let changed = ready.symmetric_difference(&asked.ready).cloned().collect();
+        asked.ready = ready;
+        changed
     });
-    if more {
+    if !changed.is_empty() {
         for tab in super::all() {
-            tab.timeline().figures_arrived();
+            tab.timeline().figures_arrived(&changed);
         }
     }
 }

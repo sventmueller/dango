@@ -1,6 +1,7 @@
 //! Rewinding the conversation to just before a prompt (I6): the agent resumes the session as a new branch that ends
 //! there, guarded so that it refuses rather than drops more than that prompt's turn.
 
+use std::rc::Rc;
 use std::time::SystemTime;
 
 use ide_thread::{
@@ -113,7 +114,7 @@ impl AgentTab {
             let old = std::mem::replace(&mut state.source, Source::Idle);
             let replaying = old.is_replay();
             old.end();
-            state.thread = kept.clone();
+            state.thread = Rc::new(kept.clone());
             state.status = ide_thread::Status::Idle;
             state.turn = None;
             state.resume = None;
@@ -127,7 +128,7 @@ impl AgentTab {
             });
             replaying
         };
-        self.timeline().apply(kept, &[Change::Cleared]);
+        self.timeline().apply(Rc::new(kept), &[Change::Cleared]);
         self.composer.set_text(&message.text);
         self.refresh_chips();
         self.refresh();
@@ -161,14 +162,14 @@ impl AgentTab {
             let mut state = self.state.borrow_mut();
             let old = std::mem::replace(&mut state.source, Source::Idle);
             old.end();
-            state.thread = before.clone();
+            state.thread = Rc::new(before.clone());
             state.status = ide_thread::Status::Idle;
             state.turn = None;
             if let Some(message) = message {
                 state.queue.insert(0, message);
             }
         }
-        self.timeline().apply(before, &[Change::Cleared]);
+        self.timeline().apply(Rc::new(before), &[Change::Cleared]);
         self.refresh_queue();
         self.refresh();
         self.start();

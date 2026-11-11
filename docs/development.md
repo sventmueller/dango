@@ -42,6 +42,14 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 - `integration [--list] [--paid] [--only <group>[,<group>…]]` runs the integration checks; `--list` only prints what
   would run and why the rest is skipped, and the groups that use paid accounts run only with `--paid` or by name.
 
+`cargo xtask selftest agent-perf` measures streaming into histories of 1,000 and 10,000 cards, with answers of
+roughly 10 KB and 100 KB. It reports p50, p95 and the slowest update, including height correction and drawing;
+p95 must stay below 16 ms and each update below 100 ms. Samples arrive 30 ms apart, yielding to AppKit between updates. Run it on an otherwise
+idle Mac. It also checks native view and selection reuse,
+background tabs catching up without building cards while hidden, and text, fonts and links against a complete
+Markdown render, including definitions that arrive after their references. Reports are in
+`target/selftest/agent-perf.json`; it uses replayed events and makes no model requests.
+
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.
 The identifiers never contain the display name, so renaming the app strands no settings.

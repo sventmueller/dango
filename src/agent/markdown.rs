@@ -23,6 +23,9 @@ use super::attrs::{Attribute, add_attribute, attributed, attributed_mut, utf16_r
 use super::style::{code_background, mono, token_color};
 use crate::util::ns;
 
+mod stream;
+pub use stream::Streaming;
+
 const LIST_INDENT: f64 = 22.0;
 const QUOTE_INDENT: f64 = 12.0;
 
@@ -74,15 +77,6 @@ fn build(
         }
         None => (layout(&doc, &NoImages, None), Arc::from("")),
     };
-    let out = NSMutableAttributedString::new();
-    // Group and table numbers count within a top-level block only.
-    let paras: Vec<(usize, &Para)> = laid
-        .blocks
-        .iter()
-        .enumerate()
-        .flat_map(|(n, block)| block.paras.iter().map(move |p| (n, p)))
-        .collect();
-    let mut frames = Frames::default();
     let renderer = Renderer {
         mtm,
         size,
@@ -91,9 +85,25 @@ fn build(
         macros,
         width: figures.unwrap_or(0.0),
     };
+    let paras: Vec<_> = laid
+        .blocks
+        .iter()
+        .enumerate()
+        .flat_map(|(n, block)| block.paras.iter().map(move |p| (n, p)))
+        .collect();
+    render_paragraphs(&renderer, &paras, true)
+}
+
+fn render_paragraphs(
+    renderer: &Renderer,
+    paras: &[(usize, &Para)],
+    document_end: bool,
+) -> Retained<NSAttributedString> {
+    let out = NSMutableAttributedString::new();
+    let mut frames = Frames::default();
     for (n, (block, para)) in paras.iter().enumerate() {
         let next = paras.get(n + 1);
-        let last = next.is_none();
+        let last = next.is_none() && document_end;
         let continues =
             next.is_some_and(|(b, p)| b == block && p.style.group == para.style.group && para.style.group != 0);
         frames.block = *block;

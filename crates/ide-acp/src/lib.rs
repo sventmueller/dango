@@ -19,6 +19,7 @@ pub mod sandbox;
 pub mod session;
 pub mod test_agent;
 mod tool;
+mod usage;
 
 pub use capabilities::{
     AuthMethod, Capabilities, Category, ConfigOption, Mode, OptionChoice, OptionValue, SlashCommand, TerminalSignIn,

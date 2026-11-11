@@ -10,7 +10,7 @@ use agent_client_protocol::schema::v1 as acp;
 use ide_thread::{
     AgentMessage, EntryKind, ErrorKind, Lane, Notice, PermissionOption, PermissionRequest, RequestState, Status,
     TextEdit, Thought, Todo, TodoStatus, ToolCall, ToolKind, ToolOutput, ToolPatch, ToolStatus, ToolView, Update,
-    UsagePatch, UserMessage,
+    UserMessage,
 };
 use serde_json::Value;
 
@@ -494,12 +494,7 @@ impl Mapper {
                 agent_client_protocol::schema::MaybeUndefined::Value(title) => vec![Update::Title(title.clone())],
                 _ => Vec::new(),
             },
-            acp::SessionUpdate::UsageUpdate(usage) => vec![Update::Usage(UsagePatch {
-                context_used: Some(usage.used),
-                context_size: Some(usage.size),
-                cost_usd: usage.cost.as_ref().filter(|c| c.currency == "USD").map(|c| c.amount),
-                ..UsagePatch::default()
-            })],
+            acp::SessionUpdate::UsageUpdate(usage) => vec![crate::usage::context(usage)],
             acp::SessionUpdate::AvailableCommandsUpdate(commands) => {
                 caps.learn_commands(&commands.available_commands);
                 return (Vec::new(), true);

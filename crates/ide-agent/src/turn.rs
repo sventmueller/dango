@@ -513,34 +513,98 @@ fn fail_card(shared: &Shared, id: &str, note: &ToolNote) {
     }]);
 }
 
-/// Runs the calls one after the other; after a cancel the rest are answered without running.
+/// Read-only calls may overlap within a group; every other call is an ordering barrier.
 fn run_tools(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value, Option<String>)]) -> Vec<Block> {
-    calls
+    let mut results = Vec::new();
+    let mut at = 0;
+    while at < calls.len() {
+        let end = calls[at..]
+            .iter()
+            .take(4)
+            .take_while(|(_, name, input, invalid)| {
+                invalid.is_none()
+                    && matches!(
+                        name.as_str(),
+                        "read_file" | "grep" | "glob" | "diagnostics" | "web_fetch"
+                    )
+                    && tools::action(name, input, &shared.workspace)
+                        .is_ok_and(|action| shared.lock().policy.decide(&action) == Verdict::Allow)
+            })
+            .count()
+            + at;
+        if end > at + 1 && !cancel.is_cancelled() {
+            results.extend(read_group(shared, cancel, &calls[at..end]));
+            at = end;
+        } else {
+            let (id, name, input, invalid) = &calls[at];
+            let outcome = if cancel.is_cancelled() {
+                rejected(shared, id, ToolNote::Cancelled)
+            } else if let Some(raw) = invalid {
+                let mut outcome = rejected(shared, id, ToolNote::InvalidJson);
+                outcome.content = json!({"INVALID_JSON": raw}).to_string();
+                outcome
+            } else {
+                call(shared, cancel, id, name, input)
+            };
+            results.push(result(id, name, &outcome.content, outcome.is_error, outcome.note));
+            at += 1;
+        }
+    }
+    results
+}
+
+fn rejected(shared: &Shared, id: &str, note: ToolNote) -> Outcome {
+    fail_card(shared, id, &note);
+    Outcome::failed(note)
+}
+
+/// Permissions are settled in order before workers start, so parallel reads never race approval status.
+fn read_group(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value, Option<String>)]) -> Vec<Block> {
+    let prepared: Vec<_> = calls
         .iter()
-        .map(|(id, name, input, invalid)| {
+        .map(|(id, name, input, _)| {
             if cancel.is_cancelled() {
-                fail_card(shared, id, &ToolNote::Cancelled);
-                return result(
-                    id,
-                    name,
-                    &ToolNote::Cancelled.for_model(),
-                    true,
-                    Some(ToolNote::Cancelled),
-                );
+                Err(ToolNote::Cancelled)
+            } else {
+                prepare(shared, cancel, id, name, input)
             }
-            if let Some(raw) = invalid {
-                let message = json!({"INVALID_JSON": raw}).to_string();
-                fail_card(shared, id, &ToolNote::InvalidJson);
-                return result(id, name, &message, true, Some(ToolNote::InvalidJson));
-            }
-            let outcome = call(shared, cancel, id, name, input);
-            result(id, name, &outcome.content, outcome.is_error, outcome.note)
         })
-        .collect()
+        .collect();
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = calls
+            .iter()
+            .zip(prepared)
+            .map(|((id, name, input, _), prepared)| {
+                scope.spawn(move || match prepared {
+                    Err(note) => rejected(shared, id, note),
+                    Ok(()) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
+                    Ok(()) => execute(shared, cancel, id, name, input),
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .zip(calls)
+            .map(|(worker, (id, name, _, _))| {
+                let outcome = worker
+                    .join()
+                    .unwrap_or_else(|_| rejected(shared, id, ToolNote::NotStarted("tool worker panicked".into())));
+                result(id, name, &outcome.content, outcome.is_error, outcome.note)
+            })
+            .collect()
+    })
 }
 
 /// One call: its card, the policy's verdict, the user's answer where needed, and running it.
 fn call(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Outcome {
+    match prepare(shared, cancel, id, name, input) {
+        Err(note) => rejected(shared, id, note),
+        Ok(()) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
+        Ok(()) => execute(shared, cancel, id, name, input),
+    }
+}
+
+fn prepare(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Result<(), ToolNote> {
     let (kind, title, view) = tools::card(name, input, &shared.workspace);
     let known = shared.lock().thread.entry_by_key(id).is_some();
     if !known {
@@ -562,15 +626,9 @@ fn call(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -
             ..ToolPatch::default()
         },
     }]);
-    let action = match tools::action(name, input, &shared.workspace) {
-        Ok(action) => action,
-        Err(note) => {
-            fail_card(shared, id, &note);
-            return Outcome::failed(note);
-        }
-    };
+    let action = tools::action(name, input, &shared.workspace)?;
     let verdict = shared.lock().policy.decide(&action);
-    let allowed = match verdict {
+    match verdict {
         Verdict::Allow => Ok(()),
         Verdict::Deny(refusal) => Err(ToolNote::Refused(refusal)),
         verdict @ Verdict::Ask { .. } => ask(
@@ -584,12 +642,7 @@ fn call(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -
             },
             verdict,
         ),
-    };
-    if let Err(note) = allowed {
-        fail_card(shared, id, &note);
-        return Outcome::failed(note);
     }
-    execute(shared, cancel, id, name, input)
 }
 
 fn execute(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Outcome {

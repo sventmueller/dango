@@ -58,6 +58,20 @@ pub fn dollars(amount: f64) -> String {
         .map_or_else(|| format!("${amount:.2}"), |s| s.to_string())
 }
 
+/// A cost in the unit supplied by the agent, without currency conversion.
+pub fn reported_cost(cost: &ide_thread::ReportedCost) -> String {
+    if cost.currency == "USD" {
+        return dollars(cost.amount);
+    }
+    let formatter = NSNumberFormatter::new();
+    formatter.setNumberStyle(NSNumberFormatterStyle::DecimalStyle);
+    formatter.setMaximumFractionDigits(6);
+    let amount = formatter
+        .stringFromNumber(&NSNumber::new_f64(cost.amount))
+        .map_or_else(|| cost.amount.to_string(), |s| s.to_string());
+    format!("{amount} {}", cost.currency)
+}
+
 /// A share, `0.42` for 42 percent, in the user's number format.
 pub fn percent(share: f64) -> String {
     let formatter = NSNumberFormatter::new();

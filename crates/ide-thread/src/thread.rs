@@ -13,8 +13,8 @@ use crate::update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Up
 
 /// A conversation with one agent: its head, its timeline, its subagents and its background work.
 ///
-/// Entries are shared, so a copy of a thread costs one pointer per entry and the UI can keep one while the
-/// connection goes on changing the original.
+/// Entries and lookup indexes are shared; copying a thread copies the entry pointers but no index keys. The UI
+/// can keep a snapshot while the connection goes on changing the original.
 #[derive(Debug, Clone)]
 pub struct Thread {
     id: crate::model::ThreadId,
@@ -35,8 +35,8 @@ pub struct Thread {
     lanes: HashMap<String, Vec<Arc<Entry>>>,
     background: Vec<BackgroundItem>,
     next: u64,
-    keys: HashMap<String, EntryId>,
-    places: HashMap<EntryId, (Lane, usize)>,
+    keys: Arc<HashMap<String, EntryId>>,
+    places: Arc<HashMap<EntryId, (Lane, usize)>>,
 }
 
 impl Thread {
@@ -61,8 +61,8 @@ impl Thread {
             lanes: HashMap::new(),
             background: Vec::new(),
             next: 1,
-            keys: HashMap::new(),
-            places: HashMap::new(),
+            keys: Arc::default(),
+            places: Arc::default(),
         }
     }
 
@@ -318,9 +318,9 @@ impl Thread {
             uuid: None,
             follows: None,
         }));
-        self.places.insert(id, (lane.clone(), index));
+        Arc::make_mut(&mut self.places).insert(id, (lane.clone(), index));
         if let Some(key) = key {
-            self.keys.insert(key, id);
+            Arc::make_mut(&mut self.keys).insert(key, id);
         }
         changes.push(Change::Inserted { lane, id, index });
     }
@@ -425,9 +425,11 @@ impl Thread {
     }
 
     fn remove(&mut self, key: &str, changes: &mut Vec<Change>) {
-        let Some(id) = self.keys.remove(key) else { return };
-        self.keys.retain(|_, other| *other != id);
-        let Some((lane, index)) = self.places.remove(&id) else {
+        let Some(id) = Arc::make_mut(&mut self.keys).remove(key) else {
+            return;
+        };
+        Arc::make_mut(&mut self.keys).retain(|_, other| *other != id);
+        let Some((lane, index)) = Arc::make_mut(&mut self.places).remove(&id) else {
             return;
         };
         let timeline = match &lane {
@@ -440,7 +442,7 @@ impl Thread {
         if index < timeline.len() {
             timeline.remove(index);
             for (offset, entry) in timeline.iter().enumerate().skip(index) {
-                self.places.insert(entry.id, (lane.clone(), offset));
+                Arc::make_mut(&mut self.places).insert(entry.id, (lane.clone(), offset));
             }
         }
         changes.push(Change::Removed { lane, id });
@@ -569,8 +571,8 @@ impl Thread {
         self.background.clear();
         self.todos.clear();
         self.usage = Usage::default();
-        self.keys.clear();
-        self.places.clear();
+        self.keys = Arc::default();
+        self.places = Arc::default();
         changes.push(Change::Cleared);
     }
 
@@ -661,6 +663,8 @@ fn patch_usage(usage: &mut Usage, patch: UsagePatch) -> bool {
         cache_read_tokens,
         cache_write_tokens,
         cost_usd,
+        reported_cost,
+        reported_tokens,
         context_used,
         context_size,
         turn,
@@ -691,6 +695,15 @@ fn patch_usage(usage: &mut Usage, patch: UsagePatch) -> bool {
         usage.cache_write_tokens = n;
     }
     merge(&mut usage.cost_usd, cost_usd);
+    if let Some(cost) = reported_cost {
+        if cost.currency != "USD" {
+            usage.cost_usd = None;
+        }
+        usage.reported_cost = Some(cost);
+    }
+    if reported_tokens.is_some() {
+        usage.reported_tokens = reported_tokens;
+    }
     merge(&mut usage.context_used, context_used);
     merge(&mut usage.context_size, context_size);
     *usage != before

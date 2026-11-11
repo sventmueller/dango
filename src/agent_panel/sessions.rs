@@ -97,7 +97,7 @@ impl Model {
             let shown: HashSet<&str> = entries.iter().map(|e| e.id.as_str()).collect();
             for tab in inputs.tabs.iter().filter(|t| !shown.contains(t.thread_id().as_str())) {
                 let node = thread_node(
-                    IndexEntry::of(&tab.snapshot(), SystemTime::now()),
+                    IndexEntry::of(&tab.view_snapshot(), SystemTime::now()),
                     Some(tab),
                     inputs.bookmarks,
                 );
@@ -162,7 +162,7 @@ fn thread_node(entry: IndexEntry, tab: Option<&Rc<AgentTab>>, bookmarks: &BTreeS
     let mut entry = entry;
     if let Some(tab) = tab {
         entry.title = tab.title();
-        let thread = tab.snapshot();
+        let thread = tab.view_snapshot();
         entry.cost_usd = if thread.usage().subscription {
             None
         } else {

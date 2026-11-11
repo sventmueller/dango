@@ -104,6 +104,11 @@ pub struct Usage {
     pub cache_write_tokens: u64,
     /// The agent's estimate of what the thread has cost, in US dollars.
     pub cost_usd: Option<f64>,
+    /// The session cost in the unit the agent reports, including currencies other than USD and credits.
+    pub reported_cost: Option<ReportedCost>,
+    /// The latest token report. ACP agents disagree on whether these counts cover a turn or a session, so these
+    /// are neither accumulated nor used as context occupancy.
+    pub reported_tokens: Option<TokenReport>,
     /// Tokens the context window holds now.
     pub context_used: Option<u64>,
     /// Tokens the context window can hold.
@@ -130,6 +135,33 @@ impl Usage {
     pub fn billed_cost(&self) -> Option<f64> {
         self.cost_usd.filter(|_| !self.subscription)
     }
+}
+
+/// A cost reported by an agent, without currency conversion.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReportedCost {
+    /// The cumulative session amount.
+    pub amount: f64,
+    /// The currency or other unit supplied by the agent.
+    pub currency: String,
+}
+
+/// Token counts exactly as the latest agent response reports them. Categories can overlap; `total` is the
+/// reported total rather than a sum of the breakdown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenReport {
+    /// The reported total.
+    pub total: u64,
+    /// Reported input tokens, without inferring whether cache is included.
+    pub input: u64,
+    /// Reported output tokens, without inferring whether reasoning is included.
+    pub output: u64,
+    /// Cache reads, when the agent supplies them.
+    pub cache_read: Option<u64>,
+    /// Cache writes, when the agent supplies them.
+    pub cache_write: Option<u64>,
+    /// Reasoning tokens, which may already be included in output.
+    pub thought: Option<u64>,
 }
 
 /// What one finished turn took.

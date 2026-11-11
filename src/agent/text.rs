@@ -4,13 +4,13 @@
 use std::cell::{Cell, RefCell};
 
 use objc2::rc::Retained;
-use objc2::runtime::AnyObject;
+use objc2::runtime::{AnyObject, Bool};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSLayoutManager, NSTextContainer, NSTextStorage, NSTextView, NSUserInterfaceLayoutDirection, NSView,
     NSViewNoIntrinsicMetric,
 };
-use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize};
 
 use super::timeline::TimelineTable;
 use crate::util::guarded;
@@ -20,6 +20,9 @@ pub struct TextIvars {
     storage: RefCell<Option<Retained<NSTextStorage>>>,
     width: Cell<f64>,
     height: Cell<f64>,
+    /// Whether AppKit is resizing the view, during which it must not scroll the timeline.
+    resizing: Cell<bool>,
+    streaming: RefCell<Option<super::markdown::Streaming>>,
 }
 
 define_class!(
@@ -69,8 +72,11 @@ define_class!(
 
         #[unsafe(method(setFrameSize:))]
         fn set_frame_size(&self, size: NSSize) {
+            // NSTextView scrolls its selection into view as it resizes, which would pull the timeline away from its end.
+            let outer = self.ivars().resizing.replace(true);
             // SAFETY: The superclass's implementation, with this method's signature.
             let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
+            self.ivars().resizing.set(outer);
             guarded((), || {
                 if (size.width - self.ivars().width.get()).abs() > 0.5 && size.width > 1.0 {
                     self.ivars().width.set(size.width);
@@ -78,6 +84,15 @@ define_class!(
                     self.invalidateIntrinsicContentSize();
                 }
             });
+        }
+
+        #[unsafe(method(scrollRectToVisible:))]
+        fn scroll_rect_to_visible(&self, rect: NSRect) -> Bool {
+            if self.ivars().resizing.get() {
+                return Bool::NO;
+            }
+            // SAFETY: The superclass's implementation, with this method's signature.
+            unsafe { msg_send![super(self), scrollRectToVisible: rect] }
         }
     }
 );
@@ -103,6 +118,8 @@ impl CardText {
             storage: RefCell::new(Some(storage)),
             width: Cell::new(width),
             height: Cell::new(0.0),
+            resizing: Cell::new(false),
+            streaming: RefCell::new(None),
         };
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width, 20.0));
         let this = Self::alloc(mtm).set_ivars(ivars);
@@ -120,6 +137,37 @@ impl CardText {
         view.setTranslatesAutoresizingMaskIntoConstraints(false);
         view.measure();
         view
+    }
+
+    /// The live answer keeps its parser, rendered blocks and TextKit storage between updates.
+    pub fn streaming(mtm: MainThreadMarker, markdown: &str, width: f64) -> Retained<CardText> {
+        let mut streaming = super::markdown::Streaming::new(markdown);
+        let (text, _) = streaming.render(mtm, markdown, width).expect("first streaming render");
+        let view = Self::new(mtm, &text, width, true);
+        *view.ivars().streaming.borrow_mut() = Some(streaming);
+        view
+    }
+
+    /// Replaces the affected tail while preserving the user's text selection.
+    pub fn update_markdown(&self, markdown: &str) -> bool {
+        let mut streaming = self.ivars().streaming.borrow_mut();
+        let Some(streaming) = streaming.as_mut() else {
+            return false;
+        };
+        let Some((text, prefix)) = streaming.render(self.mtm(), markdown, self.ivars().width.get()) else {
+            return false;
+        };
+        let storage = self.ivars().storage.borrow();
+        let Some(storage) = storage.as_ref() else { return false };
+        let selected = self.selectedRange();
+        storage.beginEditing();
+        storage.replaceCharactersInRange_withAttributedString(NSRange::new(prefix, storage.length() - prefix), &text);
+        storage.endEditing();
+        let start = selected.location.min(storage.length());
+        self.setSelectedRange(NSRange::new(start, selected.length.min(storage.length() - start)));
+        self.measure();
+        self.invalidateIntrinsicContentSize();
+        true
     }
 
     /// The timeline the card is in.

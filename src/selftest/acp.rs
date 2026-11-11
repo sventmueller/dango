@@ -475,7 +475,64 @@ fn sign_in(root: PathBuf) {
                 move || tab_of(key).is_some_and(|t| t.is_live()),
                 move || {
                     check("signing in opens the session", true, "");
-                    missing(root);
+                    usage(root, 0);
+                },
+            );
+        },
+    );
+}
+
+/// Usage-only responses reach the status line even when the agent reports no monetary cost or context window.
+fn usage(root: PathBuf, index: usize) {
+    let scenarios = ["usage-tokens", "usage-metadata", "usage-credits"];
+    let Some(&scenario) = scenarios.get(index) else {
+        return missing(root);
+    };
+    let Some(controller) = controller_of(&root) else {
+        return finish(NAME);
+    };
+    crate::agent::set_test_launch(test_launch(scenario, &root));
+    let Some(tab) = crate::agent::open_preset(&controller, CODEX) else {
+        return finish(NAME);
+    };
+    let key = tab.key;
+    soon(
+        "the usage agent opens",
+        move || tab_of(key).is_some_and(|t| t.is_live()),
+        move || {
+            if let Some(tab) = tab_of(key) {
+                tab.type_and_send("report usage");
+            }
+            soon(
+                "the usage response arrives",
+                move || tab_of(key).is_some_and(|t| t.snapshot().usage().reported_tokens.is_some()),
+                move || {
+                    let Some(tab) = tab_of(key) else { return finish(NAME) };
+                    let status = tab.inspect().status.join(" | ");
+                    let credit = index == 2;
+                    check(
+                        "ACP token reports and original cost units reach the status line",
+                        if credit {
+                            status.contains("2,5 credits") && status.contains("6 % Kontext")
+                        } else {
+                            status.contains("1 k Tokens") && !status.contains("Kontext")
+                        },
+                        status,
+                    );
+                    let (_, tip) = crate::agent::cost_text(tab.snapshot().usage());
+                    check(
+                        "ACP token totals keep their reported breakdown in the tooltip",
+                        tip.as_deref().is_some_and(|s| {
+                            s.contains("Zuletzt gemeldet: 1 k Tokens")
+                                && s.contains("Eingabe: 700")
+                                && s.contains("Ausgabe: 300")
+                        }),
+                        tip.unwrap_or_default(),
+                    );
+                    if let Some(controller) = controller_of(&root) {
+                        picture(&controller, scenario);
+                    }
+                    usage(root, index + 1);
                 },
             );
         },

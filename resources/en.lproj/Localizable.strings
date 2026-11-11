@@ -388,6 +388,12 @@
 "Reserve fürs Verdichten" = "Reserve for compacting";
 "Sitzung {} · Zug {}" = "Session {} · turn {}";
 "Sitzung: {}" = "Session: {}";
+"Zuletzt gemeldet: {}" = "Last reported: {}";
+"Eingabe: {}" = "Input: {}";
+"Ausgabe: {}" = "Output: {}";
+"Cache gelesen: {}" = "Cache read: {}";
+"Cache geschrieben: {}" = "Cache write: {}";
+"Reasoning: {}" = "Reasoning: {}";
 "Skills" = "Skills";
 "Speicherdateien" = "Memory files";
 "Systemprompt" = "System prompt";

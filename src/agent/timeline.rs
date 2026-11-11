@@ -8,6 +8,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::time::SystemTime;
 
 use ide_thread::{Change, Entry, EntryId, EntryKind, Lane, Thread};
@@ -123,6 +124,14 @@ impl TimelineTable {
     }
 }
 
+#[derive(Clone, Copy)]
+struct Correction {
+    id: EntryId,
+    width: f64,
+    before: f64,
+    after: f64,
+}
+
 pub struct Timeline {
     mtm: MainThreadMarker,
     key: u64,
@@ -130,11 +139,15 @@ pub struct Timeline {
     table: Retained<TimelineTable>,
     target: Retained<AgentTarget>,
     cwd: PathBuf,
-    thread: RefCell<Thread>,
+    thread: RefCell<Rc<Thread>>,
     rows: RefCell<Vec<EntryId>>,
+    positions: RefCell<HashMap<EntryId, usize>>,
+    pending: Cell<bool>,
+    pending_follow: Cell<bool>,
+    figures: RefCell<HashMap<EntryId, Vec<splat_render::js::Key>>>,
     /// The entries of the rows, in their order.
     list: RefCell<Vec<std::sync::Arc<Entry>>>,
-    /// The measured height of each entry's row, with the width it was measured at.
+    /// The height published to AppKit for each entry, at the committed width, initially estimated.
     heights: RefCell<HashMap<u64, (f64, f64)>>,
     /// The width the rows were last laid out at.
     width: Cell<f64>,
@@ -142,14 +155,14 @@ pub struct Timeline {
     inputs: RefCell<Inputs>,
     live: RefCell<Vec<Live>>,
     /// Rows whose card turned out another height than the table had, with that height.
-    corrections: RefCell<BTreeMap<usize, f64>>,
+    corrections: RefCell<BTreeMap<usize, Correction>>,
     built: Cell<usize>,
     /// Only the conversation shows: no tools, thinking or status lines.
     focus: Cell<bool>,
 }
 
 impl Timeline {
-    pub fn new(mtm: MainThreadMarker, key: u64, target: &AgentTarget, thread: Thread, cwd: PathBuf) -> Timeline {
+    pub fn new(mtm: MainThreadMarker, key: u64, target: &AgentTarget, thread: Rc<Thread>, cwd: PathBuf) -> Timeline {
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
         let this = TimelineTable::alloc(mtm).set_ivars(TableIvars { key });
         // SAFETY: NSTableView's initializer, called once on the newly allocated object.
@@ -164,6 +177,7 @@ impl Timeline {
         table.setSelectionHighlightStyle(NSTableViewSelectionHighlightStyle::Regular);
         table.setAllowsEmptySelection(true);
         table.setRowHeight(40.0);
+        table.setUsesAutomaticRowHeights(false);
         table.setColumnAutoresizingStyle(
             objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
         );
@@ -181,8 +195,10 @@ impl Timeline {
         scroll.setDocumentView(Some(&table));
         scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
         table.sizeLastColumnToFit();
+        let width = scroll.contentSize().width.max(200.0);
         let list = shown(&thread, false);
-        let rows = list.iter().map(|e| e.id).collect();
+        let rows: Vec<_> = list.iter().map(|e| e.id).collect();
+        let positions = rows.iter().enumerate().map(|(i, id)| (*id, i)).collect();
         Timeline {
             mtm,
             key,
@@ -192,9 +208,13 @@ impl Timeline {
             cwd,
             thread: RefCell::new(thread),
             rows: RefCell::new(rows),
+            positions: RefCell::new(positions),
+            pending: Cell::new(false),
+            pending_follow: Cell::new(false),
+            figures: RefCell::new(HashMap::new()),
             list: RefCell::new(list),
             heights: RefCell::new(HashMap::new()),
-            width: Cell::new(0.0),
+            width: Cell::new(width),
             expanded: RefCell::new(HashSet::new()),
             inputs: RefCell::new(Inputs::default()),
             live: RefCell::new(Vec::new()),
@@ -244,13 +264,15 @@ impl Timeline {
     }
 
     fn known_height(&self, entry: &Entry) -> f64 {
-        let width = self.table_width();
+        let width = self.width.get();
         if let Some((measured, height)) = self.heights.borrow().get(&entry.id.get())
             && (measured - width).abs() < 0.5
         {
             return *height;
         }
-        cards::estimate(entry, width - Self::leading(entry) - TRAILING) + TOP + BOTTOM
+        let height = cards::estimate(entry, width - Self::leading(entry) - TRAILING) + TOP + BOTTOM;
+        self.heights.borrow_mut().insert(entry.id.get(), (width, height));
+        height
     }
 
     pub fn row_view(&self, row: usize) -> Retained<NSTableRowView> {
@@ -280,7 +302,9 @@ impl Timeline {
                 nested: false,
                 now: SystemTime::now(),
             };
-            cards::build(&ctx, &entry)
+            let (card, figures) = super::figures::collect(|| cards::build(&ctx, &entry));
+            self.figures.borrow_mut().insert(entry.id, figures);
+            card
         };
         self.built.set(self.built.get() + 1);
         let cell = NSTableCellView::new(self.mtm);
@@ -303,17 +327,34 @@ impl Timeline {
         bottom.setPriority(999.0);
         bottom.setActive(true);
         let height = measure(&cell, width);
-        self.heights.borrow_mut().insert(entry.id.get(), (width, height));
-        if (height - before).abs() > 0.5 {
-            self.correct(row, before);
-        }
+        self.record_height(row, entry.id, width, before, height);
         Some(Retained::into_super(cell))
     }
 
-    /// Tells the table, once it is done with what it does now, that `row` changed its height from `before`.
-    fn correct(&self, row: usize, before: f64) {
+    /// Keeps delegate heights stable until AppKit is notified; geometry queries may otherwise corrupt its cache.
+    fn record_height(&self, row: usize, id: EntryId, width: f64, before: f64, after: f64) {
+        if (width - self.width.get()).abs() >= 0.5 {
+            return;
+        }
+        if (after - before).abs() <= 0.5 {
+            self.corrections.borrow_mut().remove(&row);
+            self.heights.borrow_mut().insert(id.get(), (width, before));
+            return;
+        }
         let first = self.corrections.borrow().is_empty();
-        self.corrections.borrow_mut().entry(row).or_insert(before);
+        self.corrections
+            .borrow_mut()
+            .entry(row)
+            .and_modify(|correction| {
+                correction.width = width;
+                correction.after = after;
+            })
+            .or_insert(Correction {
+                id,
+                width,
+                before,
+                after,
+            });
         if first {
             let key = self.key;
             main_soon(move || {
@@ -333,15 +374,23 @@ impl Timeline {
         let visible = self.scroll.contentView().bounds();
         let mut shift = 0.0;
         let set = objc2_foundation::NSMutableIndexSet::new();
-        for (row, before) in &corrections {
-            if *row >= self.count() {
+        for (row, correction) in &corrections {
+            if self.rows.borrow().get(*row) != Some(&correction.id) {
                 continue;
             }
             let rect = self.table.rectOfRow(isize::try_from(*row).unwrap_or(0));
             if rect.origin.y + rect.size.height <= visible.origin.y + 1.0 {
-                shift += self.row_height(*row) - before;
+                shift += correction.after - correction.before;
             }
             set.addIndex(*row);
+        }
+        // All old rectangles must be read before publishing any new heights.
+        for (row, correction) in corrections {
+            if self.rows.borrow().get(row) == Some(&correction.id) {
+                self.heights
+                    .borrow_mut()
+                    .insert(correction.id.get(), (correction.width, correction.after));
+            }
         }
         NSAnimationContext::beginGrouping();
         NSAnimationContext::currentContext().setDuration(0.0);
@@ -357,18 +406,106 @@ impl Timeline {
         }
     }
 
-    /// Takes in a new state of the thread and redraws the rows `changes` name.
-    pub fn apply(&self, thread: Thread, changes: &[Change]) {
+    /// Takes in a new state; content-only changes keep the row index and untouched cards.
+    pub fn apply(&self, thread: Rc<Thread>, changes: &[Change]) {
         let following = self.is_at_bottom() || self.count() == 0;
-        let old: Vec<EntryId> = self.rows.borrow().clone();
-        let list = shown(&thread, self.focus.get());
-        let new: Vec<EntryId> = list.iter().map(|e| e.id).collect();
-        let mut reload: HashSet<usize> = HashSet::new();
-        let mut everything = false;
+        let structural = self.structure_changed(&thread, changes);
+        let old_len = self.count();
+        let appended = !structural || self.reindex(&thread);
+        *self.thread.borrow_mut() = thread;
+        let reload = self.changed_rows(changes);
+        if !structural && reload.is_empty() {
+            return;
+        }
+        if !self.is_visible() {
+            if !self.pending.replace(true) {
+                self.pending_follow.set(following);
+            }
+            return;
+        }
+        if self.pending.get() {
+            self.catch_up();
+            self.refresh_marks();
+            return;
+        }
+        if !appended || changes.contains(&Change::Cleared) {
+            self.table.reloadData();
+        } else {
+            if self.count() > old_len {
+                let added = NSIndexSet::indexSetWithIndexesInRange(objc2_foundation::NSRange::new(
+                    old_len,
+                    self.count() - old_len,
+                ));
+                self.table
+                    .insertRowsAtIndexes_withAnimation(&added, objc2_app_kit::NSTableViewAnimationOptions::empty());
+            }
+            self.refresh_rows(reload.into_iter().filter(|i| *i < old_len));
+        }
+        self.refresh_marks();
+        if following {
+            self.scroll_to_end();
+        }
+    }
+
+    fn structure_changed(&self, thread: &Thread, changes: &[Change]) -> bool {
+        if self.thread.borrow().entries(&Lane::Main).len() != thread.entries(&Lane::Main).len() {
+            return true;
+        }
+        changes.iter().any(|change| match change {
+            Change::Cleared | Change::Inserted { lane: Lane::Main, .. } | Change::Removed { lane: Lane::Main, .. } => {
+                true
+            }
+            Change::Updated { lane: Lane::Main, id } => {
+                let new = thread.entry(*id);
+                let old_thread = self.thread.borrow();
+                let old = old_thread.entry(*id);
+                match (old, new) {
+                    (Some(old), Some(new)) => {
+                        is_quiet_hook(old) != is_quiet_hook(new)
+                            || matches!(old.kind, EntryKind::UserMessage(_))
+                                != matches!(new.kind, EntryKind::UserMessage(_))
+                            || (self.focus.get() && hidden_in_focus(old) != hidden_in_focus(new))
+                    }
+                    _ => true,
+                }
+            }
+            _ => false,
+        })
+    }
+
+    /// Rebuilds the filtered index only for structural edits, in linear time.
+    fn reindex(&self, thread: &Thread) -> bool {
+        let list = shown(thread, self.focus.get());
+        let new: Vec<_> = list.iter().map(|e| e.id).collect();
+        let positions: HashMap<_, _> = new.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+        let old = self.rows.borrow();
+        let appended = new.starts_with(&old);
+        for id in old.iter().filter(|id| !positions.contains_key(id)) {
+            self.inputs.borrow_mut().forget(id.get());
+            self.heights.borrow_mut().remove(&id.get());
+            self.figures.borrow_mut().remove(id);
+        }
+        drop(old);
+        // Corrections name row positions, which may now belong to other entries.
+        self.corrections.borrow_mut().clear();
+        *self.rows.borrow_mut() = new;
+        *self.positions.borrow_mut() = positions;
+        *self.list.borrow_mut() = list;
+        appended
+    }
+
+    fn changed_rows(&self, changes: &[Change]) -> HashSet<usize> {
+        let thread = self.thread.borrow();
+        let positions = self.positions.borrow();
+        let mut list = self.list.borrow_mut();
+        let mut reload = HashSet::new();
         for change in changes {
             match change {
                 Change::Updated { lane: Lane::Main, id } => {
-                    if let Some(i) = new.iter().position(|e| e == id) {
+                    if let Some(&i) = positions.get(id) {
+                        if let Some((_, index)) = thread.place(*id) {
+                            list[i] = thread.entries(&Lane::Main)[index].clone();
+                        }
                         reload.insert(i);
                     }
                 }
@@ -385,23 +522,24 @@ impl Timeline {
                     ..
                 }
                 | Change::Subagent(key) => {
-                    if let Some(i) = owner_row(&thread, &new, key) {
+                    if let Some(i) = owner_row(&thread, &positions, key) {
                         reload.insert(i);
                     }
                 }
-                Change::Cleared => everything = true,
                 _ => {}
             }
         }
-        // A hook that ran fine has no row of its own; the row that counts its turn's hooks changes with it.
-        let hidden_changed = changes.iter().any(|c| match c {
+        // Successful hooks share one row per turn.
+        if changes.iter().any(|c| match c {
             Change::Inserted {
                 lane: Lane::Main, id, ..
             }
-            | Change::Updated { lane: Lane::Main, id } => !new.contains(id),
+            | Change::Updated { lane: Lane::Main, id } => {
+                !positions.contains_key(id) && thread.entry(*id).is_some_and(is_quiet_hook)
+            }
+            Change::Removed { lane: Lane::Main, .. } => true,
             _ => false,
-        });
-        if hidden_changed {
+        }) {
             reload.extend(
                 list.iter()
                     .enumerate()
@@ -409,30 +547,78 @@ impl Timeline {
                     .map(|(i, _)| i),
             );
         }
-        for id in old.iter().filter(|id| !new.contains(id)) {
-            self.inputs.borrow_mut().forget(id.get());
+        reload
+    }
+
+    fn is_visible(&self) -> bool {
+        !self.scroll.isHiddenOrHasHiddenAncestor() && self.scroll.window().is_some_and(|w| crate::window::in_front(&w))
+    }
+
+    /// A background tab catches up once, when it becomes visible again.
+    pub fn show_pending(&self) {
+        if self.is_visible() && self.pending.get() {
+            self.catch_up();
         }
-        *self.thread.borrow_mut() = thread;
-        *self.rows.borrow_mut() = new.clone();
-        *self.list.borrow_mut() = list;
-        let appended = new.len() >= old.len() && new[..old.len()] == old[..];
-        if everything || !appended {
-            self.table.reloadData();
-        } else {
-            if new.len() > old.len() {
-                let added = NSIndexSet::indexSetWithIndexesInRange(objc2_foundation::NSRange::new(
-                    old.len(),
-                    new.len() - old.len(),
-                ));
-                self.table
-                    .insertRowsAtIndexes_withAnimation(&added, objc2_app_kit::NSTableViewAnimationOptions::empty());
-            }
-            self.reload_rows(reload.into_iter().filter(|i| *i < old.len()));
+    }
+
+    /// Builds the rows of a timeline that was hidden at the width it has now, and shows the end if it did before.
+    fn catch_up(&self) {
+        // A native tab has just adopted its sidebar; hydrate at the final viewport width.
+        if let Some(window) = self.scroll.window() {
+            window.layoutIfNeeded();
         }
-        self.refresh_marks();
-        if following {
+        self.pending.set(false);
+        let width = self.table_width();
+        self.fit_column(width);
+        self.width.set(width);
+        self.corrections.borrow_mut().clear();
+        self.table.reloadData();
+        if self.pending_follow.get() {
             self.scroll_to_end();
         }
+    }
+
+    fn refresh_rows(&self, rows: impl Iterator<Item = usize>) {
+        let mut reload = Vec::new();
+        for row in rows {
+            if !self.update_stream(row) {
+                reload.push(row);
+            }
+        }
+        self.reload_rows(reload.into_iter());
+    }
+
+    fn update_stream(&self, row: usize) -> bool {
+        let Some(entry) = self.entry(row) else { return false };
+        let EntryKind::AgentMessage(message) = &entry.kind else {
+            return false;
+        };
+        if !message.streaming || message.markdown.trim().is_empty() {
+            return false;
+        }
+        let Some(cell) = self
+            .table
+            .viewAtColumn_row_makeIfNecessary(0, isize::try_from(row).unwrap_or(0), false)
+        else {
+            return false;
+        };
+        let Some(text) = cell
+            .subviews()
+            .firstObject()
+            .and_then(|v| v.downcast::<super::text::CardText>().ok())
+        else {
+            return false;
+        };
+        let before = self.known_height(&entry);
+        let (updated, figures) = super::figures::collect(|| text.update_markdown(&message.markdown));
+        if updated {
+            self.figures.borrow_mut().insert(entry.id, figures);
+            ui_summary(&text, &entry, &self.thread.borrow());
+            // `measure` sizes a detached cell. Resizing a live table cell would invalidate other rows.
+            let height = text.intrinsicContentSize().height.ceil() + TOP + BOTTOM;
+            self.record_height(row, entry.id, self.table_width(), before, height);
+        }
+        true
     }
 
     fn reload_rows(&self, rows: impl Iterator<Item = usize>) {
@@ -448,7 +634,12 @@ impl Timeline {
 
     /// Builds the card of entry `id` anew.
     pub fn reload_entry(&self, id: u64) {
-        if let Some(row) = self.rows.borrow().iter().position(|e| e.get() == id) {
+        if let Some(row) = self
+            .positions
+            .borrow()
+            .iter()
+            .find_map(|(entry, row)| (entry.get() == id).then_some(*row))
+        {
             self.reload_rows(std::iter::once(row));
         }
     }
@@ -511,10 +702,7 @@ impl Timeline {
     /// Shows only the conversation, or everything again.
     pub fn set_focus_view(&self, on: bool) {
         self.focus.set(on);
-        let thread = self.thread.borrow().clone();
-        let list = shown(&thread, on);
-        *self.rows.borrow_mut() = list.iter().map(|e| e.id).collect();
-        *self.list.borrow_mut() = list;
+        self.reindex(&self.thread.borrow());
         self.table.reloadData();
         self.scroll_to_end();
     }
@@ -531,7 +719,8 @@ impl Timeline {
         if count == 0 {
             return;
         }
-        self.table.scrollRowToVisible(isize::try_from(count - 1).unwrap_or(0));
+        // After a reload or height change the table sizes itself only on its next layout pass, too late to find the end.
+        self.table.tile();
         let clip = self.scroll.contentView();
         let height = self.table.frame().size.height;
         let y = (height - clip.bounds().size.height).max(0.0);
@@ -542,8 +731,7 @@ impl Timeline {
     /// Scrolls to entry `key` and selects its row.
     pub fn reveal(&self, key: &str) {
         let thread = self.thread.borrow().clone();
-        let rows = self.rows.borrow().clone();
-        let Some(row) = owner_row(&thread, &rows, key) else {
+        let Some(row) = owner_row(&thread, &self.positions.borrow(), key) else {
             return;
         };
         self.table.scrollRowToVisible(isize::try_from(row).unwrap_or(0));
@@ -562,9 +750,25 @@ impl Timeline {
     }
 
     /// Builds the cards anew, as formulas and diagrams they show as code were drawn.
-    pub fn figures_arrived(&self) {
+    pub fn figures_arrived(&self, keys: &[splat_render::js::Key]) {
+        let rows: Vec<_> = self
+            .figures
+            .borrow()
+            .iter()
+            .filter(|(_, wanted)| wanted.iter().any(|key| keys.contains(key)))
+            .filter_map(|(id, _)| self.positions.borrow().get(id).copied())
+            .collect();
+        if rows.is_empty() {
+            return;
+        }
+        if !self.is_visible() {
+            if !self.pending.replace(true) {
+                self.pending_follow.set(self.is_at_bottom());
+            }
+            return;
+        }
         let following = self.is_at_bottom();
-        self.table.reloadData();
+        self.reload_rows(rows.into_iter());
         if following {
             self.scroll_to_end();
         }
@@ -573,12 +777,20 @@ impl Timeline {
     /// Lays the cards out anew after the width changed.
     pub fn width_changed(&self) {
         let width = self.table_width();
-        self.fit_column(width);
-        if (width - self.width.get()).abs() < 1.0 || self.table.inLiveResize() {
+        // `record_height` drops measurements half a point off the committed width, so a smaller change must commit.
+        if (width - self.width.get()).abs() < 0.5 || self.table.inLiveResize() {
             return;
         }
         let following = self.is_at_bottom();
+        if !self.is_visible() {
+            if !self.pending.replace(true) {
+                self.pending_follow.set(following);
+            }
+            return;
+        }
+        self.fit_column(width);
         self.width.set(width);
+        self.corrections.borrow_mut().clear();
         self.table.reloadData();
         if following {
             self.scroll_to_end();
@@ -587,6 +799,9 @@ impl Timeline {
 
     /// Advances the running times of the cards in view; whether any runs.
     pub fn tick(&self, now: SystemTime) -> bool {
+        if !self.is_visible() {
+            return false;
+        }
         let mut live = self.live.borrow_mut();
         live.retain(|l| l.label.window().is_some());
         for l in live.iter() {
@@ -601,6 +816,49 @@ impl Timeline {
     #[cfg(feature = "selftest")]
     pub fn built(&self) -> usize {
         self.built.get()
+    }
+
+    /// Checks the geometry of visible rows against the heights published to AppKit.
+    #[cfg(feature = "selftest")]
+    pub fn height_discrepancy(&self) -> f64 {
+        let range = self.table.rowsInRect(self.table.visibleRect());
+        (range.location..range.location + range.length)
+            .filter(|row| *row < self.count())
+            .map(|row| {
+                (self.table.rectOfRow(isize::try_from(row).unwrap_or(0)).size.height - self.row_height(row)).abs()
+            })
+            .fold(0.0, f64::max)
+    }
+
+    /// Includes deferred height correction and drawing in the streaming timing budget.
+    #[cfg(feature = "selftest")]
+    pub fn settle(&self) {
+        if let Some(window) = self.scroll.window() {
+            window.layoutIfNeeded();
+        }
+        self.width_changed();
+        for _ in 0..32 {
+            self.flush_corrections();
+            if let Some(window) = self.scroll.window() {
+                window.displayIfNeeded();
+            }
+            if self.corrections.borrow().is_empty() {
+                break;
+            }
+        }
+    }
+
+    /// The current answer's text view, for checking reuse and selection during streaming.
+    #[cfg(feature = "selftest")]
+    pub fn streaming_text(&self) -> Option<Retained<objc2_app_kit::NSTextView>> {
+        let row = isize::try_from(self.count().checked_sub(1)?).ok()?;
+        let cell = self.table.viewAtColumn_row_makeIfNecessary(0, row, false)?;
+        let text = cell
+            .subviews()
+            .firstObject()?
+            .downcast::<super::text::CardText>()
+            .ok()?;
+        Some(text.into_super())
     }
 
     /// The rows in view whose height differs from what their card needs, as `row: table height / card height`.
@@ -711,12 +969,12 @@ fn shown(thread: &Thread, focus: bool) -> Vec<std::sync::Arc<Entry>> {
 }
 
 /// The row of the main lane whose card shows the subagent or tool call `key`.
-fn owner_row(thread: &Thread, rows: &[EntryId], key: &str) -> Option<usize> {
+fn owner_row(thread: &Thread, rows: &HashMap<EntryId, usize>, key: &str) -> Option<usize> {
     let mut key = key.to_string();
     for _ in 0..8 {
         let entry = thread.entry_by_key(&key)?;
-        if let Some(i) = rows.iter().position(|id| *id == entry.id) {
-            return Some(i);
+        if let Some(i) = rows.get(&entry.id) {
+            return Some(*i);
         }
         match thread.place(entry.id) {
             Some((Lane::Subagent(parent), _)) => key = parent.clone(),
@@ -734,4 +992,8 @@ fn measure(cell: &NSTableCellView, width: f64) -> f64 {
     let fitting = cell.fittingSize();
     constraint.setActive(false);
     fitting.height.ceil()
+}
+
+fn ui_summary(view: &NSView, entry: &Entry, thread: &Thread) {
+    super::ui::group(view, &cards::summary(thread, entry));
 }

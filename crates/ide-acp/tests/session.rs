@@ -128,6 +128,32 @@ fn the_session_offers_what_the_agent_reported() {
 }
 
 #[test]
+fn prompt_usage_reaches_the_thread_with_and_without_standard_usage() {
+    for scenario in ["usage-tokens", "usage-metadata", "usage-credits"] {
+        let (session, _, _) = ready(scenario);
+        for _ in 0..2 {
+            session.send(message("usage please")).unwrap();
+            wait("the usage response", || {
+                let thread = session.snapshot();
+                thread.status() == Status::Idle && thread.usage().reported_tokens.is_some()
+            });
+            let thread = session.snapshot();
+            assert_eq!(thread.usage().reported_tokens.as_ref().unwrap().total, 1000);
+            assert!(thread.usage().turns.is_empty(), "no assumed turn/session scope");
+            assert!(!thread.usage().subscription, "token quota is not a plan allowance");
+            if scenario == "usage-credits" {
+                let cost = thread.usage().reported_cost.as_ref().unwrap();
+                assert_eq!((cost.amount, cost.currency.as_str()), (2.5, "credits"));
+                assert_eq!(thread.usage().context_used, Some(12000));
+            } else {
+                assert_eq!(thread.usage().context_used, None);
+            }
+        }
+        session.stop(Duration::from_millis(500));
+    }
+}
+
+#[test]
 fn a_turn_fills_the_thread_with_every_kind_of_entry() {
     let thread = answered_turn(Choice::Option(0));
     let kinds: Vec<&EntryKind> = thread.entries(&Lane::Main).iter().map(|e| &e.kind).collect();

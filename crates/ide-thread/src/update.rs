@@ -118,6 +118,10 @@ pub struct UsagePatch {
     pub cache_write_tokens: Option<u64>,
     /// The cost so far, in US dollars.
     pub cost_usd: Option<f64>,
+    /// The cumulative cost in the agent's original currency or unit.
+    pub reported_cost: Option<crate::ReportedCost>,
+    /// The latest agent token report, without inferring its scope.
+    pub reported_tokens: Option<crate::TokenReport>,
     /// Tokens the context window holds now.
     pub context_used: Option<u64>,
     /// Tokens the context window can hold.
@@ -231,7 +235,7 @@ pub struct BackgroundPatch {
 }
 
 /// What an update changed, for the UI to redraw just that.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Change {
     /// A field of the thread's head changed.
     Header(Field),
@@ -271,7 +275,7 @@ pub enum Change {
 }
 
 /// A field of the thread's head.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Field {
     /// The agent's session id.
     Session,

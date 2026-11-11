@@ -202,6 +202,90 @@ fn sent_results(stub: &Stub, request: usize) -> Vec<Value> {
     last["content"].as_array().unwrap().clone()
 }
 
+struct GatedDiagnostics(std::sync::mpsc::Sender<std::sync::mpsc::Sender<()>>);
+
+impl ide_agent::Diagnostics for GatedDiagnostics {
+    fn diagnostics(&self, _path: Option<&Path>) -> Vec<ide_agent::Diagnostic> {
+        let (release, wait) = std::sync::mpsc::channel();
+        self.0.send(release).unwrap();
+        wait.recv_timeout(Duration::from_secs(10)).unwrap();
+        Vec::new()
+    }
+}
+
+#[test]
+fn reads_overlap_four_at_a_time_and_writes_are_ordering_barriers() {
+    let project = Project::new("parallel");
+    let mut tools = Vec::new();
+    for id in ["d0", "d1", "d2", "d3", "d4"] {
+        tools.push((id, "diagnostics", json!({})));
+    }
+    tools.push((
+        "write",
+        "write_file",
+        json!({"path": "barrier.txt", "content": "written"}),
+    ));
+    tools.push(("after", "diagnostics", json!({})));
+    tools.push(("read", "read_file", json!({"path": "barrier.txt"})));
+    let stub = Stub::script(vec![calls(&tools), says("done")]).unwrap();
+    let (entered, receive) = std::sync::mpsc::channel();
+    let mut config = config(&stub, &project, Approval::All, false, None);
+    config.workspace = config.workspace.with_diagnostics(Arc::new(GatedDiagnostics(entered)));
+    let run = start(config);
+    send(&run, "read, write, then read again");
+    let first: Vec<_> = (0..4)
+        .map(|_| receive.recv_timeout(Duration::from_secs(5)).unwrap())
+        .collect();
+    assert!(receive.try_recv().is_err(), "a fifth read must wait for a worker slot");
+    assert!(!project.root().join("barrier.txt").exists());
+    for release in first.into_iter().rev() {
+        release.send(()).unwrap();
+    }
+    let fifth = receive.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(
+        !project.root().join("barrier.txt").exists(),
+        "the write waits for every earlier read"
+    );
+    fifth.send(()).unwrap();
+    let after = receive.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(project.root().join("barrier.txt")).unwrap(),
+        "written"
+    );
+    after.send(()).unwrap();
+    idle(&run);
+    let results = sent_results(&stub, 1);
+    let ids: Vec<_> = results.iter().map(|r| r["tool_use_id"].as_str().unwrap()).collect();
+    assert_eq!(ids, ["d0", "d1", "d2", "d3", "d4", "write", "after", "read"]);
+    assert!(results.last().unwrap()["content"].as_str().unwrap().contains("written"));
+}
+
+#[test]
+fn cancellation_does_not_start_the_next_read_group() {
+    let project = Project::new("parallel-cancel");
+    let tools: Vec<_> = ["d0", "d1", "d2", "d3", "d4", "d5"]
+        .into_iter()
+        .map(|id| (id, "diagnostics", json!({})))
+        .collect();
+    let stub = Stub::script(vec![calls(&tools)]).unwrap();
+    let (entered, receive) = std::sync::mpsc::channel();
+    let mut config = config(&stub, &project, Approval::All, false, None);
+    config.workspace = config.workspace.with_diagnostics(Arc::new(GatedDiagnostics(entered)));
+    let run = start(config);
+    send(&run, "read");
+    let first: Vec<_> = (0..4)
+        .map(|_| receive.recv_timeout(Duration::from_secs(5)).unwrap())
+        .collect();
+    run.session.cancel();
+    for release in first {
+        release.send(()).unwrap();
+    }
+    let thread = idle(&run);
+    assert!(receive.try_recv().is_err());
+    assert_eq!(tool(&thread, "d4").status, ToolStatus::Failed);
+    assert_eq!(tool(&thread, "d5").status, ToolStatus::Failed);
+}
+
 #[test]
 fn a_turn_reads_then_edits_with_the_users_approval_and_stores_a_rule() {
     let project = Project::new("edit");

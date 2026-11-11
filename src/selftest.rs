@@ -4,8 +4,10 @@
 mod a11y;
 mod acp;
 mod agent;
+mod agent_background;
 mod agent_context;
 mod agent_outside;
+mod agent_perf;
 mod agent_plan;
 pub mod application;
 mod browser_dev;
@@ -116,6 +118,8 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "acp" => acp::run(),
         "own-agent" => own_agent::run(),
         "agent" => agent::run(),
+        "agent-perf" => agent_perf::run(),
+        "agent-background" => agent_background::run(),
         "file-icons" => file_icons::run(),
         "agent-live" => agent::live(),
         "browser" => browser(),

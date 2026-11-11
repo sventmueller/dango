@@ -392,6 +392,26 @@ mod tests {
     }
 
     #[test]
+    fn snapshots_keep_their_lookup_indexes_across_insert_remove_and_clear() {
+        let mut thread = thread();
+        thread.apply(put("a", message()));
+        thread.apply(put("b", message()));
+        let snapshot = thread.clone();
+        let a = snapshot.entry_by_key("a").unwrap().id;
+        let b = snapshot.entry_by_key("b").unwrap().id;
+        thread.apply(Update::Remove { key: "a".into() });
+        thread.apply(put("c", message()));
+        assert_eq!(snapshot.place(a), Some((&Lane::Main, 0)));
+        assert_eq!(snapshot.place(b), Some((&Lane::Main, 1)));
+        assert!(snapshot.entry_by_key("c").is_none());
+        assert!(thread.entry_by_key("a").is_none());
+        assert_eq!(thread.place(b), Some((&Lane::Main, 0)));
+        thread.apply(Update::Clear);
+        assert_eq!(snapshot.entry_by_key("a").unwrap().id, a);
+        assert_eq!(snapshot.entry_by_key("b").unwrap().id, b);
+    }
+
+    #[test]
     fn a_thousand_entries_are_added_and_found_quickly() {
         let mut thread = thread();
         let started = std::time::Instant::now();

@@ -54,7 +54,7 @@ pub enum Incoming {
 /// Session events waiting for the main thread.
 #[derive(Default)]
 pub struct Inbox {
-    events: Mutex<Vec<Incoming>>,
+    events: Mutex<super::inbox::Pending>,
     scheduled: AtomicBool,
 }
 
@@ -132,7 +132,7 @@ pub struct Offered {
 
 pub struct State {
     pub source: Source,
-    pub thread: Thread,
+    pub thread: Rc<Thread>,
     pub caps: Capabilities,
     /// What the ACP agent and its session offer.
     pub acp: Option<ide_acp::Capabilities>,
@@ -229,6 +229,7 @@ impl AgentTab {
         source: Source,
     ) -> AgentTab {
         let mtm = controller.mtm();
+        let thread = Rc::new(thread);
         let key = NEXT_KEY.fetch_add(1, Ordering::Relaxed);
         let target = AgentTarget::new(mtm, key);
         let this = AgentRoot::alloc(mtm).set_ivars(RootIvars { key });
@@ -506,6 +507,11 @@ impl AgentTab {
 
     /// The thread as it is now.
     pub fn snapshot(&self) -> Thread {
+        self.state.borrow().thread.as_ref().clone()
+    }
+
+    /// The last state received by the UI, shared without copying its history.
+    pub fn view_snapshot(&self) -> Rc<Thread> {
         self.state.borrow().thread.clone()
     }
 
@@ -538,6 +544,12 @@ impl AgentTab {
         }
     }
 
+    /// Resumes presentation and live labels after a background tab comes back into view.
+    pub fn show_pending(&self) {
+        self.timeline.show_pending();
+        self.start_ticking();
+    }
+
     /// Looks for `claude` and the login shell's environment on a worker thread, then starts the session.
     pub fn start(&self) {
         let Some(controller) = self.controller() else { return };
@@ -561,7 +573,7 @@ impl AgentTab {
                 state.source = Source::Starting;
                 state.problem = None;
                 state.choice_applied = false;
-                state.thread.clone()
+                state.thread.as_ref().clone()
             };
             self.refresh();
             self.start_acp(agent, thread);
@@ -575,7 +587,7 @@ impl AgentTab {
         };
         self.refresh();
         let key = self.key;
-        let thread = self.state.borrow().thread.clone();
+        let thread = self.snapshot();
         let _ = std::thread::Builder::new().name("claude-start".into()).spawn(move || {
             let env = crate::environment::wait(Duration::from_secs(15))
                 .map(<[(String, String)]>::to_vec)
@@ -655,9 +667,13 @@ impl AgentTab {
         move |event: E| {
             inbox.events.lock().unwrap_or_else(|e| e.into_inner()).push(wrap(event));
             if !inbox.scheduled.swap(true, Ordering::SeqCst) {
+                let scheduled = inbox.clone();
                 main_after(Duration::from_millis(30), move || {
                     if let Some(tab) = super::get(key) {
-                        tab.flush();
+                        let current = Arc::ptr_eq(&tab.inbox.borrow(), &scheduled);
+                        if current {
+                            tab.flush();
+                        }
                     }
                 });
             }
@@ -668,17 +684,20 @@ impl AgentTab {
     fn flush(&self) {
         let inbox = self.inbox.borrow().clone();
         inbox.scheduled.store(false, Ordering::SeqCst);
-        let events = std::mem::take(&mut *inbox.events.lock().unwrap_or_else(|e| e.into_inner()));
-        let mut changes = Vec::new();
+        let pending = std::mem::take(&mut *inbox.events.lock().unwrap_or_else(|e| e.into_inner()));
+        if pending.is_empty() {
+            return;
+        }
+        let changes: Vec<Change> = pending.changes.into_iter().collect();
         let mut problem = None;
         let mut learned = false;
         let mut refused = None;
-        for event in events {
+        for event in pending.events {
             match &event {
                 Incoming::Claude(Event::Changed(c))
                 | Incoming::Acp(ide_acp::Event::Changed(c))
                 | Incoming::Own(ide_agent::Event::Changed(c)) => {
-                    changes.extend(c.iter().cloned());
+                    debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
                 Incoming::Claude(Event::Capabilities) | Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
@@ -711,6 +730,9 @@ impl AgentTab {
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
         }
+        if learned {
+            self.refresh();
+        }
     }
 
     /// What an ACP session's failure means for the tab; failures of a running session's requests are only logged.
@@ -732,6 +754,8 @@ impl AgentTab {
 
     /// Shows the thread as `snapshot` has it and reacts to how its status moved.
     pub(super) fn absorb(&self, snapshot: Thread, changes: &[Change]) {
+        let snapshot = Rc::new(snapshot);
+        let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status;
         let now = snapshot.status();
         let title_changed = snapshot.title() != self.state.borrow().thread.title();
@@ -740,9 +764,21 @@ impl AgentTab {
             state.thread = snapshot.clone();
             state.status = now;
         }
+        let had_rows = self.timeline.count() > 0;
         self.timeline.apply(snapshot, changes);
-        self.refresh();
-        self.refresh_plan_docs();
+        if refresh.controls
+            || changes.is_empty()
+            || title_changed
+            || before != now
+            || had_rows != (self.timeline.count() > 0)
+        {
+            self.refresh();
+        } else if refresh.status {
+            self.status.show(&self.state.borrow().thread);
+        }
+        if refresh.plans {
+            self.refresh_plan_docs();
+        }
         if before != now {
             self.status_moved(before, now);
         }
@@ -752,7 +788,9 @@ impl AgentTab {
         if now != Status::Idle {
             self.start_ticking();
         }
-        if let Some(controller) = self.controller() {
+        if refresh.overview
+            && let Some(controller) = self.controller()
+        {
             super::changed(&controller);
         }
     }
@@ -975,6 +1013,9 @@ fn tick(key: u64) {
     let Some(tab) = super::get(key) else { return };
     let live = tab.timeline.tick(SystemTime::now());
     let running = tab.status() != Status::Idle;
+    if running && let Some(session) = tab.session() {
+        super::usage::fetch(&session);
+    }
     if live || running {
         main_after(Duration::from_secs(1), move || tick(key));
     } else {

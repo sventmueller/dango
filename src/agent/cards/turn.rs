@@ -174,7 +174,10 @@ pub fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool) -> Re
             &NSColor::secondaryLabelColor(),
         ));
     }
-    if streaming || ctx.nested {
+    if streaming && !ctx.nested {
+        return ui::view(&CardText::streaming(ctx.mtm, markdown, ctx.width));
+    }
+    if ctx.nested {
         return ui::view(&markdown_text(ctx, markdown, Tone::Primary));
     }
     let text = markdown_text(&ctx.narrower(COPY_WIDTH + 6.0), markdown, Tone::Primary);

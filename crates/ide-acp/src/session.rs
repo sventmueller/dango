@@ -367,7 +367,11 @@ impl Session {
             let updates = {
                 let mut state = shared.state();
                 match &result {
-                    Ok(response) => state.mapper.end_turn(&wire_name(&response.stop_reason), now()),
+                    Ok(response) => {
+                        let mut updates = state.mapper.end_turn(&wire_name(&response.stop_reason), now());
+                        updates.extend(crate::usage::response(response));
+                        updates
+                    }
                     Err(error) => {
                         let mut updates = state.mapper.error(ErrorKind::Api, error.message.clone(), now());
                         updates.push(Update::Status(Status::Idle));

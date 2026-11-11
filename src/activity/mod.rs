@@ -298,7 +298,7 @@ fn count(tabs: &[std::rc::Rc<AgentTab>], processes: &[ide_process::ProcessInfo])
     let agents: usize = tabs
         .iter()
         .map(|tab| {
-            let thread = tab.snapshot();
+            let thread = tab.view_snapshot();
             usize::from(thread.status() != Status::Idle)
                 + thread
                     .subagents()
@@ -360,7 +360,7 @@ fn cli_lines(threads: &[crate::terminal::CliThread], now: SystemTime) -> Vec<Lin
 fn agent_lines(tabs: &[std::rc::Rc<AgentTab>], now: SystemTime, all: bool) -> Vec<Line> {
     let mut lines = Vec::new();
     for tab in tabs {
-        let thread = tab.snapshot();
+        let thread = tab.view_snapshot();
         let mut buttons = vec![(t("Zeigen"), Action::ShowTab(tab.key))];
         if thread.status() != Status::Idle {
             buttons.push((t("Stopp"), Action::StopTurn(tab.key)));

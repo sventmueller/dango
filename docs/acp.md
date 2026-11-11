@@ -75,7 +75,7 @@ filled never overwrites its entries.
 | `current_mode_update` | `Mode(id)` |
 | `config_option_update` | `Model`, `Effort`, `Mode` from the options classed so, by value id |
 | `session_info_update` with a title | `Title` |
-| `usage_update` | `Usage`: context used and size; cost when the currency is USD |
+| `usage_update` | `Usage`: context used and size; cumulative cost in the reported currency or unit, including credits (USD also fills `cost_usd`) |
 | `available_commands_update` | capabilities only |
 | anything else (unstable or unknown) | ignored |
 
@@ -84,7 +84,7 @@ filled never overwrites its entries.
 | Event | Thread |
 |---|---|
 | Prompt sent | `Put UserMessage`, `Status(Running)` |
-| `session/prompt` answered | open text `Finish`ed, `Status(Idle)`; stop reason `cancelled` → `Notice::Interrupted`, any other than `end_turn` → `Notice::Error { Turn, <reason> }` |
+| `session/prompt` answered | open text `Finish`ed, `Status(Idle)`; token report from `usage`, else `_meta.quota.token_count` (Codex camelCase or Gemini snake_case); stop reason `cancelled` → `Notice::Interrupted`, any other than `end_turn` → `Notice::Error { Turn, <reason> }` |
 | `session/prompt` failed | `Notice::Error { Api, <message> }`, `Status(Idle)` |
 | `session/request_permission` | the tool call updated from the request; `Put PermissionRequest` (key `permission-pN`) with name, title and input of the tool call, options in the agent's order (`allow_once` → `AllowOnce`, `allow_always` → `AllowAlways { rule: <name> }`, rejects → `Deny`); `Status(RequiresAction)` |
 | Answer | `Choice::Option(n)` → `selected` with the agent's option id, `Choice::Dismiss` → `cancelled`; `Resolve Decided(Allowed { always } \| Denied)`; `Status(Running)` once none is open |
@@ -92,6 +92,16 @@ filled never overwrites its entries.
 | Cancel | open permission requests answered `cancelled` and `Resolve Withdrawn`, then `session/cancel` |
 | Any other request from the agent (`fs/*`, `terminal/*`, unknown) | answered `method not found` |
 | Process ends unasked | open requests withdrawn; while a turn ran or the connection failed: `Notice::Error { Process, <end of stderr> }`, `Status(Idle)`; `Event::Ended` |
+
+Token reports are displayed as the latest reported usage, with the agent's total and breakdown preserved.
+They are not accumulated: ACP's experimental `PromptResponse.usage` has
+[conflicting turn/session semantics](https://github.com/agentclientprotocol/agent-client-protocol/issues/1860)
+in the schema and agents. Cache and reasoning counts may overlap input/output; neither is added to the reported
+total. A token report does not imply context occupancy or subscription limits. In particular, the Codex/Gemini
+`quota.token_count` extension reports tokens, not a five-hour or weekly allowance
+([Codex](https://github.com/agentclientprotocol/codex-acp/blob/main/src/QuotaMeta.ts),
+[Gemini](https://github.com/google-gemini/gemini-cli/blob/main/packages/cli/src/acp/acpSession.ts)). Missing data stays unknown.
+The account usage cache of the native Claude connection is only used by its own tabs.
 
 ## Register and installation (E5, R8)
 

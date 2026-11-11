@@ -16,6 +16,7 @@ mod context_view;
 mod figures;
 mod format;
 mod header;
+mod inbox;
 mod markdown;
 mod mention;
 mod notify;
@@ -23,6 +24,7 @@ mod outside;
 mod overlay;
 mod own;
 pub mod plan;
+mod refresh;
 mod rewind;
 mod row;
 mod source;
@@ -196,6 +198,15 @@ pub fn answer_text(
     markdown::render_with_figures(mtm, markdown, style::BODY, markdown::Tone::Primary, 500.0)
 }
 
+#[cfg(feature = "selftest")]
+pub fn answer_height(mtm: objc2::MainThreadMarker, markdown: &str, width: f64) -> f64 {
+    use objc2_app_kit::NSView;
+    let rendered = markdown::render_with_figures(mtm, markdown, style::BODY, markdown::Tone::Primary, width);
+    let text = text::CardText::new(mtm, &rendered, width, true);
+    let view: &NSView = &text;
+    view.intrinsicContentSize().height
+}
+
 /// Every open AI tab.
 pub fn all() -> Vec<Rc<AgentTab>> {
     TABS.with(|tabs| tabs.borrow().clone())
@@ -234,7 +245,7 @@ pub fn running_in(controller: &WindowController) -> Vec<String> {
     of_window(controller)
         .into_iter()
         .filter(|tab| {
-            let thread = tab.snapshot();
+            let thread = tab.view_snapshot();
             thread.status() != ide_thread::Status::Idle
                 || thread.subagents().iter().any(|s| !s.status.is_final())
                 || thread.background().iter().any(|b| !b.status.is_final() && !b.ambient)
@@ -254,6 +265,13 @@ pub fn window_closed(controller: &WindowController) {
 fn changed(controller: &WindowController) {
     crate::agent_panel::refresh(controller);
     crate::activity::refresh(controller);
+}
+
+/// Catches up the selected tab after AppKit switches native windows or split documents.
+pub fn show_pending(controller: &WindowController) {
+    for tab in of_window(controller).iter().filter(|tab| tab.is_shown()) {
+        tab.show_pending();
+    }
 }
 
 /// Moves the keyboard focus into the composer of the selected AI tab, or back out of it (⌘Esc); opens a tab when the

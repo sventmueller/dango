@@ -165,6 +165,7 @@ define_class!(
                 if let Some(tab) = self.tab_of_notification(notification) {
                     self.make_current(&tab);
                 }
+                crate::agent::show_pending(self);
             });
         }
 
@@ -1057,6 +1058,7 @@ impl WindowController {
         if let Some(tab) = self.tab_of_document(id) {
             tab.mark_focused(id);
             self.select(&tab);
+            crate::agent::show_pending(self);
         }
     }
 

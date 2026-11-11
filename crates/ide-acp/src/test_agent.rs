@@ -219,6 +219,10 @@ impl<W: Write> Agent<W> {
             .collect();
         self.prompt = Some(id);
         self.notify(json!({"sessionUpdate": "user_message_chunk", "content": {"type": "text", "text": text}}));
+        if self.scenario.starts_with("usage-") {
+            self.usage_reply();
+            return;
+        }
         if text.contains("slow") {
             self.notify(json!({"sessionUpdate": "agent_message_chunk",
                                "content": {"type": "text", "text": "Working on it"}}));
@@ -226,6 +230,26 @@ impl<W: Write> Agent<W> {
         }
         self.steps = opening().into();
         self.play();
+    }
+
+    fn usage_reply(&mut self) {
+        if self.scenario == "usage-credits" {
+            self.notify(json!({"sessionUpdate": "usage_update", "used": 12000, "size": 200000,
+                "cost": {"amount": 2.5, "currency": "credits"}}));
+        }
+        let result = if self.scenario == "usage-metadata" {
+            json!({"stopReason": "end_turn", "_meta": {"quota": {
+                "token_count": {"input_tokens": 700, "output_tokens": 300}
+            }}})
+        } else {
+            json!({"stopReason": "end_turn", "usage": {
+                "totalTokens": 1000, "inputTokens": 700, "outputTokens": 300,
+                "cachedReadTokens": 200, "thoughtTokens": 100
+            }})
+        };
+        if let Some(id) = self.prompt.take() {
+            self.reply(&id, result);
+        }
     }
 
     /// Plays steps until one waits for the client or the turn is over.
