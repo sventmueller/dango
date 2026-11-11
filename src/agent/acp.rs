@@ -141,9 +141,9 @@ impl Agent {
         })
     }
 
-    /// The colours its mark runs through in the tab bar, for an agent that shows more than one.
-    pub fn gradient(&self) -> Option<Vec<Retained<NSColor>>> {
-        gradient_of(self.id())
+    /// The colours of its mark's left, top, right and bottom point in the tab bar, for an agent that shows four.
+    pub fn four_colours(&self) -> Option<[Retained<NSColor>; 4]> {
+        four_colours_of(self.id())
     }
 
     pub fn is_acp(&self) -> bool {
@@ -172,9 +172,9 @@ pub fn cli_colour(name: &str) -> Retained<NSColor> {
         .map_or_else(NSColor::controlAccentColor, |agent| Agent::Acp(agent).colour())
 }
 
-/// The colours the CLI `name`'s mark runs through in the tab bar, for one that shows more than one.
-pub fn cli_gradient(name: &str) -> Option<Vec<Retained<NSColor>>> {
-    gradient_of(name)
+/// The colours of the left, top, right and bottom point of the CLI `name`'s mark, for one that shows four.
+pub fn cli_four_colours(name: &str) -> Option<[Retained<NSColor>; 4]> {
+    four_colours_of(name)
 }
 
 /// The colour the owner gave an agent the app ships with, by the agent's or its CLI's id (E66).
@@ -190,16 +190,18 @@ fn brand(id: &str) -> Option<splat_markdown::palette::Rgb> {
     }
 }
 
-/// Google's colours, which its agents show in a gradient instead of one colour.
-const GOOGLE: [splat_markdown::palette::Rgb; 3] = [
+/// Google's blue, yellow, red and green, which its agents' marks show as Gemini's star does: blue at the right, yellow
+/// at the left, red at the top, green at the bottom.
+const GOOGLE: [splat_markdown::palette::Rgb; 4] = [
     splat_markdown::palette::Rgb(0x42, 0x85, 0xF4),
-    splat_markdown::palette::Rgb(0x9B, 0x72, 0xCB),
-    splat_markdown::palette::Rgb(0xD9, 0x65, 0x70),
+    splat_markdown::palette::Rgb(0xFB, 0xBC, 0x04),
+    splat_markdown::palette::Rgb(0xEA, 0x43, 0x35),
+    splat_markdown::palette::Rgb(0x34, 0xA8, 0x53),
 ];
 
-fn gradient_of(id: &str) -> Option<Vec<Retained<NSColor>>> {
-    matches!(id, "gemini" | "antigravity-acp" | "agy")
-        .then(|| GOOGLE.iter().map(|rgb| super::style::accent(*rgb)).collect())
+fn four_colours_of(id: &str) -> Option<[Retained<NSColor>; 4]> {
+    let [blue, yellow, red, green] = GOOGLE.map(super::style::accent);
+    matches!(id, "gemini" | "antigravity-acp" | "agy").then(|| [yellow, red, blue, green])
 }
 
 /// The name shown for the agent a thread names, as the session list reads it.
@@ -848,9 +850,9 @@ mod colour_tests {
     }
 
     #[test]
-    fn only_googles_agents_run_through_their_colours() {
-        assert!(gradient_of("antigravity-acp").is_some_and(|colors| colors.len() == 3));
-        assert!(gradient_of("agy").is_some());
-        assert!(gradient_of("codex-acp").is_none());
+    fn only_googles_agents_show_four_colours() {
+        assert!(four_colours_of("antigravity-acp").is_some());
+        assert!(four_colours_of("agy").is_some());
+        assert!(four_colours_of("codex-acp").is_none());
     }
 }

@@ -928,10 +928,10 @@ impl WindowController {
         }
     }
 
-    /// Fills the symbol of the document `id` with `colors`, running across it.
-    pub fn set_tab_gradient(&self, id: isize, colors: Vec<Retained<NSColor>>) {
+    /// Shows the symbol of the document `id` in four colours, `colors` at its left, top, right and bottom point.
+    pub fn set_tab_four_colours(&self, id: isize, colors: [Retained<NSColor>; 4]) {
         if let Some((tab, document)) = self.find_document(id) {
-            document.set_gradient(colors);
+            document.set_four_colours(colors);
             tab.refresh();
         }
     }

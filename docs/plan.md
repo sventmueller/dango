@@ -409,7 +409,7 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Aktives und Bedienbares (offene Fragen und Pläne, laufende Aufgabe, Fokus, Senden, Hauptknöpfe, Laufpunkte,
   Lesezeichen), Statusfarben für Erfolg, Warten und Fehler, neutrale Töne für schmückende Symbole. Nur in der
   Tableiste unterscheidet sich jeder Anbieter: Symbol und Laufpunkt eines AI- oder CLI-Tabs tragen seine Farbe –
-  Claude Terrakotta, Codex Blau, Googles Agenten (Antigravity, Gemini) ihre Farben als Verlauf, OpenCode Dunkelgrau,
+  Claude Terrakotta, Codex Blau, Googles Agenten (Antigravity, Gemini) die vier Farben des Gemini-Sterns, OpenCode Dunkelgrau,
   der eigene Agent Grün, andere ACP-Agenten ihre Farbe aus dem Register, sonst die Systemakzentfarbe –, so angepasst an Hell,
   Dunkel und erhöhten Kontrast, dass sie 3:1 zum Hintergrund halten, mit erhöhtem Kontrast 4,5:1.
 - **E67 Gemini wird nicht mehr angeboten** *(Entscheidung des Eigentümers)*: Google hat die Anmeldung der Gemini CLI

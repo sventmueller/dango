@@ -40,7 +40,7 @@ use std::rc::Rc;
 
 use crate::window::WindowController;
 pub use acp::{
-    AcpAgent, Agent, Availability, agent_name, availability, cached_register, cli_colour, cli_gradient,
+    AcpAgent, Agent, Availability, agent_name, availability, cached_register, cli_colour, cli_four_colours,
     confirm_install, launch_of,
 };
 #[cfg(feature = "selftest")]
