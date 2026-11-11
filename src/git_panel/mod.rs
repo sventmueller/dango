@@ -11,6 +11,7 @@ mod progress;
 mod rows;
 mod sheets;
 mod text;
+mod toolbar;
 mod trees;
 mod ui;
 mod work;
@@ -18,6 +19,9 @@ mod work;
 use std::path::Path;
 
 use crate::window::WindowController;
+pub use toolbar::{TOOLBAR_ID, toolbar_item};
+#[cfg(feature = "selftest")]
+pub use toolbar::{choose as toolbar_choose, seen as toolbar_seen};
 pub(crate) use ui::empty_state;
 pub use work::git;
 

@@ -125,8 +125,19 @@ define_class!(
                 guarded((), || {
                     super::multi::selection_changed(self);
                     crate::lsp::selection_moved(self);
+                    crate::navigation::moved(self, false);
                 });
             }
+        }
+
+        #[unsafe(method(becomeFirstResponder))]
+        fn become_first_responder(&self) -> bool {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let took: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
+            if took {
+                guarded((), || crate::navigation::moved(self, true));
+            }
+            took
         }
 
         #[unsafe(method(paste:))]

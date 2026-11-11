@@ -184,8 +184,103 @@ fn plus(root: PathBuf) {
             format!("held {held}, {titles:?}, {}", tabs_of(&controller)),
         );
         every_plus_entry(&controller, &root);
-        super::git::pictures(root, "tabs-icons", |_| finish(SCENARIO));
+        super::git::pictures(root, "tabs-icons", navigation);
     });
+}
+
+/// The UTF-16 offset of the start of line `line`, counted from 0, in the text of `lines` lines `line N`.
+fn line_start(line: usize) -> usize {
+    (0..line).map(|n| format!("line {n}\n").len()).sum()
+}
+
+/// Where the cursor of the editor in front is, by file name and offset.
+fn front_place(controller: &WindowController) -> Option<(String, usize)> {
+    let view = crate::editor::editor_of_tab(controller, controller.selected_tab()?)?;
+    let name = view.document().path()?.file_name()?.to_string_lossy().into_owned();
+    Some((name, view.selectedRange().location))
+}
+
+/// Back and forward go through the places left for another file or a far jump, from the toolbar and the Go menu.
+fn navigation(root: PathBuf) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let long = root.join("long.txt");
+    let other = root.join("other.txt");
+    let text: String = (0..300).map(|n| format!("line {n}\n")).collect();
+    let _ = std::fs::write(&long, &text);
+    let _ = std::fs::write(&other, "other\n");
+    let put = |path: &Path, offset: usize| {
+        controller.open_file(path);
+        if let Some(view) = crate::editor::editor_of(&controller, path) {
+            if let Some(window) = view.window() {
+                window.makeFirstResponder(Some(&view));
+            }
+            view.setSelectedRange(objc2_foundation::NSRange::new(offset, 0));
+        }
+    };
+    put(&long, line_start(5));
+    put(&long, line_start(6));
+    put(&long, line_start(200));
+    put(&other, 0);
+    let group = controller.window().and_then(|window| {
+        let toolbar = window.toolbar()?;
+        toolbar
+            .items()
+            .iter()
+            .find(|item| item.itemIdentifier().to_string() == crate::navigation::TOOLBAR_ID)
+            .and_then(|item| item.downcast::<objc2_app_kit::NSToolbarItemGroup>().ok())
+    });
+    let enabled = |group: &Option<Retained<objc2_app_kit::NSToolbarItemGroup>>| -> Vec<bool> {
+        group
+            .as_ref()
+            .map(|g| g.subitems().iter().map(|item| item.isEnabled()).collect())
+            .unwrap_or_default()
+    };
+    let before = enabled(&group);
+    let mut walked = Vec::new();
+    for back in [true, true, false, false] {
+        crate::navigation::go(&controller, back);
+        walked.push(front_place(&controller));
+    }
+    let name = |n: &str, at: usize| Some((n.to_string(), at));
+    check(
+        "back and forward go through the places left for another file or a far jump, typing in between leaves none",
+        walked
+            == [
+                name("long.txt", line_start(200)),
+                name("long.txt", line_start(6)),
+                name("long.txt", line_start(200)),
+                name("other.txt", 0),
+            ],
+        format!("{walked:?}"),
+    );
+    check(
+        "the toolbar's back is enabled once there is a place to go back to, forward only after going back",
+        before == [true, false] && enabled(&group) == [true, false],
+        format!("before {before:?}, after {:?}", enabled(&group)),
+    );
+    let ids: Vec<String> = controller
+        .window()
+        .and_then(|w| w.toolbar())
+        .map(|t| t.items().iter().map(|i| i.itemIdentifier().to_string()).collect())
+        .unwrap_or_default();
+    check(
+        "the toolbar holds back and forward, the branch and Open Quickly beside the activity",
+        [
+            crate::navigation::TOOLBAR_ID,
+            crate::git_panel::TOOLBAR_ID,
+            "ide.quickOpen",
+            "ide.activity",
+        ]
+        .iter()
+        .all(|id| ids.iter().any(|shown| shown == id)),
+        format!("{ids:?}"),
+    );
+    if let Some(window) = controller.window() {
+        snapshot(&window, "tabs-toolbar");
+    }
+    finish(SCENARIO);
 }
 
 fn keeping(controller: &WindowController, root: &Path) {

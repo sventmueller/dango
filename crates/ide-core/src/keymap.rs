@@ -72,6 +72,8 @@ pub const DEFAULTS: &[Binding] = &[
     bind("code.symbols", "shift+cmd+o"),
     bind("code.rename", "ctrl+cmd+e"),
     bind("code.format", "shift+alt+f"),
+    bind("go.back", "ctrl+-"),
+    bind("go.forward", "ctrl+shift+-"),
     bind("code.nextProblem", "cmd+'"),
     bind("code.previousProblem", "shift+cmd+'"),
     bind("edit.fold", "alt+cmd+left"),

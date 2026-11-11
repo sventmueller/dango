@@ -279,10 +279,19 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
 /// Places in the code, which the language server of the editor in front knows.
 fn go_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
     let entry = |title: &str, action: Sel, command: &str| item(mtm, title, Some(action), &keys.get(command));
+    let navigator = crate::navigation::navigator(mtm);
+    let [back, forward] = crate::navigation::actions().map(|(title, action, command)| {
+        let entry = entry(title, action, command);
+        crate::util::set_target(&entry, &navigator);
+        entry
+    });
     submenu(
         mtm,
         t("Gehe zu"),
         vec![
+            back,
+            forward,
+            separator(mtm),
             entry(t("Gehe zu Definition"), sel!(ideDefinition:), "code.definition"),
             entry(t("Verwendungen suchen"), sel!(ideReferences:), "code.references"),
             entry(t("Gehe zu Symbol …"), sel!(ideSymbols:), "code.symbols"),

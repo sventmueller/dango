@@ -15,6 +15,7 @@ mod git_panel;
 mod lsp;
 mod markdown;
 mod menu;
+mod navigation;
 mod own_agent;
 mod preview;
 mod project;

@@ -606,6 +606,7 @@ impl GitPanel {
             self.update_banner();
             self.update_problem();
         }
+        self.refresh_toolbar();
         if let Some(controller) = self.controller() {
             controller.set_symbol_count(Panel::Git, count);
         }

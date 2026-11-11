@@ -560,6 +560,12 @@ fn untrusted(root: PathBuf, ok: bool) {
     };
     controller.activate_panel(Panel::Git);
     check("an untrusted folder runs no git and says why", ok, "");
+    let shown = crate::git_panel::toolbar_seen(&controller);
+    check(
+        "an untrusted folder shows no branch in the toolbar",
+        !shown.is_empty() && shown.iter().all(Option::is_none),
+        format!("{shown:?}"),
+    );
     let tip = controller.symbol_tip(Panel::Git);
     check(
         "an untrusted folder counts no changes on the Git symbol",

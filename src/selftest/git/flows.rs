@@ -70,8 +70,21 @@ fn branch_made(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     check("the new branch is checked out", ok, describe(&controller));
-    let offered = panel::choose_branch(&controller, "master");
-    check("the branch popup lists master", offered, "");
+    let shown = crate::git_panel::toolbar_seen(&controller);
+    check(
+        "the toolbar names the branch beside the title and offers the others and a new one",
+        !shown.is_empty()
+            && shown.iter().all(|seen| {
+                seen.as_ref().is_some_and(|(title, choices)| {
+                    title == BRANCH
+                        && choices.iter().any(|c| c == "master")
+                        && choices.iter().any(|c| c == t("Neuer Branch …"))
+                })
+            }),
+        format!("{shown:?}"),
+    );
+    let offered = crate::git_panel::toolbar_choose(&controller, "master");
+    check("the toolbar's branch lists master", offered, "");
     wait_for(root, |c| on_branch(c, "master"), switched_back);
 }
 
@@ -79,7 +92,11 @@ fn switched_back(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
     };
-    check("the popup switches back to master", ok, describe(&controller));
+    check(
+        "the toolbar's branch switches back to master",
+        ok,
+        describe(&controller),
+    );
     in_background(
         root,
         |root| {

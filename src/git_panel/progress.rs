@@ -100,6 +100,7 @@ impl GitPanel {
         self.update_distance(ahead_behind);
         ui.pull.setEnabled(!detached);
         ui.push.setEnabled(!detached);
+        self.refresh_toolbar();
     }
 
     fn branch_item(&self, title: &str, name: &str) -> objc2::rc::Retained<NSMenuItem> {

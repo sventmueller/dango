@@ -194,7 +194,7 @@ vibeedit/
 ## Oberfläche
 - **Fenster:** `NSSplitViewController` mit Sidebar-Item (Symbolspalte + Panel) und Inhalts-Item (Tableiste + Tab);
   seit E60 je Tab ein `NSWindow` in der Tabgruppe des Ordners.
-  Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler im Tooltip), Neues Terminal, Neuer AI-Thread.
+  Toolbar: Seitenleiste, Zurück/Vor, Projektname, Branch, Schnell öffnen, Aktivität (Zähler im Tooltip); siehe E73.
 - **Symbolspalte:** Dateien, AI, Git, CI (Zahl und Zustand im Tooltip, E69), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
   klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55; das Einklappen per Klick entfällt, siehe E61.)*
 - **Dateien:** `NSOutlineView` Source-List, Git-Farben, Kontextmenü (Neu, Umbenennen, In Papierkorb, Im Finder zeigen,
@@ -436,10 +436,12 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Dock-Symbol trägt keine Zahl; dass eine Sitzung wartet oder fertig ist, melden der rote Punkt im Tab (E71) und die
   Mitteilung. Fenstermenü und Dock-Menü nennen jeden Ordner einmal, mit dem Tab, der vorn liegt; ein herausgezogener
   Tab in einem eigenen Fenster bleibt dort genannt.
-- **E70 Datei-Icons nach macOS-Art** *(Entscheidung des Eigentümers, ersetzt VS Codes Seti)*: Dateibaum, Suche,
-  Open Quickly und Tabs zeigen für die häufigen Sprachen das Logo aus Simple Icons (einfarbig, `assets/simple-icons`),
-  für alles andere ein SF Symbol der Dateiart, beide in Apples Systemfarben mit 3:1 Kontrast (E66). Logos mit
-  nicht-kommerzieller Lizenz (Sass, Vue) entfallen; Ordner behalten ihren Pfeil statt eines Icons.
+- **E73 Toolbar mit Verlauf, Branch und Schnellöffnen** *(Entscheidung des Eigentümers, ergänzt die Fensterbeschreibung)*:
+  Vor dem Titel stehen Zurück und Vorwärts (⌃- und ⌃⇧-, auch im Menü „Gehe zu“): Sie führen durch die Stellen in
+  Editoren, die der Nutzer für eine andere Datei oder einen Sprung über mehr als zehn Zeilen verlassen hat, je Fenster.
+  Rechts stehen der Branch als Auswahl mit allen Branches und „Neuer Branch …“ (nur wo git läuft, E22), die Lupe für
+  „Schnell öffnen“ und die Aktivität. „Neues Terminal“ und „Neuer AI-Thread“ entfallen; das „+“ der Tableiste deckt
+  sie ab (E65).
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
