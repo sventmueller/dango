@@ -225,6 +225,12 @@ pub fn run() {
         seen.rows == 0 && seen.composer,
         format!("{} rows", seen.rows),
     );
+    let hits = tab.composer_clicks();
+    check(
+        "a click on the empty composer, its placeholder or its margin puts the keyboard focus into its text",
+        !hits.is_empty() && hits.iter().all(|&hit| hit),
+        format!("{hits:?}"),
+    );
     check(
         "the composer has the model and the mode pill",
         seen.pills.len() == 2 && seen.pills.iter().all(|p| !p.is_empty()),

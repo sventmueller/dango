@@ -14,7 +14,7 @@ use ide_process::Supervisor;
 use ide_thread::{Attachment, Change, Status, Thread, ThreadId, ThreadIndex, UserMessage};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSBox, NSColor, NSLayoutConstraint, NSResponder, NSStackView, NSView};
+use objc2_app_kit::{NSBox, NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
 use objc2_foundation::{NSObjectProtocol, NSRect};
 use splat_i18n::{t, tf};
 
@@ -75,6 +75,27 @@ define_class!(
                 NSColor::textBackgroundColor().setFill();
                 objc2_app_kit::NSBezierPath::fillRect(self.bounds());
             });
+        }
+
+        /// A click on the composer's card that no control in it took, such as on its margin, goes into its text.
+        #[unsafe(method(mouseDown:))]
+        fn mouse_down(&self, event: &NSEvent) {
+            let taken = guarded(false, || {
+                let Some(tab) = super::get(self.ivars().key) else {
+                    return false;
+                };
+                let card = &tab.composer.card;
+                let inside = card.convertPoint_fromView(event.locationInWindow(), None);
+                if !objc2_foundation::NSPointInRect(inside, card.bounds()) {
+                    return false;
+                }
+                tab.focus_composer();
+                true
+            });
+            if !taken {
+                // SAFETY: The superclass's implementation, with this method's signature.
+                let () = unsafe { msg_send![super(self), mouseDown: event] };
+            }
         }
 
         /// A tab that leaves its window for good was closed: its session ends with it.
@@ -440,6 +461,12 @@ impl AgentTab {
 
     pub fn timeline(&self) -> &Timeline {
         &self.timeline
+    }
+
+    /// Clicks across the composer and on its margin: whether each put the keyboard focus into its text.
+    #[cfg(feature = "selftest")]
+    pub fn composer_clicks(&self) -> Vec<bool> {
+        self.composer.clicks()
     }
 
     /// The width of the column the conversation reads in.

@@ -200,6 +200,19 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         sessions.iter().any(|session| session == SESSION),
         format!("{sessions:?}"),
     );
+    let hits = crate::agent::of_window(&first)
+        .iter()
+        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
+        .map(|tab| {
+            tab.select();
+            tab.composer_clicks()
+        });
+    check(
+        "a click on the composer of the AI thread that came back, also on its placeholder, focuses its text",
+        hits.as_ref()
+            .is_some_and(|hits| !hits.is_empty() && hits.iter().all(|&hit| hit)),
+        format!("{hits:?}"),
+    );
     let frame = first.window().map(|w| rect(w.frame()));
     let same = |a: [f64; 4], b: [f64; 4]| a.iter().zip(b).all(|(a, b)| (a - b).abs() < 0.5);
     check(
