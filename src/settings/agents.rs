@@ -18,7 +18,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSBackingStoreType, NSButton, NSColor, NSLayoutAttribute, NSPanel, NSScrollView, NSStackView, NSTextField,
+    NSAlert, NSBackingStoreType, NSBezelStyle, NSButton, NSColor, NSControlSize, NSLayoutAttribute, NSPanel,
+    NSProgressIndicator, NSProgressIndicatorStyle, NSScrollView, NSStackView, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView, NSWindowStyleMask,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
@@ -27,14 +28,21 @@ use splat_i18n::{t, tf};
 use crate::agent::AcpAgent;
 use crate::util::{guarded, main_soon, ns, set_action};
 
-/// The width of the tab's list.
-const WIDTH: f64 = 600.0;
+/// The width of the tab's groups.
+const WIDTH: f64 = 520.0;
 
-/// The height of the tab, which scrolls when the agents are more than fit.
-const HEIGHT: f64 = 440.0;
+/// The room around the groups.
+const MARGIN: f64 = 20.0;
 
-/// The width of the agents' names, so their states line up.
-const NAME_WIDTH: f64 = 190.0;
+/// The tallest the groups get before they scroll.
+const MAX_HEIGHT: f64 = 560.0;
+
+/// The room inside a group's line, at its sides and above and below it.
+const PADDING: f64 = 12.0;
+const INSET: f64 = 9.0;
+
+/// The width of the dot before an agent's name.
+const MARK: f64 = 16.0;
 
 thread_local! {
     /// What each installation running now has got to, by the agent's id; the registry's fetch under the empty id.
@@ -48,8 +56,23 @@ thread_local! {
 /// A button of a line: its title, its action and its tag.
 type Action = (String, Sel, isize);
 
+/// How far an agent is from starting, as the dot before its name shows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Mark {
+    Ready,
+    /// Part of it is there, such as an agent's program without its adapter.
+    Partial,
+    Absent,
+    /// Something runs that changes the state: an installation, or the login shell still being read.
+    Busy,
+    /// No state of its own; the dot's room stays so the names line up.
+    Blank,
+}
+
 pub struct AgentsIvars {
-    list: OnceCell<Retained<NSStackView>>,
+    /// The agents' lines, and the registry's line in a group of its own.
+    agents: OnceCell<Retained<NSStackView>>,
+    register: OnceCell<Retained<NSStackView>>,
     /// Whether a thread waits for the login shell's environment, which the states need.
     waiting: Cell<bool>,
 }
@@ -81,7 +104,7 @@ define_class!(
                     if let Err(error) = installs().rollback(preset.id) {
                         alert(self.mtm(), &tf("{} konnte nicht zurückgesetzt werden", &[preset.name]), &error.to_string());
                     }
-                    self.reload();
+                    super::agents_changed();
                 }
             });
         }
@@ -141,6 +164,44 @@ fn link(mtm: MainThreadMarker, title: &str, target: &AgentsSettings, action: Sel
     button
 }
 
+/// A push button of a line.
+fn push(mtm: MainThreadMarker, title: &str, target: &AgentsSettings, action: Sel, tag: isize) -> Retained<NSButton> {
+    // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
+    let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
+    set_action(&button, target, action);
+    button.setTag(tag);
+    button.setBezelStyle(NSBezelStyle::Push);
+    button
+}
+
+/// The dot before an agent's name, or the spinner while something runs.
+fn mark_view(mtm: MainThreadMarker, mark: Mark) -> Retained<NSView> {
+    let view: Retained<NSView> = if mark == Mark::Busy {
+        let spinner = NSProgressIndicator::new(mtm);
+        spinner.setStyle(NSProgressIndicatorStyle::Spinning);
+        spinner.setControlSize(NSControlSize::Small);
+        spinner.setDisplayedWhenStopped(false);
+        // SAFETY: A nil sender is what AppKit's own callers pass.
+        unsafe { spinner.startAnimation(None) };
+        Retained::into_super(spinner)
+    } else {
+        let color = match mark {
+            Mark::Ready => NSColor::systemGreenColor(),
+            Mark::Partial => NSColor::systemOrangeColor(),
+            Mark::Absent => NSColor::tertiaryLabelColor(),
+            Mark::Busy | Mark::Blank => NSColor::clearColor(),
+        };
+        let dot = crate::agent::icon(mtm, "circle.fill", "", 8.0, &color);
+        // The state beside it says in words what the dot shows.
+        crate::util::hide_from_voiceover(&dot);
+        Retained::into_super(Retained::into_super(dot))
+    };
+    view.setTranslatesAutoresizingMaskIntoConstraints(false);
+    view.widthAnchor().constraintEqualToConstant(MARK).setActive(true);
+    view.heightAnchor().constraintEqualToConstant(MARK).setActive(true);
+    view
+}
+
 /// Installs `plan` after the user agreed, showing how far it got in the tab.
 fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
     if PROGRESS.with(|p| p.borrow().contains_key(id)) || !crate::agent::confirm_install(mtm, name, &plan) {
@@ -193,13 +254,14 @@ fn fetch() {
 /// What the tab says about `preset`, at `index` of the presets, and what it offers. An adapter whose agent's own
 /// program is there says so, and Claude over ACP, only a fallback for Claude's own connection, never reads as Claude
 /// missing.
-fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (String, Vec<Action>) {
+fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (Mark, String, Vec<Action>) {
     if let Some(progress) = PROGRESS.with(|p| p.borrow().get(preset.id).cloned()) {
-        return (progress, Vec::new());
+        return (Mark::Busy, progress, Vec::new());
     }
     let launch = crate::agent::launch_of(&AcpAgent::of_preset(preset), env, std::path::Path::new("/"));
     let installs = installs();
     let mut actions = Vec::new();
+    let mut mark = Mark::Ready;
     let state = match launch.map(|l| l.origin) {
         Some(Origin::OnPath) => tf("Bereit · {} im PATH", &[preset.on_path.map_or("", |(name, _)| name)]),
         Some(Origin::Installed { version, .. }) => {
@@ -219,12 +281,18 @@ fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (Str
         Some(_) => t("Bereit").to_string(),
         None => {
             let claude = preset.id == "claude-acp" && crate::agent::claude_program(env).is_some();
-            let (state, button) = missing(preset, preset.cli_on_path(env).is_some(), claude);
+            let cli = preset.cli_on_path(env).is_some();
+            let (state, button) = missing(preset, cli, claude);
+            mark = if cli && !claude && preset.cli.is_some() {
+                Mark::Partial
+            } else {
+                Mark::Absent
+            };
             actions.push((button.to_string(), sel!(ideAgentsInstall:), index));
             state
         }
     };
-    (state, actions)
+    (mark, state, actions)
 }
 
 /// What the tab says about `preset` when it does not start, and the title of its install button: Claude over ACP
@@ -247,10 +315,13 @@ fn missing(preset: &Preset, cli: bool, claude: bool) -> (String, &'static str) {
 }
 
 /// What the tab says about Claude's own connection (E21).
-fn claude_state(env: &[(String, String)]) -> String {
+fn claude_state(env: &[(String, String)]) -> (Mark, String) {
     match crate::agent::claude_program(env) {
-        Some(path) => tf("Bereit · {}", &[&crate::app::display_path(&path)]),
-        None => t("Nicht gefunden: claude im Terminal installieren und dort anmelden").to_string(),
+        Some(path) => (Mark::Ready, tf("Bereit · {}", &[&crate::app::display_path(&path)])),
+        None => (
+            Mark::Absent,
+            t("Nicht gefunden: claude im Terminal installieren und dort anmelden").to_string(),
+        ),
     }
 }
 
@@ -298,14 +369,16 @@ fn registry_installed() -> Vec<(String, String)> {
 impl AgentsSettings {
     pub fn new(mtm: MainThreadMarker) -> Retained<AgentsSettings> {
         let this = Self::alloc(mtm).set_ivars(AgentsIvars {
-            list: OnceCell::new(),
+            agents: OnceCell::new(),
+            register: OnceCell::new(),
             waiting: Cell::new(false),
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
     }
 
-    /// The tab: what it is about, then the agents line by line, scrolling when they are more than fit.
+    /// The tab: what it is about, the agents in a group, the registry in another; as tall as they are, scrolling only
+    /// past `MAX_HEIGHT`.
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let note = NSTextField::wrappingLabelWithString(
@@ -317,89 +390,56 @@ impl AgentsSettings {
         note.setFont(Some(&crate::agent::style::small()));
         note.setTextColor(Some(&NSColor::secondaryLabelColor()));
         note.setPreferredMaxLayoutWidth(WIDTH);
-        let list = self.ivars().list.get_or_init(|| {
-            let list = NSStackView::new(mtm);
-            list.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-            list.setAlignment(NSLayoutAttribute::Leading);
-            list.setSpacing(8.0);
-            list
-        });
+        let agents = self.ivars().agents.get_or_init(|| group_lines(mtm));
+        let register = self.ivars().register.get_or_init(|| group_lines(mtm));
         self.reload();
-        let document = crate::agent_panel::flipped(mtm);
-        document.addSubview(list);
-        list.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let scroll = NSScrollView::new(mtm);
-        scroll.setHasVerticalScroller(true);
-        scroll.setAutohidesScrollers(true);
-        scroll.setDrawsBackground(false);
-        scroll.setDocumentView(Some(&document));
-        document.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let root = NSView::initWithFrame(
-            NSView::alloc(mtm),
-            NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(WIDTH + 40.0, HEIGHT)),
-        );
-        for view in [&*note as &NSView, &scroll] {
-            root.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let content = NSStackView::new(mtm);
+        content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+        content.setAlignment(NSLayoutAttribute::Leading);
+        content.setSpacing(16.0);
+        content.setEdgeInsets(crate::agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
+        content.addArrangedSubview(&note);
+        content.setCustomSpacing_afterView(10.0, &note);
+        for lines in [agents, register] {
+            let group = crate::agent::framed(
+                mtm,
+                lines,
+                &NSColor::separatorColor(),
+                Some(&NSColor::quaternarySystemFillColor()),
+                8.0,
+                crate::agent::insets(0.0, 0.0, 0.0, 0.0),
+            );
+            content.addArrangedSubview(&group);
+            group.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
         }
-        for constraint in [
-            list.topAnchor().constraintEqualToAnchor(&document.topAnchor()),
-            list.leadingAnchor().constraintEqualToAnchor(&document.leadingAnchor()),
-            list.bottomAnchor().constraintEqualToAnchor(&document.bottomAnchor()),
-            document
-                .widthAnchor()
-                .constraintEqualToAnchor(&scroll.contentView().widthAnchor()),
-            note.topAnchor()
-                .constraintEqualToAnchor_constant(&root.topAnchor(), 20.0),
-            note.leadingAnchor()
-                .constraintEqualToAnchor_constant(&root.leadingAnchor(), 20.0),
-            note.trailingAnchor()
-                .constraintEqualToAnchor_constant(&root.trailingAnchor(), -20.0),
-            scroll
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&note.bottomAnchor(), 14.0),
-            scroll
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&root.leadingAnchor(), 20.0),
-            scroll
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&root.trailingAnchor(), -20.0),
-            scroll
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&root.bottomAnchor(), -20.0),
-        ] {
-            constraint.setActive(true);
-        }
-        root
+        scrolling(mtm, &content)
     }
 
     /// Shows every agent's state again, as it is now.
     pub fn reload(&self) {
-        let Some(list) = self.ivars().list.get() else { return };
-        for view in list.arrangedSubviews().iter() {
-            list.removeArrangedSubview(&view);
-            view.removeFromSuperview();
-        }
+        let (Some(agents), Some(register)) = (self.ivars().agents.get(), self.ivars().register.get()) else {
+            return;
+        };
         let env = crate::environment::get();
-        let waiting = t("Umgebung der Login-Shell wird gelesen …");
         if env.is_none() {
             self.wait_for_environment();
         }
         let env = env.unwrap_or_default();
-        let claude = if env.is_empty() {
-            waiting.to_string()
-        } else {
-            claude_state(env)
-        };
-        list.addArrangedSubview(&self.line("Claude", &claude, &[]));
-        list.addArrangedSubview(&self.line(
-            t("Eigener Agent"),
-            t("Anbieter, Modelle und Schlüssel im Tab „Eigener Agent“"),
-            &[(t("Öffnen").to_string(), sel!(ideAgentsOwnSettings:), 0)],
-        ));
+        let waiting = || (Mark::Busy, t("Umgebung der Login-Shell wird gelesen …").to_string());
+        let (mark, claude) = if env.is_empty() { waiting() } else { claude_state(env) };
+        let mut lines = vec![
+            self.line(Some(mark), "Claude", &claude, &[]),
+            self.line(
+                Some(Mark::Blank),
+                t("Eigener Agent"),
+                t("Anbieter, Modelle und Schlüssel im Tab „Eigener Agent“"),
+                &[(t("Öffnen").to_string(), sel!(ideAgentsOwnSettings:), 0)],
+            ),
+        ];
         for (n, preset) in PRESETS.iter().enumerate().filter(|(_, preset)| preset.offered) {
-            let (state, actions) = if env.is_empty() {
-                (waiting.to_string(), Vec::new())
+            let (mark, state, actions) = if env.is_empty() {
+                let (mark, state) = waiting();
+                (mark, state, Vec::new())
             } else {
                 preset_state(preset, isize::try_from(n).unwrap_or(-1), env)
             };
@@ -408,13 +448,14 @@ impl AgentsSettings {
             } else {
                 preset.name
             };
-            list.addArrangedSubview(&self.line(name, &state, &actions));
+            lines.push(self.line(Some(mark), name, &state, &actions));
         }
         for (name, state) in registry_installed() {
-            list.addArrangedSubview(&self.line(&name, &state, &[]));
+            lines.push(self.line(Some(Mark::Ready), &name, &state, &[]));
         }
+        fill(agents, &lines);
         let (state, actions) = register_state();
-        list.addArrangedSubview(&self.line(t("ACP-Register"), &state, &actions));
+        fill(register, &[self.line(None, t("ACP-Register"), &state, &actions)]);
     }
 
     /// Shows the states again once the login shell's environment is there, which a fresh start still reads.
@@ -428,67 +469,162 @@ impl AgentsSettings {
         });
     }
 
-    fn line(&self, name: &str, state: &str, actions: &[Action]) -> Retained<NSStackView> {
+    /// A line of a group: the dot of `mark` if it has one, the name with its state below it, and its buttons.
+    fn line(&self, mark: Option<Mark>, name: &str, state: &str, actions: &[Action]) -> Retained<NSView> {
         let mtm = self.mtm();
+        let mut buttons = Vec::new();
+        let mut room = WIDTH - 2.0 * PADDING;
+        for (title, action, tag) in actions {
+            let button = push(mtm, title, self, *action, *tag);
+            // The agents' buttons have the same titles; the agent's name tells them apart for VoiceOver.
+            crate::util::set_label(&button, Some(&format!("{title}: {name}")));
+            room -= button.fittingSize().width + SPACING;
+            buttons.push(Retained::into_super(Retained::into_super(button)));
+        }
+        let mut views = Vec::new();
+        if let Some(mark) = mark {
+            views.push(mark_view(mtm, mark));
+            room -= MARK + SPACING;
+        }
         let title = NSTextField::labelWithString(&ns(name), mtm);
-        title.setFont(Some(&crate::agent::style::medium(crate::agent::style::BODY)));
-        title.setTranslatesAutoresizingMaskIntoConstraints(false);
-        title
-            .widthAnchor()
-            .constraintEqualToConstant(NAME_WIDTH)
-            .setActive(true);
+        title.setFont(Some(&crate::agent::style::body()));
         let detail = NSTextField::wrappingLabelWithString(&ns(state), mtm);
         detail.setFont(Some(&crate::agent::style::small()));
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        detail.setPreferredMaxLayoutWidth(WIDTH - NAME_WIDTH - 140.0);
-        let mut views: Vec<Retained<NSView>> = vec![
-            Retained::into_super(Retained::into_super(title)),
-            Retained::into_super(Retained::into_super(detail)),
-            crate::agent_panel::spacer(mtm),
-        ];
-        for (title, action, tag) in actions {
-            let button = link(mtm, title, self, *action, *tag);
-            // The agents' buttons have the same titles; the agent's name tells them apart for VoiceOver.
-            crate::util::set_label(&button, Some(&format!("{title}: {name}")));
-            views.push(Retained::into_super(Retained::into_super(button)));
-        }
+        detail.setPreferredMaxLayoutWidth(room - SPACING);
+        let text = NSStackView::new(mtm);
+        text.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+        text.setAlignment(NSLayoutAttribute::Leading);
+        text.setSpacing(2.0);
+        text.addArrangedSubview(&title);
+        text.addArrangedSubview(&detail);
+        let text: Retained<NSView> = Retained::into_super(text);
+        views.push(text.clone());
+        views.push(crate::agent_panel::spacer(mtm));
+        views.extend(buttons);
         let line = NSStackView::new(mtm);
         line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        line.setAlignment(NSLayoutAttribute::FirstBaseline);
-        line.setSpacing(8.0);
+        line.setAlignment(NSLayoutAttribute::CenterY);
+        line.setSpacing(SPACING);
+        line.setEdgeInsets(crate::agent::insets(INSET, PADDING, INSET, PADDING));
         for view in &views {
             line.addArrangedSubview(view);
         }
         line.setTranslatesAutoresizingMaskIntoConstraints(false);
-        line.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-        line
+        // A stack centring its views keeps its insets across them only as loosely as it hugs them, which measuring
+        // the tab for the window's height overrides.
+        for constraint in [
+            line.widthAnchor().constraintEqualToConstant(WIDTH),
+            line.heightAnchor()
+                .constraintGreaterThanOrEqualToAnchor_constant(&text.heightAnchor(), 2.0 * INSET),
+        ] {
+            constraint.setActive(true);
+        }
+        Retained::into_super(line)
     }
 
     /// What the tab shows, line by line, for the self-test.
     #[cfg(feature = "selftest")]
     pub fn lines(&self) -> Vec<String> {
-        let Some(list) = self.ivars().list.get() else {
-            return Vec::new();
-        };
-        list.arrangedSubviews()
-            .iter()
-            .map(|line| {
-                let Some(stack) = line.downcast_ref::<NSStackView>() else {
-                    return String::new();
-                };
-                stack
-                    .arrangedSubviews()
-                    .iter()
-                    .filter_map(|v| {
-                        v.downcast_ref::<NSTextField>()
-                            .map(|l| l.stringValue().to_string())
-                            .or_else(|| v.downcast_ref::<NSButton>().map(|b| format!("[{}]", b.title())))
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            })
+        let groups = [self.ivars().agents.get(), self.ivars().register.get()];
+        groups
+            .into_iter()
+            .flatten()
+            .flat_map(|group| group.arrangedSubviews().to_vec())
+            .filter(|line| line.downcast_ref::<NSStackView>().is_some())
+            .map(|line| texts(&line).join(" "))
             .collect()
     }
+}
+
+/// The room between the parts of a line.
+const SPACING: f64 = 8.0;
+
+/// The column a group's lines stand in.
+fn group_lines(mtm: MainThreadMarker) -> Retained<NSStackView> {
+    let lines = NSStackView::new(mtm);
+    lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+    lines.setAlignment(NSLayoutAttribute::CenterX);
+    lines.setSpacing(0.0);
+    lines
+}
+
+/// Puts `lines` into `group` in place of what it showed, with a line between each two.
+fn fill(group: &NSStackView, lines: &[Retained<NSView>]) {
+    for view in group.arrangedSubviews().iter() {
+        group.removeArrangedSubview(&view);
+        view.removeFromSuperview();
+    }
+    for (n, line) in lines.iter().enumerate() {
+        if n > 0 {
+            let rule = crate::agent::separator(group.mtm());
+            group.addArrangedSubview(&rule);
+            rule.widthAnchor()
+                .constraintEqualToConstant(WIDTH - 2.0 * PADDING)
+                .setActive(true);
+        }
+        group.addArrangedSubview(line);
+    }
+}
+
+/// `content` in a scroll view that is as tall as it, up to `MAX_HEIGHT`.
+fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
+    let document = crate::agent_panel::flipped(mtm);
+    document.addSubview(content);
+    content.setTranslatesAutoresizingMaskIntoConstraints(false);
+    let scroll = NSScrollView::new(mtm);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    scroll.setDrawsBackground(false);
+    scroll.setDocumentView(Some(&document));
+    document.setTranslatesAutoresizingMaskIntoConstraints(false);
+    let root = NSView::new(mtm);
+    root.addSubview(&scroll);
+    scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
+    let fit = scroll.heightAnchor().constraintEqualToAnchor(&document.heightAnchor());
+    fit.setPriority(750.0);
+    let mut pins = vec![
+        scroll.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
+        scroll.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
+        scroll.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
+        scroll.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
+        scroll.widthAnchor().constraintEqualToConstant(WIDTH + 2.0 * MARGIN),
+    ];
+    // The tab view sets the root's frame, which these give way to instead of clashing with it.
+    for pin in &mut pins {
+        pin.setPriority(999.0);
+    }
+    for constraint in pins.iter().chain([
+        &fit,
+        &scroll.heightAnchor().constraintLessThanOrEqualToConstant(MAX_HEIGHT),
+        &content.topAnchor().constraintEqualToAnchor(&document.topAnchor()),
+        &content
+            .leadingAnchor()
+            .constraintEqualToAnchor(&document.leadingAnchor()),
+        &content.bottomAnchor().constraintEqualToAnchor(&document.bottomAnchor()),
+        &document
+            .widthAnchor()
+            .constraintEqualToAnchor(&scroll.contentView().widthAnchor()),
+    ]) {
+        constraint.setActive(true);
+    }
+    root
+}
+
+/// The texts and button titles in `view`, in order, for the self-test.
+#[cfg(feature = "selftest")]
+fn texts(view: &NSView) -> Vec<String> {
+    if let Some(label) = view.downcast_ref::<NSTextField>() {
+        return vec![label.stringValue().to_string()];
+    }
+    if let Some(button) = view.downcast_ref::<NSButton>() {
+        return vec![format!("[{}]", button.title())];
+    }
+    let children = match view.downcast_ref::<NSStackView>() {
+        Some(stack) => stack.arrangedSubviews(),
+        None => view.subviews(),
+    };
+    children.iter().flat_map(|child| texts(&child)).collect()
 }
 
 /// What a registry entry offers this Mac, as the registry window says it.

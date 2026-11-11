@@ -190,6 +190,7 @@ pub fn show(mtm: MainThreadMarker) {
         controller.ivars().dictation.reload();
         window.makeKeyAndOrderFront(None);
     });
+    fit_agents();
 }
 
 /// Brings the settings window to the front on its CI tab.
@@ -236,7 +237,39 @@ pub fn show_agents(mtm: MainThreadMarker) {
 pub fn agents_changed() {
     if let Some(agents) = agents_tab_now() {
         agents.reload();
+        fit_agents();
     }
+}
+
+/// Sizes the Agents tab to what it shows now, and the window with it while that tab is open.
+fn fit_agents() {
+    WINDOW.with(|cell| {
+        let cell = cell.borrow();
+        let Some((window, _)) = cell.as_ref() else { return };
+        let Some(tabs) = window
+            .contentViewController()
+            .and_then(|c| c.downcast::<NSTabViewController>().ok())
+        else {
+            return;
+        };
+        let page = usize::try_from(AGENTS_TAB)
+            .ok()
+            .and_then(|n| tabs.tabViewItems().iter().nth(n))
+            .and_then(|item| item.viewController(window.mtm()));
+        let Some(page) = page else { return };
+        let size = page.view().fittingSize();
+        page.setPreferredContentSize(size);
+        let Some(content) = window.contentView() else { return };
+        let now = content.frame().size;
+        if tabs.selectedTabViewItemIndex() != AGENTS_TAB || (now.width == size.width && now.height == size.height) {
+            return;
+        }
+        let mut frame = window.frame();
+        frame.size.width += size.width - now.width;
+        frame.size.height += size.height - now.height;
+        frame.origin.y -= size.height - now.height;
+        window.setFrame_display_animate(frame, true, window.isVisible());
+    });
 }
 
 /// The Agents tab of the settings window, once it was built.
@@ -353,7 +386,7 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
     tabs.addTabViewItem(&item);
     let agents = NSViewController::new(mtm);
     let view = controller.ivars().agents.view();
-    agents.setPreferredContentSize(view.frame().size);
+    agents.setPreferredContentSize(view.fittingSize());
     agents.setView(&view);
     agents.setTitle(Some(&ns(t("Agenten"))));
     let item = NSTabViewItem::tabViewItemWithViewController(&agents);

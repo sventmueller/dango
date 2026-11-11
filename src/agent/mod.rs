@@ -65,6 +65,7 @@ pub use source::Resume;
 pub use tab::AgentTab;
 #[cfg(feature = "selftest")]
 pub(crate) use tab::{INPUT_INSET, INPUT_WIDTH, SIDE_MARGIN};
+pub use ui::{framed, icon, insets, separator};
 #[cfg(feature = "selftest")]
 pub use usage::inject as inject_usage;
 
