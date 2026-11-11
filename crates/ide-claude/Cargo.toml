@@ -10,6 +10,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+base64 = "0.22.1"
 ide-core = { path = "../ide-core" }
 ide-process = { path = "../ide-process" }
 ide-thread = { path = "../ide-thread" }

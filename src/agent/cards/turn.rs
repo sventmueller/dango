@@ -97,7 +97,10 @@ fn attachment_row(ctx: &Ctx<'_>, attachments: &[Attachment]) -> Retained<objc2_a
         .iter()
         .map(|a| {
             let (name, symbol_name) = match a {
-                Attachment::Image { name, .. } => (name.clone().unwrap_or_else(|| t("Bild").to_string()), "photo"),
+                Attachment::Image { name, data, .. } => {
+                    let name = name.clone().unwrap_or_else(|| t("Bild").to_string());
+                    return ui::picture_tile(ctx.mtm, data, &name, None);
+                }
                 Attachment::File { path, lines } => {
                     let mut name = format::short_path(&path.to_string_lossy(), ctx.cwd);
                     if let Some((a, b)) = lines {

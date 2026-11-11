@@ -48,6 +48,21 @@ fn window_png(window: &objc2_app_kit::NSWindow) -> Option<Vec<u8>> {
     Some(data.to_vec())
 }
 
+/// The width each picture other than a symbol is shown at in `view`, with the picture's own width.
+fn shown_pictures(view: &objc2_app_kit::NSView) -> Vec<(f64, f64)> {
+    let mut out: Vec<(f64, f64)> = view
+        .downcast_ref::<objc2_app_kit::NSImageView>()
+        .and_then(|v| v.image().map(|image| (v.frame().size.width, image)))
+        .filter(|(_, image)| !image.isTemplate())
+        .map(|(shown, image)| (shown, image.size().width))
+        .into_iter()
+        .collect();
+    for child in view.subviews().iter() {
+        out.extend(shown_pictures(&child));
+    }
+    out
+}
+
 fn release(pasteboard: &NSPasteboard) {
     // SAFETY: `releaseGlobally` takes nothing; objc2 leaves it out because of its name.
     let () = unsafe { msg_send![pasteboard, releaseGlobally] };
@@ -114,6 +129,13 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
         format!("pasted {pasted}, tiles {tiles:?}"),
     );
+    if let Some(png) = &shot {
+        let frame = serde_json::json!({"type": "user", "uuid": "picture-sent", "message": {"role": "user", "content": [
+            {"type": "text", "text": "Was fehlt hier?"},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": ide_claude::input::base64(png)}},
+        ]}});
+        tab.feed(&format!("{}{frame}", ide_claude::replay::SENT));
+    }
     let key = tab.key;
     main_after(SETTLE, move || pictures(root, key, then));
 }
@@ -123,6 +145,26 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
+    let sent = tab_of(key).map(|tab| {
+        let timeline = tab.timeline();
+        (0..timeline.count())
+            .filter_map(|row| timeline.cell(row))
+            .flat_map(|cell| {
+                cell.layoutSubtreeIfNeeded();
+                shown_pictures(&cell)
+            })
+            .collect::<Vec<_>>()
+    });
+    check(
+        "a sent picture stays in the conversation as a tile showing it",
+        sent.as_ref().is_some_and(|tiles| {
+            tiles.len() == 1
+                && tiles
+                    .iter()
+                    .all(|(shown, picture)| *shown > 40.0 && *shown <= 76.0 && *picture > 100.0)
+        }),
+        format!("{sent:?}"),
+    );
     picture(&controller, "agent-outside");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
     main_after(SETTLE, move || {

@@ -201,10 +201,28 @@ pub enum Block {
         is_error: Option<bool>,
     },
     /// An image.
-    Image,
+    Image {
+        /// Its bytes, when the frame carries them.
+        #[serde(default)]
+        source: Option<ImageSource>,
+    },
     /// Any other block.
     #[serde(other)]
     Other,
+}
+
+/// Where an image's bytes are.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct ImageSource {
+    /// `base64` when `data` holds the bytes.
+    #[serde(default, rename = "type")]
+    pub kind: String,
+    /// Its type, such as `image/png`.
+    #[serde(default)]
+    pub media_type: String,
+    /// The bytes in base64.
+    #[serde(default)]
+    pub data: String,
 }
 
 /// An assistant frame.

@@ -103,8 +103,19 @@ impl Replay {
                     .pointer("/message/content")
                     .map(crate::tools::result_text)
                     .unwrap_or_default();
+                let attachments = frame
+                    .pointer("/message/content")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|block| match serde_json::from_value(block.clone()) {
+                        Ok(protocol::Block::Image { source: Some(source) }) => crate::mapping::image(&source),
+                        _ => None,
+                    })
+                    .collect();
                 let message = UserMessage {
                     text,
+                    attachments,
                     ..UserMessage::default()
                 };
                 self.mapper.user_message(message, uuid, now)

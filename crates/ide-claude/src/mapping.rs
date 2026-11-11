@@ -14,8 +14,8 @@ use serde_json::Value;
 
 use crate::control::{self, ContextUsage, PermissionAsk, Suggestion, TaskOutput, UsageReport};
 use crate::protocol::{
-    ApiUsage, Assistant, BackgroundTask, Block, Delta, Hook, Message, ModelUsage, RateLimitInfo, RawEvent, StreamEvent,
-    System, TaskNotification, TaskProgress, TaskStarted, TaskUpdated, TurnResult, User,
+    ApiUsage, Assistant, BackgroundTask, Block, Delta, Hook, ImageSource, Message, ModelUsage, RateLimitInfo, RawEvent,
+    StreamEvent, System, TaskNotification, TaskProgress, TaskStarted, TaskUpdated, TurnResult, User,
 };
 use crate::tools::{self, Shape};
 
@@ -728,6 +728,7 @@ impl Mapper {
         let lane = lane(u.parent_tool_use_id.as_ref());
         let mut out = Vec::new();
         let mut text = Vec::new();
+        let mut images = Vec::new();
         let mut keys = Vec::new();
         for block in u.message.blocks() {
             match block {
@@ -747,15 +748,16 @@ impl Mapper {
                     keys.push(tool_use_id);
                 }
                 Block::Text { text: t } => text.push(t),
+                Block::Image { source: Some(source) } => images.extend(image(&source)),
                 _ => {}
             }
         }
         let wanted = self.history || lane != Lane::Main;
-        if wanted && !text.is_empty() && u.is_synthetic != Some(true) {
+        if wanted && !(text.is_empty() && images.is_empty()) && u.is_synthetic != Some(true) {
             let key = u.uuid.as_ref().map(|id| format!("user:{id}"));
             let message = UserMessage {
                 text: text.join("\n"),
-                attachments: Vec::new(),
+                attachments: images,
                 message_id: u.uuid.clone(),
             };
             keys.extend(key.clone());
@@ -1679,5 +1681,19 @@ pub(crate) fn sign_in_problem(a: &Assistant) -> Option<String> {
         error.to_string()
     } else {
         text.join("\n")
+    })
+}
+
+/// The picture a user frame carries, as an attachment.
+pub(crate) fn image(source: &ImageSource) -> Option<ide_thread::Attachment> {
+    use base64::Engine;
+    (source.kind == "base64").then_some(())?;
+    Some(ide_thread::Attachment::Image {
+        name: None,
+        media_type: source.media_type.clone(),
+        data: base64::engine::general_purpose::STANDARD
+            .decode(&source.data)
+            .ok()?
+            .into(),
     })
 }

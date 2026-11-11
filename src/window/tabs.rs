@@ -12,9 +12,9 @@ use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSLayoutConstraint
 use objc2_app_kit::{
     NSBackingStoreType, NSBox, NSButton, NSColor, NSFont, NSFontManager, NSFontTraitMask, NSImage, NSImageAlignment,
     NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLineBreakMode, NSMenu, NSMenuItem, NSResponder,
-    NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem, NSStackView, NSTextField, NSToolbar,
-    NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView, NSViewController, NSWindow, NSWindowStyleMask,
-    NSWindowToolbarStyle,
+    NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem, NSStackView, NSTextField,
+    NSTitlebarSeparatorStyle, NSToolbar, NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView,
+    NSViewController, NSWindow, NSWindowStyleMask, NSWindowToolbarStyle,
 };
 use objc2_foundation::{
     NSAttributedString, NSDictionary, NSMutableAttributedString, NSPoint, NSRect, NSSize, NSString,
@@ -369,6 +369,8 @@ impl TabWindow {
         // Documents and their views come and go after the window shows, past the key view loop AppKit makes once.
         window.setAutorecalculatesKeyViewLoop(true);
         window.setToolbarStyle(NSWindowToolbarStyle::Unified);
+        // In full screen AppKit draws a line under the toolbar across the sidebar, which the window otherwise lacks.
+        window.setTitlebarSeparatorStyle(NSTitlebarSeparatorStyle::None);
         window.setTabbingIdentifier(&ns(identifier));
         window.setDelegate(Some(ProtocolObject::from_ref(controller)));
 

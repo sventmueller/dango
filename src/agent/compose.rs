@@ -2,11 +2,10 @@
 //! as context, the chips of attachments, and sending or queueing the message.
 
 use ide_thread::{Attachment, Status, UserMessage};
-use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::sel;
-use objc2_app_kit::{NSButton, NSColor, NSImage, NSImageScaling, NSImageView, NSTextInputClient, NSView};
-use objc2_foundation::{NSData, NSRange};
+use objc2_app_kit::{NSButton, NSColor, NSTextInputClient};
+use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::mention::{self, Mention};
@@ -14,11 +13,6 @@ use super::suggest::Item;
 use super::tab::AgentTab;
 use super::{context, format, style, ui};
 use crate::util::{main_soon, ns};
-
-/// The side of a pasted picture's tile, about as large as in Claude's app.
-const THUMBNAIL: f64 = 76.0;
-const THUMBNAIL_PADDING: f64 = 6.0;
-const THUMBNAIL_RADIUS: f64 = 10.0;
 
 /// An attachment's name and symbol, whether it is outside text, and its picture.
 type Chip = ((String, &'static str), bool, Option<std::sync::Arc<[u8]>>);
@@ -289,7 +283,7 @@ impl AgentTab {
                     sel!(ideAgentRemoveAttachment:),
                     tag,
                 );
-                chips.addArrangedSubview(&self.thumbnail(picture, name, &remove));
+                chips.addArrangedSubview(&ui::picture_tile(self.mtm, picture, name, Some(&remove)));
                 continue;
             }
             let remove = ui::symbol_button(
@@ -342,48 +336,6 @@ impl AgentTab {
             ),
             Attachment::External { label, .. } => (label.clone(), "globe"),
         }
-    }
-
-    /// A pasted or attached picture as a tile showing it, with `remove` in its corner.
-    fn thumbnail(&self, data: &[u8], name: &str, remove: &NSButton) -> Retained<NSView> {
-        let mtm = self.mtm;
-        let image = NSImage::initWithData(objc2::AnyThread::alloc(), &NSData::with_bytes(data));
-        let view = NSImageView::new(mtm);
-        view.setImage(image.as_deref());
-        view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
-        view.setToolTip(Some(&ns(name)));
-        crate::util::set_label(&view, Some(name));
-        view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let tile = ui::framed(
-            mtm,
-            &view,
-            &NSColor::separatorColor(),
-            Some(&NSColor::controlBackgroundColor()),
-            THUMBNAIL_RADIUS,
-            ui::insets(
-                THUMBNAIL_PADDING,
-                THUMBNAIL_PADDING,
-                THUMBNAIL_PADDING,
-                THUMBNAIL_PADDING,
-            ),
-        );
-        if let Some(inner) = tile.contentView() {
-            inner.addSubview(remove);
-        }
-        remove.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            tile.widthAnchor().constraintEqualToConstant(THUMBNAIL),
-            tile.heightAnchor().constraintEqualToConstant(THUMBNAIL),
-            remove
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&tile.topAnchor(), 3.0),
-            remove
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&tile.trailingAnchor(), -3.0),
-        ] {
-            constraint.setActive(true);
-        }
-        Retained::into_super(tile)
     }
 
     /// A chip: offered rather than attached, or with the mark of outside text.

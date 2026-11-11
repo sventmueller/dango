@@ -316,6 +316,52 @@ mod tests {
         let _ = std::fs::remove_dir_all(&folder);
     }
 
+    /// A picture's type and bytes.
+    type Picture = (String, Vec<u8>);
+
+    #[test]
+    fn a_pasted_picture_comes_back_with_its_message() {
+        let folder = scratch("picture");
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("s3.jsonl");
+        let transcript = [
+            r#"{"type":"user","uuid":"p1","message":{"role":"user","content":[{"type":"text","text":"Look"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"iVBORw=="}}]}}"#,
+            r#"{"type":"user","uuid":"p2","message":{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":"/9j/"}}]}}"#,
+        ];
+        std::fs::write(&path, transcript.join("\n")).unwrap();
+        let thread = rebuild(Thread::new(ide_thread::ThreadId::from("t"), "claude", &folder), &path).unwrap();
+        let pictures: Vec<(String, Vec<Picture>)> = thread
+            .entries(&ide_thread::Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                ide_thread::EntryKind::UserMessage(m) => Some((
+                    m.text.clone(),
+                    m.attachments
+                        .iter()
+                        .filter_map(|a| match a {
+                            ide_thread::Attachment::Image { media_type, data, .. } => {
+                                Some((media_type.clone(), data.to_vec()))
+                            }
+                            _ => None,
+                        })
+                        .collect(),
+                )),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            pictures,
+            [
+                (
+                    "Look".to_string(),
+                    vec![("image/png".to_string(), vec![0x89, b'P', b'N', b'G'])]
+                ),
+                (String::new(), vec![("image/jpeg".to_string(), vec![0xff, 0xd8, 0xff])]),
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
     #[test]
     fn a_missing_folder_lists_nothing() {
         assert!(list(&scratch("missing"), Path::new("/nowhere")).is_empty());

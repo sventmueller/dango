@@ -5,11 +5,11 @@ use objc2::runtime::{AnyObject, Sel};
 use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{
     NSAccessibility, NSAccessibilityGroupRole, NSBezelStyle, NSBox, NSBoxType, NSButton, NSColor, NSControlSize,
-    NSFont, NSImageSymbolConfiguration, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSLineBreakMode,
-    NSProgressIndicator, NSProgressIndicatorStyle, NSStackView, NSStackViewDistribution, NSTextField, NSTitlePosition,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSFont, NSImage, NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLayoutAttribute,
+    NSLayoutConstraintOrientation, NSLineBreakMode, NSProgressIndicator, NSProgressIndicatorStyle, NSStackView,
+    NSStackViewDistribution, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSSize};
+use objc2_foundation::{NSData, NSEdgeInsets, NSSize};
 
 use crate::util::{constant, ns, set_action, symbol};
 
@@ -136,6 +136,45 @@ pub fn framed(
         constraint.setActive(true);
     }
     frame
+}
+
+/// The side of a picture's tile, about as large as in Claude's app.
+const TILE: f64 = 76.0;
+const TILE_PADDING: f64 = 6.0;
+const TILE_RADIUS: f64 = 10.0;
+
+/// A picture as a tile showing it, named `name`, with `remove` in its corner if it can be dropped.
+pub fn picture_tile(mtm: MainThreadMarker, data: &[u8], name: &str, remove: Option<&NSButton>) -> Retained<NSView> {
+    let image = NSImage::initWithData(objc2::AnyThread::alloc(), &NSData::with_bytes(data));
+    let view = NSImageView::new(mtm);
+    view.setImage(image.as_deref());
+    view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
+    view.setToolTip(Some(&ns(name)));
+    crate::util::set_label(&view, Some(name));
+    view.setTranslatesAutoresizingMaskIntoConstraints(false);
+    let tile = framed(
+        mtm,
+        &view,
+        &NSColor::separatorColor(),
+        Some(&NSColor::controlBackgroundColor()),
+        TILE_RADIUS,
+        insets(TILE_PADDING, TILE_PADDING, TILE_PADDING, TILE_PADDING),
+    );
+    tile.widthAnchor().constraintEqualToConstant(TILE).setActive(true);
+    tile.heightAnchor().constraintEqualToConstant(TILE).setActive(true);
+    if let (Some(remove), Some(inner)) = (remove, tile.contentView()) {
+        inner.addSubview(remove);
+        remove.setTranslatesAutoresizingMaskIntoConstraints(false);
+        remove
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&tile.topAnchor(), 3.0)
+            .setActive(true);
+        remove
+            .trailingAnchor()
+            .constraintEqualToAnchor_constant(&tile.trailingAnchor(), -3.0)
+            .setActive(true);
+    }
+    Retained::into_super(tile)
 }
 
 pub fn insets(top: f64, left: f64, bottom: f64, right: f64) -> NSEdgeInsets {
