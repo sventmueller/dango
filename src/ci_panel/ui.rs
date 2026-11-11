@@ -309,6 +309,8 @@ impl Ui {
         };
         self.sign.setTitle(&ns(title));
         set_action(&self.sign, panel, action);
+        self.sign
+            .setHidden(state.login.is_none() && state.source.is_some() && !keychain);
         let failed = state.runs.iter().any(|r| r.run.state == ide_ci::State::Failed);
         let active = state.runs.iter().any(|r| r.run.state.is_active());
         self.rerun.setEnabled(failed && !state.busy && state.client.is_some());
