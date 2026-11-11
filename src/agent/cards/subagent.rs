@@ -1,6 +1,6 @@
 //! A subagent's card: what it is to do, how far it got and what it used, and its own timeline once opened.
 
-use ide_thread::{EntryId, Lane, Subagent, TaskStatus, ToolCall, ToolView};
+use ide_thread::{Entry, EntryId, EntryKind, Lane, Subagent, TaskStatus, Thread, ToolCall, ToolView};
 use objc2::rc::Retained;
 use objc2::sel;
 use objc2_app_kit::{NSColor, NSView};
@@ -106,6 +106,14 @@ pub fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
         parts.push(ui::view(&ui::row(mtm, 2.0, &[&chevron, &link, &spacer])));
         if open {
             parts.push(nested(ctx, &lane));
+        } else {
+            let mut asks = Vec::new();
+            waiting(ctx.thread, &lane, 0, &mut asks);
+            let inner = Ctx {
+                nested: true,
+                ..ctx.narrower(0.0)
+            };
+            parts.extend(asks.into_iter().map(|entry| build(&inner, entry)));
         }
     }
     let finished = sub.filter(|s| s.status.is_final()).and_then(|s| s.summary.clone());
@@ -117,6 +125,25 @@ pub fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
     }
     let refs: Vec<&NSView> = parts.iter().map(|v| &**v).collect();
     ui::view(&ui::column(mtm, 5.0, &refs))
+}
+
+/// How deep subagents started by subagents are searched for requests.
+const NESTING: usize = 8;
+
+/// The requests in `lane` and in the timelines of the subagents it started that wait for the user, in order; a folded
+/// card shows them so they can be answered without opening it.
+fn waiting<'a>(thread: &'a Thread, lane: &Lane, depth: usize, out: &mut Vec<&'a Entry>) {
+    for entry in thread.entries(lane) {
+        if entry.kind.waits_for_answer() {
+            out.push(entry);
+        }
+        if depth < NESTING
+            && let EntryKind::ToolCall(call) = &entry.kind
+            && matches!(call.view, ToolView::Agent { .. })
+        {
+            waiting(thread, &Lane::Subagent(call.call_id.clone()), depth + 1, out);
+        }
+    }
 }
 
 /// The subagent's own report in a tool result, without the frame the CLI wraps it in for the model.

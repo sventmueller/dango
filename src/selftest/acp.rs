@@ -333,8 +333,10 @@ fn remembered(root: PathBuf, key: u64) {
                 true,
                 "",
             );
-            if let Some(tab) = tab_of(other) {
-                tab.close();
+            if let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(other))
+                && let Some(id) = controller.tab_with_key(&tab.tab_key())
+            {
+                controller.close_tab(id);
             }
             cancel(root, key);
         },

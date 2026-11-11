@@ -248,7 +248,66 @@ pub fn run() {
     );
     picture(&controller, "agent-empty");
     let key = tab.key;
-    main_after(Duration::from_millis(300), move || permission(root, key));
+    subagent_asks(&controller, root.clone(), move || {
+        if let Some(tab) = tab_of(key) {
+            tab.select();
+        }
+        main_after(Duration::from_millis(300), move || permission(root, key));
+    });
+}
+
+/// A subagent whose tool waits for permission, its timeline folded: the request shows on its card all the same.
+fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce() + Send + 'static) {
+    let Some(tab) = crate::agent::open_replay(controller) else {
+        check("a second AI tab opens", false, "");
+        return then();
+    };
+    let session = "51e1f7e5-0000-4000-8000-0000000000ee";
+    let assistant = |id: &str, parent: Option<&str>, content: serde_json::Value| {
+        json!({"type": "assistant", "message": {"model": "claude-opus-5-5", "id": id, "type": "message", "role": "assistant",
+               "content": content, "stop_reason": null, "usage": {"input_tokens": 10, "output_tokens": 20}},
+               "parent_tool_use_id": parent, "session_id": session, "uuid": format!("{id}-uuid")})
+        .to_string()
+    };
+    let lines = [
+        assistant(
+            "msg_sub_1",
+            None,
+            json!([{"type": "tool_use", "id": "toolu_sub", "name": "Agent",
+                    "input": {"description": "Wetter holen", "prompt": "Fetch the weather", "subagent_type": "general-purpose"}}]),
+        ),
+        assistant(
+            "msg_sub_2",
+            Some("toolu_sub"),
+            json!([{"type": "tool_use", "id": "toolu_fetch", "name": "WebFetch",
+                    "input": {"url": "https://example.org/weather", "prompt": "Read the weather"}}]),
+        ),
+        json!({"type": "control_request", "request_id": "perm-sub", "request": {"subtype": "can_use_tool",
+               "tool_name": "WebFetch", "input": {"url": "https://example.org/weather", "prompt": "Read the weather"},
+               "permission_suggestions": [], "tool_use_id": "toolu_fetch"}})
+        .to_string(),
+    ];
+    tab.feed(&lines.join("\n"));
+    let other = tab.key;
+    main_after(Duration::from_millis(300), move || {
+        let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(other)) else {
+            return then();
+        };
+        let buttons = tab.timeline().last_card_buttons();
+        let misfits = tab.timeline().misfits();
+        check(
+            "a subagent's request that waits shows on its folded card, ready to answer, the row as tall as the card",
+            tab.snapshot().pending_requests().len() == 1
+                && buttons.iter().any(|b| b == splat_i18n::t("Einmal erlauben"))
+                && misfits.is_empty(),
+            format!("{buttons:?}, misfits {misfits:?}"),
+        );
+        picture(&controller, "agent-subagent-asks");
+        if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
+            controller.close_tab(id);
+        }
+        then();
+    });
 }
 
 fn same(a: f64, b: f64) -> bool {

@@ -626,6 +626,29 @@ impl Timeline {
         inputs.editors.keys().filter_map(|id| inputs.editor_text(*id)).collect()
     }
 
+    /// The titles of the buttons on the card of the last row.
+    #[cfg(feature = "selftest")]
+    pub fn last_card_buttons(&self) -> Vec<String> {
+        fn collect(view: &NSView, out: &mut Vec<String>) {
+            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+                out.push(button.title().to_string());
+            }
+            for child in view.subviews().iter() {
+                collect(&child, out);
+            }
+        }
+        let last = self.table.numberOfRows() - 1;
+        let Some(view) = (last >= 0)
+            .then(|| self.table.viewAtColumn_row_makeIfNecessary(0, last, true))
+            .flatten()
+        else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        collect(&view, &mut out);
+        out
+    }
+
     /// The cards in view, as their VoiceOver summaries.
     #[cfg(feature = "selftest")]
     pub fn visible_summaries(&self) -> Vec<String> {

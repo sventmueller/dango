@@ -602,6 +602,13 @@ impl Thread {
     }
 }
 
+impl EntryKind {
+    /// Whether this is a request that waits for the user's answer.
+    pub fn waits_for_answer(&self) -> bool {
+        request_state(self) == Some(&RequestState::Pending)
+    }
+}
+
 fn request_state(kind: &EntryKind) -> Option<&RequestState> {
     match kind {
         EntryKind::PermissionRequest(r) => Some(&r.state),
