@@ -40,6 +40,7 @@
 "Ausschneiden" = "오려두기";
 "Auswahl anhängen" = "선택 영역 첨부";
 "Auswahl: {}" = "선택 영역: {}";
+"Automatische Prüfung" = "자동 검토";
 "Bearbeiten" = "편집";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "명령과 편집은 네트워크 없이 프로젝트 안에만 씁니다";
 "Beim Start die zuletzt offenen Ordner öffnen" = "시작할 때 마지막으로 열었던 폴더 다시 열기";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "설정…";
 "Endpunkt entfernen" = "엔드포인트 제거";
 "Endpunkt hinzufügen" = "엔드포인트 추가";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "변경과 안전한 명령을 허용하고 되돌릴 수 없는 작업 전에 묻습니다.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "다음으로 대체 – 허용하기 전에 편집 가능";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "예를 들어 다른 Mac에 있는 Ollama 또는 LM Studio용입니다. 비워 두면 기본 주소로 복원됩니다.";
 "Fenster" = "윈도우";
 "Fenster schließen" = "윈도우 닫기";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "안전하지 않을 수 있는 것으로 감지된 작업에 대해서만 묻습니다.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "파일을 변경하거나 네트워크에 접근하기 전마다 묻습니다.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "권한 설정에 따라 변경과 명령 전에 묻습니다.";
 "Freigabemodus nicht gewechselt" = "권한 모드가 변경되지 않음";
 "Fremder Inhalt" = "외부 콘텐츠";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "앱이 가격을 모르는 모델용입니다. 다른 모든 가격보다 우선합니다.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "메뉴 지우기";
 "Löschen" = "삭제";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "계획에서 부분을 선택하고 ‘댓글 달기’를 선택하십시오.";
+"Minimal" = "최소";
 "Mit Kommentaren überarbeiten lassen" = "댓글 반영하여 수정";
 "Modell des Agenten" = "에이전트의 모델";
 "Modell, etwa gpt-x" = "모델(예: gpt-x)";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "불러온 레지스트리에 없음";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "필요하지 않음, Claude는 자체 프로그램으로 실행됩니다";
 "Nicht vorhanden" = "설치되지 않음";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "프로젝트의 파일 변경을 묻지 않고 수락합니다.";
 "Noch kein Modell" = "아직 모델 없음";
 "Noch nicht geladen" = "아직 불러오지 않음";
 "Nur fragen" = "질문만";
+"Nur lesen" = "읽기 전용";
 "OpenAI-kompatibel" = "OpenAI 호환";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "실행하기 전에 작업을 신중하게 계획합니다.";
 "Preis eintragen" = "가격 입력";
 "Preis entfernen" = "가격 제거";
 "Projekt" = "프로젝트";
+"Projekt bearbeiten" = "프로젝트 편집";
 "Regel" = "규칙";
 "Regel entfernen" = "규칙 제거";
 "Schlüssel" = "키";
@@ -160,6 +170,8 @@
 "Text von {}" = "{}의 텍스트";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "설정의 ‘에이전트’에서 제공자와 키를 입력하고 모델을 선택하거나 Ollama 또는 LM Studio를 설정하십시오.";
 "Umgebung der Login-Shell wird gelesen …" = "로그인 셸의 환경을 읽는 중…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "인터넷과 Mac의 모든 파일에 제한 없이 접근합니다.";
+"Voller Zugriff" = "전체 접근";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "‘항상 허용’으로 허용한 항목(프로젝트별). 파괴적인 Git 명령은 그래도 매번 묻습니다.";
 "Wie der Anbieter" = "제공자 기본값";
 "im Schlüsselbund" = "키체인에 있음";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · 되감기 전";
 "{}: zurückgesetzt {}" = "{}: {}에 재설정";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "프로젝트의 파일을 변경하고, 프로젝트 밖에 쓰거나 네트워크에 접근하기 전에 묻습니다.";
 "Änderungen erlauben" = "변경 허용";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "폴더를 열면 여기에 파일이 표시됩니다.";
 "Öffnen" = "열기";

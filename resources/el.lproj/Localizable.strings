@@ -40,6 +40,7 @@
 "Ausschneiden" = "Αποκοπή";
 "Auswahl anhängen" = "Επισύναψη επιλογής";
 "Auswahl: {}" = "Επιλογή: {}";
+"Automatische Prüfung" = "Αυτόματος έλεγχος";
 "Bearbeiten" = "Επεξεργασία";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Οι εντολές και οι αλλαγές γράφουν μόνο μέσα στο έργο, χωρίς δίκτυο";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Άνοιγμα των τελευταίων ανοιχτών φακέλων κατά την εκκίνηση";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Ρυθμίσεις…";
 "Endpunkt entfernen" = "Αφαίρεση τελικού σημείου";
 "Endpunkt hinzufügen" = "Προσθήκη τελικού σημείου";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Επιτρέπει αλλαγές και ασφαλείς εντολές και ρωτά πριν από οτιδήποτε μη αναστρέψιμο.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Αντικατάσταση με – μπορείτε να το αλλάξετε πριν το επιτρέψετε";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Για παράδειγμα, για το Ollama ή το LM Studio σε άλλο Mac. Αν αφήσετε το πεδίο κενό, επανέρχεται η συνήθης διεύθυνση.";
 "Fenster" = "Παράθυρο";
 "Fenster schließen" = "Κλείσιμο παραθύρου";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Ρωτά μόνο για ενέργειες που εντοπίζονται ως πιθανώς μη ασφαλείς.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Ρωτά πριν από κάθε αλλαγή αρχείου και κάθε πρόσβαση στο δίκτυο.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Ρωτά πριν από αλλαγές και εντολές, όπως ορίζουν οι άδειες.";
 "Freigabemodus nicht gewechselt" = "Η λειτουργία αδειών δεν άλλαξε";
 "Fremder Inhalt" = "Εξωτερικό περιεχόμενο";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Για μοντέλα των οποίων την τιμή δεν γνωρίζει η εφαρμογή. Υπερισχύει κάθε άλλης τιμής.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Εκκαθάριση μενού";
 "Löschen" = "Διαγραφή";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Επισημάνετε ένα σημείο του σχεδίου και επιλέξτε «Σχολιασμός».";
+"Minimal" = "Ελάχιστο";
 "Mit Kommentaren überarbeiten lassen" = "Αναθεώρηση με σχόλια";
 "Modell des Agenten" = "Μοντέλο του πράκτορα";
 "Modell, etwa gpt-x" = "Μοντέλο, π.χ. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Δεν υπάρχει στο φορτωμένο μητρώο";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Δεν χρειάζεται, το Claude εκτελείται μέσω του δικού του προγράμματος";
 "Nicht vorhanden" = "Δεν είναι εγκατεστημένο";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Αποδέχεται αλλαγές αρχείων στο έργο χωρίς ερώτηση.";
 "Noch kein Modell" = "Κανένα μοντέλο ακόμη";
 "Noch nicht geladen" = "Δεν έχει φορτωθεί ακόμη";
 "Nur fragen" = "Μόνο ερωτήσεις";
+"Nur lesen" = "Μόνο ανάγνωση";
 "OpenAI-kompatibel" = "Συμβατό με OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Σχεδιάζει προσεκτικά την εργασία πριν την εκτελέσει.";
 "Preis eintragen" = "Καταχώριση τιμής";
 "Preis entfernen" = "Αφαίρεση τιμής";
 "Projekt" = "Έργο";
+"Projekt bearbeiten" = "Επεξεργασία έργου";
 "Regel" = "Κανόνας";
 "Regel entfernen" = "Αφαίρεση κανόνα";
 "Schlüssel" = "Κλειδί";
@@ -160,6 +170,8 @@
 "Text von {}" = "Κείμενο από {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Στις Ρυθμίσεις, στην ενότητα «Πράκτορας», καταχωρίστε έναν πάροχο με το κλειδί του και επιλέξτε ένα μοντέλο ή ρυθμίστε το Ollama ή το LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Ανάγνωση του περιβάλλοντος του κελύφους σύνδεσης…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Απεριόριστη πρόσβαση στο διαδίκτυο και σε κάθε αρχείο του Mac.";
+"Voller Zugriff" = "Πλήρης πρόσβαση";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ό,τι επιτρέψατε με το «Να επιτρέπεται πάντα», ανά έργο. Οι καταστροφικές εντολές Git ρωτούν παρ’ όλα αυτά κάθε φορά.";
 "Wie der Anbieter" = "Προεπιλογή παρόχου";
 "im Schlüsselbund" = "στην κλειδοθήκη";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · πριν από την επιστροφή";
 "{}: zurückgesetzt {}" = "{}: επαναφορά {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Αλλάζει αρχεία στο έργο και ρωτά πριν γράψει εκτός αυτού ή αποκτήσει πρόσβαση στο δίκτυο.";
 "Änderungen erlauben" = "Επιτρέπονται αλλαγές";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Ανοίξτε έναν φάκελο για να δείτε εδώ τα αρχεία του.";
 "Öffnen" = "Άνοιγμα";

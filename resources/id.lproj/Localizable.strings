@@ -40,6 +40,7 @@
 "Ausschneiden" = "Potong";
 "Auswahl anhängen" = "Lampirkan Pilihan";
 "Auswahl: {}" = "Pilihan: {}";
+"Automatische Prüfung" = "Tinjauan Otomatis";
 "Bearbeiten" = "Edit";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Perintah dan perubahan hanya menulis di dalam proyek, tanpa jaringan";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Buka kembali folder yang terakhir dibuka saat aplikasi dimulai";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Pengaturan…";
 "Endpunkt entfernen" = "Hapus Endpoint";
 "Endpunkt hinzufügen" = "Tambahkan Endpoint";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Mengizinkan perubahan dan perintah yang aman serta bertanya sebelum tindakan yang tidak dapat dibatalkan.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Diganti dengan – dapat diubah sebelum Anda mengizinkan";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Misalnya untuk Ollama atau LM Studio di Mac lain. Kosongkan untuk memulihkan alamat biasa.";
 "Fenster" = "Jendela";
 "Fenster schließen" = "Tutup Jendela";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Hanya bertanya untuk tindakan yang terdeteksi mungkin tidak aman.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Bertanya sebelum setiap perubahan file dan setiap akses jaringan.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Bertanya sebelum perubahan dan perintah, sesuai pengaturan izin.";
 "Freigabemodus nicht gewechselt" = "Mode Izin Tidak Diubah";
 "Fremder Inhalt" = "Konten Eksternal";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Untuk model yang harganya tidak diketahui aplikasi. Harga ini didahulukan dari harga lainnya.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Bersihkan Menu";
 "Löschen" = "Hapus";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Pilih bagian dari rencana, lalu pilih “Komentari”.";
+"Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "Revisi dengan Komentar";
 "Modell des Agenten" = "Model agen";
 "Modell, etwa gpt-x" = "Model, misalnya gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Tidak ada di registri yang dimuat";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Tidak perlu, Claude berjalan melalui programnya sendiri";
 "Nicht vorhanden" = "Tidak terinstal";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Menerima perubahan file di proyek tanpa bertanya.";
 "Noch kein Modell" = "Belum Ada Model";
 "Noch nicht geladen" = "Belum dimuat";
 "Nur fragen" = "Hanya Bertanya";
+"Nur lesen" = "Hanya Baca";
 "OpenAI-kompatibel" = "Kompatibel dengan OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Merencanakan tugas dengan cermat sebelum menjalankannya.";
 "Preis eintragen" = "Masukkan Harga";
 "Preis entfernen" = "Hapus Harga";
 "Projekt" = "Proyek";
+"Projekt bearbeiten" = "Edit Proyek";
 "Regel" = "Aturan";
 "Regel entfernen" = "Hapus Aturan";
 "Schlüssel" = "Kunci";
@@ -160,6 +170,8 @@
 "Text von {}" = "Teks dari {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Di Pengaturan bagian “Agen”, masukkan penyedia beserta kuncinya dan pilih model, atau siapkan Ollama atau LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Membaca lingkungan shell login…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Akses tanpa batas ke internet dan setiap file di Mac.";
+"Voller Zugriff" = "Akses Penuh";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Apa yang telah Anda izinkan dengan “Selalu Izinkan”, per proyek. Perintah Git yang merusak tetap bertanya setiap kali.";
 "Wie der Anbieter" = "Bawaan Penyedia";
 "im Schlüsselbund" = "di Rantai Kunci";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · sebelum putar balik";
 "{}: zurückgesetzt {}" = "{}: direset {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mengubah file di proyek dan bertanya sebelum menulis di luarnya atau mengakses jaringan.";
 "Änderungen erlauben" = "Izinkan Perubahan";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Buka folder untuk melihat file-nya di sini.";
 "Öffnen" = "Buka";

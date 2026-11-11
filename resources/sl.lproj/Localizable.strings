@@ -40,6 +40,7 @@
 "Ausschneiden" = "Izreži";
 "Auswahl anhängen" = "Priloži izbor";
 "Auswahl: {}" = "Izbor: {}";
+"Automatische Prüfung" = "Samodejni pregled";
 "Bearbeiten" = "Uredi";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Ukazi in spremembe pišejo samo v projekt, brez omrežja";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Ob zagonu odpri nazadnje odprte mape";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Nastavitve …";
 "Endpunkt entfernen" = "Odstrani končno točko";
 "Endpunkt hinzufügen" = "Dodaj končno točko";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Dovoli spremembe in varne ukaze ter vpraša pred nepovratnimi dejanji.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Zamenjano z – mogoče spremeniti, preden dovolite";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Na primer za Ollama ali LM Studio na drugem Macu. Če polje pustite prazno, se obnovi običajni naslov.";
 "Fenster" = "Okno";
 "Fenster schließen" = "Zapri okno";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Vpraša le pri dejanjih, prepoznanih kot morda nevarna.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Vpraša pred vsako spremembo datoteke in vsakim dostopom do omrežja.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Vpraša pred spremembami in ukazi, kot določajo dovoljenja.";
 "Freigabemodus nicht gewechselt" = "Način dovoljenj ni bil spremenjen";
 "Fremder Inhalt" = "Zunanja vsebina";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Za modele, katerih cene aplikacija ne pozna. Ima prednost pred vsemi drugimi cenami.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Počisti meni";
 "Löschen" = "Izbriši";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Označite mesto v načrtu in izberite »Komentiraj«.";
+"Minimal" = "Minimalno";
 "Mit Kommentaren überarbeiten lassen" = "Zahtevaj popravke s komentarji";
 "Modell des Agenten" = "Model agenta";
 "Modell, etwa gpt-x" = "Model, npr. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Ni v naloženem registru";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Ni potrebno, Claude teče prek lastnega programa";
 "Nicht vorhanden" = "Ni nameščeno";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Sprejme spremembe datotek v projektu brez vprašanja.";
 "Noch kein Modell" = "Še ni modela";
 "Noch nicht geladen" = "Še ni naloženo";
 "Nur fragen" = "Samo vprašanja";
+"Nur lesen" = "Samo branje";
 "OpenAI-kompatibel" = "Združljivo z OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Skrbno načrtuje nalogo, preden jo izvede.";
 "Preis eintragen" = "Vnesi ceno";
 "Preis entfernen" = "Odstrani ceno";
 "Projekt" = "Projekt";
+"Projekt bearbeiten" = "Urejanje projekta";
 "Regel" = "Pravilo";
 "Regel entfernen" = "Odstrani pravilo";
 "Schlüssel" = "Ključ";
@@ -160,6 +170,8 @@
 "Text von {}" = "Besedilo s strani {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "V nastavitvah pod »Agent« vnesite ponudnika s ključem in izberite model ali nastavite Ollama oziroma LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Branje okolja prijavne lupine …";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Neomejen dostop do interneta in vseh datotek v Macu.";
+"Voller Zugriff" = "Poln dostop";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Kar ste dovolili z »Vedno dovoli«, po projektih. Uničujoči ukazi Git kljub temu vprašajo vsakič.";
 "Wie der Anbieter" = "Kot pri ponudniku";
 "im Schlüsselbund" = "v verigi ključev";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · pred previjanjem nazaj";
 "{}: zurückgesetzt {}" = "{}: ponastavitev: {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Spreminja datoteke v projektu in vpraša pred pisanjem zunaj njega ali dostopom do omrežja.";
 "Änderungen erlauben" = "Dovoli spremembe";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Odprite mapo, da tukaj vidite njene datoteke.";
 "Öffnen" = "Odpri";

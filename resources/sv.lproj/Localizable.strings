@@ -40,6 +40,7 @@
 "Ausschneiden" = "Klipp ut";
 "Auswahl anhängen" = "Bifoga markering";
 "Auswahl: {}" = "Markering: {}";
+"Automatische Prüfung" = "Automatisk granskning";
 "Bearbeiten" = "Redigera";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Kommandon och ändringar skriver bara i projektet, utan nätverk";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Öppna de senast öppna mapparna vid start";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Inställningar…";
 "Endpunkt entfernen" = "Ta bort slutpunkt";
 "Endpunkt hinzufügen" = "Lägg till slutpunkt";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Tillåter ändringar och säkra kommandon och frågar före allt som inte går att ångra.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Ersätts med – kan ändras innan du tillåter";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Till exempel för Ollama eller LM Studio på en annan Mac. Lämna tomt för att återställa den vanliga adressen.";
 "Fenster" = "Fönster";
 "Fenster schließen" = "Stäng fönster";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Frågar bara vid åtgärder som bedöms som möjligen osäkra.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Frågar före varje filändring och varje nätverksåtkomst.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Frågar före ändringar och kommandon, enligt behörigheterna.";
 "Freigabemodus nicht gewechselt" = "Behörighetsläget ändrades inte";
 "Fremder Inhalt" = "Externt innehåll";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "För modeller vars pris appen inte känner till. Det går före alla andra priser.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Rensa menyn";
 "Löschen" = "Radera";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Markera ett ställe i planen och välj ”Kommentera”.";
+"Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "Omarbeta med kommentarer";
 "Modell des Agenten" = "Agentens modell";
 "Modell, etwa gpt-x" = "Modell, t.ex. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Inte i det inlästa registret";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Behövs inte, Claude körs via sitt eget program";
 "Nicht vorhanden" = "Inte installerad";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Godkänner filändringar i projektet utan att fråga.";
 "Noch kein Modell" = "Ingen modell än";
 "Noch nicht geladen" = "Inte inläst än";
 "Nur fragen" = "Bara fråga";
+"Nur lesen" = "Endast läsning";
 "OpenAI-kompatibel" = "OpenAI-kompatibel";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Planerar uppgiften noggrant innan den utförs.";
 "Preis eintragen" = "Ange pris";
 "Preis entfernen" = "Ta bort pris";
 "Projekt" = "Projekt";
+"Projekt bearbeiten" = "Redigera projekt";
 "Regel" = "Regel";
 "Regel entfernen" = "Ta bort regel";
 "Schlüssel" = "Nyckel";
@@ -160,6 +170,8 @@
 "Text von {}" = "Text från {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Ange en leverantör med nyckel i Inställningar under ”Agent” och välj en modell, eller konfigurera Ollama eller LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Läser inloggningsskalets miljö…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Obegränsad åtkomst till internet och alla filer på Mac-datorn.";
+"Voller Zugriff" = "Full åtkomst";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Det du har tillåtit med ”Tillåt alltid”, per projekt. Destruktiva Git-kommandon frågar ändå varje gång.";
 "Wie der Anbieter" = "Leverantörens förval";
 "im Schlüsselbund" = "i nyckelringen";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · före tillbakaspolning";
 "{}: zurückgesetzt {}" = "{}: återställs {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Ändrar filer i projektet och frågar innan något skrivs utanför det eller nätverket används.";
 "Änderungen erlauben" = "Tillåt ändringar";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Öppna en mapp för att se dess filer här.";
 "Öffnen" = "Öppna";

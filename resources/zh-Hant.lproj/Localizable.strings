@@ -40,6 +40,7 @@
 "Ausschneiden" = "剪下";
 "Auswahl anhängen" = "附加所選範圍";
 "Auswahl: {}" = "所選範圍：{}";
+"Automatische Prüfung" = "自動審查";
 "Bearbeiten" = "編輯";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "指令和編輯只會寫入專案內，且不使用網路";
 "Beim Start die zuletzt offenen Ordner öffnen" = "啟動時重新打開上次打開的檔案夾";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "設定⋯";
 "Endpunkt entfernen" = "移除端點";
 "Endpunkt hinzufügen" = "加入端點";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "允許更改和安全的指令，在無法復原的動作前詢問。";
 "Ersetzt durch – vor dem Erlauben änderbar" = "取代為（允許前可編輯）";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "例如用於另一台 Mac 上的 Ollama 或 LM Studio。留空即可恢復預設網址。";
 "Fenster" = "視窗";
 "Fenster schließen" = "關閉視窗";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "僅在偵測到可能不安全的動作時詢問。";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "每次更改檔案和存取網路前都會詢問。";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "依照權限設定，在更改和執行指令前詢問。";
 "Freigabemodus nicht gewechselt" = "權限模式未變更";
 "Fremder Inhalt" = "外部內容";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "用於 App 不知道價格的模型。此價格優先於其他所有價格。";
@@ -124,6 +129,7 @@
 "Liste löschen" = "清除選單";
 "Löschen" = "刪除";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "在計畫中選取一個段落，然後選擇「加入註解」。";
+"Minimal" = "最低";
 "Mit Kommentaren überarbeiten lassen" = "依註解修訂";
 "Modell des Agenten" = "代理程式的模型";
 "Modell, etwa gpt-x" = "模型，例如 gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "不在已載入的登錄庫中";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "不需要，Claude 透過自己的程式執行";
 "Nicht vorhanden" = "未安裝";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "不需詢問即接受專案中的檔案更改。";
 "Noch kein Modell" = "尚無模型";
 "Noch nicht geladen" = "尚未載入";
 "Nur fragen" = "僅詢問";
+"Nur lesen" = "唯讀";
 "OpenAI-kompatibel" = "相容 OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "在執行前仔細規劃工作。";
 "Preis eintragen" = "輸入價格";
 "Preis entfernen" = "移除價格";
 "Projekt" = "專案";
+"Projekt bearbeiten" = "編輯專案";
 "Regel" = "規則";
 "Regel entfernen" = "移除規則";
 "Schlüssel" = "金鑰";
@@ -160,6 +170,8 @@
 "Text von {}" = "來自 {} 的文字";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "請在「設定」的「代理程式」中輸入供應商及其金鑰並選擇模型，或設定 Ollama 或 LM Studio。";
 "Umgebung der Login-Shell wird gelesen …" = "正在讀取登入 Shell 的環境⋯";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "不受限制地存取網際網路和 Mac 上的所有檔案。";
+"Voller Zugriff" = "完整存取";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "你以「永遠允許」允許的項目，依專案列出。具破壞性的 Git 指令仍會每次詢問。";
 "Wie der Anbieter" = "供應商預設值";
 "im Schlüsselbund" = "在鑰匙圈中";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · 回溯之前";
 "{}: zurückgesetzt {}" = "{}：{} 重設";
 "{}: {}" = "{}：{}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "更改專案中的檔案，在寫入專案外部或存取網路前詢問。";
 "Änderungen erlauben" = "允許編輯";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "打開檔案夾即可在此處查看其中的檔案。";
 "Öffnen" = "打開";

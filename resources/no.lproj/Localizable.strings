@@ -40,6 +40,7 @@
 "Ausschneiden" = "Klipp ut";
 "Auswahl anhängen" = "Legg ved markering";
 "Auswahl: {}" = "Markering: {}";
+"Automatische Prüfung" = "Automatisk gjennomgang";
 "Bearbeiten" = "Rediger";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Kommandoer og endringer skriver bare i prosjektet, uten nettverk";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Åpne de sist åpne mappene på nytt ved oppstart";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Innstillinger…";
 "Endpunkt entfernen" = "Fjern endepunkt";
 "Endpunkt hinzufügen" = "Legg til endepunkt";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Tillater endringer og trygge kommandoer og spør før noe som ikke kan angres.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Erstattet med – kan endres før du tillater det";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "For eksempel for Ollama eller LM Studio på en annen Mac. La feltet stå tomt for å gjenopprette den vanlige adressen.";
 "Fenster" = "Vindu";
 "Fenster schließen" = "Lukk vindu";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Spør bare ved handlinger som oppdages som mulig usikre.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Spør før hver filendring og hver nettverkstilgang.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Spør før endringer og kommandoer, slik tillatelsene angir.";
 "Freigabemodus nicht gewechselt" = "Tillatelsesmodusen ble ikke endret";
 "Fremder Inhalt" = "Eksternt innhold";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "For modeller der appen ikke kjenner prisen. Den går foran alle andre priser.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Tøm menyen";
 "Löschen" = "Slett";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Marker et sted i planen og velg «Kommenter».";
+"Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "La revidere med kommentarer";
 "Modell des Agenten" = "Agentens modell";
 "Modell, etwa gpt-x" = "Modell, for eksempel gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Ikke i det innlastede registeret";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Ikke nødvendig, Claude kjører via sitt eget program";
 "Nicht vorhanden" = "Ikke installert";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Godtar filendringer i prosjektet uten å spørre.";
 "Noch kein Modell" = "Ingen modell ennå";
 "Noch nicht geladen" = "Ikke lastet inn ennå";
 "Nur fragen" = "Bare spørsmål";
+"Nur lesen" = "Bare lesing";
 "OpenAI-kompatibel" = "OpenAI-kompatibel";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Planlegger oppgaven nøye før den utføres.";
 "Preis eintragen" = "Legg inn pris";
 "Preis entfernen" = "Fjern pris";
 "Projekt" = "Prosjekt";
+"Projekt bearbeiten" = "Rediger prosjekt";
 "Regel" = "Regel";
 "Regel entfernen" = "Fjern regel";
 "Schlüssel" = "Nøkkel";
@@ -160,6 +170,8 @@
 "Text von {}" = "Tekst fra {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Legg inn en leverandør med nøkkel under «Agent» i Innstillinger, og velg en modell, eller sett opp Ollama eller LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Leser miljøet til påloggingsskallet…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Ubegrenset tilgang til internett og alle filer på Mac-en.";
+"Voller Zugriff" = "Full tilgang";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Det du har tillatt med «Tillat alltid», per prosjekt. Destruktive Git-kommandoer spør likevel hver gang.";
 "Wie der Anbieter" = "Leverandørens standard";
 "im Schlüsselbund" = "i nøkkelringen";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · før tilbakespoling";
 "{}: zurückgesetzt {}" = "{}: nullstilles {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Endrer filer i prosjektet og spør før skriving utenfor det eller nettverkstilgang.";
 "Änderungen erlauben" = "Tillat endringer";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Åpne en mappe for å se filene her.";
 "Öffnen" = "Åpne";

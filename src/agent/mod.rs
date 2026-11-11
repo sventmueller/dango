@@ -3,6 +3,7 @@
 //! `ide_acp::Session`; the self-test feeds recordings through `ide_claude::replay::Replay` instead.
 
 mod acp;
+mod acp_words;
 mod actions;
 mod attrs;
 mod cards;

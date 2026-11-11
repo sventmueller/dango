@@ -40,6 +40,7 @@
 "Ausschneiden" = "Retalla";
 "Auswahl anhängen" = "Adjunta la selecció";
 "Auswahl: {}" = "Selecció: {}";
+"Automatische Prüfung" = "Revisió automàtica";
 "Bearbeiten" = "Edita";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "les ordres i els canvis només escriuen dins del projecte, sense xarxa";
 "Beim Start die zuletzt offenen Ordner öffnen" = "En iniciar, obre les carpetes que hi havia obertes";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Configuració…";
 "Endpunkt entfernen" = "Elimina el punt de connexió";
 "Endpunkt hinzufügen" = "Afegeix un punt de connexió";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Permet canvis i ordres segures, i pregunta abans de res irreversible.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Es substitueix per – editable abans de permetre‑ho";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Per exemple, per a Ollama o LM Studio en un altre Mac. Si deixes el camp buit, es restaura l’adreça habitual.";
 "Fenster" = "Finestra";
 "Fenster schließen" = "Tanca la finestra";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Només pregunta per accions detectades com a possiblement insegures.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Pregunta abans de cada canvi de fitxer i cada accés a la xarxa.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Pregunta abans de canvis i ordres, segons els permisos.";
 "Freigabemodus nicht gewechselt" = "No s’ha canviat el mode de permisos";
 "Fremder Inhalt" = "Contingut extern";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Per als models el preu dels quals l’app no coneix. Té prioritat sobre qualsevol altre preu.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Buida el menú";
 "Löschen" = "Elimina";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selecciona un passatge del pla i tria “Comenta”.";
+"Minimal" = "Mínim";
 "Mit Kommentaren überarbeiten lassen" = "Demana canvis amb els comentaris";
 "Modell des Agenten" = "Model de l’agent";
 "Modell, etwa gpt-x" = "Model, p. ex. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "No és al registre carregat";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "No cal, Claude funciona amb el seu propi programa";
 "Nicht vorhanden" = "No instal·lat";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Accepta canvis de fitxers al projecte sense preguntar.";
 "Noch kein Modell" = "Encara no hi ha cap model";
 "Noch nicht geladen" = "Encara no s’ha carregat";
 "Nur fragen" = "Només preguntes";
+"Nur lesen" = "Només lectura";
 "OpenAI-kompatibel" = "Compatible amb OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Planifica la tasca amb cura abans d’executar-la.";
 "Preis eintragen" = "Introdueix un preu";
 "Preis entfernen" = "Elimina el preu";
 "Projekt" = "Projecte";
+"Projekt bearbeiten" = "Editar el projecte";
 "Regel" = "Regla";
 "Regel entfernen" = "Elimina la regla";
 "Schlüssel" = "Clau";
@@ -160,6 +170,8 @@
 "Text von {}" = "Text procedent de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "A la configuració, a “Agent”, introdueix un proveïdor amb la seva clau i tria un model, o configura Ollama o LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Llegint l’entorn de l’intèrpret d’ordres d’inici de sessió…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Accés sense restriccions a internet i a tots els fitxers del Mac.";
+"Voller Zugriff" = "Accés complet";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "El que has permès amb “Permet sempre”, per projecte. Les ordres destructives de Git pregunten igualment cada vegada.";
 "Wie der Anbieter" = "Per omissió del proveïdor";
 "im Schlüsselbund" = "al clauer";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · abans de retrocedir";
 "{}: zurückgesetzt {}" = "{}: es restableix {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Canvia fitxers del projecte i pregunta abans d’escriure fora d’aquest o d’accedir a la xarxa.";
 "Änderungen erlauben" = "Permet els canvis";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Obre una carpeta per veure’n els fitxers aquí.";
 "Öffnen" = "Obre";

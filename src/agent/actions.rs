@@ -43,6 +43,7 @@ pub fn modes() -> [(&'static str, &'static str, &'static str); 5] {
 /// The name of an effort level as the composer shows it.
 pub fn effort_name(level: &str) -> String {
     match level {
+        "minimal" => t("Minimal").to_string(),
         "low" => t("Niedrig").to_string(),
         "medium" => t("Mittel").to_string(),
         "high" => t("Hoch").to_string(),

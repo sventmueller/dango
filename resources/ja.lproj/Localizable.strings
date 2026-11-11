@@ -40,6 +40,7 @@
 "Ausschneiden" = "カット";
 "Auswahl anhängen" = "選択部分を添付";
 "Auswahl: {}" = "選択部分: {}";
+"Automatische Prüfung" = "自動レビュー";
 "Bearbeiten" = "編集";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "コマンドと変更はプロジェクト内にのみ書き込み、ネットワークは使用しません";
 "Beim Start die zuletzt offenen Ordner öffnen" = "起動時に前回開いていたフォルダを開く";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "設定…";
 "Endpunkt entfernen" = "エンドポイントを削除";
 "Endpunkt hinzufügen" = "エンドポイントを追加";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "変更と安全なコマンドを許可し、元に戻せない操作の前に確認します。";
 "Ersetzt durch – vor dem Erlauben änderbar" = "置き換え後 – 許可する前に編集できます";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "たとえば、別のMac上のOllamaやLM Studio用です。空のままにすると通常のアドレスに戻ります。";
 "Fenster" = "ウインドウ";
 "Fenster schließen" = "ウインドウを閉じる";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "安全でない可能性があると判定された操作についてのみ確認します。";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "ファイルの変更やネットワークへのアクセスの前に毎回確認します。";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "変更やコマンドの前に、権限の設定に従って確認します。";
 "Freigabemodus nicht gewechselt" = "権限モードは変更されませんでした";
 "Fremder Inhalt" = "外部コンテンツ";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "アプリが料金を把握していないモデル用です。ほかのどの料金よりも優先されます。";
@@ -124,6 +129,7 @@
 "Liste löschen" = "メニューを消去";
 "Löschen" = "削除";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "プラン内の箇所を選択して、“コメント”を選択してください。";
+"Minimal" = "最小";
 "Mit Kommentaren überarbeiten lassen" = "コメントを反映して修正";
 "Modell des Agenten" = "エージェントのモデル";
 "Modell, etwa gpt-x" = "モデル（例: gpt-x）";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "読み込んだレジストリにありません";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "不要です。Claudeは独自のプログラムで動作します";
 "Nicht vorhanden" = "インストールされていません";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "プロジェクト内のファイル変更を確認なしで受け入れます。";
 "Noch kein Modell" = "モデルがまだありません";
 "Noch nicht geladen" = "まだ読み込まれていません";
 "Nur fragen" = "質問のみ";
+"Nur lesen" = "読み取り専用";
 "OpenAI-kompatibel" = "OpenAI互換";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "実行する前にタスクを慎重に計画します。";
 "Preis eintragen" = "料金を入力";
 "Preis entfernen" = "料金を削除";
 "Projekt" = "プロジェクト";
+"Projekt bearbeiten" = "プロジェクトを編集";
 "Regel" = "ルール";
 "Regel entfernen" = "ルールを削除";
 "Schlüssel" = "キー";
@@ -160,6 +170,8 @@
 "Text von {}" = "{}からのテキスト";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "“設定”の“エージェント”で、プロバイダとそのキーを入力してモデルを選択するか、OllamaまたはLM Studioを設定してください。";
 "Umgebung der Login-Shell wird gelesen …" = "ログインシェルの環境を読み込み中…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "インターネットとMac上のすべてのファイルに制限なくアクセスします。";
+"Voller Zugriff" = "フルアクセス";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“常に許可”で許可したもの（プロジェクトごと）。破壊的なGitコマンドはそれでも毎回確認します。";
 "Wie der Anbieter" = "プロバイダのデフォルト";
 "im Schlüsselbund" = "キーチェーン内";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · 巻き戻し前";
 "{}: zurückgesetzt {}" = "{}: {}にリセット";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "プロジェクト内のファイルを変更し、プロジェクト外への書き込みやネットワークアクセスの前に確認します。";
 "Änderungen erlauben" = "変更を許可";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "フォルダを開くと、ここにファイルが表示されます。";
 "Öffnen" = "開く";

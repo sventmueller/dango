@@ -40,6 +40,7 @@
 "Ausschneiden" = "Вирізати";
 "Auswahl anhängen" = "Прикріпити вибране";
 "Auswahl: {}" = "Вибране: {}";
+"Automatische Prüfung" = "Автоперевірка";
 "Bearbeiten" = "Редагування";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "команди та зміни записують лише в межах проєкту, без мережі";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Під час запуску відкривати папки, відкриті минулого разу";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Параметри…";
 "Endpunkt entfernen" = "Вилучити кінцеву точку";
 "Endpunkt hinzufügen" = "Додати кінцеву точку";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Дозволяє зміни й безпечні команди та питає перед незворотними діями.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Заміна — можна змінити, перш ніж дозволити";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Наприклад, для Ollama чи LM Studio на іншому Mac. Щоб відновити звичайну адресу, залиште поле порожнім.";
 "Fenster" = "Вікно";
 "Fenster schließen" = "Закрити вікно";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Питає лише про дії, розпізнані як можливо небезпечні.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Питає перед кожною зміною файлу та кожним доступом до мережі.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Питає перед змінами й командами згідно з дозволами.";
 "Freigabemodus nicht gewechselt" = "Режим дозволів не змінено";
 "Fremder Inhalt" = "Зовнішній вміст";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Для моделей, ціна яких програмі невідома. Ця ціна має пріоритет над будь-якою іншою.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Очистити меню";
 "Löschen" = "Видалити";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Виділіть уривок плану й виберіть «Коментувати».";
+"Minimal" = "Мінімальний";
 "Mit Kommentaren überarbeiten lassen" = "Повернути з коментарями";
 "Modell des Agenten" = "Модель агента";
 "Modell, etwa gpt-x" = "Модель, наприклад gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Немає в завантаженому реєстрі";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Не потрібно, Claude працює через власну програму";
 "Nicht vorhanden" = "Не інстальовано";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Приймає зміни файлів у проєкті без запитань.";
 "Noch kein Modell" = "Ще немає моделі";
 "Noch nicht geladen" = "Ще не завантажено";
 "Nur fragen" = "Лише запитання";
+"Nur lesen" = "Лише читання";
 "OpenAI-kompatibel" = "Сумісний з OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Ретельно планує завдання перед виконанням.";
 "Preis eintragen" = "Указати ціну";
 "Preis entfernen" = "Вилучити ціну";
 "Projekt" = "Проєкт";
+"Projekt bearbeiten" = "Редагування проєкту";
 "Regel" = "Правило";
 "Regel entfernen" = "Вилучити правило";
 "Schlüssel" = "Ключ";
@@ -160,6 +170,8 @@
 "Text von {}" = "Текст із {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "У параметрах, у розділі «Агент», укажіть провайдера з ключем і виберіть модель або налаштуйте Ollama чи LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Читання середовища оболонки входу…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Необмежений доступ до інтернету й будь-якого файлу на Mac.";
+"Voller Zugriff" = "Повний доступ";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Те, що ви дозволили через «Завжди дозволяти», окремо для кожного проєкту. Руйнівні команди Git однаково питають дозволу щоразу.";
 "Wie der Anbieter" = "Як у провайдера";
 "im Schlüsselbund" = "у вʼязці";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · перед відкатом";
 "{}: zurückgesetzt {}" = "{}: скидання: {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Змінює файли проєкту й питає перед записом поза ним або доступом до мережі.";
 "Änderungen erlauben" = "Дозволити зміни";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Відкрийте папку, щоб побачити тут її файли.";
 "Öffnen" = "Відкрити";

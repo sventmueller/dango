@@ -18,6 +18,7 @@ use objc2::sel;
 use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSColor, NSMenu, NSView};
 use splat_i18n::{t, tf};
 
+use super::acp_words;
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
 use super::source::{Problem, Source};
 use super::tab::{AgentTab, Incoming};
@@ -479,7 +480,7 @@ impl AgentTab {
             .model()
             .map_or_else(|| t("Modell des Agenten").to_string(), |m| m.current_name());
         let pill = match caps.thought_level() {
-            Some(level) => tf("{} · {}", &[&model, &level.current_name()]),
+            Some(level) => tf("{} · {}", &[&model, &acp_words::current(level)]),
             None => model,
         };
         self.composer.model.setTitle(&ns(&pill));
@@ -490,7 +491,10 @@ impl AgentTab {
             .mode
             .as_ref()
             .and_then(|id| caps.modes.iter().find(|m| m.id == *id))
-            .map_or_else(|| t("Standard").to_string(), |m| m.name.clone());
+            .map_or_else(
+                || t("Standard").to_string(),
+                |m| acp_words::mode(&agent.id, &m.id).map_or_else(|| m.name.clone(), |(name, _)| name.to_string()),
+            );
         self.composer.mode.setTitle(&ns(&mode));
         self.composer.mode.setEnabled(!caps.modes.is_empty());
         self.composer
@@ -532,7 +536,7 @@ impl AgentTab {
             if !offered.is_empty() {
                 menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
             }
-            let heading = self.menu_item(&menu, &option.name, sel!(ideAgentPickModel:), -1);
+            let heading = self.menu_item(&menu, &acp_words::heading(option), sel!(ideAgentPickModel:), -1);
             heading.setEnabled(false);
             let OptionValue::Select { current, choices } = &option.value else {
                 continue;
@@ -547,7 +551,8 @@ impl AgentTab {
                 }
                 group.clone_from(&choice.group);
                 let tag = isize::try_from(offered.len()).unwrap_or(-1);
-                let entry = self.menu_item(&menu, &choice.name, sel!(ideAgentPickModel:), tag);
+                let name = acp_words::choice(option, &choice.value, &choice.name);
+                let entry = self.menu_item(&menu, &name, sel!(ideAgentPickModel:), tag);
                 if let Some(description) = &choice.description {
                     entry.setToolTip(Some(&ns(description)));
                 }
@@ -630,15 +635,16 @@ impl AgentTab {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let agent = self.agent.id().to_string();
         for (n, mode) in caps.modes.iter().enumerate() {
-            let entry = self.menu_item(
-                &menu,
-                &mode.name,
-                sel!(ideAgentPickMode:),
-                isize::try_from(n).unwrap_or(-1),
-            );
-            if let Some(description) = &mode.description {
-                entry.setToolTip(Some(&ns(description)));
+            let own = acp_words::mode(&agent, &mode.id);
+            let name = own.map_or_else(|| mode.name.clone(), |(name, _)| name.to_string());
+            let entry = self.menu_item(&menu, &name, sel!(ideAgentPickMode:), isize::try_from(n).unwrap_or(-1));
+            if let Some(description) = own
+                .map(|(_, words)| words.to_string())
+                .or_else(|| mode.description.clone())
+            {
+                entry.setToolTip(Some(&ns(&description)));
             }
             if caps.mode.as_ref() == Some(&mode.id) {
                 entry.setState(objc2_app_kit::NSControlStateValueOn);

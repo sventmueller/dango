@@ -40,6 +40,7 @@
 "Ausschneiden" = "Cut";
 "Auswahl anhängen" = "Attach Selection";
 "Auswahl: {}" = "Selection: {}";
+"Automatische Prüfung" = "Auto Review";
 "Bearbeiten" = "Edit";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Commands and edits write only inside the project, without network";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Reopen previously open folders at launch";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Settings…";
 "Endpunkt entfernen" = "Remove Endpoint";
 "Endpunkt hinzufügen" = "Add Endpoint";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Allows changes and safe commands and asks before anything irreversible.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Replaced with – editable before you allow it";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "For Ollama or LM Studio on another Mac, say. Leave it empty to restore the usual address.";
 "Fenster" = "Window";
 "Fenster schließen" = "Close Window";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Asks only for actions detected as possibly unsafe.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Asks before every file change and every network access.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Asks before changes and commands, as the permissions set out.";
 "Freigabemodus nicht gewechselt" = "Permission Mode Not Changed";
 "Fremder Inhalt" = "External Content";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "For models whose price the app does not know. It takes precedence over every other price.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Clear Menu";
 "Löschen" = "Delete";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Select a passage of the plan and choose “Comment”.";
+"Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "Revise with Comments";
 "Modell des Agenten" = "Agent's model";
 "Modell, etwa gpt-x" = "Model, such as gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Not in the loaded registry";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Not needed, Claude runs through its own program";
 "Nicht vorhanden" = "Not installed";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Accepts file changes in the project without asking.";
 "Noch kein Modell" = "No Model Yet";
 "Noch nicht geladen" = "Not loaded yet";
 "Nur fragen" = "Ask Only";
+"Nur lesen" = "Read Only";
 "OpenAI-kompatibel" = "OpenAI-compatible";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Plans the task carefully before carrying it out.";
 "Preis eintragen" = "Enter a Price";
 "Preis entfernen" = "Remove Price";
 "Projekt" = "Project";
+"Projekt bearbeiten" = "Edit Project";
 "Regel" = "Rule";
 "Regel entfernen" = "Remove Rule";
 "Schlüssel" = "Key";
@@ -160,6 +170,8 @@
 "Text von {}" = "Text from {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "In Settings under “Agent”, enter a provider with its key and choose a model, or set up Ollama or LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Reading the login shell's environment …";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Unrestricted access to the internet and every file on the Mac.";
+"Voller Zugriff" = "Full Access";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "What you allowed with “Always allow”, per project. Destructive git commands still ask every time.";
 "Wie der Anbieter" = "Provider's Default";
 "im Schlüsselbund" = "in the keychain";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · before rewinding";
 "{}: zurückgesetzt {}" = "{}: resets {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Changes files in the project and asks before writing outside it or accessing the network.";
 "Änderungen erlauben" = "Allow Edits";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Open a folder to see its files here.";
 "Öffnen" = "Open";

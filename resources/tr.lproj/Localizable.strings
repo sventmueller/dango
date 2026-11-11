@@ -40,6 +40,7 @@
 "Ausschneiden" = "Kes";
 "Auswahl anhängen" = "Seçimi Ekle";
 "Auswahl: {}" = "Seçim: {}";
+"Automatische Prüfung" = "Otomatik İnceleme";
 "Bearbeiten" = "Düzen";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Komutlar ve düzenlemeler yalnızca projenin içine yazar, ağ olmadan";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Açılışta en son açık olan klasörleri yeniden aç";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Ayarlar…";
 "Endpunkt entfernen" = "Uç Noktayı Kaldır";
 "Endpunkt hinzufügen" = "Uç Nokta Ekle";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Değişikliklere ve güvenli komutlara izin verir, geri alınamaz işlemlerden önce sorar.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Yerine gelecek metin – izin vermeden önce düzenlenebilir";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Örneğin başka bir Mac’teki Ollama veya LM Studio için. Boş bırakırsanız olağan adres geri yüklenir.";
 "Fenster" = "Pencere";
 "Fenster schließen" = "Pencereyi Kapat";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Yalnızca güvensiz olabileceği tespit edilen işlemlerde sorar.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Her dosya değişikliğinden ve ağ erişiminden önce sorar.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Değişikliklerden ve komutlardan önce, izinlerin belirlediği şekilde sorar.";
 "Freigabemodus nicht gewechselt" = "İzin Modu Değiştirilmedi";
 "Fremder Inhalt" = "Dış İçerik";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Uygulamanın fiyatını bilmediği modeller için. Diğer tüm fiyatlardan önce gelir.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Menüyü Temizle";
 "Löschen" = "Sil";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Planda bir bölüm seçin ve “Yorum Yap” öğesini seçin.";
+"Minimal" = "En Az";
 "Mit Kommentaren überarbeiten lassen" = "Yorumlarla Değişiklik İste";
 "Modell des Agenten" = "Ajanın modeli";
 "Modell, etwa gpt-x" = "Model, örneğin gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Yüklenen kayıt defterinde yok";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Gerekmiyor, Claude kendi programıyla çalışır";
 "Nicht vorhanden" = "Yüklü değil";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Projedeki dosya değişikliklerini sormadan kabul eder.";
 "Noch kein Modell" = "Henüz Model Yok";
 "Noch nicht geladen" = "Henüz yüklenmedi";
 "Nur fragen" = "Yalnızca Sor";
+"Nur lesen" = "Salt Okunur";
 "OpenAI-kompatibel" = "OpenAI uyumlu";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Görevi yürütmeden önce dikkatle planlar.";
 "Preis eintragen" = "Fiyat Gir";
 "Preis entfernen" = "Fiyatı Kaldır";
 "Projekt" = "Proje";
+"Projekt bearbeiten" = "Projeyi Düzenle";
 "Regel" = "Kural";
 "Regel entfernen" = "Kuralı Kaldır";
 "Schlüssel" = "Anahtar";
@@ -160,6 +170,8 @@
 "Text von {}" = "{} sitesinden metin";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Ayarlar’da “Ajan” altında anahtarıyla birlikte bir sağlayıcı girin ve bir model seçin ya da Ollama veya LM Studio’yu ayarlayın.";
 "Umgebung der Login-Shell wird gelesen …" = "Oturum açma kabuğunun ortamı okunuyor…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "İnternete ve Mac’teki her dosyaya sınırsız erişim.";
+"Voller Zugriff" = "Tam Erişim";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“Her Zaman İzin Ver” ile izin verdikleriniz, proje başına. Yıkıcı Git komutları yine de her seferinde sorar.";
 "Wie der Anbieter" = "Sağlayıcıya Göre";
 "im Schlüsselbund" = "Anahtar Zinciri’nde";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · geri sarmadan önce";
 "{}: zurückgesetzt {}" = "{}: sıfırlanma: {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Projedeki dosyaları değiştirir; proje dışına yazmadan veya ağa erişmeden önce sorar.";
 "Änderungen erlauben" = "Düzenlemelere İzin Ver";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Dosyalarını burada görmek için bir klasör açın.";
 "Öffnen" = "Aç";

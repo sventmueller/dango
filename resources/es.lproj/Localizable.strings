@@ -40,6 +40,7 @@
 "Ausschneiden" = "Cortar";
 "Auswahl anhängen" = "Adjuntar selección";
 "Auswahl: {}" = "Selección: {}";
+"Automatische Prüfung" = "Revisión automática";
 "Bearbeiten" = "Edición";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "los comandos y los cambios solo escriben en el proyecto, sin red";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Volver a abrir al iniciar las carpetas que estaban abiertas";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Ajustes…";
 "Endpunkt entfernen" = "Eliminar endpoint";
 "Endpunkt hinzufügen" = "Añadir endpoint";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Permite cambios y comandos seguros, y pregunta antes de lo irreversible.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Sustituido por – editable antes de permitirlo";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Por ejemplo, para Ollama o LM Studio en otro Mac. Si lo dejas vacío, se restaura la dirección habitual.";
 "Fenster" = "Ventana";
 "Fenster schließen" = "Cerrar ventana";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Solo pregunta por acciones detectadas como posiblemente inseguras.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Pregunta antes de cada cambio de archivo y cada acceso a la red.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Pregunta antes de cambios y comandos, según los permisos.";
 "Freigabemodus nicht gewechselt" = "No se cambió el modo de permisos";
 "Fremder Inhalt" = "Contenido externo";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Para modelos cuyo precio no conoce la app. Tiene prioridad sobre cualquier otro precio.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Borrar menú";
 "Löschen" = "Eliminar";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selecciona una parte del plan y elige «Comentar».";
+"Minimal" = "Mínimo";
 "Mit Kommentaren überarbeiten lassen" = "Pedir revisión con comentarios";
 "Modell des Agenten" = "Modelo del agente";
 "Modell, etwa gpt-x" = "Modelo, p. ej. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "No está en el registro cargado";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "No hace falta, Claude funciona con su propio programa";
 "Nicht vorhanden" = "No instalado";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Acepta cambios de archivos en el proyecto sin preguntar.";
 "Noch kein Modell" = "Aún no hay ningún modelo";
 "Noch nicht geladen" = "Aún no se ha cargado";
 "Nur fragen" = "Solo preguntar";
+"Nur lesen" = "Solo lectura";
 "OpenAI-kompatibel" = "Compatible con OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Planifica la tarea con cuidado antes de ejecutarla.";
 "Preis eintragen" = "Introducir precio";
 "Preis entfernen" = "Eliminar precio";
 "Projekt" = "Proyecto";
+"Projekt bearbeiten" = "Editar proyecto";
 "Regel" = "Regla";
 "Regel entfernen" = "Eliminar regla";
 "Schlüssel" = "Clave";
@@ -160,6 +170,8 @@
 "Text von {}" = "Texto de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "En Ajustes, en «Agente», introduce un proveedor con su clave y elige un modelo, o configura Ollama o LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Leyendo el entorno de la shell de inicio de sesión…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Acceso sin restricciones a internet y a todos los archivos del Mac.";
+"Voller Zugriff" = "Acceso completo";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Lo que has permitido con «Permitir siempre», por proyecto. Los comandos de Git destructivos preguntan igualmente cada vez.";
 "Wie der Anbieter" = "Según el proveedor";
 "im Schlüsselbund" = "en el llavero";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · antes de rebobinar";
 "{}: zurückgesetzt {}" = "{}: se reinicia {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Cambia archivos del proyecto y pregunta antes de escribir fuera de él o acceder a la red.";
 "Änderungen erlauben" = "Permitir ediciones";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Abre una carpeta para ver aquí sus archivos.";
 "Öffnen" = "Abrir";

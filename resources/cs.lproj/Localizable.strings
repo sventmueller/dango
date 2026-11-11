@@ -40,6 +40,7 @@
 "Ausschneiden" = "Vyjmout";
 "Auswahl anhängen" = "Připojit výběr";
 "Auswahl: {}" = "Výběr: {}";
+"Automatische Prüfung" = "Automatická kontrola";
 "Bearbeiten" = "Úpravy";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Příkazy a úpravy zapisují jen do projektu, bez sítě";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Při spuštění znovu otevřít naposledy otevřené složky";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Nastavení…";
 "Endpunkt entfernen" = "Odstranit koncový bod";
 "Endpunkt hinzufügen" = "Přidat koncový bod";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Povoluje změny a bezpečné příkazy a ptá se před nevratnými akcemi.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Nahradí se textem – před povolením lze upravit";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Například pro Ollama nebo LM Studio na jiném Macu. Prázdné pole obnoví obvyklou adresu.";
 "Fenster" = "Okno";
 "Fenster schließen" = "Zavřít okno";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Ptá se jen u akcí rozpoznaných jako možná nebezpečné.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Ptá se před každou změnou souboru a každým přístupem k síti.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Ptá se před změnami a příkazy podle nastavených povolení.";
 "Freigabemodus nicht gewechselt" = "Režim povolení nebyl změněn";
 "Fremder Inhalt" = "Cizí obsah";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Pro modely, jejichž cenu aplikace nezná. Má přednost před každou jinou cenou.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Vymazat nabídku";
 "Löschen" = "Smazat";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Vyberte místo v plánu a zvolte „Komentovat“.";
+"Minimal" = "Minimální";
 "Mit Kommentaren überarbeiten lassen" = "Nechat přepracovat podle komentářů";
 "Modell des Agenten" = "Model agenta";
 "Modell, etwa gpt-x" = "Model, např. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Není v načteném registru";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Není potřeba, Claude běží přes vlastní program";
 "Nicht vorhanden" = "Nenainstalováno";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Přijímá změny souborů v projektu bez dotazu.";
 "Noch kein Modell" = "Zatím žádný model";
 "Noch nicht geladen" = "Zatím nenačteno";
 "Nur fragen" = "Jen dotazy";
+"Nur lesen" = "Jen pro čtení";
 "OpenAI-kompatibel" = "Kompatibilní s OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Pečlivě naplánuje úkol, než ho provede.";
 "Preis eintragen" = "Zadat cenu";
 "Preis entfernen" = "Odstranit cenu";
 "Projekt" = "Projekt";
+"Projekt bearbeiten" = "Upravovat projekt";
 "Regel" = "Pravidlo";
 "Regel entfernen" = "Odstranit pravidlo";
 "Schlüssel" = "Klíč";
@@ -160,6 +170,8 @@
 "Text von {}" = "Text ze zdroje {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "V Nastavení v části „Agent“ zadejte poskytovatele s klíčem a vyberte model, nebo nastavte Ollama či LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Načítání prostředí přihlašovacího shellu…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Neomezený přístup k internetu a ke všem souborům v Macu.";
+"Voller Zugriff" = "Plný přístup";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Co bylo povoleno volbou „Vždy povolit“, pro každý projekt zvlášť. Destruktivní příkazy Gitu se přesto ptají pokaždé.";
 "Wie der Anbieter" = "Podle poskytovatele";
 "im Schlüsselbund" = "v klíčence";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · před přetočením zpět";
 "{}: zurückgesetzt {}" = "{}: obnovení {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mění soubory v projektu a ptá se před zápisem mimo něj nebo přístupem k síti.";
 "Änderungen erlauben" = "Povolit úpravy";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Otevřete složku a uvidíte zde její soubory.";
 "Öffnen" = "Otevřít";

@@ -40,6 +40,7 @@
 "Ausschneiden" = "قص";
 "Auswahl anhängen" = "إرفاق التحديد";
 "Auswahl: {}" = "التحديد: {}";
+"Automatische Prüfung" = "مراجعة تلقائية";
 "Bearbeiten" = "تعديل";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "تكتب الأوامر والتعديلات داخل المشروع فقط، بدون شبكة";
 "Beim Start die zuletzt offenen Ordner öffnen" = "إعادة فتح المجلدات المفتوحة سابقًا عند بدء التشغيل";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "الإعدادات…";
 "Endpunkt entfernen" = "إزالة نقطة النهاية";
 "Endpunkt hinzufügen" = "إضافة نقطة نهاية";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "يسمح بالتغييرات والأوامر الآمنة ويسأل قبل أي إجراء لا رجعة فيه.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "النص البديل – يمكن تعديله قبل السماح";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "مثلًا لـ Ollama أو LM Studio على جهاز Mac آخر. اتركه فارغًا لاستعادة العنوان المعتاد.";
 "Fenster" = "نافذة";
 "Fenster schließen" = "إغلاق النافذة";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "يسأل فقط عن الإجراءات التي يُكتشف أنها قد تكون غير آمنة.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "يسأل قبل كل تغيير في ملف وكل وصول إلى الشبكة.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "يسأل قبل التغييرات والأوامر وفق إعدادات الأذونات.";
 "Freigabemodus nicht gewechselt" = "لم يتغير وضع الأذونات";
 "Fremder Inhalt" = "محتوى خارجي";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "للنماذج التي لا يعرف التطبيق سعرها. له الأولوية على أي سعر آخر.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "مسح القائمة";
 "Löschen" = "حذف";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "حدد موضعًا في الخطة واختر “تعليق”.";
+"Minimal" = "أدنى";
 "Mit Kommentaren überarbeiten lassen" = "مراجعة حسب التعليقات";
 "Modell des Agenten" = "نموذج الوكيل";
 "Modell, etwa gpt-x" = "النموذج، مثل gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "غير موجود في الفهرس المحمَّل";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "غير ضروري، فـClaude يعمل عبر برنامجه الخاص";
 "Nicht vorhanden" = "غير مثبّت";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "يقبل تغييرات الملفات في المشروع دون سؤال.";
 "Noch kein Modell" = "لا يوجد نموذج بعد";
 "Noch nicht geladen" = "لم يتم التحميل بعد";
 "Nur fragen" = "أسئلة فقط";
+"Nur lesen" = "للقراءة فقط";
 "OpenAI-kompatibel" = "متوافق مع OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "يخطط للمهمة بعناية قبل تنفيذها.";
 "Preis eintragen" = "إدخال سعر";
 "Preis entfernen" = "إزالة السعر";
 "Projekt" = "المشروع";
+"Projekt bearbeiten" = "تحرير المشروع";
 "Regel" = "القاعدة";
 "Regel entfernen" = "إزالة القاعدة";
 "Schlüssel" = "المفتاح";
@@ -160,6 +170,8 @@
 "Text von {}" = "نص من {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "في الإعدادات ضمن “الوكيل”، أدخل مزوّدًا مع مفتاحه واختر نموذجًا، أو قم بإعداد Ollama أو LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "جارٍ قراءة بيئة صدفة تسجيل الدخول…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "وصول غير مقيّد إلى الإنترنت وإلى كل ملف على جهاز Mac.";
+"Voller Zugriff" = "وصول كامل";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "ما سمحت به عبر “السماح دائمًا”، لكل مشروع. ومع ذلك تسأل أوامر Git المدمِّرة في كل مرة.";
 "Wie der Anbieter" = "حسب المزوّد";
 "im Schlüsselbund" = "في سلسلة المفاتيح";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "‏{} · قبل الإرجاع";
 "{}: zurückgesetzt {}" = "‏{}: يُعاد التعيين في {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "يغيّر ملفات المشروع ويسأل قبل الكتابة خارجه أو الوصول إلى الشبكة.";
 "Änderungen erlauben" = "السماح بالتعديلات";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "افتح مجلدًا لترى ملفاته هنا.";
 "Öffnen" = "فتح";

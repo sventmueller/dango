@@ -40,6 +40,7 @@
 "Ausschneiden" = "Cắt";
 "Auswahl anhängen" = "Đính kèm lựa chọn";
 "Auswahl: {}" = "Lựa chọn: {}";
+"Automatische Prüfung" = "Tự động xem xét";
 "Bearbeiten" = "Sửa";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Lệnh và chỉnh sửa chỉ ghi trong dự án, không có mạng";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Mở lại các thư mục đã mở trước đó khi khởi động";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Cài đặt…";
 "Endpunkt entfernen" = "Xóa điểm cuối";
 "Endpunkt hinzufügen" = "Thêm điểm cuối";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Cho phép thay đổi và lệnh an toàn, hỏi trước mọi thao tác không thể hoàn tác.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Thay bằng – có thể sửa trước khi cho phép";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Ví dụ cho Ollama hoặc LM Studio trên một máy Mac khác. Để trống để khôi phục địa chỉ thông thường.";
 "Fenster" = "Cửa sổ";
 "Fenster schließen" = "Đóng Cửa sổ";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Chỉ hỏi với các thao tác được nhận diện là có thể không an toàn.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Hỏi trước mỗi thay đổi tệp và mỗi lần truy cập mạng.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Hỏi trước khi thay đổi và chạy lệnh, theo thiết lập quyền.";
 "Freigabemodus nicht gewechselt" = "Chưa đổi chế độ quyền";
 "Fremder Inhalt" = "Nội dung bên ngoài";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Dành cho các mô hình mà ứng dụng không biết giá. Giá này được ưu tiên hơn mọi giá khác.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Xóa menu";
 "Löschen" = "Xóa";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Hãy chọn một đoạn trong kế hoạch rồi chọn “Nhận xét”.";
+"Minimal" = "Tối thiểu";
 "Mit Kommentaren überarbeiten lassen" = "Yêu cầu chỉnh sửa theo nhận xét";
 "Modell des Agenten" = "Mô hình của tác nhân";
 "Modell, etwa gpt-x" = "Mô hình, ví dụ gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Không có trong sổ đăng ký đã tải";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Không cần, Claude chạy qua chương trình riêng của nó";
 "Nicht vorhanden" = "Chưa cài đặt";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Chấp nhận thay đổi tệp trong dự án mà không hỏi.";
 "Noch kein Modell" = "Chưa có mô hình";
 "Noch nicht geladen" = "Chưa tải";
 "Nur fragen" = "Chỉ hỏi";
+"Nur lesen" = "Chỉ đọc";
 "OpenAI-kompatibel" = "Tương thích OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Lên kế hoạch cẩn thận cho tác vụ trước khi thực hiện.";
 "Preis eintragen" = "Nhập giá";
 "Preis entfernen" = "Xóa giá";
 "Projekt" = "Dự án";
+"Projekt bearbeiten" = "Sửa dự án";
 "Regel" = "Quy tắc";
 "Regel entfernen" = "Xóa quy tắc";
 "Schlüssel" = "Khóa";
@@ -160,6 +170,8 @@
 "Text von {}" = "Văn bản từ {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Trong Cài đặt, mục “Tác nhân”, hãy nhập một nhà cung cấp kèm khóa và chọn mô hình, hoặc thiết lập Ollama hay LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Đang đọc môi trường của shell đăng nhập…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Truy cập không giới hạn vào internet và mọi tệp trên máy Mac.";
+"Voller Zugriff" = "Toàn quyền truy cập";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Những gì bạn đã cho phép bằng “Luôn cho phép”, theo từng dự án. Các lệnh git mang tính phá hủy vẫn hỏi mỗi lần.";
 "Wie der Anbieter" = "Theo nhà cung cấp";
 "im Schlüsselbund" = "trong Chuỗi khóa";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · trước khi tua lại";
 "{}: zurückgesetzt {}" = "{}: đặt lại vào {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Thay đổi tệp trong dự án và hỏi trước khi ghi ra ngoài hoặc truy cập mạng.";
 "Änderungen erlauben" = "Cho phép chỉnh sửa";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Mở một thư mục để xem các tệp của thư mục đó ở đây.";
 "Öffnen" = "Mở";

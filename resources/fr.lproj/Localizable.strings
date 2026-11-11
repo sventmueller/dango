@@ -40,6 +40,7 @@
 "Ausschneiden" = "Couper";
 "Auswahl anhängen" = "Joindre la sélection";
 "Auswahl: {}" = "Sélection : {}";
+"Automatische Prüfung" = "Vérification automatique";
 "Bearbeiten" = "Édition";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Les commandes et les modifications n’écrivent que dans le projet, sans réseau";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Rouvrir au démarrage les dossiers ouverts précédemment";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Réglages…";
 "Endpunkt entfernen" = "Supprimer le point de terminaison";
 "Endpunkt hinzufügen" = "Ajouter un point de terminaison";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Autorise les modifications et les commandes sûres, et demande avant toute action irréversible.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Remplacé par – modifiable avant d’autoriser";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Par exemple pour Ollama ou LM Studio sur un autre Mac. Laissez le champ vide pour rétablir l’adresse habituelle.";
 "Fenster" = "Fenêtre";
 "Fenster schließen" = "Fermer la fenêtre";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Ne demande que pour les actions jugées potentiellement dangereuses.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Demande avant chaque modification de fichier et chaque accès réseau.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Demande avant les modifications et les commandes, selon les autorisations.";
 "Freigabemodus nicht gewechselt" = "Mode d’autorisation non modifié";
 "Fremder Inhalt" = "Contenu externe";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Pour les modèles dont l’app ne connaît pas le prix. Il prime sur tout autre prix.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Effacer le menu";
 "Löschen" = "Supprimer";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Sélectionnez un passage du plan et choisissez « Commenter ».";
+"Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "Réviser avec les commentaires";
 "Modell des Agenten" = "Modèle de l’agent";
 "Modell, etwa gpt-x" = "Modèle, par ex. gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Absent du registre chargé";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Inutile, Claude passe par son propre programme";
 "Nicht vorhanden" = "Non installé";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Accepte les modifications de fichiers du projet sans demander.";
 "Noch kein Modell" = "Aucun modèle pour l’instant";
 "Noch nicht geladen" = "Pas encore chargé";
 "Nur fragen" = "Questions uniquement";
+"Nur lesen" = "Lecture seule";
 "OpenAI-kompatibel" = "Compatible OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Planifie soigneusement la tâche avant de l’exécuter.";
 "Preis eintragen" = "Saisir un prix";
 "Preis entfernen" = "Supprimer le prix";
 "Projekt" = "Projet";
+"Projekt bearbeiten" = "Modifier le projet";
 "Regel" = "Règle";
 "Regel entfernen" = "Supprimer la règle";
 "Schlüssel" = "Clé";
@@ -160,6 +170,8 @@
 "Text von {}" = "Texte provenant de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Dans les réglages, sous « Agent », saisissez un fournisseur avec sa clé et choisissez un modèle, ou configurez Ollama ou LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Lecture de l’environnement du shell de connexion…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Accès sans restriction à Internet et à tous les fichiers du Mac.";
+"Voller Zugriff" = "Accès complet";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ce que vous avez autorisé avec « Toujours autoriser », par projet. Les commandes Git destructives demandent quand même confirmation à chaque fois.";
 "Wie der Anbieter" = "Selon le fournisseur";
 "im Schlüsselbund" = "dans le trousseau";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · avant le retour en arrière";
 "{}: zurückgesetzt {}" = "{} : réinitialisation {}";
 "{}: {}" = "{} : {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifie les fichiers du projet et demande avant d’écrire ailleurs ou d’accéder au réseau.";
 "Änderungen erlauben" = "Autoriser les modifications";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Ouvrez un dossier pour voir ses fichiers ici.";
 "Öffnen" = "Ouvrir";

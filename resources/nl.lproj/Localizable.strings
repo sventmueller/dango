@@ -40,6 +40,7 @@
 "Ausschneiden" = "Knip";
 "Auswahl anhängen" = "Voeg selectie toe";
 "Auswahl: {}" = "Selectie: {}";
+"Automatische Prüfung" = "Automatische controle";
 "Bearbeiten" = "Wijzig";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "Commando's en wijzigingen schrijven alleen binnen het project, zonder netwerk";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Open bij het starten de laatst geopende mappen opnieuw";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Instellingen…";
 "Endpunkt entfernen" = "Verwijder endpoint";
 "Endpunkt hinzufügen" = "Voeg endpoint toe";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Staat wijzigingen en veilige opdrachten toe en vraagt vóór iets onomkeerbaars.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Vervangen door – te wijzigen voordat je het toestaat";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Bijvoorbeeld voor Ollama of LM Studio op een andere Mac. Laat het leeg om het gebruikelijke adres te herstellen.";
 "Fenster" = "Venster";
 "Fenster schließen" = "Sluit venster";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Vraagt alleen bij acties die als mogelijk onveilig worden herkend.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Vraagt vóór elke bestandswijziging en elke netwerktoegang.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Vraagt vóór wijzigingen en opdrachten, zoals de toestemmingen bepalen.";
 "Freigabemodus nicht gewechselt" = "Toestemmingsmodus niet gewijzigd";
 "Fremder Inhalt" = "Externe inhoud";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Voor modellen waarvan de app de prijs niet kent. Deze prijs gaat voor elke andere prijs.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Wis menu";
 "Löschen" = "Verwijder";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selecteer een passage in het plan en kies 'Voeg opmerking toe'.";
+"Minimal" = "Minimaal";
 "Mit Kommentaren überarbeiten lassen" = "Laat herzien met opmerkingen";
 "Modell des Agenten" = "Model van de agent";
 "Modell, etwa gpt-x" = "Model, bijvoorbeeld gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Niet in het geladen register";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Niet nodig, Claude draait via zijn eigen programma";
 "Nicht vorhanden" = "Niet geïnstalleerd";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Accepteert bestandswijzigingen in het project zonder te vragen.";
 "Noch kein Modell" = "Nog geen model";
 "Noch nicht geladen" = "Nog niet geladen";
 "Nur fragen" = "Alleen vragen";
+"Nur lesen" = "Alleen lezen";
 "OpenAI-kompatibel" = "Compatibel met OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Plant de taak zorgvuldig voordat deze wordt uitgevoerd.";
 "Preis eintragen" = "Voer prijs in";
 "Preis entfernen" = "Verwijder prijs";
 "Projekt" = "Project";
+"Projekt bearbeiten" = "Project bewerken";
 "Regel" = "Regel";
 "Regel entfernen" = "Verwijder regel";
 "Schlüssel" = "Sleutel";
@@ -160,6 +170,8 @@
 "Text von {}" = "Tekst van {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Voer in Instellingen onder 'Agent' een aanbieder met zijn sleutel in en kies een model, of stel Ollama of LM Studio in.";
 "Umgebung der Login-Shell wird gelesen …" = "Omgeving van de login-shell wordt gelezen…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Onbeperkte toegang tot het internet en elk bestand op de Mac.";
+"Voller Zugriff" = "Volledige toegang";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Wat je met 'Sta altijd toe' hebt toegestaan, per project. Destructieve Git-commando's vragen toch elke keer.";
 "Wie der Anbieter" = "Standaard van aanbieder";
 "im Schlüsselbund" = "in de sleutelhanger";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · voor het terugspoelen";
 "{}: zurückgesetzt {}" = "{}: reset {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Wijzigt bestanden in het project en vraagt vóór schrijven daarbuiten of netwerktoegang.";
 "Änderungen erlauben" = "Sta wijzigingen toe";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Open een map om de bestanden hier te zien.";
 "Öffnen" = "Open";

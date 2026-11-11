@@ -40,6 +40,7 @@
 "Ausschneiden" = "גזירה";
 "Auswahl anhängen" = "צירוף הבחירה";
 "Auswahl: {}" = "בחירה: {}";
+"Automatische Prüfung" = "בדיקה אוטומטית";
 "Bearbeiten" = "עריכה";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "פקודות ושינויים כותבים רק בתוך הפרויקט, ללא רשת";
 "Beim Start die zuletzt offenen Ordner öffnen" = "פתיחת התיקיות שהיו פתוחות לאחרונה, בעת ההפעלה";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "הגדרות…";
 "Endpunkt entfernen" = "הסרת נקודת הקצה";
 "Endpunkt hinzufügen" = "הוספת נקודת קצה";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "מתיר שינויים ופקודות בטוחות ושואל לפני כל דבר בלתי הפיך.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "המלל המחליף – ניתן לעריכה לפני האישור";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "למשל עבור Ollama או LM Studio ב-Mac אחר. השארת השדה ריק משחזרת את כתובת ברירת המחדל.";
 "Fenster" = "חלון";
 "Fenster schließen" = "סגירת החלון";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "שואל רק על פעולות שזוהו כעלולות להיות לא בטוחות.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "שואל לפני כל שינוי בקובץ וכל גישה לרשת.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "שואל לפני שינויים ופקודות, כפי שקובעות ההרשאות.";
 "Freigabemodus nicht gewechselt" = "מצב ההרשאות לא שונה";
 "Fremder Inhalt" = "תוכן חיצוני";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "עבור מודלים שהמחיר שלהם אינו ידוע ליישום. מחיר זה גובר על כל מחיר אחר.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "ניקוי התפריט";
 "Löschen" = "מחיקה";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "יש לסמן קטע בתוכנית ולבחור ״הוספת הערה״.";
+"Minimal" = "מינימלי";
 "Mit Kommentaren überarbeiten lassen" = "בקשת שינויים לפי ההערות";
 "Modell des Agenten" = "המודל של הסוכן";
 "Modell, etwa gpt-x" = "מודל, למשל gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "לא נמצא במרשם שנטען";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "לא נדרש, Claude פועל דרך התוכנה שלו";
 "Nicht vorhanden" = "לא מותקן";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "מקבל שינויים בקבצים בפרויקט בלי לשאול.";
 "Noch kein Modell" = "עדיין אין מודל";
 "Noch nicht geladen" = "עדיין לא נטען";
 "Nur fragen" = "שאלות בלבד";
+"Nur lesen" = "קריאה בלבד";
 "OpenAI-kompatibel" = "תואם OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "מתכנן את המשימה בקפידה לפני שהוא מבצע אותה.";
 "Preis eintragen" = "הזנת מחיר";
 "Preis entfernen" = "הסרת המחיר";
 "Projekt" = "פרויקט";
+"Projekt bearbeiten" = "עריכת הפרויקט";
 "Regel" = "כלל";
 "Regel entfernen" = "הסרת הכלל";
 "Schlüssel" = "מפתח";
@@ -160,6 +170,8 @@
 "Text von {}" = "טקסט מתוך {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "יש להזין בהגדרות, תחת ״סוכן״, ספק עם מפתח ולבחור מודל, או להגדיר את Ollama או LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "הסביבה של מעטפת ההתחברות נקראת…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "גישה בלתי מוגבלת לאינטרנט ולכל קובץ ב-Mac.";
+"Voller Zugriff" = "גישה מלאה";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "מה שאישרת באמצעות ״הרשאה קבועה״, לפי פרויקט. פקודות Git הרסניות מחייבות אישור בכל פעם בכל זאת.";
 "Wie der Anbieter" = "ברירת המחדל של הספק";
 "im Schlüsselbund" = "בצרור המפתחות";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "‏{} · לפני החזרה לאחור";
 "{}: zurückgesetzt {}" = "‏{}: איפוס ב-{}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "משנה קבצים בפרויקט ושואל לפני כתיבה מחוצה לו או גישה לרשת.";
 "Änderungen erlauben" = "שינויים מותרים";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "יש לפתוח תיקיה כדי לראות כאן את הקבצים שלה.";
 "Öffnen" = "פתיחה";

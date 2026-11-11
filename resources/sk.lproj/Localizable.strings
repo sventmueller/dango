@@ -40,6 +40,7 @@
 "Ausschneiden" = "Vystrihnúť";
 "Auswahl anhängen" = "Pripojiť výber";
 "Auswahl: {}" = "Výber: {}";
+"Automatische Prüfung" = "Automatická kontrola";
 "Bearbeiten" = "Upraviť";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "príkazy a zmeny zapisujú iba do projektu, bez siete";
 "Beim Start die zuletzt offenen Ordner öffnen" = "Pri spustení znova otvoriť naposledy otvorené priečinky";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "Nastavenia…";
 "Endpunkt entfernen" = "Odstrániť koncový bod";
 "Endpunkt hinzufügen" = "Pridať koncový bod";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "Povoľuje zmeny a bezpečné príkazy a pýta sa pred nezvratnými akciami.";
 "Ersetzt durch – vor dem Erlauben änderbar" = "Nahradí sa týmto – pred povolením sa dá upraviť";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Napríklad pre Ollama alebo LM Studio na inom Macu. Ak pole necháte prázdne, obnoví sa obvyklá adresa.";
 "Fenster" = "Okno";
 "Fenster schließen" = "Zatvoriť okno";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "Pýta sa len pri akciách rozpoznaných ako možno nebezpečné.";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "Pýta sa pred každou zmenou súboru a každým prístupom k sieti.";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "Pýta sa pred zmenami a príkazmi podľa nastavených povolení.";
 "Freigabemodus nicht gewechselt" = "Režim povolení sa nezmenil";
 "Fremder Inhalt" = "Externý obsah";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Pre modely, ktorých cenu aplikácia nepozná. Má prednosť pred každou inou cenou.";
@@ -124,6 +129,7 @@
 "Liste löschen" = "Vymazať menu";
 "Löschen" = "Vymazať";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Označte miesto v pláne a vyberte „Komentovať“.";
+"Minimal" = "Minimálne";
 "Mit Kommentaren überarbeiten lassen" = "Prepracovať podľa komentárov";
 "Modell des Agenten" = "Model agenta";
 "Modell, etwa gpt-x" = "Model, napríklad gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "Nie je v načítanom registri";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "Nie je potrebné, Claude beží cez vlastný program";
 "Nicht vorhanden" = "Nenainštalované";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "Prijíma zmeny súborov v projekte bez otázky.";
 "Noch kein Modell" = "Zatiaľ žiadny model";
 "Noch nicht geladen" = "Zatiaľ nenačítané";
 "Nur fragen" = "Iba otázky";
+"Nur lesen" = "Iba na čítanie";
 "OpenAI-kompatibel" = "Kompatibilné s OpenAI";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "Starostlivo naplánuje úlohu predtým, ako ju vykoná.";
 "Preis eintragen" = "Zadať cenu";
 "Preis entfernen" = "Odstrániť cenu";
 "Projekt" = "Projekt";
+"Projekt bearbeiten" = "Upravovať projekt";
 "Regel" = "Pravidlo";
 "Regel entfernen" = "Odstrániť pravidlo";
 "Schlüssel" = "Kľúč";
@@ -160,6 +170,8 @@
 "Text von {}" = "Text z {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "V Nastaveniach v časti „Agent“ zadajte poskytovateľa s kľúčom a vyberte model, alebo nastavte Ollama či LM Studio.";
 "Umgebung der Login-Shell wird gelesen …" = "Načítava sa prostredie prihlasovacieho shellu…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "Neobmedzený prístup na internet a ku všetkým súborom v Macu.";
+"Voller Zugriff" = "Plný prístup";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Čo ste povolili pomocou „Vždy povoliť“, pre každý projekt zvlášť. Deštruktívne príkazy Gitu sa aj tak pýtajú zakaždým.";
 "Wie der Anbieter" = "Podľa poskytovateľa";
 "im Schlüsselbund" = "v kľúčenke";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · pred pretočením späť";
 "{}: zurückgesetzt {}" = "{}: obnoví sa o {}";
 "{}: {}" = "{}: {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mení súbory v projekte a pýta sa pred zápisom mimo neho alebo prístupom k sieti.";
 "Änderungen erlauben" = "Povoliť úpravy";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "Otvorte priečinok, aby ste tu videli jeho súbory.";
 "Öffnen" = "Otvoriť";

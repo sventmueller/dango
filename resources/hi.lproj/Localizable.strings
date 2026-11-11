@@ -40,6 +40,7 @@
 "Ausschneiden" = "कट";
 "Auswahl anhängen" = "चयन अटैच करें";
 "Auswahl: {}" = "चयन : {}";
+"Automatische Prüfung" = "स्वचालित समीक्षा";
 "Bearbeiten" = "संपादन";
 "Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk" = "कमांड और बदलाव केवल प्रोजेक्ट में लिखते हैं, नेटवर्क के बिना";
 "Beim Start die zuletzt offenen Ordner öffnen" = "शुरू होने पर पिछली बार खुले फ़ोल्डर खोलें";
@@ -93,10 +94,14 @@
 "Einstellungen …" = "सेटिंग…";
 "Endpunkt entfernen" = "एंडपॉइंट हटाएँ";
 "Endpunkt hinzufügen" = "एंडपॉइंट जोड़ें";
+"Erlaubt Änderungen und sichere Befehle und fragt vor Unumkehrbarem." = "बदलाव और सुरक्षित कमांड की अनुमति देता है और किसी भी अपरिवर्तनीय काम से पहले पूछता है।";
 "Ersetzt durch – vor dem Erlauben änderbar" = "इससे बदला जाएगा – अनुमति देने से पहले संपादित किया जा सकता है";
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "जैसे किसी दूसरे Mac पर Ollama या LM Studio के लिए। खाली छोड़ने पर सामान्य पता फिर से लागू हो जाता है।";
 "Fenster" = "विंडो";
 "Fenster schließen" = "विंडो बंद करें";
+"Fragt nur bei Aktionen, die als möglicherweise unsicher erkannt werden." = "केवल उन कार्रवाइयों के लिए पूछता है जिन्हें संभवतः असुरक्षित पाया गया हो।";
+"Fragt vor jeder Dateiänderung und jedem Netzzugriff." = "हर फ़ाइल बदलाव और हर नेटवर्क एक्सेस से पहले पूछता है।";
+"Fragt vor Änderungen und Befehlen, wie die Freigaben es vorgeben." = "बदलावों और कमांड से पहले, अनुमतियों के अनुसार पूछता है।";
 "Freigabemodus nicht gewechselt" = "अनुमति मोड नहीं बदला";
 "Fremder Inhalt" = "बाहरी कॉन्टेंट";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "उन मॉडलों के लिए जिनकी कीमत ऐप नहीं जानता। यह कीमत अन्य सभी कीमतों से पहले लागू होती है।";
@@ -124,6 +129,7 @@
 "Liste löschen" = "मेनू साफ़ करें";
 "Löschen" = "डिलीट करें";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "योजना में कोई अंश चुनें, फिर “टिप्पणी करें” पर क्लिक करें।";
+"Minimal" = "न्यूनतम";
 "Mit Kommentaren überarbeiten lassen" = "टिप्पणियों के साथ संशोधित करवाएँ";
 "Modell des Agenten" = "एजेंट का मॉडल";
 "Modell, etwa gpt-x" = "मॉडल, जैसे gpt-x";
@@ -142,13 +148,17 @@
 "Nicht im geladenen Register" = "लोड की गई रजिस्ट्री में नहीं";
 "Nicht nötig, Claude läuft über sein eigenes Programm" = "ज़रूरी नहीं, Claude अपने प्रोग्राम से चलता है";
 "Nicht vorhanden" = "इंस्टॉल नहीं है";
+"Nimmt Dateiänderungen im Projekt ohne Rückfrage an." = "प्रोजेक्ट में फ़ाइल बदलाव बिना पूछे स्वीकार करता है।";
 "Noch kein Modell" = "अभी कोई मॉडल नहीं";
 "Noch nicht geladen" = "अभी लोड नहीं हुआ";
 "Nur fragen" = "केवल पूछें";
+"Nur lesen" = "केवल पढ़ना";
 "OpenAI-kompatibel" = "OpenAI-संगत";
+"Plant die Aufgabe sorgfältig, bevor es sie ausführt." = "कार्य को करने से पहले सावधानी से योजना बनाता है।";
 "Preis eintragen" = "कीमत दर्ज करें";
 "Preis entfernen" = "कीमत हटाएँ";
 "Projekt" = "प्रोजेक्ट";
+"Projekt bearbeiten" = "प्रोजेक्ट संपादित करें";
 "Regel" = "नियम";
 "Regel entfernen" = "नियम हटाएँ";
 "Schlüssel" = "कुंजी";
@@ -160,6 +170,8 @@
 "Text von {}" = "{} से टेक्स्ट";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "सेटिंग्ज़ में “एजेंट” के अंतर्गत कुंजी के साथ कोई प्रदाता दर्ज करें और मॉडल चुनें, या Ollama या LM Studio सेट अप करें।";
 "Umgebung der Login-Shell wird gelesen …" = "लॉगिन शेल का एनवायरनमेंट पढ़ा जा रहा है…";
+"Uneingeschränkter Zugriff auf das Internet und jede Datei des Mac." = "इंटरनेट और Mac की हर फ़ाइल तक बिना रोक-टोक एक्सेस।";
+"Voller Zugriff" = "पूर्ण एक्सेस";
 "Was du mit „Immer erlauben“ freigegeben hast, je Projekt. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "“हमेशा अनुमति दें” से दी गई अनुमतियाँ, हर प्रोजेक्ट के लिए अलग। विनाशकारी Git कमांड फिर भी हर बार पूछती हैं।";
 "Wie der Anbieter" = "प्रदाता का डिफ़ॉल्ट";
 "im Schlüsselbund" = "कीचेन में";
@@ -256,6 +268,7 @@
 "{} · vor dem Zurückspulen" = "{} · रिवाइंड से पहले";
 "{}: zurückgesetzt {}" = "{} : रीसेट {}";
 "{}: {}" = "{} : {}";
+"Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "प्रोजेक्ट की फ़ाइलें बदलता है और उसके बाहर लिखने या नेटवर्क एक्सेस से पहले पूछता है।";
 "Änderungen erlauben" = "बदलावों की अनुमति दें";
 "Öffne einen Ordner, um seine Dateien hier zu sehen." = "फ़ाइलें यहाँ देखने के लिए कोई फ़ोल्डर खोलें।";
 "Öffnen" = "खोलें";
