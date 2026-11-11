@@ -928,6 +928,14 @@ impl WindowController {
         }
     }
 
+    /// Fills the symbol of the document `id` with `colors`, running across it.
+    pub fn set_tab_gradient(&self, id: isize, colors: Vec<Retained<NSColor>>) {
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_gradient(colors);
+            tab.refresh();
+        }
+    }
+
     /// Runs `open`, which opens a document, so that the document shows beside the document `anchor` in its tab.
     pub fn open_beside(&self, anchor: isize, open: impl FnOnce()) {
         let before = self.ivars().beside.replace(Some(anchor));

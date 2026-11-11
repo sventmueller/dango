@@ -338,6 +338,9 @@ pub fn open(tab: &AgentTab, id: u64) {
     let title = tf("Plan · {}", &[&super::super::format::first_line(&tab.title(), 32)]);
     let tab_id = controller.add_tab(TabKind::Plan, Some(key), &title, view);
     controller.set_tab_tint(tab_id, &tab.agent.colour());
+    if let Some(colors) = tab.agent.gradient() {
+        controller.set_tab_gradient(tab_id, colors);
+    }
     focus(&controller, tab.key, id);
 }
 

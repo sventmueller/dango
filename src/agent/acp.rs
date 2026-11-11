@@ -135,11 +135,15 @@ impl Agent {
 
     /// Its own colour, if it has one.
     fn rgb(&self) -> Option<splat_markdown::palette::Rgb> {
-        match self {
-            Agent::Claude => Some(super::style::TERRACOTTA),
-            Agent::Own => None,
+        brand(self.id()).or_else(|| match self {
             Agent::Acp(agent) => agent.colour.as_deref().and_then(rgb_of),
-        }
+            Agent::Claude | Agent::Own => None,
+        })
+    }
+
+    /// The colours its mark runs through in the tab bar, for an agent that shows more than one.
+    pub fn gradient(&self) -> Option<Vec<Retained<NSColor>>> {
+        gradient_of(self.id())
     }
 
     pub fn is_acp(&self) -> bool {
@@ -156,6 +160,9 @@ pub fn cli_colour(name: &str) -> Retained<NSColor> {
     if name == "claude" {
         return Agent::Claude.colour();
     }
+    if let Some(rgb) = brand(name) {
+        return super::style::accent(rgb);
+    }
     AcpAgent::presets()
         .into_iter()
         .find(|agent| {
@@ -163,6 +170,36 @@ pub fn cli_colour(name: &str) -> Retained<NSColor> {
                 .is_some_and(|p| p.cli == Some(name) || p.on_path.is_some_and(|(program, _)| program == name))
         })
         .map_or_else(NSColor::controlAccentColor, |agent| Agent::Acp(agent).colour())
+}
+
+/// The colours the CLI `name`'s mark runs through in the tab bar, for one that shows more than one.
+pub fn cli_gradient(name: &str) -> Option<Vec<Retained<NSColor>>> {
+    gradient_of(name)
+}
+
+/// The colour the owner gave an agent the app ships with, by the agent's or its CLI's id (E66).
+fn brand(id: &str) -> Option<splat_markdown::palette::Rgb> {
+    use splat_markdown::palette::Rgb;
+    match id {
+        "claude" | "claude-acp" => Some(super::style::TERRACOTTA),
+        "codex-acp" | "codex" => Some(Rgb(0x1F, 0x6F, 0xEB)),
+        "opencode" => Some(Rgb(0x3A, 0x3A, 0x3C)),
+        "gemini" | "antigravity-acp" | "agy" => Some(GOOGLE[0]),
+        own if own == ide_agent::session::AGENT_ID => Some(Rgb(0x2D, 0xA4, 0x4E)),
+        _ => None,
+    }
+}
+
+/// Google's colours, which its agents show in a gradient instead of one colour.
+const GOOGLE: [splat_markdown::palette::Rgb; 3] = [
+    splat_markdown::palette::Rgb(0x42, 0x85, 0xF4),
+    splat_markdown::palette::Rgb(0x9B, 0x72, 0xCB),
+    splat_markdown::palette::Rgb(0xD9, 0x65, 0x70),
+];
+
+fn gradient_of(id: &str) -> Option<Vec<Retained<NSColor>>> {
+    matches!(id, "gemini" | "antigravity-acp" | "agy")
+        .then(|| GOOGLE.iter().map(|rgb| super::style::accent(*rgb)).collect())
 }
 
 /// The name shown for the agent a thread names, as the session list reads it.
@@ -794,5 +831,26 @@ impl AgentTab {
             .into_iter()
             .map(|(title, _, _)| title.to_string())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod colour_tests {
+    use super::*;
+
+    #[test]
+    fn every_shipped_agent_has_the_colour_the_owner_gave_it() {
+        assert_eq!(brand("claude"), Some(super::super::style::TERRACOTTA));
+        assert_eq!(brand("codex-acp"), brand("codex"), "the agent and its CLI look alike");
+        assert!(brand("opencode").is_some());
+        assert!(brand(ide_agent::session::AGENT_ID).is_some());
+        assert_eq!(brand("someone-else"), None);
+    }
+
+    #[test]
+    fn only_googles_agents_run_through_their_colours() {
+        assert!(gradient_of("antigravity-acp").is_some_and(|colors| colors.len() == 3));
+        assert!(gradient_of("agy").is_some());
+        assert!(gradient_of("codex-acp").is_none());
     }
 }

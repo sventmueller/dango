@@ -404,6 +404,9 @@ impl AgentTab {
         let id = controller.add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view);
         self.tab_id.set(id);
         controller.set_tab_tint(id, &self.agent.colour());
+        if let Some(colors) = self.agent.gradient() {
+            controller.set_tab_gradient(id, colors);
+        }
         self.header.set_agent(self.agent.name());
         self.composer.set_agent(self.agent.name());
         self.refresh();

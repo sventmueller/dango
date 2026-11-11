@@ -92,6 +92,8 @@ pub struct Document {
     dirty: Cell<bool>,
     status: RefCell<Option<Retained<NSColor>>>,
     tint: RefCell<Option<Retained<NSColor>>>,
+    /// The colours the symbol runs through instead of its tint, as Google's agents show theirs.
+    gradient: RefCell<Option<Vec<Retained<NSColor>>>>,
     /// The view in the document that had the keyboard focus last, which gets it back when the document is activated.
     focus: RefCell<Option<Weak<NSView>>>,
 }
@@ -144,6 +146,7 @@ impl Document {
             dirty: Cell::new(false),
             status: RefCell::new(None),
             tint: RefCell::new(None),
+            gradient: RefCell::new(None),
             focus: RefCell::new(None),
         })
     }
@@ -183,6 +186,11 @@ impl Document {
         self.name_badge();
     }
 
+    pub fn set_gradient(&self, colors: Vec<Retained<NSColor>>) {
+        *self.gradient.borrow_mut() = Some(colors);
+        self.name_badge();
+    }
+
     /// The small picture before the title of its tab: a file's icon, else a symbol of what it shows in the colour of
     /// its agent or worktree.
     fn icon(&self) -> Option<Retained<NSImage>> {
@@ -200,11 +208,15 @@ impl Document {
             }
             kind => kind.symbol(),
         };
+        let cli = self.title().split_whitespace().next().unwrap_or_default().to_string();
+        let gradient = self.gradient.borrow().clone().or_else(|| {
+            (self.kind == TabKind::Cli)
+                .then(|| crate::agent::cli_gradient(&cli))
+                .flatten()
+        });
         let color = match (tint, self.kind) {
             (Some(tint), _) => tint,
-            (None, TabKind::Cli) => {
-                crate::agent::cli_colour(self.title().split_whitespace().next().unwrap_or_default())
-            }
+            (None, TabKind::Cli) => crate::agent::cli_colour(&cli),
             (None, TabKind::Agent | TabKind::Plan) => crate::agent::Agent::Claude.colour(),
             (None, _) => NSColor::secondaryLabelColor(),
         };
@@ -214,7 +226,11 @@ impl Document {
             unsafe { objc2_app_kit::NSFontWeightRegular },
         )
         .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(&color));
-        symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
+        let image = symbol(name, "")?.imageWithSymbolConfiguration(&configuration)?;
+        Some(match gradient {
+            Some(colors) => crate::util::gradient(&image, &colors),
+            None => image,
+        })
     }
 
     /// Whether `view` is the document's or inside it.

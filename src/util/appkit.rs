@@ -74,6 +74,30 @@ pub fn tinted(image: &NSImage, color: &NSColor) -> Retained<NSImage> {
     NSImage::imageWithSize_flipped_drawingHandler(size, false, &draw)
 }
 
+/// `image`, a template, filled with `colors` running across it from its leading top to its trailing bottom.
+pub fn gradient(image: &NSImage, colors: &[Retained<NSColor>]) -> Retained<NSImage> {
+    let image = image.retain();
+    let colors = objc2_foundation::NSArray::from_retained_slice(colors);
+    let size = image.size();
+    let draw = block2::RcBlock::new(move |rect: NSRect| -> Bool {
+        super::guarded(Bool::NO, || {
+            image.drawInRect(rect);
+            let Some(fill) = objc2_app_kit::NSGradient::initWithColors(
+                <objc2_app_kit::NSGradient as objc2::AnyThread>::alloc(),
+                &colors,
+            ) else {
+                return Bool::YES;
+            };
+            if let Some(context) = objc2_app_kit::NSGraphicsContext::currentContext() {
+                context.setCompositingOperation(objc2_app_kit::NSCompositingOperation::SourceAtop);
+            }
+            fill.drawInRect_angle(rect, -45.0);
+            Bool::YES
+        })
+    });
+    NSImage::imageWithSize_flipped_drawingHandler(size, false, &draw)
+}
+
 /// A borderless button titled `title` that sends `action` along the responder chain, or to `target` when given.
 pub fn borderless_button(
     mtm: MainThreadMarker,
