@@ -269,16 +269,9 @@ impl Session {
             let mut state = self.shared.lock_state();
             let mut updates = Vec::new();
             if state.thread.title().is_empty() {
-                let title: String = message
-                    .text
-                    .lines()
-                    .next()
-                    .unwrap_or_default()
-                    .chars()
-                    .take(80)
-                    .collect();
-                if !title.trim().is_empty() {
-                    updates.push(Update::Title(title.trim().to_string()));
+                let title = ide_thread::title_from(&message.text);
+                if !title.is_empty() {
+                    updates.push(Update::Title(title));
                 }
             }
             updates.extend(state.mapper.user_message(message, &uuid, SystemTime::now()));

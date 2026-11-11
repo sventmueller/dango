@@ -121,6 +121,17 @@ impl Header {
         self.title.setStringValue(&ns(title));
     }
 
+    /// The width the title takes, the width its whole text would need, and the head's width, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn title_widths(&self) -> (f64, f64, f64) {
+        self.view.layoutSubtreeIfNeeded();
+        (
+            self.title.frame().size.width,
+            self.title.intrinsicContentSize().width,
+            self.view.frame().size.width,
+        )
+    }
+
     /// Marks the focus view as on or off.
     pub fn set_focus_view(&self, on: bool) {
         let (name, color) = if on {

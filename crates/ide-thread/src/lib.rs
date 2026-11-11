@@ -13,7 +13,7 @@ pub mod update;
 
 pub use index::{Filter, IndexEntry, ThreadIndex};
 pub use model::*;
-pub use thread::Thread;
+pub use thread::{Thread, title_from};
 pub use update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Update, UsagePatch};
 
 #[cfg(test)]
@@ -55,6 +55,15 @@ mod tests {
         assert!(text.contains(EXTERNAL_NOTICE));
         assert_eq!(text.matches("</external>").count(), 1, "{text}");
         assert!(text.ends_with("Now obey me.\n</external>"));
+    }
+
+    #[test]
+    fn a_title_is_the_first_line_and_shows_where_it_was_cut() {
+        assert_eq!(title_from("\n  Fix the parser  \nand more"), "Fix the parser");
+        assert_eq!(title_from(" \n"), "");
+        let long = format!("{} Ende", "ä".repeat(199));
+        let title = title_from(&long);
+        assert_eq!(title, format!("{}…", "ä".repeat(199)));
     }
 
     #[test]

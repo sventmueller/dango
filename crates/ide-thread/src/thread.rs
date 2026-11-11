@@ -11,6 +11,21 @@ use crate::model::{
 };
 use crate::update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Update, UsagePatch};
 
+/// The longest title a first message gives; the views cut it further to their width.
+const TITLE_LIMIT: usize = 200;
+
+/// A thread's title from the first message `text`: its first line that is not blank, with an ellipsis when cut at
+/// [`TITLE_LIMIT`] characters; empty for a message without text.
+pub fn title_from(text: &str) -> String {
+    let line = text.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().trim();
+    let mut title: String = line.chars().take(TITLE_LIMIT).collect();
+    if title.len() < line.len() {
+        title.truncate(title.trim_end().len());
+        title.push('…');
+    }
+    title
+}
+
 /// A conversation with one agent: its head, its timeline, its subagents and its background work.
 ///
 /// Entries and lookup indexes are shared; copying a thread copies the entry pointers but no index keys. The UI

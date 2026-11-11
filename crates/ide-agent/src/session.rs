@@ -286,7 +286,7 @@ impl Session {
             entry: EntryKind::UserMessage(message.clone()),
         }];
         if self.shared.lock().thread.title().is_empty() {
-            updates.push(Update::Title(title_of(&message.text)));
+            updates.push(Update::Title(ide_thread::title_from(&message.text)));
         }
         self.shared.apply(updates);
         let mut content = vec![Block::text(&text)];
@@ -424,16 +424,6 @@ fn compact_command(text: &str) -> Option<Option<String>> {
     }
     let focus = rest.trim();
     Some((!focus.is_empty()).then(|| focus.to_string()))
-}
-
-/// A title from the first line of the first message.
-fn title_of(text: &str) -> String {
-    let line = text.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().trim();
-    let mut title: String = line.chars().take(60).collect();
-    if title.len() < line.len() {
-        title.push('…');
-    }
-    title
 }
 
 /// The message as the model reads it: the text, then the files and selections attached to it.

@@ -992,7 +992,9 @@ fn self_title(state: &State, agent: &Agent) -> String {
             .entries(&ide_thread::Lane::Main)
             .iter()
             .find_map(|e| match &e.kind {
-                ide_thread::EntryKind::UserMessage(m) => Some(super::format::first_line(&m.text, 60)),
+                ide_thread::EntryKind::UserMessage(m) => {
+                    Some(ide_thread::title_from(&m.text)).filter(|t| !t.is_empty())
+                }
                 _ => None,
             })
     };
@@ -1075,6 +1077,14 @@ impl AgentTab {
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
         }
+    }
+
+    /// Shows `title` in the head for a moment and measures it as [`Header::title_widths`] does.
+    pub fn title_widths(&self, title: &str) -> (f64, f64, f64) {
+        self.header.set_title(title);
+        let widths = self.header.title_widths();
+        self.refresh();
+        widths
     }
 
     pub fn inspect(&self) -> Inspection {

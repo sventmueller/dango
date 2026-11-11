@@ -219,6 +219,7 @@ pub fn run() {
         format!("{before:?} → {after:?}"),
     );
     follows_window(&controller, &tab);
+    long_title(&tab);
     let seen = tab.inspect();
     check(
         "an AI tab opens empty with its composer",
@@ -347,6 +348,17 @@ fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce
         }
         then();
     });
+}
+
+/// A title wider than the head takes the room up to the buttons and is cut there, not after a count of characters.
+fn long_title(tab: &AgentTab) {
+    let title = ide_thread::title_from(&"könnten wir hier eine Vorschau einbauen ".repeat(8));
+    let (shown, whole, head) = tab.title_widths(&title);
+    check(
+        "a long session title fills the head up to its buttons and is cut at its width",
+        title.ends_with('…') && shown < whole && shown > head * 0.5,
+        format!("title {shown:.0} of {whole:.0} pt in a head of {head:.0} pt"),
+    );
 }
 
 fn same(a: f64, b: f64) -> bool {
