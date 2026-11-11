@@ -1,22 +1,31 @@
-//! The folder tree's outline view, as VS Code's explorer lays it out: a folder's chevron stands where a file's icon
-//! does, so names line up whatever a row is, and the outline view's own disclosure triangle is gone.
+//! The outline view of the sidebar's lists, the folder tree and the AI panel's, as VS Code lays them out: a row that
+//! opens shows a chevron where another row shows its icon, so names line up whatever a row is, and the outline view's
+//! own disclosure triangle is gone.
+
+use std::cell::Cell;
 
 use objc2::rc::Retained;
 use objc2::runtime::NSObjectProtocol;
-use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSColor, NSImage, NSImageSymbolConfiguration, NSOutlineView, NSUserInterfaceLayoutDirection};
 use objc2_foundation::{NSRect, NSSize};
 
-/// Where a top-level row's icon begins.
+/// Where a top-level row of the folder tree begins.
 const LEADING: f64 = 12.0;
+
+pub struct OutlineIvars {
+    /// Where a top-level row begins.
+    leading: Cell<f64>,
+}
 /// The size of a folder's chevron.
 const CHEVRON_POINTS: f64 = 10.0;
 
 define_class!(
-    // SAFETY: NSOutlineView has no subclassing requirements and `FileOutline` has no ivars.
+    // SAFETY: NSOutlineView has no subclassing requirements and `FileOutline` does not implement Drop.
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEFileOutline"]
+    #[ivars = OutlineIvars]
     pub struct FileOutline;
 
     unsafe impl NSObjectProtocol for FileOutline {}
@@ -37,7 +46,7 @@ define_class!(
             if column != 0 {
                 return frame;
             }
-            let indent = LEADING + self.levelForRow(row).max(0) as f64 * self.indentationPerLevel();
+            let indent = self.ivars().leading.get() + self.levelForRow(row).max(0) as f64 * self.indentationPerLevel();
             let (left, right) = if self.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft {
                 (frame.origin.x, self.bounds().size.width - indent)
             } else {
@@ -52,9 +61,18 @@ define_class!(
 );
 
 impl FileOutline {
+    /// The folder tree's.
     pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<FileOutline> {
+        FileOutline::with_leading(mtm, frame, LEADING)
+    }
+
+    /// One whose top-level rows begin `leading` from its edge.
+    pub fn with_leading(mtm: MainThreadMarker, frame: NSRect, leading: f64) -> Retained<FileOutline> {
+        let this = Self::alloc(mtm).set_ivars(OutlineIvars {
+            leading: Cell::new(leading),
+        });
         // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
-        unsafe { msg_send![Self::alloc(mtm), initWithFrame: frame] }
+        unsafe { msg_send![super(this), initWithFrame: frame] }
     }
 }
 

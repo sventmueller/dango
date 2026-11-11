@@ -512,6 +512,18 @@ fn panel(root: PathBuf, key: u64) {
             .any(|r| r.contains("list files") || r.contains("30-tick")),
         running.join(" | "),
     );
+    let edges = crate::agent_panel::edges(&controller);
+    check(
+        "the AI panel's lists begin where its section titles do, as VS Code's do",
+        edges.as_ref().is_some_and(|(title, rows)| {
+            rows.iter().any(|(level, _)| *level == 0)
+                && rows
+                    .iter()
+                    .filter(|(level, _)| *level == 0)
+                    .all(|(_, x)| (x - title).abs() < 3.0)
+        }),
+        format!("{edges:?}"),
+    );
     let usage = seen.map(|s| s.usage.join(" | ")).unwrap_or_default();
     check(
         "the AI panel shows the plan's usage from get_usage",

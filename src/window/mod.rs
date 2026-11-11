@@ -4,7 +4,7 @@
 mod activity_bar;
 mod chooser;
 mod document_area;
-mod file_outline;
+pub(crate) mod file_outline;
 mod files;
 mod files_header;
 mod frame;

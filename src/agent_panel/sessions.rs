@@ -428,11 +428,17 @@ define_class!(
 
     unsafe impl NSOutlineViewDelegate for Source {
         #[unsafe(method_id(outlineView:viewForTableColumn:item:))]
-        fn view_for(&self, _view: &NSOutlineView, _column: Option<&NSTableColumn>, item: &AnyObject) -> Option<Retained<NSView>> {
+        fn view_for(&self, view: &NSOutlineView, _column: Option<&NSTableColumn>, item: &AnyObject) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let id = id_of(item)?;
                 let node = self.ivars().model.borrow().nodes.get(&id)?.clone();
-                Some(self.cell(&node, &id))
+                // SAFETY: The item came from this outline view, which knows it.
+                let (opens, open) = unsafe { (view.isExpandable(Some(item)), view.isItemExpanded(Some(item))) };
+                let cell = self.cell(&node, &id, opens);
+                if opens {
+                    rows::add_chevron(self.mtm(), &cell, open);
+                }
+                Some(cell)
             })
         }
 
@@ -442,6 +448,7 @@ define_class!(
                 if let Some(id) = notified(notification) {
                     self.ivars().collapsed.borrow_mut().insert(id);
                 }
+                turn_chevron(notification);
             });
         }
 
@@ -451,6 +458,7 @@ define_class!(
                 if let Some(id) = notified(notification) {
                     self.ivars().collapsed.borrow_mut().remove(&id);
                 }
+                turn_chevron(notification);
             });
         }
     }
@@ -467,7 +475,23 @@ define_class!(
         fn open(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 let Some(view) = sender.and_then(|s| s.downcast_ref::<NSOutlineView>()) else { return };
-                let Some(item) = view.itemAtRow(view.clickedRow()) else { return };
+                let row = view.clickedRow();
+                let Some(item) = view.itemAtRow(row) else { return };
+                let group = id_of(&item)
+                    .is_some_and(|id| matches!(self.ivars().model.borrow().nodes.get(&id), Some(Node::Group { .. })));
+                // SAFETY: The item came from this outline view, which knows it.
+                let opens = unsafe { view.isExpandable(Some(&item)) };
+                if opens && (group || on_chevron(view, row)) {
+                    // SAFETY: As above.
+                    unsafe {
+                        if view.isItemExpanded(Some(&item)) {
+                            view.collapseItem(Some(&item));
+                        } else {
+                            view.expandItem(Some(&item));
+                        }
+                    }
+                    return;
+                }
                 if let Some(id) = id_of(&item) {
                     self.open_id(&id);
                 }
@@ -535,6 +559,40 @@ fn id_of(item: &AnyObject) -> Option<String> {
     item.downcast_ref::<NSString>().map(|s| s.to_string())
 }
 
+/// Where a top-level row begins: its content, set in by the row's own inset, then starts where the text of the
+/// section titles above does.
+const ROW_LEADING: f64 = -2.0;
+
+/// How far into a row a click still hits its chevron.
+const CHEVRON_HIT: f64 = 16.0;
+
+/// Whether the click on `row` landed on its chevron, at the start of the row.
+fn on_chevron(view: &NSOutlineView, row: isize) -> bool {
+    let Some(event) = objc2_app_kit::NSApplication::sharedApplication(view.mtm()).currentEvent() else {
+        return false;
+    };
+    let at = view.convertPoint_fromView(event.locationInWindow(), None);
+    let start = view.frameOfCellAtColumn_row(0, row).origin.x;
+    at.x >= start && at.x < start + CHEVRON_HIT
+}
+
+/// Draws the row of the item that opened or closed again, so its chevron points the new way.
+fn turn_chevron(notification: &objc2_foundation::NSNotification) {
+    let Some(view) = notification
+        .object()
+        .and_then(|object| object.downcast::<NSOutlineView>().ok())
+    else {
+        return;
+    };
+    let item = notification
+        .userInfo()
+        .and_then(|info| info.objectForKey(&ns("NSObject")));
+    if let Some(item) = item {
+        // SAFETY: The item is the one the outline view just opened or closed.
+        unsafe { view.reloadItem(Some(&item)) };
+    }
+}
+
 fn notified(notification: &objc2_foundation::NSNotification) -> Option<String> {
     let info = notification.userInfo()?;
     let item = info.objectForKey(&ns("NSObject"))?;
@@ -553,7 +611,11 @@ pub fn outline(mtm: MainThreadMarker, kind: Kind) -> (Retained<NSOutlineView>, R
     };
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
     let source: Retained<Source> = unsafe { msg_send![super(Source::alloc(mtm).set_ivars(ivars)), init] };
-    let view = NSOutlineView::new(mtm);
+    let view: Retained<NSOutlineView> = Retained::into_super(crate::window::file_outline::FileOutline::with_leading(
+        mtm,
+        objc2_foundation::NSRect::ZERO,
+        ROW_LEADING,
+    ));
     let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("row"));
     view.addTableColumn(&column);
     // SAFETY: The column was just added to this outline view, which keeps it.
@@ -628,7 +690,8 @@ impl Source {
         }
     }
 
-    fn cell(&self, node: &Node, id: &str) -> Retained<NSView> {
+    /// The row of `node`; a group that opens shows its chevron in place of its symbol.
+    fn cell(&self, node: &Node, id: &str, opens: bool) -> Retained<NSView> {
         let mtm = self.mtm();
         match node {
             Node::Group { name, fixed } => {
@@ -637,7 +700,7 @@ impl Source {
                 rows::cell(
                     mtm,
                     &Look {
-                        symbol: Some((symbol, 10.0, NSColor::secondaryLabelColor())),
+                        symbol: (!opens).then(|| (symbol, 10.0, NSColor::secondaryLabelColor())),
                         title: name,
                         bold: true,
                         dim: true,

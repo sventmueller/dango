@@ -404,6 +404,36 @@ pub struct Inspection {
     pub new_session: Vec<String>,
 }
 
+/// In the panel's coordinates: where the first section's title begins, and where the content of each row of the two
+/// lists begins, with the row's level.
+#[cfg(feature = "selftest")]
+pub fn edges(controller: &WindowController) -> Option<(f64, Vec<(isize, f64)>)> {
+    let panel = panel_of(controller)?;
+    panel.reload();
+    panel.view.layoutSubtreeIfNeeded();
+    let x = |view: &NSView| view.convertRect_toView(view.bounds(), Some(&panel.view)).origin.x;
+    let head = panel.view.arrangedSubviews().firstObject()?;
+    let label = head.downcast_ref::<NSStackView>()?.arrangedSubviews().firstObject()?;
+    let mut rows = Vec::new();
+    for outline in [&panel.sessions, &panel.running] {
+        for row in 0..outline.numberOfRows() {
+            let Some(cell) = outline.viewAtColumn_row_makeIfNecessary(0, row, true) else {
+                continue;
+            };
+            cell.layoutSubtreeIfNeeded();
+            let first = cell
+                .subviews()
+                .iter()
+                .find_map(|view| view.downcast::<NSStackView>().ok())
+                .and_then(|stack| stack.arrangedSubviews().firstObject());
+            if let Some(first) = first {
+                rows.push((outline.levelForRow(row), x(&first)));
+            }
+        }
+    }
+    Some((x(&label), rows))
+}
+
 #[cfg(feature = "selftest")]
 pub fn inspect(controller: &WindowController) -> Option<Inspection> {
     let panel = panel_of(controller)?;

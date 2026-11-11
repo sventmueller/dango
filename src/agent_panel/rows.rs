@@ -78,6 +78,22 @@ pub struct Look<'a> {
     pub badge: Option<(&'a str, Retained<NSColor>)>,
 }
 
+/// Puts a chevron in front of the row `cell` made, pointing down when its item is open, where a row that does not
+/// open shows its symbol.
+pub fn add_chevron(mtm: MainThreadMarker, cell: &NSView, open: bool) {
+    let Some(stack) = cell
+        .subviews()
+        .iter()
+        .find_map(|view| view.downcast::<objc2_app_kit::NSStackView>().ok())
+    else {
+        return;
+    };
+    let view = NSImageView::new(mtm);
+    view.setImage(crate::window::file_outline::chevron(open).as_deref());
+    view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
+    stack.insertArrangedSubview_atIndex(&view, 0);
+}
+
 /// A row of the panel's lists.
 pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
