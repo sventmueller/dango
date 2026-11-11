@@ -5,10 +5,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSBox, NSButton, NSCellImagePosition, NSColor, NSDragOperation, NSDraggingInfo, NSEvent,
-    NSEventModifierFlags, NSLayoutConstraint, NSPasteboard, NSPasteboardType, NSPasteboardTypePNG,
-    NSPasteboardTypeString, NSPasteboardTypeTIFF, NSScrollView, NSStackView, NSTextField, NSTextInputClient,
-    NSTextView, NSView,
+    NSAccessibility, NSBezelStyle, NSBox, NSButton, NSCellImagePosition, NSColor, NSControlBorderShape,
+    NSDragOperation, NSDraggingInfo, NSEvent, NSEventModifierFlags, NSLayoutConstraint, NSPasteboard, NSPasteboardType,
+    NSPasteboardTypePNG, NSPasteboardTypeString, NSPasteboardTypeTIFF, NSScrollView, NSStackView, NSTextField,
+    NSTextInputClient, NSTextView, NSTintProminence, NSView,
 };
 use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
@@ -148,7 +148,6 @@ pub struct Composer {
     pub model: Retained<NSButton>,
     pub mode: Retained<NSButton>,
     pub sandbox: Retained<NSButton>,
-    pub send_box: Retained<NSBox>,
     pub send: Retained<NSButton>,
     /// The microphone, which dictates into the text view.
     #[cfg(feature = "dictation")]
@@ -259,7 +258,7 @@ impl Composer {
                 &spacer,
                 &parts.mode,
                 &parts.sandbox,
-                &parts.send_box,
+                &parts.send,
             ],
         );
         let card = card(mtm, &ui::column(mtm, 8.0, &[&chips, &editor, &footer]));
@@ -273,7 +272,6 @@ impl Composer {
             model: parts.model,
             mode: parts.mode,
             sandbox: parts.sandbox,
-            send_box: parts.send_box,
             send: parts.send,
             #[cfg(feature = "dictation")]
             mic,
@@ -339,21 +337,25 @@ impl Composer {
 
     /// The send button as a stop button while a turn runs, dimmed when there is nothing to send.
     pub fn show_running(&self, running: bool, can_send: bool) {
+        let glass = has_glass(&self.send);
+        let (send, stop) = send_symbols(glass);
         let (name, label) = if running && !can_send {
-            ("stop.fill", t("Stoppen"))
+            (stop, t("Stoppen"))
         } else {
-            ("arrow.up", t("Senden"))
+            (send, t("Senden"))
         };
         self.send.setImage(symbol(name, label).as_deref());
         self.send.setToolTip(Some(&ns(label)));
         crate::util::set_label(&self.send, Some(label));
         let active = running || can_send;
-        let fill = if active {
-            NSColor::controlAccentColor()
-        } else {
-            NSColor::quaternaryLabelColor()
-        };
-        self.send_box.setFillColor(&fill);
+        if !glass {
+            let tint = if active {
+                NSColor::controlAccentColor()
+            } else {
+                NSColor::tertiaryLabelColor()
+            };
+            self.send.setContentTintColor(Some(&tint));
+        }
         self.send.setEnabled(active);
     }
 
@@ -461,7 +463,6 @@ struct Footer {
     model: Retained<NSButton>,
     mode: Retained<NSButton>,
     sandbox: Retained<NSButton>,
-    send_box: Retained<NSBox>,
     send: Retained<NSButton>,
 }
 
@@ -480,35 +481,55 @@ impl Footer {
         let model = pill(mtm, target, sel!(ideAgentModelMenu:), t("Modell und Denktiefe"));
         let mode = pill(mtm, target, sel!(ideAgentModeMenu:), t("Freigabemodus"));
         let sandbox = ui::symbol_button(mtm, "shield", t("Sandbox"), 12.0, target, sel!(ideAgentSandbox:), 0);
-        let send = ui::symbol_button(mtm, "arrow.up", t("Senden"), 12.0, target, sel!(ideAgentSend:), 0);
-        send.setContentTintColor(Some(&NSColor::alternateSelectedControlTextColor()));
-        send.setSymbolConfiguration(Some(
-            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                12.0,
-                constant!(objc2_app_kit::NSFontWeightBold),
-            ),
-        ));
-        let send_box = ui::framed(
-            mtm,
-            &send,
-            &NSColor::clearColor(),
-            Some(&NSColor::controlAccentColor()),
-            6.0,
-            ui::insets(0.0, 0.0, 0.0, 0.0),
-        );
-        send_box.setBorderWidth(0.0);
-        ui::fixed_width(&send_box, 26.0);
-        ui::fixed_height(&send_box, 26.0);
+        let send = send_button(mtm, target);
         Footer {
             attach,
             slash,
             model,
             mode,
             sandbox,
-            send_box,
             send,
         }
     }
+}
+
+/// Whether AppKit draws `button` as Liquid Glass, which it can from macOS 26 on.
+fn has_glass(button: &NSButton) -> bool {
+    button.respondsToSelector(sel!(setTintProminence:))
+}
+
+/// The symbols of the send button for sending and stopping: bare on a glass button, which draws its own circle,
+/// else filled circles.
+fn send_symbols(glass: bool) -> (&'static str, &'static str) {
+    if glass {
+        ("arrow.up", "stop.fill")
+    } else {
+        ("arrow.up.circle.fill", "stop.circle.fill")
+    }
+}
+
+/// The round send button: a glass button tinted in the accent colour, or a filled circle symbol before macOS 26.
+fn send_button(mtm: MainThreadMarker, target: &AgentTarget) -> Retained<NSButton> {
+    let send = ui::symbol_button(mtm, "arrow.up", t("Senden"), 12.0, target, sel!(ideAgentSend:), 0);
+    let glass = has_glass(&send);
+    send.setImage(symbol(send_symbols(glass).0, t("Senden")).as_deref());
+    let (points, weight) = if glass {
+        send.setBordered(true);
+        send.setBezelStyle(NSBezelStyle::Glass);
+        send.setBorderShape(NSControlBorderShape::Circle);
+        send.setTintProminence(NSTintProminence::Primary);
+        send.setContentTintColor(None);
+        (12.0, constant!(objc2_app_kit::NSFontWeightBold))
+    } else {
+        send.setContentTintColor(Some(&NSColor::controlAccentColor()));
+        (22.0, constant!(objc2_app_kit::NSFontWeightRegular))
+    };
+    send.setSymbolConfiguration(Some(
+        &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(points, weight),
+    ));
+    ui::fixed_width(&send, 26.0);
+    ui::fixed_height(&send, 26.0);
+    send
 }
 
 /// The pasteboard's types that hold a picture.
