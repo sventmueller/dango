@@ -1,7 +1,6 @@
 //! The folder tree of a project panel: each folder read when it is opened, kept up to date from the watcher.
 
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -12,6 +11,9 @@ use ignore::IncrementalIgnore;
 use crate::order::NameKey;
 use crate::rules;
 use crate::watch::{Changes, WatchEvent};
+
+/// Finder's per-folder view settings, never project content.
+const FINDER_STORE: &str = ".DS_Store";
 
 /// What an entry is; for a symbolic link, what it points to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +54,7 @@ pub struct Entry {
     pub modified: Option<SystemTime>,
     /// Hidden by `.gitignore`, `.ignore`, `.git/info/exclude` or the global excludes.
     pub is_ignored: bool,
-    /// Hidden by the system, such as `.DS_Store` or a file with the hidden flag.
+    /// Hidden by the system with the hidden flag.
     pub is_hidden: bool,
 }
 
@@ -66,7 +68,7 @@ impl Entry {
 /// What the tree lists.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TreeOptions {
-    /// Also list ignored and hidden entries, marked as such; `.git` stays out regardless.
+    /// Also list ignored and hidden entries, marked as such; `.git` and `.DS_Store` stay out regardless.
     pub show_ignored: bool,
 }
 
@@ -212,11 +214,11 @@ impl Tree {
             let name = item.file_name();
             // Without following a link, as git and the walks of the index and the search see it.
             let Ok(own) = item.metadata() else { continue };
-            if name == rules::GIT_DIR {
+            if name == rules::GIT_DIR || name == FINDER_STORE {
                 continue;
             }
             let is_ignored = self.rules.matched(relative.join(&name), own.is_dir()).is_ignore();
-            let is_hidden = hidden(&name, &own);
+            let is_hidden = flagged_hidden(&own);
             if !self.options.show_ignored && (is_ignored || is_hidden) {
                 continue;
             }
@@ -269,10 +271,6 @@ fn loops(link: &Path, dir: &Path, real_dir: &mut Option<PathBuf>) -> bool {
         *real_dir = dir.canonicalize().ok();
     }
     real_dir.as_ref().is_some_and(|real| real.starts_with(&target))
-}
-
-fn hidden(name: &OsStr, metadata: &fs::Metadata) -> bool {
-    name == ".DS_Store" || flagged_hidden(metadata)
 }
 
 #[cfg(target_os = "macos")]
@@ -354,8 +352,15 @@ mod tests {
     }
 
     #[test]
-    fn showing_ignored_entries_marks_them_and_still_leaves_out_git() {
+    fn showing_ignored_entries_marks_them_and_still_leaves_out_git_and_ds_store() {
         let root = project("tree-ignored");
+        write(&root, "flagged.txt", "x");
+        let status = std::process::Command::new("chflags")
+            .arg("hidden")
+            .arg(root.join("flagged.txt"))
+            .status()
+            .unwrap();
+        assert!(status.success());
         let mut tree = Tree::new(&root, TreeOptions { show_ignored: true }).unwrap();
         let entries = tree.expand(&root).unwrap().to_vec();
         let ignored: BTreeSet<&str> = entries
@@ -372,8 +377,8 @@ mod tests {
             .filter(|e| e.is_hidden)
             .map(|e| e.name.as_str())
             .collect();
-        assert_eq!(hidden, [".DS_Store"]);
-        assert!(!entries.iter().any(|e| e.name == ".git"));
+        assert_eq!(hidden, ["flagged.txt"]);
+        assert!(!entries.iter().any(|e| e.name == ".git" || e.name == ".DS_Store"));
         let inside = tree.expand(&root.join("target")).unwrap();
         assert!(inside.iter().all(|e| e.is_ignored), "{inside:?}");
     }
