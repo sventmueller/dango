@@ -246,7 +246,7 @@ fn same(a: f64, b: f64) -> bool {
 }
 
 /// Widens and narrows the window of `tab`: the sidebar keeps its width, the AI tab takes the change and its column
-/// fills it up to its widest.
+/// fills it but for its margin.
 fn follows_window(controller: &WindowController, tab: &AgentTab) {
     let Some(window) = controller.window() else { return };
     let start = window.frame();
@@ -259,10 +259,11 @@ fn follows_window(controller: &WindowController, tab: &AgentTab) {
             controller.inspect().sidebar_width,
             tab.root().frame().size.width,
             tab.column_width(),
+            tab.composer_place(),
         )
     };
     let first = measure(start.size.width);
-    let (_, sidebar, root, _) = first;
+    let (_, sidebar, root, _, _) = first;
     let wider = measure(start.size.width + 400.0);
     let narrower = measure(760.0);
     window.setFrame_display(start, true);
@@ -276,11 +277,21 @@ fn follows_window(controller: &WindowController, tab: &AgentTab) {
             && same(narrower.2, root - (start.size.width - 760.0)),
         format!("{first:?} in {start:?}; wider {wider:?}, narrower {narrower:?}"),
     );
-    let fills = |(_, _, root, column): (f64, f64, f64, f64)| same(column, root.min(crate::agent::MAX_COLUMN));
+    type Seen = (f64, f64, f64, f64, (f64, f64));
+    let fills = |(_, _, root, column, _): Seen| same(column, root - 2.0 * crate::agent::SIDE_MARGIN);
     check(
-        "the conversation's column fills the AI tab up to its widest",
+        "the conversation's column grows with the AI tab, with the same margin at any width",
         fills(first) && fills(wider) && fills(narrower),
         format!("{first:?}, wider {wider:?}, narrower {narrower:?}"),
+    );
+    let held = |(_, _, _, column, (width, off)): Seen| {
+        let wanted = (column - 2.0 * crate::agent::INPUT_INSET).min(crate::agent::INPUT_WIDTH);
+        same(width, wanted) && same(off, 0.0)
+    };
+    check(
+        "the composer fills a narrow AI tab and keeps its widest in the middle of a wide one",
+        held(first) && held(wider) && held(narrower),
+        format!("{:?}, wider {:?}, narrower {:?}", first.4, wider.4, narrower.4),
     );
 }
 

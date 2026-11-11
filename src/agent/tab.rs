@@ -32,11 +32,17 @@ use super::{notify, overlay, style, ui};
 use crate::util::{guarded, main_after, main_soon};
 use crate::window::{TabKind, WindowController};
 
-/// The widest the conversation gets; wider lines read badly.
-pub(crate) const MAX_COLUMN: f64 = 880.0;
-/// How strongly the column fills the tab up to `MAX_COLUMN`: above the content's hugging and the holding priority of
-/// the window's content, below the sidebar's, which keeps its width.
+/// The room on either side of the conversation, which takes the rest of the tab's width.
+pub(crate) const SIDE_MARGIN: f64 = 16.0;
+/// The widest the composer gets; it stands in the middle below a wider conversation.
+pub(crate) const INPUT_WIDTH: f64 = 852.0;
+/// The room between the composer and the conversation's edges.
+pub(crate) const INPUT_INSET: f64 = 14.0;
+/// How strongly the composer fills the conversation's width up to `INPUT_WIDTH`: above the content's hugging and the
+/// holding priority of the window's content, below the sidebar's, so a wide window neither narrows nor moves it.
 const FILL_PRIORITY: f32 = 255.0;
+/// The width the sandbox warning wraps at.
+const WARNING_WIDTH: f64 = 800.0;
 
 static NEXT_KEY: AtomicU64 = AtomicU64::new(1);
 
@@ -252,7 +258,7 @@ impl AgentTab {
             t("Umgehen ohne Sandbox: Claude führt jeden Befehl ohne Rückfrage und ohne Schutz aus."),
             &style::small(),
             &NSColor::labelColor(),
-            MAX_COLUMN - 80.0,
+            WARNING_WIDTH,
         );
         let warning_icon = ui::icon(
             mtm,
@@ -362,8 +368,6 @@ impl AgentTab {
         }
         self.empty.setTranslatesAutoresizingMaskIntoConstraints(false);
         self.problem_holder.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let wide = column.widthAnchor().constraintEqualToAnchor(&root.widthAnchor());
-        wide.setPriority(FILL_PRIORITY);
         let scroll = self.timeline.view();
         let constraints: Vec<Retained<NSLayoutConstraint>> = vec![
             self.header.view.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
@@ -381,12 +385,12 @@ impl AgentTab {
             line.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
             column.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
             column.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
-            column.centerXAnchor().constraintEqualToAnchor(&root.centerXAnchor()),
-            column.widthAnchor().constraintLessThanOrEqualToConstant(MAX_COLUMN),
             column
-                .widthAnchor()
-                .constraintLessThanOrEqualToAnchor(&root.widthAnchor()),
-            wide,
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&root.leadingAnchor(), SIDE_MARGIN),
+            column
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&root.trailingAnchor(), -SIDE_MARGIN),
             scroll.topAnchor().constraintEqualToAnchor(&column.topAnchor()),
             scroll.leadingAnchor().constraintEqualToAnchor(&column.leadingAnchor()),
             scroll
@@ -395,15 +399,6 @@ impl AgentTab {
             scroll
                 .bottomAnchor()
                 .constraintEqualToAnchor_constant(&bottom.topAnchor(), -6.0),
-            bottom
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&column.leadingAnchor(), 14.0),
-            bottom
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&column.trailingAnchor(), -14.0),
-            bottom
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&column.bottomAnchor(), -8.0),
             self.empty
                 .centerXAnchor()
                 .constraintEqualToAnchor(&scroll.centerXAnchor()),
@@ -420,7 +415,7 @@ impl AgentTab {
                 .widthAnchor()
                 .constraintLessThanOrEqualToAnchor(&scroll.widthAnchor()),
         ];
-        for constraint in constraints {
+        for constraint in constraints.into_iter().chain(input_constraints(&bottom, &column)) {
             constraint.setActive(true);
         }
     }
@@ -474,6 +469,23 @@ impl AgentTab {
     pub fn column_width(&self) -> f64 {
         // SAFETY: Asking for the superview only reads; the column holds the timeline while the tab lives.
         unsafe { self.timeline.view().superview() }.map_or(0.0, |column| column.frame().size.width)
+    }
+
+    /// The width of the composer's card and how far its middle is off the column's.
+    #[cfg(feature = "selftest")]
+    pub fn composer_place(&self) -> (f64, f64) {
+        let card = self.composer.card.frame();
+        // SAFETY: Asking for the superview only reads; the column holds the timeline while the tab lives.
+        let column = unsafe { self.timeline.view().superview() };
+        let middle = |frame: NSRect| frame.origin.x + frame.size.width / 2.0;
+        let off = column.map_or(f64::NAN, |column| {
+            let card = self
+                .composer
+                .card
+                .convertRect_toView(self.composer.card.bounds(), Some(&column));
+            middle(card) - column.bounds().size.width / 2.0
+        });
+        (card.size.width, off)
     }
 
     pub fn controller(&self) -> Option<Retained<WindowController>> {
@@ -957,6 +969,26 @@ impl AgentTab {
             self.offer_selection();
         }
     }
+}
+
+/// The composer and what stands above and below it at the foot of `column`: as wide as the column but for its inset,
+/// at most `INPUT_WIDTH`, in the middle.
+fn input_constraints(bottom: &NSView, column: &NSView) -> Vec<Retained<NSLayoutConstraint>> {
+    let fill = bottom
+        .widthAnchor()
+        .constraintEqualToAnchor_constant(&column.widthAnchor(), -2.0 * INPUT_INSET);
+    fill.setPriority(FILL_PRIORITY);
+    vec![
+        bottom.centerXAnchor().constraintEqualToAnchor(&column.centerXAnchor()),
+        bottom
+            .leadingAnchor()
+            .constraintGreaterThanOrEqualToAnchor_constant(&column.leadingAnchor(), INPUT_INSET),
+        bottom.widthAnchor().constraintLessThanOrEqualToConstant(INPUT_WIDTH),
+        fill,
+        bottom
+            .bottomAnchor()
+            .constraintEqualToAnchor_constant(&column.bottomAnchor(), -8.0),
+    ]
 }
 
 /// The session's title: the user's, else the agent's, else the first line of the first message.
