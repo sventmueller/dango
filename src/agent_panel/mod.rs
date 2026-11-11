@@ -383,6 +383,7 @@ fn scroll(mtm: MainThreadMarker, outline: &NSOutlineView) -> Retained<NSScrollVi
 /// Shows `report` as the latest usage, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn set_usage_report(report: ide_claude::control::UsageReport) {
+    crate::agent::inject_usage(report.clone());
     usage::inject(report);
     refresh_all();
 }

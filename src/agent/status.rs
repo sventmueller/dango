@@ -1,5 +1,5 @@
-//! The status line under the composer: how full the context is, what the session cost, compaction, retries and the
-//! last error.
+//! The status line under the composer: how full the context is, compaction, retries and the last error on the left,
+//! what the session cost or how much of the plan is used on the right.
 
 use std::cell::Cell;
 
@@ -117,9 +117,10 @@ impl StatusLine {
         let spacer = ui::spacer(mtm);
         #[cfg(feature = "dictation")]
         let dictation = crate::dictation::line(mtm);
-        let view = ui::row(mtm, 6.0, &[&ring, &context, &cost, &activity, &spacer, &problem]);
+        // What the session holds and does on the left, what it costs or how much of the plan is used on the right.
+        let view = ui::row(mtm, 6.0, &[&ring, &context, &activity, &problem, &spacer, &cost]);
         #[cfg(feature = "dictation")]
-        view.insertArrangedSubview_atIndex(&dictation, 4);
+        view.insertArrangedSubview_atIndex(&dictation, 3);
         view.setAccessibilityElement(true);
         view.setAccessibilityRole(Some(crate::util::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
         view.setAccessibilityLabel(Some(&ns(t("Status"))));

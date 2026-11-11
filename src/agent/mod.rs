@@ -34,6 +34,7 @@ mod target;
 mod text;
 mod timeline;
 mod ui;
+mod usage;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -60,6 +61,8 @@ pub use source::Resume;
 pub use tab::AgentTab;
 #[cfg(feature = "selftest")]
 pub(crate) use tab::{INPUT_INSET, INPUT_WIDTH, SIDE_MARGIN};
+#[cfg(feature = "selftest")]
+pub use usage::inject as inject_usage;
 
 thread_local! {
     /// Every open AI tab, in the order they were opened; a tab leaves when it is closed.

@@ -17,7 +17,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSRectEdge, NSSize};
 use splat_i18n::{t, tf};
 
-use super::format::{dollars, elapsed, percent, time_of_day, tokens};
+use super::format::{dollars, elapsed, percent, tokens};
 use super::{style, ui};
 use crate::util::{guarded, ns, set_action};
 
@@ -567,31 +567,21 @@ pub fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
     if !usage.subscription {
         return cost_text(usage);
     }
-    let limits = thread.rate_limits();
-    let windows: Vec<String> = limits
-        .iter()
-        .filter_map(|l| {
-            Some(format!(
-                "{} {}",
-                super::cards::window_name(&l.window),
-                percent(l.utilization?)
-            ))
-        })
-        .collect();
-    let text = if windows.is_empty() {
-        t("Abo").to_string()
-    } else {
-        windows.join(" · ")
-    };
+    let windows = super::usage::windows(thread);
+    let mut text = vec![t("Abo").to_string()];
+    text.extend(
+        windows
+            .iter()
+            .map(|w| format!("{} {}", super::cards::window_name(&w.name), percent(w.used))),
+    );
     let mut tip = vec![t("Abo: Die Nutzung zählt gegen die Limits des Plans, nicht nach Tokens.").to_string()];
-    tip.extend(limits.iter().filter_map(|l| {
-        let at = l.resets_at?;
+    tip.extend(windows.iter().filter_map(|w| {
         Some(tf(
             "{}: zurückgesetzt {}",
-            &[&super::cards::window_name(&l.window), &time_of_day(at)],
+            &[&super::cards::window_name(&w.name), w.resets.as_ref()?],
         ))
     }));
-    (text, Some(tip.join("\n")))
+    (text.join(" · "), Some(tip.join("\n")))
 }
 
 /// A session row's quiet `text` in the AI panel, followed by what the session cost when that is known.

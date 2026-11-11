@@ -864,6 +864,11 @@ impl AgentTab {
         if let Some(controller) = self.controller() {
             controller.set_tab_title(self.tab_id.get(), &super::format::first_line(&title, 32));
         }
+        if matches!(self.agent, Agent::Claude)
+            && let Some(session) = self.session()
+        {
+            super::usage::fetch(&session);
+        }
         self.status.show(&thread);
         self.refresh_composer();
         let empty = self.timeline.count() == 0;

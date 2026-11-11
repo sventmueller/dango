@@ -495,6 +495,20 @@ fn panel(root: PathBuf, key: u64) {
     if let Ok(report) = <ide_claude::control::UsageReport as ide_claude::control::Answer>::read(usage_answer()) {
         crate::agent_panel::set_usage_report(report);
     }
+    let status = tab.inspect().status;
+    let wanted = format!(
+        "{} · {} {} · {} {}",
+        splat_i18n::t("Abo"),
+        crate::agent::window_name("seven_day"),
+        crate::agent::percent(0.79),
+        crate::agent::window_name("five_hour"),
+        crate::agent::percent(0.42),
+    );
+    check(
+        "the status line names the plan with its week and five hours from get_usage",
+        status.last() == Some(&wanted),
+        status.join(" | "),
+    );
     let seen = crate::agent_panel::inspect(&controller);
     let sessions = seen.as_ref().map(|s| s.sessions.clone()).unwrap_or_default();
     let running = seen.as_ref().map(|s| s.running.clone()).unwrap_or_default();
