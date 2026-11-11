@@ -1,16 +1,16 @@
-//! The rows of the CI list: runs with their number and age, jobs with how long they took, steps; the context menu
-//! and what a row's action acts on.
+//! The rows of the CI list: runs with their number and age, GitLab's stages, jobs with how long they took, steps;
+//! which of them stand open, the context menu and what a row's action acts on.
 
 use ide_ci::{Job, Run, State};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
-use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAccessibility, NSColor, NSEvent, NSFont, NSImageSymbolConfiguration, NSImageView, NSLayoutAttribute,
-    NSLineBreakMode, NSMenu, NSMenuItem, NSOutlineView, NSStackView, NSTableCellView, NSUserInterfaceLayoutOrientation,
-    NSView,
+    NSLayoutConstraintOrientation, NSLineBreakMode, NSMenu, NSMenuItem, NSOutlineView, NSStackView, NSTableCellView,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSObjectProtocol, NSRect, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::panel::CiPanel;
@@ -92,6 +92,8 @@ impl CiOutlineView {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Key {
     Run(u64),
+    /// A run's stage by its place among the run's stages.
+    Stage(u64, u32),
     Job(u64, u64),
     Step(u64, u64, u32),
 }
@@ -100,6 +102,7 @@ impl Key {
     pub fn encode(&self) -> String {
         match self {
             Key::Run(run) => format!("run:{run}"),
+            Key::Stage(run, stage) => format!("stage:{run}:{stage}"),
             Key::Job(run, job) => format!("job:{run}:{job}"),
             Key::Step(run, job, step) => format!("step:{run}:{job}:{step}"),
         }
@@ -111,6 +114,7 @@ impl Key {
         let numbers: Vec<u64> = parts.map(|p| p.parse().ok()).collect::<Option<_>>()?;
         match (kind, numbers.as_slice()) {
             ("run", [run]) => Some(Key::Run(*run)),
+            ("stage", [run, stage]) => Some(Key::Stage(*run, u32::try_from(*stage).ok()?)),
             ("job", [run, job]) => Some(Key::Job(*run, *job)),
             ("step", [run, job, step]) => Some(Key::Step(*run, *job, u32::try_from(*step).ok()?)),
             _ => None,
@@ -143,6 +147,15 @@ impl CiPanel {
         row.jobs.iter().find(|j| j.id == job).cloned()
     }
 
+    /// The name of the run's stage `index` and how far its jobs got.
+    pub fn find_stage(&self, run: u64, index: u32) -> Option<(String, State)> {
+        let state = self.read();
+        let row = state.runs.iter().find(|r| r.run.id == run)?;
+        let stages = ide_ci::stages(&row.jobs);
+        let stage = stages.get(usize::try_from(index).ok()?)?;
+        Some((stage.name.to_string(), stage.state()))
+    }
+
     pub fn row_view(&self, key: &Key) -> Option<Retained<NSView>> {
         let mtm = self.mtm();
         match *key {
@@ -156,14 +169,14 @@ impl CiPanel {
                 let title = format!("{} #{}", run.name, run.number);
                 Some(cell(mtm, run.state, &title, Some(&detail), None))
             }
+            Key::Stage(run, index) => {
+                let (name, state) = self.find_stage(run, index)?;
+                Some(cell(mtm, state, &name, None, None))
+            }
             Key::Job(run, id) => {
                 let job = self.find_job(run, id)?;
                 let took = job.seconds(ide_ci::now()).map(text::took);
-                let name = match &job.stage {
-                    Some(stage) if *stage != job.name => format!("{stage} › {}", job.name),
-                    _ => job.name.clone(),
-                };
-                Some(cell(mtm, job.state, &name, None, took.as_deref()))
+                Some(cell(mtm, job.state, &job.name, None, took.as_deref()))
             }
             Key::Step(run, job, number) => {
                 let step = self
@@ -203,7 +216,7 @@ impl CiPanel {
     /// The run an action means: the one of the row it came from, else the first run in `state` or still running.
     pub fn run_for(&self, sender: Option<&AnyObject>, state: State) -> Option<Run> {
         let picked = self.keys_for(sender).into_iter().find_map(|key| match key {
-            Key::Run(run) | Key::Job(run, _) | Key::Step(run, _, _) => self.find_run(run),
+            Key::Run(run) | Key::Stage(run, _) | Key::Job(run, _) | Key::Step(run, _, _) => self.find_run(run),
         });
         picked.or_else(|| {
             self.read()
@@ -225,11 +238,11 @@ impl CiPanel {
     pub fn job_for(&self, sender: Option<&AnyObject>) -> Option<Job> {
         self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Job(run, job) | Key::Step(run, job, _) => self.find_job(run, job),
-            Key::Run(_) => None,
+            Key::Run(_) | Key::Stage(..) => None,
         })
     }
 
-    /// Return or a double click: a job or step opens its log, a run opens or closes.
+    /// Return or a double click: a job or step opens its log, a run or stage opens or closes.
     pub fn activate_row(&self, row: isize) {
         let outline = &self.ui().outline;
         let Some(item) = (row >= 0).then(|| outline.itemAtRow(row)).flatten() else {
@@ -237,7 +250,7 @@ impl CiPanel {
         };
         match Key::of(&item) {
             Some(Key::Job(run, job) | Key::Step(run, job, _)) => self.open_log(self.find_job(run, job)),
-            Some(Key::Run(_)) => {
+            Some(Key::Run(_) | Key::Stage(..)) => {
                 // SAFETY: The item came from this outline view, which knows it.
                 unsafe {
                     if outline.isItemExpanded(Some(&item)) {
@@ -251,16 +264,12 @@ impl CiPanel {
         }
     }
 
-    /// Reloads the list, keeping the selection; runs show their jobs.
+    /// Reloads the list, keeping the selection and what the user opened or closed.
     pub fn reload_outline(&self) {
         let outline = &self.ui().outline;
         let selected = self.selected_keys();
         outline.reloadData();
-        let runs: Vec<Key> = self.read().runs.iter().map(|r| Key::Run(r.run.id)).collect();
-        for key in runs {
-            // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
-            unsafe { outline.expandItem(Some(&self.item_for(&key))) };
-        }
+        self.unfold(None);
         let rows = objc2_foundation::NSMutableIndexSet::new();
         for key in &selected {
             // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
@@ -271,6 +280,69 @@ impl CiPanel {
         }
         outline.selectRowIndexes_byExtendingSelection(&rows, false);
         self.ui().show_empty_list(self.read().runs.is_empty());
+    }
+
+    /// Opens and closes the rows below `parent` as the user left them, else as their state asks for.
+    fn unfold(&self, parent: Option<&Key>) {
+        let outline = &self.ui().outline;
+        let parent = parent.map(|key| self.item_for(key));
+        let children = self.children(parent.as_deref().map(|item| item as &AnyObject));
+        for (index, key) in children.into_iter().enumerate() {
+            let item = self.item_for(&key);
+            if self.children(Some(&item)).is_empty() {
+                continue;
+            }
+            let chosen = self.read().chosen.get(&key).copied();
+            let open = chosen.unwrap_or_else(|| self.opens_by_itself(key, index));
+            self.ivars().unfolding.set(true);
+            // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+            unsafe {
+                if open {
+                    outline.expandItem(Some(&item));
+                } else {
+                    outline.collapseItem(Some(&item));
+                }
+            }
+            self.ivars().unfolding.set(false);
+            if open {
+                self.unfold(Some(&key));
+            }
+        }
+    }
+
+    /// Whether a row the user has not opened or closed stands open: the newest run and the ones that failed or still
+    /// run, and the stages that failed or run.
+    fn opens_by_itself(&self, key: Key, index: usize) -> bool {
+        match key {
+            Key::Run(run) => {
+                index == 0
+                    || self
+                        .find_run(run)
+                        .is_some_and(|r| r.state == State::Failed || r.state.is_active())
+            }
+            Key::Stage(run, stage) => self
+                .find_stage(run, stage)
+                .is_some_and(|(_, state)| matches!(state, State::Failed | State::Running)),
+            Key::Job(..) | Key::Step(..) => false,
+        }
+    }
+
+    /// The user opened or closed a row, which it stays from now on; what it shows opens as its states ask for.
+    pub fn note_expansion(&self, notification: &NSNotification, open: bool) {
+        if self.ivars().unfolding.get() {
+            return;
+        }
+        let Some(key) = notification
+            .userInfo()
+            .and_then(|info| info.objectForKey(&ns("NSObject")))
+            .and_then(|item| Key::of(&item))
+        else {
+            return;
+        };
+        self.state().chosen.insert(key, open);
+        if open {
+            self.unfold(Some(&key));
+        }
     }
 
     /// The context menu of the clicked row.
@@ -301,7 +373,7 @@ impl CiPanel {
     fn menu_entries(&self, key: Key) -> Vec<(&'static str, Option<Sel>, bool)> {
         let busy = self.read().busy;
         match key {
-            Key::Run(id) => {
+            Key::Run(id) | Key::Stage(id, _) => {
                 let state = self.find_run(id).map_or(State::Neutral, |r| r.state);
                 vec![
                     (
@@ -350,8 +422,10 @@ fn cell(
         unsafe { objc2_app_kit::NSFontWeightMedium },
     )));
     icon.setContentTintColor(Some(&text::color(state)));
+    icon.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
     let name = label(mtm, title);
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    name.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     let lines = NSStackView::new(mtm);
     lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     lines.setAlignment(NSLayoutAttribute::Leading);
@@ -362,6 +436,7 @@ fn cell(
         second.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
         second.setTextColor(Some(&NSColor::secondaryLabelColor()));
         second.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        second.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
         lines.addArrangedSubview(&second);
     }
     let row = NSStackView::new(mtm);
@@ -386,6 +461,7 @@ fn cell(
             unsafe { objc2_app_kit::NSFontWeightRegular },
         )));
         end.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        end.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
         cell.addSubview(&end);
         end.setTranslatesAutoresizingMaskIntoConstraints(false);
         end.trailingAnchor()

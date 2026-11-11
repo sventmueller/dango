@@ -36,4 +36,4 @@ pub use client::{Client, locate};
 pub use error::{Error, Result};
 pub use forge::{Forge, HostRule, Kind, RemoteUrl, candidates};
 pub use http::{Method, Network, Recorded, Request, Response, Transport, now};
-pub use model::{Job, Run, State, Step, seconds};
+pub use model::{Job, Run, Stage, State, Step, seconds, stages};

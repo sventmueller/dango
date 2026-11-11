@@ -319,6 +319,11 @@ fn gitlab_listed(root: PathBuf, ok: bool) {
                 .is_some_and(|s| s.account.as_deref() == Some("lab-selftest")),
         describe(&controller),
     );
+    check(
+        "GitLab's jobs sit under their stages, and only the failed or running stage stands open",
+        seen.as_ref().is_some_and(|s| s.rows == 6),
+        describe(&controller),
+    );
     let bearer = format!("Bearer {TOKEN}");
     let only_there = stubs()
         .github

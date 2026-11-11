@@ -225,7 +225,7 @@ fn gitlab_pipelines_jobs_over_next_page_headers_trace_retry_and_cancel() {
     let runs = client.runs(Some("main"), SHA).unwrap();
     assert_eq!(
         (runs[0].id, runs[0].state, runs[0].name.as_str()),
-        (501, State::Running, "Pipeline (push)")
+        (501, State::Running, "Pipeline")
     );
     let jobs = client.jobs(&runs[0]).unwrap();
     let summary: Vec<_> = jobs

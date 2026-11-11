@@ -77,10 +77,7 @@ fn read_pipelines(client: &Client, url: &str) -> Result<Vec<Run>> {
         .into_iter()
         .map(|p| Run {
             id: p.id,
-            name: p
-                .name
-                .or_else(|| p.source.clone().map(|s| format!("Pipeline ({s})")))
-                .unwrap_or_else(|| "Pipeline".into()),
+            name: p.name.unwrap_or_else(|| "Pipeline".into()),
             state: state(&p.status),
             url: p.web_url,
             branch: p.reference,

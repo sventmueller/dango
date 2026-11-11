@@ -49,7 +49,7 @@ impl State {
 pub struct Run {
     /// The service's number for it.
     pub id: u64,
-    /// The workflow's name, or the pipeline's name or source.
+    /// The workflow's name, or the pipeline's name, else `Pipeline`.
     pub name: String,
     /// How far it got.
     pub state: State,
@@ -98,6 +98,42 @@ impl Job {
         let started = self.started?;
         Some((self.finished.unwrap_or(now) - started).max(0))
     }
+}
+
+/// A GitLab stage with its jobs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stage<'a> {
+    /// Its name.
+    pub name: &'a str,
+    /// Its jobs, in the order they were created.
+    pub jobs: Vec<&'a Job>,
+}
+
+impl Stage<'_> {
+    /// How far its jobs got, together.
+    pub fn state(&self) -> State {
+        State::summary(self.jobs.iter().map(|j| j.state)).unwrap_or(State::Neutral)
+    }
+}
+
+/// The stages of `jobs` in the order the pipeline runs them; none if a job has no stage, as on GitHub.
+pub fn stages(jobs: &[Job]) -> Vec<Stage<'_>> {
+    let mut stages: Vec<Stage<'_>> = Vec::new();
+    for job in jobs {
+        let Some(name) = job.stage.as_deref() else {
+            return Vec::new();
+        };
+        match stages.iter_mut().find(|s| s.name == name) {
+            Some(stage) => stage.jobs.push(job),
+            None => stages.push(Stage { name, jobs: vec![job] }),
+        }
+    }
+    for stage in &mut stages {
+        stage.jobs.sort_by_key(|j| j.id);
+    }
+    // GitLab creates a pipeline's jobs stage by stage, so the lowest id tells a stage's place.
+    stages.sort_by_key(|s| s.jobs.first().map(|j| j.id));
+    stages
 }
 
 /// One step of a job.
@@ -160,6 +196,44 @@ mod tests {
         assert_eq!(seconds("2024-02-29T00:00:00.000Z"), Some(1_709_164_800));
         assert_eq!(seconds("not a time"), None);
         assert_eq!(seconds("2026-13-01T00:00:00Z"), None);
+    }
+
+    fn job(id: u64, stage: Option<&str>, state: State) -> Job {
+        Job {
+            id,
+            run: 1,
+            name: format!("job-{id}"),
+            stage: stage.map(str::to_string),
+            state,
+            url: String::new(),
+            started: None,
+            finished: None,
+            steps: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn stages_follow_the_pipeline_even_when_the_service_lists_newest_first() {
+        let jobs = [
+            job(9, Some("deploy"), State::Queued),
+            job(7, Some("test"), State::Failed),
+            job(5, Some("test"), State::Success),
+            job(3, Some("build"), State::Success),
+        ];
+        let stages = stages(&jobs);
+        let seen: Vec<_> = stages
+            .iter()
+            .map(|s| (s.name, s.jobs.iter().map(|j| j.id).collect::<Vec<_>>(), s.state()))
+            .collect();
+        assert_eq!(
+            seen,
+            [
+                ("build", vec![3], State::Success),
+                ("test", vec![5, 7], State::Failed),
+                ("deploy", vec![9], State::Queued),
+            ]
+        );
+        assert!(super::stages(&[job(1, None, State::Success), job(2, Some("x"), State::Success)]).is_empty());
     }
 
     #[test]

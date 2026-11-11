@@ -1,6 +1,6 @@
 //! The CI panel of one window: what it read, when it reads again, and the AppKit callbacks of its views.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -14,7 +14,7 @@ use objc2_app_kit::{
     NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSView,
 };
-use objc2_foundation::{NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
 
 use super::load::{self, Head, Loaded, RunRow};
 use super::rows::Key;
@@ -67,6 +67,8 @@ pub struct State {
     /// A login waits for the browser.
     pub login: Option<super::login::Login>,
     pub menu_keys: Vec<Key>,
+    /// The rows the user opened or closed.
+    pub chosen: HashMap<Key, bool>,
     loading: bool,
     again: bool,
     /// Which planned read is the current one; an older one does nothing.
@@ -81,6 +83,8 @@ pub struct PanelIvars {
     root: PathBuf,
     ui: OnceCell<Ui>,
     state: RefCell<State>,
+    /// The panel itself opens and closes rows, so the user's choices are not touched.
+    pub unfolding: Cell<bool>,
     items: RefCell<HashMap<String, Retained<NSString>>>,
 }
 
@@ -132,6 +136,16 @@ define_class!(
         #[unsafe(method(outlineView:heightOfRowByItem:))]
         fn row_height(&self, _view: &NSOutlineView, item: &AnyObject) -> f64 {
             guarded(24.0, || super::rows::height(Key::of(item).as_ref()))
+        }
+
+        #[unsafe(method(outlineViewItemDidCollapse:))]
+        fn did_collapse(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, false));
+        }
+
+        #[unsafe(method(outlineViewItemDidExpand:))]
+        fn did_expand(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, true));
         }
     }
 
@@ -287,6 +301,7 @@ impl CiPanel {
             controller: Weak::from(controller),
             root,
             ui: OnceCell::new(),
+            unfolding: Cell::new(false),
             state: RefCell::new(State {
                 wait: FIRST_WAIT,
                 ..State::default()
@@ -526,7 +541,7 @@ impl CiPanel {
         self.ui().show_problem(self.read().problem.as_deref());
     }
 
-    /// The rows below `item`: runs at the top, then jobs, then steps.
+    /// The rows below `item`: runs at the top, then GitLab's stages, then jobs, then steps.
     pub fn children(&self, item: Option<&AnyObject>) -> Vec<Key> {
         let state = self.read();
         match item.map(Key::of) {
@@ -535,7 +550,22 @@ impl CiPanel {
                 .runs
                 .iter()
                 .find(|r| r.run.id == run)
-                .map(|r| r.jobs.iter().map(|j| Key::Job(run, j.id)).collect())
+                .map(|r| match ide_ci::stages(&r.jobs).len() {
+                    0 => r.jobs.iter().map(|j| Key::Job(run, j.id)).collect(),
+                    stages => (0..u32::try_from(stages).unwrap_or(0))
+                        .map(|stage| Key::Stage(run, stage))
+                        .collect(),
+                })
+                .unwrap_or_default(),
+            Some(Some(Key::Stage(run, stage))) => state
+                .runs
+                .iter()
+                .find(|r| r.run.id == run)
+                .and_then(|r| {
+                    let stages = ide_ci::stages(&r.jobs);
+                    let jobs = &stages.get(usize::try_from(stage).ok()?)?.jobs;
+                    Some(jobs.iter().map(|j| Key::Job(run, j.id)).collect())
+                })
                 .unwrap_or_default(),
             Some(Some(Key::Job(run, job))) => state
                 .runs
