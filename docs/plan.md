@@ -477,6 +477,12 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   von Endungen, nicht der UTType, weil macOS `.ts`/`.mts` als Video und `.key` als Keynote führt. SVG bleibt Text
   im Editor; „Als Vorschau öffnen“ im Kontextmenü der Dateiliste zeigt die Zeichnung in einem eigenen Tab
   „Vorschau: <Datei>“.
+- **E76 Terminal zeichnet mit Metal** *(Entscheidung des Eigentümers, ändert E8)*: Das Terminal setzt jedes Bild
+  auf der GPU aus Bausteinen zusammen (Schriftzeichen, Rahmenzeichen, Unterstreichungen), die Core Graphics einmal
+  zeichnet; Schrift und Farben bleiben damit wie bei Core Text, ein Test vergleicht beide Wege Pixel für Pixel. Pro
+  Bild kostet das den Hauptthread rund 0,7 ms statt 2–17 ms (200 × 60 Zeichen, M3), unabhängig von der Zahl der
+  Farbwechsel. Der Core-Graphics-Weg bleibt für Bilder der Ansicht (`cacheDisplayInRect`) und als Rückfall ohne Metal
+  oder mit `IDE_TERMINAL_CPU`. Ein von anderen Fenstern verdecktes Fenster zeichnet erst, wenn es wieder sichtbar ist.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

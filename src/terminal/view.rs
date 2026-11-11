@@ -15,12 +15,13 @@ use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAccessibilityValueChangedNotification, NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
-    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSBeep, NSColor,
-    NSDragOperation, NSDraggingInfo, NSEvent, NSGraphicsContext, NSLayoutConstraintOrientation, NSMenu, NSMenuItem,
-    NSMenuItemValidation, NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypeString, NSStackView,
-    NSStackViewDistribution, NSTextInputClient, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutDirection,
-    NSUserInterfaceLayoutOrientation, NSView, NSWindowDidBecomeKeyNotification, NSWindowDidResignKeyNotification,
-    NSWorkspace,
+    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSBeep,
+    NSBitmapImageRep, NSColor, NSDragOperation, NSDraggingInfo, NSEvent, NSGraphicsContext,
+    NSLayoutConstraintOrientation, NSMenu, NSMenuItem, NSMenuItemValidation, NSPasteboard, NSPasteboardTypeFileURL,
+    NSPasteboardTypeString, NSStackView, NSStackViewDistribution, NSTextInputClient, NSTrackingArea,
+    NSTrackingAreaOptions, NSUserInterfaceLayoutDirection, NSUserInterfaceLayoutOrientation, NSView,
+    NSViewLayerContentsRedrawPolicy, NSWindowDidBecomeKeyNotification, NSWindowDidChangeOcclusionStateNotification,
+    NSWindowDidResignKeyNotification, NSWindowOcclusionState, NSWorkspace,
 };
 use objc2_core_graphics::CGContext;
 use objc2_foundation::{
@@ -31,10 +32,12 @@ use splat_i18n::{t, tf};
 
 use super::banner::Banner;
 use super::cli::{CliState, Launch};
+use super::gpu::Surface;
 use super::input::KeyState;
 use super::mouse::MouseState;
 use super::palette::{self, Theme};
-use super::render::{self, Fonts, Overlay};
+use super::render::{self, Canvas, Fonts, Overlay};
+use super::sprites::QuadCanvas;
 use crate::util::{constant, guarded, item, main_after, ns, separator, set_target};
 use crate::window::WindowController;
 
@@ -65,6 +68,8 @@ pub struct Ivars {
     pub(super) keys: KeyState,
     pub(super) mouse: MouseState,
     banners: RefCell<Option<Banners>>,
+    /// Drawing on the GPU; none where the view draws with Core Graphics.
+    gpu: Option<RefCell<Surface>>,
     blink: RefCell<Option<Retained<NSTimer>>>,
     observers: RefCell<Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
     /// The CLI the terminal runs instead of a shell, for a CLI thread (I5).
@@ -104,6 +109,10 @@ pub(super) struct State {
     announced: Cell<Option<Instant>>,
     pub(super) size: Cell<Option<Size>>,
     notices: Cell<u64>,
+    /// A GPU frame was skipped while the window was hidden behind others.
+    unpresented: Cell<bool>,
+    /// The view is drawing a picture of itself, which only Core Graphics can.
+    picturing: Cell<bool>,
 }
 
 pub(super) struct Banners {
@@ -111,6 +120,9 @@ pub(super) struct Banners {
     notice: Banner,
     url: RefCell<Option<String>>,
 }
+
+/// What a window notification the view observes calls.
+type Handler = fn(&TerminalView);
 
 fn remove_observers(observers: &mut Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>) {
     let center = NSNotificationCenter::defaultCenter();
@@ -211,11 +223,33 @@ define_class!(
             guarded((), || self.draw(dirty));
         }
 
+        #[unsafe(method(wantsUpdateLayer))]
+        fn wants_update_layer(&self) -> bool {
+            self.ivars().gpu.is_some() && !self.ivars().state.picturing.get()
+        }
+
+        #[unsafe(method(cacheDisplayInRect:toBitmapImageRep:))]
+        fn cache_display(&self, rect: NSRect, bitmap: &NSBitmapImageRep) {
+            let picturing = &self.ivars().state.picturing;
+            picturing.set(true);
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let () = unsafe { msg_send![super(self), cacheDisplayInRect: rect, toBitmapImageRep: bitmap] };
+            picturing.set(false);
+        }
+
+        #[unsafe(method(updateLayer))]
+        fn update_layer(&self) {
+            guarded((), || self.draw_gpu());
+        }
+
         #[unsafe(method(setFrameSize:))]
         fn set_frame_size(&self, size: NSSize) {
             // SAFETY: The superclass's implementation, with this method's signature.
             let () = unsafe { msg_send![super(self), setFrameSize: size] };
-            guarded((), || self.layout_grid());
+            guarded((), || {
+                self.layout_grid();
+                self.redraw_layer();
+            });
         }
 
         #[unsafe(method(viewDidMoveToWindow))]
@@ -225,7 +259,10 @@ define_class!(
 
         #[unsafe(method(viewDidChangeBackingProperties))]
         fn did_change_backing(&self) {
-            guarded((), || self.layout_grid());
+            guarded((), || {
+                self.layout_grid();
+                self.redraw_layer();
+            });
         }
 
         #[unsafe(method(viewDidChangeEffectiveAppearance))]
@@ -527,6 +564,7 @@ impl TerminalView {
             keys: KeyState::default(),
             mouse: MouseState::default(),
             banners: RefCell::new(None),
+            gpu: Surface::new().map(RefCell::new),
             blink: RefCell::new(None),
             observers: RefCell::new(vec![]),
             cli: cli.map(CliState::new),
@@ -535,6 +573,11 @@ impl TerminalView {
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
         this.setWantsLayer(true);
+        if let (Some(gpu), Some(layer)) = (&this.ivars().gpu, this.layer()) {
+            this.setLayerContentsRedrawPolicy(NSViewLayerContentsRedrawPolicy::OnSetNeedsDisplay);
+            // AppKit sends `updateLayer` only for a backing layer of its own, so the Metal layer lies inside that one.
+            layer.addSublayer(gpu.borrow().layer());
+        }
         // Programs lay out their output for a left-to-right grid, whatever the interface language.
         this.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
         this.registerForDraggedTypes(&NSArray::from_slice(&[
@@ -934,15 +977,20 @@ impl TerminalView {
             return;
         };
         let center = NSNotificationCenter::defaultCenter();
-        for name in [
-            constant!(NSWindowDidBecomeKeyNotification),
-            constant!(NSWindowDidResignKeyNotification),
-        ] {
+        let handlers: [(&NSString, Handler); 3] = [
+            (constant!(NSWindowDidBecomeKeyNotification), TerminalView::focus_changed),
+            (constant!(NSWindowDidResignKeyNotification), TerminalView::focus_changed),
+            (
+                constant!(NSWindowDidChangeOcclusionStateNotification),
+                TerminalView::occlusion_changed,
+            ),
+        ];
+        for (name, handler) in handlers {
             let view = Weak::from(self);
             let block = RcBlock::new(move |_: NonNull<NSNotification>| {
                 guarded((), || {
                     if let Some(view) = view.load() {
-                        view.focus_changed();
+                        handler(&view);
                     }
                 });
             });
@@ -1065,6 +1113,7 @@ impl TerminalView {
         self.announce();
     }
 
+    /// Draws with Core Graphics, where there is no GPU and for pictures of the view.
     fn draw(&self, dirty: NSRect) {
         let Some(context) = NSGraphicsContext::currentContext() else {
             return;
@@ -1074,17 +1123,45 @@ impl TerminalView {
         let bounds = self.bounds();
         CGContext::clip_to_rect(Some(&ctx), bounds);
         let dirty = render::intersect(dirty, bounds);
+        let fonts = self.fonts();
+        self.with_frame(|theme, screen, overlay| match screen {
+            Some(screen) => render::draw(&ctx, &fonts, theme, screen, overlay, dirty),
+            None => render::fill(&ctx, theme.palette.background, dirty),
+        });
+    }
+
+    /// Draws a frame on the GPU into the view's layer, or once the window shows again if it is hidden behind others.
+    fn draw_gpu(&self) {
+        let Some(surface) = &self.ivars().gpu else { return };
+        let shown = self
+            .window()
+            .is_some_and(|window| window.occlusionState().contains(NSWindowOcclusionState::Visible));
+        // A hidden window takes no drawables back, so asking for one would stall until it times out.
+        self.ivars().state.unpresented.set(!shown);
+        if !shown {
+            return;
+        }
+        let bounds = self.bounds();
+        let fonts = self.fonts();
+        self.with_frame(|theme, screen, overlay| {
+            let paint = |canvas: &mut QuadCanvas| match screen {
+                Some(screen) => render::paint(canvas, &fonts, theme, screen, overlay, bounds),
+                None => canvas.fill(theme.palette.background, 1.0, bounds),
+            };
+            let clear = theme.palette.background;
+            surface.borrow_mut().present(&fonts, bounds, clear, &paint);
+        });
+    }
+
+    /// Runs `f` with what a frame shows: the colours, the screen once the session has started, and what lies over it.
+    fn with_frame(&self, f: impl FnOnce(&Theme, Option<&Snapshot>, &Overlay)) {
         let theme = self.ivars().theme.borrow();
         let screen = self.ivars().screen.borrow();
-        let Some(screen) = screen.as_ref() else {
-            render::fill(&ctx, theme.palette.background, dirty);
-            return;
-        };
-        let fonts = self.fonts();
         let state = &self.ivars().state;
         let marked = self.ivars().keys.marked.borrow();
-        let final_line =
-            (state.exited.get() && screen.display_offset == 0).then(|| (final_line(screen), t("[Prozess beendet]")));
+        let final_line = screen.as_ref().and_then(|screen| {
+            (state.exited.get() && screen.display_offset == 0).then(|| (final_line(screen), t("[Prozess beendet]")))
+        });
         let overlay = Overlay {
             focused: state.focused.get(),
             cursor_on: !state.cursor_off.get(),
@@ -1092,7 +1169,20 @@ impl TerminalView {
             final_line,
             flash: state.flash_until.get().is_some_and(|until| Instant::now() < until),
         };
-        render::draw(&ctx, &fonts, &theme, screen, &overlay, dirty);
+        f(&theme, screen.as_ref(), &overlay);
+    }
+
+    /// A GPU frame follows a change of size or scale, which Core Graphics drawing gets from AppKit on its own.
+    fn redraw_layer(&self) {
+        if self.ivars().gpu.is_some() {
+            self.setNeedsDisplay(true);
+        }
+    }
+
+    fn occlusion_changed(&self) {
+        if self.ivars().state.unpresented.get() {
+            self.setNeedsDisplay(true);
+        }
     }
 
     /// Starts or stops the cursor's blinking as the program asks while the view has the focus.

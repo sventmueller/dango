@@ -6,6 +6,7 @@ mod banner;
 mod boxdraw;
 mod cli;
 mod clip;
+mod gpu;
 mod input;
 #[cfg(feature = "selftest")]
 pub mod inspect;
@@ -14,6 +15,7 @@ mod links;
 mod mouse;
 mod palette;
 mod render;
+mod sprites;
 mod view;
 
 use std::cell::RefCell;

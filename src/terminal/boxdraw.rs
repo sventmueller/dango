@@ -235,6 +235,17 @@ pub fn draw(ctx: &CGContext, c: char, pen: &Pen) -> bool {
     true
 }
 
+/// Whether `draw` draws `c`.
+pub fn covers(c: char) -> bool {
+    let code = u32::from(c);
+    dashes(code).is_some()
+        || match code {
+            0x2500..=0x254b => LINES[usize::try_from(code - 0x2500).unwrap_or(0)].is_some(),
+            0x2550..=0x259f => true,
+            _ => false,
+        }
+}
+
 fn lines(ctx: &CGContext, arms: Arms, pen: &Pen) {
     let r = pen.rect;
     let width = |weight: u8| if weight == 2 { pen.light * 2.0 } else { pen.light };
@@ -472,5 +483,22 @@ mod tests {
             })
         );
         assert_eq!(dashes(0x2550), None);
+    }
+
+    #[test]
+    fn covers_names_exactly_the_characters_drawn_by_hand() {
+        let space = objc2_core_graphics::CGColorSpace::new_device_rgb().unwrap();
+        // SAFETY: A null buffer lets Core Graphics allocate one for the 8 × 16 pixels.
+        let ctx =
+            unsafe { objc2_core_graphics::CGBitmapContextCreate(std::ptr::null_mut(), 8, 16, 8, 0, Some(&space), 2) }
+                .unwrap();
+        let pen = Pen {
+            rect: rect(0.0, 0.0, 8.0, 16.0),
+            scale: 1.0,
+            light: 1.0,
+        };
+        for c in ('\u{2400}'..='\u{25ff}').chain(['a', '漢', '─']) {
+            assert_eq!(covers(c), draw(&ctx, c, &pen), "{c}");
+        }
     }
 }

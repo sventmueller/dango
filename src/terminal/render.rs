@@ -1,9 +1,11 @@
-//! Drawing a terminal screen with Core Text: the monospaced faces and the cell they fill, then line by line the
-//! backgrounds, the selection, the text with its lines, and on top the cursor and text an input method is composing.
+//! Drawing a terminal screen: the monospaced faces and the cell they fill, then line by line the backgrounds, the
+//! selection, the text with its lines, and on top the cursor and text an input method is composing, onto a canvas that
+//! is either Core Graphics or the GPU's quads (`gpu`).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ptr::NonNull;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use ide_terminal::{Cell, CellFlags, CursorShape, Highlight, Point, Rgb, Snapshot};
 use objc2::AnyThread;
@@ -120,8 +122,9 @@ impl Metrics {
     }
 }
 
+/// One of the four faces of the terminal font.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Face {
+pub enum Face {
     Regular,
     Bold,
     Italic,
@@ -138,21 +141,24 @@ impl Face {
         }
     }
 
-    fn index(self) -> usize {
+    pub fn index(self) -> usize {
         self as usize
     }
 }
 
 /// A glyph in one of the fonts.
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Glyph {
-    font: usize,
-    glyph: CGGlyph,
-    advance: f64,
+pub struct Glyph {
+    /// The index of its font in `Fonts`.
+    pub font: usize,
+    pub glyph: CGGlyph,
+    pub advance: f64,
 }
 
 /// The terminal's faces at one size, the fonts that fill in characters they lack, and the glyphs found so far.
 pub struct Fonts {
+    /// Tells these fonts from any made before, for caches of what was drawn with them.
+    pub id: u64,
     fonts: RefCell<Vec<CFRetained<CTFont>>>,
     fallback_names: RefCell<Vec<String>>,
     glyphs: RefCell<HashMap<(char, Face), Option<Glyph>>>,
@@ -167,7 +173,9 @@ impl Fonts {
         let italic = italic_of(&regular);
         let bold_italic = italic_of(&bold);
         let metrics = measure(&regular, scale.max(1.0));
+        static MADE: AtomicU64 = AtomicU64::new(0);
         Fonts {
+            id: MADE.fetch_add(1, Ordering::Relaxed),
             fonts: RefCell::new(vec![regular, bold, italic, bold_italic]),
             fallback_names: RefCell::new(vec![]),
             glyphs: RefCell::new(HashMap::new()),
@@ -175,11 +183,12 @@ impl Fonts {
         }
     }
 
-    fn font(&self, index: usize) -> CFRetained<CTFont> {
+    pub fn font(&self, index: usize) -> CFRetained<CTFont> {
         self.fonts.borrow()[index].clone()
     }
 
-    fn glyph(&self, c: char, face: Face) -> Option<Glyph> {
+    /// The glyph for `c` in `face`, from a fallback font where the face lacks it.
+    pub fn glyph(&self, c: char, face: Face) -> Option<Glyph> {
         if let Some(found) = self.glyphs.borrow().get(&(c, face)) {
             return *found;
         }
@@ -311,7 +320,7 @@ pub fn fill(ctx: &CGContext, color: Rgb, area: CGRect) {
     CGContext::fill_rect(Some(ctx), area);
 }
 
-fn set_color(ctx: &CGContext, color: Rgb, alpha: f64) {
+pub fn set_color(ctx: &CGContext, color: Rgb, alpha: f64) {
     let channel = |v: u8| f64::from(v) / 255.0;
     let (r, g, b) = (channel(color.r), channel(color.g), channel(color.b));
     CGContext::set_rgb_fill_color(Some(ctx), r, g, b, alpha);
@@ -332,10 +341,127 @@ pub struct Overlay<'a> {
     pub flash: bool,
 }
 
-/// Draws the lines of `screen` that meet `dirty`, and over them what `overlay` adds.
+/// What a frame is drawn onto, in points from the view's top left: a Core Graphics context, or the GPU's quads.
+pub trait Canvas {
+    /// Fills `area` with `color` at `alpha`.
+    fn fill(&mut self, color: Rgb, alpha: f64, area: CGRect);
+    /// `glyph` with its origin at `x` on `baseline`.
+    fn glyph(&mut self, glyph: Glyph, x: f64, baseline: f64, color: Rgb);
+    /// Draws `c` into `pen`'s cells if it is a line or block character drawn by hand; whether it is one.
+    fn boxdraw(&mut self, c: char, pen: &Pen, color: Rgb) -> bool;
+    /// How wide `text` is in `face`.
+    fn measure(&mut self, text: &str, face: Face) -> f64;
+    /// `text` shaped by Core Text in `face`, starting at `x` on `baseline`.
+    fn line(&mut self, text: &str, face: Face, x: f64, baseline: f64, color: Rgb);
+    /// An underline of `kind` across `area` whose top is at `y`.
+    fn underline(&mut self, kind: Stroke, area: CGRect, y: f64, color: Rgb);
+}
+
+/// Glyphs in one font, colour and baseline, drawn with one call.
+struct Batch {
+    font: usize,
+    color: Rgb,
+    baseline: f64,
+    glyphs: Vec<CGGlyph>,
+    positions: Vec<CGPoint>,
+}
+
+/// Draws straight into a Core Graphics context, as `drawRect:` and pictures of the view do.
+pub struct CgCanvas<'a> {
+    ctx: &'a CGContext,
+    fonts: &'a Fonts,
+    batch: Option<Batch>,
+}
+
+impl CgCanvas<'_> {
+    fn flush(&mut self) {
+        let Some(batch) = self.batch.take() else { return };
+        let font = self.fonts.font(batch.font);
+        set_color(self.ctx, batch.color, 1.0);
+        show_glyphs(self.ctx, &font, &batch.glyphs, &batch.positions, batch.baseline);
+    }
+}
+
+impl Drop for CgCanvas<'_> {
+    fn drop(&mut self) {
+        self.flush();
+    }
+}
+
+impl Canvas for CgCanvas<'_> {
+    fn fill(&mut self, color: Rgb, alpha: f64, area: CGRect) {
+        self.flush();
+        set_color(self.ctx, color, alpha);
+        CGContext::fill_rect(Some(self.ctx), area);
+    }
+
+    fn glyph(&mut self, glyph: Glyph, x: f64, baseline: f64, color: Rgb) {
+        let position = CGPoint::new(x, 0.0);
+        if let Some(open) = &mut self.batch
+            && open.font == glyph.font
+            && open.color == color
+            && (open.baseline - baseline).abs() < f64::EPSILON
+        {
+            open.glyphs.push(glyph.glyph);
+            open.positions.push(position);
+            return;
+        }
+        self.flush();
+        self.batch = Some(Batch {
+            font: glyph.font,
+            color,
+            baseline,
+            glyphs: vec![glyph.glyph],
+            positions: vec![position],
+        });
+    }
+
+    fn boxdraw(&mut self, c: char, pen: &Pen, color: Rgb) -> bool {
+        if !boxdraw::covers(c) {
+            return false;
+        }
+        self.flush();
+        set_color(self.ctx, color, 1.0);
+        boxdraw::draw(self.ctx, c, pen)
+    }
+
+    fn measure(&mut self, text: &str, face: Face) -> f64 {
+        line_width(&line_of(self.fonts, text, face))
+    }
+
+    fn line(&mut self, text: &str, face: Face, x: f64, baseline: f64, color: Rgb) {
+        self.flush();
+        draw_line(self.ctx, &line_of(self.fonts, text, face), x, baseline, color);
+    }
+
+    fn underline(&mut self, kind: Stroke, area: CGRect, y: f64, color: Rgb) {
+        self.flush();
+        set_color(self.ctx, color, 1.0);
+        draw_underline(self.ctx, &self.fonts.metrics, kind, area, y, 0.0);
+    }
+}
+
+/// Draws the lines of `screen` that meet `dirty` with Core Graphics, and over them what `overlay` adds.
 pub fn draw(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, overlay: &Overlay, dirty: CGRect) {
+    let mut canvas = CgCanvas {
+        ctx,
+        fonts,
+        batch: None,
+    };
+    paint(&mut canvas, fonts, theme, screen, overlay, dirty);
+}
+
+/// Paints the lines of `screen` that meet `dirty` onto `canvas`, and over them what `overlay` adds.
+pub fn paint(
+    canvas: &mut impl Canvas,
+    fonts: &Fonts,
+    theme: &Theme,
+    screen: &Snapshot,
+    overlay: &Overlay,
+    dirty: CGRect,
+) {
     let m = fonts.metrics;
-    fill(ctx, screen.background, dirty);
+    canvas.fill(screen.background, 1.0, dirty);
     let width = dirty.origin.x + dirty.size.width;
     let (_, top) = m.position(0.0, dirty.origin.y);
     let (_, bottom) = m.position(0.0, dirty.origin.y + dirty.size.height);
@@ -343,36 +469,25 @@ pub fn draw(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, ov
     let last = clamp_to(bottom.ceil(), screen.lines);
     for line in first..last {
         if let Some(row) = screen.rows.get(line) {
-            backgrounds(ctx, &m, screen.background, line, row, width);
+            backgrounds(canvas, &m, screen.background, line, row, width);
             if let Some((from, to)) = screen.selection.and_then(|s| selected(&s, line, row.len())) {
-                fill(
-                    ctx,
-                    theme.selection,
-                    m.cell_rect(Point { line, column: from }, to + 1 - from),
-                );
+                let area = m.cell_rect(Point { line, column: from }, to + 1 - from);
+                canvas.fill(theme.selection, 1.0, area);
             }
-            text(ctx, fonts, line, row, 0..row.len(), None);
-            decorations(ctx, &m, line, row);
+            text(canvas, fonts, line, row, 0..row.len(), None);
+            decorations(canvas, &m, line, row);
         }
     }
     if let Some((line, words)) = overlay.final_line {
         let x = m.cell_rect(Point { line, column: 0 }, 1).origin.x;
-        draw_string(
-            ctx,
-            fonts,
-            words,
-            Face::Regular,
-            x,
-            line,
-            theme.palette.foreground.dim(),
-        );
+        let baseline = INSET_Y + line as f64 * m.cell_height + m.baseline;
+        canvas.line(words, Face::Regular, x, baseline, theme.palette.foreground.dim());
     } else if overlay.marked.is_empty() {
-        cursor(ctx, fonts, theme, screen, overlay);
+        cursor(canvas, fonts, theme, screen, overlay);
     }
-    marked(ctx, fonts, theme, screen, overlay.marked);
+    marked(canvas, fonts, theme, screen, overlay.marked);
     if overlay.flash {
-        set_color(ctx, theme.palette.foreground, 0.12);
-        CGContext::fill_rect(Some(ctx), dirty);
+        canvas.fill(theme.palette.foreground, 0.12, dirty);
     }
 }
 
@@ -399,7 +514,7 @@ fn selected(selection: &Highlight, line: usize, columns: usize) -> Option<(usize
 }
 
 /// Cell backgrounds other than the screen's, the outer ones reaching to the edges of the view.
-fn backgrounds(ctx: &CGContext, m: &Metrics, default: Rgb, line: usize, row: &[Cell], width: f64) {
+fn backgrounds(canvas: &mut impl Canvas, m: &Metrics, default: Rgb, line: usize, row: &[Cell], width: f64) {
     let mut start = 0;
     while start < row.len() {
         let bg = row[start].bg;
@@ -413,23 +528,15 @@ fn backgrounds(ctx: &CGContext, m: &Metrics, default: Rgb, line: usize, row: &[C
             if end == row.len() {
                 area.size.width = (width - area.origin.x).max(area.size.width);
             }
-            fill(ctx, bg, area);
+            canvas.fill(bg, 1.0, area);
         }
         start = end;
     }
 }
 
-/// Glyphs in one font and colour, drawn with one call.
-struct Batch {
-    font: usize,
-    color: Rgb,
-    glyphs: Vec<CGGlyph>,
-    positions: Vec<CGPoint>,
-}
-
 /// The text of `columns` of `row`, in `color` if given, else each cell's own.
 fn text(
-    ctx: &CGContext,
+    canvas: &mut impl Canvas,
     fonts: &Fonts,
     line: usize,
     row: &[Cell],
@@ -438,7 +545,6 @@ fn text(
 ) {
     let m = fonts.metrics;
     let baseline = INSET_Y + line as f64 * m.cell_height + m.baseline;
-    let mut batch: Option<Batch> = None;
     for column in columns {
         let Some(cell) = row.get(column) else { break };
         if cell.flags.contains(CellFlags::WIDE_SPACER)
@@ -452,13 +558,12 @@ fn text(
         let area = m.cell_rect(Point { line, column }, cells);
         let face = Face::of(cell.flags);
         if cell.zero_width.is_empty() {
-            set_color(ctx, fg, 1.0);
             let pen = Pen {
                 rect: area,
                 scale: m.scale,
                 light: m.stroke,
             };
-            if boxdraw::draw(ctx, cell.ch, &pen) {
+            if canvas.boxdraw(cell.ch, &pen, fg) {
                 continue;
             }
             if let Some(glyph) = fonts.glyph(cell.ch, face) {
@@ -467,49 +572,33 @@ fn text(
                 } else {
                     0.0
                 };
-                let position = CGPoint::new(area.origin.x + offset, 0.0);
-                match &mut batch {
-                    Some(open) if open.font == glyph.font && open.color == fg => {
-                        open.glyphs.push(glyph.glyph);
-                        open.positions.push(position);
-                    }
-                    _ => {
-                        flush(ctx, fonts, batch.take(), baseline);
-                        batch = Some(Batch {
-                            font: glyph.font,
-                            color: fg,
-                            glyphs: vec![glyph.glyph],
-                            positions: vec![position],
-                        });
-                    }
-                }
+                canvas.glyph(glyph, area.origin.x + offset, baseline, fg);
                 continue;
             }
         }
         let cluster: String = std::iter::once(cell.ch)
             .chain(cell.zero_width.iter().copied())
             .collect();
-        draw_cluster(ctx, fonts, &cluster, face, area, baseline, fg);
+        let width = canvas.measure(&cluster, face);
+        let offset = ((area.size.width - width) / 2.0).max(0.0);
+        canvas.line(&cluster, face, area.origin.x + offset, baseline, fg);
     }
-    flush(ctx, fonts, batch, baseline);
 }
 
-/// Draws `batch` on the baseline at `baseline`, in a space turned upright for the glyphs.
-fn flush(ctx: &CGContext, fonts: &Fonts, batch: Option<Batch>, baseline: f64) {
-    let Some(batch) = batch else { return };
-    let font = fonts.font(batch.font);
-    set_color(ctx, batch.color, 1.0);
+/// Draws `glyphs` of `font` at `positions` along `baseline`, in a space turned upright for them.
+pub fn show_glyphs(ctx: &CGContext, font: &CTFont, glyphs: &[CGGlyph], positions: &[CGPoint], baseline: f64) {
+    let count = glyphs.len().min(positions.len());
     let c = Some(ctx);
     CGContext::save_g_state(c);
     CGContext::translate_ctm(c, 0.0, baseline);
     CGContext::scale_ctm(c, 1.0, -1.0);
     upright_text(ctx);
-    // SAFETY: The two buffers hold one entry per glyph.
+    // SAFETY: Both buffers hold at least `count` entries.
     unsafe {
         font.draw_glyphs(
-            NonNull::from(&*batch.glyphs).cast(),
-            NonNull::from(&*batch.positions).cast(),
-            batch.glyphs.len(),
+            NonNull::from(glyphs).cast(),
+            NonNull::from(positions).cast(),
+            count,
             ctx,
         );
     }
@@ -531,7 +620,7 @@ fn upright_text(ctx: &CGContext) {
 }
 
 /// A line of Core Text in `face` whose glyphs take the context's fill colour.
-fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
+pub fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
     let font = fonts.font(face.index());
     let string = NSMutableAttributedString::initWithString(NSMutableAttributedString::alloc(), &ns(text));
     let whole = NSRange::new(0, string.length());
@@ -554,12 +643,12 @@ fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
     unsafe { CTLine::with_attributed_string(attributed) }
 }
 
-fn line_width(line: &CTLine) -> f64 {
+pub fn line_width(line: &CTLine) -> f64 {
     // SAFETY: Null pointers skip the metrics not asked for.
     unsafe { line.typographic_bounds(std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut()) }
 }
 
-fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: Rgb) {
+pub fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: Rgb) {
     set_color(ctx, color, 1.0);
     let c = Some(ctx);
     CGContext::save_g_state(c);
@@ -571,30 +660,25 @@ fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: Rgb) 
     CGContext::restore_g_state(c);
 }
 
-/// A character with the marks combined with it, shaped by Core Text and centred in its cells.
-fn draw_cluster(ctx: &CGContext, fonts: &Fonts, cluster: &str, face: Face, area: CGRect, baseline: f64, color: Rgb) {
-    let line = line_of(fonts, cluster, face);
-    let width = line_width(&line);
-    let offset = ((area.size.width - width) / 2.0).max(0.0);
-    draw_line(ctx, &line, area.origin.x + offset, baseline, color);
-}
-
-/// `words` from `x` on line `line`; how wide they are.
-fn draw_string(ctx: &CGContext, fonts: &Fonts, words: &str, face: Face, x: f64, line: usize, color: Rgb) -> f64 {
-    let m = fonts.metrics;
-    let ct_line = line_of(fonts, words, face);
-    let baseline = INSET_Y + line as f64 * m.cell_height + m.baseline;
-    draw_line(ctx, &ct_line, x, baseline, color);
-    line_width(&ct_line)
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Stroke {
+/// The kinds of underline a cell can carry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Stroke {
     Single,
     Double,
     Curly,
     Dotted,
     Dashed,
+}
+
+impl Stroke {
+    /// The length after which a dotted or dashed line repeats, for a line `width` thick.
+    pub fn period(self, width: f64) -> Option<f64> {
+        match self {
+            Stroke::Dotted => Some(2.0 * width),
+            Stroke::Dashed => Some(5.0 * width),
+            Stroke::Single | Stroke::Double | Stroke::Curly => None,
+        }
+    }
 }
 
 fn underline_of(flags: CellFlags) -> Option<Stroke> {
@@ -611,7 +695,7 @@ fn underline_of(flags: CellFlags) -> Option<Stroke> {
 }
 
 /// Underlines and strike lines, each run of cells that share one drawn at once.
-fn decorations(ctx: &CGContext, m: &Metrics, line: usize, row: &[Cell]) {
+fn decorations(canvas: &mut impl Canvas, m: &Metrics, line: usize, row: &[Cell]) {
     let top = INSET_Y + line as f64 * m.cell_height;
     let baseline = top + m.baseline;
     let mut column = 0;
@@ -627,17 +711,18 @@ fn decorations(ctx: &CGContext, m: &Metrics, line: usize, row: &[Cell]) {
         let area = m.cell_rect(Point { line, column }, end - column);
         if let Some(color) = strike {
             let y = m.snap(baseline - m.strike - m.stroke / 2.0);
-            fill(ctx, color, rect(area.origin.x, y, area.size.width, m.stroke));
+            canvas.fill(color, 1.0, rect(area.origin.x, y, area.size.width, m.stroke));
         }
         if let Some((kind, color)) = underline {
-            set_color(ctx, color, 1.0);
-            draw_underline(ctx, m, kind, area, baseline + m.underline);
+            canvas.underline(kind, area, baseline + m.underline, color);
         }
         column = end;
     }
 }
 
-fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f64) {
+/// Strokes an underline of `kind` across `area` with its top at `y` in the context's colour; dotted and dashed lines
+/// start `phase` into their pattern.
+pub fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f64, phase: f64) {
     let (x, width, t) = (area.origin.x, area.size.width, m.stroke);
     let c = Some(ctx);
     match kind {
@@ -656,7 +741,7 @@ fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f
             CGContext::save_g_state(c);
             CGContext::set_line_width(c, t);
             // SAFETY: The pattern holds the two lengths passed.
-            unsafe { CGContext::set_line_dash(c, 0.0, pattern.as_ptr(), 2) };
+            unsafe { CGContext::set_line_dash(c, phase, pattern.as_ptr(), 2) };
             CGContext::begin_path(c);
             CGContext::move_to_point(c, x, y + t / 2.0);
             CGContext::add_line_to_point(c, x + width, y + t / 2.0);
@@ -683,7 +768,7 @@ fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f
     }
 }
 
-fn cursor(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, overlay: &Overlay) {
+fn cursor(canvas: &mut impl Canvas, fonts: &Fonts, theme: &Theme, screen: &Snapshot, overlay: &Overlay) {
     let at = screen.cursor;
     if !at.visible || (overlay.focused && !overlay.cursor_on) {
         return;
@@ -697,60 +782,55 @@ fn cursor(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, over
         CursorShape::HollowBlock
     };
     let bar = m.snap((m.cell_width / 8.0).max(1.0)).max(1.0 / m.scale);
+    let (x, y, w, h, s) = (
+        area.origin.x,
+        area.origin.y,
+        area.size.width,
+        area.size.height,
+        m.stroke,
+    );
     match shape {
         CursorShape::Block => {
-            fill(ctx, color, area);
+            canvas.fill(color, 1.0, area);
             if let Some(row) = screen.rows.get(at.point.line) {
                 let behind = row.get(at.point.column).map_or(screen.background, |cell| cell.bg);
                 let column = at.point.column;
-                text(ctx, fonts, at.point.line, row, column..column + 1, Some(behind));
+                text(canvas, fonts, at.point.line, row, column..column + 1, Some(behind));
             }
         }
         CursorShape::HollowBlock => {
-            set_color(ctx, color, 1.0);
-            let inset = m.stroke / 2.0;
-            let frame = rect(
-                area.origin.x + inset,
-                area.origin.y + inset,
-                area.size.width - m.stroke,
-                area.size.height - m.stroke,
-            );
-            CGContext::stroke_rect_with_width(Some(ctx), frame, m.stroke);
+            for side in [
+                rect(x, y, w, s),
+                rect(x, y + h - s, w, s),
+                rect(x, y + s, s, h - 2.0 * s),
+                rect(x + w - s, y + s, s, h - 2.0 * s),
+            ] {
+                canvas.fill(color, 1.0, side);
+            }
         }
-        CursorShape::Beam => fill(ctx, color, rect(area.origin.x, area.origin.y, bar, area.size.height)),
-        CursorShape::Underline => fill(
-            ctx,
-            color,
-            rect(
-                area.origin.x,
-                area.origin.y + area.size.height - bar,
-                area.size.width,
-                bar,
-            ),
-        ),
+        CursorShape::Beam => canvas.fill(color, 1.0, rect(x, y, bar, h)),
+        CursorShape::Underline => canvas.fill(color, 1.0, rect(x, y + h - bar, w, bar)),
     }
 }
 
 /// Text an input method is composing, on the screen's background at the cursor and underlined.
-fn marked(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, text: &str) {
+fn marked(canvas: &mut impl Canvas, fonts: &Fonts, theme: &Theme, screen: &Snapshot, text: &str) {
     if text.is_empty() {
         return;
     }
     let m = fonts.metrics;
-    let at = screen.cursor.point;
-    let line = line_of(fonts, text, Face::Regular);
-    let area = m.cell_rect(at, 1);
-    let width = line_width(&line).max(m.cell_width);
-    fill(
-        ctx,
+    let area = m.cell_rect(screen.cursor.point, 1);
+    let width = canvas.measure(text, Face::Regular).max(m.cell_width);
+    canvas.fill(
         screen.background,
+        1.0,
         rect(area.origin.x, area.origin.y, width, area.size.height),
     );
     let baseline = area.origin.y + m.baseline;
-    draw_line(ctx, &line, area.origin.x, baseline, theme.palette.foreground);
-    fill(
-        ctx,
+    canvas.line(text, Face::Regular, area.origin.x, baseline, theme.palette.foreground);
+    canvas.fill(
         theme.palette.foreground,
+        1.0,
         rect(area.origin.x, baseline + m.underline, width, m.stroke),
     );
 }
