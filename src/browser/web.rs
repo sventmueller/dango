@@ -4,12 +4,13 @@
 
 use std::cell::OnceCell;
 use std::path::Path;
+use std::sync::OnceLock;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::NSEventModifierFlags;
-use objc2_foundation::{NSNumber, NSURL, NSURLRequest};
+use objc2_foundation::{NSBundle, NSNumber, NSString, NSURL, NSURLRequest};
 use objc2_web_kit::{
     WKDownload, WKDownloadDelegate, WKNavigationAction, WKNavigationActionPolicy, WKNavigationResponse,
     WKNavigationResponsePolicy, WKNavigationType, WKWebView, WKWebViewConfiguration, WKWebsiteDataStore,
@@ -47,6 +48,9 @@ pub fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> 
     // SAFETY: The shared store and plain flags, set before any view uses the configuration.
     unsafe {
         config.setWebsiteDataStore(&store(mtm));
+        if let Some(name) = safari_name() {
+            config.setApplicationNameForUserAgent(Some(&ns(name)));
+        }
         let preferences = config.preferences();
         preferences.setJavaScriptCanOpenWindowsAutomatically(false);
         preferences.setFraudulentWebsiteWarningEnabled(true);
@@ -54,6 +58,28 @@ pub fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> 
     }
     enable_inspect_element(&config);
     config
+}
+
+/// The tail Safari adds to WebKit's user agent, for the installed Safari. Sites such as Google serve a reduced page to
+/// a WebKit browser whose user agent lacks it.
+fn safari_name() -> Option<&'static str> {
+    static NAME: OnceLock<Option<String>> = OnceLock::new();
+    NAME.get_or_init(|| {
+        let url = objc2_app_kit::NSWorkspace::sharedWorkspace()
+            .URLForApplicationWithBundleIdentifier(&ns("com.apple.Safari"))?;
+        let bundle = NSBundle::bundleWithURL(&url)?;
+        let version = bundle.objectForInfoDictionaryKey(&ns("CFBundleShortVersionString"))?;
+        user_agent_tail(&version.downcast_ref::<NSString>()?.to_string())
+    })
+    .as_deref()
+}
+
+/// Safari's user agent tail for Safari `version`; the `Safari/605.1.15` token is frozen in every Safari since 2017.
+fn user_agent_tail(version: &str) -> Option<String> {
+    let valid = version
+        .split('.')
+        .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit()));
+    valid.then(|| format!("Version/{version} Safari/605.1.15"))
 }
 
 /// Adds "Inspect Element" to a page's context menu. `isInspectable` alone only lets Safari's Develop menu attach;
@@ -255,4 +281,21 @@ pub fn error_detail(error: &objc2_foundation::NSError, key: &objc2_foundation::N
     }
     let url = value.downcast_ref::<NSURL>()?;
     url.absoluteString().map(|s| s.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::user_agent_tail;
+
+    #[test]
+    fn user_agent_tail_takes_a_dotted_version_only() {
+        assert_eq!(user_agent_tail("27.2").as_deref(), Some("Version/27.2 Safari/605.1.15"));
+        assert_eq!(
+            user_agent_tail("27.2.1").as_deref(),
+            Some("Version/27.2.1 Safari/605.1.15")
+        );
+        assert_eq!(user_agent_tail(""), None);
+        assert_eq!(user_agent_tail("27..2"), None);
+        assert_eq!(user_agent_tail("27.2 beta"), None);
+    }
 }
