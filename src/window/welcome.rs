@@ -17,6 +17,9 @@ use crate::util::{borderless_button, label, ns};
 /// How many recent folders the welcome tab lists.
 const SHOWN_RECENT: usize = 8;
 
+/// The edge length of the app icon above the title.
+const ICON_SIZE: f64 = 72.0;
+
 /// The recent folders that still exist, as the welcome tab lists them.
 pub fn recent_folders() -> Vec<PathBuf> {
     State::load_user()
@@ -37,9 +40,24 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
         let image = NSImageView::imageViewWithImage(&icon, mtm);
         crate::util::hide_from_voiceover(&image);
         image.setTranslatesAutoresizingMaskIntoConstraints(false);
-        image.widthAnchor().constraintEqualToConstant(72.0).setActive(true);
-        image.heightAnchor().constraintEqualToConstant(72.0).setActive(true);
-        stack.addArrangedSubview(&image);
+        // macOS app icons keep 100 of their 1024 points clear on each side, so the visible tile starts further in.
+        let margin = ICON_SIZE * 100.0 / 1024.0;
+        let frame = NSView::new(mtm);
+        frame.setTranslatesAutoresizingMaskIntoConstraints(false);
+        frame.addSubview(&image);
+        for constraint in [
+            image.widthAnchor().constraintEqualToConstant(ICON_SIZE),
+            image.heightAnchor().constraintEqualToConstant(ICON_SIZE),
+            image.topAnchor().constraintEqualToAnchor(&frame.topAnchor()),
+            image.bottomAnchor().constraintEqualToAnchor(&frame.bottomAnchor()),
+            image
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&frame.leadingAnchor(), -margin),
+            frame.widthAnchor().constraintEqualToConstant(ICON_SIZE - margin),
+        ] {
+            constraint.setActive(true);
+        }
+        stack.addArrangedSubview(&frame);
     }
     let title = label(mtm, ide_product::NAME);
     // SAFETY: AppKit sets its font weight constants when it loads.
