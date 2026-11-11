@@ -511,15 +511,15 @@ fn usage(root: PathBuf, index: usize) {
                     let status = tab.inspect().status.join(" | ");
                     let credit = index == 2;
                     check(
-                        "ACP token reports and original cost units reach the status line",
+                        "ACP token reports stand on the left like the context, original cost units on the right",
                         if credit {
                             status.contains("2,5 credits") && status.contains("6 % Kontext")
                         } else {
-                            status.contains("1 k Tokens") && !status.contains("Kontext")
+                            status.starts_with("1 k Tokens") && !status.contains("Kontext")
                         },
                         status,
                     );
-                    let (_, tip) = crate::agent::cost_text(tab.snapshot().usage());
+                    let tip = crate::agent::token_text(tab.snapshot().usage()).map(|(_, tip)| tip);
                     check(
                         "ACP token totals keep their reported breakdown in the tooltip",
                         tip.as_deref().is_some_and(|s| {

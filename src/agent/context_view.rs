@@ -527,32 +527,30 @@ impl Swatch {
     }
 }
 
-/// The status line's cost: the session's, and the last turn's when it is known; with the details as a tooltip.
-pub fn cost_text(usage: &Usage) -> (String, Option<String>) {
-    let (mut text, details) = session_cost_text(usage);
-    let mut tip: Vec<String> = details.into_iter().collect();
-    if let Some(report) = &usage.reported_tokens {
-        let count = tf("{} Tokens", &[&tokens(report.total)]);
-        if text.is_empty() {
-            text = count.clone();
-        }
-        tip.push(tf("Zuletzt gemeldet: {}", &[&count]));
-        tip.push(tf("Eingabe: {}", &[&tokens(report.input)]));
-        tip.push(tf("Ausgabe: {}", &[&tokens(report.output)]));
-        if let Some(read) = report.cache_read {
-            tip.push(tf("Cache gelesen: {}", &[&tokens(read)]));
-        }
-        if let Some(write) = report.cache_write {
-            tip.push(tf("Cache geschrieben: {}", &[&tokens(write)]));
-        }
-        if let Some(thought) = report.thought {
-            tip.push(tf("Reasoning: {}", &[&tokens(thought)]));
-        }
+/// The agent's last token report for the left of the status line, where other agents show the context, with its
+/// breakdown as a tooltip; `None` without a report.
+pub fn token_text(usage: &Usage) -> Option<(String, String)> {
+    let report = usage.reported_tokens.as_ref()?;
+    let count = tf("{} Tokens", &[&tokens(report.total)]);
+    let mut tip = vec![
+        tf("Zuletzt gemeldet: {}", &[&count]),
+        tf("Eingabe: {}", &[&tokens(report.input)]),
+        tf("Ausgabe: {}", &[&tokens(report.output)]),
+    ];
+    if let Some(read) = report.cache_read {
+        tip.push(tf("Cache gelesen: {}", &[&tokens(read)]));
     }
-    (text, (!tip.is_empty()).then(|| tip.join("\n")))
+    if let Some(write) = report.cache_write {
+        tip.push(tf("Cache geschrieben: {}", &[&tokens(write)]));
+    }
+    if let Some(thought) = report.thought {
+        tip.push(tf("Reasoning: {}", &[&tokens(thought)]));
+    }
+    Some((count, tip.join("\n")))
 }
 
-fn session_cost_text(usage: &Usage) -> (String, Option<String>) {
+/// The status line's cost: the session's, and the last turn's when it is known; with the details as a tooltip.
+pub fn cost_text(usage: &Usage) -> (String, Option<String>) {
     if let Some(cost) = usage.reported_cost.as_ref().filter(|c| c.currency != "USD") {
         let text = super::format::reported_cost(cost);
         let tip = tf("Sitzung: {}", &[&text]);

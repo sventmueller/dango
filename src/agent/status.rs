@@ -162,7 +162,10 @@ impl StatusLine {
             }
             _ => {
                 self.ring.setHidden(true);
-                self.context.setStringValue(&ns(""));
+                let reported = super::context_view::token_text(usage);
+                let (text, tip) = reported.map_or((String::new(), None), |(text, tip)| (text, Some(tip)));
+                self.context.setStringValue(&ns(&text));
+                self.context.setToolTip(tip.as_deref().map(ns).as_deref());
             }
         }
         let (cost, details) = super::context_view::spend_text(thread);

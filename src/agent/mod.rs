@@ -54,7 +54,7 @@ pub use actions::{alerts_seen, answer_alerts};
 #[cfg(feature = "selftest")]
 pub use cards::window_name;
 #[cfg(feature = "selftest")]
-pub use context_view::{click as click_context, close as close_context, cost_text, seen as context_seen};
+pub use context_view::{click as click_context, close as close_context, cost_text, seen as context_seen, token_text};
 #[cfg(feature = "selftest")]
 pub use figures::{asked_for as asked_for_figure, is_dark};
 #[cfg(feature = "selftest")]
