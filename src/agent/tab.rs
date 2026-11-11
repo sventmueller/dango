@@ -630,6 +630,7 @@ impl AgentTab {
                 .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
             launch.sandbox = state.sandbox;
             launch.permission_mode = Some(state.mode.clone());
+            launch.allow_bypass = true;
             launch.model.clone_from(&state.model);
             launch.effort.clone_from(&state.effort);
             launch.file_checkpoints = true;
@@ -1106,7 +1107,7 @@ impl AgentTab {
     /// Switches to the permission mode `mode`, as the mode pill's menu does.
     #[cfg(feature = "selftest")]
     pub fn use_mode(&self, mode: &str) {
-        self.state.borrow().source.set_mode(mode);
+        self.state.borrow().source.set_mode(mode, |_| ());
         self.state.borrow_mut().mode = mode.to_string();
         self.refresh_composer();
     }

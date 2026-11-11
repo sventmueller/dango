@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "예를 들어 다른 Mac에 있는 Ollama 또는 LM Studio용입니다. 비워 두면 기본 주소로 복원됩니다.";
 "Fenster" = "윈도우";
 "Fenster schließen" = "윈도우 닫기";
+"Freigabemodus nicht gewechselt" = "권한 모드가 변경되지 않음";
 "Fremder Inhalt" = "외부 콘텐츠";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "앱이 가격을 모르는 모델용입니다. 다른 모든 가격보다 우선합니다.";
 "Für diesen Mac gibt es keine Ausgabe" = "이 Mac용 빌드가 없습니다";

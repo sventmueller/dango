@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "De exemplu, pentru Ollama sau LM Studio pe alt Mac. Lăsați câmpul gol pentru a restabili adresa obișnuită.";
 "Fenster" = "Fereastră";
 "Fenster schließen" = "Închideți fereastra";
+"Freigabemodus nicht gewechselt" = "Modul de permisiuni nu a fost schimbat";
 "Fremder Inhalt" = "Conținut extern";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Pentru modelele al căror preț nu îl cunoaște aplicația. Are prioritate față de orice alt preț.";
 "Für diesen Mac gibt es keine Ausgabe" = "Nu există o variantă pentru acest Mac";

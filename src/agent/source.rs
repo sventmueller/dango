@@ -198,9 +198,14 @@ impl Source {
         }
     }
 
-    pub fn set_mode(&self, mode: &str) {
+    /// Switches the session's permission mode; `refused` gets the CLI's reason when it says no.
+    pub fn set_mode(&self, mode: &str, refused: impl FnOnce(String) + Send + 'static) {
         if let Some(session) = self.session() {
-            session.set_permission_mode(mode).then(|_| ());
+            session.set_permission_mode(mode).then(move |answer| {
+                if let Err(error) = answer {
+                    refused(error.to_string());
+                }
+            });
         }
     }
 

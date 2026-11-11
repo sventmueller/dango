@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "F.eks. til Ollama eller LM Studio på en anden Mac. Lad feltet være tomt for at gendanne den sædvanlige adresse.";
 "Fenster" = "Vindue";
 "Fenster schließen" = "Luk vindue";
+"Freigabemodus nicht gewechselt" = "Tilladelsestilstanden blev ikke ændret";
 "Fremder Inhalt" = "Fremmed indhold";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Til modeller, hvis pris appen ikke kender. Den har forrang for alle andre priser.";
 "Für diesen Mac gibt es keine Ausgabe" = "Der findes ingen udgave til denne Mac";

@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Örneğin başka bir Mac’teki Ollama veya LM Studio için. Boş bırakırsanız olağan adres geri yüklenir.";
 "Fenster" = "Pencere";
 "Fenster schließen" = "Pencereyi Kapat";
+"Freigabemodus nicht gewechselt" = "İzin Modu Değiştirilmedi";
 "Fremder Inhalt" = "Dış İçerik";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Uygulamanın fiyatını bilmediği modeller için. Diğer tüm fiyatlardan önce gelir.";
 "Für diesen Mac gibt es keine Ausgabe" = "Bu Mac için bir derleme yok";

@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Például egy másik Macen futó Ollamához vagy LM Studióhoz. Ha üresen hagyja, visszaáll a szokásos cím.";
 "Fenster" = "Ablak";
 "Fenster schließen" = "Ablak bezárása";
+"Freigabemodus nicht gewechselt" = "Az engedélymód nem változott";
 "Fremder Inhalt" = "Külső tartalom";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Azokhoz a modellekhez, amelyek árát az app nem ismeri. Minden más árral szemben elsőbbséget élvez.";
 "Für diesen Mac gibt es keine Ausgabe" = "Ehhez a Machez nincs kiadás";

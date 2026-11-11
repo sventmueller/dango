@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Por ejemplo, para Ollama o LM Studio en otro Mac. Si lo dejas vacío, se restaura la dirección habitual.";
 "Fenster" = "Ventana";
 "Fenster schließen" = "Cerrar ventana";
+"Freigabemodus nicht gewechselt" = "No se cambió el modo de permisos";
 "Fremder Inhalt" = "Contenido externo";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Para modelos cuyo precio no conoce la app. Tiene prioridad sobre cualquier otro precio.";
 "Für diesen Mac gibt es keine Ausgabe" = "No hay ninguna compilación para este Mac";

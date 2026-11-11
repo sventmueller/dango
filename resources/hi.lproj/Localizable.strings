@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "जैसे किसी दूसरे Mac पर Ollama या LM Studio के लिए। खाली छोड़ने पर सामान्य पता फिर से लागू हो जाता है।";
 "Fenster" = "विंडो";
 "Fenster schließen" = "विंडो बंद करें";
+"Freigabemodus nicht gewechselt" = "अनुमति मोड नहीं बदला";
 "Fremder Inhalt" = "बाहरी कॉन्टेंट";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "उन मॉडलों के लिए जिनकी कीमत ऐप नहीं जानता। यह कीमत अन्य सभी कीमतों से पहले लागू होती है।";
 "Für diesen Mac gibt es keine Ausgabe" = "इस Mac के लिए कोई बिल्ड नहीं है";

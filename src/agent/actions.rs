@@ -590,10 +590,30 @@ impl AgentTab {
         let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
             return;
         };
-        self.state.borrow().source.set_mode(&mode);
+        let key = self.key;
+        self.state.borrow().source.set_mode(&mode, move |why| {
+            crate::util::main_soon(move || {
+                if let Some(tab) = super::get(key) {
+                    tab.mode_refused(&why);
+                }
+            });
+        });
         super::choices::remember(self.agent.id(), |choice| choice.mode = Some(mode.clone()));
         self.state.borrow_mut().mode = mode;
         self.refresh_composer();
+    }
+
+    /// The CLI kept its mode instead of the one picked: the composer shows the mode it runs in, the next sessions start
+    /// with that one, and an alert gives the CLI's reason.
+    pub(super) fn mode_refused(&self, why: &str) {
+        let now = match self.state.borrow().thread.mode() {
+            None | Some("manual") => "default".to_string(),
+            Some(mode) => mode.to_string(),
+        };
+        super::choices::remember(self.agent.id(), |choice| choice.mode = Some(now.clone()));
+        self.state.borrow_mut().mode = now;
+        self.refresh_composer();
+        crate::editor::show_alert(self.mtm, t("Freigabemodus nicht gewechselt"), why);
     }
 
     /// The sandbox switch (E19): the CLI takes it at start, so a resting session starts again with it.

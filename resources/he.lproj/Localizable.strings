@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "למשל עבור Ollama או LM Studio ב-Mac אחר. השארת השדה ריק משחזרת את כתובת ברירת המחדל.";
 "Fenster" = "חלון";
 "Fenster schließen" = "סגירת החלון";
+"Freigabemodus nicht gewechselt" = "מצב ההרשאות לא שונה";
 "Fremder Inhalt" = "תוכן חיצוני";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "עבור מודלים שהמחיר שלהם אינו ידוע ליישום. מחיר זה גובר על כל מחיר אחר.";
 "Für diesen Mac gibt es keine Ausgabe" = "אין גירסה עבור Mac זה";

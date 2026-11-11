@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Misalnya untuk Ollama atau LM Studio di Mac lain. Kosongkan untuk memulihkan alamat biasa.";
 "Fenster" = "Jendela";
 "Fenster schließen" = "Tutup Jendela";
+"Freigabemodus nicht gewechselt" = "Mode Izin Tidak Diubah";
 "Fremder Inhalt" = "Konten Eksternal";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Untuk model yang harganya tidak diketahui aplikasi. Harga ini didahulukan dari harga lainnya.";
 "Für diesen Mac gibt es keine Ausgabe" = "Tidak ada build untuk Mac ini";

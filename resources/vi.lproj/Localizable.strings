@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Ví dụ cho Ollama hoặc LM Studio trên một máy Mac khác. Để trống để khôi phục địa chỉ thông thường.";
 "Fenster" = "Cửa sổ";
 "Fenster schließen" = "Đóng Cửa sổ";
+"Freigabemodus nicht gewechselt" = "Chưa đổi chế độ quyền";
 "Fremder Inhalt" = "Nội dung bên ngoài";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Dành cho các mô hình mà ứng dụng không biết giá. Giá này được ưu tiên hơn mọi giá khác.";
 "Für diesen Mac gibt es keine Ausgabe" = "Không có bản dựng cho máy Mac này";

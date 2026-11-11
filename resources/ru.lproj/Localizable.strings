@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Например, для Ollama или LM Studio на другом Mac. Чтобы восстановить стандартный адрес, оставьте поле пустым.";
 "Fenster" = "Окно";
 "Fenster schließen" = "Закрыть окно";
+"Freigabemodus nicht gewechselt" = "Режим разрешений не изменён";
 "Fremder Inhalt" = "Внешнее содержимое";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Для моделей, цена которых приложению неизвестна. Эта цена имеет приоритет над любой другой.";
 "Für diesen Mac gibt es keine Ausgabe" = "Для этого Mac нет сборки";

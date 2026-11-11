@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "Esimerkiksi Ollamalle tai LM Studiolle toisella Macilla. Jos jätät kentän tyhjäksi, tavallinen osoite palautetaan.";
 "Fenster" = "Ikkuna";
 "Fenster schließen" = "Sulje ikkuna";
+"Freigabemodus nicht gewechselt" = "Lupatilaa ei vaihdettu";
 "Fremder Inhalt" = "Ulkopuolinen sisältö";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "Malleille, joiden hintaa appi ei tunne. Se on etusijalla kaikkiin muihin hintoihin nähden.";
 "Für diesen Mac gibt es keine Ausgabe" = "Tälle Macille ei ole versiota";

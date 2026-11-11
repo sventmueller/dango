@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "たとえば、別のMac上のOllamaやLM Studio用です。空のままにすると通常のアドレスに戻ります。";
 "Fenster" = "ウインドウ";
 "Fenster schließen" = "ウインドウを閉じる";
+"Freigabemodus nicht gewechselt" = "権限モードは変更されませんでした";
 "Fremder Inhalt" = "外部コンテンツ";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "アプリが料金を把握していないモデル用です。ほかのどの料金よりも優先されます。";
 "Für diesen Mac gibt es keine Ausgabe" = "このMac用のビルドはありません";

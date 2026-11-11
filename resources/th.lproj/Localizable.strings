@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "เช่น สำหรับ Ollama หรือ LM Studio บน Mac เครื่องอื่น เว้นว่างไว้เพื่อคืนค่าที่อยู่ปกติ";
 "Fenster" = "หน้าต่าง";
 "Fenster schließen" = "ปิดหน้าต่าง";
+"Freigabemodus nicht gewechselt" = "ไม่ได้เปลี่ยนโหมดสิทธิ์";
 "Fremder Inhalt" = "เนื้อหาจากภายนอก";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "สำหรับโมเดลที่แอปไม่รู้ราคา ราคานี้มีผลเหนือราคาอื่นทั้งหมด";
 "Für diesen Mac gibt es keine Ausgabe" = "ไม่มีบิลด์สำหรับ Mac เครื่องนี้";

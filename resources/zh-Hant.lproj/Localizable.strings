@@ -97,6 +97,7 @@
 "Etwa für Ollama oder LM Studio auf einem anderen Mac. Leer lassen stellt die übliche Adresse wieder her." = "例如用於另一台 Mac 上的 Ollama 或 LM Studio。留空即可恢復預設網址。";
 "Fenster" = "視窗";
 "Fenster schließen" = "關閉視窗";
+"Freigabemodus nicht gewechselt" = "權限模式未變更";
 "Fremder Inhalt" = "外部內容";
 "Für Modelle, deren Preis die App nicht kennt. Er gilt vor jedem anderen Preis." = "用於 App 不知道價格的模型。此價格優先於其他所有價格。";
 "Für diesen Mac gibt es keine Ausgabe" = "沒有適用於這台 Mac 的版本";

@@ -53,6 +53,9 @@ pub struct Launch {
     pub disallowed_tools: Vec<String>,
     /// More folders the tools may use.
     pub add_dirs: Vec<PathBuf>,
+    /// Whether the session may switch to `bypassPermissions` while it runs, which the CLI refuses unless told so at
+    /// launch; it does not start in that mode for it.
+    pub allow_bypass: bool,
     /// Whether shell commands run in the CLI's sandbox.
     pub sandbox: bool,
     /// Whether the CLI saves the transcript, which resuming and the session list need.
@@ -88,6 +91,7 @@ impl Launch {
             allowed_tools: Vec::new(),
             disallowed_tools: Vec::new(),
             add_dirs: Vec::new(),
+            allow_bypass: false,
             sandbox: false,
             persist: true,
             file_checkpoints: false,
@@ -163,6 +167,9 @@ impl Launch {
         if self.sandbox {
             // The CLI's sandbox covers shell commands only; failIfUnavailable keeps it from silently running without.
             flag("settings", r#"{"sandbox":{"enabled":true,"failIfUnavailable":true}}"#);
+        }
+        if self.allow_bypass {
+            args.push("--allow-dangerously-skip-permissions".into());
         }
         if !self.persist {
             args.push("--no-session-persistence".into());
@@ -245,6 +252,17 @@ mod tests {
             "transcripts are kept for resuming"
         );
         assert!(!args.iter().any(|a| a.starts_with("--resume") || a == "--fork-session"));
+        assert!(!args.iter().any(|a| a.contains("dangerously")));
+    }
+
+    #[test]
+    fn bypassing_permissions_is_allowed_without_starting_in_it() {
+        let mut launch = launch();
+        launch.allow_bypass = true;
+        let args = launch.arguments();
+        assert!(args.contains(&"--allow-dangerously-skip-permissions".to_string()));
+        assert!(args.contains(&"--permission-mode=default".to_string()));
+        assert!(!args.contains(&"--dangerously-skip-permissions".to_string()));
     }
 
     #[test]
