@@ -228,7 +228,7 @@ pub fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Re
     ui::hug(&name);
     let detail = ui::label(
         ctx.mtm,
-        detail,
+        &head_detail(detail),
         &NSFont::systemFontOfSize(size),
         &NSColor::secondaryLabelColor(),
     );
@@ -236,6 +236,15 @@ pub fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Re
     let mut views: Vec<&NSView> = vec![&name, &detail, &spacer];
     views.extend(trailing.iter().copied());
     ui::row(ctx.mtm, 6.0, &views)
+}
+
+/// The most characters of a head's detail; the label cuts it shorter where the card is narrower.
+const HEAD_DETAIL: usize = 200;
+
+/// The detail of a card's head on one line, such as a shell command without a description, which the card shows in
+/// full below.
+fn head_detail(detail: &str) -> String {
+    format::first_line(detail, HEAD_DETAIL)
 }
 
 /// The colour of the dot of `entry` in the timeline; `None` for entries without one.
@@ -405,6 +414,13 @@ pub fn since(ctx: &Ctx<'_>, since: SystemTime) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_heads_detail_keeps_to_its_first_line() {
+        assert_eq!(head_detail("Run the tests"), "Run the tests");
+        assert_eq!(head_detail("python3 - <<'EOF'\np='a'\nEOF"), "python3 - <<'EOF'…");
+        assert_eq!(head_detail("\n  cargo test\n"), "cargo test");
+    }
 
     #[test]
     fn a_tag_carries_the_entry_and_what_to_do() {
