@@ -407,9 +407,8 @@ impl AgentTab {
         let id = controller.add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view);
         self.tab_id.set(id);
         controller.set_tab_tint(id, &self.agent.colour());
-        self.header.set_agent(self.agent.name(), &self.agent.colour());
-        self.composer
-            .set_agent(self.agent.name(), self.agent.colour(), self.agent.fill());
+        self.header.set_agent(self.agent.name());
+        self.composer.set_agent(self.agent.name());
         self.refresh();
     }
 
@@ -860,7 +859,7 @@ impl AgentTab {
         self.refresh_tab_mark();
     }
 
-    /// The dot on the tab: Claude's colour while it works, orange while it waits, the accent when it finished unseen.
+    /// The dot on the tab: the agent's colour while it works, orange while it waits, the accent when it finished unseen.
     fn refresh_tab_mark(&self) {
         let Some(controller) = self.controller() else { return };
         let state = self.state.borrow();

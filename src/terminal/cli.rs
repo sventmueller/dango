@@ -59,10 +59,10 @@ impl CliStatus {
         }
     }
 
-    /// The colour of its dot, as agent tabs colour theirs.
+    /// The colour of its dot in the activity view and the AI panel, as agent threads colour theirs there.
     pub fn color(self) -> Retained<NSColor> {
         match self {
-            CliStatus::Working => crate::agent::style::terracotta(),
+            CliStatus::Working => NSColor::controlAccentColor(),
             CliStatus::Waiting => NSColor::systemOrangeColor(),
             CliStatus::Finished => NSColor::tertiaryLabelColor(),
         }
@@ -456,7 +456,12 @@ impl TerminalView {
             return;
         };
         if let Some(tab) = self.ivars().tab.get() {
-            controller.set_tab_status(tab, Some(&cli.status().color()));
+            // In the tab bar a working CLI shows its agent's colour, as an AI tab that works does.
+            let color = match cli.status() {
+                CliStatus::Working => crate::agent::cli_colour(&cli.name),
+                status => status.color(),
+            };
+            controller.set_tab_status(tab, Some(&color));
         }
         crate::activity::refresh(&controller);
         crate::agent_panel::refresh(&controller);

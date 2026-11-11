@@ -400,7 +400,7 @@ fn color_of(row: &ContextRow) -> Retained<NSColor> {
         Some("system_tools") => NSColor::systemBlueColor(),
         Some("mcp_tools" | "mcp_instructions") => NSColor::systemTealColor(),
         Some("custom_agents") => NSColor::systemPurpleColor(),
-        Some("memory_files") => style::terracotta(),
+        Some("memory_files") => NSColor::systemPinkColor(),
         Some("skills") => NSColor::systemYellowColor(),
         Some("messages") => NSColor::systemGreenColor(),
         _ => NSColor::systemBrownColor(),

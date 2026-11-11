@@ -230,7 +230,7 @@ fn permission_buttons(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
     );
     if !request.default_to_no {
         once.setKeyEquivalent(&ns(""));
-        once.setBezelColor(Some(&ctx.fill()));
+        once.setBezelColor(Some(&NSColor::controlAccentColor()));
     }
     let mut buttons: Vec<Retained<NSView>> = vec![ui::view(&once)];
     let rules: Vec<&PermissionOption> = request
@@ -360,7 +360,7 @@ pub fn question(ctx: &Ctx<'_>, id: EntryId, question: &Question) -> Retained<NSV
     ui::view(&ui::framed(
         mtm,
         &column,
-        &ctx.accent(),
+        &NSColor::controlAccentColor(),
         None,
         8.0,
         ui::insets(10.0, 12.0, 10.0, 12.0),
@@ -531,7 +531,13 @@ fn pending_plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSV
         .get(&id.get())
         .cloned()
         .unwrap_or_default();
-    let icon = ui::icon(mtm, "list.bullet.clipboard", t("Plan"), 13.0, &ctx.accent());
+    let icon = ui::icon(
+        mtm,
+        "list.bullet.clipboard",
+        t("Plan"),
+        13.0,
+        &NSColor::secondaryLabelColor(),
+    );
     let title = ui::label(
         mtm,
         t("Plan zur Freigabe"),
@@ -586,7 +592,7 @@ fn pending_plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSV
     ui::view(&ui::framed(
         mtm,
         &column,
-        &ctx.accent(),
+        &NSColor::controlAccentColor(),
         None,
         8.0,
         ui::insets(10.0, 12.0, 10.0, 12.0),
@@ -603,7 +609,7 @@ fn plan_answers(ctx: &Ctx<'_>, id: EntryId, waiting: bool, noted: bool) -> Retai
         sel!(ideAgentPlan:),
         pack(id, PLAN_APPROVE),
     );
-    approve.setBezelColor(Some(&ctx.fill()));
+    approve.setBezelColor(Some(&NSColor::controlAccentColor()));
     let revise_title = if !noted {
         t("Überarbeiten lassen")
     } else {

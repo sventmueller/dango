@@ -147,10 +147,6 @@ pub struct Composer {
     pub sandbox: Retained<NSButton>,
     pub send_box: Retained<NSBox>,
     pub send: Retained<NSButton>,
-    /// The agent's colour, for the border while the composer has the focus.
-    accent: std::cell::RefCell<Retained<NSColor>>,
-    /// The agent's colour as the send button's fill, dark enough for its white arrow.
-    fill: std::cell::RefCell<Retained<NSColor>>,
     /// The microphone, which dictates into the text view.
     #[cfg(feature = "dictation")]
     pub mic: crate::dictation::Mic,
@@ -275,8 +271,6 @@ impl Composer {
             sandbox: parts.sandbox,
             send_box: parts.send_box,
             send: parts.send,
-            accent: std::cell::RefCell::new(style::terracotta()),
-            fill: std::cell::RefCell::new(style::fill(style::TERRACOTTA)),
             #[cfg(feature = "dictation")]
             mic,
         }
@@ -305,15 +299,9 @@ impl Composer {
 
     /// Shows `text` while the composer is empty.
     /// Names the agent the message goes to, for VoiceOver.
-    /// Names the agent the composer writes to, and takes its colours.
-    pub fn set_agent(&self, agent: &str, accent: Retained<NSColor>, fill: Retained<NSColor>) {
+    pub fn set_agent(&self, agent: &str) {
         self.text
             .setAccessibilityLabel(Some(&ns(&tf("Nachricht an {}", &[agent]))));
-        *self.accent.borrow_mut() = accent;
-        *self.fill.borrow_mut() = fill;
-        if self.send.isEnabled() {
-            self.send_box.setFillColor(&self.fill.borrow());
-        }
     }
 
     pub fn set_placeholder(&self, text: &str) {
@@ -335,10 +323,10 @@ impl Composer {
         self.fit();
     }
 
-    /// The border of the card, in the agent's colour while the composer has the keyboard focus.
+    /// The border of the card, in the system's accent colour while the composer has the keyboard focus.
     pub fn show_focus(&self, focused: bool) {
         let color = if focused {
-            self.accent.borrow().clone()
+            NSColor::controlAccentColor()
         } else {
             NSColor::separatorColor()
         };
@@ -357,7 +345,7 @@ impl Composer {
         crate::util::set_label(&self.send, Some(label));
         let active = running || can_send;
         let fill = if active {
-            self.fill.borrow().clone()
+            NSColor::controlAccentColor()
         } else {
             NSColor::quaternaryLabelColor()
         };
@@ -430,7 +418,7 @@ impl Footer {
         let mode = pill(mtm, target, sel!(ideAgentModeMenu:), t("Freigabemodus"));
         let sandbox = ui::symbol_button(mtm, "shield", t("Sandbox"), 12.0, target, sel!(ideAgentSandbox:), 0);
         let send = ui::symbol_button(mtm, "arrow.up", t("Senden"), 12.0, target, sel!(ideAgentSend:), 0);
-        send.setContentTintColor(Some(&NSColor::whiteColor()));
+        send.setContentTintColor(Some(&NSColor::alternateSelectedControlTextColor()));
         send.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 12.0,
@@ -441,7 +429,7 @@ impl Footer {
             mtm,
             &send,
             &NSColor::clearColor(),
-            Some(&style::fill(style::TERRACOTTA)),
+            Some(&NSColor::controlAccentColor()),
             6.0,
             ui::insets(0.0, 0.0, 0.0, 0.0),
         );

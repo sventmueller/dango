@@ -37,7 +37,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::window::WindowController;
-pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_register, confirm_install, launch_of};
+pub use acp::{
+    AcpAgent, Agent, Availability, agent_name, availability, cached_register, cli_colour, confirm_install, launch_of,
+};
 #[cfg(feature = "selftest")]
 pub use acp::{set_test_launch, set_test_register};
 pub use actions::ask_text;

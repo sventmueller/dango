@@ -366,7 +366,7 @@ fn agent_lines(tabs: &[std::rc::Rc<AgentTab>], now: SystemTime, all: bool) -> Ve
             buttons.push((t("Stopp"), Action::StopTurn(tab.key)));
         }
         let tint = match thread.status() {
-            Status::Running => crate::agent::style::terracotta(),
+            Status::Running => NSColor::controlAccentColor(),
             Status::RequiresAction => NSColor::systemOrangeColor(),
             Status::Idle => NSColor::tertiaryLabelColor(),
         };

@@ -336,7 +336,7 @@ impl AgentTab {
             ui::row(mtm, 3.0, &[&icon, &label, button])
         };
         let border = if offered {
-            self.agent.colour().colorWithAlphaComponent(0.6)
+            NSColor::controlAccentColor().colorWithAlphaComponent(0.6)
         } else if outside {
             NSColor::systemOrangeColor().colorWithAlphaComponent(0.6)
         } else {

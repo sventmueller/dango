@@ -117,19 +117,14 @@ impl Agent {
         }
     }
 
-    /// Its colour as the chat's accent, with enough contrast in every appearance; the system's accent colour for an
-    /// agent without one.
+    /// Its colour, which tells its tabs apart in the tab bar, with enough contrast in every appearance; the system's
+    /// accent colour for an agent without one.
     pub fn colour(&self) -> Retained<NSColor> {
         match (self, self.rgb()) {
             (Agent::Claude, _) => super::style::terracotta(),
             (_, Some(rgb)) => super::style::accent(rgb),
             (_, None) => NSColor::controlAccentColor(),
         }
-    }
-
-    /// Its colour as the fill of a button with white text.
-    pub fn fill(&self) -> Retained<NSColor> {
-        self.rgb().map_or_else(NSColor::controlAccentColor, super::style::fill)
     }
 
     /// Its own colour, if it has one.
@@ -148,6 +143,20 @@ impl Agent {
     pub fn is_own(&self) -> bool {
         matches!(self, Agent::Own)
     }
+}
+
+/// The colour of the agent whose CLI is `name`, as the tabs of its CLI threads show it.
+pub fn cli_colour(name: &str) -> Retained<NSColor> {
+    if name == "claude" {
+        return Agent::Claude.colour();
+    }
+    AcpAgent::presets()
+        .into_iter()
+        .find(|agent| {
+            register::preset(&agent.id)
+                .is_some_and(|p| p.cli == Some(name) || p.on_path.is_some_and(|(program, _)| program == name))
+        })
+        .map_or_else(NSColor::controlAccentColor, |agent| Agent::Acp(agent).colour())
 }
 
 /// The name shown for the agent a thread names, as the session list reads it.

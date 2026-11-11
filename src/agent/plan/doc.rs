@@ -176,7 +176,13 @@ impl PlanDoc {
         text.setSelectable(true);
         text.setTextContainerInset(NSSize::new(28.0, 22.0));
         let rendered = markdown::render(mtm, plan, style::BODY + 1.0, Tone::Primary);
-        let icon = ui::icon(mtm, "list.bullet.clipboard", t("Plan"), 15.0, &tab.agent.colour());
+        let icon = ui::icon(
+            mtm,
+            "list.bullet.clipboard",
+            t("Plan"),
+            15.0,
+            &NSColor::secondaryLabelColor(),
+        );
         let title = ui::label(mtm, t("Plan zur Freigabe"), &style::bold(15.0), &NSColor::labelColor());
         let state = ui::label(mtm, "", &style::small(), &NSColor::secondaryLabelColor());
         let tag = |what: u8| super::entry_tag(entry, what);
@@ -201,7 +207,7 @@ impl PlanDoc {
             tag(PLAN_REVISE),
         );
         let approve = ui::button(mtm, t("Plan annehmen"), target, sel!(ideAgentPlan:), tag(PLAN_APPROVE));
-        approve.setBezelColor(Some(&tab.agent.fill()));
+        approve.setBezelColor(Some(&NSColor::controlAccentColor()));
         let spacer = ui::spacer(mtm);
         let head = ui::row(
             mtm,

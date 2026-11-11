@@ -1,5 +1,5 @@
-//! Sizes, fonts and colours of the AI tab. System colours throughout; the accent is the agent's own colour, made to keep
-//! its contrast in every appearance as Apple's guidelines ask, and Claude's is terracotta.
+//! Sizes, fonts and colours of the AI tab. System colours throughout, as Apple's guidelines ask; an agent's own colour
+//! only tells its tabs apart in the tab bar, made to keep its contrast in every appearance.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -92,8 +92,8 @@ fn dynamic(pick: impl Fn(Appearance) -> Rgb + 'static) -> Retained<NSColor> {
     unsafe { NSColor::colorWithName_dynamicProvider(None, &block) }
 }
 
-/// The accents and fills made so far, by their colour and whether they fill.
-type Accents = HashMap<(u8, u8, u8, bool), Retained<NSColor>>;
+/// The accents made so far, by their colour.
+type Accents = HashMap<(u8, u8, u8), Retained<NSColor>>;
 
 thread_local! {
     static TOKEN_COLORS: RefCell<HashMap<Token, Retained<NSColor>>> = RefCell::new(HashMap::new());
@@ -110,9 +110,6 @@ const DARK_GROUND: Rgb = Rgb(0x1E, 0x1E, 0x1E);
 /// for text.
 const ACCENT_CONTRAST: f64 = 3.0;
 const HIGH_CONTRAST: f64 = 4.5;
-/// The contrast white text keeps with a button filled with the accent, and with Increase Contrast.
-const FILL_CONTRAST: f64 = 4.5;
-const HIGH_FILL_CONTRAST: f64 = 7.0;
 /// In how many steps an accent moves towards black or white.
 const MIX_STEPS: i32 = 40;
 
@@ -149,7 +146,7 @@ fn against(base: Rgb, ground: Rgb, wanted: f64) -> Rgb {
 /// An agent's colour `base` as its accent: as it is where it stands out enough, else darker on light and lighter on
 /// dark grounds, more so with Increase Contrast.
 pub fn accent(base: Rgb) -> Retained<NSColor> {
-    cached(base, false, move |appearance| match appearance {
+    cached(base, move |appearance| match appearance {
         Appearance::Light => against(base, LIGHT_GROUND, ACCENT_CONTRAST),
         Appearance::Dark => against(base, DARK_GROUND, ACCENT_CONTRAST),
         Appearance::LightHighContrast => against(base, LIGHT_GROUND, HIGH_CONTRAST),
@@ -157,19 +154,11 @@ pub fn accent(base: Rgb) -> Retained<NSColor> {
     })
 }
 
-/// An agent's colour `base` as the fill of a button with white text, dark enough for the text to read.
-pub fn fill(base: Rgb) -> Retained<NSColor> {
-    cached(base, true, move |appearance| match appearance {
-        Appearance::Light | Appearance::Dark => against(base, LIGHT_GROUND, FILL_CONTRAST),
-        Appearance::LightHighContrast | Appearance::DarkHighContrast => against(base, LIGHT_GROUND, HIGH_FILL_CONTRAST),
-    })
-}
-
-fn cached(base: Rgb, filled: bool, pick: impl Fn(Appearance) -> Rgb + 'static) -> Retained<NSColor> {
+fn cached(base: Rgb, pick: impl Fn(Appearance) -> Rgb + 'static) -> Retained<NSColor> {
     ACCENTS.with(|cache| {
         cache
             .borrow_mut()
-            .entry((base.0, base.1, base.2, filled))
+            .entry((base.0, base.1, base.2))
             .or_insert_with(|| dynamic(pick))
             .clone()
     })
@@ -249,15 +238,5 @@ mod tests {
         let blue = Rgb(0x47, 0x96, 0xE3);
         assert_eq!(against(blue, LIGHT_GROUND, ACCENT_CONTRAST), blue);
         assert_eq!(against(TERRACOTTA, DARK_GROUND, ACCENT_CONTRAST), TERRACOTTA);
-    }
-
-    #[test]
-    fn a_fill_is_dark_enough_for_white_text() {
-        for colour in COLOURS {
-            for wanted in [FILL_CONTRAST, HIGH_FILL_CONTRAST] {
-                let made = against(colour, LIGHT_GROUND, wanted);
-                assert!(contrast(made, Rgb(0xFF, 0xFF, 0xFF)) >= wanted, "{colour:?}");
-            }
-        }
     }
 }

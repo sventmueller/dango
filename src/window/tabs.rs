@@ -200,12 +200,13 @@ impl Document {
             }
             kind => kind.symbol(),
         };
-        let agent = matches!(self.kind, TabKind::Agent | TabKind::Plan)
-            || (self.kind == TabKind::Cli && self.title().starts_with("claude"));
-        let color = match tint {
-            Some(tint) => tint,
-            None if agent => crate::agent::style::terracotta(),
-            None => NSColor::secondaryLabelColor(),
+        let color = match (tint, self.kind) {
+            (Some(tint), _) => tint,
+            (None, TabKind::Cli) => {
+                crate::agent::cli_colour(self.title().split_whitespace().next().unwrap_or_default())
+            }
+            (None, TabKind::Agent | TabKind::Plan) => crate::agent::Agent::Claude.colour(),
+            (None, _) => NSColor::secondaryLabelColor(),
         };
         let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
             11.0,

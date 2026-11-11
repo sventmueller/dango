@@ -13,20 +13,18 @@ use crate::util::{ns, symbol};
 
 pub struct Header {
     pub view: Retained<NSStackView>,
-    /// The agent's mark, in its colour.
+    /// The agent's mark; its colour is the tab bar's to show.
     mark: Retained<objc2_app_kit::NSImageView>,
     title: Retained<NSTextField>,
     bookmark: Retained<NSButton>,
     focus: Retained<NSButton>,
     /// Opens the overview of the session's subagents and background tasks.
     pub tasks: Retained<NSButton>,
-    /// The agent's colour, which marks what is on.
-    accent: std::cell::RefCell<Retained<NSColor>>,
 }
 
 impl Header {
     pub fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Header {
-        let mark = ui::icon(mtm, "sparkle", "", 14.0, &style::terracotta());
+        let mark = ui::icon(mtm, "sparkle", "", 14.0, &NSColor::secondaryLabelColor());
         let title = ui::label(
             mtm,
             t("Neue Sitzung"),
@@ -110,14 +108,11 @@ impl Header {
             bookmark,
             focus,
             tasks,
-            accent: std::cell::RefCell::new(style::terracotta()),
         }
     }
 
-    /// Shows the agent's mark in `colour`, described as `agent`.
-    pub fn set_agent(&self, agent: &str, colour: &objc2_app_kit::NSColor) {
-        *self.accent.borrow_mut() = objc2::Message::retain(colour);
-        self.mark.setContentTintColor(Some(colour));
+    /// Describes the agent's mark as `agent`.
+    pub fn set_agent(&self, agent: &str) {
         crate::util::set_label(&self.mark, Some(agent));
         self.mark.setToolTip(Some(&ns(agent)));
     }
@@ -129,7 +124,7 @@ impl Header {
     /// Marks the focus view as on or off.
     pub fn set_focus_view(&self, on: bool) {
         let (name, color) = if on {
-            ("text.bubble.fill", self.accent.borrow().clone())
+            ("text.bubble.fill", NSColor::controlAccentColor())
         } else {
             ("text.bubble", NSColor::secondaryLabelColor())
         };
@@ -145,7 +140,7 @@ impl Header {
 
     pub fn set_bookmarked(&self, on: bool) {
         let (name, color) = if on {
-            ("bookmark.fill", self.accent.borrow().clone())
+            ("bookmark.fill", NSColor::controlAccentColor())
         } else {
             ("bookmark", NSColor::secondaryLabelColor())
         };

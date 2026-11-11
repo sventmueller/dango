@@ -670,7 +670,7 @@ impl Source {
                             agent_and_age(&entry.agent, entry.last_activity),
                             entry.cost_usd,
                         ),
-                        badge: bookmarked.then(|| ("bookmark.fill", crate::agent::style::terracotta())),
+                        badge: bookmarked.then(|| ("bookmark.fill", NSColor::controlAccentColor())),
                     },
                 )
             }
@@ -969,7 +969,7 @@ impl Source {
 /// The status dot of a session row.
 fn dot(status: Option<Status>, unseen: bool) -> (&'static str, f64, Retained<NSColor>) {
     match status {
-        Some(Status::Running) => ("circle.fill", 7.0, crate::agent::style::terracotta()),
+        Some(Status::Running) => ("circle.fill", 7.0, NSColor::controlAccentColor()),
         Some(Status::RequiresAction) => ("circle.fill", 7.0, NSColor::systemOrangeColor()),
         Some(Status::Idle) if unseen => ("circle.fill", 7.0, NSColor::controlAccentColor()),
         Some(Status::Idle) => ("circle", 7.0, NSColor::tertiaryLabelColor()),
