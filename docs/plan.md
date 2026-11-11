@@ -436,6 +436,10 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Dock-Symbol trägt keine Zahl; dass eine Sitzung wartet oder fertig ist, melden der rote Punkt im Tab (E71) und die
   Mitteilung. Fenstermenü und Dock-Menü nennen jeden Ordner einmal, mit dem Tab, der vorn liegt; ein herausgezogener
   Tab in einem eigenen Fenster bleibt dort genannt.
+- **E70 Datei-Icons nach macOS-Art** *(Entscheidung des Eigentümers, ersetzt VS Codes Seti)*: Dateibaum, Suche,
+  Open Quickly und Tabs zeigen für die häufigen Sprachen das Logo aus Simple Icons (einfarbig, `assets/simple-icons`),
+  für alles andere ein SF Symbol der Dateiart, beide in Apples Systemfarben mit 3:1 Kontrast (E66). Logos mit
+  nicht-kommerzieller Lizenz (Sass, Vue) entfallen; Ordner behalten ihren Pfeil statt eines Icons.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

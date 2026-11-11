@@ -1,6 +1,6 @@
-//! The `file-icons` scenario: a folder with files of many kinds, shown with their Seti icons in the Files panel and
-//! in Open Quickly and pictured in light, dark and both high-contrast appearances, for a look at whether they match
-//! VS Code's.
+//! The `file-icons` scenario: a folder with files of many kinds, shown with their logos and symbols in the Files panel
+//! and in Open Quickly and pictured in light, dark and both high-contrast appearances, for a look at whether they
+//! read at a glance.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -25,36 +25,48 @@ const FILES: &[&str] = &[
     ".gitignore",
     "api.proto",
     "app.rb",
+    "app.ts",
     "app.tsx",
+    "App.vue",
     "build.sh",
     "Cargo.lock",
     "Cargo.toml",
     "CHANGELOG.md",
+    "chime.wav",
     "data.csv",
     "Dockerfile",
+    "fix.patch",
     "index.html",
     "index.js",
     "index.php",
     "Info.plist",
+    "Inter.ttf",
+    "intro.mov",
     "lexer.c",
     "lexer.h",
     "LICENSE-MIT",
     "logo.svg",
+    "main.dart",
     "main.go",
-    "main.rs",
+    "Main.hs",
     "Main.java",
     "Main.kt",
+    "main.rs",
     "Makefile",
     "manual.pdf",
     "notes.md",
+    "notes.txt",
     "package.json",
     "parser_test.go",
     "photo.png",
+    "Program.cs",
     "README.md",
     "release.zip",
     "rustfmt.toml",
+    "schema.prisma",
     "schema.sql",
     "site.css",
+    "TODO.md",
     "tool.py",
     "View.swift",
     "workflow.yml",
@@ -94,9 +106,19 @@ fn listed(root: PathBuf, waited: u32) {
     );
     let kinds: std::collections::HashSet<_> = FILES.iter().map(|f| crate::file_icon::icon_of(f)).collect();
     check(
-        "the files show many different icons, as VS Code with Seti does",
+        "the files show many different icons",
         kinds.len() * 2 > FILES.len(),
         format!("{} icons for {} files", kinds.len(), FILES.len()),
+    );
+    let missing: Vec<_> = kinds
+        .iter()
+        .filter(|icon| crate::file_icon::template(icon).is_none())
+        .map(|icon| icon.id)
+        .collect();
+    check(
+        "every icon has an image, each symbol is one macOS knows",
+        missing.is_empty(),
+        missing.join(", "),
     );
     picture(&controller, "file-icons");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));

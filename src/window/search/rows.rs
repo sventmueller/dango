@@ -11,10 +11,9 @@ use objc2::runtime::Sel;
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSAccessibility, NSBackgroundColorAttributeName, NSButton, NSColor, NSEvent, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSImageView, NSLayoutConstraintOrientation, NSLineBreakMode,
-    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSStrikethroughStyleAttributeName, NSTableCellView,
-    NSTextAlignment, NSTextField, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutDirection, NSView,
-    NSWorkspace, NSWritingDirection,
+    NSForegroundColorAttributeName, NSLayoutConstraintOrientation, NSLineBreakMode, NSMutableParagraphStyle,
+    NSParagraphStyleAttributeName, NSStrikethroughStyleAttributeName, NSTableCellView, NSTextAlignment, NSTextField,
+    NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutDirection, NSView, NSWritingDirection,
 };
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize};
 use splat_i18n::tf;
@@ -144,10 +143,7 @@ pub(super) fn file_row(
     replacing: Option<&Replacing>,
 ) -> Retained<NSView> {
     let cell = ResultCell::new(mtm);
-    let icon = NSWorkspace::sharedWorkspace().iconForFile(&ns(&path.to_string_lossy()));
-    icon.setSize(NSSize::new(16.0, 16.0));
-    let image = NSImageView::imageViewWithImage(&icon, mtm);
-    crate::util::hide_from_voiceover(&image);
+    let image = crate::file_icon::image_view(mtm, path, false);
     let name = path
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());

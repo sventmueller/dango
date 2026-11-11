@@ -1,23 +1,26 @@
-//! The icon of a file in lists, as VS Code's default file icon theme shows it: Seti's glyph and colour for the
-//! file's name, extension or language, from the theme VS Code ships, vendored in `assets/seti` (see the README there).
-//! Folders have no icon, only the outline view's disclosure triangle, and keep the icon's room so their names line up
-//! with the files'. The icons are decoration: VoiceOver reads the file's name beside them.
+//! The icon of a file in lists: the logo of a common language from Simple Icons, vendored in `assets/simple-icons`
+//! (see the README there), or an SF Symbol for its kind, in a system colour that keeps its contrast in every
+//! appearance (E66). Folders have no icon, only the outline view's disclosure triangle, and keep the icon's room so
+//! their names line up with the files'. The icons are decoration: VoiceOver reads the file's name beside them.
 
-mod glyph;
-mod languages;
-mod theme;
+mod kinds;
+mod logo;
 
 use std::path::Path;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSImage, NSImageScaling, NSImageView};
+use objc2_app_kit::{NSColor, NSFontWeightRegular, NSImage, NSImageScaling, NSImageSymbolConfiguration, NSImageView};
+use splat_markdown::palette::Rgb;
 
-pub use theme::Icon;
+pub use kinds::{Icon, Shape, Tint};
 
-/// The icon VS Code with Seti shows for a file called `name`.
+/// The point size of the symbols, which matches the logos' drawn size.
+const SYMBOL_SIZE: f64 = 12.0;
+
+/// The icon of a file called `name`.
 pub fn icon_of(name: &str) -> Icon {
-    theme::theme().icon_of(name)
+    kinds::icon_of(name)
 }
 
 /// An image view, 16 points square, with the icon of the file at `path`, or empty for a folder; hidden from
@@ -26,13 +29,10 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
     let view = NSImageView::new(mtm);
     view.setImageScaling(NSImageScaling::ScaleNone);
     if !folder {
-        let name = path
-            .file_name()
-            .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-        let icon = icon_of(&name);
-        if let Some(image) = glyph::image(icon.glyph) {
+        let icon = icon_of(&file_name(path));
+        if let Some(image) = template(&icon) {
             view.setImage(Some(&image));
-            view.setContentTintColor(Some(&glyph::color(&icon)));
+            view.setContentTintColor(Some(&color(icon.tint)));
         }
     }
     crate::util::hide_from_voiceover(&view);
@@ -42,74 +42,123 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
 /// The icon of the file at `path` drawn in its colour, for a place that takes an image rather than an image view,
 /// such as the title of a tab.
 pub fn image(path: &Path) -> Option<Retained<NSImage>> {
-    let name = path.file_name()?.to_string_lossy().into_owned();
-    let icon = icon_of(&name);
-    let image = glyph::image(icon.glyph)?;
-    Some(crate::util::tinted(&image, &glyph::color(&icon)))
+    let icon = icon_of(&file_name(path));
+    let template = template(&icon)?;
+    Some(crate::util::tinted(&template, &color(icon.tint)))
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+}
+
+/// The icon's shape as a template image.
+pub fn template(icon: &Icon) -> Option<Retained<NSImage>> {
+    match icon.shape {
+        Shape::Logo(name) => logo::image(name),
+        Shape::Symbol(name) => {
+            // SAFETY: AppKit sets its font weight constants when it loads.
+            let weight = unsafe { NSFontWeightRegular };
+            let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(SYMBOL_SIZE, weight);
+            crate::util::symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
+        }
+    }
+}
+
+/// The colour of `tint`: Apple's system colour, darker or lighter where it would not stand out from the ground.
+fn color(tint: Tint) -> Retained<NSColor> {
+    let rgb = match tint {
+        Tint::Plain => return NSColor::secondaryLabelColor(),
+        Tint::Blue => Rgb(0x00, 0x7A, 0xFF),
+        Tint::Brown => Rgb(0xA2, 0x84, 0x5E),
+        Tint::Cyan => Rgb(0x55, 0xBE, 0xF0),
+        Tint::Gray => Rgb(0x8E, 0x8E, 0x93),
+        Tint::Green => Rgb(0x28, 0xCD, 0x41),
+        Tint::Indigo => Rgb(0x58, 0x56, 0xD6),
+        Tint::Orange => Rgb(0xFF, 0x95, 0x00),
+        Tint::Pink => Rgb(0xFF, 0x2D, 0x55),
+        Tint::Purple => Rgb(0xAF, 0x52, 0xDE),
+        Tint::Red => Rgb(0xFF, 0x3B, 0x30),
+        Tint::Teal => Rgb(0x59, 0xAD, 0xC4),
+        Tint::Yellow => Rgb(0xFF, 0xCC, 0x00),
+    };
+    crate::agent::style::accent(rgb)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::theme::Rgb;
     use super::*;
 
     #[test]
-    fn files_get_the_icons_vs_code_shows() {
+    fn files_get_the_icon_of_their_kind() {
         let cases = [
-            ("main.rs", "_rust"),
-            ("server.go", "_go2"),
-            ("app.ts", "_typescript"),
-            ("app.tsx", "_react"),
-            ("index.js", "_javascript"),
-            ("index.mjs", "_javascript"),
-            ("view.jsx", "_react"),
-            ("tool.py", "_python"),
-            ("View.swift", "_swift"),
-            ("lexer.c", "_c"),
-            ("lexer.cpp", "_cpp"),
-            ("lexer.h", "_c_1"),
-            ("Main.java", "_java"),
-            ("Main.kt", "_kotlin"),
-            ("app.rb", "_ruby"),
-            ("index.php", "_php"),
-            ("build.sh", "_shell"),
-            (".zshrc", "_shell"),
-            ("package.json", "_json"),
-            ("tsconfig.json", "_tsconfig"),
-            ("rustfmt.toml", "_config"),
-            ("ci.yml", "_yml"),
-            ("compose.yaml", "_docker_3"),
-            ("Info.plist", "_xml"),
-            ("index.html", "_html_3"),
-            ("site.css", "_css"),
-            ("site.scss", "_sass"),
-            ("README.md", "_info"),
-            ("notes.md", "_markdown"),
-            ("todo.txt", "_todo"),
-            ("schema.sql", "_db"),
-            ("api.proto", "_default"),
-            ("Cargo.lock", "_default"),
-            ("yarn.lock", "_yarn"),
-            ("logo.png", "_image"),
-            ("logo.svg", "_svg"),
-            ("manual.pdf", "_pdf"),
-            ("dist.zip", "_zip_1"),
-            ("data.csv", "_csv"),
-            ("Makefile", "_makefile"),
-            ("Dockerfile", "_docker"),
-            ("Dockerfile.dev", "_docker"),
-            (".gitignore", "_git"),
-            (".gitmodules", "_git"),
-            ("LICENSE", "_license"),
-            ("CHANGELOG.md", "_clock"),
-            (".editorconfig", "_config"),
-            (".env.local", "_config"),
-            ("Cargo.toml", "_config"),
-            ("parser_test.go", "_go2"),
-            ("button.test.tsx", "_react_1"),
-            ("login.spec.ts", "_typescript_1"),
-            ("VERSION", "_clock"),
-            ("random.xyz", "_default"),
+            ("main.rs", "rust"),
+            ("server.go", "go"),
+            ("app.ts", "typescript"),
+            ("types.d.ts", "typescript"),
+            ("app.tsx", "react"),
+            ("index.js", "javascript"),
+            ("index.mjs", "javascript"),
+            ("view.jsx", "react"),
+            ("tool.py", "python"),
+            ("View.swift", "swift"),
+            ("lexer.c", "c"),
+            ("lexer.cpp", "cplusplus"),
+            ("lexer.h", "c"),
+            ("Main.java", "openjdk"),
+            ("Main.kt", "kotlin"),
+            ("app.rb", "ruby"),
+            ("Gemfile", "ruby"),
+            ("index.php", "php"),
+            ("Program.cs", "csharp"),
+            ("schema.prisma", "prisma"),
+            ("build.sh", "shell"),
+            (".zshrc", "shell"),
+            ("package.json", "json"),
+            ("tsconfig.json", "json"),
+            ("package-lock.json", "lock"),
+            ("rustfmt.toml", "config"),
+            ("Cargo.toml", "config"),
+            ("ci.yml", "yaml"),
+            ("compose.yaml", "docker"),
+            ("docker-compose.override.yml", "docker"),
+            ("Info.plist", "markup"),
+            ("index.html", "html5"),
+            ("site.css", "css"),
+            ("site.scss", "css"),
+            ("README.md", "readme"),
+            ("readme", "readme"),
+            ("notes.md", "markdown"),
+            ("todo.txt", "todo"),
+            ("todolist.rs", "rust"),
+            ("schema.sql", "database"),
+            ("api.proto", "document"),
+            ("Cargo.lock", "lock"),
+            ("yarn.lock", "lock"),
+            ("logo.png", "image"),
+            ("logo.svg", "vector"),
+            ("manual.pdf", "pdf"),
+            ("dist.zip", "archive"),
+            ("data.csv", "table"),
+            ("Makefile", "build"),
+            ("CMakeLists.txt", "build"),
+            ("Dockerfile", "docker"),
+            ("Dockerfile.dev", "docker"),
+            (".gitignore", "git"),
+            (".gitmodules", "git"),
+            ("LICENSE", "license"),
+            ("LICENSE-MIT", "license"),
+            ("CHANGELOG.md", "changelog"),
+            ("VERSION", "changelog"),
+            (".editorconfig", "config"),
+            (".env", "secrets"),
+            (".env.local", "secrets"),
+            (".envrc", "shell"),
+            ("parser_test.go", "go"),
+            ("button.test.tsx", "react"),
+            ("login.spec.ts", "typescript"),
+            ("random.xyz", "document"),
+            ("noextension", "document"),
         ];
         for (name, id) in cases {
             assert_eq!(icon_of(name).id, id, "{name}");
@@ -117,20 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn a_light_appearance_takes_the_themes_light_colour() {
-        let rust = icon_of("main.rs");
-        assert_eq!(
-            (rust.dark, rust.light),
-            (Some(Rgb(0x6d, 0x80, 0x86)), Some(Rgb(0x62, 0x73, 0x79)))
-        );
-        let unknown = icon_of("random.xyz");
-        assert_ne!(unknown.light, unknown.dark);
-        let todo = icon_of("todo.txt");
-        assert_eq!((todo.dark, todo.light), (None, None), "drawn in the colour of the text");
-    }
-
-    #[test]
-    fn the_common_kinds_differ_by_glyph_or_colour() {
+    fn the_common_kinds_differ_by_shape_or_colour() {
         let kinds = [
             "a.rs",
             "a.go",
@@ -145,12 +181,12 @@ mod tests {
             "a.kt",
             "a.rb",
             "a.php",
+            "a.cs",
             "a.sh",
             "a.json",
             "a.yml",
             "a.html",
             "a.css",
-            "a.scss",
             "a.md",
             "a.sql",
             "a.csv",
@@ -158,35 +194,39 @@ mod tests {
             "a.png",
             "a.svg",
             "a.zip",
+            "a.txt",
             "Makefile",
             "Dockerfile",
             ".gitignore",
             "README.md",
             "LICENSE",
             "a.toml",
+            ".env",
+            "a.lock",
             "a.unknown",
         ];
         let mut seen = std::collections::HashMap::new();
         for name in kinds {
             let icon = icon_of(name);
-            if let Some(other) = seen.insert((icon.glyph, icon.dark), name) {
+            if let Some(other) = seen.insert((icon.shape, icon.tint), name) {
                 panic!("{name} looks like {other}");
             }
         }
     }
 
     #[test]
-    fn every_icon_the_theme_names_exists_and_every_glyph_is_in_the_font() {
-        let theme = theme::theme();
-        for id in theme.referenced() {
-            assert!(theme.has(id), "no definition {id}");
-        }
-        let font = glyph::font().expect("Core Text reads the vendored font");
-        for character in theme.glyphs() {
+    fn every_logo_is_vendored_and_parses() {
+        for icon in kinds::LOGOS {
+            let Shape::Logo(name) = icon.shape else { continue };
+            let path = logo::path(name).unwrap_or_else(|| panic!("{name} does not parse"));
+            let bounds = kurbo::Shape::bounding_box(&path);
             assert!(
-                glyph::glyph_of(&font, character).is_some(),
-                "no glyph U+{:04X}",
-                u32::from(character)
+                bounds.x0 >= -0.01 && bounds.y0 >= -0.01 && bounds.x1 <= 24.01 && bounds.y1 <= 24.01,
+                "{name} leaves its square: {bounds:?}"
+            );
+            assert!(
+                bounds.width() > 12.0 || bounds.height() > 12.0,
+                "{name} is tiny: {bounds:?}"
             );
         }
     }

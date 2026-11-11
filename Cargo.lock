@@ -1321,6 +1321,7 @@ dependencies = [
  "ide-terminal",
  "ide-thread",
  "image",
+ "kurbo",
  "libc",
  "lowspeak",
  "objc2",

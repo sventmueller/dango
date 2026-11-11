@@ -78,14 +78,8 @@ const EMBEDDED: [(&str, &str, &str); 2] = [
 ];
 
 /// What the app carries from other projects, under their licenses: the license file in the repository and what it
-/// covers; `assets/seti/README.md` names the versions.
-const VENDORED: [(&str, &str); 2] = [
-    ("assets/seti/LICENSE-seti-ui.md", "Seti UI file icons"),
-    (
-        "assets/seti/LICENSE-vscode.txt",
-        "the Seti file icon theme of Visual Studio Code",
-    ),
-];
+/// covers; `assets/simple-icons/README.md` names the version.
+const VENDORED: [(&str, &str); 1] = [("assets/simple-icons/LICENSE.md", "Simple Icons language logos")];
 
 /// A crate in the program, from a line of `cargo tree` in the format `{p}|{l}|{r}`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -573,8 +567,7 @@ mod tests {
         assert!(section("comrak ").contains("binary forms, with or without modification"));
         assert!(section("objc2-app-kit ").contains("Copyright (c) the authors of https://github.com/madsmtm/objc2"));
         assert!(section("splat-i18n ").contains("Permission is hereby granted"));
-        assert!(section("Seti UI file icons").contains("Copyright (c) 2014 Jesse Weed"));
-        assert!(section("the Seti file icon theme").contains("Copyright (c) 2015 - present Microsoft Corporation"));
+        assert!(section("Simple Icons language logos").contains("Rust logo, by the Rust Foundation, CC BY-SA 4.0"));
         assert!(section("mermaid (in the renderer").contains("Permission is hereby granted"));
         assert!(section("mathjax (in the renderer").contains("Apache License"));
         assert!(!text.contains("mathlive"), "the formula field stays in splat");
