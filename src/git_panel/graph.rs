@@ -6,7 +6,10 @@ use std::cell::RefCell;
 use ide_git::Commit;
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSAccessibility, NSBezierPath, NSColor, NSUserInterfaceLayoutDirection, NSView};
+use objc2_app_kit::{
+    NSAccessibility, NSBackgroundStyle, NSBezierPath, NSColor, NSTableCellView, NSTableRowView,
+    NSTableViewSelectionHighlightStyle, NSUserInterfaceLayoutDirection, NSView,
+};
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use crate::util::guarded;
@@ -271,6 +274,120 @@ impl GraphView {
             dot(DOT_RADIUS).fill();
         }
     }
+}
+
+/// How far a selection keeps from the list's edges, and how round its corners are, as the source list draws it.
+const SELECTION_INSET: f64 = 10.0;
+const SELECTION_RADIUS: f64 = 5.0;
+
+define_class!(
+    // SAFETY: NSTableRowView has no subclassing requirements and `GraphRowView` does not implement Drop.
+    /// The row of a commit or of a commit's file, whose selection begins after the graph's lanes so it leaves the dot
+    /// and the lines visible.
+    #[unsafe(super(NSTableRowView))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDEGitGraphRowView"]
+    pub struct GraphRowView;
+
+    unsafe impl NSObjectProtocol for GraphRowView {}
+
+    impl GraphRowView {
+        /// The outline view sets its own style on every row view it adds; AppKit draws a source list's selection
+        /// across the row by itself, so the row takes none and draws its own in `drawBackgroundInRect:`.
+        #[unsafe(method(setSelectionHighlightStyle:))]
+        fn set_selection_highlight_style(&self, _style: NSTableViewSelectionHighlightStyle) {
+            // SAFETY: The superclass's own setter, with its signature.
+            let _: () = unsafe { msg_send![super(self), setSelectionHighlightStyle: NSTableViewSelectionHighlightStyle::None] };
+        }
+
+        #[unsafe(method(setSelected:))]
+        fn set_selected(&self, selected: bool) {
+            // SAFETY: The superclass's own setter, with its signature.
+            let _: () = unsafe { msg_send![super(self), setSelected: selected] };
+            self.restyle();
+        }
+
+        #[unsafe(method(setEmphasized:))]
+        fn set_emphasized(&self, emphasized: bool) {
+            // SAFETY: The superclass's own setter, with its signature.
+            let _: () = unsafe { msg_send![super(self), setEmphasized: emphasized] };
+            self.restyle();
+        }
+
+        #[unsafe(method(drawBackgroundInRect:))]
+        fn draw_background(&self, dirty: NSRect) {
+            guarded((), || {
+                // SAFETY: The superclass's own method, with its signature.
+                let _: () = unsafe { msg_send![super(self), drawBackgroundInRect: dirty] };
+                let Some(rect) = self.selection_rect().filter(|_| self.isSelected()) else {
+                    return;
+                };
+                let color = if self.isEmphasized() {
+                    NSColor::selectedContentBackgroundColor()
+                } else {
+                    NSColor::unemphasizedSelectedContentBackgroundColor()
+                };
+                color.setFill();
+                NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, SELECTION_RADIUS, SELECTION_RADIUS).fill();
+            });
+        }
+    }
+);
+
+impl GraphRowView {
+    pub fn new(mtm: MainThreadMarker) -> Retained<GraphRowView> {
+        // SAFETY: NSView's designated initializer, called once on the newly allocated object.
+        unsafe { msg_send![GraphRowView::alloc(mtm), initWithFrame: NSRect::ZERO] }
+    }
+
+    /// Redraws the selection and hands the cells the background they stand on, which AppKit does only for a row with
+    /// a selection style of its own.
+    fn restyle(&self) {
+        self.setNeedsDisplay(true);
+        let style = if self.isSelected() && self.isEmphasized() {
+            NSBackgroundStyle::Emphasized
+        } else {
+            NSBackgroundStyle::Normal
+        };
+        for view in self.subviews().iter() {
+            if let Some(cell) = view.downcast_ref::<NSTableCellView>() {
+                cell.setBackgroundStyle(style);
+            }
+        }
+    }
+
+    /// The selection from the end of the row's lanes, or from the leading inset in a row without them, to the
+    /// trailing inset.
+    fn selection_rect(&self) -> Option<NSRect> {
+        let bounds = self.bounds();
+        let (start, end) = (
+            bounds.origin.x + SELECTION_INSET,
+            bounds.origin.x + bounds.size.width - SELECTION_INSET,
+        );
+        let rtl = self.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft;
+        // The dot's lane ends a little past the dot, so the selection may start just inside the lanes.
+        let (left, right) = match graph_in(self).map(|g| self.convertRect_fromView(g.bounds(), Some(&g))) {
+            Some(lanes) if rtl => (start, lanes.origin.x + 1.0),
+            Some(lanes) => (lanes.origin.x + lanes.size.width - 1.0, end),
+            None => (start, end),
+        };
+        (right > left).then(|| {
+            NSRect::new(
+                NSPoint::new(left, bounds.origin.y),
+                NSSize::new(right - left, bounds.size.height),
+            )
+        })
+    }
+}
+
+/// The graph somewhere inside `view`.
+fn graph_in(view: &NSView) -> Option<Retained<GraphView>> {
+    view.subviews()
+        .iter()
+        .find_map(|child| match child.clone().downcast::<GraphView>() {
+            Ok(graph) => Some(graph),
+            Err(_) => graph_in(&child),
+        })
 }
 
 /// A line from `start` to `end`, straight down within a lane or bending over to another one.

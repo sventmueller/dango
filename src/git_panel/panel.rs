@@ -12,7 +12,7 @@ use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
-    NSOutlineViewDelegate, NSTableColumn, NSTextDelegate, NSTextViewDelegate, NSView,
+    NSOutlineViewDelegate, NSTableColumn, NSTableRowView, NSTextDelegate, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
 
@@ -176,6 +176,16 @@ define_class!(
             item: &AnyObject,
         ) -> Option<Retained<NSView>> {
             guarded(None, || self.row_view(&key_of(item)?))
+        }
+
+        #[unsafe(method_id(outlineView:rowViewForItem:))]
+        fn row_view_for(&self, view: &NSOutlineView, item: &AnyObject) -> Option<Retained<NSTableRowView>> {
+            guarded(None, || match key_of(item)? {
+                RowKey::Commit(_) | RowKey::CommitFile(..) | RowKey::More => {
+                    Some(Retained::into_super(super::graph::GraphRowView::new(view.mtm())))
+                }
+                _ => None,
+            })
         }
 
         #[unsafe(method(outlineView:heightOfRowByItem:))]

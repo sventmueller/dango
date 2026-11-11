@@ -343,6 +343,19 @@ pub mod selftest {
         panel.preview_row(row);
     }
 
+    /// Selects the row of the commit titled `subject`, and only it.
+    pub fn select_commit(controller: &WindowController, subject: &str) {
+        let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {
+            return;
+        };
+        let outline = &panel.ui().outline;
+        // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+        let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Commit(hash)))) };
+        if let Ok(row) = usize::try_from(row) {
+            outline.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        }
+    }
+
     /// The files the list shows below the commit titled `subject`.
     pub fn commit_rows(controller: &WindowController, subject: &str) -> Vec<PathBuf> {
         let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {

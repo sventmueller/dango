@@ -549,6 +549,7 @@ fn commit_diff(root: PathBuf, ok: bool) {
         ok && counts == Some((2, 1)),
         format!("{counts:?}"),
     );
+    panel::select_commit(&controller, TOPIC_WORK);
     pictures(root, "git-graph", |root| {
         if let Some(controller) = window_of(&root) {
             panel::click(&controller, panel::Control::Push);
