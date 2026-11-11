@@ -10,10 +10,10 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSColor, NSControlTextEditingDelegate, NSImageView, NSLineBreakMode, NSMenu,
-    NSMenuDelegate, NSModalResponse, NSOutlineView, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPasteboard,
-    NSPasteboardTypeString, NSScrollView, NSTableCellView, NSTableColumn, NSTableViewStyle, NSTextField, NSView,
-    NSWorkspace,
+    NSAccessibility, NSAlert, NSApplication, NSColor, NSControlTextEditingDelegate, NSImageAlignment, NSImageView,
+    NSLineBreakMode, NSMenu, NSMenuDelegate, NSModalResponse, NSOutlineView, NSOutlineViewDataSource,
+    NSOutlineViewDelegate, NSPasteboard, NSPasteboardTypeString, NSScrollView, NSTableCellView, NSTableColumn,
+    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutDirection, NSView, NSWorkspace,
 };
 use objc2_foundation::{
     NSArray, NSFileManager, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURL,
@@ -623,6 +623,14 @@ fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool
     let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, path, open.is_some());
     if let Some(open) = open {
         image.setImage(super::file_outline::chevron(open).as_deref());
+        // At the start of the icon's place, where the search panel's chevrons sit under the panel's title.
+        let rtl = NSApplication::sharedApplication(mtm).userInterfaceLayoutDirection()
+            == NSUserInterfaceLayoutDirection::RightToLeft;
+        image.setImageAlignment(if rtl {
+            NSImageAlignment::AlignRight
+        } else {
+            NSImageAlignment::AlignLeft
+        });
     }
     let name = path
         .file_name()

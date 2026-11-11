@@ -187,11 +187,72 @@ fn found(root: PathBuf, ok: bool) {
         }),
         format!("{labels:?}"),
     );
+    chevrons_line_up(&root);
     if let Some(window) = window_of(&root).and_then(|c| c.window()) {
         snapshot(&window, "search-results");
     }
     with_panel(&root, |p| search::set(p, Toggle::Case, true));
     poll(root, Instant::now() + WAIT, settled, case_sensitive);
+}
+
+/// A closed folder's chevron in the folder tree begins where the search panel's closed chevron does.
+fn chevrons_line_up(root: &Path) {
+    let controller = window_of(root);
+    let search = controller
+        .as_ref()
+        .and_then(|c| c.search_panel())
+        .and_then(|p| search::replace_chevron(&p))
+        .and_then(|button| ink_start(&button));
+    let tree = controller
+        .as_ref()
+        .and_then(|c| c.file_tree_outline())
+        .and_then(|outline| closed_folder_chevron(&outline));
+    check(
+        "a closed folder's chevron in the files panel begins where the search panel's does",
+        search
+            .zip(tree)
+            .is_some_and(|(search, tree)| (search - tree).abs() < 0.5),
+        format!("search {search:?}, folder tree {tree:?}"),
+    );
+}
+
+fn closed_folder_chevron(outline: &objc2_app_kit::NSOutlineView) -> Option<f64> {
+    (0..outline.numberOfRows()).find_map(|row| {
+        let item = outline.itemAtRow(row)?;
+        // SAFETY: The item belongs to the outline, which asks its own data source.
+        let closed = unsafe { outline.isExpandable(Some(&item)) && !outline.isItemExpanded(Some(&item)) };
+        if !closed {
+            return None;
+        }
+        let cell = outline
+            .viewAtColumn_row_makeIfNecessary(0, row, true)?
+            .downcast::<objc2_app_kit::NSTableCellView>()
+            .ok()?;
+        // SAFETY: The cell is one of the folder tree's, which set an image view on it.
+        let image = unsafe { cell.imageView() }?;
+        ink_start(&image)
+    })
+}
+
+/// Where the first drawn column of `view` lies, in window coordinates.
+fn ink_start(view: &objc2_app_kit::NSView) -> Option<f64> {
+    let bounds = view.bounds();
+    let bitmap = view.bitmapImageRepForCachingDisplayInRect(bounds)?;
+    view.cacheDisplayInRect_toBitmapImageRep(bounds, &bitmap);
+    let (wide, high) = (bitmap.pixelsWide(), bitmap.pixelsHigh());
+    let column = (0..wide).find(|&x| {
+        (0..high).any(|y| {
+            bitmap
+                .colorAtX_y(x, y)
+                .is_some_and(|color| color.alphaComponent() > 0.3)
+        })
+    })?;
+    let scale = wide as f64 / bounds.size.width.max(1.0);
+    let start = objc2_foundation::NSRect::new(
+        objc2_foundation::NSPoint::new(bounds.origin.x + column as f64 / scale, bounds.origin.y),
+        objc2_foundation::NSSize::new(1.0, 1.0),
+    );
+    Some(view.convertRect_toView(start, None).origin.x)
 }
 
 fn case_sensitive(root: PathBuf, ok: bool) {

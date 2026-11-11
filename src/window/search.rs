@@ -1081,6 +1081,11 @@ pub mod selftest {
         }
     }
 
+    /// The chevron that opens the replace field.
+    pub fn replace_chevron(panel: &SearchPanel) -> Option<objc2::rc::Retained<objc2_app_kit::NSButton>> {
+        panel.ivars().views.get().map(|views| views.replace_toggle.clone())
+    }
+
     /// Opens the replace field, as its chevron does, and types `with` into it.
     pub fn replace_with(panel: &SearchPanel, with: &str) {
         if let Some(views) = panel.ivars().views.get() {

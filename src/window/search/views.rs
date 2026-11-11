@@ -28,7 +28,7 @@ pub(super) struct Views {
     pub(super) page: Retained<NSView>,
     pub(super) field: Retained<NSSearchField>,
     toggles: Vec<(Toggle, Retained<NSButton>)>,
-    replace_toggle: Retained<NSButton>,
+    pub(super) replace_toggle: Retained<NSButton>,
     replace_row: Retained<NSStackView>,
     pub(super) replace: Retained<NSTextField>,
     pub(super) replace_all: Retained<NSButton>,

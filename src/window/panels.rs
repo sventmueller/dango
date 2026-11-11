@@ -21,7 +21,7 @@ const HEADER_INSET: f64 = 8.0;
 const HEADER_MIDDLE: f64 = 17.0;
 /// How far the folder tree reaches past the panel's leading edge, which its source list style indents more than the
 /// other panels' content.
-const TREE_OUTDENT: f64 = 5.0;
+const TREE_OUTDENT: f64 = 4.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
