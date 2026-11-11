@@ -1,9 +1,11 @@
 //! Documents as they read, beside their editor (E1, Phase 9): Markdown as native text with the formulas, diagrams and
-//! pictures of splat's render path (docs/splat-render.md), PDF files through PDFKit, HTML files in the browser tab.
+//! pictures of splat's render path (docs/splat-render.md), PDF files through PDFKit, pictures, media and office
+//! documents through Quick Look, HTML files in the browser tab.
 
 mod markdown;
 mod page;
 mod pdf;
+mod quick_look;
 mod sync;
 
 use std::cell::{Cell, RefCell};
@@ -11,17 +13,16 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::sel;
+use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_foundation::NSURL;
 
 use crate::editor::EditorTextView;
 use crate::util::{main_after, ns};
 use crate::window::{TabKind, WindowController};
 use markdown::Preview;
-pub use pdf::{is_pdf, open as open_pdf};
 
 thread_local! {
     /// The open Markdown previews of all windows.
@@ -51,6 +52,72 @@ pub fn is_html(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| ["html", "htm", "xhtml"].contains(&e.to_ascii_lowercase().as_str()))
+}
+
+/// Whether `path` opens in a tab that shows it rather than in an editor.
+pub fn is_document(path: &Path) -> bool {
+    pdf::is_pdf(path) || quick_look::is_quick_look(path)
+}
+
+/// Opens `path` in a tab that shows it, or in the preview tab, or selects the tab that shows it; `false` when Quick
+/// Look is missing and an editor should take the file.
+pub fn open_document(controller: &WindowController, path: &Path, preview: bool) -> bool {
+    let key = path.to_string_lossy().into_owned();
+    if select_shown(controller, &key, preview) {
+        return true;
+    }
+    let name = crate::editor::display_name(path);
+    let view = if pdf::is_pdf(path) {
+        let Some(view) = pdf::view(controller.mtm(), path, &name) else {
+            crate::editor::show_alert(
+                controller.mtm(),
+                &splat_i18n::tf("„{}“ lässt sich nicht öffnen.", &[&name]),
+                splat_i18n::t("Die Datei ist kein lesbares PDF."),
+            );
+            return true;
+        };
+        view
+    } else {
+        let Some(view) = quick_look::view(controller.mtm(), path, &name) else {
+            return false;
+        };
+        view
+    };
+    if preview {
+        controller.add_preview_tab(TabKind::Preview, Some(key), &name, view);
+    } else {
+        controller.add_tab(TabKind::Preview, Some(key), &name, view);
+    }
+    true
+}
+
+pub fn is_svg(path: &Path) -> bool {
+    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"))
+}
+
+/// Opens the drawing of the SVG file `path` in a tab of its own, apart from an editor of its source, or selects it.
+pub fn open_drawing(controller: &WindowController, path: &Path) {
+    let key = format!("preview:{}", path.display());
+    if select_shown(controller, &key, false) {
+        return;
+    }
+    let name = crate::editor::display_name(path);
+    if let Some(view) = quick_look::view(controller.mtm(), path, &name) {
+        let title = splat_i18n::tf("Vorschau: {}", &[&name]);
+        controller.add_tab(TabKind::Preview, Some(key), &title, view);
+    }
+}
+
+/// Brings the tab that shows `key` to the front, and keeps it unless `preview`; whether there is one.
+fn select_shown(controller: &WindowController, key: &str, preview: bool) -> bool {
+    let Some(id) = controller.tab_with_key(key) else {
+        return false;
+    };
+    if !preview {
+        controller.keep_tab(id);
+    }
+    controller.select_tab_by_id(id);
+    true
 }
 
 /// Whether the menu offers a preview of the document `view` shows.
@@ -279,5 +346,9 @@ pub mod seen {
 
     pub fn page_count(view: &objc2_app_kit::NSView) -> usize {
         super::pdf::page_count(view)
+    }
+
+    pub fn is_quick_look(view: &objc2_app_kit::NSView) -> bool {
+        super::quick_look::shows(view)
     }
 }

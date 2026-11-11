@@ -203,9 +203,7 @@ impl Document {
                 }
                 "doc.text"
             }
-            TabKind::Preview if path.is_some_and(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"))) => {
-                "doc.richtext"
-            }
+            TabKind::Preview if let Some(image) = path.and_then(crate::file_icon::image) => return Some(image),
             kind => kind.symbol(),
         };
         let cli = self.title().split_whitespace().next().unwrap_or_default().to_string();
@@ -252,10 +250,10 @@ impl Document {
         }
     }
 
-    /// Puts the document's name and icon on its badge: a preview is "Vorschau" with an eye, as it sits beside the
-    /// document it shows.
+    /// Puts the document's name and icon on its badge: a Markdown preview is "Vorschau" with an eye, as it sits
+    /// beside the document it shows.
     fn name_badge(&self) {
-        let (text, close, image) = if self.kind == TabKind::Preview {
+        let (text, close, image) = if self.kind == TabKind::Preview && self.key.is_none() {
             (
                 t("Vorschau").to_string(),
                 t("Vorschau schließen").to_string(),

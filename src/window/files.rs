@@ -162,6 +162,15 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideOpenAsPreview:))]
+        fn open_as_preview(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let (Some(path), Some(controller)) = (self.clicked(), self.ivars().controller.load()) {
+                    crate::preview::open_drawing(&controller, &path);
+                }
+            });
+        }
+
         #[unsafe(method(ideRevealInFinder:))]
         fn reveal(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
@@ -453,7 +462,7 @@ impl FileTreeSource {
                 .unwrap_or_else(|| self.ivars().project.root().to_path_buf()),
         );
         let file = path.as_deref().is_some_and(Path::is_file);
-        let entries: Vec<(&str, objc2::runtime::Sel, bool)> = vec![
+        let mut entries: Vec<(&str, objc2::runtime::Sel, bool)> = vec![
             (t("Daneben öffnen"), sel!(ideOpenBesideClicked:), file),
             ("", sel!(ideNewFile:), false),
             (t("Neue Datei …"), sel!(ideNewFile:), true),
@@ -466,6 +475,9 @@ impl FileTreeSource {
             (t("Umbenennen …"), sel!(ideRename:), path.is_some()),
             (t("In den Papierkorb legen"), sel!(ideMoveToTrash:), path.is_some()),
         ];
+        if file && path.as_deref().is_some_and(crate::preview::is_svg) {
+            entries.insert(1, (t("Als Vorschau öffnen"), sel!(ideOpenAsPreview:), true));
+        }
         for (title, action, enabled) in entries {
             if title.is_empty() {
                 menu.addItem(&separator(mtm));

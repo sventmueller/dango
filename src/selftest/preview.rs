@@ -1,7 +1,7 @@
 //! The `preview` scenario: a Markdown file opens its preview in a panel to the right, with formulas, a diagram and a
 //! picture of its folder drawn, follows typing and scrolling; an AI answer shows a drawn formula; a PDF file opens in
-//! a tab of its own and an HTML file in the browser beside its editor. In an untrusted folder pictures from the web
-//! wait for the user to ask for them (E22).
+//! a tab of its own, a picture and on request an SVG drawing in a Quick Look tab, an HTML file in the browser beside
+//! its editor. In an untrusted folder pictures from the web wait for the user to ask for them (E22).
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -78,6 +78,10 @@ pub(super) fn run() {
     let _ = std::fs::write(root.join("doc.md"), document());
     let _ = std::fs::write(root.join("bild.png"), PNG);
     let _ = std::fs::write(root.join("heft.pdf"), pdf());
+    let _ = std::fs::write(
+        root.join("logo.svg"),
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\"><circle cx=\"20\" cy=\"20\" r=\"16\" fill=\"teal\"/></svg>\n",
+    );
     let _ = std::fs::write(root.join("seite.html"), "<html><body><h1>Seite</h1></body></html>\n");
     crate::project::trust(&root);
     crate::app::open_project(mtm, root.clone());
@@ -232,6 +236,52 @@ fn pdf_and_html(root: PathBuf) {
         controller.tab_titles().contains(&"heft.pdf".to_string()) && pages == Some(1),
         format!("{:?}, {pages:?} pages", controller.tab_titles()),
     );
+    controller.open_file(&root.join("bild.png"));
+    let quick_look = controller
+        .selected_view()
+        .is_some_and(|view| seen::is_quick_look(&view));
+    check(
+        "a picture opens in a tab that shows it through Quick Look",
+        controller.tab_titles().contains(&"bild.png".to_string()) && quick_look,
+        format!("{:?}, Quick Look {quick_look}", controller.tab_titles()),
+    );
+    main_after(Duration::from_millis(1500), move || {
+        if let Some(window) = window_of(&root).and_then(|c| c.window()) {
+            snapshot(&window, "preview-picture");
+        }
+        svg(root);
+    });
+}
+
+/// An SVG file opens as text, and its drawing in a tab of its own on request.
+fn svg(root: PathBuf) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let path = root.join("logo.svg");
+    controller.open_file(&path);
+    crate::preview::open_drawing(&controller, &path);
+    let quick_look = controller
+        .selected_view()
+        .is_some_and(|view| seen::is_quick_look(&view));
+    let titles = controller.tab_titles();
+    check(
+        "an SVG file opens in an editor, and as a preview in a Quick Look tab of its own",
+        editor(&controller, "logo.svg").is_some() && titles.contains(&"Vorschau: logo.svg".to_string()) && quick_look,
+        format!("{titles:?}, Quick Look {quick_look}"),
+    );
+    main_after(Duration::from_millis(1500), move || {
+        if let Some(window) = window_of(&root).and_then(|c| c.window()) {
+            snapshot(&window, "preview-svg");
+        }
+        html(root);
+    });
+}
+
+fn html(root: PathBuf) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
     controller.open_file(&root.join("seite.html"));
     let Some(view) = editor(&controller, "seite.html") else {
         check(

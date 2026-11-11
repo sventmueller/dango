@@ -442,6 +442,12 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Rechts stehen der Branch als Auswahl mit allen Branches und „Neuer Branch …“ (nur wo git läuft, E22), die Lupe für
   „Schnell öffnen“ und die Aktivität. „Neues Terminal“ und „Neuer AI-Thread“ entfallen; das „+“ der Tableiste deckt
   sie ab (E65).
+- **E75 Dokumente in Quick Look** *(Wunsch des Eigentümers, ergänzt Phase 9 und E62)*: Bilder, Audio, Video,
+  Schriften und Office-/iWork-Dokumente öffnen wie PDFs in einem eigenen Tab, gezeigt von Quick Look
+  (`QLPreviewView`) wie im Finder; PDFs bleiben bei PDFKit. Welche Dateien das sind, entscheidet eine feste Liste
+  von Endungen, nicht der UTType, weil macOS `.ts`/`.mts` als Video und `.key` als Keynote führt. SVG bleibt Text
+  im Editor; „Als Vorschau öffnen“ im Kontextmenü der Dateiliste zeigt die Zeichnung in einem eigenen Tab
+  „Vorschau: <Datei>“.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

@@ -4,13 +4,12 @@ use std::path::Path;
 
 use objc2::rc::{Allocated, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
-use objc2::{MainThreadMarker, MainThreadOnly, msg_send};
+use objc2::{MainThreadMarker, msg_send};
 use objc2_app_kit::{NSAccessibility, NSView};
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSURL};
-use splat_i18n::{t, tf};
+use splat_i18n::tf;
 
 use crate::util::ns;
-use crate::window::{TabKind, WindowController};
 
 // PDFKit has no crate of its own here; its classes are looked up by name once the framework is loaded.
 #[link(name = "PDFKit", kind = "framework")]
@@ -20,34 +19,8 @@ pub fn is_pdf(path: &Path) -> bool {
     path.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
 }
 
-/// Opens `path` in a PDF tab of `controller`, or in its preview tab, or selects the tab that shows it.
-pub fn open(controller: &WindowController, path: &Path, preview: bool) {
-    let key = path.to_string_lossy().into_owned();
-    if let Some(id) = controller.tab_with_key(&key) {
-        if !preview {
-            controller.keep_tab(id);
-        }
-        controller.select_tab_by_id(id);
-        return;
-    }
-    let name = crate::editor::display_name(path);
-    let Some(view) = pdf_view(controller.mtm(), path, &name) else {
-        crate::editor::show_alert(
-            controller.mtm(),
-            &tf("„{}“ lässt sich nicht öffnen.", &[&name]),
-            t("Die Datei ist kein lesbares PDF."),
-        );
-        return;
-    };
-    if preview {
-        controller.add_preview_tab(TabKind::Preview, Some(key), &name, view);
-    } else {
-        controller.add_tab(TabKind::Preview, Some(key), &name, view);
-    }
-}
-
 /// A `PDFView` showing the file, scaled to its width; `None` when PDFKit cannot read it.
-fn pdf_view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<NSView>> {
+pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<NSView>> {
     let document_class = AnyClass::get(c"PDFDocument")?;
     let view_class = AnyClass::get(c"PDFView")?;
     let url = NSURL::fileURLWithPath(&ns(&path.to_string_lossy()));

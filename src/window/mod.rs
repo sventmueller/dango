@@ -981,11 +981,10 @@ impl WindowController {
         }
     }
 
-    /// Opens `path` in an editor tab, or selects the tab that has it and keeps it if it is the preview tab; a PDF file
-    /// opens in a tab that shows it.
+    /// Opens `path` in an editor tab, or selects the tab that has it and keeps it if it is the preview tab; a PDF,
+    /// a picture, a media file or an office document opens in a tab that shows it.
     pub fn open_file(&self, path: &Path) {
-        if crate::preview::is_pdf(path) {
-            crate::preview::open_pdf(self, path, false);
+        if crate::preview::is_document(path) && crate::preview::open_document(self, path, false) {
             return;
         }
         if let Some(id) = self.tab_with_key(&path.to_string_lossy()) {
@@ -999,8 +998,7 @@ impl WindowController {
 
     /// Opens `path` in the preview tab, as a single click in the folder tree does, or selects the tab that has it.
     pub fn preview_file(&self, path: &Path) {
-        if crate::preview::is_pdf(path) {
-            crate::preview::open_pdf(self, path, true);
+        if crate::preview::is_document(path) && crate::preview::open_document(self, path, true) {
             return;
         }
         if self.select_tab(&path.to_string_lossy()) {
