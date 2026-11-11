@@ -552,14 +552,17 @@ fn panel(root: PathBuf, key: u64) {
     let edges = crate::agent_panel::edges(&controller);
     let title = controller.panel_title_row();
     check(
-        "the AI panel's title offers a new session, its list begins where the title does",
+        "the AI panel's title offers a new session, its list begins where the title does and ends where the button does",
         title.as_ref().is_some_and(|(_, row)| !row.buttons_start.is_nan())
             && edges.as_ref().zip(title.as_ref()).is_some_and(|(rows, (_, row))| {
-                !rows.is_empty() && rows.iter().all(|x| (x - row.title_start).abs() < 3.0)
+                !rows.is_empty()
+                    && rows.iter().all(|(start, end)| {
+                        (start - row.title_start).abs() < 3.0 && (end - row.buttons_end).abs() < 3.0
+                    })
             }),
         format!(
             "{:?}, rows at {edges:?}",
-            title.map(|(name, row)| (name, row.title_start, row.buttons_start))
+            title.map(|(name, row)| (name, row.title_start, row.buttons_end))
         ),
     );
     let key = tab.key;

@@ -4,8 +4,8 @@
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSColor, NSFont, NSImageSymbolConfiguration, NSImageView, NSLayoutConstraintOrientation, NSLineBreakMode,
-    NSTableCellView, NSTextField, NSView,
+    NSColor, NSImageSymbolConfiguration, NSImageView, NSLayoutConstraintOrientation, NSLineBreakMode, NSTableCellView,
+    NSTextField, NSView,
 };
 
 use crate::util::{constant, ns, symbol};
@@ -86,7 +86,6 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let title = NSTextField::labelWithString(&ns(look.title), mtm);
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    title.setFont(Some(&NSFont::systemFontOfSize(12.0)));
     let color = if look.dim {
         NSColor::secondaryLabelColor()
     } else {
@@ -125,9 +124,7 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
         stack
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
-        stack
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        stack.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
         stack.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
     ] {
         constraint.setActive(true);

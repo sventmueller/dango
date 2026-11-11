@@ -16,6 +16,8 @@ const LEADING: f64 = 12.0;
 pub struct OutlineIvars {
     /// Where a top-level row begins.
     leading: Cell<f64>,
+    /// How far a row's cell ends from the far edge; AppKit's source list inset when `None`.
+    trailing: Option<f64>,
 }
 /// The size of a folder's chevron.
 const CHEVRON_POINTS: f64 = 10.0;
@@ -48,9 +50,14 @@ define_class!(
             }
             let indent = self.ivars().leading.get() + self.levelForRow(row).max(0) as f64 * self.indentationPerLevel();
             let (left, right) = if self.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft {
-                (frame.origin.x, self.bounds().size.width - indent)
+                let left = self.ivars().trailing.unwrap_or(frame.origin.x);
+                (left, self.bounds().size.width - indent)
             } else {
-                (indent, frame.origin.x + frame.size.width)
+                let right = self
+                    .ivars()
+                    .trailing
+                    .map_or(frame.origin.x + frame.size.width, |trailing| self.bounds().size.width - trailing);
+                (indent, right)
             };
             NSRect::new(
                 objc2_foundation::NSPoint::new(left, frame.origin.y),
@@ -63,13 +70,19 @@ define_class!(
 impl FileOutline {
     /// The folder tree's.
     pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<FileOutline> {
-        FileOutline::with_leading(mtm, frame, LEADING)
+        FileOutline::with_insets(mtm, frame, LEADING, None)
     }
 
-    /// One whose top-level rows begin `leading` from its edge.
-    pub fn with_leading(mtm: MainThreadMarker, frame: NSRect, leading: f64) -> Retained<FileOutline> {
+    /// One whose top-level rows begin `leading` from its edge and end `trailing` from the far one.
+    pub fn with_insets(
+        mtm: MainThreadMarker,
+        frame: NSRect,
+        leading: f64,
+        trailing: Option<f64>,
+    ) -> Retained<FileOutline> {
         let this = Self::alloc(mtm).set_ivars(OutlineIvars {
             leading: Cell::new(leading),
+            trailing,
         });
         // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), initWithFrame: frame] }

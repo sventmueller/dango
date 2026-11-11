@@ -25,6 +25,8 @@ const TREE_OUTDENT: f64 = 4.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
+/// How far a title's buttons keep from the sidebar's trailing edge.
+pub const ACCESSORY_INSET: f64 = 6.0;
 
 /// Where the parts of a panel's title row sit, in the panel's coordinates.
 #[cfg(feature = "selftest")]
@@ -73,7 +75,7 @@ impl Panels {
                 .constraintEqualToAnchor_constant(&view.topAnchor(), HEADER_MIDDLE),
             accessory
                 .trailingAnchor()
-                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -6.0),
+                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -ACCESSORY_INSET),
             accessory
                 .centerYAnchor()
                 .constraintEqualToAnchor_constant(&header.centerYAnchor(), ACCESSORY_DROP),

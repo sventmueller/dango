@@ -25,6 +25,8 @@ use crate::util::{guarded, item, ns, set_action, set_target};
 
 /// Where a row begins: its content, set in by the row's own inset, then starts where the panel's title does.
 const ROW_LEADING: f64 = -2.0;
+/// Where a row ends, from the list's far edge: its age then ends with the title's button.
+const ROW_TRAILING: f64 = 2.0;
 
 #[derive(Clone)]
 pub enum Node {
@@ -297,10 +299,11 @@ pub fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retained<Sour
     };
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
     let source: Retained<Source> = unsafe { msg_send![super(Source::alloc(mtm).set_ivars(ivars)), init] };
-    let view: Retained<NSOutlineView> = Retained::into_super(crate::window::file_outline::FileOutline::with_leading(
+    let view: Retained<NSOutlineView> = Retained::into_super(crate::window::file_outline::FileOutline::with_insets(
         mtm,
         objc2_foundation::NSRect::ZERO,
         ROW_LEADING,
+        Some(ROW_TRAILING),
     ));
     let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("row"));
     view.addTableColumn(&column);

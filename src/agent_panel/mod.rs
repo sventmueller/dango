@@ -21,11 +21,13 @@ use splat_i18n::t;
 
 use crate::agent::Resume;
 use crate::util::{main_after, ns};
+use crate::window::panels::ACCESSORY_INSET;
 use crate::window::{Panel, WindowController};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
 
-/// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
+/// How far the panel's content keeps from the sidebar's leading edge: as far as the panel's title; at the trailing
+/// edge it ends with the title's button.
 const SIDE: f64 = 8.0;
 
 /// The panel of one window.
@@ -198,7 +200,7 @@ impl AgentPanel {
             top: 0.0,
             left: SIDE,
             bottom: 8.0,
-            right: SIDE,
+            right: ACCESSORY_INSET,
         });
         let panel = Rc::new(AgentPanel {
             controller: Weak::from(controller),
@@ -216,7 +218,7 @@ impl AgentPanel {
         scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
         scroll
             .widthAnchor()
-            .constraintEqualToAnchor_constant(&panel.view.widthAnchor(), -2.0 * SIDE)
+            .constraintEqualToAnchor_constant(&panel.view.widthAnchor(), -SIDE - ACCESSORY_INSET)
             .setActive(true);
         panel.sessions.setAccessibilityLabel(Some(&ns(t("Sitzungen"))));
         controller.set_panel_accessory(Panel::Agents, &panel.agents.new_session_button());
@@ -283,26 +285,27 @@ pub struct Inspection {
     pub new_session: Vec<String>,
 }
 
-/// In the panel's coordinates, where the content of each row of the list begins.
+/// In the panel's coordinates, where the content of each row of the list begins and where it ends.
 #[cfg(feature = "selftest")]
-pub fn edges(controller: &WindowController) -> Option<Vec<f64>> {
+pub fn edges(controller: &WindowController) -> Option<Vec<(f64, f64)>> {
     let panel = panel_of(controller)?;
     panel.reload();
     panel.view.layoutSubtreeIfNeeded();
-    let x = |view: &NSView| view.convertRect_toView(view.bounds(), Some(&panel.view)).origin.x;
+    let frame = |view: &NSView| view.convertRect_toView(view.bounds(), Some(&panel.view));
     let mut rows = Vec::new();
     for row in 0..panel.sessions.numberOfRows() {
         let Some(cell) = panel.sessions.viewAtColumn_row_makeIfNecessary(0, row, true) else {
             continue;
         };
         cell.layoutSubtreeIfNeeded();
-        let first = cell
+        let views = cell
             .subviews()
             .iter()
             .find_map(|view| view.downcast::<NSStackView>().ok())
-            .and_then(|stack| stack.arrangedSubviews().firstObject());
-        if let Some(first) = first {
-            rows.push(x(&first));
+            .map(|stack| stack.arrangedSubviews());
+        if let Some((first, last)) = views.and_then(|v| v.firstObject().zip(v.lastObject())) {
+            let last = frame(&last);
+            rows.push((frame(&first).origin.x, last.origin.x + last.size.width));
         }
     }
     Some(rows)
