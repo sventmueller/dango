@@ -409,6 +409,11 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Tableiste unterscheidet sich jeder Anbieter: Symbol und Laufpunkt eines AI- oder CLI-Tabs tragen seine Farbe –
   Claude Terrakotta, ACP-Agenten ihre Farbe aus dem Register, sonst die Systemakzentfarbe –, so angepasst an Hell,
   Dunkel und erhöhten Kontrast, dass sie 3:1 zum Hintergrund halten, mit erhöhtem Kontrast 4,5:1.
+- **E67 Gemini wird nicht mehr angeboten** *(Entscheidung des Eigentümers)*: Google hat die Anmeldung der Gemini CLI
+  mit einem privaten Google-Konto beendet und verweist auf Antigravity; ohne API-Schlüssel startet Gemini keine
+  Sitzung mehr. Gemini erscheint deshalb weder im „+“-Menü, auf der Neuer-Tab-Seite, im Worktree- und AI-Panel-Menü
+  noch in der Agentenliste der Einstellungen oder als CLI-Thread. Die Definition bleibt, damit vorhandene Gemini-
+  Verläufe lesbar bleiben; Antigravity übernimmt.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

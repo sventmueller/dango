@@ -130,10 +130,12 @@ fn session_menu(target: &Target) -> Retained<NSMenu> {
     }
     let env = crate::environment::get().unwrap_or_default();
     for (n, agent) in AcpAgent::presets().into_iter().enumerate() {
-        if matches!(
-            crate::agent::availability(&agent, env, std::path::Path::new("/")),
-            Availability::Ready(_)
-        ) {
+        if agent.offered()
+            && matches!(
+                crate::agent::availability(&agent, env, std::path::Path::new("/")),
+                Availability::Ready(_)
+            )
+        {
             let entry = item(mtm, &agent.name, Some(sel!(ideNewAcpThread:)), "");
             entry.setTag(isize::try_from(n).unwrap_or(-1));
             menu.addItem(&entry);

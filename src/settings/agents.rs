@@ -397,7 +397,7 @@ impl AgentsSettings {
             t("Anbieter, Modelle und Schlüssel im Tab „Eigener Agent“"),
             &[(t("Öffnen").to_string(), sel!(ideAgentsOwnSettings:), 0)],
         ));
-        for (n, preset) in PRESETS.iter().enumerate() {
+        for (n, preset) in PRESETS.iter().enumerate().filter(|(_, preset)| preset.offered) {
             let (state, actions) = if env.is_empty() {
                 (waiting.to_string(), Vec::new())
             } else {

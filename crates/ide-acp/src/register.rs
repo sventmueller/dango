@@ -332,6 +332,8 @@ pub struct Preset {
     pub sandbox: Sandbox,
     /// What that sandbox limits.
     pub effect: Effect,
+    /// Whether new threads are offered with it; its threads read either way.
+    pub offered: bool,
 }
 
 /// The agents of the plan (E5) with the registry's versions of 2026-11-09; each change to them needs a run of
@@ -355,6 +357,7 @@ pub const PRESETS: &[Preset] = &[
         verified: false,
         sandbox: Sandbox::Env(&[("INITIAL_AGENT_MODE", "workspace-write")]),
         effect: Effect::WorkspaceWrite,
+        offered: true,
     },
     Preset {
         id: "gemini",
@@ -375,6 +378,8 @@ pub const PRESETS: &[Preset] = &[
         verified: false,
         sandbox: Sandbox::Args(&["--sandbox"]),
         effect: Effect::ProjectWritesOnly,
+        // Google ended the sign-in with a personal account for Gemini CLI and points to Antigravity instead.
+        offered: false,
     },
     Preset {
         id: "antigravity-acp",
@@ -398,6 +403,7 @@ pub const PRESETS: &[Preset] = &[
         verified: false,
         sandbox: Sandbox::Unavailable,
         effect: Effect::None,
+        offered: true,
     },
     Preset {
         id: "opencode",
@@ -421,6 +427,7 @@ pub const PRESETS: &[Preset] = &[
         verified: false,
         sandbox: Sandbox::Unavailable,
         effect: Effect::None,
+        offered: true,
     },
     Preset {
         id: "claude-acp",
@@ -447,6 +454,7 @@ pub const PRESETS: &[Preset] = &[
             r#"{"claudeCode":{"options":{"sandbox":{"enabled":true,"failIfUnavailable":true}}}}"#,
         ),
         effect: Effect::ShellCommands,
+        offered: true,
     },
 ];
 

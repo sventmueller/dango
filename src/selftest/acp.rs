@@ -367,8 +367,10 @@ fn panel(root: PathBuf) {
     );
     let offered = seen.map(|s| s.new_session).unwrap_or_default();
     check(
-        "a new session offers the agents that are ready and the way to manage them",
-        offered.iter().any(|t| t == "Gemini") && offered.last().map(String::as_str) == Some(t("Agenten verwalten …")),
+        "a new session offers the agents that are ready, not Gemini any more, and the way to manage them",
+        offered.iter().any(|t| t == "Codex")
+            && !offered.iter().any(|t| t == "Gemini")
+            && offered.last().map(String::as_str) == Some(t("Agenten verwalten …")),
         offered.join(" | "),
     );
     main_after(Duration::from_millis(400), move || {
@@ -379,8 +381,9 @@ fn panel(root: PathBuf) {
         crate::settings::show_agents(MainThreadMarker::from(&*controller));
         let lines = crate::settings::agents_lines();
         check(
-            "the settings list every agent's state and the loaded registry",
-            lines.iter().any(|l| l.starts_with("Gemini Bereit"))
+            "the settings list every offered agent's state, not Gemini any more, and the loaded registry",
+            lines.iter().any(|l| l.starts_with("Codex Bereit"))
+                && !lines.iter().any(|l| l.starts_with("Gemini"))
                 && lines.iter().any(|l| l.starts_with("Claude über ACP"))
                 && lines.iter().any(|l| l.starts_with("ACP-Register 9 Agenten")),
             lines.join(" | "),

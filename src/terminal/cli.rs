@@ -28,9 +28,8 @@ use super::view::TerminalView;
 use crate::util::{item, main_after, ns, symbol};
 use crate::window::{TabKind, WindowController};
 
-/// The CLIs offered, by command; gemini only when it is installed.
-const CLIS: [&str; 4] = ["claude", "codex", "agy", "gemini"];
-const OPTIONAL: [&str; 1] = ["gemini"];
+/// The CLIs offered, by command.
+const CLIS: [&str; 3] = ["claude", "codex", "agy"];
 
 /// Quiet this long, a CLI waits.
 const IDLE: Duration = Duration::from_secs(4);
@@ -292,9 +291,6 @@ fn entries(folder: bool, trusted: bool, found: &[&str]) -> Vec<Entry> {
     }
     for name in CLIS {
         let installed = found.contains(&name);
-        if OPTIONAL.contains(&name) && !installed {
-            continue;
-        }
         entries.push(Entry::Cli {
             name,
             found: installed,
@@ -355,7 +351,6 @@ fn continuing(name: &str, session: Option<&str>) -> Option<Vec<String>> {
     match (name, session) {
         ("claude", Some(session)) => Some(vec!["--resume".into(), session.into()]),
         ("codex", _) => Some(vec!["resume".into(), "--last".into()]),
-        ("gemini", _) => Some(vec!["--resume".into(), "latest".into()]),
         _ => None,
     }
 }
@@ -611,9 +606,9 @@ mod tests {
                 cli("agy", true, true)
             ]
         );
-        let untrusted = entries(true, false, &["claude", "gemini"]);
+        let untrusted = entries(true, false, &["claude", "agy"]);
         assert!(matches!(untrusted[0], Entry::Note(_)));
-        assert_eq!(untrusted.last(), Some(&cli("gemini", true, false)));
+        assert_eq!(untrusted.last(), Some(&cli("agy", true, false)));
         assert!(matches!(entries(false, false, &[])[0], Entry::Note(_)));
     }
 }

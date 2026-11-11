@@ -143,7 +143,7 @@ pub fn installed_presets() -> Vec<(usize, String)> {
     AcpAgent::presets()
         .into_iter()
         .enumerate()
-        .filter(|(_, agent)| installed(&Agent::Acp(agent.clone())))
+        .filter(|(_, agent)| agent.offered() && installed(&Agent::Acp(agent.clone())))
         .map(|(index, agent)| (index, agent.name))
         .collect()
 }

@@ -18,6 +18,7 @@ pub fn agents() -> Vec<(Agent, bool)> {
     let presets = AcpAgent::presets()
         .into_iter()
         .zip(crate::agent::preset_menu())
+        .filter(|(agent, _)| agent.offered())
         .map(|(agent, (_, usable))| (Agent::Acp(agent), usable));
     let own = (Agent::Own, crate::own_agent::default_choice().is_some());
     std::iter::once((Agent::Claude, true))

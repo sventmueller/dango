@@ -50,6 +50,11 @@ impl AcpAgent {
         }
     }
 
+    /// Whether new threads are offered with it; an entry of the register always is.
+    pub fn offered(&self) -> bool {
+        register::preset(&self.id).is_none_or(|preset| preset.offered)
+    }
+
     /// The agent with the register id `id`: one this build knows, else an entry of the register last fetched.
     pub fn find(id: &str) -> Option<AcpAgent> {
         if let Some(preset) = register::preset(id) {
