@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 use crate::capabilities::Capabilities;
 use crate::control::{
     self, Answer, ContextUsage, ControlError, Incoming, InitializeResult, InterruptResult, PermissionAnswer,
-    PermissionAsk, PlanAnswer, Request, RewindResult, TaskOutput, UsageReport,
+    PermissionAsk, PlanAnswer, RemoteControlResult, Request, RewindResult, TaskOutput, UsageReport,
 };
 use crate::input;
 use crate::launch::Launch;
@@ -44,6 +44,8 @@ pub enum Event {
     Changed(Vec<Change>),
     /// The CLI reported its commands, tools, models or account anew.
     Capabilities,
+    /// The Remote Control connection changed; read it with `Session::remote_control`.
+    RemoteControl,
     /// Something keeps the session from working, such as a missing sign-in.
     Failed(SessionError),
     /// The process ended; its last error output is attached.
@@ -51,6 +53,22 @@ pub enum Event {
         /// The end of what the CLI wrote to stderr.
         stderr: String,
     },
+}
+
+/// Where the session stands with Remote Control, which continues it on claude.ai and in the Claude apps.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum RemoteControl {
+    /// The CLI does not offer it, or has not said yet.
+    #[default]
+    Unavailable,
+    /// Not connected.
+    Off,
+    /// Connecting.
+    Connecting,
+    /// Connected; the session's page on claude.ai.
+    Connected(String),
+    /// The connection failed or broke off; why.
+    Failed(String),
 }
 
 /// Why a session cannot do what was asked.
@@ -106,6 +124,13 @@ struct State {
     capabilities: Capabilities,
     /// The CLI refused `get_context_usage`, so it is not asked after turns any more.
     context_refused: bool,
+    remote: RemoteControl,
+    /// The connection the latest `remote_control` answer opened, which `bridge_state` frames name.
+    remote_epoch: Option<u64>,
+    /// The page of the latest connection, kept for when it recovers.
+    remote_url: Option<String>,
+    /// Counts `remote_control` requests, so that only the latest answer counts.
+    remote_asked: u64,
 }
 
 struct Shared {
@@ -202,6 +227,10 @@ impl Session {
                 asks: HashMap::new(),
                 capabilities: Capabilities::default(),
                 context_refused: false,
+                remote: RemoteControl::Unavailable,
+                remote_epoch: None,
+                remote_url: None,
+                remote_asked: 0,
             }),
             pending: Mutex::new(HashMap::new()),
             sink: Box::new(sink),
@@ -239,6 +268,7 @@ impl Session {
             forward_subagent_text: launch.forward_subagent_text,
         };
         let weak = Arc::downgrade(&self.shared);
+        let remote = launch.remote_control;
         let reply: Reply<InitializeResult> = self.request(
             request,
             Some(Box::new(move |payload, state| {
@@ -250,6 +280,13 @@ impl Session {
                     shared.emit_later(Event::Capabilities);
                     if result.signed_out() {
                         shared.sign_in_required("Not logged in".into());
+                    }
+                    if result.remote_control_offered() {
+                        state.remote = RemoteControl::Off;
+                        if remote.unwrap_or_else(|| result.remote_control_at_start()) {
+                            shared.ask_remote(state, true);
+                        }
+                        shared.emit_later(Event::RemoteControl);
                     }
                 }
                 vec![result.billing()]
@@ -375,6 +412,23 @@ impl Session {
     /// Moves the foreground task of `tool_use_id`, or all of them, to the background; tells whether any moved.
     pub fn background(&self, tool_use_id: Option<&str>) -> Reply<bool> {
         self.request(Request::BackgroundTasks(tool_use_id.map(str::to_string)), None)
+    }
+
+    /// Where the session stands with Remote Control.
+    pub fn remote_control(&self) -> RemoteControl {
+        self.shared.lock_state().remote.clone()
+    }
+
+    /// Connects the session to Remote Control or ends that, when the CLI offers it.
+    pub fn set_remote_control(&self, on: bool) {
+        {
+            let mut state = self.shared.lock_state();
+            if state.remote == RemoteControl::Unavailable {
+                return;
+            }
+            self.shared.ask_remote(&mut state, on);
+        }
+        self.shared.emit(Event::RemoteControl);
     }
 
     /// Reads the end of a shell or monitor task's output and keeps it on the thread's background item.
@@ -563,6 +617,72 @@ impl Shared {
         });
     }
 
+    /// Sends `remote_control`; the answer moves `state.remote` on in the order the CLI wrote it, unless a later
+    /// request overtook it.
+    fn ask_remote(self: &Arc<Self>, state: &mut State, on: bool) {
+        state.remote_asked += 1;
+        let asked = state.remote_asked;
+        state.remote = if on {
+            RemoteControl::Connecting
+        } else {
+            RemoteControl::Off
+        };
+        let weak = Arc::downgrade(self);
+        let after: After = Box::new(move |payload, state| {
+            if state.remote_asked != asked || state.remote == RemoteControl::Unavailable || !on {
+                return Vec::new();
+            }
+            state.remote = match RemoteControlResult::read(payload.clone()) {
+                Ok(RemoteControlResult {
+                    session_url: Some(url),
+                    bridge_epoch,
+                }) => {
+                    state.remote_epoch = bridge_epoch;
+                    state.remote_url = Some(url.clone());
+                    RemoteControl::Connected(url)
+                }
+                Ok(_) => RemoteControl::Failed("no session page".into()),
+                Err(error) => RemoteControl::Failed(error.to_string()),
+            };
+            if let Some(shared) = weak.upgrade() {
+                shared.emit_later(Event::RemoteControl);
+            }
+            Vec::new()
+        });
+        let reply: Reply<RemoteControlResult> = self.request(Request::RemoteControl(on), Some(after));
+        let weak = Arc::downgrade(self);
+        reply.then(move |result| {
+            let (Err(error), Some(shared)) = (result, weak.upgrade()) else {
+                return;
+            };
+            {
+                let mut state = shared.lock_state();
+                if state.remote_asked != asked || state.remote == RemoteControl::Unavailable {
+                    return;
+                }
+                state.remote = RemoteControl::Failed(error.to_string());
+            }
+            shared.emit(Event::RemoteControl);
+        });
+    }
+
+    /// Follows a `bridge_state` frame: a connection that breaks off is failed, one that recovers connected again.
+    fn bridge_state(&self, state: &mut State, frame: &str, epoch: Option<u64>, detail: Option<&String>) {
+        let current = epoch.is_none() || epoch == state.remote_epoch;
+        let next = match (&state.remote, frame) {
+            (RemoteControl::Connected(_), "failed" | "policy_disabled") if current => {
+                RemoteControl::Failed(detail.cloned().unwrap_or_else(|| frame.to_string()))
+            }
+            (RemoteControl::Failed(_), "connected") if current => match &state.remote_url {
+                Some(url) => RemoteControl::Connected(url.clone()),
+                None => return,
+            },
+            _ => return,
+        };
+        state.remote = next;
+        self.emit_later(Event::RemoteControl);
+    }
+
     fn lock_state(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -670,6 +790,13 @@ impl Shared {
                             state.capabilities.learn_init(init);
                             self.emit_later(Event::Capabilities);
                         }
+                        Message::System(System::BridgeState {
+                            state: frame,
+                            epoch,
+                            detail,
+                        }) => {
+                            self.bridge_state(&mut state, frame, *epoch, detail.as_ref());
+                        }
                         Message::System(System::CommandsChanged(commands)) => {
                             state.capabilities.slash_commands = commands
                                 .iter()
@@ -756,6 +883,7 @@ impl Shared {
         let changes = {
             let mut state = self.lock_state();
             state.asks.clear();
+            state.remote = RemoteControl::Unavailable;
             let now = SystemTime::now();
             let mut updates = state.mapper.ended(now);
             if !self.end_expected.load(Ordering::SeqCst) {

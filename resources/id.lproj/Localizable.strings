@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Hapus Server Bahasa";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Misalnya “Elixir”, “ex, exs”, dan “elixir-ls”. Perintah adalah program di PATH shell login atau jalur, diikuti argumennya.";
 "Name, Dateiendungen und Befehl sind nötig." = "Nama, ekstensi file, dan perintah wajib diisi.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: lanjutkan di ponsel atau di claude.ai";
+"Remote Control verbindet …" = "Remote Control sedang terhubung…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control aktif: sesi ini juga berjalan di ponsel dan di claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control terputus: {}";
+"Link kopieren" = "Salin Tautan";
+"Remote Control beenden" = "Matikan Remote Control";
 "Dateien:" = "File:";
 "Ignorierte und versteckte Dateien anzeigen" = "Tampilkan file yang diabaikan dan tersembunyi";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Pohon file juga menampilkan, dengan warna redup, apa yang dikecualikan .gitignore atau disembunyikan macOS.";

@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Eliminați serverul de limbaj";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "De exemplu „Elixir”, „ex, exs” și „elixir-ls”. Comanda este un program din PATH-ul shellului de login sau o cale, urmată de argumentele sale.";
 "Name, Dateiendungen und Befehl sind nötig." = "Numele, extensiile de fișier și comanda sunt obligatorii.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: continuați pe telefon sau pe claude.ai";
+"Remote Control verbindet …" = "Remote Control se conectează…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control este activat: această sesiune rulează și pe telefon și pe claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control s-a întrerupt: {}";
+"Link kopieren" = "Copiați linkul";
+"Remote Control beenden" = "Dezactivați Remote Control";
 "Dateien:" = "Fișiere:";
 "Ignorierte und versteckte Dateien anzeigen" = "Afișați fișierele ignorate și ascunse";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Arborele de fișiere afișează și, estompat, ce exclude .gitignore sau ascunde macOS.";

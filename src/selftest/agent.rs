@@ -12,6 +12,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSRect, NSSize};
 use serde_json::json;
+use splat_i18n::t;
 
 use super::{check, finish, snapshot};
 use crate::agent::AgentTab;
@@ -436,6 +437,7 @@ fn permission(root: PathBuf, key: u64) {
         format!("{} pending", tab.snapshot().pending_requests().len()),
     );
     tab.timeline().scroll_to_end();
+    scroller_rests_at_the_end(&tab);
     let key = tab.key;
     main_after(Duration::from_millis(300), move || {
         if let Some(controller) = controller_of(&root) {
@@ -443,6 +445,24 @@ fn permission(root: PathBuf, key: u64) {
         }
         running(root, key);
     });
+}
+
+fn scroller_rests_at_the_end(tab: &AgentTab) {
+    let scroll = tab.timeline().view();
+    if scroll.scrollerStyle() != objc2_app_kit::NSScrollerStyle::Overlay {
+        return;
+    }
+    let at_end = scroll.hasVerticalScroller();
+    let clip = scroll.contentView();
+    clip.scrollToPoint(objc2_foundation::NSPoint::new(0.0, 0.0));
+    scroll.reflectScrolledClipView(&clip);
+    let away = scroll.hasVerticalScroller();
+    tab.timeline().scroll_to_end();
+    check(
+        "following the end does not flash the scroller, scrolling away brings it back",
+        !at_end && away,
+        format!("at the end {at_end}, away {away}"),
+    );
 }
 
 /// A subagent and a background shell that run.
@@ -970,6 +990,7 @@ pub fn live() {
         return finish("agent-live");
     };
     tab.use_model("haiku");
+    tab.keep_remote_control_off();
     let key = tab.key;
     let started = Instant::now();
     main_after(Duration::from_millis(500), move || live_wait(root, key, started, false));
@@ -1023,6 +1044,11 @@ fn live_wait(root: PathBuf, key: u64, started: Instant, sent: bool) {
         "the status line shows context and cost",
         !seen.status.is_empty(),
         seen.status.join(" | "),
+    );
+    check(
+        "the head offers Remote Control, off as the thread chose",
+        seen.remote.as_deref() == Some(t("Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten")),
+        format!("{:?}", seen.remote),
     );
     main_after(Duration::from_millis(400), move || {
         if let Some(controller) = controller_of(&root) {

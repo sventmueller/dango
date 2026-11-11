@@ -51,6 +51,8 @@ pub enum Request {
         /// Only report what would change.
         dry_run: bool,
     },
+    /// Connects the session to Remote Control on claude.ai, or ends that; internal in the CLI (`docs/claude-mapping.md`).
+    RemoteControl(bool),
 }
 
 impl Request {
@@ -68,6 +70,7 @@ impl Request {
             Request::GetContextUsage { .. } => "get_context_usage",
             Request::GetUsage => "get_usage",
             Request::RewindFiles { .. } => "rewind_files",
+            Request::RemoteControl(_) => "remote_control",
         }
     }
 
@@ -75,9 +78,10 @@ impl Request {
     pub fn timeout(&self) -> Duration {
         match self {
             Request::Initialize { .. } => Duration::from_secs(60),
-            Request::GetContextUsage { .. } | Request::GetUsage | Request::RewindFiles { .. } => {
-                Duration::from_secs(30)
-            }
+            Request::GetContextUsage { .. }
+            | Request::GetUsage
+            | Request::RewindFiles { .. }
+            | Request::RemoteControl(_) => Duration::from_secs(30),
             _ => Duration::from_secs(10),
         }
     }
@@ -107,6 +111,7 @@ impl Request {
                 user_message_id,
                 dry_run,
             } => json!({ "user_message_id": user_message_id, "dry_run": dry_run }),
+            Request::RemoteControl(enabled) => json!({ "enabled": enabled }),
         };
         if let Value::Object(map) = &mut body {
             map.insert("subtype".into(), Value::from(self.subtype()));
@@ -175,9 +180,23 @@ pub struct InitializeResult {
     pub output_style: String,
     /// The CLI's version.
     pub claude_code_version: Option<String>,
+    /// Whether the account and the organisation allow Remote Control; older CLIs leave it out.
+    pub remote_control_available: Option<bool>,
+    /// Whether the user's settings (`remoteControlAtStartup`) connect each session to Remote Control at start.
+    pub remote_control_auto_enable: Option<bool>,
 }
 
 impl InitializeResult {
+    /// Whether Remote Control can be offered at all.
+    pub fn remote_control_offered(&self) -> bool {
+        self.remote_control_available == Some(true)
+    }
+
+    /// Whether the session connects to Remote Control as it starts, unless the user decided otherwise for the thread.
+    pub fn remote_control_at_start(&self) -> bool {
+        self.remote_control_offered() && self.remote_control_auto_enable == Some(true)
+    }
+
     /// Whether the CLI has no sign-in at all: no subscription token and no API key on Anthropic's own API.
     pub fn signed_out(&self) -> bool {
         self.first_party_without_key() && self.account.token_source.as_deref() == Some("none")
@@ -460,6 +479,16 @@ pub struct RewindResult {
     pub deletions: u64,
 }
 
+/// What `remote_control` answers when it connects.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
+#[serde(default)]
+pub struct RemoteControlResult {
+    /// The session's page on claude.ai.
+    pub session_url: Option<String>,
+    /// Which connection of the session later `bridge_state` frames speak of.
+    pub bridge_epoch: Option<u64>,
+}
+
 /// Reads a success payload as the answer of a request type.
 pub trait Answer: Sized + Send + 'static {
     /// The answer in `payload`, which is `{}` when the CLI sent none.
@@ -505,7 +534,8 @@ answer_by_serde!(
     InterruptResult,
     TaskOutput,
     ContextUsage,
-    RewindResult
+    RewindResult,
+    RemoteControlResult
 );
 
 /// A request from the CLI.

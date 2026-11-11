@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Rimuovi server di linguaggio";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Ad esempio “Elixir”, “ex, exs” ed “elixir-ls”. Il comando è un programma nel PATH della shell di login o un percorso, seguito dai suoi argomenti.";
 "Name, Dateiendungen und Befehl sind nötig." = "Nome, estensioni dei file e comando sono obbligatori.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: continua sul telefono o su claude.ai";
+"Remote Control verbindet …" = "Connessione di Remote Control…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control è attivo: questa sessione è in esecuzione anche sul telefono e su claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control è interrotto: {}";
+"Link kopieren" = "Copia link";
+"Remote Control beenden" = "Disattiva Remote Control";
 "Dateien:" = "File:";
 "Ignorierte und versteckte Dateien anzeigen" = "Mostra file ignorati e nascosti";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "L’albero dei file mostra anche, attenuato, ciò che .gitignore esclude o macOS nasconde.";

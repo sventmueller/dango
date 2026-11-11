@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Nyelvi szerver eltávolítása";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Például „Elixir”, „ex, exs” és „elixir-ls”. A parancs egy program a bejelentkezési shell PATH-jában vagy egy útvonal, amelyet az argumentumai követnek.";
 "Name, Dateiendungen und Befehl sind nötig." = "A név, a fájlkiterjesztések és a parancs megadása kötelező.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: folytatás a telefonon vagy a claude.ai-on";
+"Remote Control verbindet …" = "A Remote Control csatlakozik…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "A Remote Control be van kapcsolva: ez a munkamenet a telefonon és a claude.ai-on is fut";
+"Remote Control ist unterbrochen: {}" = "A Remote Control megszakadt: {}";
+"Link kopieren" = "Hivatkozás másolása";
+"Remote Control beenden" = "Remote Control kikapcsolása";
 "Dateien:" = "Fájlok:";
 "Ignorierte und versteckte Dateien anzeigen" = "Figyelmen kívül hagyott és rejtett fájlok megjelenítése";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "A fájlfa halványan azt is mutatja, amit a .gitignore kizár vagy a macOS elrejt.";

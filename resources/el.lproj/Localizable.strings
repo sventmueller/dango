@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Αφαίρεση διακομιστή γλώσσας";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Για παράδειγμα «Elixir», «ex, exs» και «elixir-ls». Η εντολή είναι ένα πρόγραμμα στο PATH του κελύφους σύνδεσης ή μια διαδρομή, ακολουθούμενη από τα ορίσματά της.";
 "Name, Dateiendungen und Befehl sind nötig." = "Απαιτούνται όνομα, επεκτάσεις αρχείων και εντολή.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: συνεχίστε στο τηλέφωνό σας ή στο claude.ai";
+"Remote Control verbindet …" = "Σύνδεση Remote Control…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Το Remote Control είναι ενεργό: αυτή η συνεδρία εκτελείται και στο τηλέφωνό σας και στο claude.ai";
+"Remote Control ist unterbrochen: {}" = "Το Remote Control διακόπηκε: {}";
+"Link kopieren" = "Αντιγραφή συνδέσμου";
+"Remote Control beenden" = "Απενεργοποίηση Remote Control";
 "Dateien:" = "Αρχεία:";
 "Ignorierte und versteckte Dateien anzeigen" = "Εμφάνιση αγνοημένων και κρυφών αρχείων";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Το δέντρο αρχείων δείχνει επίσης, αχνά, ό,τι εξαιρεί το .gitignore ή κρύβει το macOS.";

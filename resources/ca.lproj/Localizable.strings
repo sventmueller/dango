@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Elimina el servidor de llenguatge";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Per exemple, «Elixir», «ex, exs» i «elixir-ls». L’ordre és un programa del PATH de l’intèrpret d’ordres d’inici de sessió o un camí, seguit dels seus arguments.";
 "Name, Dateiendungen und Befehl sind nötig." = "Cal el nom, les extensions de fitxer i l’ordre.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: continua al telèfon o a claude.ai";
+"Remote Control verbindet …" = "Remote Control s’està connectant…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control està activat: aquesta sessió també s’executa al telèfon i a claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control s’ha interromput: {}";
+"Link kopieren" = "Copia l’enllaç";
+"Remote Control beenden" = "Desactiva Remote Control";
 "Dateien:" = "Fitxers:";
 "Ignorierte und versteckte Dateien anzeigen" = "Mostra els fitxers ignorats i ocults";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "L’arbre de fitxers també mostra, atenuat, el que .gitignore exclou o macOS amaga.";

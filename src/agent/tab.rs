@@ -143,6 +143,8 @@ pub struct State {
     pub queue: Vec<UserMessage>,
     pub attachments: Vec<Attachment>,
     pub sandbox: bool,
+    /// Whether the user connected the thread to Remote Control or ended it; `None` follows their Claude settings.
+    pub remote: Option<bool>,
     pub mode: String,
     pub model: Option<String>,
     pub effort: Option<String>,
@@ -286,6 +288,7 @@ impl AgentTab {
                 queue: Vec::new(),
                 attachments: Vec::new(),
                 sandbox: false,
+                remote: None,
                 mode: choice.mode.unwrap_or_else(|| "default".into()),
                 model: choice.model,
                 effort: choice.effort,
@@ -621,6 +624,7 @@ impl AgentTab {
                 .map(str::to_string)
                 .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
             launch.sandbox = state.sandbox;
+            launch.remote_control = state.remote;
             launch.permission_mode = Some(state.mode.clone());
             launch.allow_bypass = true;
             launch.model.clone_from(&state.model);
@@ -691,6 +695,7 @@ impl AgentTab {
         let changes: Vec<Change> = pending.changes.into_iter().collect();
         let mut problem = None;
         let mut learned = false;
+        let mut remote = false;
         let mut refused = None;
         for event in pending.events {
             match &event {
@@ -701,6 +706,7 @@ impl AgentTab {
                 }
                 Incoming::Own(other) => self.own_event(other),
                 Incoming::Claude(Event::Capabilities) | Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
+                Incoming::Claude(Event::RemoteControl) => remote = true,
                 Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
                 Incoming::Claude(event @ Event::Failed(_)) => problem = source::problem_of(event),
                 Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
@@ -732,6 +738,8 @@ impl AgentTab {
         }
         if learned {
             self.refresh();
+        } else if remote {
+            self.refresh_remote();
         }
     }
 
@@ -874,6 +882,7 @@ impl AgentTab {
         };
         self.header.set_title(&title);
         self.header.set_bookmarked(self.state.borrow().bookmarked);
+        self.refresh_remote();
         if let Some(controller) = self.controller() {
             controller.set_tab_title(self.tab_id.get(), &super::format::first_line(&title, 32));
         }
@@ -899,6 +908,11 @@ impl AgentTab {
         let blocked = matches!(problem, Some(Problem::Untrusted | Problem::NotFound));
         self.composer.card.setHidden(blocked);
         self.refresh_tab_mark();
+    }
+
+    fn refresh_remote(&self) {
+        let remote = self.session().map(|s| s.remote_control()).unwrap_or_default();
+        self.header.set_remote(&remote);
     }
 
     fn refresh_tab_mark(&self) {
@@ -1040,6 +1054,8 @@ pub struct Inspection {
     pub title: String,
     pub subagents: Vec<String>,
     pub background: Vec<String>,
+    /// The tooltip of the head's Remote Control button, while it shows.
+    pub remote: Option<String>,
 }
 
 #[cfg(feature = "selftest")]
@@ -1102,7 +1118,15 @@ impl AgentTab {
             title: self.title(),
             subagents: thread.subagents().iter().map(|s| s.description.clone()).collect(),
             background: thread.background().iter().map(|b| b.label.clone()).collect(),
+            remote: self.header.remote_tip(),
         }
+    }
+
+    /// Keeps the thread off Remote Control whatever the user's Claude settings say, so a live self-test registers
+    /// nothing on claude.ai.
+    #[cfg(feature = "selftest")]
+    pub fn keep_remote_control_off(&self) {
+        self.state.borrow_mut().remote = Some(false);
     }
 
     /// Picks the model for the next start.

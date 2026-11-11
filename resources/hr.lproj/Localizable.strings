@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Ukloni jezični poslužitelj";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Na primjer „Elixir“, „ex, exs“ i „elixir-ls“. Naredba je program u PATH-u ljuske za prijavu ili putanja, nakon koje slijede njezini argumenti.";
 "Name, Dateiendungen und Befehl sind nötig." = "Naziv, nastavci datoteka i naredba su obavezni.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: nastavite na telefonu ili na claude.ai";
+"Remote Control verbindet …" = "Remote Control se povezuje…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control je uključen: ova sesija radi i na telefonu i na claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control je prekinut: {}";
+"Link kopieren" = "Kopiraj poveznicu";
+"Remote Control beenden" = "Isključi Remote Control";
 "Dateien:" = "Datoteke:";
 "Ignorierte und versteckte Dateien anzeigen" = "Prikaži zanemarene i skrivene datoteke";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Stablo datoteka prikazuje i, zasivljeno, ono što .gitignore isključuje ili macOS skriva.";

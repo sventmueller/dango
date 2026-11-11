@@ -306,6 +306,17 @@ define_class!(
             self.on_tab(|tab| tab.show_tasks(view.as_deref()));
         }
 
+        #[unsafe(method(ideAgentRemoteControl:))]
+        fn remote_control(&self, sender: Option<&AnyObject>) {
+            self.on_menu(sender, AgentTab::remote_control);
+        }
+
+        #[unsafe(method(ideAgentRemoteControlAction:))]
+        fn remote_control_action(&self, sender: Option<&AnyObject>) {
+            let action = tag(sender);
+            self.on_tab(|tab| tab.remote_control_action(action));
+        }
+
         #[unsafe(method(ideAgentFocusView:))]
         fn focus_view(&self, _sender: Option<&AnyObject>) {
             self.on_tab(AgentTab::toggle_focus_view);

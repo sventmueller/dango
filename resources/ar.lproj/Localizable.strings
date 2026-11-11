@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "إزالة خادم لغة";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "مثل «Elixir» و«ex, exs» و«elixir-ls». الأمر هو برنامج في PATH الخاص بصدفة تسجيل الدخول أو مسار، يليه وسائطه.";
 "Name, Dateiendungen und Befehl sind nötig." = "الاسم وامتدادات الملفات والأمر مطلوبة.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: تابِع على هاتفك أو على claude.ai";
+"Remote Control verbindet …" = "جارٍ اتصال Remote Control…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control قيد التشغيل: تعمل هذه الجلسة أيضًا على هاتفك وعلى claude.ai";
+"Remote Control ist unterbrochen: {}" = "انقطع Remote Control: {}";
+"Link kopieren" = "نسخ الرابط";
+"Remote Control beenden" = "إيقاف Remote Control";
 "Dateien:" = "الملفات:";
 "Ignorierte und versteckte Dateien anzeigen" = "عرض الملفات المتجاهلة والمخفية";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "تعرض شجرة الملفات أيضًا ما يستبعده ‎.gitignore‏ أو يخفيه macOS، بلون باهت.";

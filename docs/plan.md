@@ -114,9 +114,10 @@ eingearbeitet (markiert mit *Review*).
 - **E21 Claude direkt wie das offizielle Plugin, ACP für alle anderen** *(entschieden)*. `claude` mit Stream-JSON
   (`--input-format/--output-format stream-json`, `--permission-prompt-tool stdio`, `--include-partial-messages`,
   `--include-hook-events`). Regeln von Anthropic: `claude` bleibt unverändert, Anmeldung nur über `claude` selbst,
-  keine Ausgabe als VS-Code-Plugin, Menüname „Claude“. Nicht möglich (nur private Schnittstellen): Reiter „Web“,
-  „Remote Control“. *Review — Funktionsvertrag in zwei Stufen* (geprüft gegen die öffentliche
-  `@anthropic-ai/claude-agent-sdk@0.3.319/sdk.d.ts` und das installierte Plugin 2.1.319):
+  keine Ausgabe als VS-Code-Plugin, Menüname „Claude“. Nicht möglich (nur private Schnittstellen): Reiter „Web“.
+  „Remote Control“ gibt es auf Entscheidung des Owners trotzdem, als Best effort (siehe unten). *Review —
+  Funktionsvertrag in zwei Stufen* (geprüft gegen die öffentliche `@anthropic-ai/claude-agent-sdk@0.3.319/sdk.d.ts`
+  und das installierte Plugin 2.1.319):
   - *Kern (Abnahme hängt daran):* Prompt und Streaming, Denken, Werkzeug-Karten, Freigaben über `can_use_tool`
     (inkl. `updatedInput` = Änderung vor dem Annehmen bearbeiten), Stopp (`interrupt`), Modell/Modus, Subagenten über
     `parent_tool_use_id` und `task_started/progress/updated/notification`, Hintergrund-Aufgaben über
@@ -125,7 +126,10 @@ eingearbeitet (markiert mit *Review*).
   - *Best effort, ausdrücklich experimentell:* Nutzungsbalken über `get_usage` (in der SDK als „Experimental — the
     response shape may change“ markiert), `/context`-Aufschlüsselung, `rewind_files` (erfasst nur Datei-Werkzeuge,
     keine Bash- und Subagenten-Änderungen — maßgeblich ist deshalb I6), Hook-Ausgabe, Sitzungsablage
-    `~/.claude/projects` (internes Format). Fällt etwas weg, blendet die Oberfläche das Element aus.
+    `~/.claude/projects` (internes Format), Remote Control über die interne Steuernachricht `remote_control` und
+    `--replay-user-messages` (wie die VS-Code-Erweiterung; die Anmeldung bei claude.ai macht `claude` selbst, der
+    Thread folgt `remoteControlAtStartup`, bis der Nutzer ihn selbst verbindet oder trennt). Fällt etwas weg, blendet
+    die Oberfläche das Element aus.
   - Unbekannte Freigabe-Anfragen werden abgelehnt, nicht durchgewunken. Zu Phase 4 gehört eine Abbildungstabelle
     Stream-JSON → Thread-Modell; sie ist zugleich Spezifikation der Mitschnitt-Tests.
 - **E5 Agenten-Register** *(bestätigt)* aus der ACP-Registry (*Review:* 45 Einträge). Vorbelegt: Claude (E21; Rückfall

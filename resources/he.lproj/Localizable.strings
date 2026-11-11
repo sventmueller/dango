@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "הסרת שרת שפה";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "לדוגמה “Elixir”, “ex, exs” ו-“elixir-ls”. הפקודה היא תוכנה ב-PATH של מעטפת ההתחברות או נתיב, ואחריה הארגומנטים שלה.";
 "Name, Dateiendungen und Befehl sind nötig." = "נדרשים שם, סיומות קבצים ופקודה.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: אפשר להמשיך בטלפון או ב‑claude.ai";
+"Remote Control verbindet …" = "Remote Control מתחבר…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control פועל: הסשן הזה רץ גם בטלפון וב‑claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control נקטע: {}";
+"Link kopieren" = "העתקת הקישור";
+"Remote Control beenden" = "כיבוי Remote Control";
 "Dateien:" = "קבצים:";
 "Ignorierte und versteckte Dateien anzeigen" = "הצגת קבצים מוחרגים ומוסתרים";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "עץ הקבצים מציג גם, בצבע עמום, את מה ש־‎.gitignore‏ מחריג או ש־macOS מסתיר.";

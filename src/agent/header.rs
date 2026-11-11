@@ -1,10 +1,12 @@
-//! The head of the AI tab: Claude's mark and the session's title, then bookmark, history and a new session.
+//! The head of the AI tab: Claude's mark and the session's title, then Remote Control, bookmark, history and a new
+//! session.
 
+use ide_claude::RemoteControl;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSButton, NSClickGestureRecognizer, NSColor, NSStackView, NSTextField};
 use objc2_foundation::NSEdgeInsets;
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use super::style;
 use super::target::AgentTarget;
@@ -20,6 +22,7 @@ pub struct Header {
     focus: Retained<NSButton>,
     /// Opens the overview of the session's subagents and background tasks.
     pub tasks: Retained<NSButton>,
+    remote: Retained<NSButton>,
 }
 
 impl Header {
@@ -88,11 +91,23 @@ impl Header {
             sel!(ideAgentTasks:),
             0,
         );
+        let remote = ui::symbol_button(
+            mtm,
+            "iphone",
+            t("Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten"),
+            13.0,
+            target,
+            sel!(ideAgentRemoteControl:),
+            0,
+        );
+        remote.setHidden(true);
         let spacer = ui::spacer(mtm);
         let view = ui::row(
             mtm,
             8.0,
-            &[&mark, &title, &spacer, &focus, &tasks, &bookmark, &history, &new],
+            &[
+                &mark, &title, &spacer, &remote, &focus, &tasks, &bookmark, &history, &new,
+            ],
         );
         view.setEdgeInsets(NSEdgeInsets {
             top: 0.0,
@@ -108,7 +123,49 @@ impl Header {
             bookmark,
             focus,
             tasks,
+            remote,
         }
+    }
+
+    /// The Remote Control button's tooltip, while it shows.
+    #[cfg(feature = "selftest")]
+    pub fn remote_tip(&self) -> Option<String> {
+        let tip = self.remote.toolTip().map(|t| t.to_string());
+        tip.filter(|_| !self.remote.isHidden())
+    }
+
+    /// Shows where the session stands with Remote Control; hidden where the CLI does not offer it.
+    pub fn set_remote(&self, remote: &RemoteControl) {
+        let interrupted;
+        let (name, color, tip) = match remote {
+            RemoteControl::Unavailable => {
+                self.remote.setHidden(true);
+                return;
+            }
+            RemoteControl::Off => (
+                "iphone",
+                NSColor::secondaryLabelColor(),
+                t("Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten"),
+            ),
+            RemoteControl::Connecting => (
+                "iphone.radiowaves.left.and.right",
+                NSColor::secondaryLabelColor(),
+                t("Remote Control verbindet …"),
+            ),
+            RemoteControl::Connected(_) => (
+                "iphone.radiowaves.left.and.right",
+                NSColor::controlAccentColor(),
+                t("Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai"),
+            ),
+            RemoteControl::Failed(why) => {
+                interrupted = tf("Remote Control ist unterbrochen: {}", &[why]);
+                ("iphone.slash", NSColor::systemOrangeColor(), interrupted.as_str())
+            }
+        };
+        self.remote.setImage(symbol(name, tip).as_deref());
+        self.remote.setContentTintColor(Some(&color));
+        self.remote.setToolTip(Some(&ns(tip)));
+        self.remote.setHidden(false);
     }
 
     /// Describes the agent's mark as `agent`.

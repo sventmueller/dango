@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Вилучити мовний сервер";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Наприклад, «Elixir», «ex, exs» і «elixir-ls». Команда — це програма з PATH оболонки входу або шлях, після якого йдуть її аргументи.";
 "Name, Dateiendungen und Befehl sind nötig." = "Потрібні назва, розширення файлів і команда.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: продовжуйте на телефоні або на claude.ai";
+"Remote Control verbindet …" = "Remote Control підключається…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control увімкнено: цей сеанс працює також на телефоні й на claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control перервано: {}";
+"Link kopieren" = "Скопіювати посилання";
+"Remote Control beenden" = "Вимкнути Remote Control";
 "Dateien:" = "Файли:";
 "Ignorierte und versteckte Dateien anzeigen" = "Показувати ігноровані та приховані файли";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Дерево файлів також показує, приглушено, те, що виключає .gitignore або приховує macOS.";

@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Odstranit jazykový server";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Například „Elixir“, „ex, exs“ a „elixir-ls“. Příkaz je program v PATH přihlašovacího shellu nebo cesta, za kterou následují jeho argumenty.";
 "Name, Dateiendungen und Befehl sind nötig." = "Název, přípony souborů a příkaz jsou povinné.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: pokračujte v telefonu nebo na claude.ai";
+"Remote Control verbindet …" = "Remote Control se připojuje…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control je zapnutý: tato relace běží i v telefonu a na claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control je přerušený: {}";
+"Link kopieren" = "Kopírovat odkaz";
+"Remote Control beenden" = "Vypnout Remote Control";
 "Dateien:" = "Soubory:";
 "Ignorierte und versteckte Dateien anzeigen" = "Zobrazovat ignorované a skryté soubory";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Strom souborů zobrazí ztlumeně i to, co vylučuje .gitignore nebo skrývá macOS.";

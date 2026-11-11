@@ -10,7 +10,8 @@ changes the table first.
   them one after the other. Where the language wants another order, the sentence is rephrased.
 - **Symbols and names:** `⌘ ⌥ ⇧ ⌃ ↩ ⎋`, key names such as Esc, and file names, commands and flags stay as they are.
   Product and service names are never translated: Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI, OpenRouter,
-  Ollama, LM Studio, Lowspeak, Git, GitHub, GitLab, ACP, MCP, CI, OAuth, PATH, JSON, Finder, macOS, Mac.
+  Ollama, LM Studio, Lowspeak, Git, GitHub, GitLab, ACP, MCP, CI, OAuth, PATH, JSON, Finder, macOS, Mac, claude.ai,
+  Remote Control (Anthropic's feature of that name).
 - **The app's name** never appears in a translation; where a key names the app, it has a `{}` for it.
 - **macOS first:** menu items, buttons and system words that macOS has (the Standard terms below) take the wording
   of macOS in that language, letter for letter, including how it writes the ellipsis of an item that opens a

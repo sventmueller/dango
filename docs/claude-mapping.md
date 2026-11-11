@@ -12,7 +12,7 @@ UI hides the element when it fails.
 
 | Item | Value |
 |---|---|
-| Command | `claude --print --input-format=stream-json --output-format=stream-json --verbose --include-partial-messages --include-hook-events --permission-prompt-tool=stdio` |
+| Command | `claude --print --input-format=stream-json --output-format=stream-json --verbose --include-partial-messages --include-hook-events --permission-prompt-tool=stdio --replay-user-messages` |
 | Options | `--model=`, `--permission-mode=` (new threads: `default`, E27), `--effort=`, `--thinking=adaptive\|disabled` or `--max-thinking-tokens=N`, `--thinking-display=summarized` (default), `--resume=<session>` with optional `--resume-session-at=<message uuid>`, `--resume-drops-turn=<prompt uuid>` (only with both before it) and `--fork-session` (rewinding the conversation as a branch, I6), `--allowedTools=`, `--disallowedTools=`, `--add-dir=`, `--no-session-persistence` (only when `Launch::persist` is off), sandbox (E19, off by default): `--settings={"sandbox":{"enabled":true,"failIfUnavailable":true}}` |
 | Environment | the login shell's (`ide_process::shell_env`), without `CLAUDE_CODE_ENTRYPOINT` so the CLI never takes the app for the VS Code extension; `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=true` only with `Launch::file_checkpoints` (needed by `rewind_files`) |
 | Supervisor | `Kind::Agent`, label `claude`; graceful stop = close stdin (`on_stop`), then SIGTERM/SIGKILL to the group |
@@ -95,7 +95,10 @@ losing that output.
 | `user` tool_result of AskUserQuestion / ExitPlanMode | `Resolve` Answered (from `answers`) / Approved; `is_error` → Denied / Rejected. A plan the app answered in this session keeps that answer; only a plan read back from a transcript is resolved from the result, with `stop` when the text is `PLAN_REJECT_MESSAGE` and no feedback for the app's fixed messages | core | recorded_question, plan_todos |
 | `user` text with `parent_tool_use_id` | `Put` UserMessage in the subagent lane (its prompt) | core | recorded_subagent_background |
 | `user` text in the main lane | ignored live (the app put the message itself); used by `Mapper::for_history` | exp. | — |
-| `user` with `isReplay` / `isSynthetic` | ignored | — | — |
+| `user` with `isReplay` of a prompt the app sent (its uuid) | ignored | core | — |
+| `user` with `isReplay` of any other prompt of the main lane (typed on claude.ai through Remote Control), without `isSynthetic`, with no `origin` or `origin.kind` `human`/`remote`, text not starting with `<` | `Put` UserMessage `user:<uuid>`, chained, `Status::Running`, as if the app had sent it | exp. | — |
+| `user` with `isSynthetic`, and echoes of task notifications or CLI tags | ignored | — | — |
+| `system/bridge_state` | Remote Control: `failed`/`policy_disabled` of the current connection (`bridge_epoch`) → `Failed(detail)`; `connected` after that → `Connected` again; others ignored | exp. | — |
 | `system/status` | `Activity` Requesting / Compacting / none; `Mode` from `permissionMode`; `compact_result: failed` → Notice Error `Compaction` | core | compaction |
 | `system/compact_boundary` | Notice Compaction (manual/auto, tokens before/after, `freed_tokens()`); `context_used` = post tokens | core | compaction |
 | `system/api_retry` | Notice Retrying (attempt, max, delay, error, HTTP status), one per turn | core | api_retry |
@@ -165,6 +168,7 @@ Answers (`Session::answer`, `answer_questions`, `answer_plan`):
 | `context_usage` (and by itself after every `result`, as `summary`) | `get_context_usage { detail: summary\|full }` | `ContextUsage` (categories, totals, memory files, MCP tools, agents, skills, built-in tools, messages) | 30 s | `context_used`, `context_size`, `breakdown` (`exact` for `full`); a refusal stops the asking after turns | exp. |
 | `usage` (and at the start of a resumed session) | `get_usage { skip_behaviors: true }` | `UsageReport` (session cost and model totals, subscription, windows, raw) | 30 s | the session's totals a resumed session's next turn is counted from | exp. |
 | `rewind_files` | `rewind_files { user_message_id, dry_run }` | `RewindResult` | 30 s | — (I6 checkpoints stay authoritative) | exp. |
+| `set_remote_control` (and after `initialize` when the thread connected it, or when it has no choice and the answer has `remote_control_auto_enable`, which the user's `remoteControlAtStartup` sets) | `remote_control { enabled }` — internal, not in `sdk.d.ts`; the VS Code extension sends it the same way, and the CLI signs in to claude.ai itself | `RemoteControlResult { session_url, bridge_epoch }` | 30 s | none; `Session::remote_control` and `Event::RemoteControl`. Offered only when the `initialize` answer has `remote_control_available: true` | exp. |
 
 Every request has an id `req-<n>`; an error response becomes `ControlError::Refused`, no answer in time becomes
 `Timeout` and sends `control_cancel_request`, a process end becomes `Closed`.

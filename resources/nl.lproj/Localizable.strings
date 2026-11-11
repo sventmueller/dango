@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Verwijder taalserver";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Bijvoorbeeld ‘Elixir’, ‘ex, exs’ en ‘elixir-ls’. Het commando is een programma in het PATH van de login-shell of een pad, gevolgd door zijn argumenten.";
 "Name, Dateiendungen und Befehl sind nötig." = "Naam, bestandsextensies en commando zijn vereist.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: ga verder op je telefoon of op claude.ai";
+"Remote Control verbindet …" = "Remote Control maakt verbinding…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control staat aan: deze sessie draait ook op je telefoon en op claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control is onderbroken: {}";
+"Link kopieren" = "Kopieer link";
+"Remote Control beenden" = "Zet Remote Control uit";
 "Dateien:" = "Bestanden:";
 "Ignorierte und versteckte Dateien anzeigen" = "Toon genegeerde en verborgen bestanden";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "De bestandsstructuur toont ook, gedimd, wat .gitignore uitsluit of macOS verbergt.";

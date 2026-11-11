@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "เอาเซิร์ฟเวอร์ภาษาออก";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "เช่น “Elixir”, “ex, exs” และ “elixir-ls” คำสั่งคือโปรแกรมใน PATH ของ login shell หรือพาธ ตามด้วยอาร์กิวเมนต์ของโปรแกรม";
 "Name, Dateiendungen und Befehl sind nötig." = "ต้องระบุชื่อ นามสกุลไฟล์ และคำสั่ง";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: ทำต่อบนโทรศัพท์หรือบน claude.ai";
+"Remote Control verbindet …" = "Remote Control กำลังเชื่อมต่อ…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control เปิดอยู่: เซสชันนี้ทำงานบนโทรศัพท์และบน claude.ai ด้วย";
+"Remote Control ist unterbrochen: {}" = "Remote Control ถูกขัดจังหวะ: {}";
+"Link kopieren" = "คัดลอกลิงก์";
+"Remote Control beenden" = "ปิด Remote Control";
 "Dateien:" = "ไฟล์:";
 "Ignorierte und versteckte Dateien anzeigen" = "แสดงไฟล์ที่ถูกละเว้นและไฟล์ที่ซ่อนอยู่";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "แผนผังไฟล์จะแสดงรายการที่ .gitignore ยกเว้นหรือ macOS ซ่อนไว้ด้วยสีจาง";

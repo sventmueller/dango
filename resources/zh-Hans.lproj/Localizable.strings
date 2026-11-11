@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "移除语言服务器";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "例如“Elixir”“ex, exs”和“elixir-ls”。命令是登录 Shell 的 PATH 中的程序或路径，后跟其参数。";
 "Name, Dateiendungen und Befehl sind nötig." = "名称、文件扩展名和命令为必填项。";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control：在手机或 claude.ai 上继续";
+"Remote Control verbindet …" = "Remote Control 正在连接…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control 已打开：此会话也在手机和 claude.ai 上运行";
+"Remote Control ist unterbrochen: {}" = "Remote Control 已中断：{}";
+"Link kopieren" = "拷贝链接";
+"Remote Control beenden" = "关闭 Remote Control";
 "Dateien:" = "文件：";
 "Ignorierte und versteckte Dateien anzeigen" = "显示被忽略的文件和隐藏文件";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "文件树也会以浅色显示被 .gitignore 排除或被 macOS 隐藏的项目。";

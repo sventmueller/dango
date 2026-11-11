@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-use ide_claude::{ControlError, Event, Launch, PermissionAnswer, Session, SessionError};
+use ide_claude::{ControlError, Event, Launch, PermissionAnswer, RemoteControl, Session, SessionError};
 use ide_process::Supervisor;
 use ide_thread::{Decision, EntryKind, Lane, RequestState, Status, Thread, ThreadId, UserMessage};
 use serde_json::{Value, json};
@@ -21,8 +21,14 @@ fn scratch(name: &str) -> PathBuf {
 
 /// A stand-in CLI in `dir` that answers `initialize` with `account` and then prints `frames`.
 fn stand_in(dir: &Path, account: Value, frames: &[Value]) -> Launch {
+    let answer = json!({"commands": [], "models": [{"value": "haiku", "displayName": "Haiku"}], "account": account, "output_style": "default"});
+    stand_in_answering(dir, answer, frames)
+}
+
+/// A stand-in CLI in `dir` that answers `initialize` with `answer` and then prints `frames`.
+fn stand_in_answering(dir: &Path, answer: Value, frames: &[Value]) -> Launch {
     let mut lines = vec![
-        json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-1", "response": {"commands": [], "models": [{"value": "haiku", "displayName": "Haiku"}], "account": account, "output_style": "default"}}}),
+        json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-1", "response": answer}}),
     ];
     lines.extend_from_slice(frames);
     let fixture: String = lines.iter().map(|l| format!("{l}\n")).collect();
@@ -310,6 +316,103 @@ fn the_real_cli_answers_a_prompt() {
     assert!(caps.version.is_some());
     assert!(!caps.models.is_empty(), "initialize was answered");
     assert!(session.context_usage(false).wait().is_ok());
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+}
+
+fn remote_answer() -> Value {
+    json!({"commands": [], "models": [], "account": {}, "output_style": "default", "remote_control_available": true, "remote_control_auto_enable": true})
+}
+
+fn remote_requests(dir: &Path) -> Vec<Value> {
+    written(dir)
+        .into_iter()
+        .filter(|f| f.pointer("/request/subtype") == Some(&json!("remote_control")))
+        .map(|f| f["request"].clone())
+        .collect()
+}
+
+#[test]
+fn remote_control_connects_as_the_settings_ask_recovers_and_shows_prompts_from_the_phone() {
+    let dir = scratch("remote");
+    let launch = stand_in_answering(
+        &dir,
+        remote_answer(),
+        &[
+            json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-2", "response": {"session_url": "https://claude.ai/code/s-1", "bridge_epoch": 3}}}),
+            json!({"type": "system", "subtype": "bridge_state", "state": "failed", "bridge_epoch": 3, "detail": "network"}),
+            json!({"type": "system", "subtype": "bridge_state", "state": "connected", "bridge_epoch": 3, "recovered": true}),
+            json!({"type": "user", "uuid": "t-1", "isReplay": true, "origin": {"kind": "task-notification"}, "message": {"role": "user", "content": "a task ended"}}),
+            json!({"type": "user", "uuid": "p-1", "isReplay": true, "message": {"role": "user", "content": "from the phone"}}),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    let texts = |t: &Thread| -> Vec<String> {
+        t.entries(&Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                EntryKind::UserMessage(m) => Some(m.text.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    wait_for(&rx, |_| {
+        session.remote_control() == RemoteControl::Connected("https://claude.ai/code/s-1".into())
+            && !session.with_thread(texts).is_empty()
+    });
+    assert_eq!(session.with_thread(texts), ["from the phone"]);
+    let sent = session.send(UserMessage {
+        text: "from the app".into(),
+        ..UserMessage::default()
+    });
+    assert!(sent.is_ok());
+    session.set_remote_control(false);
+    assert_eq!(session.remote_control(), RemoteControl::Off);
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+    assert_eq!(session.remote_control(), RemoteControl::Unavailable);
+    assert_eq!(
+        remote_requests(&dir),
+        [
+            json!({"subtype": "remote_control", "enabled": true}),
+            json!({"subtype": "remote_control", "enabled": false})
+        ]
+    );
+    let args = std::fs::read_to_string(dir.join("written.ndjson.args")).unwrap();
+    assert!(args.lines().any(|a| a == "--replay-user-messages"));
+}
+
+#[test]
+fn a_thread_that_turned_remote_control_off_stays_off_when_it_starts_again() {
+    let dir = scratch("remote-off");
+    let mut launch = stand_in_answering(&dir, remote_answer(), &[]);
+    launch.remote_control = Some(false);
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    wait_for(&rx, |e| matches!(e, Event::RemoteControl));
+    assert_eq!(session.remote_control(), RemoteControl::Off);
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+    assert!(remote_requests(&dir).is_empty());
+}
+
+#[test]
+fn remote_control_fails_when_its_connection_breaks_off_but_not_for_an_older_one() {
+    let dir = scratch("remote-failed");
+    let launch = stand_in_answering(
+        &dir,
+        remote_answer(),
+        &[
+            json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-2", "response": {"session_url": "https://claude.ai/code/s-2", "bridge_epoch": 2}}}),
+            json!({"type": "system", "subtype": "bridge_state", "state": "failed", "bridge_epoch": 1, "detail": "old"}),
+            json!({"type": "system", "subtype": "bridge_state", "state": "failed", "bridge_epoch": 2, "detail": "network"}),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    wait_for(&rx, |_| matches!(session.remote_control(), RemoteControl::Failed(_)));
+    assert_eq!(session.remote_control(), RemoteControl::Failed("network".into()));
     session.close_input();
     wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
 }

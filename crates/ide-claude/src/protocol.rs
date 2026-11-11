@@ -258,9 +258,12 @@ pub struct User {
     /// Whether the CLI made it up rather than the user typing it.
     #[serde(default, rename = "isSynthetic")]
     pub is_synthetic: Option<bool>,
-    /// Whether it echoes a message the app sent.
+    /// Whether it echoes a prompt the CLI took in, from the app or from Remote Control.
     #[serde(default, rename = "isReplay")]
     pub is_replay: Option<bool>,
+    /// Where an echoed prompt came from, such as `{"kind": "task-notification"}`; none for a person's prompt.
+    #[serde(default)]
+    pub origin: Option<Value>,
     /// The tool's structured output, shaped per tool.
     #[serde(default, alias = "toolUseResult")]
     pub tool_use_result: Option<Value>,
@@ -569,6 +572,15 @@ pub enum System {
     CommandsChanged(Vec<Value>),
     /// The disk is full and the transcript is not written.
     WritesLost(String),
+    /// The Remote Control connection changed.
+    BridgeState {
+        /// `ready`, `connected`, `failed`, `policy_disabled` or another the app does not know.
+        state: String,
+        /// Which connection it speaks of.
+        epoch: Option<u64>,
+        /// Why it failed.
+        detail: Option<String>,
+    },
     /// Any other subtype.
     Unknown(String),
 }
@@ -619,6 +631,11 @@ impl System {
             },
             "commands_changed" => System::CommandsChanged(typed(value.get("commands")?)?),
             "session_writes_lost" => System::WritesLost(field("error_code").unwrap_or_default()),
+            "bridge_state" => System::BridgeState {
+                state: field("state")?,
+                epoch: value.get("bridge_epoch").and_then(Value::as_u64),
+                detail: field("detail"),
+            },
             other => System::Unknown(other.to_string()),
         })
     }

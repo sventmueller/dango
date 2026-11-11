@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "लैंग्वेज सर्वर हटाएँ";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "जैसे “Elixir”, “ex, exs” और “elixir-ls”। कमांड लॉगिन शेल के PATH में कोई प्रोग्राम या कोई पाथ है, जिसके बाद उसके आर्ग्युमेंट आते हैं।";
 "Name, Dateiendungen und Befehl sind nötig." = "नाम, फ़ाइल एक्सटेंशन और कमांड ज़रूरी हैं।";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: अपने फ़ोन पर या claude.ai पर जारी रखें";
+"Remote Control verbindet …" = "Remote Control कनेक्ट हो रहा है…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control चालू है: यह सेशन आपके फ़ोन और claude.ai पर भी चलता है";
+"Remote Control ist unterbrochen: {}" = "Remote Control बाधित हुआ: {}";
+"Link kopieren" = "लिंक कॉपी करें";
+"Remote Control beenden" = "Remote Control बंद करें";
 "Dateien:" = "फ़ाइलें :";
 "Ignorierte und versteckte Dateien anzeigen" = "अनदेखी और छिपी फ़ाइलें दिखाएँ";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "फ़ाइल ट्री वह भी हल्के रंग में दिखाता है जिसे .gitignore बाहर रखता है या macOS छिपाता है।";

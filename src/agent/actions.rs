@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ide_claude::{PermissionAnswer, PlanAnswer};
+use ide_claude::{PermissionAnswer, PlanAnswer, RemoteControl, Session};
 use ide_git::{Restore, RestoreOptions};
 use ide_thread::{
     Answer, Attachment, Entry, EntryKind, Lane, PermissionOption, RequestState, Status, Thread, ToolView, UserMessage,
@@ -13,7 +13,7 @@ use objc2::runtime::Sel;
 use objc2::{ClassType, MainThreadMarker, sel};
 use objc2_app_kit::{
     NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSBitmapImageFileType, NSBitmapImageRep, NSMenu,
-    NSModalResponseOK, NSOpenPanel, NSPasteboard, NSView,
+    NSModalResponseOK, NSOpenPanel, NSPasteboard, NSView, NSWorkspace,
 };
 use objc2_foundation::{NSArray, NSDictionary, NSPoint, NSURL};
 use splat_i18n::{t, tf};
@@ -1049,6 +1049,49 @@ impl AgentTab {
         self.header.set_focus_view(on);
     }
 
+    /// The phone in the head: connects the session to Remote Control, or offers its page and its end.
+    pub fn remote_control(&self, view: &NSView) {
+        let Some(session) = self.session() else { return };
+        match session.remote_control() {
+            RemoteControl::Off | RemoteControl::Failed(_) => self.set_remote_control(&session, true),
+            RemoteControl::Connected(_) => {
+                let menu = NSMenu::new(self.mtm);
+                menu.setAutoenablesItems(false);
+                let action = sel!(ideAgentRemoteControlAction:);
+                self.menu_item(&menu, t("Im Browser öffnen"), action, REMOTE_OPEN);
+                self.menu_item(&menu, t("Link kopieren"), action, REMOTE_COPY);
+                menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
+                self.menu_item(&menu, t("Remote Control beenden"), action, REMOTE_END);
+                pop_up(&menu, view);
+            }
+            RemoteControl::Connecting | RemoteControl::Unavailable => {}
+        }
+    }
+
+    /// An item of the Remote Control menu.
+    pub fn remote_control_action(&self, action: isize) {
+        let Some(session) = self.session() else { return };
+        let RemoteControl::Connected(url) = session.remote_control() else {
+            return;
+        };
+        match action {
+            REMOTE_OPEN => {
+                if let Some(url) = NSURL::URLWithString(&ns(&url)) {
+                    NSWorkspace::sharedWorkspace().openURL(&url);
+                }
+            }
+            REMOTE_COPY => copy_text(&url),
+            REMOTE_END => self.set_remote_control(&session, false),
+            _ => {}
+        }
+    }
+
+    /// Connects or disconnects, and keeps the choice for when the thread's session starts again.
+    fn set_remote_control(&self, session: &Session, on: bool) {
+        self.state.borrow_mut().remote = Some(on);
+        session.set_remote_control(on);
+    }
+
     /// Copies the answer `id` as markdown.
     pub fn copy_entry(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
@@ -1272,6 +1315,10 @@ fn run_alert(alert: &NSAlert) -> objc2_app_kit::NSModalResponse {
 }
 
 /// Puts `text` on the general pasteboard.
+const REMOTE_OPEN: isize = 0;
+const REMOTE_COPY: isize = 1;
+const REMOTE_END: isize = 2;
+
 pub(super) fn copy_text(text: &str) {
     let pasteboard = NSPasteboard::generalPasteboard();
     pasteboard.clearContents();

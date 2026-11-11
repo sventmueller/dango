@@ -21,7 +21,7 @@ pub use control::{ControlError, PermissionAnswer, PlanAnswer};
 pub use launch::{Launch, Thinking};
 pub use mapping::Mapper;
 pub use protocol::Message;
-pub use session::{Event, Reply, Session, SessionError};
+pub use session::{Event, RemoteControl, Reply, Session, SessionError};
 
 /// The id of the Claude connection in the agent register and on its threads.
 pub const AGENT: &str = "claude";

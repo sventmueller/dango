@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Xóa máy chủ ngôn ngữ";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Ví dụ “Elixir”, “ex, exs” và “elixir-ls”. Lệnh là một chương trình trong PATH của shell đăng nhập hoặc một đường dẫn, theo sau là các đối số của nó.";
 "Name, Dateiendungen und Befehl sind nötig." = "Cần có tên, phần mở rộng tệp và lệnh.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: tiếp tục trên điện thoại hoặc trên claude.ai";
+"Remote Control verbindet …" = "Remote Control đang kết nối…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control đang bật: phiên này cũng chạy trên điện thoại và trên claude.ai";
+"Remote Control ist unterbrochen: {}" = "Remote Control bị gián đoạn: {}";
+"Link kopieren" = "Sao chép liên kết";
+"Remote Control beenden" = "Tắt Remote Control";
 "Dateien:" = "Tệp:";
 "Ignorierte und versteckte Dateien anzeigen" = "Hiển thị tệp bị bỏ qua và tệp ẩn";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Cây tệp cũng hiển thị mờ những gì .gitignore loại trừ hoặc macOS ẩn đi.";

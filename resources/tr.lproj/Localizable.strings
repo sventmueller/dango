@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "Dil Sunucusunu Kaldır";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Örneğin “Elixir”, “ex, exs” ve “elixir-ls”. Komut, oturum açma kabuğunun PATH’indeki bir program ya da bir yoldur; ardından argümanları gelir.";
 "Name, Dateiendungen und Befehl sind nötig." = "Ad, dosya uzantıları ve komut gereklidir.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: telefonunuzda veya claude.ai’da devam edin";
+"Remote Control verbindet …" = "Remote Control bağlanıyor…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control açık: bu oturum telefonunuzda ve claude.ai’da da çalışıyor";
+"Remote Control ist unterbrochen: {}" = "Remote Control kesildi: {}";
+"Link kopieren" = "Bağlantıyı Kopyala";
+"Remote Control beenden" = "Remote Control’ü Kapat";
 "Dateien:" = "Dosyalar:";
 "Ignorierte und versteckte Dateien anzeigen" = "Yok sayılan ve gizli dosyaları göster";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Dosya ağacı, .gitignore’un dışladığı veya macOS’in gizlediği öğeleri de soluk olarak gösterir.";

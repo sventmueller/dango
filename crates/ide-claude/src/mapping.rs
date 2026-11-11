@@ -97,6 +97,8 @@ pub struct Mapper {
     totals_unknown: bool,
     /// The prompts sent so far.
     prompts: u64,
+    /// The ids of the prompts the app sent, whose echoes it leaves out.
+    sent: HashSet<String>,
 }
 
 /// What the CLI counts for the whole session: its cost and tokens over all models.
@@ -278,6 +280,7 @@ impl Mapper {
     pub fn user_message(&mut self, message: UserMessage, uuid: &str, now: SystemTime) -> Vec<Update> {
         self.auth_reported = false;
         self.prompts += 1;
+        self.sent.insert(uuid.to_string());
         let key = format!("user:{uuid}");
         let mut out = vec![put(
             &Lane::Main,
@@ -723,7 +726,7 @@ impl Mapper {
 
     fn user(&mut self, u: &User, now: SystemTime) -> Vec<Update> {
         if u.is_replay == Some(true) {
-            return Vec::new();
+            return self.prompt_from_elsewhere(u, now);
         }
         let lane = lane(u.parent_tool_use_id.as_ref());
         let mut out = Vec::new();
@@ -770,6 +773,45 @@ impl Mapper {
             out.extend(self.link(&keys, uuid));
         }
         out
+    }
+
+    /// The echo of a prompt the app did not send, such as one typed on claude.ai through Remote Control, as the user's
+    /// message; echoes of the app's own prompts, of the CLI's own and of task notifications are left out.
+    fn prompt_from_elsewhere(&mut self, u: &User, now: SystemTime) -> Vec<Update> {
+        let Some(uuid) = u.uuid.as_deref() else {
+            return Vec::new();
+        };
+        let person = u
+            .origin
+            .as_ref()
+            .is_none_or(|o| matches!(o.get("kind").and_then(Value::as_str), Some("human" | "remote")));
+        if self.history
+            || self.sent.contains(uuid)
+            || u.parent_tool_use_id.is_some()
+            || u.is_synthetic == Some(true)
+            || !person
+        {
+            return Vec::new();
+        }
+        let mut text = Vec::new();
+        let mut images = Vec::new();
+        for block in u.message.blocks() {
+            match block {
+                Block::Text { text: t } => text.push(t),
+                Block::Image { source: Some(source) } => images.extend(image(&source)),
+                _ => {}
+            }
+        }
+        let text = text.join("\n");
+        if text.trim_start().starts_with('<') || (text.trim().is_empty() && images.is_empty()) {
+            return Vec::new();
+        }
+        let message = UserMessage {
+            text,
+            attachments: images,
+            message_id: None,
+        };
+        self.user_message(message, uuid, now)
     }
 
     fn tool_result(
@@ -1696,4 +1738,55 @@ pub(crate) fn image(source: &ImageSource) -> Option<ide_thread::Attachment> {
             .ok()?
             .into(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user_texts(updates: &[Update]) -> Vec<String> {
+        updates
+            .iter()
+            .filter_map(|u| match u {
+                Update::Put {
+                    entry: EntryKind::UserMessage(m),
+                    ..
+                } => Some(m.text.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn echo(mapper: &mut Mapper, frame: &str) -> Vec<String> {
+        let message = crate::protocol::parse(frame).unwrap();
+        user_texts(&mapper.map(&message, SystemTime::UNIX_EPOCH))
+    }
+
+    #[test]
+    fn only_echoes_of_prompts_typed_elsewhere_become_user_messages() {
+        let mut mapper = Mapper::new();
+        let own = UserMessage {
+            text: "from the app".into(),
+            ..UserMessage::default()
+        };
+        assert_eq!(
+            user_texts(&mapper.user_message(own, "u-1", SystemTime::UNIX_EPOCH)),
+            ["from the app"]
+        );
+        let replay = |uuid: &str, extra: &str, content: &str| {
+            format!(
+                r#"{{"type":"user","uuid":"{uuid}","isReplay":true,{extra}"message":{{"role":"user","content":"{content}"}}}}"#
+            )
+        };
+        assert!(echo(&mut mapper, &replay("u-1", "", "from the app")).is_empty());
+        assert!(echo(&mut mapper, &replay("s-1", r#""isSynthetic":true,"#, "made up")).is_empty());
+        assert!(echo(&mut mapper, &replay("c-1", "", "<bash-stdout>ls</bash-stdout>")).is_empty());
+        let task = replay("t-1", r#""origin":{"kind":"task-notification"},"#, "done");
+        assert!(echo(&mut mapper, &task).is_empty());
+        let phone = replay("p-1", r#""origin":{"kind":"human"},"#, "from the phone");
+        assert_eq!(echo(&mut mapper, &phone), ["from the phone"]);
+        assert_eq!(mapper.prompts(), 2);
+        let mut history = Mapper::for_history();
+        assert!(echo(&mut history, &replay("p-2", "", "from the phone")).is_empty());
+    }
 }

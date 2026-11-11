@@ -1194,6 +1194,12 @@
 "Sprachserver entfernen" = "언어 서버 제거";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "예: ‘Elixir’, ‘ex, exs’ 및 ‘elixir-ls’. 명령은 로그인 셸의 PATH에 있는 프로그램 또는 경로이며 그 뒤에 인수가 옵니다.";
 "Name, Dateiendungen und Befehl sind nötig." = "이름, 파일 확장자 및 명령이 필요합니다.";
+"Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten" = "Remote Control: 휴대폰이나 claude.ai에서 계속하기";
+"Remote Control verbindet …" = "Remote Control 연결 중…";
+"Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai" = "Remote Control 켜짐: 이 세션은 휴대폰과 claude.ai에서도 실행됩니다";
+"Remote Control ist unterbrochen: {}" = "Remote Control 연결이 끊김: {}";
+"Link kopieren" = "링크 복사";
+"Remote Control beenden" = "Remote Control 끄기";
 "Dateien:" = "파일:";
 "Ignorierte und versteckte Dateien anzeigen" = "무시된 파일 및 가려진 파일 보기";
 "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = ".gitignore에서 제외하거나 macOS가 가린 항목도 파일 트리에 흐리게 표시합니다.";

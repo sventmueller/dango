@@ -66,6 +66,8 @@ pub struct Launch {
     pub progress_summaries: bool,
     /// Whether the text and thinking of subagents are forwarded, not only their tool calls.
     pub forward_subagent_text: bool,
+    /// Whether the session connects to Remote Control as it starts; `None` follows the user's Claude settings.
+    pub remote_control: Option<bool>,
 }
 
 /// The variable the CLI reads to know who started it; it is left for the CLI to choose, so the app never passes
@@ -97,6 +99,7 @@ impl Launch {
             file_checkpoints: false,
             progress_summaries: true,
             forward_subagent_text: true,
+            remote_control: None,
         }
     }
 
@@ -119,6 +122,8 @@ impl Launch {
             "--include-partial-messages",
             "--include-hook-events",
             "--permission-prompt-tool=stdio",
+            // Prompts typed on claude.ai through Remote Control reach the app only as echoes.
+            "--replay-user-messages",
         ]
         .map(str::to_string)
         .to_vec();
@@ -235,6 +240,7 @@ mod tests {
             "--include-partial-messages",
             "--include-hook-events",
             "--permission-prompt-tool=stdio",
+            "--replay-user-messages",
             "--permission-mode=default",
             "--thinking-display=summarized",
         ] {
