@@ -1,5 +1,5 @@
-//! The rows of the panel's list, a session with the dot of an open one, its symbol, title and age, and the small views
-//! other panels borrow.
+//! The rows of the panel's list, a session with its circle, green while it is open, its title and age, and the small
+//! views other panels borrow.
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -68,20 +68,18 @@ fn icon(mtm: MainThreadMarker, name: &str, points: f64, color: &NSColor) -> Reta
 
 /// What a row shows.
 pub struct Look<'a> {
-    /// Whether the session is open in a tab, which a green dot in front says.
+    /// Whether the session is open in a tab: a green circle in front, else an empty one.
     pub open: bool,
-    /// The symbol before the title, with its size and colour.
-    pub symbol: (&'a str, f64, Retained<NSColor>),
     pub title: &'a str,
     pub dim: bool,
     /// The quieter text at the end.
     pub detail: &'a str,
-    /// A second symbol after the title, such as a bookmark.
+    /// A symbol after the title, such as a bookmark.
     pub badge: Option<(&'a str, Retained<NSColor>)>,
 }
 
-/// The width of the dot that marks an open session, kept free in the other rows so their symbols line up.
-const DOT_WIDTH: f64 = 7.0;
+/// The size of the circle in front of a session.
+const DOT_POINTS: f64 = 7.0;
 
 /// A row of the panel's list.
 pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
@@ -100,17 +98,12 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     detail.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     detail.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
-    let dot = icon(mtm, "circle.fill", DOT_WIDTH, &NSColor::systemGreenColor());
-    dot.setHidden(!look.open);
-    dot.widthAnchor().constraintEqualToConstant(DOT_WIDTH).setActive(true);
+    let dot = if look.open {
+        icon(mtm, "circle.fill", DOT_POINTS, &NSColor::systemGreenColor())
+    } else {
+        icon(mtm, "circle", DOT_POINTS, &NSColor::tertiaryLabelColor())
+    };
     let mut views: Vec<Retained<NSView>> = vec![Retained::into_super(Retained::into_super(dot))];
-    let (name, points, symbol_color) = &look.symbol;
-    views.push(Retained::into_super(Retained::into_super(icon(
-        mtm,
-        name,
-        *points,
-        symbol_color,
-    ))));
     views.push(Retained::into_super(Retained::into_super(title.clone())));
     if let Some((name, color)) = &look.badge {
         views.push(Retained::into_super(Retained::into_super(icon(mtm, name, 9.0, color))));
@@ -120,9 +113,7 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let stack = objc2_app_kit::NSStackView::new(mtm);
     stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::CenterY);
-    stack.setSpacing(5.0);
-    // A hidden dot keeps its room, so every row's symbol starts at the same place.
-    stack.setDetachesHiddenViews(false);
+    stack.setSpacing(6.0);
     for view in &views {
         stack.addArrangedSubview(view);
     }

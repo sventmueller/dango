@@ -1,6 +1,6 @@
 //! The panel's one list of the folder's sessions, bookmarked ones first, else newest first: those of AI tabs and those
-//! of the CLIs, an AI tab's with its agent's symbol, a CLI's with a terminal; the open ones marked green. A click opens
-//! one; the context menu renames, bookmarks and archives a session and shows the archive.
+//! of the CLIs alike, the open ones with a green circle. A click opens one; the context menu renames, bookmarks and
+//! archives a session and shows the archive.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -116,11 +116,14 @@ impl Model {
                     Node::Cli(thread.clone()),
                 ));
             }
+            // A session an AI tab continues shows once, as that tab's.
+            let open: Vec<String> = inputs.tabs.iter().filter_map(|t| t.session_id()).collect();
             let known: HashSet<&str> = inputs
                 .index
                 .list(&Filter::default())
                 .iter()
                 .filter_map(|e| e.session.as_deref())
+                .chain(open.iter().map(String::as_str))
                 .collect();
             for session in inputs
                 .terminal
@@ -349,52 +352,33 @@ impl Source {
         view.sizeLastColumnToFit();
     }
 
-    /// The row of `node`: whether it is open, an AI tab's symbol or a terminal, its title and how long ago it was used.
+    /// The row of `node`: whether it is open, its title and how long ago it was used.
     fn cell(&self, node: &Node) -> Retained<NSView> {
-        let mtm = self.mtm();
         let open = node.open();
-        match node {
-            Node::Thread { entry, bookmarked, .. } => {
-                let title = if entry.title.is_empty() {
+        let (title, dim, when, badge) = match node {
+            Node::Thread { entry, bookmarked, .. } => (
+                if entry.title.is_empty() {
                     t("Neue Sitzung")
                 } else {
-                    &entry.title
-                };
-                rows::cell(
-                    mtm,
-                    &Look {
-                        open,
-                        symbol: ("sparkle", 10.0, NSColor::secondaryLabelColor()),
-                        title,
-                        dim: entry.archived,
-                        detail: &crate::agent::with_cost(crate::agent::age(entry.last_activity), entry.cost_usd),
-                        badge: bookmarked.then(|| ("bookmark.fill", NSColor::controlAccentColor())),
-                    },
-                )
-            }
-            Node::Past { resume, when } => rows::cell(
-                mtm,
-                &Look {
-                    open,
-                    symbol: ("terminal", 10.0, NSColor::secondaryLabelColor()),
-                    title: resume.title.as_deref().unwrap_or(&resume.session),
-                    dim: false,
-                    detail: &crate::agent::age(*when),
-                    badge: None,
+                    entry.title.as_str()
                 },
+                entry.archived,
+                entry.last_activity,
+                bookmarked.then(|| ("bookmark.fill", NSColor::controlAccentColor())),
             ),
-            Node::Cli(thread) => rows::cell(
-                mtm,
-                &Look {
-                    open,
-                    symbol: ("terminal", 10.0, NSColor::secondaryLabelColor()),
-                    title: &thread.name,
-                    dim: false,
-                    detail: thread.status.text(),
-                    badge: None,
-                },
-            ),
-        }
+            Node::Past { resume, when } => (resume.title.as_deref().unwrap_or(&resume.session), false, *when, None),
+            Node::Cli(thread) => (thread.name.as_str(), false, thread.started, None),
+        };
+        rows::cell(
+            self.mtm(),
+            &Look {
+                open,
+                title,
+                dim,
+                detail: &crate::agent::age(when),
+                badge,
+            },
+        )
     }
 
     fn open_id(&self, id: &str) {
@@ -532,10 +516,7 @@ impl Source {
             .nodes
             .values()
             .filter_map(|node| match node {
-                Node::Thread { entry, .. } => Some(crate::agent::with_cost(
-                    crate::agent::age(entry.last_activity),
-                    entry.cost_usd,
-                )),
+                Node::Thread { entry, .. } => Some(crate::agent::age(entry.last_activity)),
                 _ => None,
             })
             .collect()

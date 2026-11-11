@@ -196,49 +196,7 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         first.window_tabs() == before.first && second.window_tabs() == before.second,
         format!("{:?} / {:?}", first.window_tabs(), second.window_tabs()),
     );
-    let sessions = crate::agent::of_window(&first)
-        .iter()
-        .filter_map(|tab| tab.session_id())
-        .collect::<Vec<_>>();
-    check(
-        "the AI thread comes back as its session, played from a recording here",
-        sessions.iter().any(|session| session == SESSION),
-        format!("{sessions:?}"),
-    );
-    let agent = other_agents_session(&a);
-    check(
-        "a session another agent ran comes back with that agent, not with Claude",
-        agent.as_deref() == Some("antigravity-acp"),
-        format!("{agent:?}"),
-    );
-    let wanted = (
-        Some(PICKS.0.to_string()),
-        Some(PICKS.1.to_string()),
-        PICKS.2.to_string(),
-    );
-    let restored = crate::agent::of_window(&first)
-        .iter()
-        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
-        .map(|tab| tab.picks());
-    let fresh = crate::agent::open_replay(&first).map(|tab| tab.picks());
-    check(
-        "the AI thread that came back and a new one start with the model, effort and mode picked last",
-        restored.as_ref() == Some(&wanted) && fresh.as_ref() == Some(&wanted),
-        format!("{restored:?} / {fresh:?}"),
-    );
-    let hits = crate::agent::of_window(&first)
-        .iter()
-        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
-        .map(|tab| {
-            tab.select();
-            tab.composer_clicks()
-        });
-    check(
-        "a click on the composer of the AI thread that came back, also on its placeholder, focuses its text",
-        hits.as_ref()
-            .is_some_and(|hits| !hits.is_empty() && hits.iter().all(|&hit| hit)),
-        format!("{hits:?}"),
-    );
+    ai_sessions(&first, &a);
     let frame = first.window().map(|w| rect(w.frame()));
     let same = |a: [f64; 4], b: [f64; 4]| a.iter().zip(b).all(|(a, b)| (a - b).abs() < 0.5);
     check(
@@ -284,6 +242,99 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
             finish(SCENARIO);
         },
     );
+}
+
+/// The AI thread that came back: its session, the panel's one row for it, the agent of another agent's session, the
+/// picks and the composer.
+fn ai_sessions(first: &crate::window::WindowController, a: &Path) {
+    let sessions = crate::agent::of_window(first)
+        .iter()
+        .filter_map(|tab| tab.session_id())
+        .collect::<Vec<_>>();
+    check(
+        "the AI thread comes back as its session, played from a recording here",
+        sessions.iter().any(|session| session == SESSION),
+        format!("{sessions:?}"),
+    );
+    let twice = continued_once(first, a);
+    check(
+        "a session an AI tab continues shows once in the AI panel, not also as one saved from a terminal",
+        twice
+            .as_ref()
+            .is_some_and(|rows| !rows.iter().any(|(_, _, title)| title == "doppelt")),
+        format!("{twice:?}"),
+    );
+    let agent = other_agents_session(a);
+    check(
+        "a session another agent ran comes back with that agent, not with Claude",
+        agent.as_deref() == Some("antigravity-acp"),
+        format!("{agent:?}"),
+    );
+    let wanted = (
+        Some(PICKS.0.to_string()),
+        Some(PICKS.1.to_string()),
+        PICKS.2.to_string(),
+    );
+    let restored = crate::agent::of_window(first)
+        .iter()
+        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
+        .map(|tab| tab.picks());
+    let fresh = crate::agent::open_replay(first).map(|tab| tab.picks());
+    check(
+        "the AI thread that came back and a new one start with the model, effort and mode picked last",
+        restored.as_ref() == Some(&wanted) && fresh.as_ref() == Some(&wanted),
+        format!("{restored:?} / {fresh:?}"),
+    );
+    let hits = crate::agent::of_window(first)
+        .iter()
+        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
+        .map(|tab| {
+            tab.select();
+            tab.composer_clicks()
+        });
+    check(
+        "a click on the composer of the AI thread that came back, also on its placeholder, focuses its text",
+        hits.as_ref()
+            .is_some_and(|hits| !hits.is_empty() && hits.iter().all(|&hit| hit)),
+        format!("{hits:?}"),
+    );
+}
+
+/// The AI panel's rows once the CLI saved a transcript of the session the AI tab that came back continues.
+fn continued_once(
+    controller: &crate::window::WindowController,
+    folder: &Path,
+) -> Option<Vec<(&'static str, bool, String)>> {
+    let project = crate::agent_panel::claude_config_dir()
+        .join("projects")
+        .join(ide_claude::history::project_folder(folder));
+    std::fs::create_dir_all(&project).ok()?;
+    std::fs::write(
+        project.join(format!("{SESSION}.jsonl")),
+        "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"doppelt\"}}\n",
+    )
+    .ok()?;
+    // As a tab whose session the index does not know yet: only the tab itself then tells the two apart.
+    crate::agent::of_window(controller)
+        .into_iter()
+        .find(|tab| tab.session_id().as_deref() == Some(SESSION))?;
+    let mut index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
+    let saved: Vec<ide_thread::ThreadId> = index
+        .list(&ide_thread::Filter::default())
+        .into_iter()
+        .filter(|entry| entry.session.as_deref() == Some(SESSION))
+        .map(|entry| entry.id.clone())
+        .collect();
+    for id in &saved {
+        let _ = index.remove(id);
+    }
+    let shown = controller.inspect().panel;
+    controller.activate_panel(Panel::Agents);
+    let rows = crate::agent_panel::inspect(controller).map(|seen| seen.rows);
+    if let Some(panel) = shown {
+        controller.activate_panel(panel);
+    }
+    rows
 }
 
 /// The agent the window's layout would resume an Antigravity session of `folder` with, by its id.

@@ -75,8 +75,8 @@ fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
         .find(|t| t.key == key)
         .and_then(|t| t.snapshot().usage().cost_usd);
     check(
-        "the AI panel's session row shows what the session cost",
-        cost.is_some() && details.iter().any(|d| d.contains(" · ")),
+        "the AI panel's session row leaves out what the session cost",
+        cost.is_some() && !details.is_empty() && details.iter().all(|d| !d.contains('$')),
         details.join(" | "),
     );
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));

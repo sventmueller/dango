@@ -584,14 +584,6 @@ pub fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
     (text.join(" · "), Some(tip.join("\n")))
 }
 
-/// A session row's quiet `text` in the AI panel, followed by what the session cost when that is known.
-pub fn with_cost(text: String, cost_usd: Option<f64>) -> String {
-    match cost_usd {
-        Some(cost) => format!("{text} · {}", amount(cost)),
-        None => text,
-    }
-}
-
 /// Clicks the gauge of the tab with `key`, as the mouse would; whether it was there to click.
 #[cfg(feature = "selftest")]
 pub fn click(key: u64) -> bool {

@@ -51,7 +51,6 @@ pub use actions::ask_text;
 pub use actions::{alerts_seen, answer_alerts};
 #[cfg(feature = "selftest")]
 pub use cards::window_name;
-pub use context_view::with_cost;
 #[cfg(feature = "selftest")]
 pub use context_view::{click as click_context, close as close_context, cost_text, seen as context_seen};
 #[cfg(feature = "selftest")]
