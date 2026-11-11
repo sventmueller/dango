@@ -784,8 +784,8 @@ impl TabWindow {
     }
 }
 
-/// A tab's title after its icon, which sits on the text's baseline like a letter and is left out for VoiceOver, which
-/// reads the title.
+/// A tab's title after its icon, which is centred on the capitals of the text and left out for VoiceOver, which reads
+/// the title.
 fn titled(icon: Option<&NSImage>, title: &str, font: &NSFont) -> Retained<NSAttributedString> {
     let text = NSMutableAttributedString::new();
     if let Some(icon) = icon {
@@ -795,7 +795,7 @@ fn titled(icon: Option<&NSImage>, title: &str, font: &NSFont) -> Retained<NSAttr
         let attachment = NSTextAttachment::new();
         attachment.setImage(Some(icon));
         attachment.setBounds(NSRect::new(
-            NSPoint::new(0.0, font.descender()),
+            NSPoint::new(0.0, (font.capHeight() - height) / 2.0),
             NSSize::new(width, height),
         ));
         text.appendAttributedString(&NSAttributedString::attributedStringWithAttachment(&attachment));
