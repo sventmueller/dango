@@ -607,7 +607,7 @@ impl GitPanel {
             self.update_problem();
         }
         if let Some(controller) = self.controller() {
-            controller.set_badge(Panel::Git, count);
+            controller.set_symbol_count(Panel::Git, count);
         }
     }
 

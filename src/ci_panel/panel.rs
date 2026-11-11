@@ -511,8 +511,8 @@ impl CiPanel {
         let summary = RunState::summary(self.read().runs.iter().map(|r| r.run.state));
         if let Some(controller) = self.controller() {
             match summary.filter(|_| phase == Phase::Ready) {
-                Some(state) => controller.set_status_badge(Panel::Ci, Some((&text::color(state), text::word(state)))),
-                None => controller.set_status_badge(Panel::Ci, None),
+                Some(state) => controller.set_symbol_status(Panel::Ci, Some(text::word(state))),
+                None => controller.set_symbol_status(Panel::Ci, None),
             }
         }
     }

@@ -307,11 +307,11 @@ fn listed(root: PathBuf, ok: bool) {
             },
         ),
     );
-    let badge = controller.badge(Panel::Git);
+    let tip = controller.symbol_tip(Panel::Git);
     check(
-        "the badge counts the changed files",
-        badge.as_deref() == Some("3"),
-        format!("{badge:?}"),
+        "the Git symbol carries no badge, its tooltip counts the changed files",
+        tip == (Some(splat_i18n::tf("{}, {} Änderungen", &[Panel::Git.title(), "3"])), 0),
+        format!("{tip:?}"),
     );
     if let Some(window) = controller.window() {
         snapshot(&window, "git-changes");
@@ -354,11 +354,11 @@ fn staged(root: PathBuf, ok: bool) {
             format!("staged: {}; changes: {}", names(&s.staged), names(&s.changes))
         }),
     );
-    let badge = controller.badge(Panel::Git);
+    let tip = controller.symbol_tip(Panel::Git);
     check(
-        "a staged file still counts once on the badge",
-        badge.as_deref() == Some("3"),
-        format!("{badge:?}"),
+        "a staged file still counts once in the Git symbol's tooltip",
+        tip == (Some(splat_i18n::tf("{}, {} Änderungen", &[Panel::Git.title(), "3"])), 0),
+        format!("{tip:?}"),
     );
     pictures(root, "git-panel", |root| {
         if let Some(controller) = window_of(&root) {
@@ -560,11 +560,11 @@ fn untrusted(root: PathBuf, ok: bool) {
     };
     controller.activate_panel(Panel::Git);
     check("an untrusted folder runs no git and says why", ok, "");
-    let badge = controller.badge(Panel::Git);
+    let tip = controller.symbol_tip(Panel::Git);
     check(
-        "an untrusted folder has no badge",
-        badge.is_none(),
-        format!("{badge:?}"),
+        "an untrusted folder counts no changes on the Git symbol",
+        tip == (Some(Panel::Git.title().to_string()), 0),
+        format!("{tip:?}"),
     );
     if let Some(window) = controller.window() {
         snapshot(&window, "git-untrusted");

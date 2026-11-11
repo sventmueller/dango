@@ -19,7 +19,7 @@ eingearbeitet (markiert mit *Review*).
   PlantUML/LaTeX zu Bildern macht (splats `src/editor/js.rs` + `resources/js`, ~14 MB).
 - **E2 Version 1 ohne App Sandbox** *(bestätigt)*: Developer ID, Hardened Runtime, notarisiertes DMG, Sparkle,
   zusätzlich Homebrew Cask. Kindprozesse erben einen Sandbox; Terminal, Agenten, git und LSP wären damit unbrauchbar.
-- **E3 Seitenleiste VS-Code-Stil** *(deine Wahl)*: senkrechte Symbolspalte (`NSButton`s, SF Symbols, Badges), Panel im
+- **E3 Seitenleiste VS-Code-Stil** *(deine Wahl)*: senkrechte Symbolspalte (`NSButton`s, SF Symbols; Badges entfallen, E69), Panel im
   Sidebar-Split-Item (Systemmaterial, ab macOS 26 Liquid Glass). Sonst HIG: Unified Toolbar, Systemfarben, Dark Mode,
   Erhöhter Kontrast, Rechts-nach-links, VoiceOver, volle Tastaturbedienung, Standardmenüs, Einstellungen (⌘,).
   *Review:* Code-Ansichten (Editor, Terminal, Diff, Zeilennummern) bleiben auch bei arabischer/hebräischer Oberfläche
@@ -195,7 +195,7 @@ vibeedit/
 - **Fenster:** `NSSplitViewController` mit Sidebar-Item (Symbolspalte + Panel) und Inhalts-Item (Tableiste + Tab);
   seit E60 je Tab ein `NSWindow` in der Tabgruppe des Ordners.
   Toolbar: Seitenleiste, Zurück/Vor, Projektname mit Branch, Aktivität (Zähler im Tooltip), Neues Terminal, Neuer AI-Thread.
-- **Symbolspalte:** Dateien, AI, Git (Badge), CI (Badge-Farbe), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
+- **Symbolspalte:** Dateien, AI, Git, CI (Zahl und Zustand im Tooltip, E69), unten Einstellungen; ⌘1–⌘4; Klick aufs aktive Symbol
   klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55; das Einklappen per Klick entfällt, siehe E61.)*
 - **Dateien:** `NSOutlineView` Source-List, Git-Farben, Kontextmenü (Neu, Umbenennen, In Papierkorb, Im Finder zeigen,
   Pfad kopieren, Im Terminal öffnen, An Agent anhängen).
@@ -425,6 +425,9 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   bleiben im Kontextmenü, dort auch „Archiv zeigen“. Gruppen, Suche, „Aktiv · N“ und der Baum „Laufend“ entfallen;
   was läuft, zeigt die Aktivitätsübersicht. Die Nutzung des Abos steht in der Statuszeile des Claude-Tabs: links der
   Kontext, rechts Abo oder Kosten mit Wochenlimit und 5-Stundenlimit.
+- **E69 Keine Badges in der Symbolspalte** *(Entscheidung des Eigentümers, ändert E3)*: Die Symbole der Seitenleiste
+  tragen weder Zahl noch Punkt. Die Zahl der Git-Änderungen und der Zustand des letzten CI-Laufs stehen nur noch im
+  Tooltip und in der VoiceOver-Beschriftung des Symbols („Git, 3 Änderungen“, „CI: fehlgeschlagen“).
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

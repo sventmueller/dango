@@ -176,11 +176,15 @@ fn github_listed(root: PathBuf, ok: bool) {
         ok && listed,
         describe(&controller),
     );
-    let badge = controller.badge(Panel::Ci);
+    let tip = controller.symbol_tip(Panel::Ci);
     check(
-        "the CI symbol shows a dot for the failed run",
-        badge.as_deref() == Some(""),
-        format!("{badge:?}"),
+        "the CI symbol carries no dot, its tooltip names the failed run",
+        tip.1 == 0
+            && tip
+                .0
+                .as_deref()
+                .is_some_and(|t| t.starts_with(Panel::Ci.title()) && t.len() > Panel::Ci.title().len()),
+        format!("{tip:?}"),
     );
     let unsent = stubs().github.seen().iter().all(|s| s.authorization.is_none());
     check(

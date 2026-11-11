@@ -780,18 +780,17 @@ impl WindowController {
         }
     }
 
-    /// Shows a dot in `color` on the symbol of `panel` with `words` for VoiceOver, such as a failed CI run; `None`
-    /// hides it.
-    pub fn set_status_badge(&self, panel: Panel, status: Option<(&NSColor, &str)>) {
+    /// Names `words`, such as a failed CI run, in the tooltip of `panel`'s symbol; `None` names only the panel.
+    pub fn set_symbol_status(&self, panel: Panel, words: Option<&str>) {
         if let Some(activity) = self.ivars().activity.borrow().as_ref() {
-            activity.set_status(panel, status);
+            activity.set_status(panel, words);
         }
     }
 
-    /// Shows `count` on the symbol of `panel`; 0 hides it.
-    pub fn set_badge(&self, panel: Panel, count: usize) {
+    /// Names `count` changes in the tooltip of `panel`'s symbol.
+    pub fn set_symbol_count(&self, panel: Panel, count: usize) {
         if let Some(activity) = self.ivars().activity.borrow().as_ref() {
-            activity.set_badge(panel, count);
+            activity.set_count(panel, count);
         }
     }
 
@@ -1726,9 +1725,10 @@ impl WindowController {
         self.documents().len()
     }
 
-    /// The number the badge on `panel`'s symbol shows; `None` while it is hidden.
-    pub fn badge(&self, panel: Panel) -> Option<String> {
-        self.ivars().activity.borrow().as_ref().and_then(|a| a.badge(panel))
+    /// The tooltip of `panel`'s symbol, with the marks that show on any symbol.
+    pub fn symbol_tip(&self, panel: Panel) -> (Option<String>, usize) {
+        let activity = self.ivars().activity.borrow();
+        activity.as_ref().map_or((None, 0), |a| (a.tip(panel), a.marks()))
     }
 
     /// The view of the document commands act on.

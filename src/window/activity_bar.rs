@@ -1,50 +1,23 @@
 //! The column of symbols at the left edge that picks the panel beside it.
 
 use objc2::rc::Retained;
-use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSBox, NSBoxType, NSButton, NSColor, NSFont, NSLayoutAttribute, NSStackView, NSTextAlignment,
-    NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSButton, NSColor, NSLayoutAttribute, NSStackView, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSSize};
+use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
-use crate::util::{label, ns, symbol_button};
+use crate::util::{ns, symbol_button};
 
 const BUTTON_SIZE: f64 = 32.0;
 const SYMBOL_POINTS: f64 = 16.0;
-const BADGE_HEIGHT: f64 = 15.0;
 
 pub struct ActivityBar {
     view: Retained<NSView>,
     buttons: Vec<(Panel, Retained<NSButton>)>,
-    badges: Vec<(Panel, Badge)>,
 }
-
-/// The number on a panel's symbol.
-struct Badge {
-    shape: Retained<BadgeShape>,
-    count: Retained<NSTextField>,
-}
-
-define_class!(
-    // SAFETY: NSBox has no subclassing requirements and `BadgeShape` does not implement Drop.
-    #[unsafe(super(NSBox))]
-    #[thread_kind = MainThreadOnly]
-    #[name = "IDEBadgeShape"]
-    struct BadgeShape;
-
-    unsafe impl NSObjectProtocol for BadgeShape {}
-
-    impl BadgeShape {
-        /// Lets clicks through to the button below.
-        #[unsafe(method_id(hitTest:))]
-        fn hit_test(&self, _point: NSPoint) -> Option<Retained<NSView>> {
-            None
-        }
-    }
-);
 
 impl ActivityBar {
     pub fn new(mtm: MainThreadMarker, target: &WindowController) -> ActivityBar {
@@ -59,7 +32,6 @@ impl ActivityBar {
             right: 0.0,
         });
         let mut buttons = vec![];
-        let mut badges = vec![];
         for panel in Panel::ALL {
             let button = symbol_button(
                 mtm,
@@ -72,7 +44,6 @@ impl ActivityBar {
             button.setTag(panel.tag());
             sized(&button);
             stack.addArrangedSubview(&button);
-            badges.push((panel, Badge::new(mtm, &button)));
             buttons.push((panel, button));
         }
         let settings = symbol_button(
@@ -102,7 +73,7 @@ impl ActivityBar {
         ] {
             constraint.setActive(true);
         }
-        ActivityBar { view, buttons, badges }
+        ActivityBar { view, buttons }
     }
 
     pub fn view(&self) -> &NSView {
@@ -123,115 +94,53 @@ impl ActivityBar {
         }
     }
 
-    /// Shows `count` on the symbol of `panel` and tells VoiceOver with the symbol's label; 0 hides it.
-    /// Shows a dot in `color` on the symbol of `panel`, and `words` to VoiceOver with the symbol's label; `None`
-    /// hides it. A count replaces it.
-    pub fn set_status(&self, panel: Panel, status: Option<(&NSColor, &str)>) {
-        let Some((_, badge)) = self.badges.iter().find(|(p, _)| *p == panel) else {
-            return;
-        };
-        badge.count.setStringValue(&ns(""));
-        badge.shape.setHidden(status.is_none());
-        let description = match status {
-            Some((color, words)) => {
-                badge.shape.setFillColor(color);
-                tf("{}: {}", &[panel.title(), words])
-            }
+    /// Names `words`, such as a failed CI run, with the label and tooltip of `panel`'s symbol; `None` names only the
+    /// panel.
+    pub fn set_status(&self, panel: Panel, words: Option<&str>) {
+        let description = match words {
+            Some(words) => tf("{}: {}", &[panel.title(), words]),
             None => panel.title().to_string(),
         };
-        if let Some((_, button)) = self.buttons.iter().find(|(p, _)| *p == panel) {
-            crate::util::set_label(button, Some(&description));
-            button.setToolTip(Some(&ns(&description)));
-        }
+        self.describe(panel, &description);
     }
 
-    pub fn set_badge(&self, panel: Panel, count: usize) {
-        let Some((_, badge)) = self.badges.iter().find(|(p, _)| *p == panel) else {
-            return;
-        };
-        badge.shape.setFillColor(&NSColor::controlAccentColor());
-        let text = if count > 99 {
-            "99+".to_string()
-        } else {
-            count.to_string()
-        };
-        badge.count.setStringValue(&ns(&text));
-        badge.shape.setHidden(count == 0);
+    /// Names `count` changes with the label and tooltip of `panel`'s symbol.
+    pub fn set_count(&self, panel: Panel, count: usize) {
         let description = match count {
             0 => panel.title().to_string(),
             1 => tf("{}, 1 Änderung", &[panel.title()]),
             n => tf("{}, {} Änderungen", &[panel.title(), &n.to_string()]),
         };
+        self.describe(panel, &description);
+    }
+
+    fn describe(&self, panel: Panel, description: &str) {
         if let Some((_, button)) = self.buttons.iter().find(|(p, _)| *p == panel) {
-            crate::util::set_label(button, Some(&description));
-            button.setToolTip(Some(&ns(&description)));
+            crate::util::set_label(button, Some(description));
+            button.setToolTip(Some(&ns(description)));
         }
     }
 
+    /// The tooltip of `panel`'s symbol.
     #[cfg(feature = "selftest")]
-    pub fn badge(&self, panel: Panel) -> Option<String> {
-        let (_, badge) = self.badges.iter().find(|(p, _)| *p == panel)?;
-        (!badge.shape.isHidden()).then(|| badge.count.stringValue().to_string())
+    pub fn tip(&self, panel: Panel) -> Option<String> {
+        let (_, button) = self.buttons.iter().find(|(p, _)| *p == panel)?;
+        button.toolTip().map(|tip| tip.to_string())
+    }
+
+    /// How many marks show on the symbols.
+    #[cfg(feature = "selftest")]
+    pub fn marks(&self) -> usize {
+        self.buttons
+            .iter()
+            .flat_map(|(_, button)| button.subviews().to_vec())
+            .filter(|view| view.downcast_ref::<objc2_app_kit::NSBox>().is_some() && !view.isHidden())
+            .count()
     }
 
     #[cfg(feature = "selftest")]
     pub fn button_count(&self) -> usize {
         self.buttons.len() + 1
-    }
-}
-
-impl Badge {
-    /// A hidden badge on the top trailing corner of `button`; the button's label speaks for it.
-    fn new(mtm: MainThreadMarker, button: &NSButton) -> Badge {
-        let count = label(mtm, "");
-        count.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-            9.0,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightSemibold },
-        )));
-        count.setTextColor(Some(&NSColor::whiteColor()));
-        count.setAlignment(NSTextAlignment::Center);
-        // SAFETY: NSBox's designated initializer, called once on the newly allocated object.
-        let shape: Retained<BadgeShape> = unsafe { msg_send![BadgeShape::alloc(mtm), init] };
-        shape.setBoxType(NSBoxType::Custom);
-        shape.setTitlePosition(NSTitlePosition::NoTitle);
-        shape.setBorderWidth(0.0);
-        shape.setCornerRadius(BADGE_HEIGHT / 2.0);
-        shape.setFillColor(&NSColor::controlAccentColor());
-        shape.setContentViewMargins(NSSize::new(0.0, 0.0));
-        shape.setAccessibilityElement(false);
-        crate::util::hide_from_voiceover(&count);
-        shape.setHidden(true);
-        if let Some(content) = shape.contentView() {
-            content.addSubview(&count);
-            count.setTranslatesAutoresizingMaskIntoConstraints(false);
-            for constraint in [
-                count
-                    .leadingAnchor()
-                    .constraintEqualToAnchor_constant(&content.leadingAnchor(), 3.0),
-                count
-                    .trailingAnchor()
-                    .constraintEqualToAnchor_constant(&content.trailingAnchor(), -3.0),
-                count.centerYAnchor().constraintEqualToAnchor(&content.centerYAnchor()),
-            ] {
-                constraint.setActive(true);
-            }
-        }
-        button.addSubview(&shape);
-        shape.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            shape.heightAnchor().constraintEqualToConstant(BADGE_HEIGHT),
-            shape.widthAnchor().constraintGreaterThanOrEqualToConstant(BADGE_HEIGHT),
-            shape
-                .centerXAnchor()
-                .constraintEqualToAnchor_constant(&button.trailingAnchor(), -5.0),
-            shape
-                .centerYAnchor()
-                .constraintEqualToAnchor_constant(&button.topAnchor(), 8.0),
-        ] {
-            constraint.setActive(true);
-        }
-        Badge { shape, count }
     }
 }
 
