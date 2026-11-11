@@ -147,7 +147,7 @@ impl AgentTab {
         });
     }
 
-    fn deliver(&self, mut message: UserMessage, checkpoint: Option<ide_git::Checkpoint>) {
+    pub(super) fn deliver(&self, mut message: UserMessage, checkpoint: Option<ide_git::Checkpoint>) {
         // ACP and the own agent give prompts no id; the app's own one keys the checkpoint taken before the prompt (I6).
         let app_ids = self.agent.is_acp() || self.agent.is_own();
         if app_ids && message.message_id.is_none() {

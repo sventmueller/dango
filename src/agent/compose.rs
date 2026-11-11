@@ -17,6 +17,12 @@ use crate::util::{main_soon, ns};
 /// An attachment's name and symbol, whether it is outside text, and its picture.
 type Chip = ((String, &'static str), bool, Option<std::sync::Arc<[u8]>>);
 
+/// Whether a message sent now goes into the turn that runs: Claude Code reads it as soon as its running tool calls
+/// finish, within the turn, as its own prompt does; ACP agents take one prompt at a time and wait in the queue.
+fn reaches_turn(status: Status, sending: bool, claude: bool) -> bool {
+    claude && status == Status::Running && !sending
+}
+
 /// The byte offset in `text` of the UTF-16 offset `units`.
 fn byte_offset(text: &str, units: usize) -> usize {
     let mut counted = 0;
@@ -87,12 +93,21 @@ impl AgentTab {
         }
     }
 
-    /// Sends `message` now, or queues it while a turn runs or the session is not there yet.
+    /// Sends `message` now, into the running turn where Claude Code takes it there, or queues it while a turn runs or
+    /// the session is not there yet.
     fn dispatch(&self, message: UserMessage) {
-        let busy = {
+        let (busy, into_turn) = {
             let state = self.state.borrow();
-            state.status != Status::Idle || state.sending || !state.source.is_live()
+            let claude = state.source.session().is_some() && state.source.is_live();
+            (
+                state.status != Status::Idle || state.sending || !state.source.is_live(),
+                reaches_turn(state.status, state.sending, claude),
+            )
         };
+        if into_turn {
+            self.deliver(message, None);
+            return;
+        }
         if busy {
             self.state.borrow_mut().queue.push(message);
             self.refresh_queue();
@@ -373,6 +388,27 @@ impl AgentTab {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_claude_takes_a_message_into_a_running_turn() {
+        assert!(reaches_turn(Status::Running, false, true));
+        assert!(
+            !reaches_turn(Status::Running, false, false),
+            "an ACP agent or the own agent queues it"
+        );
+        assert!(
+            !reaches_turn(Status::Running, true, true),
+            "a checkpoint is being taken"
+        );
+        assert!(
+            !reaches_turn(Status::RequiresAction, false, true),
+            "it waits for an answer first"
+        );
+        assert!(
+            !reaches_turn(Status::Idle, false, true),
+            "an idle session gets it as a new turn"
+        );
+    }
 
     #[test]
     fn offsets_count_utf16_units_as_text_views_do() {
