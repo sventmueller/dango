@@ -20,6 +20,9 @@ const THUMBNAIL: f64 = 76.0;
 const THUMBNAIL_PADDING: f64 = 6.0;
 const THUMBNAIL_RADIUS: f64 = 10.0;
 
+/// An attachment's name and symbol, whether it is outside text, and its picture.
+type Chip = ((String, &'static str), bool, Option<std::sync::Arc<[u8]>>);
+
 /// The byte offset in `text` of the UTF-16 offset `units`.
 fn byte_offset(text: &str, units: usize) -> usize {
     let mut counted = 0;
@@ -260,7 +263,7 @@ impl AgentTab {
         }
         let (names, offer) = {
             let state = self.state.borrow();
-            let names: Vec<((String, &'static str), bool, Option<std::sync::Arc<[u8]>>)> = state
+            let names: Vec<Chip> = state
                 .attachments
                 .iter()
                 .map(|a| {
