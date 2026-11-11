@@ -205,11 +205,11 @@ fn sent_results(stub: &Stub, request: usize) -> Vec<Value> {
 struct GatedDiagnostics(std::sync::mpsc::Sender<std::sync::mpsc::Sender<()>>);
 
 impl ide_agent::Diagnostics for GatedDiagnostics {
-    fn diagnostics(&self, _path: Option<&Path>) -> Vec<ide_agent::Diagnostic> {
+    fn diagnostics(&self, _path: Option<&Path>) -> Option<Vec<ide_agent::Diagnostic>> {
         let (release, wait) = std::sync::mpsc::channel();
         self.0.send(release).unwrap();
         wait.recv_timeout(Duration::from_secs(10)).unwrap();
-        Vec::new()
+        Some(Vec::new())
     }
 }
 
@@ -747,15 +747,15 @@ fn compact_summarizes_on_the_users_word_and_the_next_message_joins_the_summary()
 struct OneWarning(PathBuf);
 
 impl ide_agent::Diagnostics for OneWarning {
-    fn diagnostics(&self, _path: Option<&Path>) -> Vec<ide_agent::Diagnostic> {
-        vec![ide_agent::Diagnostic {
+    fn diagnostics(&self, _path: Option<&Path>) -> Option<Vec<ide_agent::Diagnostic>> {
+        Some(vec![ide_agent::Diagnostic {
             path: self.0.join("src/main.rs"),
             line: 1,
             column: 4,
             severity: ide_agent::Severity::Warning,
             message: "unused".into(),
             source: Some("rustc".into()),
-        }]
+        }])
     }
 }
 

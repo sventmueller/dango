@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Open ernaast";
 "Als Vorschau öffnen" = "Open als voorvertoning";
 "Zum Dokument daneben" = "Ga naar document ernaast";
+"{} fehlt – installieren mit „{}“" = "{} ontbreekt – installeer het met ‘{}’";
+"{} fehlt – im Editor installierbar" = "{} ontbreekt – te installeren vanuit de editor";
+"Eingebaute Sprachserver" = "Ingebouwde taalservers";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Waar de app de server van elke taal op deze Mac vindt. Een server start pas als een editor een bestand in zijn taal opent in een vertrouwde map.";
+"Eigene Sprachserver" = "Eigen taalservers";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Voor andere talen of in plaats van een ingebouwde server: bestanden met deze extensies gaan naar het commando, dat de server via standaardinvoer en -uitvoer start.";
+"Sprache" = "Taal";
+"Server" = "Server";
+"Dateiendungen" = "Bestandsextensies";
+"Befehl" = "Commando";
+"Sprachserver hinzufügen" = "Voeg taalserver toe";
+"Sprachserver entfernen" = "Verwijder taalserver";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Bijvoorbeeld ‘Elixir’, ‘ex, exs’ en ‘elixir-ls’. Het commando is een programma in het PATH van de login-shell of een pad, gevolgd door zijn argumenten.";
+"Name, Dateiendungen und Befehl sind nötig." = "Naam, bestandsextensies en commando zijn vereist.";

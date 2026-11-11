@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Apri a lato";
 "Als Vorschau öffnen" = "Apri come anteprima";
 "Zum Dokument daneben" = "Vai al documento a lato";
+"{} fehlt – installieren mit „{}“" = "{} manca – installalo con “{}”";
+"{} fehlt – im Editor installierbar" = "{} manca – installabile dall’editor";
+"Eingebaute Sprachserver" = "Server di linguaggio integrati";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Dove l’app trova il server di ogni linguaggio su questo Mac. Un server si avvia solo quando un editor apre un file del suo linguaggio in una cartella attendibile.";
+"Eigene Sprachserver" = "Server di linguaggio personalizzati";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Per altri linguaggi o al posto di un server integrato: i file con queste estensioni vanno al comando, che avvia il server tramite input e output standard.";
+"Sprache" = "Linguaggio";
+"Server" = "Server";
+"Dateiendungen" = "Estensioni dei file";
+"Befehl" = "Comando";
+"Sprachserver hinzufügen" = "Aggiungi server di linguaggio";
+"Sprachserver entfernen" = "Rimuovi server di linguaggio";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Ad esempio “Elixir”, “ex, exs” ed “elixir-ls”. Il comando è un programma nel PATH della shell di login o un percorso, seguito dai suoi argomenti.";
+"Name, Dateiendungen und Befehl sind nötig." = "Nome, estensioni dei file e comando sono obbligatori.";

@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "옆에 열기";
 "Als Vorschau öffnen" = "미리보기로 열기";
 "Zum Dokument daneben" = "옆 문서로 이동";
+"{} fehlt – installieren mit „{}“" = "{}이(가) 없습니다 – ‘{}’(으)로 설치하십시오";
+"{} fehlt – im Editor installierbar" = "{}이(가) 없습니다 – 편집기에서 설치할 수 있습니다";
+"Eingebaute Sprachserver" = "내장 언어 서버";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "앱이 이 Mac에서 각 언어의 서버를 찾는 위치입니다. 서버는 신뢰하는 폴더에서 편집기가 해당 언어의 파일을 열 때에만 시작됩니다.";
+"Eigene Sprachserver" = "사용자 언어 서버";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "다른 언어용 또는 내장 서버 대신 사용: 이 확장자를 가진 파일은 표준 입력과 출력으로 서버를 시작하는 명령으로 전달됩니다.";
+"Sprache" = "언어";
+"Server" = "서버";
+"Dateiendungen" = "파일 확장자";
+"Befehl" = "명령";
+"Sprachserver hinzufügen" = "언어 서버 추가";
+"Sprachserver entfernen" = "언어 서버 제거";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "예: ‘Elixir’, ‘ex, exs’ 및 ‘elixir-ls’. 명령은 로그인 셸의 PATH에 있는 프로그램 또는 경로이며 그 뒤에 인수가 옵니다.";
+"Name, Dateiendungen und Befehl sind nötig." = "이름, 파일 확장자 및 명령이 필요합니다.";

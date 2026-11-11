@@ -304,11 +304,13 @@ pub(crate) fn run(name: &str, input: &Value, context: &Context<'_>) -> Outcome {
 }
 
 fn diagnostics(input: &Value, workspace: &Workspace) -> Outcome {
-    let Some(source) = workspace.diagnostics() else {
+    let path = text(input, "path").map(|p| workspace.resolve(p));
+    let Some(found) = workspace
+        .diagnostics()
+        .and_then(|source| source.diagnostics(path.as_deref()))
+    else {
         return Outcome::noted(ToolNote::NoLanguageServer);
     };
-    let path = text(input, "path").map(|p| workspace.resolve(p));
-    let found = source.diagnostics(path.as_deref());
     if found.is_empty() {
         return Outcome {
             results: Some(0),

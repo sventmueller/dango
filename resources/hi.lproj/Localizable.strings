@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "बगल में खोलें";
 "Als Vorschau öffnen" = "प्रीव्यू के रूप में खोलें";
 "Zum Dokument daneben" = "बगल वाले दस्तावेज़ पर जाएँ";
+"{} fehlt – installieren mit „{}“" = "{} नहीं मिला – इसे “{}” से इंस्टॉल करें";
+"{} fehlt – im Editor installierbar" = "{} नहीं मिला – एडिटर से इंस्टॉल किया जा सकता है";
+"Eingebaute Sprachserver" = "बिल्ट-इन लैंग्वेज सर्वर";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "ऐप इस Mac पर हर भाषा का सर्वर कहाँ पाता है। सर्वर तभी शुरू होता है जब कोई एडिटर किसी भरोसेमंद फ़ोल्डर में उसकी भाषा की फ़ाइल खोलता है।";
+"Eigene Sprachserver" = "अपने लैंग्वेज सर्वर";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "दूसरी भाषाओं के लिए या किसी बिल्ट-इन सर्वर की जगह : इन एक्सटेंशन वाली फ़ाइलें कमांड को जाती हैं, जो स्टैंडर्ड इनपुट और आउटपुट पर सर्वर शुरू करती है।";
+"Sprache" = "भाषा";
+"Server" = "सर्वर";
+"Dateiendungen" = "फ़ाइल एक्सटेंशन";
+"Befehl" = "कमांड";
+"Sprachserver hinzufügen" = "लैंग्वेज सर्वर जोड़ें";
+"Sprachserver entfernen" = "लैंग्वेज सर्वर हटाएँ";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "जैसे “Elixir”, “ex, exs” और “elixir-ls”। कमांड लॉगिन शेल के PATH में कोई प्रोग्राम या कोई पाथ है, जिसके बाद उसके आर्ग्युमेंट आते हैं।";
+"Name, Dateiendungen und Befehl sind nötig." = "नाम, फ़ाइल एक्सटेंशन और कमांड ज़रूरी हैं।";

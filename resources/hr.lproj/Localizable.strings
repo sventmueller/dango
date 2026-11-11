@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Otvori sa strane";
 "Als Vorschau öffnen" = "Otvori kao pregled";
 "Zum Dokument daneben" = "Idi na dokument sa strane";
+"{} fehlt – installieren mit „{}“" = "{} nedostaje – instalirajte ga naredbom „{}“";
+"{} fehlt – im Editor installierbar" = "{} nedostaje – može se instalirati iz urednika";
+"Eingebaute Sprachserver" = "Ugrađeni jezični poslužitelji";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Gdje aplikacija na ovom Macu pronalazi poslužitelj svakog jezika. Poslužitelj se pokreće tek kada urednik otvori datoteku njegova jezika u pouzdanoj mapi.";
+"Eigene Sprachserver" = "Vlastiti jezični poslužitelji";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Za dodatne jezike ili umjesto ugrađenog poslužitelja: datoteke s ovim nastavcima idu naredbi koja pokreće poslužitelj preko standardnog ulaza i izlaza.";
+"Sprache" = "Jezik";
+"Server" = "Poslužitelj";
+"Dateiendungen" = "Nastavci datoteka";
+"Befehl" = "Naredba";
+"Sprachserver hinzufügen" = "Dodaj jezični poslužitelj";
+"Sprachserver entfernen" = "Ukloni jezični poslužitelj";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Na primjer „Elixir“, „ex, exs“ i „elixir-ls“. Naredba je program u PATH-u ljuske za prijavu ili putanja, nakon koje slijede njezini argumenti.";
+"Name, Dateiendungen und Befehl sind nötig." = "Naziv, nastavci datoteka i naredba su obavezni.";

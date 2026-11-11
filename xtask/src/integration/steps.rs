@@ -10,7 +10,7 @@ pub(crate) const GROUPS: &[Group] = &[
         name: "lsp",
         title: "real language servers and their installers",
         paid: false,
-        uses: "downloads typescript, vtsls, rust-analyzer and gopls",
+        uses: "downloads typescript, vtsls, rust-analyzer, gopls and the npm language servers",
         steps: lsp,
     },
     Group {
@@ -134,6 +134,30 @@ fn lsp(_: &Context) -> Vec<Step> {
             "gopls installed with go install",
             vec![Need::Program("go"), Need::Network("proxy.golang.org")],
             real("gopls_is_installed_with_go_install_into_the_tools_folder"),
+        ),
+        step(
+            "clangd from the developer tools",
+            vec![Need::DeveloperTools],
+            real("clangd_from_the_developer_tools_reports_diagnostics_and_symbols"),
+        ),
+        step(
+            "sourcekit-lsp from the developer tools",
+            vec![Need::DeveloperTools],
+            real("sourcekit_lsp_reports_diagnostics_in_a_swift_package"),
+        ),
+        step(
+            "npm servers for Python, JSON, YAML, CSS, HTML and shell installed into the tools folder",
+            node(),
+            real("the_npm_servers_install_into_the_tools_folder_and_serve_their_languages"),
+        ),
+        step(
+            "taplo, marksman and lua-language-server",
+            vec![
+                Need::Program("taplo"),
+                Need::Program("marksman"),
+                Need::Program("lua-language-server"),
+            ],
+            real("the_homebrew_servers_serve_toml_markdown_and_lua"),
         ),
         step("selftest lsp", vec![Need::RustAnalyzer], selftest("lsp", Vec::new())),
     ]

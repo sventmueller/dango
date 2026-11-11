@@ -50,6 +50,8 @@ pub(crate) enum Need {
     AnyProgram(&'static [&'static str]),
     /// rust-analyzer on the login shell's PATH or through rustup, as the language server registry looks for it.
     RustAnalyzer,
+    /// Apple's developer tools, which bring clangd and sourcekit-lsp.
+    DeveloperTools,
     /// A host that takes connections on port 443.
     Network(&'static str),
     /// A sign-in with `service`, shown by any of `evidence`.
@@ -207,6 +209,8 @@ pub(crate) fn unmet(need: &Need, probe: &dyn Probe) -> Option<String> {
             (probe.program("rust-analyzer").is_none() && !through_rustup())
                 .then(|| "rust-analyzer is neither on the login shell's PATH nor installed through rustup".into())
         }
+        Need::DeveloperTools => (!probe.succeeds(Path::new("/usr/bin/xcode-select"), &["-p"]))
+            .then(|| "Apple's developer tools are not installed".into()),
         Need::Network(host) => (!probe.reachable(host)).then(|| format!("{host} cannot be reached")),
         Need::SignIn { service, evidence } => (!evidence.iter().any(|e| shows(e, probe))).then(|| {
             let looked: Vec<String> = evidence.iter().map(describe).collect();

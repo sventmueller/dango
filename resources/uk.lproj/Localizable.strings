@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Відкрити поруч";
 "Als Vorschau öffnen" = "Відкрити як попередній перегляд";
 "Zum Dokument daneben" = "Перейти до документа поруч";
+"{} fehlt – installieren mit „{}“" = "{} відсутній — інсталюйте командою «{}»";
+"{} fehlt – im Editor installierbar" = "{} відсутній — можна інсталювати з редактора";
+"Eingebaute Sprachserver" = "Вбудовані мовні сервери";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Де програма знаходить сервер кожної мови на цьому Mac. Сервер запускається, лише коли редактор відкриває файл його мови в довіреній папці.";
+"Eigene Sprachserver" = "Власні мовні сервери";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Для інших мов або замість вбудованого сервера: файли з цими розширеннями передаються команді, яка запускає сервер через стандартне введення й виведення.";
+"Sprache" = "Мова";
+"Server" = "Сервер";
+"Dateiendungen" = "Розширення файлів";
+"Befehl" = "Команда";
+"Sprachserver hinzufügen" = "Додати мовний сервер";
+"Sprachserver entfernen" = "Вилучити мовний сервер";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Наприклад, «Elixir», «ex, exs» і «elixir-ls». Команда — це програма з PATH оболонки входу або шлях, після якого йдуть її аргументи.";
+"Name, Dateiendungen und Befehl sind nötig." = "Потрібні назва, розширення файлів і команда.";

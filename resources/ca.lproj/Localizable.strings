@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Obre al costat";
 "Als Vorschau öffnen" = "Obre com a previsualització";
 "Zum Dokument daneben" = "Ves al document del costat";
+"{} fehlt – installieren mit „{}“" = "Falta {} – instal·la’l amb «{}»";
+"{} fehlt – im Editor installierbar" = "Falta {} – es pot instal·lar des de l’editor";
+"Eingebaute Sprachserver" = "Servidors de llenguatge integrats";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "On troba l’app el servidor de cada llenguatge en aquest Mac. Un servidor només s’inicia quan un editor obre un fitxer del seu llenguatge en una carpeta de confiança.";
+"Eigene Sprachserver" = "Servidors de llenguatge propis";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Per a altres llenguatges o en lloc d’un servidor integrat: els fitxers amb aquestes extensions van a l’ordre, que inicia el servidor per l’entrada i la sortida estàndard.";
+"Sprache" = "Llenguatge";
+"Server" = "Servidor";
+"Dateiendungen" = "Extensions de fitxer";
+"Befehl" = "Ordre";
+"Sprachserver hinzufügen" = "Afegeix un servidor de llenguatge";
+"Sprachserver entfernen" = "Elimina el servidor de llenguatge";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Per exemple, «Elixir», «ex, exs» i «elixir-ls». L’ordre és un programa del PATH de l’intèrpret d’ordres d’inici de sessió o un camí, seguit dels seus arguments.";
+"Name, Dateiendungen und Befehl sind nötig." = "Cal el nom, les extensions de fitxer i l’ordre.";

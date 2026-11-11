@@ -22,16 +22,17 @@ use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+use ide_core::settings::{Key, Settings};
 use ide_document::Change;
 use ide_lsp::lsp_types::{Diagnostic, MessageType, TextDocumentContentChangeEvent, Uri, WorkDoneProgress};
-use ide_lsp::{Cancel, Event, Install, Language, NotFound, Refresh, Registry, Server, ServerConfig, Status, uri};
+use ide_lsp::{Cancel, CustomServer, Event, Language, NotFound, Refresh, Registry, Server, ServerConfig, Status, uri};
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::{DefinedClass, sel};
 use splat_i18n::{t, tf};
 
 use crate::editor::{self, EditorTextView};
-use crate::util::main_soon;
+use crate::util::{main_after, main_soon};
 
 pub use agent::agent_diagnostics;
 pub use complete::{after_command, command};
@@ -43,6 +44,12 @@ pub use rename::{format, rename, save};
 
 /// How long typing must pause before semantic tokens and pulled diagnostics are asked for again.
 const REFRESH_DELAY: f64 = 0.4;
+
+/// How long a server keeps running after the last editor it serves closed, so reopening one soon costs no new indexing.
+const IDLE_STOP: Duration = Duration::from_secs(5 * 60);
+
+/// The language servers the user set up, which take their files from the built-in ones.
+pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> = Key::user("languageServers", Vec::new);
 
 /// The protocol's error for an answer the server dropped because the document changed meanwhile; asking again helps.
 const CONTENT_MODIFIED: i64 = -32801;
@@ -84,6 +91,8 @@ struct Slot {
     progress_at: std::cell::Cell<Option<std::time::Instant>>,
     /// The last message the server asked to show.
     message: RefCell<Option<String>>,
+    /// Counts the times an editor let go of the slot; a pending stop only goes ahead while it is still the latest.
+    released: Cell<u64>,
 }
 
 /// The servers of one window's folder.
@@ -95,9 +104,71 @@ struct Workspace {
 thread_local! {
     static WORKSPACES: RefCell<Vec<Rc<Workspace>>> = const { RefCell::new(Vec::new()) };
     static NEXT_ID: Cell<u64> = const { Cell::new(1) };
+    static CUSTOM: RefCell<Option<Vec<Arc<CustomServer>>>> = const { RefCell::new(None) };
 }
 
 static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
+
+/// The language servers the user set up, read from the settings once and again after `servers_changed`.
+fn custom_servers() -> Vec<Arc<CustomServer>> {
+    CUSTOM.with(|cell| {
+        cell.borrow_mut()
+            .get_or_insert_with(|| {
+                Settings::load_user()
+                    .get(&LANGUAGE_SERVERS)
+                    .into_iter()
+                    .map(Arc::new)
+                    .collect()
+            })
+            .clone()
+    })
+}
+
+/// The language of `path` and the document's language id, the user's servers first.
+fn language_of(path: &Path) -> Option<(Language, String)> {
+    Language::detect(path, &custom_servers())
+}
+
+/// Looks off the main thread for the server of every built-in language, as for a file in the home folder, and hands
+/// `done` each language's name with where its server is or what is missing, on the main thread.
+pub fn survey(done: fn(Vec<(String, String)>)) {
+    let _ = std::thread::Builder::new().name("lsp-survey".into()).spawn(move || {
+        let registry = registry();
+        let home = ide_core::paths::home();
+        let found: Vec<(Language, Result<PathBuf, NotFound>)> = ide_lsp::BUILT_IN
+            .iter()
+            .map(|language| {
+                let found = registry.find(language, &home, &home).map(|launch| launch.program);
+                (language.clone(), found)
+            })
+            .collect();
+        main_soon(move || {
+            let lines = found
+                .into_iter()
+                .map(|(language, found)| (language.name().to_string(), survey_text(found)))
+                .collect();
+            done(lines);
+        });
+    });
+}
+
+fn survey_text(found: Result<PathBuf, NotFound>) -> String {
+    match found {
+        Ok(program) => crate::app::display_path(&program),
+        Err(missing) if missing.install.is_some() && missing.missing.is_none() => {
+            tf("{} fehlt – im Editor installierbar", &[&missing.program])
+        }
+        Err(missing) => missing_text(&missing).0,
+    }
+}
+
+/// The user changed their language servers: every editor goes to the server that serves its file now.
+pub fn servers_changed() {
+    CUSTOM.with(|cell| cell.borrow_mut().take());
+    for view in editor::all_editors() {
+        opened(&view);
+    }
+}
 
 fn next_id() -> u64 {
     NEXT_ID.with(|next| {
@@ -281,8 +352,9 @@ pub fn opened(view: &EditorTextView) {
     if let (Some(previous), Some((server, _))) = (previous, server_of(view)) {
         server.close(&previous);
     }
+    release(view);
     view.ivars().lsp.borrow_mut().slot = None;
-    let Some((path, (language, language_id))) = path.and_then(|p| Language::of_path(&p).map(|l| (p, l))) else {
+    let Some((path, (language, language_id))) = path.and_then(|p| language_of(&p).map(|l| (p, l))) else {
         status::refresh(view);
         return;
     };
@@ -291,7 +363,7 @@ pub fn opened(view: &EditorTextView) {
         return;
     };
     let workspace = workspace_or_new(&root);
-    let Some(slot) = slot_for(&workspace, language, &path) else {
+    let Some(slot) = slot_for(&workspace, &language, &path) else {
         status::refresh(view);
         return;
     };
@@ -302,7 +374,7 @@ pub fn opened(view: &EditorTextView) {
     }
     if let State::Running(server) = &*slot.state.borrow() {
         let text = view.document().text().to_string();
-        server.open(&uri::from_path(&path), language_id, version(view), &text);
+        server.open(&uri::from_path(&path), &language_id, version(view), &text);
     }
     status::refresh(view);
     view.later(sel!(ideLspRefresh), REFRESH_DELAY);
@@ -310,13 +382,13 @@ pub fn opened(view: &EditorTextView) {
 
 /// The slot that serves `path`: within the folder the one of its project root, started if new; outside, as for a
 /// library's source a definition led to, an existing one of the language, since nothing starts outside the folder.
-fn slot_for(workspace: &Rc<Workspace>, language: Language, path: &Path) -> Option<Rc<Slot>> {
+fn slot_for(workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Option<Rc<Slot>> {
     if !path.starts_with(&workspace.root) {
         return workspace
             .slots
             .borrow()
             .iter()
-            .find(|s| s.language == language)
+            .find(|s| s.language == *language)
             .cloned();
     }
     let root = ide_lsp::root(language, path, &workspace.root);
@@ -324,19 +396,20 @@ fn slot_for(workspace: &Rc<Workspace>, language: Language, path: &Path) -> Optio
         .slots
         .borrow()
         .iter()
-        .find(|s| s.language == language && s.root == root)
+        .find(|s| s.language == *language && s.root == root)
     {
         return Some(found.clone());
     }
     let slot = Rc::new(Slot {
         id: next_id(),
-        language,
+        language: language.clone(),
         root,
         state: RefCell::new(State::Finding),
         progress: RefCell::new(BTreeMap::new()),
         #[cfg(feature = "selftest")]
         progress_at: std::cell::Cell::new(None),
         message: RefCell::new(None),
+        released: Cell::new(0),
     });
     workspace.slots.borrow_mut().push(slot.clone());
     find(&workspace.root, &slot);
@@ -345,11 +418,11 @@ fn slot_for(workspace: &Rc<Workspace>, language: Language, path: &Path) -> Optio
 
 /// Looks for the slot's server off the main thread and starts it when found.
 fn find(folder: &Path, slot: &Slot) {
-    let (folder, id, language, root) = (folder.to_path_buf(), slot.id, slot.language, slot.root.clone());
+    let (folder, id, language, root) = (folder.to_path_buf(), slot.id, slot.language.clone(), slot.root.clone());
     let _ = std::thread::Builder::new().name("lsp-find".into()).spawn(move || {
         let registry = registry();
         let found = registry
-            .find(language, &root, &folder)
+            .find(&language, &root, &folder)
             .map(|launch| registry.config(&launch, &root));
         main_soon(move || found_server(&folder, id, found));
     });
@@ -375,15 +448,16 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
     };
     *slot.state.borrow_mut() = state;
     if let State::Running(server) = &*slot.state.borrow() {
+        agent::started(&slot.root, slot.language.clone());
         for view in views_of(folder, id) {
             let Some(uri) = view.ivars().lsp.borrow().uri.clone() else {
                 continue;
             };
-            let Some((_, language_id)) = view.document().path().and_then(Language::of_path) else {
+            let Some((_, language_id)) = view.document().path().and_then(language_of) else {
                 continue;
             };
             let text = view.document().text().to_string();
-            server.open(&uri, language_id, version(&view), &text);
+            server.open(&uri, &language_id, version(&view), &text);
         }
     }
     refresh_slot(folder, id);
@@ -457,6 +531,7 @@ pub fn closed(view: &EditorTextView) {
     if let Some((server, uri)) = server_of(view) {
         server.close(&uri);
     }
+    release(view);
     complete::dismiss_for(view);
     hover::dismiss(view);
 }
@@ -474,13 +549,48 @@ pub fn trust_changed(root: &Path) {
 pub fn window_closed(root: &Path) {
     let Some(workspace) = workspace(root) else { return };
     for slot in workspace.slots.borrow().iter() {
-        match &*slot.state.borrow() {
-            State::Running(server) => server.stop(),
-            State::Installing(cancel, _) => cancel.cancel(),
-            _ => {}
-        }
+        end(slot);
     }
     WORKSPACES.with(|all| all.borrow_mut().retain(|w| w.root != root));
+}
+
+/// Stops the slot's server or ends its installation.
+fn end(slot: &Slot) {
+    match &*slot.state.borrow() {
+        State::Running(server) => {
+            server.stop();
+            agent::stopped(&slot.root, &slot.language);
+        }
+        State::Installing(cancel, _) => cancel.cancel(),
+        _ => {}
+    }
+}
+
+/// `view` no longer uses its slot: the slot goes once no editor has used it for `IDLE_STOP`.
+fn release(view: &EditorTextView) {
+    let Some(root) = view.controller().and_then(|c| c.project_root()) else {
+        return;
+    };
+    let Some(id) = view.ivars().lsp.borrow().slot else {
+        return;
+    };
+    let Some(slot) = slot(&root, id) else { return };
+    let turn = slot.released.get() + 1;
+    slot.released.set(turn);
+    main_after(IDLE_STOP, move || end_if_unused(&root, id, turn));
+}
+
+/// Ends slot `id` of the window of `folder` unless an editor uses it again, or let go of it later, or it installs.
+fn end_if_unused(folder: &Path, id: u64, turn: u64) {
+    let (Some(workspace), Some(slot)) = (workspace(folder), slot(folder, id)) else {
+        return;
+    };
+    let installing = matches!(&*slot.state.borrow(), State::Installing(..));
+    if slot.released.get() != turn || installing || !views_of(folder, id).is_empty() {
+        return;
+    }
+    end(&slot);
+    workspace.slots.borrow_mut().retain(|s| s.id != id);
 }
 
 /// Asks again, after a pause in typing, for what the server computes over the whole document.
@@ -626,16 +736,16 @@ pub(crate) fn server_status(view: &EditorTextView) -> (String, status::Action) {
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         return (String::new(), status::Action::None);
     };
-    let Some((language, _)) = Language::of_path(&path) else {
+    if language_of(&path).is_none() {
         return (String::new(), status::Action::None);
-    };
+    }
     let root = view.controller().and_then(|c| c.project_root());
     let found = root
         .clone()
         .zip(view.ivars().lsp.borrow().slot)
         .and_then(|(root, id)| slot(&root, id));
     if let Some(slot) = found {
-        return slot_status(&slot, language);
+        return slot_status(&slot);
     }
     let text = match root {
         None => t("Sprachserver nur in einem Ordner"),
@@ -645,10 +755,10 @@ pub(crate) fn server_status(view: &EditorTextView) -> (String, status::Action) {
     (text.to_string(), status::Action::None)
 }
 
-fn slot_status(slot: &Slot, language: Language) -> (String, status::Action) {
+fn slot_status(slot: &Slot) -> (String, status::Action) {
     match &*slot.state.borrow() {
         State::Finding => (
-            tf("Suche Sprachserver für {} …", &[language.name()]),
+            tf("Suche Sprachserver für {} …", &[slot.language.name()]),
             status::Action::None,
         ),
         State::Missing(missing) => missing_text(missing),
@@ -677,23 +787,23 @@ fn slot_status(slot: &Slot, language: Language) -> (String, status::Action) {
 }
 
 fn missing_text(missing: &NotFound) -> (String, status::Action) {
-    let server = match missing.install {
-        Install::Gopls => "gopls",
-        Install::RustAnalyzer => "rust-analyzer",
-        Install::Vtsls => "vtsls",
+    let not_on_path = |program: &str| {
+        tf(
+            "Kein Sprachserver für {}: {} fehlt auf dem PATH der Login-Shell",
+            &[missing.language.name(), program],
+        )
     };
-    match missing.missing {
-        Some(program) => (
-            tf(
-                "Kein Sprachserver für {}: {} fehlt auf dem PATH der Login-Shell",
-                &[missing.language.name(), program],
-            ),
-            status::Action::None,
-        ),
-        None => (
-            tf("{} fehlt – in den App-Ordner installieren?", &[server]),
+    match (missing.missing, missing.install, missing.hint) {
+        (Some(tool), ..) => (not_on_path(tool), status::Action::None),
+        (None, Some(_), _) => (
+            tf("{} fehlt – in den App-Ordner installieren?", &[&missing.program]),
             status::Action::Install,
         ),
+        (None, None, Some(hint)) => (
+            tf("{} fehlt – installieren mit „{}“", &[&missing.program, hint]),
+            status::Action::None,
+        ),
+        (None, None, None) => (not_on_path(&missing.program), status::Action::None),
     }
 }
 
@@ -704,12 +814,7 @@ pub fn status_action(view: &EditorTextView) {
         return;
     };
     let Some(slot) = slot(&root, id) else { return };
-    let action = {
-        let Some((language, _)) = view.document().path().and_then(Language::of_path) else {
-            return;
-        };
-        slot_status(&slot, language).1
-    };
+    let action = slot_status(&slot).1;
     match action {
         status::Action::Install => install(&root, &slot),
         status::Action::Cancel => {
@@ -734,7 +839,9 @@ pub fn status_action(view: &EditorTextView) {
 /// Installs the slot's missing server into the app's tools folder, after the user asked for it in the status bar.
 fn install(folder: &Path, slot: &Slot) {
     let what = match &*slot.state.borrow() {
-        State::Missing(missing) => missing.install,
+        State::Missing(NotFound {
+            install: Some(what), ..
+        }) => *what,
         _ => return,
     };
     let cancel = Cancel::new();
@@ -827,6 +934,12 @@ pub fn marks_of(view: &EditorTextView) -> Vec<(std::ops::Range<usize>, String)> 
         .collect()
 }
 
+/// The name of the language whose server takes `path`, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn language_name(path: &Path) -> Option<String> {
+    language_of(path).map(|(language, _)| language.name().to_string())
+}
+
 /// How many semantic tokens `view` paints, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn token_count(view: &EditorTextView) -> usize {
@@ -886,8 +999,10 @@ mod tests {
     fn a_missing_server_is_offered_for_installation_unless_its_tool_is_missing_too() {
         let missing = |missing| NotFound {
             language: Language::Rust,
-            install: Install::RustAnalyzer,
+            program: "rust-analyzer".into(),
+            install: Some(ide_lsp::Install::RustAnalyzer),
             missing,
+            hint: None,
         };
         let (text, action) = missing_text(&missing(None));
         assert_eq!(action, status::Action::Install);
@@ -895,6 +1010,22 @@ mod tests {
         let (text, action) = missing_text(&missing(Some("go")));
         assert_eq!(action, status::Action::None, "nothing to offer without go");
         assert!(text.contains("go"));
+    }
+
+    #[test]
+    fn a_server_the_app_cannot_install_names_how_to_get_it() {
+        let missing = NotFound {
+            language: Language::Lua,
+            program: "lua-language-server".into(),
+            install: None,
+            missing: None,
+            hint: Some("brew install lua-language-server"),
+        };
+        let (text, action) = missing_text(&missing);
+        assert_eq!(action, status::Action::None);
+        assert!(text.contains("brew install lua-language-server"), "{text}");
+        let custom = NotFound { hint: None, ..missing };
+        assert!(missing_text(&custom).0.contains("lua-language-server"));
     }
 
     #[test]

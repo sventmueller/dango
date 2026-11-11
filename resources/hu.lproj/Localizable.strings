@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Megnyitás mellette";
 "Als Vorschau öffnen" = "Megnyitás előnézetként";
 "Zum Dokument daneben" = "Ugrás a mellette lévő dokumentumra";
+"{} fehlt – installieren mit „{}“" = "A(z) {} hiányzik – telepítse ezzel: „{}”";
+"{} fehlt – im Editor installierbar" = "A(z) {} hiányzik – a szerkesztőből telepíthető";
+"Eingebaute Sprachserver" = "Beépített nyelvi szerverek";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Hol találja az app az egyes nyelvek szerverét ezen a Macen. Egy szerver csak akkor indul el, amikor egy szerkesztő megnyitja a nyelvének egy fájlját egy megbízható mappában.";
+"Eigene Sprachserver" = "Saját nyelvi szerverek";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "További nyelvekhez vagy egy beépített szerver helyett: az ilyen kiterjesztésű fájlok a parancshoz kerülnek, amely a szabványos bemeneten és kimeneten keresztül indítja a szervert.";
+"Sprache" = "Nyelv";
+"Server" = "Szerver";
+"Dateiendungen" = "Fájlkiterjesztések";
+"Befehl" = "Parancs";
+"Sprachserver hinzufügen" = "Nyelvi szerver hozzáadása";
+"Sprachserver entfernen" = "Nyelvi szerver eltávolítása";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Például „Elixir”, „ex, exs” és „elixir-ls”. A parancs egy program a bejelentkezési shell PATH-jában vagy egy útvonal, amelyet az argumentumai követnek.";
+"Name, Dateiendungen und Befehl sind nötig." = "A név, a fájlkiterjesztések és a parancs megadása kötelező.";

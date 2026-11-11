@@ -83,6 +83,9 @@ fn complete() -> Fake {
         "gemini",
         "agy",
         "codex-acp",
+        "taplo",
+        "marksman",
+        "lua-language-server",
     ]);
     fake.vars.extend([("GEMINI_API_KEY", "g"), ("OPENAI_API_KEY", "o")]);
     fake.files
@@ -92,6 +95,7 @@ fn complete() -> Fake {
     fake.succeeding.extend([
         "gh auth status --hostname github.com".to_string(),
         "glab auth status --hostname gitlab.example.org".to_string(),
+        "xcode-select -p".to_string(),
     ]);
     fake.origins
         .insert(home("Repos/splat"), "https://github.com/someone/splat.git");
@@ -194,6 +198,14 @@ fn rust_analyzer_counts_on_the_path_and_through_rustup() {
     let mut on_path = Fake::default();
     on_path.programs.insert("rust-analyzer");
     assert_eq!(unmet(&Need::RustAnalyzer, &on_path), None);
+}
+
+#[test]
+fn the_developer_tools_count_when_xcode_select_names_them() {
+    let mut fake = Fake::default();
+    assert!(unmet(&Need::DeveloperTools, &fake).is_some());
+    fake.succeeding.insert("xcode-select -p".into());
+    assert_eq!(unmet(&Need::DeveloperTools, &fake), None);
 }
 
 #[test]

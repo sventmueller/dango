@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Mở ở Bên cạnh";
 "Als Vorschau öffnen" = "Mở dưới dạng xem trước";
 "Zum Dokument daneben" = "Đi tới Tài liệu ở Bên cạnh";
+"{} fehlt – installieren mit „{}“" = "Thiếu {} – cài đặt bằng “{}”";
+"{} fehlt – im Editor installierbar" = "Thiếu {} – có thể cài đặt từ trình soạn thảo";
+"Eingebaute Sprachserver" = "Máy chủ ngôn ngữ tích hợp";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Nơi ứng dụng tìm thấy máy chủ của từng ngôn ngữ trên máy Mac này. Máy chủ chỉ khởi động khi trình soạn thảo mở tệp thuộc ngôn ngữ của nó trong thư mục được tin cậy.";
+"Eigene Sprachserver" = "Máy chủ ngôn ngữ riêng";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Cho các ngôn ngữ khác hoặc thay cho máy chủ tích hợp: các tệp có phần mở rộng này được chuyển đến lệnh, lệnh này khởi động máy chủ qua đầu vào và đầu ra chuẩn.";
+"Sprache" = "Ngôn ngữ";
+"Server" = "Máy chủ";
+"Dateiendungen" = "Phần mở rộng tệp";
+"Befehl" = "Lệnh";
+"Sprachserver hinzufügen" = "Thêm máy chủ ngôn ngữ";
+"Sprachserver entfernen" = "Xóa máy chủ ngôn ngữ";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Ví dụ “Elixir”, “ex, exs” và “elixir-ls”. Lệnh là một chương trình trong PATH của shell đăng nhập hoặc một đường dẫn, theo sau là các đối số của nó.";
+"Name, Dateiendungen und Befehl sind nötig." = "Cần có tên, phần mở rộng tệp và lệnh.";

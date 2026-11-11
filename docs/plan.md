@@ -93,6 +93,18 @@ eingearbeitet (markiert mit *Review*).
   *Review:* TypeScript per Sondierung statt fest verdrahtet — kann das `tsc` im Projekt `--lsp`, wird es genutzt, sonst
   vtsls; vtsls/npm-Installationen setzen Node voraus (Hinweis, falls es fehlt). Alle Prozesse mit der Umgebung der
   Login-Shell inkl. `SSH_AUTH_SOCK`, über den Supervisor (E23), nur in vertrauten Ordnern (E22).
+  *Speicher:* Ein Server endet fünf Minuten nach dem Schließen des letzten Editors, den er bedient, und startet mit
+  dem nächsten wieder; seine Diagnosen verfallen dabei, der eigene Agent meldet dann „kein Sprachserver“ statt „keine
+  Probleme“. rust-analyzer läuft ohne Vorab-Indexierung (`cachePriming`): am Repo selbst 1,3 statt 2,4 GB, Spitze
+  1,3 statt 3,8 GB.
+  *Weitere Sprachen (Owner, 2026-11):* Python (basedpyright, pyright, pylsp), C/C++/Objective-C (clangd), Swift
+  (sourcekit-lsp), Shell, YAML, JSON, CSS, HTML, TOML (taplo), Markdown (marksman), Lua — gesucht auf dem PATH der
+  Login-Shell, clangd und sourcekit-lsp über `xcrun` aus den Entwicklerwerkzeugen (nie über die Platzhalter in
+  `/usr/bin`, die sonst die Installation anstoßen). Die npm-Server (basedpyright, bash-, yaml- und die VS-Code-Server
+  für JSON/CSS/HTML) installiert die App auf Nachfrage wie vtsls; für die übrigen nennt die Statusleiste den
+  Installationsbefehl. yaml-language-server ohne SchemaStore-Abruf (kein Netz ohne Zutun). Eigene Server legt nur der
+  Nutzer im Tab „Sprachserver“ der Einstellungen an (Name, Endungen, Befehl; nie aus dem Projekt, E22); sie gehen den
+  eingebauten für ihre Endungen vor. Java, Kotlin, C#, Ruby, PHP usw. laufen über diesen Weg.
 
 ### AI-Coder
 - **E4 AI wie Zed.** Ein Thread-Modell für alle Agenten, geschnitten wie ACP v2: Thread → Subagenten → Hintergrund-

@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Åpne ved siden av";
 "Als Vorschau öffnen" = "Åpne som forhåndsvisning";
 "Zum Dokument daneben" = "Gå til dokumentet ved siden av";
+"{} fehlt – installieren mit „{}“" = "{} mangler – installer det med «{}»";
+"{} fehlt – im Editor installierbar" = "{} mangler – kan installeres fra editoren";
+"Eingebaute Sprachserver" = "Innebygde språktjenere";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Hvor appen finner tjeneren for hvert språk på denne Macen. En tjener starter først når en editor åpner en fil i språket sitt i en klarert mappe.";
+"Eigene Sprachserver" = "Egne språktjenere";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "For flere språk eller i stedet for en innebygd tjener: Filer med disse filetternavnene går til kommandoen, som starter tjeneren via standard inndata og utdata.";
+"Sprache" = "Språk";
+"Server" = "Tjener";
+"Dateiendungen" = "Filetternavn";
+"Befehl" = "Kommando";
+"Sprachserver hinzufügen" = "Legg til språktjener";
+"Sprachserver entfernen" = "Fjern språktjener";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "For eksempel «Elixir», «ex, exs» og «elixir-ls». Kommandoen er et program i PATH for påloggingsskallet eller en bane, etterfulgt av argumentene.";
+"Name, Dateiendungen und Befehl sind nötig." = "Navn, filetternavn og kommando er påkrevd.";

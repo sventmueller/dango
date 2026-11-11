@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Buka di Samping";
 "Als Vorschau öffnen" = "Buka sebagai Pratinjau";
 "Zum Dokument daneben" = "Pindah ke Dokumen di Samping";
+"{} fehlt – installieren mit „{}“" = "{} tidak ada – instal dengan “{}”";
+"{} fehlt – im Editor installierbar" = "{} tidak ada – dapat diinstal dari editor";
+"Eingebaute Sprachserver" = "Server Bahasa Bawaan";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Tempat aplikasi menemukan server setiap bahasa di Mac ini. Server baru dimulai saat editor membuka file dalam bahasanya di folder tepercaya.";
+"Eigene Sprachserver" = "Server Bahasa Sendiri";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Untuk bahasa lain atau sebagai pengganti server bawaan: file dengan ekstensi ini dikirim ke perintah, yang memulai server melalui input dan output standar.";
+"Sprache" = "Bahasa";
+"Server" = "Server";
+"Dateiendungen" = "Ekstensi File";
+"Befehl" = "Perintah";
+"Sprachserver hinzufügen" = "Tambahkan Server Bahasa";
+"Sprachserver entfernen" = "Hapus Server Bahasa";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Misalnya “Elixir”, “ex, exs”, dan “elixir-ls”. Perintah adalah program di PATH shell login atau jalur, diikuti argumennya.";
+"Name, Dateiendungen und Befehl sind nötig." = "Nama, ekstensi file, dan perintah wajib diisi.";

@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "横に開く";
 "Als Vorschau öffnen" = "プレビューとして開く";
 "Zum Dokument daneben" = "横の書類に移動";
+"{} fehlt – installieren mit „{}“" = "{}がありません – 「{}」でインストールしてください";
+"{} fehlt – im Editor installierbar" = "{}がありません – エディタからインストールできます";
+"Eingebaute Sprachserver" = "内蔵の言語サーバ";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "アプリがこのMacで各言語のサーバを見つけた場所です。サーバは、信頼されたフォルダ内でエディタがその言語のファイルを開いたときに初めて起動します。";
+"Eigene Sprachserver" = "独自の言語サーバ";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "ほかの言語用、または内蔵サーバの代わりに使用します。これらの拡張子のファイルは、標準入出力でサーバを起動するコマンドに渡されます。";
+"Sprache" = "言語";
+"Server" = "サーバ";
+"Dateiendungen" = "ファイル拡張子";
+"Befehl" = "コマンド";
+"Sprachserver hinzufügen" = "言語サーバを追加";
+"Sprachserver entfernen" = "言語サーバを削除";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "例:「Elixir」、「ex, exs」、「elixir-ls」。コマンドはログインシェルのPATH上のプログラムまたはパスで、その後に引数が続きます。";
+"Name, Dateiendungen und Befehl sind nötig." = "名前、ファイル拡張子、コマンドが必要です。";

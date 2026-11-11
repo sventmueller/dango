@@ -1,5 +1,5 @@
 //! Installing a missing server into the app's tools folder, after the user agreed: gopls with `go install`,
-//! rust-analyzer from its GitHub releases with a checked digest, vtsls with `npm install`.
+//! rust-analyzer from its GitHub releases with a checked digest, vtsls and the other npm servers with `npm install`.
 
 use std::fmt;
 use std::fs::{self, File};
@@ -12,7 +12,7 @@ use ide_process::{Ending, Supervisor};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
-use crate::registry::{Install, tools_bin, vtsls_bin};
+use crate::registry::{Install, node_bin, tools_bin};
 use crate::tool::{self, Cancel, Exits, Job, RunError};
 
 /// The latest rust-analyzer release, as GitHub's API describes it.
@@ -207,7 +207,7 @@ impl Installer {
         let path = match what {
             Install::Gopls => self.gopls(cancel, progress)?,
             Install::RustAnalyzer => self.rust_analyzer(cancel, progress)?,
-            Install::Vtsls => self.vtsls(cancel, progress)?,
+            Install::Npm { package, program } => self.npm(package, program, cancel, progress)?,
         };
         progress(Progress::Step(Step::Done));
         Ok(path)
@@ -230,23 +230,22 @@ impl Installer {
         installed(tools_bin(&self.tools, "gopls"), "go install")
     }
 
-    fn vtsls(&self, cancel: &Cancel, progress: &mut dyn FnMut(Progress)) -> Result<PathBuf, InstallError> {
+    fn npm(
+        &self,
+        package: &str,
+        program: &str,
+        cancel: &Cancel,
+        progress: &mut dyn FnMut(Progress),
+    ) -> Result<PathBuf, InstallError> {
         let path = tool::var(&self.env, "PATH");
         tool::which("node", path).ok_or(InstallError::Missing("node"))?;
         let npm = tool::which("npm", path).ok_or(InstallError::Missing("npm"))?;
         fs::create_dir_all(&self.tools)?;
         let prefix = self.tools.display().to_string();
         progress(Progress::Step(Step::Running));
-        let args = [
-            "install",
-            "--prefix",
-            &prefix,
-            "--no-fund",
-            "--no-audit",
-            "@vtsls/language-server",
-        ];
+        let args = ["install", "--prefix", &prefix, "--no-fund", "--no-audit", package];
         self.command(&self.env, &npm, &args, cancel, progress)?;
-        installed(vtsls_bin(&self.tools), "npm install")
+        installed(node_bin(&self.tools, program), "npm install")
     }
 
     fn command(
@@ -599,7 +598,7 @@ mod tests {
         );
         let gopls = installer.install(Install::Gopls, &Cancel::new(), &mut |_| {});
         assert!(matches!(gopls, Err(InstallError::Missing("go"))));
-        let vtsls = installer.install(Install::Vtsls, &Cancel::new(), &mut |_| {});
+        let vtsls = installer.install(crate::VTSLS, &Cancel::new(), &mut |_| {});
         assert!(matches!(vtsls, Err(InstallError::Missing("node"))));
     }
 }

@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "เปิดไว้ด้านข้าง";
 "Als Vorschau öffnen" = "เปิดเป็นการแสดงตัวอย่าง";
 "Zum Dokument daneben" = "ไปยังเอกสารด้านข้าง";
+"{} fehlt – installieren mit „{}“" = "ไม่มี {} – ติดตั้งด้วย “{}”";
+"{} fehlt – im Editor installierbar" = "ไม่มี {} – ติดตั้งได้จากตัวแก้ไข";
+"Eingebaute Sprachserver" = "เซิร์ฟเวอร์ภาษาในตัว";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "ตำแหน่งที่แอปพบเซิร์ฟเวอร์ของแต่ละภาษาบน Mac เครื่องนี้ เซิร์ฟเวอร์จะเริ่มทำงานเมื่อตัวแก้ไขเปิดไฟล์ในภาษานั้นในโฟลเดอร์ที่เชื่อถือเท่านั้น";
+"Eigene Sprachserver" = "เซิร์ฟเวอร์ภาษาของคุณเอง";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "สำหรับภาษาอื่นหรือใช้แทนเซิร์ฟเวอร์ในตัว: ไฟล์ที่มีนามสกุลเหล่านี้จะส่งไปยังคำสั่ง ซึ่งเริ่มเซิร์ฟเวอร์ผ่านอินพุตและเอาต์พุตมาตรฐาน";
+"Sprache" = "ภาษา";
+"Server" = "เซิร์ฟเวอร์";
+"Dateiendungen" = "นามสกุลไฟล์";
+"Befehl" = "คำสั่ง";
+"Sprachserver hinzufügen" = "เพิ่มเซิร์ฟเวอร์ภาษา";
+"Sprachserver entfernen" = "เอาเซิร์ฟเวอร์ภาษาออก";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "เช่น “Elixir”, “ex, exs” และ “elixir-ls” คำสั่งคือโปรแกรมใน PATH ของ login shell หรือพาธ ตามด้วยอาร์กิวเมนต์ของโปรแกรม";
+"Name, Dateiendungen und Befehl sind nötig." = "ต้องระบุชื่อ นามสกุลไฟล์ และคำสั่ง";

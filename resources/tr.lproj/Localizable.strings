@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Yanda Aç";
 "Als Vorschau öffnen" = "Önizleme Olarak Aç";
 "Zum Dokument daneben" = "Yandaki Belgeye Git";
+"{} fehlt – installieren mit „{}“" = "{} eksik – “{}” ile yükleyin";
+"{} fehlt – im Editor installierbar" = "{} eksik – düzenleyiciden yüklenebilir";
+"Eingebaute Sprachserver" = "Yerleşik Dil Sunucuları";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Uygulamanın bu Mac’te her dilin sunucusunu bulduğu yer. Bir sunucu ancak bir düzenleyici güvenilen bir klasörde kendi dilindeki bir dosyayı açtığında başlar.";
+"Eigene Sprachserver" = "Kendi Dil Sunucularınız";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Başka diller için ya da yerleşik bir sunucunun yerine: Bu uzantılara sahip dosyalar, sunucuyu standart girdi ve çıktı üzerinden başlatan komuta gider.";
+"Sprache" = "Dil";
+"Server" = "Sunucu";
+"Dateiendungen" = "Dosya Uzantıları";
+"Befehl" = "Komut";
+"Sprachserver hinzufügen" = "Dil Sunucusu Ekle";
+"Sprachserver entfernen" = "Dil Sunucusunu Kaldır";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Örneğin “Elixir”, “ex, exs” ve “elixir-ls”. Komut, oturum açma kabuğunun PATH’indeki bir program ya da bir yoldur; ardından argümanları gelir.";
+"Name, Dateiendungen und Befehl sind nötig." = "Ad, dosya uzantıları ve komut gereklidir.";

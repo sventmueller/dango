@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Otevřít vedle";
 "Als Vorschau öffnen" = "Otevřít jako náhled";
 "Zum Dokument daneben" = "Přejít na dokument vedle";
+"{} fehlt – installieren mit „{}“" = "{} chybí – nainstalujte ho příkazem „{}“";
+"{} fehlt – im Editor installierbar" = "{} chybí – lze nainstalovat v editoru";
+"Eingebaute Sprachserver" = "Vestavěné jazykové servery";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Kde aplikace na tomto Macu najde server každého jazyka. Server se spustí až tehdy, když editor otevře soubor jeho jazyka v důvěryhodné složce.";
+"Eigene Sprachserver" = "Vlastní jazykové servery";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Pro další jazyky nebo místo vestavěného serveru: soubory s těmito příponami jdou příkazu, který spustí server přes standardní vstup a výstup.";
+"Sprache" = "Jazyk";
+"Server" = "Server";
+"Dateiendungen" = "Přípony souborů";
+"Befehl" = "Příkaz";
+"Sprachserver hinzufügen" = "Přidat jazykový server";
+"Sprachserver entfernen" = "Odstranit jazykový server";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Například „Elixir“, „ex, exs“ a „elixir-ls“. Příkaz je program v PATH přihlašovacího shellu nebo cesta, za kterou následují jeho argumenty.";
+"Name, Dateiendungen und Befehl sind nötig." = "Název, přípony souborů a příkaz jsou povinné.";

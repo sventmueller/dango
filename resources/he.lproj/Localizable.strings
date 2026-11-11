@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "פתיחה לצד";
 "Als Vorschau öffnen" = "פתיחה כתצוגה מקדימה";
 "Zum Dokument daneben" = "מעבר למסמך שלצד";
+"{} fehlt – installieren mit „{}“" = "‏{} חסר – יש להתקין אותו עם “{}”";
+"{} fehlt – im Editor installierbar" = "‏{} חסר – ניתן להתקין מהעורך";
+"Eingebaute Sprachserver" = "שרתי שפה מובנים";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "היכן היישום מוצא את השרת של כל שפה ב-Mac זה. שרת מופעל רק כאשר עורך פותח קובץ בשפה שלו בתיקיה מהימנה.";
+"Eigene Sprachserver" = "שרתי שפה משלך";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "לשפות נוספות או במקום שרת מובנה: קבצים עם סיומות אלה נשלחים לפקודה, שמפעילה את השרת דרך הקלט והפלט הסטנדרטיים.";
+"Sprache" = "שפה";
+"Server" = "שרת";
+"Dateiendungen" = "סיומות קבצים";
+"Befehl" = "פקודה";
+"Sprachserver hinzufügen" = "הוספת שרת שפה";
+"Sprachserver entfernen" = "הסרת שרת שפה";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "לדוגמה “Elixir”, “ex, exs” ו-“elixir-ls”. הפקודה היא תוכנה ב-PATH של מעטפת ההתחברות או נתיב, ואחריה הארגומנטים שלה.";
+"Name, Dateiendungen und Befehl sind nötig." = "נדרשים שם, סיומות קבצים ופקודה.";

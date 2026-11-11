@@ -6,6 +6,7 @@ mod ci;
 #[cfg(feature = "dictation")]
 mod dictation;
 mod list_bar;
+mod servers;
 
 use std::cell::RefCell;
 
@@ -29,9 +30,12 @@ const CI_TAB: isize = 1;
 const AGENTS_TAB: isize = 2;
 /// Where the own agent's tab sits in the toolbar.
 const AGENT_TAB: isize = 3;
+/// Where the language servers tab sits in the toolbar.
+#[cfg(feature = "selftest")]
+const SERVERS_TAB: isize = 4;
 /// Where the dictation tab sits in the toolbar.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
-const DICTATION_TAB: isize = 4;
+const DICTATION_TAB: isize = 5;
 
 pub struct Ivars {
     settings: RefCell<Settings>,
@@ -39,6 +43,7 @@ pub struct Ivars {
     ci: Retained<ci::CiSettings>,
     agents: Retained<agents::AgentsSettings>,
     agent: Retained<agent::AgentSettings>,
+    servers: Retained<servers::ServersSettings>,
     #[cfg(feature = "dictation")]
     dictation: Retained<dictation::DictationSettings>,
 }
@@ -143,6 +148,7 @@ impl SettingsController {
             ci: ci::CiSettings::new(mtm),
             agents: agents::AgentsSettings::new(mtm),
             agent: agent::AgentSettings::new(mtm),
+            servers: servers::ServersSettings::new(mtm),
             #[cfg(feature = "dictation")]
             dictation: dictation::DictationSettings::new(mtm),
         });
@@ -168,6 +174,7 @@ pub fn show(mtm: MainThreadMarker) {
         controller.ivars().ci.reload();
         controller.ivars().agents.reload();
         controller.ivars().agent.reload();
+        controller.ivars().servers.reload();
         #[cfg(feature = "dictation")]
         controller.ivars().dictation.reload();
         window.makeKeyAndOrderFront(None);
@@ -183,6 +190,31 @@ pub fn show_ci(mtm: MainThreadMarker) {
 pub fn show_agent(mtm: MainThreadMarker) {
     show_tab(mtm, AGENT_TAB);
 }
+
+/// Brings the settings window to the front on its language servers tab, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn show_servers(mtm: MainThreadMarker) {
+    show_tab(mtm, SERVERS_TAB);
+}
+
+/// Where the built-in languages' servers are, as a survey found them; an open settings window shows it.
+fn servers_found(lines: Vec<(String, String)>) {
+    if let Some(servers) = servers_tab() {
+        servers.found(lines);
+    }
+}
+
+/// The language servers tab of the settings window, once it was built.
+pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
+    WINDOW.with(|cell| {
+        cell.borrow()
+            .as_ref()
+            .map(|(_, controller)| controller.ivars().servers.clone())
+    })
+}
+
+#[cfg(feature = "selftest")]
+pub use servers::selftest as servers_selftest;
 
 /// Brings the settings window to the front on its Agents tab.
 pub fn show_agents(mtm: MainThreadMarker) {
@@ -326,6 +358,12 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
     item.setLabel(&ns(t("Eigener Agent")));
     item.setImage(symbol("sparkles", t("Eigener Agent")).as_deref());
     tabs.addTabViewItem(&item);
+    add_tab(
+        &tabs,
+        &controller.ivars().servers.view(),
+        t("Sprachserver"),
+        "curlybraces",
+    );
     #[cfg(feature = "dictation")]
     add_tab(&tabs, &controller.ivars().dictation.view(), t("Diktat"), "mic");
     let window = NSWindow::windowWithContentViewController(&tabs);
@@ -337,7 +375,6 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
 }
 
 /// A tab of `view`, named `title` with the symbol `image`.
-#[cfg(feature = "dictation")]
 fn add_tab(tabs: &NSTabViewController, view: &NSView, title: &str, image: &str) {
     let page = NSViewController::new(tabs.mtm());
     page.setPreferredContentSize(view.fittingSize());

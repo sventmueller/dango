@@ -42,8 +42,8 @@ pub struct Diagnostic {
 
 /// The language servers' diagnostics, as the app knows them.
 pub trait Diagnostics: Send + Sync {
-    /// The problems in `path`, or in every file the servers report on.
-    fn diagnostics(&self, path: Option<&Path>) -> Vec<Diagnostic>;
+    /// The problems in `path`, or in every file the servers report on; `None` while no server runs for the project.
+    fn diagnostics(&self, path: Option<&Path>) -> Option<Vec<Diagnostic>>;
 }
 
 /// Where the agent works.

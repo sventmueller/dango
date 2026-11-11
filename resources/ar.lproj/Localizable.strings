@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "فتح بجانبه";
 "Als Vorschau öffnen" = "فتح كمعاينة";
 "Zum Dokument daneben" = "الانتقال إلى المستند المجاور";
+"{} fehlt – installieren mit „{}“" = "لم يتم العثور على {} – ثبّته باستخدام «{}»";
+"{} fehlt – im Editor installierbar" = "لم يتم العثور على {} – يمكن تثبيته من المحرر";
+"Eingebaute Sprachserver" = "خوادم اللغة المضمّنة";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "المكان الذي يجد فيه التطبيق خادم كل لغة على هذا الـ Mac. لا يبدأ الخادم إلا عندما يفتح محرر ملفًا بلغته في مجلد موثوق.";
+"Eigene Sprachserver" = "خوادم اللغة الخاصة بك";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "للغات أخرى أو بدلًا من خادم مضمّن: تُرسَل الملفات ذات هذه الامتدادات إلى الأمر الذي يبدأ الخادم عبر الإدخال والإخراج القياسيين.";
+"Sprache" = "اللغة";
+"Server" = "الخادم";
+"Dateiendungen" = "امتدادات الملفات";
+"Befehl" = "الأمر";
+"Sprachserver hinzufügen" = "إضافة خادم لغة";
+"Sprachserver entfernen" = "إزالة خادم لغة";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "مثل «Elixir» و«ex, exs» و«elixir-ls». الأمر هو برنامج في PATH الخاص بصدفة تسجيل الدخول أو مسار، يليه وسائطه.";
+"Name, Dateiendungen und Befehl sind nötig." = "الاسم وامتدادات الملفات والأمر مطلوبة.";

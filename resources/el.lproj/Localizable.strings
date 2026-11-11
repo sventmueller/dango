@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Άνοιγμα δίπλα";
 "Als Vorschau öffnen" = "Άνοιγμα ως προεπισκόπηση";
 "Zum Dokument daneben" = "Μετάβαση στο διπλανό έγγραφο";
+"{} fehlt – installieren mit „{}“" = "Το {} λείπει – εγκαταστήστε το με «{}»";
+"{} fehlt – im Editor installierbar" = "Το {} λείπει – εγκαθίσταται από τον επεξεργαστή";
+"Eingebaute Sprachserver" = "Ενσωματωμένοι διακομιστές γλώσσας";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Πού βρίσκει η εφαρμογή τον διακομιστή κάθε γλώσσας σε αυτό το Mac. Ένας διακομιστής ξεκινά μόνο όταν ένας επεξεργαστής ανοίξει ένα αρχείο της γλώσσας του σε έμπιστο φάκελο.";
+"Eigene Sprachserver" = "Δικοί σας διακομιστές γλώσσας";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Για επιπλέον γλώσσες ή στη θέση ενός ενσωματωμένου διακομιστή: τα αρχεία με αυτές τις επεκτάσεις πηγαίνουν στην εντολή, η οποία ξεκινά τον διακομιστή μέσω της τυπικής εισόδου και εξόδου.";
+"Sprache" = "Γλώσσα";
+"Server" = "Διακομιστής";
+"Dateiendungen" = "Επεκτάσεις αρχείων";
+"Befehl" = "Εντολή";
+"Sprachserver hinzufügen" = "Προσθήκη διακομιστή γλώσσας";
+"Sprachserver entfernen" = "Αφαίρεση διακομιστή γλώσσας";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Για παράδειγμα «Elixir», «ex, exs» και «elixir-ls». Η εντολή είναι ένα πρόγραμμα στο PATH του κελύφους σύνδεσης ή μια διαδρομή, ακολουθούμενη από τα ορίσματά της.";
+"Name, Dateiendungen und Befehl sind nötig." = "Απαιτούνται όνομα, επεκτάσεις αρχείων και εντολή.";

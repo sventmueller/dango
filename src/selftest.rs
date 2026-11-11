@@ -52,6 +52,7 @@ mod replace;
 mod restore;
 mod search;
 mod search_replace;
+mod servers;
 mod split;
 mod worktree;
 
@@ -137,6 +138,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "ci-settings" => ci::hosts(),
         "worktree" => worktree::run(),
         "lsp" => lsp::run(),
+        "language-servers" => servers::run(),
         "editor-multi" => editor_multi::run(),
         "search" => search::run(),
         "terminal" => terminal::run(),

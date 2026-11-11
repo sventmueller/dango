@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Otwórz obok";
 "Als Vorschau öffnen" = "Otwórz jako podgląd";
 "Zum Dokument daneben" = "Przejdź do dokumentu obok";
+"{} fehlt – installieren mit „{}“" = "Brak {} – zainstaluj poleceniem „{}”";
+"{} fehlt – im Editor installierbar" = "Brak {} – można zainstalować w edytorze";
+"Eingebaute Sprachserver" = "Wbudowane serwery języka";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Gdzie aplikacja znajduje serwer każdego języka na tym Macu. Serwer uruchamia się dopiero, gdy edytor otworzy plik w jego języku w zaufanym folderze.";
+"Eigene Sprachserver" = "Własne serwery języka";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Dla innych języków lub zamiast wbudowanego serwera: pliki z tymi rozszerzeniami trafiają do polecenia, które uruchamia serwer przez standardowe wejście i wyjście.";
+"Sprache" = "Język";
+"Server" = "Serwer";
+"Dateiendungen" = "Rozszerzenia plików";
+"Befehl" = "Polecenie";
+"Sprachserver hinzufügen" = "Dodaj serwer języka";
+"Sprachserver entfernen" = "Usuń serwer języka";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Na przykład „Elixir”, „ex, exs” i „elixir-ls”. Polecenie to program w PATH powłoki logowania lub ścieżka, a po nim jego argumenty.";
+"Name, Dateiendungen und Befehl sind nötig." = "Nazwa, rozszerzenia plików i polecenie są wymagane.";

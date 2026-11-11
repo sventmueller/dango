@@ -34,7 +34,7 @@ fn shell_env(supervisor: &Supervisor, dir: &Path) -> Vec<(String, String)> {
 type Published = Arc<Mutex<Vec<(Uri, Vec<Diagnostic>)>>>;
 
 fn start(registry: &Registry, supervisor: &Supervisor, language: Language, root: &Path) -> (Server, Published) {
-    let launch = registry.find(language, root, root).expect("a server");
+    let launch = registry.find(&language, root, root).expect("a server");
     eprintln!(
         "{language:?}: {} {:?} from {:?}",
         launch.program.display(),
@@ -143,7 +143,7 @@ fn gopls_reports_diagnostics_and_answers_hover_completion_and_definition() {
     );
     let supervisor = Supervisor::new();
     let registry = Registry::new(&supervisor, shell_env(&supervisor, &dir));
-    assert_eq!(root(Language::Go, &dir.join("main.go"), &dir), dir);
+    assert_eq!(root(&Language::Go, &dir.join("main.go"), &dir), dir);
     let (server, published) = start(&registry, &supervisor, Language::Go, &dir);
     let doc = open(&server, &dir.join("main.go"), "go");
     let errors = eventually("diagnostics", || published_errors(&published, &doc));
@@ -259,7 +259,7 @@ fn typescript_7_serves_the_project_with_its_own_compiler() {
     let env = shell_env(&supervisor, &std::env::temp_dir());
     let dir = ts_project("ts7", "typescript@7", &env);
     let registry = Registry::new(&supervisor, env);
-    let launch = registry.find(Language::TypeScript, &dir, &dir).unwrap();
+    let launch = registry.find(&Language::TypeScript, &dir, &dir).unwrap();
     assert_eq!(launch.source, Source::Project);
     assert_eq!(launch.args, ["--lsp", "--stdio"]);
     let (server, published) = start(&registry, &supervisor, Language::TypeScript, &dir);
@@ -276,11 +276,11 @@ fn an_older_typescript_falls_back_to_vtsls_installed_into_the_tools_folder() {
     let tools = project("tools-vtsls", &[]);
     let installer = Installer::new(&supervisor, env.clone(), tools.clone(), Arc::new(Http::new()));
     let program = installer
-        .install(Install::Vtsls, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
+        .install(ide_lsp::VTSLS, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
         .unwrap();
     assert!(program.ends_with("node_modules/.bin/vtsls"));
     let registry = Registry::with_tools(&supervisor, env, tools);
-    let launch = registry.find(Language::TypeScript, &dir, &dir).unwrap();
+    let launch = registry.find(&Language::TypeScript, &dir, &dir).unwrap();
     assert_eq!(launch.source, Source::Tools, "TypeScript 5 does not speak the protocol");
     let (server, published) = start(&registry, &supervisor, Language::TypeScript, &dir);
     check_typescript(&server, &dir, &published);
@@ -315,4 +315,165 @@ fn gopls_is_installed_with_go_install_into_the_tools_folder() {
         .install(Install::Gopls, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
         .unwrap();
     assert_eq!(program, tools.join("bin/gopls"));
+}
+
+/// The document's diagnostics, published or, from a server that offers it, pulled as the editor does.
+fn diagnostics(server: &Server, published: &Published, doc: &Uri) -> Vec<Diagnostic> {
+    eventually("diagnostics", || {
+        published_errors(published, doc)
+            .or_else(|| wait(|r| server.pull_diagnostics(doc, r)).ok().filter(|d| !d.is_empty()))
+    })
+}
+
+/// The names of the document's symbols at the top level, once the server has some.
+fn symbols(server: &Server, doc: &Uri) -> Vec<String> {
+    eventually("symbols", || {
+        wait(|r| server.document_symbols(doc, r)).ok().filter(|s| !s.is_empty())
+    })
+    .into_iter()
+    .map(|s| s.name)
+    .collect()
+}
+
+#[test]
+#[ignore = "needs Apple's developer tools"]
+fn clangd_from_the_developer_tools_reports_diagnostics_and_symbols() {
+    let dir = project(
+        "c",
+        &[
+            ("compile_flags.txt", "-std=c17\n"),
+            (
+                "main.c",
+                "int twice(int n) { return n * 2; }\n\nint main(void) {\n    int x = undeclared;\n    return twice(x);\n}\n",
+            ),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let registry = Registry::new(&supervisor, shell_env(&supervisor, &dir));
+    let launch = registry.find(&Language::C, &dir, &dir).unwrap();
+    assert!(
+        !launch.program.starts_with("/usr/bin"),
+        "the stand-in in /usr/bin is resolved: {launch:?}"
+    );
+    let (server, published) = start(&registry, &supervisor, Language::C, &dir);
+    let doc = open(&server, &dir.join("main.c"), "c");
+    let errors = diagnostics(&server, &published, &doc);
+    assert!(errors.iter().any(|d| d.range.start.line == 3), "{errors:?}");
+    let names = symbols(&server, &doc);
+    assert!(names.iter().any(|n| n.starts_with("twice")), "{names:?}");
+    stop(&server);
+}
+
+#[test]
+#[ignore = "needs Apple's developer tools"]
+fn sourcekit_lsp_reports_diagnostics_in_a_swift_package() {
+    let dir = project(
+        "swift",
+        &[
+            (
+                "Package.swift",
+                "// swift-tools-version:5.9\nimport PackageDescription\n\nlet package = Package(name: \"T\", targets: [.executableTarget(name: \"T\")])\n",
+            ),
+            (
+                "Sources/T/main.swift",
+                "func twice(_ n: Int) -> Int { n * 2 }\nlet x: Int = \"no\"\nprint(twice(x))\n",
+            ),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let registry = Registry::new(&supervisor, shell_env(&supervisor, &dir));
+    assert_eq!(root(&Language::Swift, &dir.join("Sources/T/main.swift"), &dir), dir);
+    let (server, published) = start(&registry, &supervisor, Language::Swift, &dir);
+    let doc = open(&server, &dir.join("Sources/T/main.swift"), "swift");
+    let errors = diagnostics(&server, &published, &doc);
+    assert!(errors.iter().any(|d| d.range.start.line == 1), "{errors:?}");
+    let names = symbols(&server, &doc);
+    assert!(names.iter().any(|n| n.starts_with("twice")), "{names:?}");
+    stop(&server);
+}
+
+#[test]
+#[ignore = "needs node and npm on the login shell's PATH and the network to install the servers"]
+fn the_npm_servers_install_into_the_tools_folder_and_serve_their_languages() {
+    let supervisor = Supervisor::new();
+    let env = shell_env(&supervisor, &std::env::temp_dir());
+    let tools = project("tools-npm", &[]);
+    let dir = project(
+        "npm-languages",
+        &[
+            (
+                "a.py",
+                "def twice(n: int) -> int:\n    return n * 2\n\nx: int = \"no\"\n",
+            ),
+            ("a.json", "{\"a\": 1,, }\n"),
+            ("a.yaml", "a: [1, 2\nb: 3\n"),
+            ("a.css", "a { colr: red; }\n"),
+            ("a.html", "<html><body><h1 id=\"top\">Hi</h1></body></html>\n"),
+            ("a.sh", "greet() {\n  echo hi\n}\n"),
+        ],
+    );
+    let registry = Registry::with_tools(&supervisor, env.clone(), tools.clone());
+    let installer = Installer::new(&supervisor, env, tools, Arc::new(Http::new()));
+    let cases = [
+        (Language::Css, "a.css", "css", true),
+        (Language::Python, "a.py", "python", true),
+        (Language::Json, "a.json", "json", true),
+        (Language::Yaml, "a.yaml", "yaml", true),
+        (Language::Html, "a.html", "html", false),
+        (Language::Shell, "a.sh", "shellscript", false),
+    ];
+    for (language, file, id, diagnoses) in cases {
+        if let Err(missing) = registry.find(&language, &dir, &dir) {
+            let install = missing.install.expect("an npm package");
+            installer
+                .install(install, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
+                .unwrap();
+            assert_eq!(registry.find(&language, &dir, &dir).unwrap().source, Source::Tools);
+        }
+        let (server, published) = start(&registry, &supervisor, language.clone(), &dir);
+        let doc = open(&server, &dir.join(file), id);
+        if diagnoses {
+            let errors = diagnostics(&server, &published, &doc);
+            eprintln!("{language:?}: {errors:?}");
+        } else {
+            let names = symbols(&server, &doc);
+            eprintln!("{language:?}: {names:?}");
+        }
+        stop(&server);
+    }
+}
+
+#[test]
+#[ignore = "needs taplo, marksman and lua-language-server on the login shell's PATH, as Homebrew installs them"]
+fn the_homebrew_servers_serve_toml_markdown_and_lua() {
+    let dir = project(
+        "brew-languages",
+        &[
+            ("a.toml", "[a]\nb = 1\nb = 2\n"),
+            ("a.md", "# Title\n\n## Part\n\nSee [missing](#nowhere).\n"),
+            (
+                "a.lua",
+                "local function twice(n)\n  return n * 2\nend\nprint(twice(undefined_name))\n",
+            ),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let registry = Registry::new(&supervisor, shell_env(&supervisor, &dir));
+    let cases = [
+        (Language::Toml, "a.toml", "toml", true),
+        (Language::Markdown, "a.md", "markdown", false),
+        (Language::Lua, "a.lua", "lua", true),
+    ];
+    for (language, file, id, diagnoses) in cases {
+        let (server, published) = start(&registry, &supervisor, language.clone(), &dir);
+        let doc = open(&server, &dir.join(file), id);
+        if diagnoses {
+            let errors = diagnostics(&server, &published, &doc);
+            eprintln!("{language:?}: {errors:?}");
+        } else {
+            let names = symbols(&server, &doc);
+            assert!(names.iter().any(|n| n.contains("Title")), "{names:?}");
+        }
+        stop(&server);
+    }
 }

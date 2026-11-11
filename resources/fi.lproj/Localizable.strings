@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Avaa viereen";
 "Als Vorschau öffnen" = "Avaa esikatseluna";
 "Zum Dokument daneben" = "Siirry viereiseen dokumenttiin";
+"{} fehlt – installieren mit „{}“" = "{} puuttuu – asenna se komennolla ”{}”";
+"{} fehlt – im Editor installierbar" = "{} puuttuu – asennettavissa editorista";
+"Eingebaute Sprachserver" = "Sisäänrakennetut kielipalvelimet";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Mistä appi löytää kunkin kielen palvelimen tältä Maciltä. Palvelin käynnistyy vasta, kun editori avaa sen kielen tiedoston luotetussa kansiossa.";
+"Eigene Sprachserver" = "Omat kielipalvelimet";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Muille kielille tai sisäänrakennetun palvelimen tilalle: näillä päätteillä olevat tiedostot menevät komennolle, joka käynnistää palvelimen vakiosyötteen ja -tulosteen kautta.";
+"Sprache" = "Kieli";
+"Server" = "Palvelin";
+"Dateiendungen" = "Tiedostopäätteet";
+"Befehl" = "Komento";
+"Sprachserver hinzufügen" = "Lisää kielipalvelin";
+"Sprachserver entfernen" = "Poista kielipalvelin";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Esimerkiksi ”Elixir”, ”ex, exs” ja ”elixir-ls”. Komento on kirjautumiskomentotulkin PATH-muuttujassa oleva ohjelma tai polku, jota seuraavat sen argumentit.";
+"Name, Dateiendungen und Befehl sind nötig." = "Nimi, tiedostopäätteet ja komento vaaditaan.";

@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Deschideți alături";
 "Als Vorschau öffnen" = "Deschideți ca previzualizare";
 "Zum Dokument daneben" = "Accesați documentul de alături";
+"{} fehlt – installieren mit „{}“" = "{} lipsește – instalați-l cu „{}”";
+"{} fehlt – im Editor installierbar" = "{} lipsește – se poate instala din editor";
+"Eingebaute Sprachserver" = "Servere de limbaj integrate";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Unde găsește aplicația serverul fiecărui limbaj pe acest Mac. Un server pornește doar când un editor deschide un fișier în limbajul său într-un dosar de încredere.";
+"Eigene Sprachserver" = "Servere de limbaj proprii";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Pentru alte limbaje sau în locul unui server integrat: fișierele cu aceste extensii merg la comandă, care pornește serverul prin intrarea și ieșirea standard.";
+"Sprache" = "Limbaj";
+"Server" = "Server";
+"Dateiendungen" = "Extensii de fișier";
+"Befehl" = "Comandă";
+"Sprachserver hinzufügen" = "Adăugați un server de limbaj";
+"Sprachserver entfernen" = "Eliminați serverul de limbaj";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "De exemplu „Elixir”, „ex, exs” și „elixir-ls”. Comanda este un program din PATH-ul shellului de login sau o cale, urmată de argumentele sale.";
+"Name, Dateiendungen und Befehl sind nötig." = "Numele, extensiile de fișier și comanda sunt obligatorii.";

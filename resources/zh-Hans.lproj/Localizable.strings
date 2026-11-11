@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "在旁边打开";
 "Als Vorschau öffnen" = "作为预览打开";
 "Zum Dokument daneben" = "前往旁边的文稿";
+"{} fehlt – installieren mit „{}“" = "缺少 {}——使用“{}”安装";
+"{} fehlt – im Editor installierbar" = "缺少 {}——可从编辑器安装";
+"Eingebaute Sprachserver" = "内建语言服务器";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "此 App 在这台 Mac 上找到各语言服务器的位置。只有当编辑器在受信任的文件夹中打开该语言的文件时，服务器才会启动。";
+"Eigene Sprachserver" = "自定语言服务器";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "用于其他语言或替代内建服务器：带有这些扩展名的文件会交给命令，由它通过标准输入和输出启动服务器。";
+"Sprache" = "语言";
+"Server" = "服务器";
+"Dateiendungen" = "文件扩展名";
+"Befehl" = "命令";
+"Sprachserver hinzufügen" = "添加语言服务器";
+"Sprachserver entfernen" = "移除语言服务器";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "例如“Elixir”“ex, exs”和“elixir-ls”。命令是登录 Shell 的 PATH 中的程序或路径，后跟其参数。";
+"Name, Dateiendungen und Befehl sind nötig." = "名称、文件扩展名和命令为必填项。";

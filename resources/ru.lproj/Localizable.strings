@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Открыть сбоку";
 "Als Vorschau öffnen" = "Открыть как просмотр";
 "Zum Dokument daneben" = "Перейти к документу сбоку";
+"{} fehlt – installieren mit „{}“" = "{} отсутствует — установите командой «{}»";
+"{} fehlt – im Editor installierbar" = "{} отсутствует — можно установить из редактора";
+"Eingebaute Sprachserver" = "Встроенные языковые серверы";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Где приложение находит сервер каждого языка на этом Mac. Сервер запускается, только когда редактор открывает файл его языка в доверенной папке.";
+"Eigene Sprachserver" = "Собственные языковые серверы";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "Для других языков или вместо встроенного сервера: файлы с этими расширениями передаются команде, которая запускает сервер через стандартный ввод и вывод.";
+"Sprache" = "Язык";
+"Server" = "Сервер";
+"Dateiendungen" = "Расширения файлов";
+"Befehl" = "Команда";
+"Sprachserver hinzufügen" = "Добавить языковой сервер";
+"Sprachserver entfernen" = "Удалить языковой сервер";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Например, «Elixir», «ex, exs» и «elixir-ls». Команда — это программа из PATH оболочки входа или путь, за которым следуют её аргументы.";
+"Name, Dateiendungen und Befehl sind nötig." = "Нужны название, расширения файлов и команда.";

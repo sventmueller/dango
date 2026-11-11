@@ -1181,3 +1181,17 @@
 "Daneben öffnen" = "Öppna bredvid";
 "Als Vorschau öffnen" = "Öppna som förhandsvisning";
 "Zum Dokument daneben" = "Gå till dokumentet bredvid";
+"{} fehlt – installieren mit „{}“" = "{} saknas – installera den med ”{}”";
+"{} fehlt – im Editor installierbar" = "{} saknas – kan installeras från redigeraren";
+"Eingebaute Sprachserver" = "Inbyggda språkservrar";
+"Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet." = "Var appen hittar servern för varje språk på den här Macen. En server startar först när en redigerare öppnar en fil i dess språk i en betrodd mapp.";
+"Eigene Sprachserver" = "Egna språkservrar";
+"Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet." = "För fler språk eller i stället för en inbyggd server: filer med dessa filändelser går till kommandot, som startar servern via standardin- och utdata.";
+"Sprache" = "Språk";
+"Server" = "Server";
+"Dateiendungen" = "Filändelser";
+"Befehl" = "Kommando";
+"Sprachserver hinzufügen" = "Lägg till språkserver";
+"Sprachserver entfernen" = "Ta bort språkserver";
+"Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Till exempel ”Elixir”, ”ex, exs” och ”elixir-ls”. Kommandot är ett program i inloggningsskalets PATH eller en sökväg, följt av dess argument.";
+"Name, Dateiendungen und Befehl sind nötig." = "Namn, filändelser och kommando krävs.";

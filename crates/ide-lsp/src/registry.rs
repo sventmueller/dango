@@ -1,5 +1,5 @@
-//! The servers the editor knows (Go, Rust, TypeScript): which language a file is in, where its project root is, and
-//! where the server's program is.
+//! Where the program of a language's server is: found on the login shell's PATH, through `rustup`, `go env` or
+//! `xcrun`, in the project, in the app's tools folder, or as the user's settings name it.
 //!
 //! Only for trusted folders. Finding and starting a server runs code the project controls: `rustup` honours the
 //! project's toolchain file, gopls and rust-analyzer run the project's build files, and the TypeScript server may be
@@ -16,6 +16,7 @@ use ide_process::{Kind, Supervisor};
 use serde_json::{Value, json};
 
 use crate::encoding::Encoding;
+use crate::language::{Common, CustomServer, Language};
 use crate::rpc::{Connection, Handler, Responder};
 use crate::server::ServerConfig;
 use crate::tool::{self, Exits, Job};
@@ -25,88 +26,6 @@ const HELPER_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// How long the TypeScript compiler may take to answer `initialize` when probed.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(20);
-
-/// A language with a known server.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Language {
-    /// Go, served by gopls.
-    Go,
-    /// Rust, served by rust-analyzer.
-    Rust,
-    /// TypeScript and JavaScript, served by TypeScript 7's own server or vtsls.
-    TypeScript,
-}
-
-impl Language {
-    /// The language of `path` and the protocol's language id for the document.
-    pub fn of_path(path: &Path) -> Option<(Language, &'static str)> {
-        let name = path.file_name()?.to_str()?;
-        match name {
-            "go.mod" => return Some((Language::Go, "go.mod")),
-            "go.work" => return Some((Language::Go, "go.work")),
-            _ => {}
-        }
-        Some(match path.extension()?.to_str()? {
-            "go" => (Language::Go, "go"),
-            "rs" => (Language::Rust, "rust"),
-            "ts" | "mts" | "cts" => (Language::TypeScript, "typescript"),
-            "tsx" => (Language::TypeScript, "typescriptreact"),
-            "js" | "mjs" | "cjs" => (Language::TypeScript, "javascript"),
-            "jsx" => (Language::TypeScript, "javascriptreact"),
-            _ => return None,
-        })
-    }
-
-    /// The name users read.
-    pub fn name(self) -> &'static str {
-        match self {
-            Language::Go => "Go",
-            Language::Rust => "Rust",
-            Language::TypeScript => "TypeScript",
-        }
-    }
-}
-
-/// The project root of `file` for `language`, looked for between the file and `trusted`, the trusted folder it is
-/// in; `trusted` itself when nothing marks a root. The search never leaves `trusted`.
-///
-/// Go: the nearest `go.work`, else the nearest `go.mod`. Rust: the topmost `Cargo.toml` with a `[workspace]`, else
-/// the nearest `Cargo.toml`. TypeScript: the nearest `tsconfig.json` or `jsconfig.json`, else `package.json`.
-pub fn root(language: Language, file: &Path, trusted: &Path) -> PathBuf {
-    let start = if file.is_dir() {
-        file
-    } else {
-        file.parent().unwrap_or(file)
-    };
-    let dirs: Vec<&Path> = start.ancestors().take_while(|dir| dir.starts_with(trusted)).collect();
-    let has = |dir: &&Path, name: &str| dir.join(name).is_file();
-    let found = match language {
-        Language::Go => dirs
-            .iter()
-            .find(|d| has(d, "go.work"))
-            .or_else(|| dirs.iter().find(|d| has(d, "go.mod"))),
-        Language::Rust => dirs
-            .iter()
-            .rev()
-            .find(|d| is_workspace(&d.join("Cargo.toml")))
-            .or_else(|| dirs.iter().find(|d| has(d, "Cargo.toml"))),
-        Language::TypeScript => dirs
-            .iter()
-            .find(|d| has(d, "tsconfig.json") || has(d, "jsconfig.json"))
-            .or_else(|| dirs.iter().find(|d| has(d, "package.json"))),
-    };
-    found.map_or_else(|| trusted.to_path_buf(), |dir| dir.to_path_buf())
-}
-
-/// Whether the manifest at `path` declares a workspace.
-fn is_workspace(path: &Path) -> bool {
-    fs::read_to_string(path).is_ok_and(|text| {
-        text.lines().map(str::trim).any(|line| {
-            line.strip_prefix("[workspace")
-                .is_some_and(|rest| rest.starts_with(']') || rest.starts_with('.'))
-        })
-    })
-}
 
 /// Where a server's program was found.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -121,6 +40,10 @@ pub enum Source {
     Tools,
     /// The project's own TypeScript compiler, which speaks the protocol since TypeScript 7.
     Project,
+    /// From Apple's developer tools, through `xcrun`.
+    Xcode,
+    /// As the user's settings name it.
+    Settings,
 }
 
 /// How to start a server.
@@ -145,19 +68,46 @@ pub enum Install {
     Gopls,
     /// rust-analyzer, from its GitHub releases.
     RustAnalyzer,
-    /// vtsls, with `npm install`.
-    Vtsls,
+    /// A package from npm, with `npm install` into the tools folder.
+    Npm {
+        /// The package, such as `@vtsls/language-server`.
+        package: &'static str,
+        /// The program it brings, such as `vtsls`.
+        program: &'static str,
+    },
 }
+
+/// vtsls, the TypeScript server for projects whose compiler does not speak the protocol.
+pub const VTSLS: Install = Install::Npm {
+    package: "@vtsls/language-server",
+    program: "vtsls",
+};
 
 /// No server was found.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotFound {
     /// For which language.
     pub language: Language,
-    /// What would provide one.
-    pub install: Install,
+    /// The server's program, as the status bar names it.
+    pub program: String,
+    /// What the app can install, if anything.
+    pub install: Option<Install>,
     /// A program that installing or running it needs and the login shell's PATH lacks, such as `go` or `node`.
     pub missing: Option<&'static str>,
+    /// The command the user installs the server with, when the app cannot.
+    pub hint: Option<&'static str>,
+}
+
+impl NotFound {
+    fn new(language: &Language, program: &str, install: Option<Install>) -> NotFound {
+        NotFound {
+            language: language.clone(),
+            program: program.to_string(),
+            install,
+            missing: None,
+            hint: None,
+        }
+    }
 }
 
 /// Finds servers with the login shell's environment, never the app's own.
@@ -194,11 +144,16 @@ impl Registry {
 
     /// The server for `language` in `root`, which lies in the trusted folder `trusted`. Blocks while it runs helpers
     /// such as `rustup which`; call it off the main thread.
-    pub fn find(&self, language: Language, root: &Path, trusted: &Path) -> Result<Launch, NotFound> {
+    pub fn find(&self, language: &Language, root: &Path, trusted: &Path) -> Result<Launch, NotFound> {
         match language {
             Language::Go => self.gopls(),
             Language::Rust => self.rust_analyzer(root),
             Language::TypeScript => self.typescript(root, trusted),
+            Language::Custom(server) => self.custom(language, server),
+            other => match other.common() {
+                Some(common) => self.common(other, &common),
+                None => Err(NotFound::new(other, other.name(), None)),
+            },
         }
     }
 
@@ -206,10 +161,33 @@ impl Registry {
     pub fn config(&self, launch: &Launch, root: &Path) -> ServerConfig {
         let mut config = ServerConfig::new(&launch.label, &launch.program, root, self.env.clone());
         config.args.clone_from(&launch.args);
-        if launch.language == Language::Go {
-            // gopls leaves semantic tokens off unless asked.
-            config.settings = json!({"gopls": {"semanticTokens": true}});
-            config.initialization_options = Some(json!({"semanticTokens": true}));
+        match launch.language {
+            Language::Go => {
+                // gopls leaves semantic tokens off unless asked.
+                config.settings = json!({"gopls": {"semanticTokens": true}});
+                config.initialization_options = Some(json!({"semanticTokens": true}));
+            }
+            Language::Rust => {
+                // Priming analyses every crate of the dependency graph up front, the largest part of rust-analyzer's
+                // memory; without it only what the open files reach is analysed.
+                let options = json!({"cachePriming": {"enable": false}});
+                config.settings = json!({"rust-analyzer": options.clone()});
+                config.initialization_options = Some(options);
+            }
+            Language::Json | Language::Css | Language::Html => {
+                // The servers taken from VS Code format only when asked to at the start.
+                config.initialization_options = Some(json!({"provideFormatter": true}));
+                if launch.language == Language::Css {
+                    // Without settings the CSS server checks nothing.
+                    let validate = json!({"validate": true});
+                    config.settings = json!({"css": validate, "scss": validate, "less": validate});
+                }
+            }
+            Language::Yaml => {
+                // Otherwise the server fetches the schema catalog from schemastore.org whenever it starts.
+                config.settings = json!({"yaml": {"schemaStore": {"enable": false}}});
+            }
+            _ => {}
         }
         config
     }
@@ -245,6 +223,91 @@ impl Registry {
         }
     }
 
+    /// A common language's server: on the PATH, from Apple's developer tools, or installed into the tools folder.
+    fn common(&self, language: &Language, common: &Common) -> Result<Launch, NotFound> {
+        for (name, args) in common.programs {
+            let Some(program) = tool::which(name, self.path()) else {
+                continue;
+            };
+            // /usr/bin/clangd and its kind only stand in for the developer tools, and ask to install them when
+            // they are missing.
+            if common.xcode && program.starts_with("/usr/bin") {
+                if let Some(real) = self.xcrun(name) {
+                    return Ok(Registry::launch(language.clone(), real, args, Source::Xcode));
+                }
+                continue;
+            }
+            return Ok(Registry::launch(language.clone(), program, args, Source::Path));
+        }
+        let (first, args) = common.programs[0];
+        if let Some(package) = common.npm {
+            let install = Install::Npm {
+                package,
+                program: first,
+            };
+            if tool::which("node", self.path()).is_none() {
+                return Err(NotFound {
+                    missing: Some("node"),
+                    ..NotFound::new(language, first, Some(install))
+                });
+            }
+            let ours = node_bin(&self.tools, first);
+            if tool::is_executable(&ours) {
+                return Ok(Registry::launch(language.clone(), ours, args, Source::Tools));
+            }
+            return Err(NotFound::new(language, first, Some(install)));
+        }
+        Err(NotFound {
+            hint: common.hint,
+            ..NotFound::new(language, first, None)
+        })
+    }
+
+    /// Where `xcrun` finds `name` in the selected developer tools; `None` without them, never asking to install them.
+    fn xcrun(&self, name: &str) -> Option<PathBuf> {
+        let home = self.home();
+        let selected = self
+            .job()
+            .run(Path::new("/usr/bin/xcode-select"), &["-p"], &home, &mut |_| {})
+            .ok()?;
+        if !selected.succeeded() {
+            return None;
+        }
+        let found = self
+            .job()
+            .run(Path::new("/usr/bin/xcrun"), &["--find", name], &home, &mut |_| {})
+            .ok()
+            .filter(tool::Output::succeeded)?;
+        let program = PathBuf::from(found.stdout.trim());
+        tool::is_executable(&program).then_some(program)
+    }
+
+    /// A server the user set up: its program by path, with `~` for the home folder, or by name on the PATH or in the
+    /// tools folder.
+    fn custom(&self, language: &Language, server: &CustomServer) -> Result<Launch, NotFound> {
+        let words = server.words();
+        let Some((first, args)) = words.split_first() else {
+            return Err(NotFound::new(language, &server.command, None));
+        };
+        let program = if first.contains('/') {
+            let path = match first.strip_prefix("~/") {
+                Some(rest) => self.home().join(rest),
+                None => PathBuf::from(first),
+            };
+            tool::is_executable(&path).then_some(path)
+        } else {
+            tool::which(first, self.path()).or_else(|| {
+                let ours = tools_bin(&self.tools, first);
+                tool::is_executable(&ours).then_some(ours)
+            })
+        };
+        let Some(program) = program else {
+            return Err(NotFound::new(language, first, None));
+        };
+        let args: Vec<&str> = args.iter().map(String::as_str).collect();
+        Ok(Registry::launch(language.clone(), program, &args, Source::Settings))
+    }
+
     fn gopls(&self) -> Result<Launch, NotFound> {
         if let Some(program) = tool::which("gopls", self.path()) {
             return Ok(Registry::launch(Language::Go, program, &[], Source::Path));
@@ -273,9 +336,8 @@ impl Registry {
             return Ok(Registry::launch(Language::Go, ours, &[], Source::Tools));
         }
         Err(NotFound {
-            language: Language::Go,
-            install: Install::Gopls,
             missing: go.is_none().then_some("go"),
+            ..NotFound::new(&Language::Go, "gopls", Some(Install::Gopls))
         })
     }
 
@@ -303,11 +365,11 @@ impl Registry {
         if tool::is_executable(&ours) {
             return Ok(Registry::launch(Language::Rust, ours, &[], Source::Tools));
         }
-        Err(NotFound {
-            language: Language::Rust,
-            install: Install::RustAnalyzer,
-            missing: None,
-        })
+        Err(NotFound::new(
+            &Language::Rust,
+            "rust-analyzer",
+            Some(Install::RustAnalyzer),
+        ))
     }
 
     /// Whether `program --version` succeeds.
@@ -320,9 +382,8 @@ impl Registry {
     fn typescript(&self, root: &Path, trusted: &Path) -> Result<Launch, NotFound> {
         if tool::which("node", self.path()).is_none() {
             return Err(NotFound {
-                language: Language::TypeScript,
-                install: Install::Vtsls,
                 missing: Some("node"),
+                ..NotFound::new(&Language::TypeScript, "vtsls", Some(VTSLS))
             });
         }
         let tsc = root
@@ -337,7 +398,7 @@ impl Registry {
             launch.label = "tsc --lsp".to_string();
             return Ok(launch);
         }
-        let ours = vtsls_bin(&self.tools);
+        let ours = node_bin(&self.tools, "vtsls");
         if tool::is_executable(&ours) {
             return Ok(Registry::launch(
                 Language::TypeScript,
@@ -354,11 +415,7 @@ impl Registry {
                 Source::Path,
             ));
         }
-        Err(NotFound {
-            language: Language::TypeScript,
-            install: Install::Vtsls,
-            missing: None,
-        })
+        Err(NotFound::new(&Language::TypeScript, "vtsls", Some(VTSLS)))
     }
 
     /// Whether the TypeScript compiler `tsc` answers `initialize` when started with `--lsp --stdio`; remembered
@@ -390,9 +447,9 @@ pub(crate) fn tools_bin(tools: &Path, name: &str) -> PathBuf {
     tools.join("bin").join(name)
 }
 
-/// Where npm puts vtsls in the tools folder.
-pub(crate) fn vtsls_bin(tools: &Path) -> PathBuf {
-    tools.join("node_modules/.bin/vtsls")
+/// Where npm puts the program `name` of a package in the tools folder.
+pub(crate) fn node_bin(tools: &Path, name: &str) -> PathBuf {
+    tools.join("node_modules/.bin").join(name)
 }
 
 /// Answers the few requests a server might send before `initialize` is answered.
@@ -467,9 +524,9 @@ fn ask(connection: &Connection, method: &str, params: Value, timeout: Duration) 
 mod tests {
     use super::*;
 
-    fn tree(files: &[&str]) -> PathBuf {
+    fn tools(files: &[&str]) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "ide-lsp-root-{}-{}",
+            "ide-lsp-registry-{}-{}",
             std::process::id(),
             files.join("+").replace('/', "_")
         ));
@@ -477,114 +534,106 @@ mod tests {
         for file in files {
             let path = dir.join(file);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
-            let text = if file.ends_with("ws/Cargo.toml") {
-                "[package]\n\n[workspace]\nmembers = []\n"
-            } else {
-                ""
-            };
-            fs::write(path, text).unwrap();
+            fs::write(&path, "").unwrap();
+            fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
         }
         dir
     }
 
-    #[test]
-    fn languages_and_document_ids_follow_the_file_name() {
-        assert_eq!(Language::of_path(Path::new("a/b.go")), Some((Language::Go, "go")));
-        assert_eq!(Language::of_path(Path::new("go.mod")), Some((Language::Go, "go.mod")));
-        assert_eq!(
-            Language::of_path(Path::new("x.tsx")),
-            Some((Language::TypeScript, "typescriptreact"))
-        );
-        assert_eq!(
-            Language::of_path(Path::new("x.mjs")),
-            Some((Language::TypeScript, "javascript"))
-        );
-        assert_eq!(Language::of_path(Path::new("lib.rs")), Some((Language::Rust, "rust")));
-        assert_eq!(Language::of_path(Path::new("README.md")), None);
-    }
-
-    #[test]
-    fn a_go_work_wins_over_the_nearer_go_mod() {
-        let dir = tree(&["go.work", "svc/go.mod", "svc/cmd/main.go", "other/x.go"]);
-        assert_eq!(root(Language::Go, &dir.join("svc/cmd/main.go"), &dir), dir);
-        let no_work = tree(&["svc/go.mod", "svc/cmd/main.go"]);
-        assert_eq!(
-            root(Language::Go, &no_work.join("svc/cmd/main.go"), &no_work),
-            no_work.join("svc")
-        );
-    }
-
-    #[test]
-    fn the_topmost_cargo_workspace_wins_and_a_lone_package_is_its_own_root() {
-        let dir = tree(&[
-            "ws/Cargo.toml",
-            "ws/crates/a/Cargo.toml",
-            "ws/crates/a/src/lib.rs",
-            "solo/Cargo.toml",
-            "solo/src/main.rs",
-        ]);
-        assert_eq!(
-            root(Language::Rust, &dir.join("ws/crates/a/src/lib.rs"), &dir),
-            dir.join("ws")
-        );
-        assert_eq!(
-            root(Language::Rust, &dir.join("solo/src/main.rs"), &dir),
-            dir.join("solo")
-        );
-    }
-
-    #[test]
-    fn a_tsconfig_wins_over_a_package_json_and_the_search_stays_inside_the_trusted_folder() {
-        let dir = tree(&[
-            "package.json",
-            "app/tsconfig.json",
-            "app/src/main.ts",
-            "lib/package.json",
-            "lib/x.js",
-        ]);
-        assert_eq!(
-            root(Language::TypeScript, &dir.join("app/src/main.ts"), &dir),
-            dir.join("app")
-        );
-        assert_eq!(root(Language::TypeScript, &dir.join("lib/x.js"), &dir), dir.join("lib"));
-        let inner = dir.join("app/src");
-        assert_eq!(
-            root(Language::TypeScript, &inner.join("main.ts"), &inner),
-            inner,
-            "never above the trusted folder"
-        );
-    }
-
-    #[test]
-    fn workspace_tables_are_told_from_lookalikes() {
-        let dir = tree(&["a/Cargo.toml"]);
-        let manifest = dir.join("a/Cargo.toml");
-        for (text, expected) in [
-            ("[workspace]\n", true),
-            ("  [workspace.dependencies]\n", true),
-            ("# [workspace]\n[package]\n", false),
-            ("[workspaces]\n", false),
-        ] {
-            fs::write(&manifest, text).unwrap();
-            assert_eq!(is_workspace(&manifest), expected, "{text:?}");
-        }
+    fn registry(tools: &Path, path: &str) -> Registry {
+        let env = vec![
+            ("PATH".to_string(), path.to_string()),
+            ("HOME".to_string(), "/nonexistent".to_string()),
+        ];
+        Registry::with_tools(&Supervisor::new(), env, tools.to_path_buf())
     }
 
     #[test]
     fn servers_are_looked_for_on_the_given_path_and_in_the_tools_folder_only() {
-        let tools = tree(&["bin/gopls"]);
-        let gopls = tools.join("bin/gopls");
-        fs::set_permissions(&gopls, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
-        let env = vec![
-            ("PATH".to_string(), "/nonexistent".to_string()),
-            ("HOME".to_string(), "/nonexistent".to_string()),
-        ];
-        let registry = Registry::with_tools(&Supervisor::new(), env, tools.clone());
-        let found = registry.find(Language::Go, &tools, &tools).unwrap();
-        assert_eq!((found.program, found.source), (gopls, Source::Tools));
-        let missing = registry.find(Language::Rust, &tools, &tools).unwrap_err();
-        assert_eq!(missing.install, Install::RustAnalyzer);
-        let no_node = registry.find(Language::TypeScript, &tools, &tools).unwrap_err();
+        let tools = tools(&["bin/gopls"]);
+        let registry = registry(&tools, "/nonexistent");
+        let found = registry.find(&Language::Go, &tools, &tools).unwrap();
+        assert_eq!((found.program, found.source), (tools.join("bin/gopls"), Source::Tools));
+        let missing = registry.find(&Language::Rust, &tools, &tools).unwrap_err();
+        assert_eq!(missing.install, Some(Install::RustAnalyzer));
+        let no_node = registry.find(&Language::TypeScript, &tools, &tools).unwrap_err();
         assert_eq!(no_node.missing, Some("node"));
+    }
+
+    #[test]
+    fn a_common_server_is_found_on_the_path_in_its_order_of_preference() {
+        let tools = tools(&["path/pylsp", "path/pyright-langserver"]);
+        let registry = registry(&tools, &tools.join("path").display().to_string());
+        let found = registry.find(&Language::Python, &tools, &tools).unwrap();
+        assert_eq!(found.program, tools.join("path/pyright-langserver"));
+        assert_eq!((found.args, found.source), (vec!["--stdio".to_string()], Source::Path));
+    }
+
+    #[test]
+    fn a_missing_npm_server_is_offered_for_installation_and_found_there_afterwards() {
+        let node = tools(&["path/node"]);
+        let path = node.join("path").display().to_string();
+        let missing = registry(&node, &path).find(&Language::Json, &node, &node).unwrap_err();
+        assert_eq!(
+            missing.install,
+            Some(Install::Npm {
+                package: "vscode-langservers-extracted",
+                program: "vscode-json-language-server"
+            })
+        );
+        assert_eq!(missing.missing, None);
+        let installed = tools(&["path/node", "node_modules/.bin/vscode-css-language-server"]);
+        let path = installed.join("path").display().to_string();
+        let found = registry(&installed, &path)
+            .find(&Language::Css, &installed, &installed)
+            .unwrap();
+        assert_eq!(found.source, Source::Tools);
+        let no_node = registry(&installed, "/nonexistent")
+            .find(&Language::Css, &installed, &installed)
+            .unwrap_err();
+        assert_eq!(no_node.missing, Some("node"), "the installed server needs node to run");
+    }
+
+    #[test]
+    fn a_server_the_app_cannot_install_names_the_command_that_does() {
+        let tools = tools(&[]);
+        let missing = registry(&tools, "/nonexistent")
+            .find(&Language::Markdown, &tools, &tools)
+            .unwrap_err();
+        assert_eq!(
+            (missing.program.as_str(), missing.install, missing.hint),
+            ("marksman", None, Some("brew install marksman"))
+        );
+    }
+
+    #[test]
+    fn the_users_server_runs_as_its_command_line_says() {
+        let tools = tools(&["path/elixir-ls", "My Tools/srv"]);
+        let registry = registry(&tools, &tools.join("path").display().to_string());
+        let server = |command: String| {
+            Language::Custom(std::sync::Arc::new(CustomServer {
+                name: "Elixir".into(),
+                extensions: vec!["ex".into()],
+                command,
+            }))
+        };
+        let by_name = registry
+            .find(&server("elixir-ls --stdio".into()), &tools, &tools)
+            .unwrap();
+        assert_eq!(by_name.program, tools.join("path/elixir-ls"));
+        assert_eq!(
+            (by_name.args, by_name.source),
+            (vec!["--stdio".to_string()], Source::Settings)
+        );
+        let by_path = registry
+            .find(
+                &server(format!("\"{}\"", tools.join("My Tools/srv").display())),
+                &tools,
+                &tools,
+            )
+            .unwrap();
+        assert_eq!(by_path.program, tools.join("My Tools/srv"));
+        let missing = registry.find(&server("nowhere -x".into()), &tools, &tools).unwrap_err();
+        assert_eq!((missing.program.as_str(), missing.install), ("nowhere", None));
     }
 }

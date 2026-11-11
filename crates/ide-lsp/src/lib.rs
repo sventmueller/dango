@@ -1,5 +1,5 @@
-//! Language servers for Go, Rust and TypeScript: the protocol client, finding a project's server and installing a
-//! missing one.
+//! Language servers: the protocol client, the languages with their servers (Go, Rust, TypeScript, common servers
+//! found on the PATH, and the user's own), finding a project's server and installing a missing one.
 //!
 //! The client speaks JSON-RPC over a server's standard input and output on threads of its own, so no call blocks
 //! and no async runtime is needed beside AppKit's run loop: requests answer through a callback on a background
@@ -20,6 +20,7 @@ mod features;
 mod framing;
 mod incoming;
 mod install;
+mod language;
 mod registry;
 mod rpc;
 mod semantic;
@@ -34,8 +35,9 @@ pub use encoding::Encoding;
 pub use error::Error;
 pub use features::{Completions, Hover, Insertion, insertion};
 pub use install::{Download, Http, InstallError, Installer, Net, Progress, Step};
+pub use language::{BUILT_IN, CustomServer, Language, root};
 pub use lsp_types;
-pub use registry::{Install, Language, Launch, NotFound, Registry, Source, default_tools, root};
+pub use registry::{Install, Launch, NotFound, Registry, Source, VTSLS, default_tools};
 pub use semantic::{Legend, SemanticTokens, Token};
 pub use server::{Event, Refresh, Reply, RestartPolicy, Server, ServerConfig, Status, Ticket, wait};
 pub use tool::Cancel;
