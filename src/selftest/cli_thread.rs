@@ -214,16 +214,14 @@ fn listed(id: u64, stage: Stage) {
         lines.contains(&format!("claude — {}", CliStatus::Waiting.text())),
         lines,
     );
-    let panel = crate::agent_panel::inspect(&controller)
-        .map(|seen| seen.sessions)
+    let rows = crate::agent_panel::inspect(&controller)
+        .map(|seen| seen.rows)
         .unwrap_or_default();
-    let group = panel
-        .iter()
-        .position(|row| row == splat_i18n::t("Im Terminal gestartet"));
     check(
-        "the AI panel lists the CLI under the sessions started in a terminal",
-        group.is_some_and(|at| panel.get(at + 1).is_some_and(|row| row.trim() == "claude")),
-        panel.join(" | "),
+        "the AI panel lists the CLI as an open CLI session",
+        rows.iter()
+            .any(|(kind, open, title)| *kind == "CLI" && *open && title == "claude"),
+        format!("{rows:?}"),
     );
     work(id, stage);
 }

@@ -49,13 +49,16 @@ pub use acp::{set_test_launch, set_test_register};
 pub use actions::ask_text;
 #[cfg(feature = "selftest")]
 pub use actions::{alerts_seen, answer_alerts};
+#[cfg(feature = "selftest")]
 pub use cards::window_name;
 pub use context_view::with_cost;
 #[cfg(feature = "selftest")]
 pub use context_view::{click as click_context, close as close_context, cost_text, seen as context_seen};
 #[cfg(feature = "selftest")]
 pub use figures::{asked_for as asked_for_figure, is_dark};
-pub use format::{age, elapsed, iso_time, percent, time_of_day, tokens};
+#[cfg(feature = "selftest")]
+pub use format::percent;
+pub use format::{age, elapsed, iso_time, time_of_day, tokens};
 pub use outside::ci_log;
 pub use source::Resume;
 pub use tab::AgentTab;

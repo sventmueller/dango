@@ -974,6 +974,13 @@ impl WindowController {
         }
     }
 
+    /// Shows `view` at the end of the title row of `panel`.
+    pub fn set_panel_accessory(&self, panel: Panel, view: &NSView) {
+        if let Some(panels) = self.ivars().panels.borrow().as_ref() {
+            panels.set_accessory(panel, view);
+        }
+    }
+
     /// Opens `path` in an editor tab, or selects the tab that has it and keeps it if it is the preview tab; a PDF file
     /// opens in a tab that shows it.
     pub fn open_file(&self, path: &Path) {

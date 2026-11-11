@@ -387,11 +387,11 @@ fn panel(root: PathBuf) {
     };
     controller.activate_panel(Panel::Agents);
     let seen = crate::agent_panel::inspect(&controller);
-    let sessions = seen.as_ref().map(|s| s.sessions.clone()).unwrap_or_default();
+    let rows = seen.as_ref().map(|s| s.rows.clone()).unwrap_or_default();
     check(
-        "the session list names the agent",
-        sessions.iter().any(|s| s.ends_with("· Gemini")),
-        sessions.join(" | "),
+        "the session list shows the agent's session as an AI session, without the agent's name",
+        rows.iter().any(|(kind, _, _)| *kind == "AI") && !rows.iter().any(|(_, _, title)| title.contains("Gemini")),
+        format!("{rows:?}"),
     );
     let offered = seen.map(|s| s.new_session).unwrap_or_default();
     check(

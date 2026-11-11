@@ -1,10 +1,9 @@
-//! The AI panel of the sidebar: the account and its usage, the sessions of the folder with groups and an archive,
-//! and what runs now.
+//! The AI panel of the sidebar: under its title, which offers a new session, one list of the folder's sessions, those
+//! of AI tabs and of CLIs, with an archive behind the list's context menu (E68).
 
 mod agents;
 mod rows;
 mod sessions;
-mod usage;
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeSet;
@@ -13,19 +12,18 @@ use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 use ide_thread::{ThreadId, ThreadIndex};
+use objc2::MainThreadOnly;
 use objc2::rc::{Retained, Weak};
-use objc2::{MainThreadMarker, MainThreadOnly, sel};
-use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSLayoutAttribute, NSOutlineView, NSScrollView, NSSearchField, NSStackView,
-    NSTextField, NSView,
-};
-use splat_i18n::{t, tf};
+#[cfg(feature = "selftest")]
+use objc2_app_kit::NSView;
+use objc2_app_kit::{NSAccessibility, NSLayoutAttribute, NSOutlineView, NSScrollView, NSStackView};
+use splat_i18n::t;
 
 use crate::agent::Resume;
 use crate::util::{main_after, ns};
 use crate::window::{Panel, WindowController};
 pub use rows::{flipped, section_label, small_label, spacer};
-use sessions::{Kind, Source};
+use sessions::Source;
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const SIDE: f64 = 8.0;
@@ -35,17 +33,9 @@ pub struct AgentPanel {
     controller: Weak<WindowController>,
     root: std::path::PathBuf,
     view: Retained<NSStackView>,
-    usage: usage::Usage,
-    active: Retained<NSTextField>,
-    archive: Retained<NSButton>,
-    search: Retained<NSSearchField>,
     sessions: Retained<NSOutlineView>,
     sessions_source: Retained<Source>,
-    running: Retained<NSOutlineView>,
-    running_source: Retained<Source>,
     show_archived: Cell<bool>,
-    /// Groups the user made that hold no session yet; the index only knows groups in use.
-    groups: RefCell<BTreeSet<String>>,
     scheduled: Cell<bool>,
     agents: agents::Agents,
 }
@@ -95,15 +85,6 @@ pub fn refresh(controller: &WindowController) {
             panel.reload();
         }
     });
-}
-
-/// Shows what changed in every window's panel.
-fn refresh_all() {
-    let controllers: Vec<Retained<WindowController>> =
-        PANELS.with(|panels| panels.borrow().iter().filter_map(|p| p.controller.load()).collect());
-    for controller in controllers {
-        refresh(&controller);
-    }
 }
 
 fn bookmarks_file() -> std::path::PathBuf {
@@ -208,22 +189,11 @@ fn transcript(cwd: &Path, session: &str) -> Option<std::path::PathBuf> {
 impl AgentPanel {
     fn new(controller: &WindowController, root: std::path::PathBuf) -> Rc<AgentPanel> {
         let mtm = controller.mtm();
-        let usage = usage::Usage::new(mtm);
         let agents = agents::Agents::new(controller);
-        let active = rows::small_label(mtm, "");
-        let search = NSSearchField::new(mtm);
-        search.setPlaceholderString(Some(&ns(t("Sitzungen durchsuchen"))));
-        search.setControlSize(objc2_app_kit::NSControlSize::Small);
-        search.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let archive = crate::util::borderless_button(mtm, "", None, sel!(ideAgentPanelArchive:));
-        archive.setFont(Some(&crate::agent::style::small()));
-        archive.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        let (sessions, sessions_source) = sessions::outline(mtm, Kind::Sessions);
-        let (running, running_source) = sessions::outline(mtm, Kind::Running);
+        let (sessions, sessions_source) = sessions::outline(mtm);
         let view = NSStackView::new(mtm);
         view.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
         view.setAlignment(NSLayoutAttribute::Leading);
-        view.setSpacing(6.0);
         view.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 0.0,
             left: SIDE,
@@ -234,77 +204,23 @@ impl AgentPanel {
             controller: Weak::from(controller),
             root,
             view,
-            usage,
-            active,
-            archive,
-            search,
             sessions,
             sessions_source,
-            running,
-            running_source,
             show_archived: Cell::new(false),
-            groups: RefCell::new(BTreeSet::new()),
             scheduled: Cell::new(false),
             agents,
         });
-        let key = Rc::as_ptr(&panel) as usize;
-        panel.sessions_source.set_panel(key);
-        panel.running_source.set_panel(key);
-        crate::util::set_action(&panel.search, &panel.sessions_source, sel!(ideAgentPanelSearch:));
-        crate::util::set_action(&panel.archive, &panel.sessions_source, sel!(ideAgentPanelArchive:));
-        panel.lay_out();
-        panel
-    }
-
-    fn lay_out(&self) {
-        let Some(controller) = self.controller.load() else {
-            return;
-        };
-        let new_session = self.agents.new_session_button();
-        let mtm = controller.mtm();
-        let section = |title: &str, trailing: Option<&NSView>| {
-            let label = rows::section_label(mtm, title);
-            let spacer = rows::spacer(mtm);
-            let mut views: Vec<&NSView> = vec![&label, &spacer];
-            if let Some(trailing) = trailing {
-                views.push(trailing);
-            }
-            row(mtm, &views)
-        };
-        let account = section(t("Konto & Nutzung"), None);
-        let sessions_head = section(t("Sitzungen"), Some(&new_session));
-        let line = row(mtm, &[&self.active, &rows::spacer(mtm), &self.archive]);
-        let running_head = section(t("Laufend"), None);
-        let sessions_scroll = scroll(mtm, &self.sessions);
-        let running_scroll = scroll(mtm, &self.running);
-        for view in [
-            &*account as &NSView,
-            &self.usage.view,
-            &sessions_head,
-            &line,
-            &self.search,
-            &sessions_scroll,
-            &running_head,
-            &running_scroll,
-        ] {
-            self.view.addArrangedSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.widthAnchor()
-                .constraintEqualToAnchor_constant(&self.view.widthAnchor(), -2.0 * SIDE)
-                .setActive(true);
-        }
-        self.view.setCustomSpacing_afterView(14.0, &self.usage.view);
-        self.view.setCustomSpacing_afterView(14.0, &sessions_scroll);
-        self.view.setCustomSpacing_afterView(14.0, &running_scroll);
-        sessions_scroll
-            .heightAnchor()
-            .constraintGreaterThanOrEqualToConstant(140.0)
+        panel.sessions_source.set_panel(Rc::as_ptr(&panel) as usize);
+        let scroll = scroll(mtm, &panel.sessions);
+        panel.view.addArrangedSubview(&scroll);
+        scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
+        scroll
+            .widthAnchor()
+            .constraintEqualToAnchor_constant(&panel.view.widthAnchor(), -2.0 * SIDE)
             .setActive(true);
-        let running_height = running_scroll.heightAnchor().constraintEqualToConstant(150.0);
-        running_height.setActive(true);
-        self.sessions.setAccessibilityLabel(Some(&ns(t("Sitzungen"))));
-        self.running
-            .setAccessibilityLabel(Some(&ns(t("Laufende Sitzungen und Aufgaben"))));
+        panel.sessions.setAccessibilityLabel(Some(&ns(t("Sitzungen"))));
+        controller.set_panel_accessory(Panel::Agents, &panel.agents.new_session_button());
+        panel
     }
 
     /// Reads the index and the open tabs again and shows them.
@@ -313,37 +229,19 @@ impl AgentPanel {
             return;
         };
         let tabs = crate::agent::of_window(&controller);
-        let live = tabs.iter().filter(|t| t.is_live()).count();
-        self.active.setStringValue(&ns(&tf("Aktiv · {}", &[&live.to_string()])));
         let index = ThreadIndex::open(&ThreadIndex::default_dir());
-        let archived = index
-            .list(&ide_thread::Filter {
-                archived: true,
-                ..ide_thread::Filter::default()
-            })
-            .into_iter()
-            .filter(|e| e.cwd.as_deref() == Some(self.root.as_path()))
-            .count();
-        let archive_title = if self.show_archived.get() {
-            t("Zurück zu den Sitzungen").to_string()
-        } else {
-            tf("Archiv ({})", &[&archived.to_string()])
-        };
-        self.archive.setTitle(&ns(&archive_title));
-        let query = self.search.stringValue().to_string();
+        let archived = self.show_archived.get();
         let model = sessions::Model::build(&sessions::Inputs {
             index: &index,
             root: &self.root,
             tabs: &tabs,
-            query: &query,
-            archived: self.show_archived.get(),
-            groups: &self.groups.borrow(),
-            terminal: if self.show_archived.get() {
+            archived,
+            terminal: if archived {
                 Vec::new()
             } else {
                 terminal_sessions(&self.root)
             },
-            cli: if self.show_archived.get() {
+            cli: if archived {
                 Vec::new()
             } else {
                 crate::terminal::cli_threads(&controller)
@@ -351,8 +249,6 @@ impl AgentPanel {
             bookmarks: &bookmarks(),
         });
         self.sessions_source.show(&self.sessions, model);
-        self.running_source.show(&self.running, sessions::Model::running(&tabs));
-        self.usage.show(&tabs);
     }
 
     fn controller(&self) -> Option<Retained<WindowController>> {
@@ -360,32 +256,13 @@ impl AgentPanel {
     }
 }
 
-fn row(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSStackView> {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setAlignment(NSLayoutAttribute::CenterY);
-    stack.setSpacing(6.0);
-    for view in views {
-        stack.addArrangedSubview(view);
-    }
-    stack
-}
-
-fn scroll(mtm: MainThreadMarker, outline: &NSOutlineView) -> Retained<NSScrollView> {
+fn scroll(mtm: objc2::MainThreadMarker, outline: &NSOutlineView) -> Retained<NSScrollView> {
     let scroll = NSScrollView::new(mtm);
     scroll.setHasVerticalScroller(true);
     scroll.setAutohidesScrollers(true);
     scroll.setDrawsBackground(false);
     scroll.setDocumentView(Some(outline));
     scroll
-}
-
-/// Shows `report` as the latest usage, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn set_usage_report(report: ide_claude::control::UsageReport) {
-    crate::agent::inject_usage(report.clone());
-    usage::inject(report);
-    refresh_all();
 }
 
 /// The quiet texts of the session rows of `controller`'s panel, for the self-test.
@@ -400,42 +277,35 @@ pub fn session_details(controller: &WindowController) -> Vec<String> {
 /// What the self-test reads from the panel.
 #[cfg(feature = "selftest")]
 pub struct Inspection {
-    pub sessions: Vec<String>,
-    pub running: Vec<String>,
-    pub usage: Vec<String>,
-    pub active: String,
+    /// The rows top to bottom: "AI" or "CLI", whether the session is open, and its title.
+    pub rows: Vec<(&'static str, bool, String)>,
     /// The titles of the "new session" menu.
     pub new_session: Vec<String>,
 }
 
-/// In the panel's coordinates: where the first section's title begins, and where the content of each row of the two
-/// lists begins, with the row's level.
+/// In the panel's coordinates, where the content of each row of the list begins.
 #[cfg(feature = "selftest")]
-pub fn edges(controller: &WindowController) -> Option<(f64, Vec<(isize, f64)>)> {
+pub fn edges(controller: &WindowController) -> Option<Vec<f64>> {
     let panel = panel_of(controller)?;
     panel.reload();
     panel.view.layoutSubtreeIfNeeded();
     let x = |view: &NSView| view.convertRect_toView(view.bounds(), Some(&panel.view)).origin.x;
-    let head = panel.view.arrangedSubviews().firstObject()?;
-    let label = head.downcast_ref::<NSStackView>()?.arrangedSubviews().firstObject()?;
     let mut rows = Vec::new();
-    for outline in [&panel.sessions, &panel.running] {
-        for row in 0..outline.numberOfRows() {
-            let Some(cell) = outline.viewAtColumn_row_makeIfNecessary(0, row, true) else {
-                continue;
-            };
-            cell.layoutSubtreeIfNeeded();
-            let first = cell
-                .subviews()
-                .iter()
-                .find_map(|view| view.downcast::<NSStackView>().ok())
-                .and_then(|stack| stack.arrangedSubviews().firstObject());
-            if let Some(first) = first {
-                rows.push((outline.levelForRow(row), x(&first)));
-            }
+    for row in 0..panel.sessions.numberOfRows() {
+        let Some(cell) = panel.sessions.viewAtColumn_row_makeIfNecessary(0, row, true) else {
+            continue;
+        };
+        cell.layoutSubtreeIfNeeded();
+        let first = cell
+            .subviews()
+            .iter()
+            .find_map(|view| view.downcast::<NSStackView>().ok())
+            .and_then(|stack| stack.arrangedSubviews().firstObject());
+        if let Some(first) = first {
+            rows.push(x(&first));
         }
     }
-    Some((x(&label), rows))
+    Some(rows)
 }
 
 #[cfg(feature = "selftest")]
@@ -443,10 +313,7 @@ pub fn inspect(controller: &WindowController) -> Option<Inspection> {
     let panel = panel_of(controller)?;
     panel.reload();
     Some(Inspection {
-        sessions: panel.sessions_source.titles(),
-        running: panel.running_source.titles(),
-        usage: panel.usage.texts(),
-        active: panel.active.stringValue().to_string(),
+        rows: panel.sessions_source.rows(),
         new_session: panel.agents.menu_titles(),
     })
 }

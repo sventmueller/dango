@@ -493,7 +493,7 @@ fn panel(root: PathBuf, key: u64) {
     tab.timeline().table().scrollRowToVisible(0);
     controller.activate_panel(Panel::Agents);
     if let Ok(report) = <ide_claude::control::UsageReport as ide_claude::control::Answer>::read(usage_answer()) {
-        crate::agent_panel::set_usage_report(report);
+        crate::agent::inject_usage(report);
     }
     let status = tab.inspect().status;
     let wanted = format!(
@@ -509,42 +509,27 @@ fn panel(root: PathBuf, key: u64) {
         status.last() == Some(&wanted),
         status.join(" | "),
     );
-    let seen = crate::agent_panel::inspect(&controller);
-    let sessions = seen.as_ref().map(|s| s.sessions.clone()).unwrap_or_default();
-    let running = seen.as_ref().map(|s| s.running.clone()).unwrap_or_default();
+    let rows = crate::agent_panel::inspect(&controller)
+        .map(|seen| seen.rows)
+        .unwrap_or_default();
     check(
-        "the AI panel lists the session",
-        !sessions.is_empty(),
-        sessions.join(" | "),
-    );
-    let active = seen.as_ref().map(|s| s.active.clone()).unwrap_or_default();
-    check("the AI panel counts the live sessions", active.contains('0'), active);
-    check(
-        "the AI panel shows what runs",
-        running
-            .iter()
-            .any(|r| r.contains("list files") || r.contains("30-tick")),
-        running.join(" | "),
+        "the AI panel lists the open session as an AI session, marked open, without its agent's name",
+        rows.iter()
+            .any(|(kind, open, title)| *kind == "AI" && *open && *title == tab.title()),
+        format!("{rows:?}"),
     );
     let edges = crate::agent_panel::edges(&controller);
-    let heading = controller.panel_title_row().map(|(_, row)| row.title_start);
+    let title = controller.panel_title_row();
     check(
-        "the AI panel's sections and lists begin where its title does, as VS Code's do",
-        edges.as_ref().zip(heading).is_some_and(|((section, rows), heading)| {
-            (section - heading).abs() < 1.0
-                && rows.iter().any(|(level, _)| *level == 0)
-                && rows
-                    .iter()
-                    .filter(|(level, _)| *level == 0)
-                    .all(|(_, x)| (x - heading).abs() < 3.0)
-        }),
-        format!("title at {heading:?}, sections and rows {edges:?}"),
-    );
-    let usage = seen.map(|s| s.usage.join(" | ")).unwrap_or_default();
-    check(
-        "the AI panel shows the plan's usage from get_usage",
-        usage.contains("42") && usage.contains("79") && usage.contains('%'),
-        usage,
+        "the AI panel's title offers a new session, its list begins where the title does",
+        title.as_ref().is_some_and(|(_, row)| !row.buttons_start.is_nan())
+            && edges.as_ref().zip(title.as_ref()).is_some_and(|(rows, (_, row))| {
+                !rows.is_empty() && rows.iter().all(|x| (x - row.title_start).abs() < 3.0)
+            }),
+        format!(
+            "{:?}, rows at {edges:?}",
+            title.map(|(name, row)| (name, row.title_start, row.buttons_start))
+        ),
     );
     let key = tab.key;
     main_after(Duration::from_millis(600), move || {

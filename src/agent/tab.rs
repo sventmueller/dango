@@ -517,12 +517,8 @@ impl AgentTab {
         self.state.borrow().source.session().filter(|s| !s.is_ended()).cloned()
     }
 
-    /// What the CLI reported about itself.
-    pub fn capabilities(&self) -> Capabilities {
-        self.state.borrow().caps.clone()
-    }
-
     /// Whether a `claude` process runs for the tab.
+    #[cfg(feature = "selftest")]
     pub fn is_live(&self) -> bool {
         self.state.borrow().source.is_live()
     }

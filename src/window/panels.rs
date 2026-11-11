@@ -135,9 +135,14 @@ impl Panels {
     /// Shows `view`, the folder tree, on the files page, and `buttons` at the end of its title row.
     pub fn set_files(&self, view: &NSView, buttons: &NSView) {
         self.place(Panel::Files, view, -TREE_OUTDENT);
+        self.set_accessory(Panel::Files, buttons);
+    }
+
+    /// Shows `view` at the end of the title row of `panel`.
+    pub fn set_accessory(&self, panel: Panel, view: &NSView) {
         let mut accessories = self.accessories.borrow_mut();
-        accessories.retain(|(panel, _)| *panel != Panel::Files);
-        accessories.push((Panel::Files, objc2::Message::retain(buttons)));
+        accessories.retain(|(owner, _)| *owner != panel);
+        accessories.push((panel, objc2::Message::retain(view)));
         drop(accessories);
         self.show(self.shown.get());
     }

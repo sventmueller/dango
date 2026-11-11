@@ -199,10 +199,9 @@ vibeedit/
   klappt ein. *(Umsetzung: fünf Panels mit Suche, ⌘1–⌘5, siehe E55; das Einklappen per Klick entfällt, siehe E61.)*
 - **Dateien:** `NSOutlineView` Source-List, Git-Farben, Kontextmenü (Neu, Umbenennen, In Papierkorb, Im Finder zeigen,
   Pfad kopieren, Im Terminal öffnen, An Agent anhängen).
-- **AI-Panel nach Screenshot 2:** *Konto & Nutzung* (Konto; Nutzungsbalken 5 h / 7 Tage mit Rücksetzzeit, experimentell
-  nach E21; beim eigenen Agenten Kosten je Anbieter), *Sitzungen* („+ Neue Sitzung“ mit Agentwahl, „Aktiv · N“, Suche,
-  Filter, Gruppen per Drag, Titel, Alter, Statuspunkt, Umbenennen, Archiv), *Laufend* (Baum der aktiven Sitzungen mit
-  Subagenten und Hintergrund-Einträgen).
+- **AI-Panel** *(E68 ersetzt die Gliederung nach Screenshot 2)*: Titel „Agenten“ mit „+ Neue Sitzung“ (Agentwahl),
+  darunter eine Liste aller Sitzungen des Ordners – AI-Tabs mit dem Agent-Symbol, CLI-Sitzungen mit Terminal –, offene
+  mit grünem Punkt; Kontextmenü mit Umbenennen, Lesezeichen, Archiv.
 - **Aktivität** *(gewünscht)*: Toolbar-Symbol mit Zähler, Übersicht über alles, was läuft — aus dem Supervisor (E23)
   und den Agenten-Meldungen: Sitzungen mit Status, Subagenten (Laufzeit, Tokens, letzte Aktion), Hintergrund-Shells
   und Monitore (letzte Ausgabe, ganze Ausgabe im Tab), Terminal-Vordergrundprozesse, Dev-Server, Language Server.
@@ -417,6 +416,14 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Sitzung mehr. Gemini erscheint deshalb weder im „+“-Menü, auf der Neuer-Tab-Seite, im Worktree- und AI-Panel-Menü
   noch in der Agentenliste der Einstellungen oder als CLI-Thread. Die Definition bleibt, damit vorhandene Gemini-
   Verläufe lesbar bleiben; Antigravity übernimmt.
+- **E68 Das AI-Panel ist eine Liste** *(Entscheidung des Eigentümers, ersetzt die Gliederung nach Screenshot 2)*:
+  Unter dem Titel „Agenten“, der rechts „+ Neue Sitzung“ anbietet, steht eine einzige Liste aller Sitzungen des
+  Ordners, ohne Abschnittsüberschriften: Lesezeichen zuerst, sonst die neueste oben. AI-Sitzungen zeigen das
+  Agent-Symbol, CLI-Sitzungen (offene CLI-Threads und im Terminal gespeicherte Claude-Sitzungen) ein Terminal, offene
+  einen grünen Punkt; kein Anbietername. Ein Klick öffnet jede Sitzung. Umbenennen, Lesezeichen und Archivieren
+  bleiben im Kontextmenü, dort auch „Archiv zeigen“. Gruppen, Suche, „Aktiv · N“ und der Baum „Laufend“ entfallen;
+  was läuft, zeigt die Aktivitätsübersicht. Die Nutzung des Abos steht in der Statuszeile des Claude-Tabs: links der
+  Kontext, rechts Abo oder Kosten mit Wochenlimit und 5-Stundenlimit.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

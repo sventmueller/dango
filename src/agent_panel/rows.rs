@@ -1,4 +1,5 @@
-//! The rows of the panel's lists: a session with its status dot and age, a group, a running subagent or task.
+//! The rows of the panel's list, a session with the dot of an open one, its symbol, title and age, and the small views
+//! other panels borrow.
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -67,10 +68,11 @@ fn icon(mtm: MainThreadMarker, name: &str, points: f64, color: &NSColor) -> Reta
 
 /// What a row shows.
 pub struct Look<'a> {
-    /// The symbol in front, with its size and colour.
-    pub symbol: Option<(&'a str, f64, Retained<NSColor>)>,
+    /// Whether the session is open in a tab, which a green dot in front says.
+    pub open: bool,
+    /// The symbol before the title, with its size and colour.
+    pub symbol: (&'a str, f64, Retained<NSColor>),
     pub title: &'a str,
-    pub bold: bool,
     pub dim: bool,
     /// The quieter text at the end.
     pub detail: &'a str,
@@ -78,33 +80,15 @@ pub struct Look<'a> {
     pub badge: Option<(&'a str, Retained<NSColor>)>,
 }
 
-/// Puts a chevron in front of the row `cell` made, pointing down when its item is open, where a row that does not
-/// open shows its symbol.
-pub fn add_chevron(mtm: MainThreadMarker, cell: &NSView, open: bool) {
-    let Some(stack) = cell
-        .subviews()
-        .iter()
-        .find_map(|view| view.downcast::<objc2_app_kit::NSStackView>().ok())
-    else {
-        return;
-    };
-    let view = NSImageView::new(mtm);
-    view.setImage(crate::window::file_outline::chevron(open).as_deref());
-    view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
-    stack.insertArrangedSubview_atIndex(&view, 0);
-}
+/// The width of the dot that marks an open session, kept free in the other rows so their symbols line up.
+const DOT_WIDTH: f64 = 7.0;
 
-/// A row of the panel's lists.
+/// A row of the panel's list.
 pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let title = NSTextField::labelWithString(&ns(look.title), mtm);
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    let font = if look.bold {
-        crate::agent::style::bold(11.0)
-    } else {
-        NSFont::systemFontOfSize(12.0)
-    };
-    title.setFont(Some(&font));
+    title.setFont(Some(&NSFont::systemFontOfSize(12.0)));
     let color = if look.dim {
         NSColor::secondaryLabelColor()
     } else {
@@ -116,12 +100,17 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     detail.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     detail.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
-    let mut views: Vec<Retained<NSView>> = Vec::new();
-    if let Some((name, points, color)) = &look.symbol {
-        views.push(Retained::into_super(Retained::into_super(icon(
-            mtm, name, *points, color,
-        ))));
-    }
+    let dot = icon(mtm, "circle.fill", DOT_WIDTH, &NSColor::systemGreenColor());
+    dot.setHidden(!look.open);
+    dot.widthAnchor().constraintEqualToConstant(DOT_WIDTH).setActive(true);
+    let mut views: Vec<Retained<NSView>> = vec![Retained::into_super(Retained::into_super(dot))];
+    let (name, points, symbol_color) = &look.symbol;
+    views.push(Retained::into_super(Retained::into_super(icon(
+        mtm,
+        name,
+        *points,
+        symbol_color,
+    ))));
     views.push(Retained::into_super(Retained::into_super(title.clone())));
     if let Some((name, color)) = &look.badge {
         views.push(Retained::into_super(Retained::into_super(icon(mtm, name, 9.0, color))));
@@ -132,6 +121,8 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::CenterY);
     stack.setSpacing(5.0);
+    // A hidden dot keeps its room, so every row's symbol starts at the same place.
+    stack.setDetachesHiddenViews(false);
     for view in &views {
         stack.addArrangedSubview(view);
     }
