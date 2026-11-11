@@ -27,6 +27,9 @@ use crate::window::{Panel, WindowController};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::{Kind, Source};
 
+/// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
+const SIDE: f64 = 8.0;
+
 /// The panel of one window.
 pub struct AgentPanel {
     controller: Weak<WindowController>,
@@ -223,9 +226,9 @@ impl AgentPanel {
         view.setSpacing(6.0);
         view.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 0.0,
-            left: 10.0,
+            left: SIDE,
             bottom: 8.0,
-            right: 10.0,
+            right: SIDE,
         });
         let panel = Rc::new(AgentPanel {
             controller: Weak::from(controller),
@@ -287,7 +290,7 @@ impl AgentPanel {
             self.view.addArrangedSubview(view);
             view.setTranslatesAutoresizingMaskIntoConstraints(false);
             view.widthAnchor()
-                .constraintEqualToAnchor_constant(&self.view.widthAnchor(), -20.0)
+                .constraintEqualToAnchor_constant(&self.view.widthAnchor(), -2.0 * SIDE)
                 .setActive(true);
         }
         self.view.setCustomSpacing_afterView(14.0, &self.usage.view);

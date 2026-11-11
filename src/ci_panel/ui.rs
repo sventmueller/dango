@@ -17,7 +17,8 @@ use super::panel::{CiPanel, Phase};
 use super::text;
 use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};
 
-const MARGIN: f64 = 10.0;
+/// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
+const MARGIN: f64 = 8.0;
 const SYMBOL_POINTS: f64 = 13.0;
 
 pub struct Ui {

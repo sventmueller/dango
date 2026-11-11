@@ -76,6 +76,25 @@ impl FileOutline {
     }
 }
 
+/// `frame` of a list's disclosure triangle, or of its first column's cell when `cell`, moved `by` toward the leading
+/// edge; the cell keeps its far edge. For lists that keep AppKit's triangle but line up with the panel's title.
+pub fn outdent(view: &NSOutlineView, frame: NSRect, by: f64, cell: bool) -> NSRect {
+    if frame.size.width <= 0.0 {
+        return frame;
+    }
+    let rtl = view.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft;
+    let x = match (rtl, cell) {
+        (false, _) => (frame.origin.x - by).max(0.0),
+        (true, false) => frame.origin.x + by,
+        (true, true) => frame.origin.x,
+    };
+    let width = if cell { frame.size.width + by } else { frame.size.width };
+    NSRect::new(
+        objc2_foundation::NSPoint::new(x, frame.origin.y),
+        NSSize::new(width, frame.size.height),
+    )
+}
+
 /// A folder's chevron, pointing down when it is open.
 pub fn chevron(open: bool) -> Option<Retained<NSImage>> {
     let name = if open { "chevron.down" } else { "chevron.right" };

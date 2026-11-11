@@ -38,6 +38,9 @@ pub fn height(key: Option<&RowKey>) -> f64 {
     }
 }
 
+/// How far AppKit's source list sets its disclosure triangles in past the panel's title.
+const OUTDENT: f64 = 5.5;
+
 define_class!(
     // SAFETY: NSOutlineView has no subclassing requirements and `GitOutlineView` does not implement Drop.
     /// Return shows the diff, Space stages or unstages, ⌘⌫ discards.
@@ -49,6 +52,25 @@ define_class!(
     unsafe impl NSObjectProtocol for GitOutlineView {}
 
     impl GitOutlineView {
+        /// The disclosure triangle where the panel's title begins, not in the source list's margin.
+        #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn outline_cell_frame(&self, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
+            crate::window::file_outline::outdent(self, frame, OUTDENT, false)
+        }
+
+        /// The rows moved along with the triangle.
+        #[unsafe(method(frameOfCellAtColumn:row:))]
+        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
+            if column != 0 {
+                return frame;
+            }
+            crate::window::file_outline::outdent(self, frame, OUTDENT, true)
+        }
+
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             let handled = guarded_key(self, event);

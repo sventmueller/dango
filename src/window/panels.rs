@@ -29,6 +29,7 @@ const ACCESSORY_DROP: f64 = 2.0;
 /// Where the parts of a panel's title row sit, in the panel's coordinates.
 #[cfg(feature = "selftest")]
 pub struct TitleRow {
+    pub title_start: f64,
     pub title_middle: f64,
     pub buttons_middle: f64,
     pub page_top: f64,
@@ -251,6 +252,7 @@ impl Panels {
             }
         });
         TitleRow {
+            title_start: title.origin.x,
             title_middle: middle(title),
             buttons_middle: first.map_or(f64::NAN, middle),
             page_top: page,

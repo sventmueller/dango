@@ -513,16 +513,18 @@ fn panel(root: PathBuf, key: u64) {
         running.join(" | "),
     );
     let edges = crate::agent_panel::edges(&controller);
+    let heading = controller.panel_title_row().map(|(_, row)| row.title_start);
     check(
-        "the AI panel's lists begin where its section titles do, as VS Code's do",
-        edges.as_ref().is_some_and(|(title, rows)| {
-            rows.iter().any(|(level, _)| *level == 0)
+        "the AI panel's sections and lists begin where its title does, as VS Code's do",
+        edges.as_ref().zip(heading).is_some_and(|((section, rows), heading)| {
+            (section - heading).abs() < 1.0
+                && rows.iter().any(|(level, _)| *level == 0)
                 && rows
                     .iter()
                     .filter(|(level, _)| *level == 0)
-                    .all(|(_, x)| (x - title).abs() < 3.0)
+                    .all(|(_, x)| (x - heading).abs() < 3.0)
         }),
-        format!("{edges:?}"),
+        format!("title at {heading:?}, sections and rows {edges:?}"),
     );
     let usage = seen.map(|s| s.usage.join(" | ")).unwrap_or_default();
     check(
