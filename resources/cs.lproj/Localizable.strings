@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mění soubory v projektu a ptá se před zápisem mimo něj nebo přístupem k síti.";
 "Änderungen erlauben" = "Povolit úpravy";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Otevřete složku a uvidíte zde její soubory.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Otevřete složku, abyste s ní mohli pracovat.";
 "Öffnen" = "Otevřít";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Otevře plán v samostatném panelu s komentáři vedle";
 "Über {}" = "O aplikaci {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Přerušit cherry-pick?";
 "Revert abbrechen?" = "Přerušit revert?";
 "Suche" = "Hledání";
-"Öffne einen Ordner, um darin zu suchen." = "Otevřete složku, ve které chcete hledat.";
 "Ersetzen ein- oder ausblenden" = "Zobrazit nebo skrýt nahrazování";
 "Ersetzen durch" = "Nahradit textem";
 "Alle ersetzen" = "Nahradit vše";

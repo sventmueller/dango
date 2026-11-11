@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Ændrer filer i projektet og spørger før skrivning uden for det eller netværksadgang.";
 "Änderungen erlauben" = "Tillad ændringer";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Åbn en mappe for at se dens arkiver her.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Åbn en mappe for at arbejde med den.";
 "Öffnen" = "Åbn";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Åbner planen i en separat fane med kommentarerne ved siden af";
 "Über {}" = "Om {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Afbryd cherry-pick?";
 "Revert abbrechen?" = "Afbryd revert?";
 "Suche" = "Søgning";
-"Öffne einen Ordner, um darin zu suchen." = "Åbn en mappe for at søge i den.";
 "Ersetzen ein- oder ausblenden" = "Vis eller skjul Erstat";
 "Ersetzen durch" = "Erstat med";
 "Alle ersetzen" = "Erstat alle";

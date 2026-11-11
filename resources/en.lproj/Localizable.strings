@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Changes files in the project and asks before writing outside it or accessing the network.";
 "Änderungen erlauben" = "Allow Edits";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Open a folder to see its files here.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Open a folder to work with it.";
 "Öffnen" = "Open";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Opens the plan in a tab of its own, with the comments beside it";
 "Über {}" = "About {}";
@@ -1174,7 +1174,6 @@
 
 /* Search panel and the files header */
 "Suche" = "Search";
-"Öffne einen Ordner, um darin zu suchen." = "Open a folder to search in it.";
 "Ersetzen ein- oder ausblenden" = "Show or Hide Replace";
 "Ersetzen durch" = "Replace with";
 "Alle ersetzen" = "Replace All";

@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "แก้ไขไฟล์ในโปรเจกต์และถามก่อนเขียนนอกโปรเจกต์หรือเข้าถึงเครือข่าย";
 "Änderungen erlauben" = "อนุญาตการแก้ไข";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "เปิดโฟลเดอร์เพื่อดูไฟล์ของโฟลเดอร์นั้นที่นี่";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "เปิดโฟลเดอร์เพื่อทำงานกับโฟลเดอร์นั้น";
 "Öffnen" = "เปิด";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "เปิดแผนในแถบแยก พร้อมความคิดเห็นอยู่ข้างๆ";
 "Über {}" = "เกี่ยวกับ {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "ยกเลิก Cherry-Pick หรือไม่";
 "Revert abbrechen?" = "ยกเลิก Revert หรือไม่";
 "Suche" = "ค้นหา";
-"Öffne einen Ordner, um darin zu suchen." = "เปิดโฟลเดอร์เพื่อค้นหาในโฟลเดอร์นั้น";
 "Ersetzen ein- oder ausblenden" = "แสดงหรือซ่อนการแทนที่";
 "Ersetzen durch" = "แทนที่ด้วย";
 "Alle ersetzen" = "แทนที่ทั้งหมด";

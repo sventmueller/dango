@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "프로젝트의 파일을 변경하고, 프로젝트 밖에 쓰거나 네트워크에 접근하기 전에 묻습니다.";
 "Änderungen erlauben" = "변경 허용";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "폴더를 열면 여기에 파일이 표시됩니다.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "작업할 폴더를 여세요.";
 "Öffnen" = "열기";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "계획을 별도의 탭에서 열고 옆에 댓글을 표시합니다";
 "Über {}" = "{}에 관하여";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "체리픽을 중단하겠습니까?";
 "Revert abbrechen?" = "되돌리기를 중단하겠습니까?";
 "Suche" = "검색";
-"Öffne einen Ordner, um darin zu suchen." = "검색할 폴더를 여십시오.";
 "Ersetzen ein- oder ausblenden" = "대치 보기 또는 가리기";
 "Ersetzen durch" = "대치할 문자열";
 "Alle ersetzen" = "모두 대치";

@@ -170,6 +170,9 @@ impl Panels {
 
     pub fn show(&self, panel: Panel) {
         self.shown.set(panel);
+        let folder = self.folder.borrow().is_some();
+        self.header.setHidden(!folder);
+        self.accessory.setHidden(!folder);
         self.header.setStringValue(&ns(&self.heading(panel)));
         for view in self.accessory.arrangedSubviews().iter() {
             self.accessory.removeView(&view);
@@ -205,6 +208,29 @@ impl Panels {
         self.header.stringValue().to_string()
     }
 
+    /// Whether the title row shows, and the texts and buttons of the shown page.
+    #[cfg(feature = "selftest")]
+    pub fn seen(&self) -> (bool, Vec<String>) {
+        fn texts(view: &NSView, out: &mut Vec<String>) {
+            if view.isHidden() {
+                return;
+            }
+            if let Some(field) = view.downcast_ref::<NSTextField>() {
+                out.push(field.stringValue().to_string());
+            } else if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+                out.push(button.title().to_string());
+            }
+            for child in view.subviews().iter() {
+                texts(&child, out);
+            }
+        }
+        let mut out = Vec::new();
+        if let Some(page) = self.shown_page() {
+            texts(&page, &mut out);
+        }
+        (!self.header.isHidden(), out)
+    }
+
     /// The geometry of the title row, in the panel's coordinates.
     #[cfg(feature = "selftest")]
     pub fn title_row(&self) -> TitleRow {
@@ -238,11 +264,12 @@ impl Panels {
     fn page(&self, panel: Panel, project: Option<&Path>) -> Retained<NSView> {
         let mtm = self.mtm;
         let state = match (panel, project) {
-            (Panel::Files, None) => empty_state(
+            // Every panel needs a folder; without one they all show the same.
+            (_, None) => empty_state(
                 mtm,
                 "folder",
                 t("Kein Ordner geöffnet"),
-                t("Öffne einen Ordner, um seine Dateien hier zu sehen."),
+                t("Öffne einen Ordner, um mit ihm zu arbeiten."),
                 Some((t("Ordner öffnen …"), sel!(ideOpenFolder:))),
             ),
             (Panel::Files, Some(folder)) => empty_state(
@@ -253,13 +280,6 @@ impl Panels {
                     .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
                 t("In Vorbereitung"),
                 None,
-            ),
-            (Panel::Search, None) => empty_state(
-                mtm,
-                panel.symbol(),
-                panel.title(),
-                t("Öffne einen Ordner, um darin zu suchen."),
-                Some((t("Ordner öffnen …"), sel!(ideOpenFolder:))),
             ),
             (panel, _) => empty_state(mtm, panel.symbol(), panel.title(), t("In Vorbereitung"), None),
         };

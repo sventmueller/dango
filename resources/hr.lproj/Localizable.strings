@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mijenja datoteke u projektu i pita prije pisanja izvan njega ili pristupa mreži.";
 "Änderungen erlauben" = "Dozvoli izmjene";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Otvorite mapu da biste ovdje vidjeli njezine datoteke.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Otvorite mapu da biste radili s njom.";
 "Öffnen" = "Otvori";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Otvara plan u zasebnoj kartici, s komentarima pokraj njega";
 "Über {}" = "Više o aplikaciji {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Prekinuti cherry-pick?";
 "Revert abbrechen?" = "Prekinuti revert?";
 "Suche" = "Pretraga";
-"Öffne einen Ordner, um darin zu suchen." = "Otvorite mapu da biste u njoj pretraživali.";
 "Ersetzen ein- oder ausblenden" = "Prikaži ili sakrij zamjenu";
 "Ersetzen durch" = "Zamijeni s";
 "Alle ersetzen" = "Zamijeni sve";

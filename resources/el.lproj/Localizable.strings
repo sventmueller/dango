@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Αλλάζει αρχεία στο έργο και ρωτά πριν γράψει εκτός αυτού ή αποκτήσει πρόσβαση στο δίκτυο.";
 "Änderungen erlauben" = "Επιτρέπονται αλλαγές";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Ανοίξτε έναν φάκελο για να δείτε εδώ τα αρχεία του.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Ανοίξτε έναν φάκελο για να εργαστείτε με αυτόν.";
 "Öffnen" = "Άνοιγμα";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Ανοίγει το σχέδιο σε ξεχωριστή καρτέλα, με τα σχόλια δίπλα";
 "Über {}" = "Πληροφορίες για το {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Ματαίωση cherry-pick;";
 "Revert abbrechen?" = "Ματαίωση revert;";
 "Suche" = "Αναζήτηση";
-"Öffne einen Ordner, um darin zu suchen." = "Ανοίξτε έναν φάκελο για να κάνετε αναζήτηση σε αυτόν.";
 "Ersetzen ein- oder ausblenden" = "Εμφάνιση ή απόκρυψη αντικατάστασης";
 "Ersetzen durch" = "Αντικατάσταση με";
 "Alle ersetzen" = "Αντικατάσταση όλων";

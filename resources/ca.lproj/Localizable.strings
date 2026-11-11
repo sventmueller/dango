@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Canvia fitxers del projecte i pregunta abans d’escriure fora d’aquest o d’accedir a la xarxa.";
 "Änderungen erlauben" = "Permet els canvis";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Obre una carpeta per veure’n els fitxers aquí.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Obre una carpeta per treballar-hi.";
 "Öffnen" = "Obre";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Obre el pla en una pestanya pròpia, amb els comentaris al costat";
 "Über {}" = "Sobre el {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Vols anul·lar el cherry-pick?";
 "Revert abbrechen?" = "Vols anul·lar el revert?";
 "Suche" = "Cerca";
-"Öffne einen Ordner, um darin zu suchen." = "Obre una carpeta per cercar‑hi.";
 "Ersetzen ein- oder ausblenden" = "Mostra o amaga la substitució";
 "Ersetzen durch" = "Substitueix per";
 "Alle ersetzen" = "Substitueix‑ho tot";

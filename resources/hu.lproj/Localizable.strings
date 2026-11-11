@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Módosítja a projekt fájljait, és rákérdez, mielőtt azon kívül írna vagy a hálózathoz férne.";
 "Änderungen erlauben" = "Módosítások engedélyezése";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Nyisson meg egy mappát, hogy itt lássa a fájljait.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Nyiss meg egy mappát, hogy dolgozhass vele.";
 "Öffnen" = "Megnyitás";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Saját lapon nyitja meg a tervet, mellette a megjegyzésekkel";
 "Über {}" = "A(z) {} névjegye";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Megszakítja a cherry-picket?";
 "Revert abbrechen?" = "Megszakítja a revertet?";
 "Suche" = "Keresés";
-"Öffne einen Ordner, um darin zu suchen." = "Nyisson meg egy mappát, hogy keressen benne.";
 "Ersetzen ein- oder ausblenden" = "Csere megjelenítése vagy elrejtése";
 "Ersetzen durch" = "Csere erre";
 "Alle ersetzen" = "Az összes cseréje";

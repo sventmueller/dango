@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Projedeki dosyaları değiştirir; proje dışına yazmadan veya ağa erişmeden önce sorar.";
 "Änderungen erlauben" = "Düzenlemelere İzin Ver";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Dosyalarını burada görmek için bir klasör açın.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Üzerinde çalışmak için bir klasör açın.";
 "Öffnen" = "Aç";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Planı, yorumlar yanında olacak şekilde ayrı bir sekmede açar";
 "Über {}" = "{} Hakkında";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Cherry-pick durdurulsun mu?";
 "Revert abbrechen?" = "Revert durdurulsun mu?";
 "Suche" = "Arama";
-"Öffne einen Ordner, um darin zu suchen." = "İçinde arama yapmak için bir klasör açın.";
 "Ersetzen ein- oder ausblenden" = "Değiştir alanını göster veya gizle";
 "Ersetzen durch" = "Şununla değiştir";
 "Alle ersetzen" = "Tümünü Değiştir";

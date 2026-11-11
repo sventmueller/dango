@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Wijzigt bestanden in het project en vraagt vóór schrijven daarbuiten of netwerktoegang.";
 "Änderungen erlauben" = "Sta wijzigingen toe";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Open een map om de bestanden hier te zien.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Open een map om ermee te werken.";
 "Öffnen" = "Open";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Opent het plan in een eigen tabblad, met de opmerkingen ernaast";
 "Über {}" = "Over {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Cherry-pick afbreken?";
 "Revert abbrechen?" = "Revert afbreken?";
 "Suche" = "Zoeken";
-"Öffne einen Ordner, um darin zu suchen." = "Open een map om erin te zoeken.";
 "Ersetzen ein- oder ausblenden" = "Toon of verberg Vervang";
 "Ersetzen durch" = "Vervang door";
 "Alle ersetzen" = "Vervang alle";

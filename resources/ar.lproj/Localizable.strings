@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "يغيّر ملفات المشروع ويسأل قبل الكتابة خارجه أو الوصول إلى الشبكة.";
 "Änderungen erlauben" = "السماح بالتعديلات";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "افتح مجلدًا لترى ملفاته هنا.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "افتح مجلدًا للعمل عليه.";
 "Öffnen" = "فتح";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "يفتح الخطة في علامة تبويب مستقلة، مع التعليقات بجانبها";
 "Über {}" = "حول {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "هل تريد إلغاء Cherry-Pick؟";
 "Revert abbrechen?" = "هل تريد إلغاء Revert؟";
 "Suche" = "بحث";
-"Öffne einen Ordner, um darin zu suchen." = "افتح مجلدًا للبحث فيه.";
 "Ersetzen ein- oder ausblenden" = "إظهار الاستبدال أو إخفاؤه";
 "Ersetzen durch" = "استبدال بـ";
 "Alle ersetzen" = "استبدال الكل";

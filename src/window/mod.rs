@@ -2012,6 +2012,11 @@ impl WindowController {
         self.tab_of_document(id)?.badge_close(id)
     }
 
+    /// Whether the shown panel's title row shows, and the texts and buttons of its page.
+    pub fn panel_seen(&self) -> Option<(bool, Vec<String>)> {
+        self.ivars().panels.borrow().as_ref().map(panels::Panels::seen)
+    }
+
     /// The shown panel's title and the geometry of its title row.
     pub fn panel_title_row(&self) -> Option<(String, panels::TitleRow)> {
         let panels = self.ivars().panels.borrow();

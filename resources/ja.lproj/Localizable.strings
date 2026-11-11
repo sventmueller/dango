@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "プロジェクト内のファイルを変更し、プロジェクト外への書き込みやネットワークアクセスの前に確認します。";
 "Änderungen erlauben" = "変更を許可";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "フォルダを開くと、ここにファイルが表示されます。";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "作業するフォルダを開いてください。";
 "Öffnen" = "開く";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "プランを専用のタブで開き、横にコメントを表示します";
 "Über {}" = "{}について";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "チェリーピックを中止しますか?";
 "Revert abbrechen?" = "リバートを中止しますか?";
 "Suche" = "検索";
-"Öffne einen Ordner, um darin zu suchen." = "検索するフォルダを開いてください。";
 "Ersetzen ein- oder ausblenden" = "置換を表示/非表示";
 "Ersetzen durch" = "置換後の文字列";
 "Alle ersetzen" = "すべてを置換";

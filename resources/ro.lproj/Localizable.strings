@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifică fișierele proiectului și întreabă înainte de a scrie în afara lui sau de a accesa rețeaua.";
 "Änderungen erlauben" = "Permiteți modificările";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Deschideți un dosar pentru a-i vedea fișierele aici.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Deschide un dosar pentru a lucra cu el.";
 "Öffnen" = "Deschideți";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Deschide planul într-o filă separată, cu comentariile alături";
 "Über {}" = "Despre {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Abandonați cherry-pick-ul?";
 "Revert abbrechen?" = "Abandonați revert-ul?";
 "Suche" = "Căutare";
-"Öffne einen Ordner, um darin zu suchen." = "Deschideți un dosar pentru a căuta în el.";
 "Ersetzen ein- oder ausblenden" = "Afișați sau ascundeți înlocuirea";
 "Ersetzen durch" = "Înlocuiți cu";
 "Alle ersetzen" = "Înlocuiți tot";

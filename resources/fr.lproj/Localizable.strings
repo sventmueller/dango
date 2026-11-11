@@ -270,7 +270,7 @@
 "{}: {}" = "{} : {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifie les fichiers du projet et demande avant d’écrire ailleurs ou d’accéder au réseau.";
 "Änderungen erlauben" = "Autoriser les modifications";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Ouvrez un dossier pour voir ses fichiers ici.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Ouvrez un dossier pour travailler dessus.";
 "Öffnen" = "Ouvrir";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Ouvre le plan dans un onglet distinct, avec les commentaires à côté";
 "Über {}" = "À propos de {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Interrompre le cherry-pick ?";
 "Revert abbrechen?" = "Interrompre le revert ?";
 "Suche" = "Recherche";
-"Öffne einen Ordner, um darin zu suchen." = "Ouvrez un dossier pour y effectuer une recherche.";
 "Ersetzen ein- oder ausblenden" = "Afficher ou masquer Remplacer";
 "Ersetzen durch" = "Remplacer par";
 "Alle ersetzen" = "Tout remplacer";

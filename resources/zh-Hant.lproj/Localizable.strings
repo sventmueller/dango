@@ -270,7 +270,7 @@
 "{}: {}" = "{}：{}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "更改專案中的檔案，在寫入專案外部或存取網路前詢問。";
 "Änderungen erlauben" = "允許編輯";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "打開檔案夾即可在此處查看其中的檔案。";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "打開一個檔案夾以開始工作。";
 "Öffnen" = "打開";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "在獨立的標籤頁中打開計畫，註解顯示在旁邊";
 "Über {}" = "關於 {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "要中止揀選嗎？";
 "Revert abbrechen?" = "要中止還原提交嗎？";
 "Suche" = "搜尋";
-"Öffne einen Ordner, um darin zu suchen." = "打開一個檔案夾以在其中搜尋。";
 "Ersetzen ein- oder ausblenden" = "顯示或隱藏取代";
 "Ersetzen durch" = "取代為";
 "Alle ersetzen" = "全部取代";

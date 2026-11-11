@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Thay đổi tệp trong dự án và hỏi trước khi ghi ra ngoài hoặc truy cập mạng.";
 "Änderungen erlauben" = "Cho phép chỉnh sửa";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Mở một thư mục để xem các tệp của thư mục đó ở đây.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Mở một thư mục để làm việc với nó.";
 "Öffnen" = "Mở";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Mở kế hoạch trong một tab riêng, kèm nhận xét bên cạnh";
 "Über {}" = "Giới thiệu về {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Hủy cherry-pick?";
 "Revert abbrechen?" = "Hủy revert?";
 "Suche" = "Tìm kiếm";
-"Öffne einen Ordner, um darin zu suchen." = "Hãy mở một thư mục để tìm kiếm trong đó.";
 "Ersetzen ein- oder ausblenden" = "Hiện hoặc ẩn Thay thế";
 "Ersetzen durch" = "Thay thế bằng";
 "Alle ersetzen" = "Thay thế Tất cả";

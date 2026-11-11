@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "משנה קבצים בפרויקט ושואל לפני כתיבה מחוצה לו או גישה לרשת.";
 "Änderungen erlauben" = "שינויים מותרים";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "יש לפתוח תיקיה כדי לראות כאן את הקבצים שלה.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "פתחו תיקייה כדי לעבוד איתה.";
 "Öffnen" = "פתיחה";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "פתיחת התוכנית בכרטיסיה נפרדת, עם ההערות לצידה";
 "Über {}" = "מידע על {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "להפסיק את ה-Cherry-Pick?";
 "Revert abbrechen?" = "להפסיק את ה-Revert?";
 "Suche" = "חיפוש";
-"Öffne einen Ordner, um darin zu suchen." = "יש לפתוח תיקיה כדי לחפש בה.";
 "Ersetzen ein- oder ausblenden" = "הצגה או הסתרה של ההחלפה";
 "Ersetzen durch" = "החלפה ב-";
 "Alle ersetzen" = "החלפת הכל";

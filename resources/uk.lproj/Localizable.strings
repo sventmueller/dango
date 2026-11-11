@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Змінює файли проєкту й питає перед записом поза ним або доступом до мережі.";
 "Änderungen erlauben" = "Дозволити зміни";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Відкрийте папку, щоб побачити тут її файли.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Відкрийте папку, щоб працювати з нею.";
 "Öffnen" = "Відкрити";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Відкриває план в окремій вкладці з коментарями поруч";
 "Über {}" = "Про {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Перервати cherry-pick?";
 "Revert abbrechen?" = "Перервати revert?";
 "Suche" = "Пошук";
-"Öffne einen Ordner, um darin zu suchen." = "Відкрийте папку, щоб шукати в ній.";
 "Ersetzen ein- oder ausblenden" = "Показати або сховати заміну";
 "Ersetzen durch" = "Замінити на";
 "Alle ersetzen" = "Замінити все";

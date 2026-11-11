@@ -270,7 +270,7 @@
 "{}: {}" = "{}: {}";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Ändrar filer i projektet och frågar innan något skrivs utanför det eller nätverket används.";
 "Änderungen erlauben" = "Tillåt ändringar";
-"Öffne einen Ordner, um seine Dateien hier zu sehen." = "Öppna en mapp för att se dess filer här.";
+"Öffne einen Ordner, um mit ihm zu arbeiten." = "Öppna en mapp för att arbeta med den.";
 "Öffnen" = "Öppna";
 "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben" = "Öppnar planen i en egen flik, med kommentarerna bredvid";
 "Über {}" = "Om {}";
@@ -1138,7 +1138,6 @@
 "Cherry-Pick abbrechen?" = "Vill du avbryta cherry-pick?";
 "Revert abbrechen?" = "Vill du avbryta revert?";
 "Suche" = "Sök";
-"Öffne einen Ordner, um darin zu suchen." = "Öppna en mapp om du vill söka i den.";
 "Ersetzen ein- oder ausblenden" = "Visa eller göm Ersätt";
 "Ersetzen durch" = "Ersätt med";
 "Alle ersetzen" = "Ersätt alla";

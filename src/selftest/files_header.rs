@@ -70,6 +70,7 @@ fn press(root: &Path, action: Sel) -> bool {
 
 /// Once the tree shows the folder, opens `src`.
 pub fn run(root: PathBuf, then: fn(PathBuf)) {
+    no_folder();
     let probe = root.clone();
     wait_until(
         move || controller(&probe).is_some_and(|c| c.tree_rows() > 0),
@@ -86,6 +87,35 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
             );
         },
     );
+}
+
+/// A window without a folder shows the same in every panel, the way to open one, and no title row.
+fn no_folder() {
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let controller = WindowController::open_new(mtm, None);
+    let seen: Vec<Option<(bool, Vec<String>)>> = window::Panel::ALL
+        .into_iter()
+        .map(|panel| {
+            controller.activate_panel(panel);
+            controller.panel_seen()
+        })
+        .collect();
+    let first = seen.first().cloned().flatten();
+    check(
+        "without a folder every panel shows the same, without a title, and offers to open a folder",
+        first.as_ref().is_some_and(|(title, texts)| {
+            !title
+                && texts.iter().any(|text| text == splat_i18n::t("Ordner öffnen …"))
+                && !texts.iter().any(|text| text == splat_i18n::t("In Vorbereitung"))
+        }) && seen.iter().all(|panel| *panel == seen[0]),
+        format!("{seen:?}"),
+    );
+    controller.activate_panel(window::Panel::Agents);
+    if let Some(window) = controller.window() {
+        window.displayIfNeeded();
+        snapshot(&window, "no-folder");
+        window.performClose(None);
+    }
 }
 
 /// "Dateien: <folder>" with the buttons on its line, the tree right below; checked again once a file opened, which
