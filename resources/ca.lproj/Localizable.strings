@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Elimina el servidor de llenguatge";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Per exemple, «Elixir», «ex, exs» i «elixir-ls». L’ordre és un programa del PATH de l’intèrpret d’ordres d’inici de sessió o un camí, seguit dels seus arguments.";
 "Name, Dateiendungen und Befehl sind nötig." = "Cal el nom, les extensions de fitxer i l’ordre.";
+"Dateien:" = "Fitxers:";
+"Ignorierte und versteckte Dateien anzeigen" = "Mostra els fitxers ignorats i ocults";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "L’arbre de fitxers també mostra, atenuat, el que .gitignore exclou o macOS amaga.";

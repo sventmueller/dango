@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "إزالة خادم لغة";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "مثل «Elixir» و«ex, exs» و«elixir-ls». الأمر هو برنامج في PATH الخاص بصدفة تسجيل الدخول أو مسار، يليه وسائطه.";
 "Name, Dateiendungen und Befehl sind nötig." = "الاسم وامتدادات الملفات والأمر مطلوبة.";
+"Dateien:" = "الملفات:";
+"Ignorierte und versteckte Dateien anzeigen" = "عرض الملفات المتجاهلة والمخفية";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "تعرض شجرة الملفات أيضًا ما يستبعده ‎.gitignore‏ أو يخفيه macOS، بلون باهت.";

@@ -334,6 +334,14 @@ fn probe_app(mtm: MainThreadMarker) {
         rows == 3,
         format!("{rows} rows"),
     );
+    window::show_ignored_files(true);
+    let shown = controller.tree_rows();
+    window::show_ignored_files(false);
+    check(
+        "the setting for ignored files lists them in the tree and leaves them out again",
+        shown == rows + 1 && controller.tree_rows() == rows,
+        format!("{shown} rows with them, {} without", controller.tree_rows()),
+    );
     let _ = std::fs::write(canonical.join("added.txt"), "new\n");
     controller.quick_open_with("main");
     main_after(Duration::from_secs(2), move || probe_project(canonical, rows));

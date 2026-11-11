@@ -88,6 +88,9 @@ pub mod keys {
     /// Whether a Markdown file opens with its preview beside it, which closes with its editor.
     pub const MARKDOWN_PREVIEW: Key<bool> = Key::user("markdownPreviewBeside", || true);
 
+    /// Whether the file tree also lists what Git ignores and what the system hides, marked as such.
+    pub const SHOW_IGNORED_FILES: Key<bool> = Key::user("showIgnoredFiles", || false);
+
     /// Where the browser's address field sends words that are no address.
     pub const SEARCH_ENGINE: Key<SearchEngine> = Key::user("searchEngine", || SearchEngine::DuckDuckGo);
 

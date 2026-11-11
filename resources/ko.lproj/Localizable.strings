@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "언어 서버 제거";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "예: ‘Elixir’, ‘ex, exs’ 및 ‘elixir-ls’. 명령은 로그인 셸의 PATH에 있는 프로그램 또는 경로이며 그 뒤에 인수가 옵니다.";
 "Name, Dateiendungen und Befehl sind nötig." = "이름, 파일 확장자 및 명령이 필요합니다.";
+"Dateien:" = "파일:";
+"Ignorierte und versteckte Dateien anzeigen" = "무시된 파일 및 가려진 파일 보기";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = ".gitignore에서 제외하거나 macOS가 가린 항목도 파일 트리에 흐리게 표시합니다.";

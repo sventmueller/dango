@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Eliminați serverul de limbaj";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "De exemplu „Elixir”, „ex, exs” și „elixir-ls”. Comanda este un program din PATH-ul shellului de login sau o cale, urmată de argumentele sale.";
 "Name, Dateiendungen und Befehl sind nötig." = "Numele, extensiile de fișier și comanda sunt obligatorii.";
+"Dateien:" = "Fișiere:";
+"Ignorierte und versteckte Dateien anzeigen" = "Afișați fișierele ignorate și ascunse";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Arborele de fișiere afișează și, estompat, ce exclude .gitignore sau ascunde macOS.";

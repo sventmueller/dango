@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Вилучити мовний сервер";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Наприклад, «Elixir», «ex, exs» і «elixir-ls». Команда — це програма з PATH оболонки входу або шлях, після якого йдуть її аргументи.";
 "Name, Dateiendungen und Befehl sind nötig." = "Потрібні назва, розширення файлів і команда.";
+"Dateien:" = "Файли:";
+"Ignorierte und versteckte Dateien anzeigen" = "Показувати ігноровані та приховані файли";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Дерево файлів також показує, приглушено, те, що виключає .gitignore або приховує macOS.";

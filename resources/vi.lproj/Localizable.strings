@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Xóa máy chủ ngôn ngữ";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Ví dụ “Elixir”, “ex, exs” và “elixir-ls”. Lệnh là một chương trình trong PATH của shell đăng nhập hoặc một đường dẫn, theo sau là các đối số của nó.";
 "Name, Dateiendungen und Befehl sind nötig." = "Cần có tên, phần mở rộng tệp và lệnh.";
+"Dateien:" = "Tệp:";
+"Ignorierte und versteckte Dateien anzeigen" = "Hiển thị tệp bị bỏ qua và tệp ẩn";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Cây tệp cũng hiển thị mờ những gì .gitignore loại trừ hoặc macOS ẩn đi.";

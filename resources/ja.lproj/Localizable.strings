@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "言語サーバを削除";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "例:「Elixir」、「ex, exs」、「elixir-ls」。コマンドはログインシェルのPATH上のプログラムまたはパスで、その後に引数が続きます。";
 "Name, Dateiendungen und Befehl sind nötig." = "名前、ファイル拡張子、コマンドが必要です。";
+"Dateien:" = "ファイル:";
+"Ignorierte und versteckte Dateien anzeigen" = "無視されたファイルと非表示のファイルを表示";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = ".gitignoreで除外されたものやmacOSで非表示のものも、ファイルツリーに淡色で表示します。";

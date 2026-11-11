@@ -495,6 +495,24 @@ pub fn tree_changed(root: &Path, dirs: &[PathBuf]) {
     });
 }
 
+/// Lets the tree of every window list what Git ignores and the system hides, or leave it out again.
+pub fn show_ignored_files(on: bool) {
+    WINDOWS.with(|windows| {
+        for window in windows.borrow().iter() {
+            let ivars = window.ivars();
+            let Some(project) = ivars.workspace.borrow().clone() else {
+                continue;
+            };
+            let changed = project
+                .tree()
+                .set_options(ide_project::TreeOptions { show_ignored: on });
+            if let Some(files) = ivars.files.borrow().as_ref() {
+                files.reload(&changed);
+            }
+        }
+    });
+}
+
 /// Hands quick-open hits to the window whose folder is `root`.
 fn quick_open_answered(root: &Path, asked: u64, hits: Vec<ide_project::Hit>) {
     WINDOWS.with(|windows| {

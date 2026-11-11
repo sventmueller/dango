@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Hapus Server Bahasa";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Misalnya “Elixir”, “ex, exs”, dan “elixir-ls”. Perintah adalah program di PATH shell login atau jalur, diikuti argumennya.";
 "Name, Dateiendungen und Befehl sind nötig." = "Nama, ekstensi file, dan perintah wajib diisi.";
+"Dateien:" = "File:";
+"Ignorierte und versteckte Dateien anzeigen" = "Tampilkan file yang diabaikan dan tersembunyi";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Pohon file juga menampilkan, dengan warna redup, apa yang dikecualikan .gitignore atau disembunyikan macOS.";

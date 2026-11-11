@@ -89,6 +89,17 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideToggleShowIgnoredFiles:))]
+        fn toggle_show_ignored_files(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let on = sender
+                    .and_then(|s| s.downcast_ref::<NSButton>())
+                    .is_some_and(|b| b.state() == NSControlStateValueOn);
+                self.store(|settings| settings.set(&keys::SHOW_IGNORED_FILES, &on));
+                crate::window::show_ignored_files(on);
+            });
+        }
+
         #[unsafe(method(ideToggleFormatOnSave:))]
         fn toggle_format_on_save(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -427,6 +438,22 @@ fn markdown_row(mtm: MainThreadMarker, controller: &SettingsController, settings
     ]
 }
 
+fn files_row(mtm: MainThreadMarker, controller: &SettingsController, settings: &Settings) -> Vec<Retained<NSView>> {
+    let checkbox = checkbox(
+        controller,
+        t("Ignorierte und versteckte Dateien anzeigen"),
+        sel!(ideToggleShowIgnoredFiles:),
+        settings.get(&keys::SHOW_IGNORED_FILES),
+    );
+    checkbox.setToolTip(Some(&ns(t(
+        "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet.",
+    ))));
+    vec![
+        label(mtm, t("Dateien:")).into_super().into_super(),
+        checkbox.into_super().into_super(),
+    ]
+}
+
 fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retained<NSView> {
     let settings = controller.ivars().settings.borrow();
     let reopen = checkbox(
@@ -466,6 +493,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
             label(mtm, t("Tabs:")).into_super().into_super(),
             previews.into_super().into_super(),
         ],
+        files_row(mtm, controller, &settings),
         vec![size_title.into_super().into_super(), size_row],
         vec![
             label(mtm, t("Code:")).into_super().into_super(),

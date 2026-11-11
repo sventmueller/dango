@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Remover servidor de linguagem";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Por exemplo, “Elixir”, “ex, exs” e “elixir-ls”. O comando é um programa no PATH da shell de início de sessão ou um caminho, seguido dos respetivos argumentos.";
 "Name, Dateiendungen und Befehl sind nötig." = "O nome, as extensões de ficheiro e o comando são obrigatórios.";
+"Dateien:" = "Ficheiros:";
+"Ignorierte und versteckte Dateien anzeigen" = "Mostrar ficheiros ignorados e ocultos";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "A árvore de ficheiros também mostra, esbatido, o que o .gitignore exclui ou o macOS oculta.";

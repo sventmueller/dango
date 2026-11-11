@@ -438,7 +438,7 @@ impl FileTreeSource {
             ignored: false,
         });
         row.expandable = entry.can_expand();
-        row.ignored = entry.is_ignored;
+        row.ignored = entry.is_ignored || entry.is_hidden;
         row.item.clone()
     }
 

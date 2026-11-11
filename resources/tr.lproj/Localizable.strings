@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Dil Sunucusunu Kaldır";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Örneğin “Elixir”, “ex, exs” ve “elixir-ls”. Komut, oturum açma kabuğunun PATH’indeki bir program ya da bir yoldur; ardından argümanları gelir.";
 "Name, Dateiendungen und Befehl sind nötig." = "Ad, dosya uzantıları ve komut gereklidir.";
+"Dateien:" = "Dosyalar:";
+"Ignorierte und versteckte Dateien anzeigen" = "Yok sayılan ve gizli dosyaları göster";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Dosya ağacı, .gitignore’un dışladığı veya macOS’in gizlediği öğeleri de soluk olarak gösterir.";

@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "移除语言服务器";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "例如“Elixir”“ex, exs”和“elixir-ls”。命令是登录 Shell 的 PATH 中的程序或路径，后跟其参数。";
 "Name, Dateiendungen und Befehl sind nötig." = "名称、文件扩展名和命令为必填项。";
+"Dateien:" = "文件：";
+"Ignorierte und versteckte Dateien anzeigen" = "显示被忽略的文件和隐藏文件";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "文件树也会以浅色显示被 .gitignore 排除或被 macOS 隐藏的项目。";

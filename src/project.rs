@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use ide_core::settings::{Settings, keys};
 use ide_project::{QuickOpen, Tree, TreeOptions, TrustStore, WatchEvent, Watcher};
 
 use crate::util::main_soon;
@@ -19,7 +20,10 @@ impl Project {
     /// project search, changed files `crate::lsp::files_changed`, every change `crate::git_panel::changed` and
     /// `crate::ci_panel::changed`, and a change in `.git` the editors' change marks, all on the main thread.
     pub fn open(root: &Path) -> std::io::Result<Project> {
-        let mut tree = Tree::new(root, TreeOptions::default())?;
+        let options = TreeOptions {
+            show_ignored: Settings::load_user().get(&keys::SHOW_IGNORED_FILES),
+        };
+        let mut tree = Tree::new(root, options)?;
         let root = tree.root().to_path_buf();
         tree.expand(&root)?;
         let tree = Arc::new(Mutex::new(tree));

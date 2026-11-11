@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Poista kielipalvelin";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Esimerkiksi ”Elixir”, ”ex, exs” ja ”elixir-ls”. Komento on kirjautumiskomentotulkin PATH-muuttujassa oleva ohjelma tai polku, jota seuraavat sen argumentit.";
 "Name, Dateiendungen und Befehl sind nötig." = "Nimi, tiedostopäätteet ja komento vaaditaan.";
+"Dateien:" = "Tiedostot:";
+"Ignorierte und versteckte Dateien anzeigen" = "Näytä ohitetut ja kätketyt tiedostot";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Tiedostopuu näyttää himmennettyinä myös kohteet, jotka .gitignore sulkee pois tai macOS kätkee.";

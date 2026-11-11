@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Keluarkan Pelayan Bahasa";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Contohnya “Elixir”, “ex, exs” dan “elixir-ls”. Perintah ialah program dalam PATH shell log masuk atau laluan, diikuti oleh argumennya.";
 "Name, Dateiendungen und Befehl sind nötig." = "Nama, sambungan fail dan perintah diperlukan.";
+"Dateien:" = "Fail:";
+"Ignorierte und versteckte Dateien anzeigen" = "Tunjukkan fail yang diabaikan dan tersembunyi";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Pepohon fail turut menunjukkan, dalam warna malap, perkara yang dikecualikan oleh .gitignore atau disembunyikan oleh macOS.";

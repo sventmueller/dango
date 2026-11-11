@@ -1195,3 +1195,6 @@
 "Sprachserver entfernen" = "Odstrani jezikovni strežnik";
 "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten." = "Na primer „Elixir“, „ex, exs“ in „elixir-ls“. Ukaz je program v poti PATH prijavne lupine ali pot, ki ji sledijo njegovi argumenti.";
 "Name, Dateiendungen und Befehl sind nötig." = "Ime, končnice datotek in ukaz so obvezni.";
+"Dateien:" = "Datoteke:";
+"Ignorierte und versteckte Dateien anzeigen" = "Pokaži prezrte in skrite datoteke";
+"Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet." = "Drevo datotek prikaže tudi, zatemnjeno, kar .gitignore izključi ali macOS skrije.";
