@@ -21,6 +21,8 @@ const MARGIN: f64 = 8.0;
 const SMALL_FONT: f64 = 11.0;
 /// The width of the replace chevron, which the replace field keeps free below it.
 const CHEVRON_WIDTH: f64 = 12.0;
+/// The size of both chevrons, the same as the folder tree's.
+const CHEVRON_POINTS: f64 = 10.0;
 
 pub(super) struct Views {
     pub(super) page: Retained<NSView>,
@@ -298,6 +300,10 @@ fn replace_toggle(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSButt
         unsafe { NSButton::buttonWithImage_target_action(&image, None, Some(sel!(ideSearchToggleReplace:)), mtm) };
     set_action(&button, panel, sel!(ideSearchToggleReplace:));
     button.setBordered(false);
+    size_chevron(&button);
+    // At its leading edge, where the chevron of the file filters below sits; the title would show beside it.
+    button.setTitle(&ns(""));
+    button.setImagePosition(NSCellImagePosition::ImageLeading);
     button.setButtonType(NSButtonType::PushOnPushOff);
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     button.setToolTip(Some(&ns(name)));
@@ -357,6 +363,7 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSButton> 
         unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, Some(sel!(ideSearchDisclose:)), mtm) };
     set_action(&button, panel, sel!(ideSearchDisclose:));
     button.setBordered(false);
+    size_chevron(&button);
     button.setButtonType(NSButtonType::PushOnPushOff);
     button.setImage(symbol("chevron.right", "").as_deref());
     button.setImagePosition(NSCellImagePosition::ImageLeading);
@@ -364,6 +371,17 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSButton> 
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     button.setAccessibilityExpanded(false);
     button
+}
+
+/// Draws the chevron of `button` at the size of every chevron of the sidebar, whatever its font.
+fn size_chevron(button: &NSButton) {
+    button.setSymbolConfiguration(Some(
+        &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            CHEVRON_POINTS,
+            // SAFETY: AppKit sets its font weight constants when it loads.
+            unsafe { objc2_app_kit::NSFontWeightSemibold },
+        ),
+    ));
 }
 
 fn glob_field(mtm: MainThreadMarker, panel: &SearchPanel, placeholder: &str, name: &str) -> Retained<NSTextField> {
