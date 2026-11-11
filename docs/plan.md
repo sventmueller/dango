@@ -431,7 +431,11 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
 - **E71 Der Punkt im Tab: grün, rot oder keiner** *(Entscheidung des Eigentümers, ändert E66)*: Ein AI- oder CLI-Tab
   zeigt rechts einen grünen Punkt, solange die Sitzung arbeitet, einen roten, solange sie auf eine Aktion des Nutzers
   wartet (Freigabe, Frage, Plan; bei einer CLI die Glocke), und keinen, wenn sie untätig ist. „Fertig, noch nicht
-  angesehen“ zeigt keinen Punkt mehr; das melden Mitteilung und Dock-Zahl. Die Anbieterfarbe bleibt beim Symbol des Tabs.
+  angesehen“ zeigt keinen Punkt mehr; das meldet die Mitteilung. Die Anbieterfarbe bleibt beim Symbol des Tabs.
+- **E72 Keine Zahl am Dock-Symbol, ein Ordner ein Eintrag** *(Entscheidung des Eigentümers, ändert I9)*: Das
+  Dock-Symbol trägt keine Zahl; dass eine Sitzung wartet oder fertig ist, melden der rote Punkt im Tab (E71) und die
+  Mitteilung. Fenstermenü und Dock-Menü nennen jeden Ordner einmal, mit dem Tab, der vorn liegt; ein herausgezogener
+  Tab in einem eigenen Fenster bleibt dort genannt.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

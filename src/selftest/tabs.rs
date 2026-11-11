@@ -134,6 +134,20 @@ fn variety(root: PathBuf) {
         replayed && icons.len() > 6 && icons.iter().all(|shown| *shown),
         format!("{icons:?} for {:?}", controller.window_tabs()),
     );
+    let listed: Vec<bool> = controller
+        .tab_windows()
+        .iter()
+        .map(|window| !window.isExcludedFromWindowsMenu())
+        .collect();
+    check(
+        "the Window menu and the Dock list the folder once, by the tab in front",
+        listed.len() > 6
+            && listed.iter().filter(|shown| **shown).count() == 1
+            && controller
+                .window()
+                .is_some_and(|window| !window.isExcludedFromWindowsMenu()),
+        format!("{listed:?}"),
+    );
     main_after(PAUSE, move || plus(root));
 }
 

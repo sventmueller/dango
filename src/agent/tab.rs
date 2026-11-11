@@ -153,8 +153,6 @@ pub struct State {
     /// The checkpoint of the turn that runs.
     pub turn: Option<Checkpoint>,
     pub status: Status,
-    /// The session finished while the user looked elsewhere.
-    pub unseen: bool,
     /// A checkpoint is being taken before a prompt goes out.
     pub sending: bool,
     pub offered: Offered,
@@ -295,7 +293,6 @@ impl AgentTab {
                 checkpoints: HashMap::new(),
                 turn: None,
                 status: Status::Idle,
-                unseen: false,
                 sending: false,
                 offered: Offered::default(),
                 previous_focus: None,
@@ -527,12 +524,6 @@ impl AgentTab {
         self.state.borrow().status
     }
 
-    /// Whether the session waits for the user or finished while they looked elsewhere.
-    pub fn wants_attention(&self) -> bool {
-        let state = self.state.borrow();
-        state.status == Status::RequiresAction || state.unseen
-    }
-
     /// Whether the tab is the one showing in its window.
     pub fn is_shown(&self) -> bool {
         self.root.window().is_some_and(|w| crate::window::in_front(&w)) && !self.root.isHiddenOrHasHiddenAncestor()
@@ -544,16 +535,6 @@ impl AgentTab {
             if let Some(window) = controller.window() {
                 window.makeKeyAndOrderFront(None);
             }
-        }
-        self.seen();
-    }
-
-    /// The user looks at the tab now: nothing is unseen any more.
-    pub fn seen(&self) {
-        let was = std::mem::take(&mut self.state.borrow_mut().unseen);
-        if was {
-            self.refresh_tab_mark();
-            notify::refresh_badge();
         }
     }
 
@@ -801,7 +782,6 @@ impl AgentTab {
                     });
                 }
                 if elsewhere {
-                    self.state.borrow_mut().unseen = true;
                     notify::post(&self.tab_key(), &title, &tf("{} ist fertig.", &[self.agent.name()]));
                 }
                 self.send_queued();
@@ -816,7 +796,6 @@ impl AgentTab {
             _ => {}
         }
         self.refresh_tab_mark();
-        notify::refresh_badge();
     }
 
     /// Records the session in the index the AI panel lists.
@@ -942,7 +921,6 @@ impl AgentTab {
     pub fn composer_focus(&self, focused: bool) {
         self.composer.show_focus(focused);
         if focused {
-            self.seen();
             self.offer_selection();
         }
     }

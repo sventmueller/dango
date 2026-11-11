@@ -318,6 +318,16 @@ fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce
         };
         let buttons = tab.timeline().last_card_buttons();
         let misfits = tab.timeline().misfits();
+        let dock = objc2::MainThreadMarker::new().and_then(|mtm| {
+            objc2_app_kit::NSApplication::sharedApplication(mtm)
+                .dockTile()
+                .badgeLabel()
+        });
+        check(
+            "the Dock icon shows no number, also while a session waits",
+            dock.is_none(),
+            format!("{dock:?}"),
+        );
         let mark = tab.tab_mark();
         check(
             "an AI tab that waits for the user has a red dot",

@@ -42,7 +42,7 @@ pub fn post(id: &str, title: &str, body: &str) {
     if !ASKED.swap(true, Ordering::SeqCst) {
         let done = RcBlock::new(|_granted: Bool, _error: *mut NSError| {});
         center.requestAuthorizationWithOptions_completionHandler(
-            UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound | UNAuthorizationOptions::Badge,
+            UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound,
             &done,
         );
     }
@@ -58,14 +58,4 @@ pub fn post(id: &str, title: &str, body: &str) {
 #[cfg(feature = "selftest")]
 pub fn posted() -> usize {
     NOTIFIED.load(Ordering::Relaxed)
-}
-
-/// Shows on the Dock icon how many sessions wait for the user or finished unseen.
-pub fn refresh_badge() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let count = super::all().iter().filter(|t| t.wants_attention()).count();
-    let label = (count > 0).then(|| ns(&count.to_string()));
-    NSApplication::sharedApplication(mtm)
-        .dockTile()
-        .setBadgeLabel(label.as_deref());
 }

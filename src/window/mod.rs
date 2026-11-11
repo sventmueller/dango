@@ -1361,6 +1361,7 @@ impl WindowController {
     fn make_current(&self, tab: &Rc<TabWindow>) {
         let previous = self.current_tab();
         if previous.as_ref().is_some_and(|previous| Rc::ptr_eq(previous, tab)) {
+            self.list_front_tabs();
             return;
         }
         let mut collapsed = false;
@@ -1376,6 +1377,25 @@ impl WindowController {
             tab.adopt_sidebar(view);
         }
         self.fit_sidebar(tab, collapsed);
+        self.list_front_tabs();
+    }
+
+    /// Lists only the tab in front of each tab group in the Window menu and the Dock's menu, so a folder appears once
+    /// there however many tabs it has; a tab dragged out into a window of its own stays listed.
+    fn list_front_tabs(&self) {
+        let current = self.current_tab();
+        for tab in self.ivars().tabs.borrow().iter() {
+            let hidden = tab.window.tabGroup().is_some_and(|group| {
+                let windows = group.windows();
+                let front = current
+                    .as_ref()
+                    .map(|current| current.window.clone())
+                    .filter(|window| windows.iter().any(|w| std::ptr::eq(&*w, &**window)))
+                    .or_else(|| group.selectedWindow());
+                windows.len() > 1 && front.is_some_and(|front| !std::ptr::eq(&*front, &*tab.window))
+            });
+            tab.window.setExcludedFromWindowsMenu(hidden);
+        }
     }
 
     /// Keeps the width the user gave the sidebar in `tab`.

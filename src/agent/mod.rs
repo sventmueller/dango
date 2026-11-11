@@ -226,7 +226,6 @@ fn remove(key: u64) {
             plan::close_docs(&controller, key);
             changed(&controller);
         }
-        notify::refresh_badge();
     }
 }
 
