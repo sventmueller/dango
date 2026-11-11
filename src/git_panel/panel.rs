@@ -181,10 +181,8 @@ define_class!(
         #[unsafe(method_id(outlineView:rowViewForItem:))]
         fn row_view_for(&self, view: &NSOutlineView, item: &AnyObject) -> Option<Retained<NSTableRowView>> {
             guarded(None, || match key_of(item)? {
-                RowKey::Commit(_) | RowKey::CommitFile(..) | RowKey::More => {
-                    Some(Retained::into_super(super::graph::GraphRowView::new(view.mtm())))
-                }
-                _ => None,
+                RowKey::Section(_) => None,
+                _ => Some(Retained::into_super(super::graph::GraphRowView::new(view.mtm()))),
             })
         }
 

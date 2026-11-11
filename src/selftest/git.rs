@@ -328,6 +328,7 @@ fn listed(root: PathBuf, ok: bool) {
         tip == (Some(splat_i18n::tf("{}, {} Änderungen", &[Panel::Git.title(), "3"])), 0),
         format!("{tip:?}"),
     );
+    panel::select_file(&controller, Path::new(README));
     if let Some(window) = controller.window() {
         snapshot(&window, "git-changes");
     }

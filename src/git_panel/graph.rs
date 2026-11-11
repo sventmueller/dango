@@ -5,7 +5,7 @@ use std::cell::RefCell;
 
 use ide_git::Commit;
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
+use objc2::{ClassType, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSAccessibility, NSBackgroundStyle, NSBezierPath, NSColor, NSTableCellView, NSTableRowView,
     NSTableViewSelectionHighlightStyle, NSUserInterfaceLayoutDirection, NSView,
@@ -279,11 +279,13 @@ impl GraphView {
 /// How far a selection keeps from the list's edges, and how round its corners are, as the source list draws it.
 const SELECTION_INSET: f64 = 10.0;
 const SELECTION_RADIUS: f64 = 5.0;
+/// How far a selection reaches past a cell that begins closer to the edge than `SELECTION_INSET`.
+const SELECTION_MARGIN: f64 = 4.0;
 
 define_class!(
     // SAFETY: NSTableRowView has no subclassing requirements and `GraphRowView` does not implement Drop.
-    /// The row of a commit or of a commit's file, whose selection begins after the graph's lanes so it leaves the dot
-    /// and the lines visible.
+    /// A row of the Git list whose selection begins after the graph's lanes, leaving the dot and the lines visible, and
+    /// before a cell set closer to the edge than the source list's inset, leaving its icon whole.
     #[unsafe(super(NSTableRowView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitGraphRowView"]
@@ -356,15 +358,28 @@ impl GraphRowView {
         }
     }
 
-    /// The selection from the end of the row's lanes, or from the leading inset in a row without them, to the
-    /// trailing inset.
+    /// The selection from the end of the row's lanes, or in a row without them from the leading inset or just before
+    /// its cell, whichever is nearer the edge, to the trailing inset.
     fn selection_rect(&self) -> Option<NSRect> {
         let bounds = self.bounds();
-        let (start, end) = (
+        let (mut start, mut end) = (
             bounds.origin.x + SELECTION_INSET,
             bounds.origin.x + bounds.size.width - SELECTION_INSET,
         );
         let rtl = self.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft;
+        for cell in self
+            .subviews()
+            .iter()
+            .filter(|v| v.isKindOfClass(NSTableCellView::class()))
+        {
+            let frame = cell.frame();
+            if rtl {
+                end = end.max(frame.origin.x + frame.size.width + SELECTION_MARGIN);
+            } else {
+                start = start.min(frame.origin.x - SELECTION_MARGIN);
+            }
+        }
+        let (start, end) = (start.max(bounds.origin.x), end.min(bounds.origin.x + bounds.size.width));
         // The dot's lane ends a little past the dot, so the selection may start just inside the lanes.
         let (left, right) = match graph_in(self).map(|g| self.convertRect_fromView(g.bounds(), Some(&g))) {
             Some(lanes) if rtl => (start, lanes.origin.x + 1.0),

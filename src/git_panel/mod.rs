@@ -356,6 +356,24 @@ pub mod selftest {
         }
     }
 
+    /// Selects the row of the changed file `path`, and only it, in a list that has the keyboard focus.
+    pub fn select_file(controller: &WindowController, path: &Path) {
+        let Some(panel) = panel::of(controller) else { return };
+        let outline = &panel.ui().outline;
+        let row = (0..outline.numberOfRows()).find(|&row| {
+            outline
+                .itemAtRow(row)
+                .and_then(|item| panel::key_of(&item))
+                .is_some_and(|key| matches!(key, RowKey::File(_, file) if file == path))
+        });
+        if let Some(row) = row.and_then(|row| usize::try_from(row).ok()) {
+            outline.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        }
+        if let Some(window) = outline.window() {
+            window.makeFirstResponder(Some(outline));
+        }
+    }
+
     /// The files the list shows below the commit titled `subject`.
     pub fn commit_rows(controller: &WindowController, subject: &str) -> Vec<PathBuf> {
         let (Some(panel), Some(hash)) = (panel::of(controller), commit_hash(controller, subject)) else {
