@@ -136,7 +136,9 @@ fn command_card(
     let extra: Vec<&NSView> = badge.iter().map(|v| &**v).collect();
     let mut parts = vec![head_with_status(ctx, call, &call.name, detail, &extra)];
     let output = call.output.as_ref().map(output_text);
-    parts.push(io_box(ctx, id, command, output.as_deref(), call));
+    if !command.is_empty() || output.is_some() {
+        parts.push(io_box(ctx, id, command, output.as_deref(), call));
+    }
     let mut actions: Vec<Retained<NSView>> = Vec::new();
     if call.status == ToolStatus::InProgress && !background && call.background_task.is_none() && !ctx.nested {
         actions.push(ui::view(&ui::link(
