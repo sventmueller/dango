@@ -533,6 +533,7 @@ impl AgentTab {
             return;
         };
         self.state.borrow().source.set_model(&model);
+        super::choices::remember(self.agent.id(), |choice| choice.model = Some(model.clone()));
         self.state.borrow_mut().model = Some(model);
         self.refresh_composer();
     }
@@ -545,6 +546,7 @@ impl AgentTab {
             return;
         };
         self.state.borrow().source.set_effort(&level);
+        super::choices::remember(self.agent.id(), |choice| choice.effort = Some(level.clone()));
         self.state.borrow_mut().effort = Some(level);
         self.refresh_composer();
     }
@@ -589,6 +591,7 @@ impl AgentTab {
             return;
         };
         self.state.borrow().source.set_mode(&mode);
+        super::choices::remember(self.agent.id(), |choice| choice.mode = Some(mode.clone()));
         self.state.borrow_mut().mode = mode;
         self.refresh_composer();
     }

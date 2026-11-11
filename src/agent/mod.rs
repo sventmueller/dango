@@ -7,6 +7,7 @@ mod actions;
 mod attrs;
 mod cards;
 mod checkpoint;
+mod choices;
 mod compose;
 mod composer;
 mod context;

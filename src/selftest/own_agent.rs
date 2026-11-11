@@ -463,6 +463,7 @@ fn close_and_reopen(root: PathBuf, key: u64) {
         return finish(NAME);
     };
     let thread_id = tab.thread_id().clone();
+    tab.pick_mode_id("edits");
     tab.toggle_sandbox();
     let (_, _, sandbox) = tab.pills();
     check(
@@ -502,6 +503,12 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
                 "the resumed thread shows the earlier turn",
                 thread.title() == "Mach die Antwort 42" && matches!(edits, Some((ToolStatus::Completed, _))),
                 format!("{} / {edits:?}", thread.title()),
+            );
+            let (_, mode, _) = tab.pills();
+            check(
+                "the thread opens again in the approval mode picked last",
+                mode == splat_i18n::t("Änderungen erlauben"),
+                mode,
             );
             if let Some(controller) = controller_of(&root) {
                 picture(&controller, "own-agent-resumed");

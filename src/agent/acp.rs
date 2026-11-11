@@ -568,9 +568,60 @@ impl AgentTab {
         let Some((option, value)) = picked.split_once('\u{1f}') else {
             return;
         };
+        self.acp_set_option(option, value);
+    }
+
+    /// Sets the agent's option `option`, its model or how much it thinks, to `value`, and remembers it for the
+    /// agent's next sessions.
+    fn acp_set_option(&self, option: &str, value: &str) {
         let result = self.state.borrow().source.set_option(option, value);
         if let Err(error) = result {
-            crate::diag::report("choosing a model", &error);
+            return crate::diag::report("choosing a model", &error);
+        }
+        let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let effort = caps.thought_level().is_some_and(|o| o.id == option);
+        super::choices::remember(self.agent.id(), |choice| {
+            let slot = if effort { &mut choice.effort } else { &mut choice.model };
+            *slot = Some(value.to_string());
+        });
+    }
+
+    /// Puts a session that just told its options on the model, thought level and mode the user picked last for the
+    /// agent, those it offers; once per session.
+    pub(super) fn acp_apply_choice(&self) {
+        let caps = {
+            let state = self.state.borrow();
+            match &state.acp {
+                Some(caps) if !state.choice_applied && (!caps.modes.is_empty() || !caps.options.is_empty()) => {
+                    caps.clone()
+                }
+                _ => return,
+            }
+        };
+        self.state.borrow_mut().choice_applied = true;
+        let choice = super::choices::of(self.agent.id());
+        for (option, wanted) in [(caps.model(), choice.model), (caps.thought_level(), choice.effort)] {
+            let (Some(option), Some(wanted)) = (option, wanted) else {
+                continue;
+            };
+            let OptionValue::Select { current, choices } = &option.value else {
+                continue;
+            };
+            if *current != wanted && choices.iter().any(|c| c.value == wanted) {
+                let result = self.state.borrow().source.set_option(&option.id, &wanted);
+                if let Err(error) = result {
+                    crate::diag::report("choosing the model picked last", &error);
+                }
+            }
+        }
+        if let Some(mode) = choice.mode
+            && caps.mode.as_ref() != Some(&mode)
+            && caps.modes.iter().any(|m| m.id == mode)
+        {
+            let result = self.state.borrow().source.set_acp_mode(&mode);
+            if let Err(error) = result {
+                crate::diag::report("choosing the mode picked last", &error);
+            }
         }
     }
 
@@ -601,10 +652,16 @@ impl AgentTab {
         let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
             return;
         };
+        self.acp_set_mode(mode);
+    }
+
+    /// Switches the agent to the mode `mode` and remembers it for the agent's next sessions.
+    fn acp_set_mode(&self, mode: String) {
         let result = self.state.borrow().source.set_acp_mode(&mode);
         if let Err(error) = result {
-            crate::diag::report("choosing a mode", &error);
+            return crate::diag::report("choosing a mode", &error);
         }
+        super::choices::remember(self.agent.id(), |choice| choice.mode = Some(mode));
     }
 
     /// The commands the agent offers, for the slash menu.
@@ -700,12 +757,12 @@ impl AgentTab {
 
     /// Sets the agent's option `option` to `value`, as picking it in the model menu does.
     pub fn choose_option(&self, option: &str, value: &str) {
-        let _ = self.state.borrow().source.set_option(option, value);
+        self.acp_set_option(option, value);
     }
 
     /// Switches the agent to mode `id`, as picking it in the mode menu does.
     pub fn choose_mode(&self, id: &str) {
-        let _ = self.state.borrow().source.set_acp_mode(id);
+        self.acp_set_mode(id.to_string());
     }
 
     /// The agent's name, as the tab shows it.

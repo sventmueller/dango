@@ -129,8 +129,10 @@ eingearbeitet (markiert mit *Review*).
   `--sandbox`); die Oberfläche zeigt die tatsächliche Wirkung je Agent (Claudes Sandbox umfasst nur Shell-Befehle,
   Geminis Standardprofil erlaubt breites Lesen und Netz). Beim eigenen Agenten gelten die Grenzen auch für seine Datei-
   und HTTP-Werkzeuge, nicht nur für Shell-Befehle.
-- **E27 Freigabemodell** *(Review, neu)*. Neue Threads starten im Modus „Manuell“. „Alles erlauben“ und „Umgehen“ ohne
-  Sandbox zeigen ausdrücklich keinen Warnkasten im Thread (Vorgabe des Owners); den Modus nennt die Modus-Pille.
+- **E27 Freigabemodell** *(Review, neu)*. Neue Threads starten mit Modell, Denktiefe und Modus, die der Nutzer für
+  den Agenten zuletzt gewählt hat, auch nach einem Neustart (Vorgabe des Owners); beim ersten Mal im Modus „Manuell“.
+  „Alles erlauben“ und „Umgehen“ ohne Sandbox zeigen ausdrücklich keinen Warnkasten im Thread (Vorgabe des Owners); den
+  Modus nennt die Modus-Pille.
   Gespeicherte Regeln gelten je Projekt und Agent und sind in den Einstellungen einsehbar und löschbar. Zerstörerische
   Git-Befehle (`push --force`, `reset --hard`, `clean -fd`) brauchen immer eine Freigabe, auch bei gespeicherten Regeln.
 

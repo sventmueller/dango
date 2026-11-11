@@ -23,6 +23,8 @@ const SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000cc";
 const PAUSE: Duration = Duration::from_millis(800);
 const FRAME: NSRect = NSRect::new(NSPoint::new(120.0, 140.0), NSSize::new(1100.0, 720.0));
 const SIDEBAR: f64 = 380.0;
+/// The model, effort and mode picked in the AI thread before the quit.
+const PICKS: (&str, &str, &str) = ("opus", "high", "acceptEdits");
 /// The session of the Claude Code stand-in, as a transcript in the CLI's folder names it.
 const CLI_SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000dd";
 /// A stand-in for a coding agent's CLI: it says how it was started and waits.
@@ -96,6 +98,9 @@ fn arrange(a: PathBuf, b: PathBuf) {
     first.open_file(&a.join("notes.md"));
     crate::terminal::open_tab(&first, Some(&a));
     let replayed = crate::selftest::replay_agent(&first, SESSION);
+    if let Some(tab) = crate::agent::of_window(&first).first() {
+        tab.pick_all(PICKS.0, PICKS.1, PICKS.2);
+    }
     for name in ["claude", "codex"] {
         let program = ide_core::paths::home().join(format!("stand-in-{name}"));
         crate::terminal::open_cli_program(&first, name, program);
@@ -199,6 +204,21 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         "the AI thread comes back as its session, played from a recording here",
         sessions.iter().any(|session| session == SESSION),
         format!("{sessions:?}"),
+    );
+    let wanted = (
+        Some(PICKS.0.to_string()),
+        Some(PICKS.1.to_string()),
+        PICKS.2.to_string(),
+    );
+    let restored = crate::agent::of_window(&first)
+        .iter()
+        .find(|tab| tab.session_id().as_deref() == Some(SESSION))
+        .map(|tab| tab.picks());
+    let fresh = crate::agent::open_replay(&first).map(|tab| tab.picks());
+    check(
+        "the AI thread that came back and a new one start with the model, effort and mode picked last",
+        restored.as_ref() == Some(&wanted) && fresh.as_ref() == Some(&wanted),
+        format!("{restored:?} / {fresh:?}"),
     );
     let hits = crate::agent::of_window(&first)
         .iter()

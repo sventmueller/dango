@@ -113,7 +113,12 @@ impl AgentTab {
     /// conversation: anew, or from the store when the thread is opened again. The model is the tab's choice, the
     /// stored thread's, else the default for new threads.
     pub(super) fn start_own(&self) {
-        let chosen = self.state.borrow().own.clone();
+        let chosen = self
+            .state
+            .borrow()
+            .own
+            .clone()
+            .or_else(|| picked_model(self.agent.id()));
         let (key, cwd, thread_id) = (self.key, self.cwd.clone(), self.thread_id.clone());
         let sandbox = self.state.borrow().sandbox;
         let sink = self.sink(Incoming::Own);
@@ -158,6 +163,7 @@ impl AgentTab {
                 return self.set_problem(Some(Problem::NoModel));
             }
         };
+        apply_choice(&session, &super::choices::of(self.agent.id()));
         let snapshot = session.snapshot();
         {
             let mut state = self.state.borrow_mut();
@@ -321,6 +327,7 @@ impl AgentTab {
             .as_ref()
             .is_some_and(|c| c.endpoint == choice.endpoint);
         self.state.borrow_mut().own = Some(choice.clone());
+        super::choices::remember(self.agent.id(), |remembered| remembered.model = Some(picked.clone()));
         let session = self.state.borrow().source.own().cloned();
         match session {
             Some(session) if same_endpoint => {
@@ -343,6 +350,9 @@ impl AgentTab {
         if let Some(session) = self.state.borrow().source.own() {
             session.set_effort(Some(level.as_str()).filter(|l| !l.is_empty()));
         }
+        super::choices::remember(self.agent.id(), |choice| {
+            choice.effort = Some(level.clone()).filter(|l| !l.is_empty());
+        });
         self.refresh_composer();
     }
 
@@ -408,6 +418,10 @@ impl AgentTab {
                 "all" => session.set_approval(Approval::All),
                 _ => session.set_approval(Approval::Manual),
             }
+            let policy = session.policy();
+            super::choices::remember(self.agent.id(), |choice| {
+                choice.mode = Some(mode_of(policy.profile, policy.approval));
+            });
         }
         self.refresh_composer();
     }
@@ -466,4 +480,37 @@ fn sel_pick_effort() -> objc2::runtime::Sel {
 
 fn sel_pick_mode() -> objc2::runtime::Sel {
     objc2::sel!(ideAgentPickMode:)
+}
+
+/// The model the user picked last for the own agent, while its service is still set up.
+fn picked_model(agent: &str) -> Option<ModelChoice> {
+    let picked = super::choices::of(agent).model?;
+    let (endpoint, model) = picked.split_once('\u{1f}')?;
+    own_agent::endpoint(endpoint)?;
+    Some(ModelChoice {
+        endpoint: endpoint.to_string(),
+        model: model.to_string(),
+    })
+}
+
+/// A profile and an approval mode as one remembered mode, such as `write all`.
+fn mode_of(profile: Profile, approval: Approval) -> String {
+    let profile = if profile == Profile::Ask { "ask" } else { "write" };
+    format!("{profile} {}", ide_agent::session::mode_id(approval))
+}
+
+/// Puts a new session on the reasoning effort and mode the user picked last for the own agent.
+fn apply_choice(session: &Session, choice: &ide_core::settings::AgentChoice) {
+    if let Some(effort) = &choice.effort {
+        session.set_effort(Some(effort.as_str()));
+    }
+    let Some((profile, approval)) = choice.mode.as_deref().and_then(|mode| mode.split_once(' ')) else {
+        return;
+    };
+    session.set_profile(if profile == "ask" { Profile::Ask } else { Profile::Write });
+    session.set_approval(match approval {
+        "edits" => Approval::Edits,
+        "all" => Approval::All,
+        _ => Approval::Manual,
+    });
 }

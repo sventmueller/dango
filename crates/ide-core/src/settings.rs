@@ -131,15 +131,35 @@ impl SearchEngine {
 
 /// What the state file holds.
 pub mod remembered {
+    use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use super::Key;
+    use super::{AgentChoice, Key};
 
     /// The folders that were open when the app last quit.
     pub const OPEN_PROJECTS: Key<Vec<PathBuf>> = Key::user("openProjects", Vec::new);
 
     /// Recently opened folders, the latest first.
     pub const RECENT_PROJECTS: Key<Vec<PathBuf>> = Key::user("recentProjects", Vec::new);
+
+    /// What the user picked last for each agent, by the agent's id, which its next sessions start with.
+    pub const AGENT_CHOICES: Key<BTreeMap<String, AgentChoice>> = Key::user("agentChoices", BTreeMap::new);
+}
+
+/// The model, reasoning effort and permission mode the user picked for an agent, each as the agent names it; unset
+/// leaves the agent's own default.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AgentChoice {
+    /// The model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// How much the model thinks.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    /// What runs without asking.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
 }
 
 /// How many folders the recent list keeps.
@@ -319,6 +339,27 @@ mod tests {
         std::fs::write(dir.join("user.json"), "[1, 2").unwrap();
         let settings = Settings::load(dir.join("user.json"));
         assert_eq!(settings.problems(), vec![(dir.join("user.json"), Locked::Damaged)]);
+    }
+
+    #[test]
+    fn an_agents_choice_comes_back_and_a_missing_part_stays_unset() {
+        let dir = scratch("agent-choices");
+        let mut state = State::load(dir.join("state.json"));
+        let mut choices = state.get(&remembered::AGENT_CHOICES);
+        assert!(choices.is_empty());
+        choices.insert(
+            "claude".into(),
+            AgentChoice {
+                model: Some("opus".into()),
+                effort: None,
+                mode: Some("bypassPermissions".into()),
+            },
+        );
+        state.set(&remembered::AGENT_CHOICES, &choices).unwrap();
+        let text = std::fs::read_to_string(dir.join("state.json")).unwrap();
+        assert!(!text.contains("effort"), "an unset part is left out: {text}");
+        let again = State::load(dir.join("state.json")).get(&remembered::AGENT_CHOICES);
+        assert_eq!(again, choices);
     }
 
     #[test]

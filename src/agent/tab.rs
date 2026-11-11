@@ -166,6 +166,8 @@ pub struct State {
     pub last_sent: Option<UserMessage>,
     /// The editor's selection, offered as context while the composer has the focus.
     pub offer: Option<Attachment>,
+    /// The session runs with the model and mode the user picked last for its agent, where it offers them.
+    pub choice_applied: bool,
 }
 
 pub struct AgentTab {
@@ -249,6 +251,12 @@ impl AgentTab {
         let problem_holder = NSView::new(mtm);
         let queue_view = ui::column(mtm, 4.0, &[]);
         let suggestions = Suggestions::new(mtm, &target);
+        // The own agent and ACP agents take the user's last picks once their session runs.
+        let choice = if matches!(agent, Agent::Claude) {
+            super::choices::of(agent.id())
+        } else {
+            ide_core::settings::AgentChoice::default()
+        };
         let tab = AgentTab {
             key,
             mtm,
@@ -279,9 +287,9 @@ impl AgentTab {
                 queue: Vec::new(),
                 attachments: Vec::new(),
                 sandbox: false,
-                mode: "default".into(),
-                model: None,
-                effort: None,
+                mode: choice.mode.unwrap_or_else(|| "default".into()),
+                model: choice.model,
+                effort: choice.effort,
                 bookmarked: false,
                 resume: None,
                 checkpoints: HashMap::new(),
@@ -294,6 +302,7 @@ impl AgentTab {
                 fork: None,
                 last_sent: None,
                 offer: None,
+                choice_applied: false,
             }),
             inbox: RefCell::new(Arc::new(Inbox::default())),
             ticking: std::cell::Cell::new(false),
@@ -571,6 +580,7 @@ impl AgentTab {
                 let mut state = self.state.borrow_mut();
                 state.source = Source::Starting;
                 state.problem = None;
+                state.choice_applied = false;
                 state.thread.clone()
             };
             self.refresh();
@@ -711,6 +721,9 @@ impl AgentTab {
             }
             state.source.snapshot()
         };
+        if learned && self.agent.is_acp() {
+            self.acp_apply_choice();
+        }
         if problem.is_some() {
             self.set_problem(problem);
         }
@@ -1060,6 +1073,34 @@ impl AgentTab {
     /// Picks the model for the next start.
     pub fn use_model(&self, model: &str) {
         self.state.borrow_mut().model = Some(model.to_string());
+    }
+
+    /// Picks `model`, `effort` and `mode` as the pills' menus do, which remembers them for the agent's next sessions.
+    #[cfg(feature = "selftest")]
+    pub fn pick_all(&self, model: &str, effort: &str, mode: &str) {
+        {
+            let mut state = self.state.borrow_mut();
+            state.offered.models = vec![model.to_string()];
+            state.offered.efforts = vec![effort.to_string()];
+            state.offered.modes = vec![mode.to_string()];
+        }
+        self.pick_model(0);
+        self.pick_effort(0);
+        self.pick_mode(0);
+    }
+
+    /// Picks the mode `mode` as the mode pill's menu does, which remembers it for the agent's next sessions.
+    #[cfg(feature = "selftest")]
+    pub fn pick_mode_id(&self, mode: &str) {
+        self.state.borrow_mut().offered.modes = vec![mode.to_string()];
+        self.pick_mode(0);
+    }
+
+    /// The model, effort and mode the session runs with or starts with.
+    #[cfg(feature = "selftest")]
+    pub fn picks(&self) -> (Option<String>, Option<String>, String) {
+        let state = self.state.borrow();
+        (state.model.clone(), state.effort.clone(), state.mode.clone())
     }
 
     /// Switches to the permission mode `mode`, as the mode pill's menu does.

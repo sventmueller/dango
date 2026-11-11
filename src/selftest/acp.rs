@@ -308,9 +308,35 @@ fn options(root: PathBuf, key: u64) {
                 move || tab_of(key).is_some_and(|t| t.is_live() && t.pills().2.starts_with("Sandbox an")),
                 move || {
                     check("the sandbox restarts the agent with its switch", true, "");
-                    cancel(root, key);
+                    remembered(root, key);
                 },
             );
+        },
+    );
+}
+
+/// A new session of the agent starts with the model and mode picked in the first.
+fn remembered(root: PathBuf, key: u64) {
+    let Some(controller) = controller_of(&root) else {
+        return finish(NAME);
+    };
+    let Some(second) = crate::agent::open_preset(&controller, GEMINI) else {
+        return finish(NAME);
+    };
+    let other = second.key;
+    soon(
+        "a new session takes the model and mode picked last",
+        move || tab_of(other).is_some_and(|t| t.is_live() && t.pills().0 == "Deep" && t.pills().1 == "Code"),
+        move || {
+            check(
+                "a new session of the agent starts with the model and mode picked last",
+                true,
+                "",
+            );
+            if let Some(tab) = tab_of(other) {
+                tab.close();
+            }
+            cancel(root, key);
         },
     );
 }
