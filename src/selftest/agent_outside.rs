@@ -129,6 +129,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
         format!("pasted {pasted}, tiles {tiles:?}"),
     );
+    let idle = tab.tab_mark();
     if let Some(png) = &shot {
         let frame = serde_json::json!({"type": "user", "uuid": "picture-sent", "message": {"role": "user", "content": [
             {"type": "text", "text": "Was fehlt hier?"},
@@ -136,6 +137,12 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
         ]}});
         tab.feed(&format!("{}{frame}", ide_claude::replay::SENT));
     }
+    let working = tab.tab_mark();
+    check(
+        "an idle AI tab has no dot, one that works a green one",
+        idle.is_none() && working.as_deref() == Some(&*objc2_app_kit::NSColor::systemGreenColor()),
+        format!("idle {idle:?}, working {working:?}"),
+    );
     let key = tab.key;
     main_after(SETTLE, move || pictures(root, key, then));
 }

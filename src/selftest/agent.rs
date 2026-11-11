@@ -318,6 +318,12 @@ fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce
         };
         let buttons = tab.timeline().last_card_buttons();
         let misfits = tab.timeline().misfits();
+        let mark = tab.tab_mark();
+        check(
+            "an AI tab that waits for the user has a red dot",
+            mark.as_deref() == Some(&*objc2_app_kit::NSColor::systemRedColor()),
+            format!("{mark:?}"),
+        );
         check(
             "a subagent's request that waits shows on its folded card, ready to answer, the row as tall as the card",
             tab.snapshot().pending_requests().len() == 1

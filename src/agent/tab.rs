@@ -884,17 +884,18 @@ impl AgentTab {
         self.refresh_tab_mark();
     }
 
-    /// The dot on the tab: the agent's colour while it works, orange while it waits, the accent when it finished unseen.
     fn refresh_tab_mark(&self) {
         let Some(controller) = self.controller() else { return };
-        let state = self.state.borrow();
-        let color = match state.status {
-            Status::Running => Some(self.agent.colour()),
-            Status::RequiresAction => Some(NSColor::systemOrangeColor()),
-            Status::Idle if state.unseen => Some(NSColor::controlAccentColor()),
+        controller.set_tab_status(self.tab_id.get(), self.tab_mark().as_deref());
+    }
+
+    /// The colour of the dot on the tab: green while the agent works, red while it waits for the user, none when idle.
+    pub fn tab_mark(&self) -> Option<Retained<NSColor>> {
+        match self.state.borrow().status {
+            Status::Running => Some(NSColor::systemGreenColor()),
+            Status::RequiresAction => Some(NSColor::systemRedColor()),
             Status::Idle => None,
-        };
-        controller.set_tab_status(self.tab_id.get(), color.as_deref());
+        }
     }
 
     /// Ends the session, as the tab closes.

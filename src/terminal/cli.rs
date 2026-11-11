@@ -105,12 +105,8 @@ fn decide(signals: &Signals, foreign: bool, now: Instant) -> CliStatus {
     if signals.exited {
         return CliStatus::Finished;
     }
-    if let Some(bell) = signals.bell {
-        let after_key = signals.key.is_none_or(|key| bell > key);
-        let quiet_since = signals.output.is_none_or(|output| output <= bell + AFTER_BELL);
-        if after_key && quiet_since {
-            return CliStatus::Waiting;
-        }
+    if rang(signals) {
+        return CliStatus::Waiting;
     }
     let quiet_for = |limit: Duration| signals.output.is_none_or(|output| now.duration_since(output) >= limit);
     if signals.spinner || foreign {
@@ -119,6 +115,25 @@ fn decide(signals: &Signals, foreign: bool, now: Instant) -> CliStatus {
         CliStatus::Waiting
     } else {
         CliStatus::Working
+    }
+}
+
+/// Whether the CLI rang the bell since the user's last key and stayed quiet after it, as it does when it asks.
+fn rang(signals: &Signals) -> bool {
+    signals.bell.is_some_and(|bell| {
+        let after_key = signals.key.is_none_or(|key| bell > key);
+        let quiet_since = signals.output.is_none_or(|output| output <= bell + AFTER_BELL);
+        after_key && quiet_since && !signals.exited
+    })
+}
+
+/// The colour of the dot on a CLI's tab: green while it works, red while it rang for the user, none when it sits idle
+/// or ended.
+fn tab_mark(signals: &Signals, status: CliStatus) -> Option<Retained<NSColor>> {
+    match status {
+        CliStatus::Working => Some(NSColor::systemGreenColor()),
+        CliStatus::Waiting if rang(signals) => Some(NSColor::systemRedColor()),
+        CliStatus::Waiting | CliStatus::Finished => None,
     }
 }
 
@@ -175,6 +190,11 @@ impl CliState {
 
     pub fn status(&self) -> CliStatus {
         self.status.get()
+    }
+
+    /// The colour of the dot on its tab, if it shows one.
+    pub fn tab_mark(&self) -> Option<Retained<NSColor>> {
+        tab_mark(&self.signals.get(), self.status())
     }
 
     fn update(&self, change: impl FnOnce(&mut Signals)) {
@@ -451,12 +471,7 @@ impl TerminalView {
             return;
         };
         if let Some(tab) = self.ivars().tab.get() {
-            // In the tab bar a working CLI shows its agent's colour, as an AI tab that works does.
-            let color = match cli.status() {
-                CliStatus::Working => crate::agent::cli_colour(&cli.name),
-                status => status.color(),
-            };
-            controller.set_tab_status(tab, Some(&color));
+            controller.set_tab_status(tab, cli.tab_mark().as_deref());
         }
         crate::activity::refresh(&controller);
         crate::agent_panel::refresh(&controller);
@@ -567,6 +582,35 @@ mod tests {
         );
         signals.exited = true;
         assert_eq!(decide(&signals, false, at(2_100)), CliStatus::Finished);
+    }
+
+    #[test]
+    fn a_cli_tab_is_green_while_working_red_when_it_rang_and_plain_when_idle() {
+        let start = Instant::now();
+        let at = |ms: u64| start + Duration::from_millis(ms);
+        let mark = |signals: &Signals, now| {
+            tab_mark(signals, decide(signals, false, now)).map(|color| {
+                if color == NSColor::systemGreenColor() {
+                    "green"
+                } else if color == NSColor::systemRedColor() {
+                    "red"
+                } else {
+                    "other"
+                }
+            })
+        };
+        let mut signals = Signals {
+            output: Some(at(0)),
+            ..Signals::default()
+        };
+        assert_eq!(mark(&signals, at(1_000)), Some("green"), "working");
+        assert_eq!(mark(&signals, at(5_000)), None, "quiet at its prompt");
+        signals.bell = Some(at(1_000));
+        assert_eq!(mark(&signals, at(1_100)), Some("red"), "rang for the user");
+        signals.key = Some(at(2_000));
+        assert_eq!(mark(&signals, at(5_000)), None, "answered, then quiet");
+        signals.exited = true;
+        assert_eq!(mark(&signals, at(5_000)), None, "ended");
     }
 
     #[test]
