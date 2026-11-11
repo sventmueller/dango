@@ -96,6 +96,22 @@ fn menu_entries(controller: &WindowController) -> Vec<(String, bool)> {
         .collect()
 }
 
+/// Whether the login shell's PATH has an executable `name`, looked up apart from the menu's own lookup.
+fn on_login_path(name: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    let path = crate::environment::wait(Duration::from_secs(10))
+        .and_then(|env| {
+            env.iter()
+                .find(|(key, _)| key == "PATH")
+                .map(|(_, value)| value.clone())
+        })
+        .unwrap_or_default();
+    path.split(':').any(|dir| {
+        std::fs::metadata(Path::new(dir).join(name))
+            .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+    })
+}
+
 fn menus(stage: Stage) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(controller) = controller_of(&stage.root) else {
@@ -107,6 +123,7 @@ fn menus(stage: Stage) {
     check(
         "in a trusted folder the menu offers the CLIs, enabled where installed",
         names.iter().all(|name| trusted.iter().any(|(title, _)| title == name))
+            && trusted.iter().all(|(title, enabled)| *enabled == on_login_path(title))
             && trusted
                 .iter()
                 .all(|(title, _)| names.contains(&title.as_str()) || title == "gemini"),
