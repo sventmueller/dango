@@ -593,6 +593,43 @@ Befund (gemessen 2026-11-12, Debug-Build, warm):
   - Vor dem ersten Umzug steht der Abhängigkeitsgraph der sechs neuen Crates in diesem Dokument; Cargo erzwingt danach,
     dass er kreisfrei bleibt. Der App-Kontext aus E97 bleibt im App-Crate und wird nicht nach unten gereicht.
 
+**Abhängigkeitsgraph der sechs Crates** (vor dem ersten Umzug festgelegt). Untereinander hängen sie nur an
+`ide-ui-common`:
+- Das Terminal meldet Links und Pfade als Ereignis an die App, statt Browser oder Editor aufzurufen.
+- Das Diktat bekommt sein Ziel als Trait „Diktatziel“.
+- Die Dateisymbole holen ihre Farbe aus `ide-ui-common`.
+
+Zustand und Fenster erreichen die Crates über eine Schnittstelle `Host`, die die App beim Start einmal anmeldet, wie
+heute schon `splat_i18n::install` und `Supervisor::global()`. Fenster sprechen sie nur über deren Kennung an.
+
+```mermaid
+flowchart TD
+  app[ide-app] --> common[ide-ui-common]
+  app --> icons[ide-ui-icons] --> common
+  app --> export[ide-ui-export] --> common
+  app --> browser[ide-ui-browser] --> common
+  app --> terminal[ide-ui-terminal] --> common
+  app -. "Feature dictation" .-> dictation[ide-ui-dictation] --> common
+  common --> core[ide-core] & product[ide-product] & smd[splat-markdown]
+  icons --> smd
+  browser --> core & product
+  terminal --> iterm[ide-terminal] & proc[ide-process] & core
+  export --> splat["splat-render, -preview, -decoder, -file-state, -markdown"]
+  dictation --> ci[ide-ci] & core & product & lowspeak
+```
+
+Reihenfolge, jeder Schritt mit grünem `make check` und `selftest probe`:
+1. `ide-ui-common`
+2. `ide-ui-icons`
+3. Terminal-Darstellung
+4. Export
+5. Browser
+6. Terminal-Ansicht
+7. Diktat, zusätzlich mit `make check-dictation`
+8. Aufräumen und erneute Messung
+
+Wo ein Schnitt nötig ist, kommt er zuerst innerhalb des App-Crates; der Umzug danach ist ein reines Verschieben.
+
 ## Risiken
 - **R14 Einblendungen über Kern-Attribut:** Kern ist ein Abstand zwischen Zeichen, keine Einfügung; TextKit 2
   kann die Lücke bei Umbruch, Graphemen oder Eingabemethoden falsch vermessen, und am Zeilenanfang gibt es kein
