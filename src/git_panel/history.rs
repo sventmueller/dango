@@ -226,9 +226,7 @@ impl GitPanel {
         for constraint in [
             text.leadingAnchor()
                 .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH),
-            pills
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+            pills.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&pills.leadingAnchor(), -6.0),
         ] {
@@ -279,9 +277,7 @@ impl GitPanel {
         for constraint in [
             text.leadingAnchor()
                 .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), FILE_INDENT),
-            letter
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -8.0),
+            letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
         ] {

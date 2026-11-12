@@ -25,8 +25,6 @@ const SECTION_HEIGHT: f64 = 26.0;
 const ROW_HEIGHT: f64 = 22.0;
 const TREE_HEIGHT: f64 = 36.0;
 const ACTION_POINTS: f64 = 12.0;
-/// How far a status letter keeps from the list's edge.
-const LETTER_INSET: f64 = 8.0;
 
 /// Return and the Return of the number block.
 const RETURN_KEYS: [u16; 2] = [36, 76];
@@ -80,14 +78,16 @@ define_class!(
                 return frame;
             }
             let frame = crate::window::file_outline::outdent(self, frame, OUTDENT, true);
-            if self.levelForRow(row) <= 0 {
-                return frame;
-            }
-            match self.key_at(row) {
-                Some(RowKey::Commit(_) | RowKey::CommitFile(..) | RowKey::More) => self.under_chevron(frame, row),
-                Some(RowKey::File(..)) => self.flush_with_chevron(frame, row),
-                _ => self.toward_leading(frame, true),
-            }
+            let frame = if self.levelForRow(row) <= 0 {
+                frame
+            } else {
+                match self.key_at(row) {
+                    Some(RowKey::Commit(_) | RowKey::CommitFile(..) | RowKey::More) => self.under_chevron(frame, row),
+                    Some(RowKey::File(..)) => self.flush_with_chevron(frame, row),
+                    _ => self.toward_leading(frame, true),
+                }
+            };
+            self.far_edge_at_margin(frame)
         }
 
         #[unsafe(method(keyDown:))]
@@ -140,6 +140,21 @@ impl GitOutlineView {
         };
         let width = if cell { frame.size.width + by } else { frame.size.width };
         NSRect::new(NSPoint::new(x, frame.origin.y), NSSize::new(width, frame.size.height))
+    }
+
+    /// `frame` ending at the panel's margin, so that counts and status letters line up with the message box above.
+    fn far_edge_at_margin(&self, frame: NSRect) -> NSRect {
+        let width = self.bounds().size.width;
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let (left, right) = if rtl {
+            (super::ui::MARGIN, frame.origin.x + frame.size.width)
+        } else {
+            (frame.origin.x, width - super::ui::MARGIN)
+        };
+        NSRect::new(
+            NSPoint::new(left, frame.origin.y),
+            NSSize::new((right - left).max(0.0), frame.size.height),
+        )
     }
 
     /// The chevron of the section that holds `row`, if it shows one.
@@ -337,7 +352,7 @@ impl GitPanel {
             .setActive(true);
         letter
             .trailingAnchor()
-            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -LETTER_INSET)
+            .constraintEqualToAnchor(&cell.trailingAnchor())
             .setActive(true);
         actions
             .trailingAnchor()
@@ -509,7 +524,7 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
     number.setTranslatesAutoresizingMaskIntoConstraints(false);
     number
         .trailingAnchor()
-        .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0)
+        .constraintEqualToAnchor(&cell.trailingAnchor())
         .setActive(true);
     number
         .centerYAnchor()
