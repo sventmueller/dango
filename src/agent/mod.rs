@@ -273,6 +273,21 @@ pub fn show_pending(controller: &WindowController) {
     }
 }
 
+/// Opens the list of `part` of the session in the AI tab the window shows.
+pub fn show_work(controller: &WindowController, part: crate::activity::Part) {
+    if let Some(tab) = of_window(controller).into_iter().find(|t| t.is_shown()) {
+        tab.show_work(part, None);
+    }
+}
+
+/// Whether the window shows an AI tab whose list of `part` has anything to show.
+pub fn can_show_work(controller: &WindowController, part: crate::activity::Part) -> bool {
+    of_window(controller)
+        .into_iter()
+        .find(|t| t.is_shown())
+        .is_some_and(|t| t.has_work(part))
+}
+
 /// Moves the keyboard focus into the composer of the selected AI tab, or back out of it (⌘Esc); opens a tab when the
 /// window has none.
 pub fn toggle_focus(controller: &WindowController) {

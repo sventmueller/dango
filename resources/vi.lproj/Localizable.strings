@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Ứng dụng biết giá của Anthropic, OpenRouter tự báo giá của mình, còn mô hình cục bộ thì miễn phí. Với các nhà cung cấp khác, luồng chỉ hiển thị chi phí khi có giá được nhập ở đây.";
 "Die Umgebung der Login-Shell fehlt." = "Thiếu môi trường của shell đăng nhập.";
 "Dienste" = "Dịch vụ";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Phiên này chưa khởi động tiến trình nền nào";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Phiên này chưa khởi động tác nhân phụ nào";
 "Diese Version wurde mit dieser App nicht erprobt." = "Phiên bản này chưa được thử nghiệm với ứng dụng này.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Văn bản này không đến từ bạn mà từ một trang web, một terminal, một nhật ký CI hoặc một tệp nằm ngoài dự án. Văn bản có thể chứa chỉ dẫn nhằm điều khiển tác nhân (prompt injection). Tác nhân nhận văn bản kèm lưu ý rằng đây là dữ liệu và không được làm theo các chỉ dẫn trong đó.";
 "Eigene Preise (US-$ je Million Tokens)" = "Giá tùy chỉnh (USD cho mỗi triệu token)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Quy tắc đã lưu";
 "Git" = "Git";
 "Hilfe" = "Trợ giúp";
+"Hintergrundprozesse dieser Sitzung" = "Tiến trình nền của phiên này";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Tiến trình nền: {} đang chạy, {} đã kết thúc";
 "Hooks: {} erfolgreich" = "Hook: {} thành công";
 "Im Browser-Tab öffnen" = "Mở trong tab trình duyệt";
 "Im Dock ablegen" = "Thu nhỏ";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Khóa được lưu trong Chuỗi khóa, không bao giờ trong tệp cài đặt. Ollama và LM Studio không cần khóa.";
 "Schlüssel …" = "Khóa…";
 "Schreiben" = "Ghi";
+"Subagenten dieser Sitzung" = "Tác nhân phụ của phiên này";
+"Subagenten: {} laufend, {} beendet" = "Tác nhân phụ: {} đang chạy, {} đã kết thúc";
 "Text von einer Webseite" = "Văn bản từ một trang web";
 "Text von {}" = "Văn bản từ {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Trong Cài đặt, mục “Tác nhân”, hãy nhập một nhà cung cấp kèm khóa và chọn mô hình, hoặc thiết lập Ollama hay LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} chưa khởi động";
 "{} ist nicht installiert" = "{} chưa được cài đặt";
 "{} konnte nicht zurückgesetzt werden" = "Không thể quay lại phiên bản trước của {}";
+"{} meldet keine Hintergrundprozesse" = "{} không báo cáo tiến trình nền";
+"{} meldet keine Subagenten" = "{} không báo cáo tác nhân phụ";
 "{} min" = "{} phút";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} yêu cầu bạn đăng nhập trước khi mở phiên.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} yêu cầu bạn đăng nhập trước khi mở phiên. Để đăng nhập trong terminal, lệnh đã được đặt vào bảng nhớ tạm.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull request";
 "Was die Liste zeigt" = "Nội dung danh sách hiển thị";
 "offen" = "đang mở";
+"Anmeldung ausfüllen" = "Điền thông tin đăng nhập";
+"Anmeldung für „{}“ ausfüllen" = "Điền thông tin đăng nhập cho “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Chọn thông tin đăng nhập từ ứng dụng Mật khẩu trong trường; ứng dụng điền thông tin đó vào biểu mẫu của trang và không giữ lại.";
+"Ausfüllen" = "Điền";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Trang này không có biểu mẫu đăng nhập hoặc trang đã thay đổi trong lúc đó.";

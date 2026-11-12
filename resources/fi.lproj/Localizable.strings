@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Appi tuntee Anthropicin hinnat, OpenRouter ilmoittaa omansa, ja paikalliset mallit ovat ilmaisia. Muiden kohdalla ketju näyttää kustannukset vasta, kun hinta on syötetty tähän.";
 "Die Umgebung der Login-Shell fehlt." = "Kirjautumiskomentotulkin ympäristö puuttuu.";
 "Dienste" = "Palvelut";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Tämä istunto ei ole vielä käynnistänyt taustaprosesseja";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Tämä istunto ei ole vielä käynnistänyt aliagentteja";
 "Diese Version wurde mit dieser App nicht erprobt." = "Tätä versiota ei ole testattu tämän apin kanssa.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Tämä teksti ei ole peräisin sinulta vaan verkkosivulta, päätteestä, CI-lokista tai projektin ulkopuolisesta tiedostosta. Se voi sisältää ohjeita, joiden tarkoitus on ohjata agenttia (prompt injection). Agentti saa sen tiedon kera, että se on dataa, jonka ohjeita sen ei pidä noudattaa.";
 "Eigene Preise (US-$ je Million Tokens)" = "Omat hinnat (US$ miljoonaa tokenia kohti)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Tallennetut säännöt";
 "Git" = "Git";
 "Hilfe" = "Ohje";
+"Hintergrundprozesse dieser Sitzung" = "Tämän istunnon taustaprosessit";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Taustaprosessit: {} käynnissä, {} päättynyt";
 "Hooks: {} erfolgreich" = "Onnistuneet hookit: {}";
 "Im Browser-Tab öffnen" = "Avaa selainvälilehdessä";
 "Im Dock ablegen" = "Pienennä";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Avaimet säilytetään avainnipussa, ei koskaan asetustiedostossa. Ollama ja LM Studio eivät tarvitse avainta.";
 "Schlüssel …" = "Avain…";
 "Schreiben" = "Kirjoitus";
+"Subagenten dieser Sitzung" = "Tämän istunnon aliagentit";
+"Subagenten: {} laufend, {} beendet" = "Aliagentit: {} käynnissä, {} päättynyt";
 "Text von einer Webseite" = "Teksti verkkosivulta";
 "Text von {}" = "Teksti lähteestä {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Lisää asetusten kohdassa ”Agentti” palveluntarjoaja avaimineen ja valitse malli, tai ota käyttöön Ollama tai LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} ei ole käynnistynyt";
 "{} ist nicht installiert" = "{} ei ole asennettuna";
 "{} konnte nicht zurückgesetzt werden" = "{}: palautus edelliseen versioon epäonnistui";
+"{} meldet keine Hintergrundprozesse" = "{} ei ilmoita taustaprosesseista";
+"{} meldet keine Subagenten" = "{} ei ilmoita aliagenteista";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} pyytää kirjautumaan sisään ennen istunnon avaamista.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} pyytää kirjautumaan sisään ennen istunnon avaamista. Päätteessä kirjautumista varten komento on leikepöydällä.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requestit";
 "Was die Liste zeigt" = "Mitä luettelo näyttää";
 "offen" = "avoin";
+"Anmeldung ausfüllen" = "Täytä kirjautumistiedot";
+"Anmeldung für „{}“ ausfüllen" = "Täytä kirjautumistiedot: ”{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Valitse kentässä kirjautumistiedot Salasanat-apista; appi täyttää ne sivun lomakkeeseen eikä säilytä niitä.";
+"Ausfüllen" = "Täytä";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Tällä sivulla ei ole kirjautumislomaketta, tai sivu on vaihtunut sillä välin.";

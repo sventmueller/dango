@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplicația cunoaște prețurile Anthropic, OpenRouter le comunică pe ale sale, iar modelele locale nu costă nimic. Pentru celelalte, conversația afișează costurile abia după ce introduceți aici un preț.";
 "Die Umgebung der Login-Shell fehlt." = "Lipsește mediul shellului de login.";
 "Dienste" = "Servicii";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Această sesiune nu a pornit încă niciun proces în fundal";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Această sesiune nu a pornit încă niciun subagent";
 "Diese Version wurde mit dieser App nicht erprobt." = "Această versiune nu a fost testată cu această aplicație.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Acest text nu provine de la dvs., ci de la o pagină web, un terminal, un jurnal CI sau un fișier din afara proiectului. Poate conține instrucțiuni menite să controleze agentul (prompt injection). Agentul îl primește împreună cu mențiunea că sunt date ale căror instrucțiuni nu trebuie să le urmeze.";
 "Eigene Preise (US-$ je Million Tokens)" = "Prețuri proprii (USD pe milion de tokenuri)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Reguli salvate";
 "Git" = "Git";
 "Hilfe" = "Ajutor";
+"Hintergrundprozesse dieser Sitzung" = "Procesele în fundal ale acestei sesiuni";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Procese în fundal: {} în execuție, {} încheiate";
 "Hooks: {} erfolgreich" = "Hookuri reușite: {}";
 "Im Browser-Tab öffnen" = "Deschideți într-o filă de browser";
 "Im Dock ablegen" = "Minimizați";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Cheile sunt păstrate în portchei, niciodată într-un fișier de configurări. Ollama și LM Studio nu au nevoie de cheie.";
 "Schlüssel …" = "Cheie…";
 "Schreiben" = "Scriere";
+"Subagenten dieser Sitzung" = "Subagenții acestei sesiuni";
+"Subagenten: {} laufend, {} beendet" = "Subagenți: {} în execuție, {} încheiați";
 "Text von einer Webseite" = "Text de pe o pagină web";
 "Text von {}" = "Text de pe {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "În Configurări, la „Agent”, introduceți un furnizor cu cheia sa și alegeți un model sau configurați Ollama ori LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} nu a pornit";
 "{} ist nicht installiert" = "{} nu este instalat";
 "{} konnte nicht zurückgesetzt werden" = "{} nu a putut fi readus la versiunea anterioară";
+"{} meldet keine Hintergrundprozesse" = "{} nu raportează procese în fundal";
+"{} meldet keine Subagenten" = "{} nu raportează subagenți";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} cere autentificarea înainte de a deschide o sesiune.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} cere autentificarea înainte de a deschide o sesiune. Pentru autentificarea în terminal, comanda se află în clipboard.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requesturi";
 "Was die Liste zeigt" = "Ce afișează lista";
 "offen" = "deschis";
+"Anmeldung ausfüllen" = "Completați datele de autentificare";
+"Anmeldung für „{}“ ausfüllen" = "Completați datele de autentificare pentru „{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Alegeți în câmp datele de autentificare din aplicația Parole; aplicația le completează în formularul paginii și nu le păstrează.";
+"Ausfüllen" = "Completați";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Această pagină nu are niciun formular de autentificare sau s-a schimbat între timp.";

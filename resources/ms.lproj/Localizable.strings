@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "App mengetahui harga Anthropic, OpenRouter menyatakan harganya sendiri dan model setempat adalah percuma. Untuk model lain, thread hanya menunjukkan kos selepas harga dimasukkan di sini.";
 "Die Umgebung der Login-Shell fehlt." = "Persekitaran shell log masuk tiada.";
 "Dienste" = "Perkhidmatan";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Sesi ini belum memulakan sebarang proses latar belakang";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Sesi ini belum memulakan sebarang subejen";
 "Diese Version wurde mit dieser App nicht erprobt." = "Versi ini belum diuji dengan app ini.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Teks ini bukan daripada anda, tetapi daripada halaman web, terminal, log CI atau fail di luar projek. Ia mungkin mengandungi arahan yang bertujuan mengemudi ejen (prompt injection). Ejen menerimanya bersama notis bahawa ia adalah data yang arahannya tidak boleh diikuti.";
 "Eigene Preise (US-$ je Million Tokens)" = "Harga Sendiri (US$ setiap Sejuta Token)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Peraturan Tersimpan";
 "Git" = "Git";
 "Hilfe" = "Bantuan";
+"Hintergrundprozesse dieser Sitzung" = "Proses Latar Belakang Sesi Ini";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Proses latar belakang: {} berjalan, {} selesai";
 "Hooks: {} erfolgreich" = "Hook: {} berjaya";
 "Im Browser-Tab öffnen" = "Buka dalam Tab Pelayar";
 "Im Dock ablegen" = "Minimumkan";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Kunci disimpan dalam Rantai Kunci, tidak sekali-kali dalam fail seting. Ollama dan LM Studio tidak memerlukannya.";
 "Schlüssel …" = "Kunci…";
 "Schreiben" = "Tulis";
+"Subagenten dieser Sitzung" = "Subejen Sesi Ini";
+"Subagenten: {} laufend, {} beendet" = "Subejen: {} berjalan, {} selesai";
 "Text von einer Webseite" = "Teks daripada halaman web";
 "Text von {}" = "Teks daripada {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Dalam Seting di bawah “Ejen”, masukkan penyedia bersama kuncinya dan pilih model, atau sediakan Ollama atau LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} belum dimulakan";
 "{} ist nicht installiert" = "{} tidak dipasang";
 "{} konnte nicht zurückgesetzt werden" = "{} tidak dapat dikembalikan";
+"{} meldet keine Hintergrundprozesse" = "{} tidak melaporkan proses latar belakang";
+"{} meldet keine Subagenten" = "{} tidak melaporkan subejen";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} mahu anda mendaftar masuk sebelum membuka sesi.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} mahu anda mendaftar masuk sebelum membuka sesi. Untuk mendaftar masuk dalam terminal, perintahnya ada dalam papan klip.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "Perkara yang ditunjukkan senarai";
 "offen" = "terbuka";
+"Anmeldung ausfüllen" = "Isi Butiran Daftar Masuk";
+"Anmeldung für „{}“ ausfüllen" = "Isi Butiran Daftar Masuk untuk “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Pilih butiran daftar masuk daripada app Kata Laluan dalam medan; app mengisinya ke dalam borang halaman dan tidak menyimpannya.";
+"Ausfüllen" = "Isi";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Halaman ini tiada borang daftar masuk, atau halaman telah bertukar sementara itu.";

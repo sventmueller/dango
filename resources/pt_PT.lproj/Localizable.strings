@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "A aplicação conhece os preços da Anthropic, o OpenRouter indica os seus e os modelos locais não custam nada. Para os restantes, uma thread só mostra custos depois de introduzir aqui um preço.";
 "Die Umgebung der Login-Shell fehlt." = "Falta o ambiente da shell de início de sessão.";
 "Dienste" = "Serviços";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Esta sessão ainda não iniciou nenhum processo em segundo plano";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Esta sessão ainda não iniciou nenhum subagente";
 "Diese Version wurde mit dieser App nicht erprobt." = "Esta versão não foi testada com esta aplicação.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Este texto não vem de si, mas de uma página web, de um terminal, de um log de CI ou de um ficheiro fora do projeto. Pode conter instruções destinadas a orientar o agente (prompt injection). O agente recebe-o com o aviso de que se trata de dados cujas instruções não deve seguir.";
 "Eigene Preise (US-$ je Million Tokens)" = "Preços próprios (USD por milhão de tokens)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Regras guardadas";
 "Git" = "Git";
 "Hilfe" = "Ajuda";
+"Hintergrundprozesse dieser Sitzung" = "Processos em segundo plano desta sessão";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Processos em segundo plano: {} em execução, {} terminados";
 "Hooks: {} erfolgreich" = "Hooks: {} com êxito";
 "Im Browser-Tab öffnen" = "Abrir num separador do navegador";
 "Im Dock ablegen" = "Minimizar";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "As chaves ficam no Porta-chaves, nunca num ficheiro de definições. O Ollama e o LM Studio não precisam de nenhuma.";
 "Schlüssel …" = "Chave…";
 "Schreiben" = "Escrita";
+"Subagenten dieser Sitzung" = "Subagentes desta sessão";
+"Subagenten: {} laufend, {} beendet" = "Subagentes: {} em execução, {} terminados";
 "Text von einer Webseite" = "Texto de uma página web";
 "Text von {}" = "Texto de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Em Definições, em “Agente”, introduza um fornecedor com a respetiva chave e escolha um modelo, ou configure o Ollama ou o LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} não foi iniciado";
 "{} ist nicht installiert" = "{} não está instalado";
 "{} konnte nicht zurückgesetzt werden" = "Não foi possível reverter {}";
+"{} meldet keine Hintergrundprozesse" = "{} não indica processos em segundo plano";
+"{} meldet keine Subagenten" = "{} não indica subagentes";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} pede que inicie sessão antes de começar.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} pede que inicie sessão antes de começar. Para iniciar sessão num terminal, o comando está no clipboard.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "O que a lista mostra";
 "offen" = "aberto";
+"Anmeldung ausfüllen" = "Preencher dados de início de sessão";
+"Anmeldung für „{}“ ausfüllen" = "Preencher dados de início de sessão para “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Escolha no campo os dados de início de sessão da aplicação Palavras-passe; a aplicação preenche-os no formulário da página e não os guarda.";
+"Ausfüllen" = "Preencher";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Esta página não tem nenhum formulário de início de sessão, ou entretanto mudou.";

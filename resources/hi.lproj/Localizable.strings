@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "ऐप Anthropic की कीमतें जानता है, OpenRouter अपनी कीमतें खुद बताता है और लोकल मॉडल मुफ़्त हैं। अन्य मॉडलों के लिए थ्रेड लागत तभी दिखाता है, जब यहाँ उनकी कीमत दर्ज हो।";
 "Die Umgebung der Login-Shell fehlt." = "लॉगिन शेल का एनवायरनमेंट उपलब्ध नहीं है।";
 "Dienste" = "सेवाएँ";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "इस सेशन ने अभी तक कोई बैकग्राउंड प्रोसेस शुरू नहीं की है";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "इस सेशन ने अभी तक कोई सब-एजेंट शुरू नहीं किया है";
 "Diese Version wurde mit dieser App nicht erprobt." = "इस संस्करण को इस ऐप के साथ टेस्ट नहीं किया गया है।";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "यह टेक्स्ट आपकी ओर से नहीं, बल्कि किसी वेब पेज, टर्मिनल, CI लॉग या प्रोजेक्ट के बाहर की किसी फ़ाइल से आया है। इसमें ऐसे निर्देश हो सकते हैं जो एजेंट को नियंत्रित करने के लिए हों (प्रॉम्प्ट इंजेक्शन)। एजेंट को यह इस सूचना के साथ मिलता है कि यह डेटा है, जिसके निर्देशों का उसे पालन नहीं करना है।";
 "Eigene Preise (US-$ je Million Tokens)" = "अपनी कीमतें (US$ प्रति मिलियन टोकन)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "सहेजे गए नियम";
 "Git" = "Git";
 "Hilfe" = "सहायता";
+"Hintergrundprozesse dieser Sitzung" = "इस सेशन की बैकग्राउंड प्रोसेस";
+"Hintergrundprozesse: {} laufend, {} beendet" = "बैकग्राउंड प्रोसेस: {} चल रही हैं, {} पूरी हुईं";
 "Hooks: {} erfolgreich" = "हुक : {} सफल";
 "Im Browser-Tab öffnen" = "ब्राउज़र टैब में खोलें";
 "Im Dock ablegen" = "मिनिमाइज़ करें";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "कुंजियाँ कीचेन में रहती हैं, कभी किसी सेटिंग्ज़ फ़ाइल में नहीं। Ollama और LM Studio को कुंजी की ज़रूरत नहीं होती।";
 "Schlüssel …" = "कुंजी…";
 "Schreiben" = "लिखें";
+"Subagenten dieser Sitzung" = "इस सेशन के सब-एजेंट";
+"Subagenten: {} laufend, {} beendet" = "सब-एजेंट: {} चल रहे हैं, {} पूरे हुए";
 "Text von einer Webseite" = "वेब पेज से टेक्स्ट";
 "Text von {}" = "{} से टेक्स्ट";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "सेटिंग्ज़ में “एजेंट” के अंतर्गत कुंजी के साथ कोई प्रदाता दर्ज करें और मॉडल चुनें, या Ollama या LM Studio सेट अप करें।";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} शुरू नहीं हुआ";
 "{} ist nicht installiert" = "{} इंस्टॉल नहीं है";
 "{} konnte nicht zurückgesetzt werden" = "{} को रोल बैक नहीं किया जा सका";
+"{} meldet keine Hintergrundprozesse" = "{} बैकग्राउंड प्रोसेस की जानकारी नहीं देता";
+"{} meldet keine Subagenten" = "{} सब-एजेंट की जानकारी नहीं देता";
 "{} min" = "{} मि॰";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "सेशन खोलने से पहले {} चाहता है कि आप साइन इन करें।";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "सेशन खोलने से पहले {} चाहता है कि आप साइन इन करें। टर्मिनल में साइन इन करने के लिए कमांड क्लिपबोर्ड पर है।";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Requests";
 "Was die Liste zeigt" = "सूची क्या दिखाती है";
 "offen" = "खुला";
+"Anmeldung ausfüllen" = "साइन इन भरें";
+"Anmeldung für „{}“ ausfüllen" = "“{}” के लिए साइन इन भरें";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "फ़ील्ड में “पासवर्ड” से कोई साइन इन चुनें; ऐप उसे पेज के फ़ॉर्म में भरता है और अपने पास नहीं रखता।";
+"Ausfüllen" = "भरें";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "इस पेज पर कोई साइन इन फ़ॉर्म नहीं है, या पेज इस बीच बदल गया है।";

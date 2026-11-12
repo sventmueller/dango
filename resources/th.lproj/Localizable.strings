@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "แอปรู้ราคาของ Anthropic ส่วน OpenRouter แจ้งราคาของตัวเอง และโมเดลในเครื่องไม่มีค่าใช้จ่าย สำหรับรายอื่น เธรดจะแสดงค่าใช้จ่ายก็ต่อเมื่อป้อนราคาไว้ที่นี่";
 "Die Umgebung der Login-Shell fehlt." = "ไม่มีสภาพแวดล้อมของ login shell";
 "Dienste" = "บริการ";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "เซสชันนี้ยังไม่ได้เริ่มกระบวนการเบื้องหลังใดๆ";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "เซสชันนี้ยังไม่ได้เริ่มเอเจนต์ย่อยใดๆ";
 "Diese Version wurde mit dieser App nicht erprobt." = "เวอร์ชั่นนี้ยังไม่ได้ทดสอบกับแอปนี้";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "ข้อความนี้ไม่ได้มาจากคุณ แต่มาจากหน้าเว็บ เทอร์มินัล ล็อก CI หรือไฟล์นอกโปรเจ็กต์ อาจมีคำสั่งที่มุ่งควบคุมเอเจนต์ (Prompt Injection) เอเจนต์จะได้รับข้อความนี้พร้อมคำแจ้งว่าเป็นข้อมูลที่เอเจนต์ต้องไม่ทำตามคำสั่งในนั้น";
 "Eigene Preise (US-$ je Million Tokens)" = "ราคาที่กำหนดเอง (US$ ต่อหนึ่งล้านโทเค็น)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "กฎที่จัดเก็บไว้";
 "Git" = "Git";
 "Hilfe" = "วิธีใช้";
+"Hintergrundprozesse dieser Sitzung" = "กระบวนการเบื้องหลังของเซสชันนี้";
+"Hintergrundprozesse: {} laufend, {} beendet" = "กระบวนการเบื้องหลัง: กำลังทำงาน {}, เสร็จแล้ว {}";
 "Hooks: {} erfolgreich" = "Hook: สำเร็จ {} รายการ";
 "Im Browser-Tab öffnen" = "เปิดในแถบเบราว์เซอร์";
 "Im Dock ablegen" = "ย่อ";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "คีย์จะอยู่ในพวงกุญแจ ไม่ใช่ในไฟล์การตั้งค่า Ollama และ LM Studio ไม่ต้องใช้คีย์";
 "Schlüssel …" = "คีย์…";
 "Schreiben" = "เขียน";
+"Subagenten dieser Sitzung" = "เอเจนต์ย่อยของเซสชันนี้";
+"Subagenten: {} laufend, {} beendet" = "เอเจนต์ย่อย: กำลังทำงาน {}, เสร็จแล้ว {}";
 "Text von einer Webseite" = "ข้อความจากหน้าเว็บ";
 "Text von {}" = "ข้อความจาก {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "ในการตั้งค่า ส่วน “เอเจนต์” ให้ป้อนผู้ให้บริการพร้อมคีย์และเลือกโมเดล หรือตั้งค่า Ollama หรือ LM Studio";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} ยังไม่ได้เริ่มทำงาน";
 "{} ist nicht installiert" = "{} ยังไม่ได้ติดตั้ง";
 "{} konnte nicht zurückgesetzt werden" = "ไม่สามารถย้อนกลับ {} ได้";
+"{} meldet keine Hintergrundprozesse" = "{} ไม่รายงานกระบวนการเบื้องหลัง";
+"{} meldet keine Subagenten" = "{} ไม่รายงานเอเจนต์ย่อย";
 "{} min" = "{} นาที";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} ต้องการให้คุณลงชื่อเข้าก่อนเปิดเซสชัน";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} ต้องการให้คุณลงชื่อเข้าก่อนเปิดเซสชัน สำหรับการลงชื่อเข้าในเทอร์มินัล คำสั่งอยู่ในคลิปบอร์ดแล้ว";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "สิ่งที่รายการแสดง";
 "offen" = "เปิดอยู่";
+"Anmeldung ausfüllen" = "ป้อนข้อมูลการลงชื่อเข้า";
+"Anmeldung für „{}“ ausfüllen" = "ป้อนข้อมูลการลงชื่อเข้าสำหรับ “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "เลือกข้อมูลการลงชื่อเข้าจากแอป “รหัสผ่าน” ในช่อง แอปจะป้อนข้อมูลลงในฟอร์มของหน้าเว็บและไม่เก็บไว้";
+"Ausfüllen" = "ป้อน";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "หน้านี้ไม่มีฟอร์มลงชื่อเข้า หรือหน้าได้เปลี่ยนไปแล้วในระหว่างนี้";

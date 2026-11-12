@@ -23,6 +23,10 @@ use crate::util::{guarded, main_after, main_soon, ns, set_action, symbol};
 use crate::window::WindowController;
 use crate::window::toolbar::kind_name;
 
+mod session;
+
+pub use session::{Part, Tally, tally};
+
 const ID: &str = "ide.activity";
 const WIDTH: f64 = 420.0;
 
@@ -46,8 +50,8 @@ pub struct ActivityIvars {
     popover: RefCell<Option<Retained<NSPopover>>>,
     actions: RefCell<Vec<Action>>,
     scheduled: Cell<bool>,
-    /// The tab whose subagents and background tasks alone the popover shows, as the session's own overview.
-    only: Cell<Option<u64>>,
+    /// The tab whose work alone the popover shows, as the session's own list, and which of it.
+    only: Cell<Option<(u64, Part)>>,
     /// The rows the popover shows, to change their texts in place.
     shown: RefCell<Option<Shown>>,
 }
@@ -344,73 +348,30 @@ fn agent_lines(tabs: &[std::rc::Rc<AgentTab>], now: SystemTime, all: bool) -> Ve
             indent: false,
             buttons,
         });
-        for sub in thread
+        let subagents = thread
             .subagents()
             .iter()
-            .filter(|s| all || s.status == TaskStatus::Running)
-        {
-            let elapsed = now.duration_since(sub.started).unwrap_or_default().max(sub.elapsed);
-            let mut detail = crate::agent::elapsed(elapsed);
-            if sub.tokens > 0 {
-                detail.push_str(&format!(" · {}", tf("{} Tokens", &[&crate::agent::tokens(sub.tokens)])));
-            }
-            if let Some(tool) = &sub.last_tool {
-                detail.push_str(&format!(" · {}", tf("zuletzt {}", &[tool])));
-            }
-            if sub.status != TaskStatus::Running {
-                detail = format!("{} · {detail}", task_status(sub.status));
-            }
-            let mut buttons = vec![(t("Zeigen"), Action::Reveal(tab.key, sub.key.clone()))];
-            if let Some(task) = sub.task_id.clone().filter(|_| sub.cancellable) {
-                buttons.push((t("Stopp"), Action::StopTask(tab.key, task)));
-            }
-            lines.push(Line {
-                symbol: "person.2",
-                tint: NSColor::secondaryLabelColor(),
-                title: sub.description.clone(),
-                detail,
-                indent: true,
-                buttons,
-            });
-        }
-        for item in thread
+            .filter(|s| all || s.status == TaskStatus::Running);
+        lines.extend(subagents.map(|sub| session::subagent_line(tab.key, sub, now, true)));
+        let background = thread
             .background()
             .iter()
-            .filter(|b| !b.status.is_final() && b.kind != BackgroundKind::Subagent)
-        {
-            let mut detail = task_status(item.status).to_string();
-            if let Some(started) = item.started {
-                detail.push_str(&format!(
-                    " · {}",
-                    crate::agent::elapsed(now.duration_since(started).unwrap_or_default())
-                ));
-            }
-            if let Some(last) = item
-                .output
-                .text
-                .as_deref()
-                .and_then(|t| t.lines().rev().find(|l| !l.trim().is_empty()))
-            {
-                detail.push_str(&format!(" · {}", last.trim()));
-            }
-            lines.push(Line {
-                symbol: background_symbol(&item.kind),
-                tint: if item.ambient {
-                    NSColor::tertiaryLabelColor()
-                } else {
-                    NSColor::secondaryLabelColor()
-                },
-                title: item.label.clone(),
-                detail,
-                indent: true,
-                buttons: vec![
-                    (t("Ausgabe zeigen"), Action::ShowOutput(tab.key, item.id.clone())),
-                    (t("Stopp"), Action::StopTask(tab.key, item.id.clone())),
-                ],
-            });
-        }
+            .filter(|b| !b.status.is_final() && Part::All.holds(&b.kind));
+        lines.extend(background.map(|item| session::background_line(tab.key, item, now, true)));
     }
     lines
+}
+
+/// The lines of `part` of the session in tab `key`.
+fn session_lines(tabs: &[std::rc::Rc<AgentTab>], key: u64, part: Part, now: SystemTime) -> Vec<Line> {
+    let tabs: Vec<std::rc::Rc<AgentTab>> = tabs.iter().filter(|tab| tab.key == key).cloned().collect();
+    match part {
+        Part::All => agent_lines(&tabs, now, true),
+        Part::Subagents | Part::Background => tabs
+            .iter()
+            .flat_map(|tab| session::lines(tab.key, &tab.view_snapshot(), part, now))
+            .collect(),
+    }
 }
 
 /// The lines of the supervisor's processes; those of a terminal, or started in one, can show its tab.
@@ -562,23 +523,17 @@ impl Activity {
         });
     }
 
-    /// What runs now, by section.
+    /// What runs now, by section, or the session's own list.
     fn sections(&self, controller: &WindowController) -> Vec<(&'static str, Vec<Line>)> {
         let now = SystemTime::now();
-        let only = self.ivars().only.get();
-        let mut tabs = crate::agent::of_window(controller);
-        tabs.retain(|tab| only.is_none_or(|key| tab.key == key));
-        let processes = if only.is_some() { Vec::new() } else { processes() };
-        let agents = agent_lines(&tabs, now, only.is_some());
-        let heading = if only.is_some() {
-            t("Aufgaben dieser Sitzung")
-        } else {
-            t("Agenten")
-        };
-        vec![
-            (heading, agents),
-            (t("Prozesse"), process_lines(controller, &processes, now)),
-        ]
+        let tabs = crate::agent::of_window(controller);
+        match self.ivars().only.get() {
+            Some((key, part)) => vec![(part.heading(), session_lines(&tabs, key, part, now))],
+            None => vec![
+                (t("Agenten"), agent_lines(&tabs, now, false)),
+                (t("Prozesse"), process_lines(controller, &processes(), now)),
+            ],
+        }
     }
 
     /// Shows what runs now: in the rows there are, while the same rows would show, else in rows built anew.
@@ -808,10 +763,10 @@ impl Activity {
     }
 }
 
-/// Opens the overview of the subagents and background tasks of the AI tab `key` below `anchor`.
-pub fn show_tab(controller: &WindowController, key: u64, anchor: &NSView) {
+/// Opens the list of `part` of the AI tab `key`'s session below `anchor`.
+pub fn show_tab(controller: &WindowController, key: u64, part: Part, anchor: &NSView) {
     if let Some(activity) = of(controller) {
-        activity.ivars().only.set(Some(key));
+        activity.ivars().only.set(Some((key, part)));
         activity.open(Some(anchor));
     }
 }
@@ -858,13 +813,15 @@ pub fn overview_lines(controller: &WindowController) -> Vec<String> {
     let Some(activity) = of(controller) else {
         return Vec::new();
     };
-    let only = activity.ivars().only.get();
-    let mut tabs = crate::agent::of_window(controller);
-    tabs.retain(|tab| only.is_none_or(|key| tab.key == key));
-    agent_lines(&tabs, SystemTime::now(), only.is_some())
-        .into_iter()
-        .map(|l| format!("{} — {}", l.title, l.detail))
-        .collect()
+    let tabs = crate::agent::of_window(controller);
+    let now = SystemTime::now();
+    match activity.ivars().only.get() {
+        Some((key, part)) => session_lines(&tabs, key, part, now),
+        None => agent_lines(&tabs, now, false),
+    }
+    .into_iter()
+    .map(|l| format!("{} — {}", l.title, l.detail))
+    .collect()
 }
 
 /// How often a popover changed the texts of its rows in place.

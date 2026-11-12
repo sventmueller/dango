@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Anthropicの料金はアプリが把握しています。OpenRouterは自身の料金を通知し、ローカルモデルは無料です。そのほかのモデルでは、ここで料金を入力するとスレッドにコストが表示されます。";
 "Die Umgebung der Login-Shell fehlt." = "ログインシェルの環境がありません。";
 "Dienste" = "サービス";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "このセッションはまだバックグラウンドプロセスを開始していません";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "このセッションはまだサブエージェントを開始していません";
 "Diese Version wurde mit dieser App nicht erprobt." = "このバージョンはこのアプリでテストされていません。";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "このテキストは自分が書いたものではなく、Webページ、ターミナル、CIログ、またはプロジェクト外のファイルからのものです。エージェントを操作しようとする指示（プロンプトインジェクション）が含まれている可能性があります。エージェントは、これがデータであり、その中の指示に従ってはならないという注意書きとともに受け取ります。";
 "Eigene Preise (US-$ je Million Tokens)" = "独自の料金（100万トークンあたりの米ドル）";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "保存済みのルール";
 "Git" = "Git";
 "Hilfe" = "ヘルプ";
+"Hintergrundprozesse dieser Sitzung" = "このセッションのバックグラウンドプロセス";
+"Hintergrundprozesse: {} laufend, {} beendet" = "バックグラウンドプロセス: 実行中 {}、終了 {}";
 "Hooks: {} erfolgreich" = "フック: {}件成功";
 "Im Browser-Tab öffnen" = "ブラウザタブで開く";
 "Im Dock ablegen" = "しまう";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "キーはキーチェーンに保存され、設定ファイルには保存されません。OllamaとLM Studioにはキーは不要です。";
 "Schlüssel …" = "キー…";
 "Schreiben" = "書き込み";
+"Subagenten dieser Sitzung" = "このセッションのサブエージェント";
+"Subagenten: {} laufend, {} beendet" = "サブエージェント: 実行中 {}、終了 {}";
 "Text von einer Webseite" = "Webページからのテキスト";
 "Text von {}" = "{}からのテキスト";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "“設定”の“エージェント”で、プロバイダとそのキーを入力してモデルを選択するか、OllamaまたはLM Studioを設定してください。";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{}が起動していません";
 "{} ist nicht installiert" = "{}がインストールされていません";
 "{} konnte nicht zurückgesetzt werden" = "{}を元に戻せませんでした";
+"{} meldet keine Hintergrundprozesse" = "{}はバックグラウンドプロセスを報告しません";
+"{} meldet keine Subagenten" = "{}はサブエージェントを報告しません";
 "{} min" = "{}分";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{}はセッションを開く前にサインインを求めています。";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{}はセッションを開く前にサインインを求めています。ターミナルでサインインする場合のコマンドはクリップボードにあります。";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "リストの表示内容";
 "offen" = "オープン";
+"Anmeldung ausfüllen" = "サインイン情報を入力";
+"Anmeldung für „{}“ ausfüllen" = "“{}”のサインイン情報を入力";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "フィールドで“パスワード”からサインイン情報を選択してください。アプリはその情報をページのフォームに入力し、保持しません。";
+"Ausfüllen" = "入力";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "このページにはサインインフォームがないか、その間にページが切り替わりました。";

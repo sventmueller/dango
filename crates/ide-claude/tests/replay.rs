@@ -263,7 +263,7 @@ fn a_running_subagent_reports_progress() {
 }
 
 #[test]
-fn a_background_command_lists_its_output_and_leaves_the_set_when_stopped() {
+fn a_background_command_lists_its_output_and_stays_as_stopped_when_stopped() {
     let midway = replay_until(
         "recorded_subagent_background",
         r#""subtype":"success","request_id":"out-1""#,
@@ -284,7 +284,17 @@ fn a_background_command_lists_its_output_and_leaves_the_set_when_stopped() {
     assert!(matches!(card.view, ToolView::Command { background: true, .. }));
 
     let thread = replay("recorded_subagent_background");
-    assert!(thread.background().is_empty(), "the stopped task left the set");
+    let [item] = thread.background() else {
+        panic!("{:?}", thread.background())
+    };
+    assert_eq!(item.status, TaskStatus::Stopped, "the stopped task stays, as stopped");
+    let ended = item.ended.and_then(|at| at.duration_since(UNIX_EPOCH).ok());
+    assert_eq!(
+        ended.map(|d| d.as_millis()),
+        Some(1_794_247_393_969),
+        "it ended when the CLI says"
+    );
+    assert_eq!(item.output.text.as_deref(), Some("tick 1\ntick 2\ntick 3\ntick 4\n"));
     assert_eq!(thread.status(), Status::Idle);
 }
 

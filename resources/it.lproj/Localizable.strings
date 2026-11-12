@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "L’app conosce i prezzi di Anthropic, OpenRouter comunica i propri e i modelli locali non costano nulla. Per gli altri, un thread mostra i costi solo dopo che hai inserito qui un prezzo.";
 "Die Umgebung der Login-Shell fehlt." = "Manca l’ambiente della shell di login.";
 "Dienste" = "Servizi";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Questa sessione non ha ancora avviato processi in background";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Questa sessione non ha ancora avviato subagenti";
 "Diese Version wurde mit dieser App nicht erprobt." = "Questa versione non è stata provata con questa app.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Questo testo non viene da te, ma da una pagina web, da un terminale, da un log CI o da un file fuori dal progetto. Può contenere istruzioni pensate per guidare l’agente (prompt injection). L’agente lo riceve con l’avviso che si tratta di dati, le cui istruzioni non deve seguire.";
 "Eigene Preise (US-$ je Million Tokens)" = "Prezzi personalizzati (US$ per milione di token)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Regole salvate";
 "Git" = "Git";
 "Hilfe" = "Aiuto";
+"Hintergrundprozesse dieser Sitzung" = "Processi in background di questa sessione";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Processi in background: {} in esecuzione, {} terminati";
 "Hooks: {} erfolgreich" = "Hook: {} riusciti";
 "Im Browser-Tab öffnen" = "Apri in un pannello del browser";
 "Im Dock ablegen" = "Contrai";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Le chiavi stanno nel Portachiavi, mai in un file di impostazioni. Ollama e LM Studio non ne hanno bisogno.";
 "Schlüssel …" = "Chiave…";
 "Schreiben" = "Scrittura";
+"Subagenten dieser Sitzung" = "Subagenti di questa sessione";
+"Subagenten: {} laufend, {} beendet" = "Subagenti: {} in esecuzione, {} terminati";
 "Text von einer Webseite" = "Testo da una pagina web";
 "Text von {}" = "Testo da {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "In Impostazioni, sotto “Agente”, inserisci un provider con la sua chiave e scegli un modello, oppure configura Ollama o LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} non è stato avviato";
 "{} ist nicht installiert" = "{} non è installato";
 "{} konnte nicht zurückgesetzt werden" = "Impossibile ripristinare {}";
+"{} meldet keine Hintergrundprozesse" = "{} non segnala processi in background";
+"{} meldet keine Subagenten" = "{} non segnala subagenti";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} richiede l’accesso prima di aprire una sessione.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} richiede l’accesso prima di aprire una sessione. Per accedere nel terminale, il comando è negli appunti.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull request";
 "Was die Liste zeigt" = "Cosa mostra l’elenco";
 "offen" = "aperto";
+"Anmeldung ausfüllen" = "Compila dati di accesso";
+"Anmeldung für „{}“ ausfüllen" = "Compila dati di accesso per “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Scegli nel campo dei dati di accesso dall’app Password; vengono inseriti nel modulo della pagina e l’app non li conserva.";
+"Ausfüllen" = "Compila";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "In questa pagina non c’è alcun modulo di accesso, oppure nel frattempo è cambiata.";

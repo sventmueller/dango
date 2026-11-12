@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "يعرف التطبيق أسعار Anthropic، ويذكر OpenRouter أسعاره بنفسه، والنماذج المحلية مجانية. أما غيرها، فلا تعرض السلسلة تكاليفها إلا بعد إدخال سعر هنا.";
 "Die Umgebung der Login-Shell fehlt." = "بيئة صدفة تسجيل الدخول مفقودة.";
 "Dienste" = "خدمات";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "لم تبدأ هذه الجلسة أي عمليات في الخلفية بعد";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "لم تبدأ هذه الجلسة أي وكلاء فرعيين بعد";
 "Diese Version wurde mit dieser App nicht erprobt." = "لم يتم اختبار هذا الإصدار مع هذا التطبيق.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "لم يأتِ هذا النص منك، بل من صفحة ويب أو طرفية أو سجل CI أو ملف خارج المشروع. قد يحتوي على تعليمات تهدف إلى توجيه الوكيل (حقن التعليمات). يتلقاه الوكيل مع تنبيه بأنه بيانات لا ينبغي له اتباع تعليماتها.";
 "Eigene Preise (US-$ je Million Tokens)" = "أسعار مخصصة (دولار أمريكي لكل مليون رمز مميز)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "القواعد المحفوظة";
 "Git" = "Git";
 "Hilfe" = "مساعدة";
+"Hintergrundprozesse dieser Sitzung" = "العمليات في الخلفية لهذه الجلسة";
+"Hintergrundprozesse: {} laufend, {} beendet" = "العمليات في الخلفية: {} قيد التشغيل، {} منتهية";
 "Hooks: {} erfolgreich" = "الخطافات الناجحة: {}";
 "Im Browser-Tab öffnen" = "فتح في علامة تبويب المتصفح";
 "Im Dock ablegen" = "تصغير";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "تُحفظ المفاتيح في سلسلة المفاتيح، ولا تُحفظ أبدًا في ملف إعدادات. لا يحتاج Ollama وLM Studio إلى مفتاح.";
 "Schlüssel …" = "المفتاح…";
 "Schreiben" = "كتابة";
+"Subagenten dieser Sitzung" = "الوكلاء الفرعيون لهذه الجلسة";
+"Subagenten: {} laufend, {} beendet" = "الوكلاء الفرعيون: {} قيد التشغيل، {} منتهية";
 "Text von einer Webseite" = "نص من صفحة ويب";
 "Text von {}" = "نص من {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "في الإعدادات ضمن “الوكيل”، أدخل مزوّدًا مع مفتاحه واختر نموذجًا، أو قم بإعداد Ollama أو LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "لم يبدأ {}";
 "{} ist nicht installiert" = "‏{} غير مثبّت";
 "{} konnte nicht zurückgesetzt werden" = "تعذّرت إعادة {} إلى الإصدار السابق";
+"{} meldet keine Hintergrundprozesse" = "لا يُبلغ {} عن عمليات في الخلفية";
+"{} meldet keine Subagenten" = "لا يُبلغ {} عن وكلاء فرعيين";
 "{} min" = "{} د";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "يطلب {} تسجيل الدخول قبل أن يفتح جلسة.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "يطلب {} تسجيل الدخول قبل أن يفتح جلسة. لتسجيل الدخول عبر الطرفية، تم نسخ الأمر إلى الحافظة.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "‏Pull Requests";
 "Was die Liste zeigt" = "ما تعرضه القائمة";
 "offen" = "مفتوح";
+"Anmeldung ausfüllen" = "تعبئة بيانات تسجيل الدخول";
+"Anmeldung für „{}“ ausfüllen" = "تعبئة بيانات تسجيل الدخول لـ “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "اختر في الحقل بيانات تسجيل دخول من تطبيق كلمات السر؛ يعبّئها التطبيق في نموذج الصفحة ولا يحتفظ بها.";
+"Ausfüllen" = "تعبئة";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "لا يوجد في هذه الصفحة نموذج لتسجيل الدخول، أو أنها تغيّرت في هذه الأثناء.";

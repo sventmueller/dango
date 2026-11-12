@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplikasi mengetahui harga Anthropic, OpenRouter menyebutkan harganya sendiri, dan model lokal gratis. Untuk model lain, thread baru menampilkan biaya setelah harga dimasukkan di sini.";
 "Die Umgebung der Login-Shell fehlt." = "Lingkungan shell login tidak ada.";
 "Dienste" = "Layanan";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Sesi ini belum memulai proses latar belakang apa pun";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Sesi ini belum memulai subagen apa pun";
 "Diese Version wurde mit dieser App nicht erprobt." = "Versi ini belum diuji dengan aplikasi ini.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Teks ini tidak berasal dari Anda, melainkan dari halaman web, terminal, log CI, atau file di luar proyek. Teks ini dapat berisi instruksi yang dimaksudkan untuk mengarahkan agen (prompt injection). Agen menerimanya dengan pemberitahuan bahwa ini adalah data yang instruksinya tidak boleh diikuti.";
 "Eigene Preise (US-$ je Million Tokens)" = "Harga Sendiri (US$ per Juta Token)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Aturan Tersimpan";
 "Git" = "Git";
 "Hilfe" = "Bantuan";
+"Hintergrundprozesse dieser Sitzung" = "Proses Latar Belakang Sesi Ini";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Proses latar belakang: {} berjalan, {} selesai";
 "Hooks: {} erfolgreich" = "Hook: {} berhasil";
 "Im Browser-Tab öffnen" = "Buka di Tab Browser";
 "Im Dock ablegen" = "Minikan";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Kunci disimpan di Rantai Kunci, tidak pernah di file pengaturan. Ollama dan LM Studio tidak memerlukannya.";
 "Schlüssel …" = "Kunci…";
 "Schreiben" = "Tulis";
+"Subagenten dieser Sitzung" = "Subagen Sesi Ini";
+"Subagenten: {} laufend, {} beendet" = "Subagen: {} berjalan, {} selesai";
 "Text von einer Webseite" = "Teks dari halaman web";
 "Text von {}" = "Teks dari {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Di Pengaturan bagian “Agen”, masukkan penyedia beserta kuncinya dan pilih model, atau siapkan Ollama atau LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} belum dimulai";
 "{} ist nicht installiert" = "{} tidak terinstal";
 "{} konnte nicht zurückgesetzt werden" = "{} tidak dapat dikembalikan";
+"{} meldet keine Hintergrundprozesse" = "{} tidak melaporkan proses latar belakang";
+"{} meldet keine Subagenten" = "{} tidak melaporkan subagen";
 "{} min" = "{} mnt";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} meminta Anda masuk sebelum membuka sesi.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} meminta Anda masuk sebelum membuka sesi. Untuk masuk di terminal, perintahnya ada di papan klip.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "Yang ditampilkan daftar";
 "offen" = "terbuka";
+"Anmeldung ausfüllen" = "Isi Data Masuk";
+"Anmeldung für „{}“ ausfüllen" = "Isi Data Masuk untuk “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Di bidang tersebut, pilih data masuk dari aplikasi Kata Sandi; data itu diisikan ke formulir halaman dan tidak disimpan oleh aplikasi.";
+"Ausfüllen" = "Isi";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Halaman ini tidak memiliki formulir masuk, atau halaman telah berubah sementara itu.";

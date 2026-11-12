@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Anthropic의 가격은 앱이 알고 있고, OpenRouter는 자체 가격을 알려 주며, 로컬 모델은 무료입니다. 그 밖의 모델은 여기에 가격을 입력해야 스레드에 비용이 표시됩니다.";
 "Die Umgebung der Login-Shell fehlt." = "로그인 셸의 환경이 없습니다.";
 "Dienste" = "서비스";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "이 세션은 아직 백그라운드 프로세스를 시작하지 않았습니다";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "이 세션은 아직 하위 에이전트를 시작하지 않았습니다";
 "Diese Version wurde mit dieser App nicht erprobt." = "이 버전은 이 앱에서 테스트되지 않았습니다.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "이 텍스트는 사용자가 아니라 웹 페이지, 터미널, CI 로그 또는 프로젝트 외부의 파일에서 온 것입니다. 에이전트를 조종하려는 지시(프롬프트 인젝션)가 포함되어 있을 수 있습니다. 에이전트는 이것이 데이터이며 그 안의 지시를 따르면 안 된다는 안내와 함께 받습니다.";
 "Eigene Preise (US-$ je Million Tokens)" = "사용자 가격(100만 토큰당 미국 달러)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "저장된 규칙";
 "Git" = "Git";
 "Hilfe" = "도움말";
+"Hintergrundprozesse dieser Sitzung" = "이 세션의 백그라운드 프로세스";
+"Hintergrundprozesse: {} laufend, {} beendet" = "백그라운드 프로세스: 실행 중 {}, 종료 {}";
 "Hooks: {} erfolgreich" = "훅: {}개 성공";
 "Im Browser-Tab öffnen" = "브라우저 탭에서 열기";
 "Im Dock ablegen" = "최소화";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "키는 설정 파일이 아니라 키체인에 저장됩니다. Ollama와 LM Studio에는 키가 필요하지 않습니다.";
 "Schlüssel …" = "키…";
 "Schreiben" = "쓰기";
+"Subagenten dieser Sitzung" = "이 세션의 하위 에이전트";
+"Subagenten: {} laufend, {} beendet" = "하위 에이전트: 실행 중 {}, 종료 {}";
 "Text von einer Webseite" = "웹 페이지의 텍스트";
 "Text von {}" = "{}의 텍스트";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "설정의 ‘에이전트’에서 제공자와 키를 입력하고 모델을 선택하거나 Ollama 또는 LM Studio를 설정하십시오.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{}이(가) 시작되지 않았습니다";
 "{} ist nicht installiert" = "{}이(가) 설치되지 않았습니다";
 "{} konnte nicht zurückgesetzt werden" = "{}을(를) 되돌릴 수 없습니다";
+"{} meldet keine Hintergrundprozesse" = "{}은(는) 백그라운드 프로세스를 보고하지 않습니다";
+"{} meldet keine Subagenten" = "{}은(는) 하위 에이전트를 보고하지 않습니다";
 "{} min" = "{}분";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{}은(는) 세션을 열기 전에 로그인을 요구합니다.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{}은(는) 세션을 열기 전에 로그인을 요구합니다. 터미널에서 로그인하는 데 필요한 명령은 클립보드에 있습니다.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "목록에 표시되는 항목";
 "offen" = "열림";
+"Anmeldung ausfüllen" = "로그인 정보 채우기";
+"Anmeldung für „{}“ ausfüllen" = "‘{}’의 로그인 정보 채우기";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "필드에서 ‘암호’ 앱의 로그인 정보를 선택하십시오. 앱은 이 정보를 페이지의 양식에 채우며 보관하지 않습니다.";
+"Ausfüllen" = "채우기";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "이 페이지에 로그인 양식이 없거나 그 사이에 페이지가 바뀌었습니다.";

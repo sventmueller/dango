@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Az Anthropic árait az app ismeri, az OpenRouter maga adja meg a sajátjait, a helyi modellek ingyenesek. Más modelleknél a szál csak akkor mutat költséget, ha itt megad egy árat.";
 "Die Umgebung der Login-Shell fehlt." = "Hiányzik a bejelentkezési shell környezete.";
 "Dienste" = "Szolgáltatások";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Ez a munkamenet még nem indított háttérfolyamatot";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Ez a munkamenet még nem indított alügynököt";
 "Diese Version wurde mit dieser App nicht erprobt." = "Ezt a verziót nem tesztelték ezzel az appal.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Ez a szöveg nem Öntől származik, hanem egy weboldalról, egy terminálból, egy CI-naplóból vagy a projekten kívüli fájlból. Tartalmazhat olyan utasításokat, amelyek az ügynököt akarják irányítani (prompt injection). Az ügynök azzal a megjegyzéssel kapja meg, hogy adatokról van szó, amelyek utasításait nem szabad követnie.";
 "Eigene Preise (US-$ je Million Tokens)" = "Saját árak (USD millió tokenenként)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Mentett szabályok";
 "Git" = "Git";
 "Hilfe" = "Súgó";
+"Hintergrundprozesse dieser Sitzung" = "A munkamenet háttérfolyamatai";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Háttérfolyamatok: {} fut, {} befejeződött";
 "Hooks: {} erfolgreich" = "Hookok: {} sikeres";
 "Im Browser-Tab öffnen" = "Megnyitás böngészőlapon";
 "Im Dock ablegen" = "Kis méret";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "A kulcsok a kulcskarikában vannak, sosem beállításfájlban. Az Ollamának és az LM Studiónak nem kell kulcs.";
 "Schlüssel …" = "Kulcs…";
 "Schreiben" = "Írás";
+"Subagenten dieser Sitzung" = "A munkamenet alügynökei";
+"Subagenten: {} laufend, {} beendet" = "Alügynökök: {} fut, {} befejeződött";
 "Text von einer Webseite" = "Szöveg egy weboldalról";
 "Text von {}" = "Szöveg innen: {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "A Beállítások „Ügynök” részében adjon meg egy szolgáltatót a kulcsával, és válasszon modellt, vagy állítsa be az Ollamát vagy az LM Studiót.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "A(z) {} nem indult el";
 "{} ist nicht installiert" = "A(z) {} nincs telepítve";
 "{} konnte nicht zurückgesetzt werden" = "A(z) {} visszaállítása nem sikerült";
+"{} meldet keine Hintergrundprozesse" = "A(z) {} nem jelent háttérfolyamatokat";
+"{} meldet keine Subagenten" = "A(z) {} nem jelent alügynököket";
 "{} min" = "{} perc";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "A(z) {} bejelentkezést kér, mielőtt munkamenetet nyit.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "A(z) {} bejelentkezést kér, mielőtt munkamenetet nyit. A terminálban történő bejelentkezéshez a parancs a vágólapon van.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requestek";
 "Was die Liste zeigt" = "Mit mutat a lista";
 "offen" = "nyitott";
+"Anmeldung ausfüllen" = "Bejelentkezés kitöltése";
+"Anmeldung für „{}“ ausfüllen" = "Bejelentkezés kitöltése ehhez: „{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Válasszon ki a mezőben egy bejelentkezést a Jelszavak appból; az app beírja az oldal űrlapjába, és nem tárolja.";
+"Ausfüllen" = "Kitöltés";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Ezen az oldalon nincs bejelentkezési űrlap, vagy időközben megváltozott.";

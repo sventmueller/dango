@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "היישום מכיר את המחירים של Anthropic, ו-OpenRouter מדווח על המחירים שלו; מודלים מקומיים אינם עולים דבר. עבור מודלים אחרים, השרשור מציג עלויות רק לאחר שהוזן כאן מחיר.";
 "Die Umgebung der Login-Shell fehlt." = "הסביבה של מעטפת ההתחברות חסרה.";
 "Dienste" = "שירותים";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "סשן זה עדיין לא הפעיל תהליכים ברקע";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "סשן זה עדיין לא הפעיל סוכני משנה";
 "Diese Version wurde mit dieser App nicht erprobt." = "גירסה זו לא נבדקה עם יישום זה.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "הטקסט הזה לא הגיע ממך, אלא מדף אינטרנט, ממסוף, מיומן CI או מקובץ מחוץ לפרויקט. הוא עשוי להכיל הוראות שנועדו לכוון את הסוכן (הזרקת פרומפט). הסוכן מקבל אותו עם הערה שמדובר בנתונים שאין לפעול לפי ההוראות שבהם.";
 "Eigene Preise (US-$ je Million Tokens)" = "מחירים מותאמים אישית (דולר למיליון טוקנים)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "כללים שמורים";
 "Git" = "Git";
 "Hilfe" = "עזרה";
+"Hintergrundprozesse dieser Sitzung" = "התהליכים ברקע של סשן זה";
+"Hintergrundprozesse: {} laufend, {} beendet" = "תהליכים ברקע: {} פועלים, {} הסתיימו";
 "Hooks: {} erfolgreich" = "מספר ה-Hooks שהצליחו: {}";
 "Im Browser-Tab öffnen" = "פתיחה בכרטיסיית הדפדפן";
 "Im Dock ablegen" = "מזעור";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "המפתחות נשמרים בצרור המפתחות, לעולם לא בקובץ הגדרות. ל-Ollama ול-LM Studio אין צורך במפתח.";
 "Schlüssel …" = "מפתח…";
 "Schreiben" = "כתיבה";
+"Subagenten dieser Sitzung" = "סוכני המשנה של סשן זה";
+"Subagenten: {} laufend, {} beendet" = "סוכני משנה: {} פועלים, {} הסתיימו";
 "Text von einer Webseite" = "טקסט מדף אינטרנט";
 "Text von {}" = "טקסט מתוך {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "יש להזין בהגדרות, תחת ״סוכן״, ספק עם מפתח ולבחור מודל, או להגדיר את Ollama או LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "‏{} לא הופעל";
 "{} ist nicht installiert" = "‏{} אינו מותקן";
 "{} konnte nicht zurückgesetzt werden" = "לא ניתן היה להחזיר את {} לגירסה הקודמת";
+"{} meldet keine Hintergrundprozesse" = "‏{} לא מדווח על תהליכים ברקע";
+"{} meldet keine Subagenten" = "‏{} לא מדווח על סוכני משנה";
 "{} min" = "{} דק׳";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "‏{} מבקש התחברות לפני פתיחת סשן.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "‏{} מבקש התחברות לפני פתיחת סשן. להתחברות במסוף, הפקודה נמצאת בלוח העריכה.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "‏Pull Requests";
 "Was die Liste zeigt" = "מה הרשימה מציגה";
 "offen" = "פתוח";
+"Anmeldung ausfüllen" = "מילוי פרטי התחברות";
+"Anmeldung für „{}“ ausfüllen" = "מילוי פרטי התחברות עבור ״{}״";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "יש לבחור בשדה פרטי התחברות מ״סיסמאות״; היישום ממלא אותם בטופס של הדף ואינו שומר אותם.";
+"Ausfüllen" = "מילוי";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "בדף זה אין טופס התחברות, או שהדף השתנה בינתיים.";

@@ -132,6 +132,14 @@ fn ready(root: PathBuf, key: u64) {
         sandbox.contains("Schreiben nur im Projekt"),
         sandbox,
     );
+    for part in [crate::activity::Part::Subagents, crate::activity::Part::Background] {
+        let (tip, enabled, _) = tab.work_button(part);
+        check(
+            "the head's subagent and background buttons are unavailable for an agent that reports neither",
+            !enabled && tip.starts_with("Gemini meldet keine"),
+            tip,
+        );
+    }
     picture(&controller, "acp-ready");
     tab.type_and_send("list the files");
     soon(

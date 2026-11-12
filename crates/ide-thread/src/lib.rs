@@ -262,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn the_background_set_is_replaced_but_keeps_what_was_learned_about_an_item() {
+    fn the_background_set_is_replaced_but_keeps_what_was_learned_and_what_ended() {
         let mut thread = thread();
         let item = |status| BackgroundItem {
             id: "b1".into(),
@@ -270,6 +270,7 @@ mod tests {
             label: "loop".into(),
             status,
             started: None,
+            ended: None,
             tool_call: None,
             parent: None,
             output: OutputTail::default(),
@@ -291,7 +292,64 @@ mod tests {
         assert_eq!(thread.background()[0].started, Some(at(5)));
         assert_eq!(thread.background()[0].output.text.as_deref(), Some("tick 1\n"));
         assert_eq!(thread.apply(Update::Background(vec![])), [Change::Background]);
-        assert!(thread.background().is_empty());
+        let [ended] = thread.background() else {
+            panic!("{:?}", thread.background())
+        };
+        assert_eq!(
+            ended.status,
+            TaskStatus::Completed,
+            "an item that leaves the set unannounced has ended"
+        );
+        assert_eq!(ended.output.text.as_deref(), Some("tick 1\n"));
+
+        let mut second = item(TaskStatus::Running);
+        second.id = "b2".into();
+        thread.apply(Update::Background(vec![second]));
+        thread.apply(Update::BackgroundItem(BackgroundPatch {
+            id: "b2".into(),
+            status: Some(TaskStatus::Stopped),
+            ended: Some(at(9)),
+            ..BackgroundPatch::default()
+        }));
+        thread.apply(Update::Background(vec![]));
+        let ids: Vec<&str> = thread.background().iter().map(|b| b.id.as_str()).collect();
+        assert_eq!(ids, ["b1", "b2"]);
+        assert_eq!(
+            thread.background()[1].status,
+            TaskStatus::Stopped,
+            "a status reported before stays"
+        );
+        assert_eq!(thread.background()[1].ended, Some(at(9)));
+        assert_eq!(
+            thread.apply(Update::Background(vec![])),
+            [],
+            "ended items alone change nothing"
+        );
+    }
+
+    #[test]
+    fn a_thread_keeps_only_the_latest_ended_background_items() {
+        let mut thread = thread();
+        let item = |id: usize| BackgroundItem {
+            id: format!("b{id}"),
+            kind: BackgroundKind::Shell,
+            label: "loop".into(),
+            status: TaskStatus::Running,
+            started: None,
+            ended: None,
+            tool_call: None,
+            parent: None,
+            output: OutputTail::default(),
+            is_backgrounded: true,
+            ambient: false,
+        };
+        for id in 0..60 {
+            thread.apply(Update::Background(vec![item(id)]));
+        }
+        thread.apply(Update::Background(vec![]));
+        let ids: Vec<&str> = thread.background().iter().map(|b| b.id.as_str()).collect();
+        assert_eq!(ids.len(), 50);
+        assert_eq!((ids[0], ids[49]), ("b10", "b59"));
     }
 
     #[test]

@@ -14,6 +14,9 @@ use crate::update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Up
 /// The longest title a first message gives; the views cut it further to their width.
 const TITLE_LIMIT: usize = 200;
 
+/// How many ended background items a thread keeps for its list, the latest ones.
+const KEPT_ENDED: usize = 50;
+
 /// A thread's title from the first message `text`: its first line that is not blank, with an ellipsis when cut at
 /// [`TITLE_LIMIT`] characters; empty for a message without text.
 pub fn title_from(text: &str) -> String {
@@ -48,7 +51,10 @@ pub struct Thread {
     main: Vec<Arc<Entry>>,
     subagents: Vec<Subagent>,
     lanes: HashMap<String, Vec<Arc<Entry>>>,
+    /// The items that run, in the agent's order, then those that ended, in the order they ended.
     background: Vec<BackgroundItem>,
+    /// How many items at the start of `background` run.
+    running: usize,
     next: u64,
     keys: Arc<HashMap<String, EntryId>>,
     places: Arc<HashMap<EntryId, (Lane, usize)>>,
@@ -75,6 +81,7 @@ impl Thread {
             subagents: Vec::new(),
             lanes: HashMap::new(),
             background: Vec::new(),
+            running: 0,
             next: 1,
             keys: Arc::default(),
             places: Arc::default(),
@@ -180,7 +187,7 @@ impl Thread {
         self.subagents.iter().find(|s| s.key == key)
     }
 
-    /// The work the agent keeps running in the background.
+    /// The work the agent keeps running in the background, then the latest of what ended.
     pub fn background(&self) -> &[BackgroundItem] {
         &self.background
     }
@@ -540,7 +547,7 @@ impl Thread {
     }
 
     fn replace_background(&mut self, items: Vec<BackgroundItem>, changes: &mut Vec<Change>) {
-        let merged: Vec<BackgroundItem> = items
+        let mut merged: Vec<BackgroundItem> = items
             .into_iter()
             .map(|mut item| {
                 if let Some(known) = self.background.iter().find(|b| b.id == item.id) {
@@ -552,6 +559,23 @@ impl Thread {
                 item
             })
             .collect();
+        let (running, ended) = self.background.split_at(self.running.min(self.background.len()));
+        let just_ended = running.iter().cloned().map(|mut item| {
+            if !item.status.is_final() {
+                item.status = TaskStatus::Completed;
+            }
+            item
+        });
+        let ended: Vec<BackgroundItem> = ended
+            .iter()
+            .cloned()
+            .chain(just_ended)
+            .filter(|item| !merged.iter().any(|other| other.id == item.id))
+            .collect();
+        let now_running = merged.len();
+        let excess = ended.len().saturating_sub(KEPT_ENDED);
+        merged.extend(ended.into_iter().skip(excess));
+        self.running = now_running;
         if merged != self.background {
             self.background = merged;
             changes.push(Change::Background);
@@ -565,6 +589,9 @@ impl Thread {
         let before = item.clone();
         if let Some(status) = patch.status {
             item.status = status;
+        }
+        if item.ended.is_none() {
+            item.ended = patch.ended;
         }
         if let Some(output) = patch.output {
             let mut next = output;
@@ -584,6 +611,7 @@ impl Thread {
         self.subagents.clear();
         self.lanes.clear();
         self.background.clear();
+        self.running = 0;
         self.todos.clear();
         self.usage = Usage::default();
         self.keys = Arc::default();

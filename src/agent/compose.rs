@@ -52,7 +52,7 @@ impl AgentTab {
         let typed = self.composer.text().trim_end().to_string();
         if typed.trim() == "/tasks" {
             self.composer.clear();
-            self.show_tasks(None);
+            self.show_work(crate::activity::Part::All, None);
             return;
         }
         let (text, resolved) = mention::resolve_files(&typed, &self.cwd);

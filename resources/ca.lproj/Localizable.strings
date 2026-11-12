@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "L’app coneix els preus d’Anthropic, OpenRouter indica els seus i els models locals no costen res. Per als altres, el fil només mostra els costos quan hi ha un preu introduït aquí.";
 "Die Umgebung der Login-Shell fehlt." = "Falta l’entorn de l’intèrpret d’ordres d’inici de sessió.";
 "Dienste" = "Serveis";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Aquesta sessió encara no ha iniciat cap procés en segon pla";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Aquesta sessió encara no ha iniciat cap subagent";
 "Diese Version wurde mit dieser App nicht erprobt." = "Aquesta versió no s’ha provat amb aquesta app.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Aquest text no prové de tu, sinó d’una pàgina web, d’un terminal, d’un log de CI o d’un fitxer de fora del projecte. Pot contenir instruccions pensades per dirigir l’agent (injecció de prompts). L’agent el rep amb l’avís que són dades i que no n’ha de seguir les instruccions.";
 "Eigene Preise (US-$ je Million Tokens)" = "Preus propis (US$ per milió de tokens)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Regles desades";
 "Git" = "Git";
 "Hilfe" = "Ajuda";
+"Hintergrundprozesse dieser Sitzung" = "Processos en segon pla d’aquesta sessió";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Processos en segon pla: {} en execució, {} acabats";
 "Hooks: {} erfolgreich" = "Hooks correctes: {}";
 "Im Browser-Tab öffnen" = "Obre a la pestanya del navegador";
 "Im Dock ablegen" = "Minimitza";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Les claus es desen al clauer, mai en un fitxer de configuració. Ollama i LM Studio no en necessiten.";
 "Schlüssel …" = "Clau…";
 "Schreiben" = "Escriptura";
+"Subagenten dieser Sitzung" = "Subagents d’aquesta sessió";
+"Subagenten: {} laufend, {} beendet" = "Subagents: {} en execució, {} acabats";
 "Text von einer Webseite" = "Text d’una pàgina web";
 "Text von {}" = "Text procedent de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "A la configuració, a “Agent”, introdueix un proveïdor amb la seva clau i tria un model, o configura Ollama o LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} no s’ha iniciat";
 "{} ist nicht installiert" = "{} no està instal·lat";
 "{} konnte nicht zurückgesetzt werden" = "No s’ha pogut revertir {}";
+"{} meldet keine Hintergrundprozesse" = "{} no informa de processos en segon pla";
+"{} meldet keine Subagenten" = "{} no informa de subagents";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} vol que t’identifiquis abans d’obrir una sessió.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} vol que t’identifiquis abans d’obrir una sessió. Per iniciar la sessió en un terminal, l’ordre és al porta-retalls.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Què mostra la llista";
 "offen" = "obert";
+"Anmeldung ausfüllen" = "Emplena l’inici de sessió";
+"Anmeldung für „{}“ ausfüllen" = "Emplena l’inici de sessió per a “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Tria al camp un inici de sessió de Contrasenyes; l’app l’emplena al formulari de la pàgina i no el conserva.";
+"Ausfüllen" = "Emplena";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "En aquesta pàgina no hi ha cap formulari d’inici de sessió, o bé ha canviat mentrestant.";

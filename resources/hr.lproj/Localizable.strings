@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplikacija zna cijene Anthropica, OpenRouter navodi svoje, a lokalni modeli ne koštaju ništa. Za ostale nit prikazuje troškove tek kad ovdje unesete cijenu.";
 "Die Umgebung der Login-Shell fehlt." = "Nedostaje okruženje ljuske za prijavu.";
 "Dienste" = "Usluge";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Ova sesija još nije pokrenula nijedan pozadinski proces";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Ova sesija još nije pokrenula nijednog podagenta";
 "Diese Version wurde mit dieser App nicht erprobt." = "Ova verzija nije testirana s ovom aplikacijom.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Ovaj tekst ne dolazi od vas, nego s web-stranice, iz terminala, CI zapisnika ili datoteke izvan projekta. Može sadržavati upute kojima se želi upravljati agentom (prompt injection). Agent ga dobiva uz napomenu da su to podaci čije upute ne smije slijediti.";
 "Eigene Preise (US-$ je Million Tokens)" = "Vlastite cijene (US$ po milijunu tokena)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Spremljena pravila";
 "Git" = "Git";
 "Hilfe" = "Pomoć";
+"Hintergrundprozesse dieser Sitzung" = "Pozadinski procesi ove sesije";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Pozadinski procesi: aktivnih {}, završenih {}";
 "Hooks: {} erfolgreich" = "Uspješni hookovi: {}";
 "Im Browser-Tab öffnen" = "Otvori u kartici preglednika";
 "Im Dock ablegen" = "Smanji";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Ključevi se nalaze u privjesku ključeva, nikad u datoteci postavki. Ollama i LM Studio ne trebaju ključ.";
 "Schlüssel …" = "Ključ…";
 "Schreiben" = "Pisanje";
+"Subagenten dieser Sitzung" = "Podagenti ove sesije";
+"Subagenten: {} laufend, {} beendet" = "Podagenti: aktivnih {}, završenih {}";
 "Text von einer Webseite" = "Tekst s web-stranice";
 "Text von {}" = "Tekst iz izvora {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "U postavkama pod “Agent” unesite pružatelja s ključem i odaberite model ili podesite Ollama ili LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} nije pokrenut";
 "{} ist nicht installiert" = "{} nije instaliran";
 "{} konnte nicht zurückgesetzt werden" = "{} nije moguće vratiti na prethodnu verziju";
+"{} meldet keine Hintergrundprozesse" = "{} ne javlja pozadinske procese";
+"{} meldet keine Subagenten" = "{} ne javlja podagente";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} traži prijavu prije otvaranja sesije.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} traži prijavu prije otvaranja sesije. Za prijavu u terminalu naredba se nalazi u memorijskom pretincu.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requestovi";
 "Was die Liste zeigt" = "Što popis prikazuje";
 "offen" = "otvoreno";
+"Anmeldung ausfüllen" = "Ispuni prijavu";
+"Anmeldung für „{}“ ausfüllen" = "Ispuni prijavu za “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Odaberite u polju prijavu iz aplikacije Lozinke; unosi se u obrazac stranice i aplikacija je ne zadržava.";
+"Ausfüllen" = "Ispuni";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na ovoj stranici nema obrasca za prijavu ili se u međuvremenu promijenila.";

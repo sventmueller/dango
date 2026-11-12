@@ -1068,6 +1068,8 @@ pub struct BackgroundItem {
     pub status: TaskStatus,
     /// When it started, when known.
     pub started: Option<SystemTime>,
+    /// When it ended, when known.
+    pub ended: Option<SystemTime>,
     /// The tool call that started it.
     pub tool_call: Option<String>,
     /// The task id of the subagent that started it.

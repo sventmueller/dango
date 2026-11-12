@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Appen kjenner prisene til Anthropic, OpenRouter oppgir sine egne, og lokale modeller koster ingenting. For andre viser en tråd først kostnader når du har lagt inn en pris her.";
 "Die Umgebung der Login-Shell fehlt." = "Miljøet til påloggingsskallet mangler.";
 "Dienste" = "Tjenester";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Denne økten har ikke startet noen bakgrunnsprosesser ennå";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Denne økten har ikke startet noen underagenter ennå";
 "Diese Version wurde mit dieser App nicht erprobt." = "Denne versjonen er ikke testet med denne appen.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Denne teksten kommer ikke fra deg, men fra en nettside, en terminal, en CI-logg eller en fil utenfor prosjektet. Den kan inneholde instrukser som skal styre agenten (prompt injection). Agenten får den med merknaden om at det er data den ikke skal følge instruksene i.";
 "Eigene Preise (US-$ je Million Tokens)" = "Egne priser (USD per million tokener)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Lagrede regler";
 "Git" = "Git";
 "Hilfe" = "Hjelp";
+"Hintergrundprozesse dieser Sitzung" = "Bakgrunnsprosesser i denne økten";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Bakgrunnsprosesser: {} kjører, {} avsluttet";
 "Hooks: {} erfolgreich" = "Hooks: {} vellykket";
 "Im Browser-Tab öffnen" = "Åpne i nettleserfane";
 "Im Dock ablegen" = "Minimer";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Nøkler ligger i nøkkelringen, aldri i en innstillingsfil. Ollama og LM Studio trenger ingen.";
 "Schlüssel …" = "Nøkkel…";
 "Schreiben" = "Skriving";
+"Subagenten dieser Sitzung" = "Underagenter i denne økten";
+"Subagenten: {} laufend, {} beendet" = "Underagenter: {} kjører, {} avsluttet";
 "Text von einer Webseite" = "Tekst fra en nettside";
 "Text von {}" = "Tekst fra {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Legg inn en leverandør med nøkkel under «Agent» i Innstillinger, og velg en modell, eller sett opp Ollama eller LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} har ikke startet";
 "{} ist nicht installiert" = "{} er ikke installert";
 "{} konnte nicht zurückgesetzt werden" = "Kunne ikke tilbakestille {}";
+"{} meldet keine Hintergrundprozesse" = "{} rapporterer ingen bakgrunnsprosesser";
+"{} meldet keine Subagenten" = "{} rapporterer ingen underagenter";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} vil at du logger på før den åpner en økt.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} vil at du logger på før den åpner en økt. For pålogging i terminalen ligger kommandoen på utklippstavlen.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Hva listen viser";
 "offen" = "åpen";
+"Anmeldung ausfüllen" = "Fyll ut pålogging";
+"Anmeldung für „{}“ ausfüllen" = "Fyll ut pålogging for «{}»";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Velg en pålogging fra Passord-appen i feltet; appen fyller den inn i sidens skjema og beholder den ikke.";
+"Ausfüllen" = "Fyll ut";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Denne siden har ikke noe påloggingsskjema, eller den har endret seg i mellomtiden.";

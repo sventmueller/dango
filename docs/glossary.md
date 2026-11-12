@@ -88,6 +88,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | custom agents | the subagents a user defines for Claude, not the own agent |
 | Thread (AI-Thread, CLI-Thread) | thread | one conversation with an agent as the app shows it |
 | Sitzung | session | a running conversation with an agent's process |
+| Subagent, Subagenten | subagent | an agent that the session's agent starts for part of its work |
+| Hintergrundprozess | background process | a shell command or monitor an agent keeps running beside its turn; a kind of Aufgabe |
 | Unterhaltung | conversation | the messages of a thread |
 | Zug | turn | one message of the user and the agent's work on it |
 | Antwort | answer | the agent's reply |
@@ -208,6 +210,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | الوكلاء المخصصون |
 | Thread (AI-Thread, CLI-Thread) | سلسلة (سلسلة AI، سلسلة CLI) |
 | Sitzung | جلسة |
+| Subagent | وكيل فرعي |
+| Hintergrundprozess | عملية في الخلفية |
 | Unterhaltung | محادثة |
 | Zug | دور |
 | Antwort | رد |
@@ -321,6 +325,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agents personalitzats |
 | Thread (AI-Thread, CLI-Thread) | fil (fil d’IA, fil de CLI) |
 | Sitzung | sessió |
+| Subagent | subagent |
+| Hintergrundprozess | procés en segon pla |
 | Unterhaltung | conversa |
 | Zug | torn |
 | Antwort | resposta |
@@ -433,6 +439,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Vlastní agenti |
 | Thread (AI-Thread, CLI-Thread) | vlákno (vlákno AI, vlákno CLI) |
 | Sitzung | relace |
+| Subagent | subagent |
+| Hintergrundprozess | proces na pozadí |
 | Unterhaltung | konverzace |
 | Zug | kolo |
 | Antwort | odpověď |
@@ -543,6 +551,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Brugerdefinerede agenter |
 | Thread (AI-Thread, CLI-Thread) | tråd (AI-tråd, CLI-tråd) |
 | Sitzung | session |
+| Subagent | subagent |
+| Hintergrundprozess | baggrundsproces |
 | Unterhaltung | samtale |
 | Zug | runde |
 | Antwort | svar |
@@ -656,6 +666,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Προσαρμοσμένοι πράκτορες |
 | Thread (AI-Thread, CLI-Thread) | νήμα (νήμα AI, νήμα CLI) |
 | Sitzung | συνεδρία |
+| Subagent | υποπράκτορας |
+| Hintergrundprozess | διεργασία παρασκηνίου |
 | Unterhaltung | συνομιλία |
 | Zug | γύρος |
 | Antwort | απάντηση |
@@ -769,6 +781,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agentes personalizados |
 | Thread (AI-Thread, CLI-Thread) | hilo (hilo de IA, hilo de CLI) |
 | Sitzung | sesión |
+| Subagent | subagente |
+| Hintergrundprozess | proceso en segundo plano |
 | Unterhaltung | conversación |
 | Zug | turno |
 | Antwort | respuesta |
@@ -883,6 +897,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Mukautetut agentit |
 | Thread (AI-Thread, CLI-Thread) | ketju (AI-ketju, CLI-ketju) |
 | Sitzung | istunto |
+| Subagent | aliagentti |
+| Hintergrundprozess | taustaprosessi |
 | Unterhaltung | keskustelu |
 | Zug | vuoro |
 | Antwort | vastaus |
@@ -994,6 +1010,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agents personnalisés |
 | Thread (AI-Thread, CLI-Thread) | fil (fil IA, fil CLI) |
 | Sitzung | session |
+| Subagent | sous-agent |
+| Hintergrundprozess | processus en arrière-plan |
 | Unterhaltung | conversation |
 | Zug | tour |
 | Antwort | réponse |
@@ -1109,6 +1127,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | סוכנים מותאמים אישית |
 | Thread (AI-Thread, CLI-Thread) | שרשור (שרשור AI, שרשור CLI) |
 | Sitzung | סשן |
+| Subagent | סוכן משנה |
+| Hintergrundprozess | תהליך ברקע |
 | Unterhaltung | שיחה |
 | Zug | סבב |
 | Antwort | תשובה |
@@ -1220,6 +1240,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | कस्टम एजेंट |
 | Thread (AI-Thread, CLI-Thread) | थ्रेड (AI थ्रेड, CLI थ्रेड) |
 | Sitzung | सेशन |
+| Subagent | सब-एजेंट |
+| Hintergrundprozess | बैकग्राउंड प्रोसेस |
 | Unterhaltung | बातचीत |
 | Zug | टर्न |
 | Antwort | जवाब |
@@ -1332,6 +1354,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Prilagođeni agenti |
 | Thread (AI-Thread, CLI-Thread) | nit (AI nit, CLI nit) |
 | Sitzung | sesija |
+| Subagent | podagent |
+| Hintergrundprozess | pozadinski proces |
 | Unterhaltung | razgovor |
 | Zug | krug |
 | Antwort | odgovor |
@@ -1446,6 +1470,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Saját ügynökök |
 | Thread (AI-Thread, CLI-Thread) | szál (AI-szál, CLI-szál) |
 | Sitzung | munkamenet |
+| Subagent | alügynök |
+| Hintergrundprozess | háttérfolyamat |
 | Unterhaltung | beszélgetés |
 | Zug | kör |
 | Antwort | válasz |
@@ -1558,6 +1584,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agen kustom |
 | Thread (AI-Thread, CLI-Thread) | thread (thread AI, thread CLI) |
 | Sitzung | sesi |
+| Subagent | subagen |
+| Hintergrundprozess | proses latar belakang |
 | Unterhaltung | percakapan |
 | Zug | giliran |
 | Antwort | jawaban |
@@ -1670,6 +1698,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agenti personalizzati |
 | Thread (AI-Thread, CLI-Thread) | thread (thread AI, thread CLI) |
 | Sitzung | sessione |
+| Subagent | subagente |
+| Hintergrundprozess | processo in background |
 | Unterhaltung | conversazione |
 | Zug | turno |
 | Antwort | risposta |
@@ -1783,6 +1813,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | カスタムエージェント |
 | Thread (AI-Thread, CLI-Thread) | スレッド (AIスレッド, CLIスレッド) |
 | Sitzung | セッション |
+| Subagent | サブエージェント |
+| Hintergrundprozess | バックグラウンドプロセス |
 | Unterhaltung | 会話 |
 | Zug | ターン |
 | Antwort | 応答 |
@@ -1895,6 +1927,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | 사용자 에이전트 |
 | Thread (AI-Thread, CLI-Thread) | 스레드 (AI 스레드, CLI 스레드) |
 | Sitzung | 세션 |
+| Subagent | 하위 에이전트 |
+| Hintergrundprozess | 백그라운드 프로세스 |
 | Unterhaltung | 대화 |
 | Zug | 턴 |
 | Antwort | 응답 |
@@ -2006,6 +2040,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Ejen tersuai |
 | Thread (AI-Thread, CLI-Thread) | thread (thread AI, thread CLI) |
 | Sitzung | sesi |
+| Subagent | subejen |
+| Hintergrundprozess | proses latar belakang |
 | Unterhaltung | perbualan |
 | Zug | giliran |
 | Antwort | jawapan |
@@ -2118,6 +2154,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Eigen agents |
 | Thread (AI-Thread, CLI-Thread) | thread (AI-thread, CLI-thread) |
 | Sitzung | sessie |
+| Subagent | subagent |
+| Hintergrundprozess | achtergrondproces |
 | Unterhaltung | gesprek |
 | Zug | beurt |
 | Antwort | antwoord |
@@ -2230,6 +2268,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Egne agenter |
 | Thread (AI-Thread, CLI-Thread) | tråd (KI-tråd, CLI-tråd) |
 | Sitzung | økt |
+| Subagent | underagent |
+| Hintergrundprozess | bakgrunnsprosess |
 | Unterhaltung | samtale |
 | Zug | runde |
 | Antwort | svar |
@@ -2342,6 +2382,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Własne agenty |
 | Thread (AI-Thread, CLI-Thread) | wątek (wątek AI, wątek CLI) |
 | Sitzung | sesja |
+| Subagent | subagent |
+| Hintergrundprozess | proces w tle |
 | Unterhaltung | rozmowa |
 | Zug | tura |
 | Antwort | odpowiedź |
@@ -2455,6 +2497,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agentes personalizados |
 | Thread (AI-Thread, CLI-Thread) | thread (thread de IA, thread de CLI) |
 | Sitzung | sessão |
+| Subagent | subagente |
+| Hintergrundprozess | processo em segundo plano |
 | Unterhaltung | conversa |
 | Zug | turno |
 | Antwort | resposta |
@@ -2568,6 +2612,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agentes personalizados |
 | Thread (AI-Thread, CLI-Thread) | thread (thread de IA, thread de CLI) |
 | Sitzung | sessão |
+| Subagent | subagente |
+| Hintergrundprozess | processo em segundo plano |
 | Unterhaltung | conversa |
 | Zug | turno |
 | Antwort | resposta |
@@ -2681,6 +2727,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agenți personalizați |
 | Thread (AI-Thread, CLI-Thread) | conversație (conversație IA, conversație CLI) |
 | Sitzung | sesiune |
+| Subagent | subagent |
+| Hintergrundprozess | proces în fundal |
 | Unterhaltung | discuție |
 | Zug | rundă |
 | Antwort | răspuns |
@@ -2794,6 +2842,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Пользовательские агенты |
 | Thread (AI-Thread, CLI-Thread) | чат (ИИ-чат, CLI-чат) |
 | Sitzung | сеанс |
+| Subagent | субагент |
+| Hintergrundprozess | фоновый процесс |
 | Unterhaltung | диалог |
 | Zug | запрос |
 | Antwort | ответ |
@@ -2907,6 +2957,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Vlastní agenti |
 | Thread (AI-Thread, CLI-Thread) | vlákno (AI vlákno, CLI vlákno) |
 | Sitzung | relácia |
+| Subagent | subagent |
+| Hintergrundprozess | proces na pozadí |
 | Unterhaltung | konverzácia |
 | Zug | kolo |
 | Antwort | odpoveď |
@@ -3021,6 +3073,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Agenti po meri |
 | Thread (AI-Thread, CLI-Thread) | nit (nit AI, nit CLI) |
 | Sitzung | seja |
+| Subagent | podagent |
+| Hintergrundprozess | proces v ozadju |
 | Unterhaltung | pogovor |
 | Zug | krog |
 | Antwort | odgovor |
@@ -3133,6 +3187,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Anpassade agenter |
 | Thread (AI-Thread, CLI-Thread) | tråd (AI-tråd, CLI-tråd) |
 | Sitzung | session |
+| Subagent | underagent |
+| Hintergrundprozess | bakgrundsprocess |
 | Unterhaltung | konversation |
 | Zug | omgång |
 | Antwort | svar |
@@ -3246,6 +3302,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | เอเจนต์ที่กำหนดเอง |
 | Thread (AI-Thread, CLI-Thread) | เธรด (เธรด AI, เธรด CLI) |
 | Sitzung | เซสชัน |
+| Subagent | เอเจนต์ย่อย |
+| Hintergrundprozess | กระบวนการเบื้องหลัง |
 | Unterhaltung | บทสนทนา |
 | Zug | รอบ |
 | Antwort | คำตอบ |
@@ -3360,6 +3418,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Özel ajanlar |
 | Thread (AI-Thread, CLI-Thread) | sohbet (AI sohbeti, CLI sohbeti) |
 | Sitzung | oturum |
+| Subagent | alt ajan |
+| Hintergrundprozess | arka plan işlemi |
 | Unterhaltung | konuşma |
 | Zug | tur |
 | Antwort | yanıt |
@@ -3472,6 +3532,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Користувацькі агенти |
 | Thread (AI-Thread, CLI-Thread) | чат (ШІ-чат, CLI-чат) |
 | Sitzung | сеанс |
+| Subagent | субагент |
+| Hintergrundprozess | фоновий процес |
 | Unterhaltung | діалог |
 | Zug | хід |
 | Antwort | відповідь |
@@ -3584,6 +3646,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | Tác nhân tùy chỉnh |
 | Thread (AI-Thread, CLI-Thread) | luồng (luồng AI, luồng CLI) |
 | Sitzung | phiên |
+| Subagent | tác nhân phụ |
+| Hintergrundprozess | tiến trình nền |
 | Unterhaltung | cuộc hội thoại |
 | Zug | lượt |
 | Antwort | câu trả lời |
@@ -3695,6 +3759,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | 自定义智能体 |
 | Thread (AI-Thread, CLI-Thread) | 对话 (AI 对话, CLI 对话) |
 | Sitzung | 会话 |
+| Subagent | 子智能体 |
+| Hintergrundprozess | 后台进程 |
 | Unterhaltung | 对话内容 |
 | Zug | 轮 |
 | Antwort | 回答 |
@@ -3807,6 +3873,8 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Eigene Agenten | 自訂代理程式 |
 | Thread (AI-Thread, CLI-Thread) | 對話 (AI 對話, CLI 對話) |
 | Sitzung | 工作階段 |
+| Subagent | 子代理程式 |
+| Hintergrundprozess | 背景程序 |
 | Unterhaltung | 對話內容 |
 | Zug | 輪 |
 | Antwort | 回答 |

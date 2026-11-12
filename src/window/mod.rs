@@ -446,6 +446,16 @@ define_class!(
             guarded((), || crate::agent::toggle_focus(self));
         }
 
+        #[unsafe(method(ideShowSessionSubagents:))]
+        fn show_session_subagents_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::agent::show_work(self, crate::activity::Part::Subagents));
+        }
+
+        #[unsafe(method(ideShowSessionBackground:))]
+        fn show_session_background_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::agent::show_work(self, crate::activity::Part::Background));
+        }
+
         #[unsafe(method(idePlanComment:))]
         fn plan_comment_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::agent::plan::comment_from_keyboard(self));
@@ -1698,6 +1708,12 @@ impl WindowController {
         let ivars = self.ivars();
         if action == Some(sel!(idePlanComment:)) {
             return crate::agent::plan::keyboard_target(self).is_some();
+        }
+        if action == Some(sel!(ideShowSessionSubagents:)) {
+            return crate::agent::can_show_work(self, crate::activity::Part::Subagents);
+        }
+        if action == Some(sel!(ideShowSessionBackground:)) {
+            return crate::agent::can_show_work(self, crate::activity::Part::Background);
         }
         if action == Some(sel!(ideShowPanel:)) {
             let current = ivars.panel_open.get().then(|| ivars.panel.get()).flatten();

@@ -24,6 +24,7 @@ use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE, DENY, PLAN_APPROVE, PLAN_R
 use super::composer::image_types;
 use super::tab::AgentTab;
 use super::{format, style, ui};
+use crate::activity::Part;
 use crate::util::{item, main_soon, ns, set_target};
 
 /// What the model is told when the user refuses a tool; for the model, so not translated.
@@ -1034,12 +1035,26 @@ impl AgentTab {
         });
     }
 
-    /// Opens the overview of the session's subagents and background tasks below `anchor`, else below the head's
-    /// button for it.
-    pub fn show_tasks(&self, anchor: Option<&NSView>) {
+    /// Opens the list of `part` of the session below `anchor`, else below the head's button for it.
+    pub fn show_work(&self, part: Part, anchor: Option<&NSView>) {
         let Some(controller) = self.controller() else { return };
-        let fallback = ui::view(&self.header.tasks);
-        crate::activity::show_tab(&controller, self.key, anchor.unwrap_or(&fallback));
+        let fallback = ui::view(self.header.work_button(part));
+        crate::activity::show_tab(&controller, self.key, part, anchor.unwrap_or(&fallback));
+    }
+
+    /// Whether the list of `part` has anything to show, as its button in the head says.
+    pub fn has_work(&self, part: Part) -> bool {
+        matches!(self.agent, Agent::Claude) && crate::activity::tally(&self.view_snapshot(), part).listed > 0
+    }
+
+    /// Brings the head's buttons for the session's subagents and background processes up to date.
+    pub(super) fn refresh_work(&self) {
+        let thread = self.view_snapshot();
+        let silent = (!matches!(self.agent, Agent::Claude)).then(|| self.agent.name());
+        for part in [Part::Subagents, Part::Background] {
+            self.header
+                .set_work(part, crate::activity::tally(&thread, part), silent);
+        }
     }
 
     /// Shows only the conversation, without tools, thinking and status lines, or everything again.

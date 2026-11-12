@@ -1,5 +1,5 @@
-//! The head of the AI tab: the session's title, then Remote Control, bookmark, history and a new
-//! session.
+//! The head of the AI tab: the session's title, then Remote Control, the focus view, the session's subagents and
+//! background processes, bookmark, history and a new session.
 
 use ide_claude::RemoteControl;
 use objc2::rc::Retained;
@@ -8,10 +8,29 @@ use objc2_app_kit::{NSButton, NSClickGestureRecognizer, NSColor, NSStackView, NS
 use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
+use crate::activity::{Part, Tally};
+
 use super::style;
 use super::target::AgentTarget;
 use super::ui;
 use crate::util::{ns, symbol};
+
+/// The symbol of the button for the session's subagents, the one the activity view shows before each of them.
+const SUBAGENTS: &str = "person.2";
+
+/// The symbol of the button for the session's background processes.
+const BACKGROUND: &str = "terminal";
+
+/// The button that opens the list of `part`, unavailable until the session has some.
+fn work_button(mtm: MainThreadMarker, target: &AgentTarget, part: Part) -> Retained<NSButton> {
+    let (name, action) = match part {
+        Part::Subagents | Part::All => (SUBAGENTS, sel!(ideAgentSubagentList:)),
+        Part::Background => (BACKGROUND, sel!(ideAgentBackgroundList:)),
+    };
+    let button = ui::symbol_button(mtm, name, part.heading(), 13.0, target, action, 0);
+    button.setEnabled(false);
+    button
+}
 
 /// Puts the title's text on the left edge of the window's tab bar, which AppKit insets 8 points from the content.
 const TITLE_INSET: f64 = 8.0;
@@ -21,8 +40,10 @@ pub struct Header {
     title: Retained<NSTextField>,
     bookmark: Retained<NSButton>,
     focus: Retained<NSButton>,
-    /// Opens the overview of the session's subagents and background tasks.
-    pub tasks: Retained<NSButton>,
+    /// Opens the list of the session's subagents.
+    pub subagents: Retained<NSButton>,
+    /// Opens the list of the session's background processes.
+    pub background: Retained<NSButton>,
     remote: Retained<NSButton>,
 }
 
@@ -82,15 +103,8 @@ impl Header {
             sel!(ideAgentFocusView:),
             0,
         );
-        let tasks = ui::symbol_button(
-            mtm,
-            "list.bullet.indent",
-            t("Aufgaben dieser Sitzung"),
-            13.0,
-            target,
-            sel!(ideAgentTasks:),
-            0,
-        );
+        let subagents = work_button(mtm, target, Part::Subagents);
+        let background = work_button(mtm, target, Part::Background);
         let remote = ui::symbol_button(
             mtm,
             "iphone",
@@ -105,7 +119,17 @@ impl Header {
         let view = ui::row(
             mtm,
             8.0,
-            &[&title, &spacer, &remote, &focus, &tasks, &bookmark, &history, &new],
+            &[
+                &title,
+                &spacer,
+                &remote,
+                &focus,
+                &subagents,
+                &background,
+                &bookmark,
+                &history,
+                &new,
+            ],
         );
         view.setEdgeInsets(NSEdgeInsets {
             top: 0.0,
@@ -119,7 +143,8 @@ impl Header {
             title,
             bookmark,
             focus,
-            tasks,
+            subagents,
+            background,
             remote,
         }
     }
@@ -163,6 +188,41 @@ impl Header {
         self.remote.setContentTintColor(Some(&color));
         self.remote.setToolTip(Some(&ns(tip)));
         self.remote.setHidden(false);
+    }
+
+    /// Shows what the list of `part` holds: in the accent colour while something runs, the numbers in the tooltip and
+    /// for VoiceOver, unavailable while it is empty; `silent` names an agent that reports no such work.
+    pub fn set_work(&self, part: Part, tally: Tally, silent: Option<&str>) {
+        let button = self.work_button(part);
+        let (running, ended) = (tally.running.to_string(), tally.ended.to_string());
+        let subagents = part == Part::Subagents;
+        let tip = match silent {
+            Some(agent) if subagents => tf("{} meldet keine Subagenten", &[agent]),
+            Some(agent) => tf("{} meldet keine Hintergrundprozesse", &[agent]),
+            None if tally.listed == 0 && subagents => {
+                t("Diese Sitzung hat noch keine Subagenten gestartet").to_string()
+            }
+            None if tally.listed == 0 => t("Diese Sitzung hat noch keine Hintergrundprozesse gestartet").to_string(),
+            None if subagents => tf("Subagenten: {} laufend, {} beendet", &[&running, &ended]),
+            None => tf("Hintergrundprozesse: {} laufend, {} beendet", &[&running, &ended]),
+        };
+        button.setToolTip(Some(&ns(&tip)));
+        crate::util::set_label(button, Some(&tip));
+        button.setEnabled(silent.is_none() && tally.listed > 0);
+        let color = if tally.running > 0 && silent.is_none() {
+            NSColor::controlAccentColor()
+        } else {
+            NSColor::secondaryLabelColor()
+        };
+        button.setContentTintColor(Some(&color));
+    }
+
+    /// The button that opens the list of `part`; the subagents' for the whole overview.
+    pub fn work_button(&self, part: Part) -> &NSButton {
+        match part {
+            Part::Subagents | Part::All => &self.subagents,
+            Part::Background => &self.background,
+        }
     }
 
     pub fn set_title(&self, title: &str) {

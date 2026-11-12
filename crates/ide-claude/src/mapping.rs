@@ -513,7 +513,14 @@ impl Mapper {
             patch.cancellable = Some(false);
             out.push(Update::Subagent(patch));
         }
-        self.level.clear();
+        for task in self.level.drain(..) {
+            out.push(Update::BackgroundItem(BackgroundPatch {
+                id: task.task_id,
+                status: Some(TaskStatus::Stopped),
+                ended: Some(now),
+                ..BackgroundPatch::default()
+            }));
+        }
         out.push(Update::Background(Vec::new()));
         out.push(Update::Activity(None));
         out.push(self.status(Status::Idle));
@@ -1278,6 +1285,7 @@ impl Mapper {
             None => vec![Update::BackgroundItem(BackgroundPatch {
                 id: u.task_id.clone(),
                 status,
+                ended,
                 output: None,
                 is_backgrounded: u.patch.is_backgrounded,
             })],
@@ -1311,6 +1319,7 @@ impl Mapper {
             None => vec![Update::BackgroundItem(BackgroundPatch {
                 id: n.task_id.clone(),
                 status,
+                ended: status.filter(|s| s.is_final()).map(|_| now),
                 output: Some(OutputTail {
                     path: n.output_file.clone(),
                     ..OutputTail::default()
@@ -1351,6 +1360,7 @@ impl Mapper {
                         .map(|t| t.started)
                         .or_else(|| self.seen.get(&b.task_id).copied())
                         .or(Some(now)),
+                    ended: None,
                     tool_call: task.and_then(|t| t.tool_use_id.clone()),
                     parent: b.parent_task_id.clone(),
                     output: OutputTail {
@@ -1815,6 +1825,23 @@ mod tests {
         assert_eq!(mapper.prompts(), 2);
         let mut history = Mapper::for_history();
         assert!(echo(&mut history, &replay("p-2", "", "from the phone")).is_empty());
+    }
+
+    #[test]
+    fn background_work_still_running_when_the_cli_ends_is_stopped_then() {
+        let mut mapper = Mapper::new();
+        let set = r#"{"type":"system","subtype":"background_tasks_changed","tasks":[{"task_id":"b1","task_type":"local_bash","description":"loop"}],"session_id":"s","uuid":"u"}"#;
+        mapper.map(&crate::protocol::parse(set).unwrap(), SystemTime::UNIX_EPOCH);
+        let at = SystemTime::UNIX_EPOCH + Duration::from_secs(7);
+        let updates = mapper.ended(at);
+        let stopped = updates.iter().position(|u| {
+            matches!(u, Update::BackgroundItem(BackgroundPatch { id, status: Some(TaskStatus::Stopped), ended: Some(when), .. })
+                if id == "b1" && *when == at)
+        });
+        let emptied = updates
+            .iter()
+            .position(|u| matches!(u, Update::Background(items) if items.is_empty()));
+        assert!(stopped.zip(emptied).is_some_and(|(s, e)| s < e), "{updates:?}");
     }
 
     fn statuses(mapper: &mut Mapper, frame: &str) -> Vec<Status> {

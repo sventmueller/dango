@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "L’app connaît les prix d’Anthropic, OpenRouter indique les siens et les modèles locaux sont gratuits. Pour les autres, un fil n’affiche les coûts qu’une fois un prix saisi ici.";
 "Die Umgebung der Login-Shell fehlt." = "L’environnement du shell de connexion est manquant.";
 "Dienste" = "Services";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Cette session n’a encore lancé aucun processus en arrière-plan";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Cette session n’a encore lancé aucun sous-agent";
 "Diese Version wurde mit dieser App nicht erprobt." = "Cette version n’a pas été testée avec cette app.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Ce texte ne vient pas de vous, mais d’une page web, d’un terminal, d’un journal CI ou d’un fichier hors du projet. Il peut contenir des instructions destinées à piloter l’agent (injection de prompt). L’agent le reçoit avec l’indication qu’il s’agit de données dont il ne doit pas suivre les instructions.";
 "Eigene Preise (US-$ je Million Tokens)" = "Prix personnalisés ($ US par million de jetons)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Règles enregistrées";
 "Git" = "Git";
 "Hilfe" = "Aide";
+"Hintergrundprozesse dieser Sitzung" = "Processus en arrière-plan de cette session";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Processus en arrière-plan : {} en cours, {} terminés";
 "Hooks: {} erfolgreich" = "Hooks : {} réussis";
 "Im Browser-Tab öffnen" = "Ouvrir dans l’onglet navigateur";
 "Im Dock ablegen" = "Minimiser";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Les clés sont stockées dans le trousseau, jamais dans un fichier de réglages. Ollama et LM Studio n’en ont pas besoin.";
 "Schlüssel …" = "Clé…";
 "Schreiben" = "Écriture";
+"Subagenten dieser Sitzung" = "Sous-agents de cette session";
+"Subagenten: {} laufend, {} beendet" = "Sous-agents : {} en cours, {} terminés";
 "Text von einer Webseite" = "Texte d’une page web";
 "Text von {}" = "Texte provenant de {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Dans les réglages, sous « Agent », saisissez un fournisseur avec sa clé et choisissez un modèle, ou configurez Ollama ou LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} n’a pas démarré";
 "{} ist nicht installiert" = "{} n’est pas installé";
 "{} konnte nicht zurückgesetzt werden" = "Impossible de rétablir la version précédente de {}";
+"{} meldet keine Hintergrundprozesse" = "{} ne signale aucun processus en arrière-plan";
+"{} meldet keine Subagenten" = "{} ne signale aucun sous-agent";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} demande une connexion avant d’ouvrir une session.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} demande une connexion avant d’ouvrir une session. Pour vous connecter dans un terminal, la commande se trouve dans le presse-papiers.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Ce que la liste affiche";
 "offen" = "ouvert";
+"Anmeldung ausfüllen" = "Remplir les données de connexion";
+"Anmeldung für „{}“ ausfüllen" = "Remplir les données de connexion pour « {} »";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Choisissez dans le champ des données de connexion de l’app Mots de passe ; elles sont saisies dans le formulaire de la page et l’app ne les conserve pas.";
+"Ausfüllen" = "Remplir";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Cette page ne contient aucun formulaire de connexion, ou elle a changé entre-temps.";

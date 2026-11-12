@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Η εφαρμογή γνωρίζει τις τιμές της Anthropic, το OpenRouter αναφέρει τις δικές του και τα τοπικά μοντέλα δεν κοστίζουν τίποτα. Για τα υπόλοιπα, το νήμα εμφανίζει κόστος μόνο αφού καταχωρίσετε εδώ μια τιμή.";
 "Die Umgebung der Login-Shell fehlt." = "Λείπει το περιβάλλον του κελύφους σύνδεσης.";
 "Dienste" = "Υπηρεσίες";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Αυτή η συνεδρία δεν έχει ξεκινήσει ακόμη διεργασίες παρασκηνίου";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Αυτή η συνεδρία δεν έχει ξεκινήσει ακόμη υποπράκτορες";
 "Diese Version wurde mit dieser App nicht erprobt." = "Αυτή η έκδοση δεν έχει δοκιμαστεί με αυτήν την εφαρμογή.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Αυτό το κείμενο δεν προέρχεται από εσάς, αλλά από μια ιστοσελίδα, ένα τερματικό, ένα αρχείο καταγραφής CI ή ένα αρχείο εκτός του έργου. Μπορεί να περιέχει οδηγίες που επιχειρούν να κατευθύνουν τον πράκτορα (prompt injection). Ο πράκτορας το λαμβάνει με την επισήμανση ότι πρόκειται για δεδομένα, των οποίων τις οδηγίες δεν πρέπει να ακολουθήσει.";
 "Eigene Preise (US-$ je Million Tokens)" = "Προσαρμοσμένες τιμές (US$ ανά εκατομμύριο token)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Αποθηκευμένοι κανόνες";
 "Git" = "Git";
 "Hilfe" = "Βοήθεια";
+"Hintergrundprozesse dieser Sitzung" = "Διεργασίες παρασκηνίου αυτής της συνεδρίας";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Διεργασίες παρασκηνίου: {} σε εκτέλεση, {} ολοκληρώθηκαν";
 "Hooks: {} erfolgreich" = "Επιτυχή hook: {}";
 "Im Browser-Tab öffnen" = "Άνοιγμα σε καρτέλα περιήγησης";
 "Im Dock ablegen" = "Ελαχιστοποίηση";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Τα κλειδιά φυλάσσονται στην κλειδοθήκη, ποτέ σε αρχείο ρυθμίσεων. Το Ollama και το LM Studio δεν χρειάζονται κλειδί.";
 "Schlüssel …" = "Κλειδί…";
 "Schreiben" = "Εγγραφή";
+"Subagenten dieser Sitzung" = "Υποπράκτορες αυτής της συνεδρίας";
+"Subagenten: {} laufend, {} beendet" = "Υποπράκτορες: {} σε εκτέλεση, {} ολοκληρώθηκαν";
 "Text von einer Webseite" = "Κείμενο από ιστοσελίδα";
 "Text von {}" = "Κείμενο από {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Στις Ρυθμίσεις, στην ενότητα «Πράκτορας», καταχωρίστε έναν πάροχο με το κλειδί του και επιλέξτε ένα μοντέλο ή ρυθμίστε το Ollama ή το LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "Το {} δεν έχει ξεκινήσει";
 "{} ist nicht installiert" = "Το {} δεν έχει εγκατασταθεί";
 "{} konnte nicht zurückgesetzt werden" = "Δεν ήταν δυνατή η επαναφορά του {}";
+"{} meldet keine Hintergrundprozesse" = "Το {} δεν αναφέρει διεργασίες παρασκηνίου";
+"{} meldet keine Subagenten" = "Το {} δεν αναφέρει υποπράκτορες";
 "{} min" = "{} λεπ.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "Το {} ζητά σύνδεση πριν ανοίξει μια συνεδρία.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "Το {} ζητά σύνδεση πριν ανοίξει μια συνεδρία. Για σύνδεση από το τερματικό, η εντολή βρίσκεται στο πρόχειρο.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Τι δείχνει η λίστα";
 "offen" = "ανοιχτό";
+"Anmeldung ausfüllen" = "Συμπλήρωση στοιχείων σύνδεσης";
+"Anmeldung für „{}“ ausfüllen" = "Συμπλήρωση στοιχείων σύνδεσης για «{}»";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Επιλέξτε στο πεδίο στοιχεία σύνδεσης από τα Συνθηματικά· η εφαρμογή τα συμπληρώνει στη φόρμα της σελίδας και δεν τα κρατά.";
+"Ausfüllen" = "Συμπλήρωση";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Αυτή η σελίδα δεν έχει φόρμα σύνδεσης ή έχει αλλάξει στο μεταξύ.";

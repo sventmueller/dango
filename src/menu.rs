@@ -218,6 +218,18 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
                 Some(sel!(ideFocusClaude:)),
                 &keys.get("agent.focus"),
             ),
+            item(
+                mtm,
+                t("Subagenten dieser Sitzung"),
+                Some(sel!(ideShowSessionSubagents:)),
+                "",
+            ),
+            item(
+                mtm,
+                t("Hintergrundprozesse dieser Sitzung"),
+                Some(sel!(ideShowSessionBackground:)),
+                "",
+            ),
             separator(mtm),
             item(
                 mtm,

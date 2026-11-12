@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplikacja zna ceny Anthropic, OpenRouter podaje własne, a modele lokalne nic nie kosztują. W przypadku innych wątek pokazuje koszty dopiero po wpisaniu tutaj ceny.";
 "Die Umgebung der Login-Shell fehlt." = "Brakuje środowiska powłoki logowania.";
 "Dienste" = "Usługi";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Ta sesja nie uruchomiła jeszcze żadnych procesów w tle";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Ta sesja nie uruchomiła jeszcze żadnych subagentów";
 "Diese Version wurde mit dieser App nicht erprobt." = "Ta wersja nie była testowana z tą aplikacją.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Ten tekst nie pochodzi od ciebie, tylko ze strony internetowej, terminala, logu CI lub pliku spoza projektu. Może zawierać polecenia mające sterować agentem (prompt injection). Agent otrzymuje go z informacją, że są to dane, których poleceń nie wolno mu wykonywać.";
 "Eigene Preise (US-$ je Million Tokens)" = "Własne ceny (USD za milion tokenów)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Zachowane reguły";
 "Git" = "Git";
 "Hilfe" = "Pomoc";
+"Hintergrundprozesse dieser Sitzung" = "Procesy w tle tej sesji";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Procesy w tle: uruchomione {}, zakończone {}";
 "Hooks: {} erfolgreich" = "Hooki: {} zakończone powodzeniem";
 "Im Browser-Tab öffnen" = "Otwórz w karcie przeglądarki";
 "Im Dock ablegen" = "Minimalizuj okno";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Klucze są w pęku kluczy, nigdy w pliku ustawień. Ollama i LM Studio ich nie potrzebują.";
 "Schlüssel …" = "Klucz…";
 "Schreiben" = "Zapis";
+"Subagenten dieser Sitzung" = "Subagenty tej sesji";
+"Subagenten: {} laufend, {} beendet" = "Subagenty: uruchomione {}, zakończone {}";
 "Text von einer Webseite" = "Tekst ze strony internetowej";
 "Text von {}" = "Tekst z {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "W Ustawieniach w sekcji „Agent” wpisz dostawcę z jego kluczem i wybierz model albo skonfiguruj Ollamę lub LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} nie został uruchomiony";
 "{} ist nicht installiert" = "{} nie jest zainstalowany";
 "{} konnte nicht zurückgesetzt werden" = "Nie można cofnąć {}";
+"{} meldet keine Hintergrundprozesse" = "{} nie zgłasza procesów w tle";
+"{} meldet keine Subagenten" = "{} nie zgłasza subagentów";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} wymaga zalogowania przed otwarciem sesji.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} wymaga zalogowania przed otwarciem sesji. Do logowania w terminalu polecenie jest w schowku.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requesty";
 "Was die Liste zeigt" = "Co pokazuje lista";
 "offen" = "otwarte";
+"Anmeldung ausfüllen" = "Wypełnij dane logowania";
+"Anmeldung für „{}“ ausfüllen" = "Wypełnij dane logowania dla „{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Wybierz w polu dane logowania z aplikacji Hasła; aplikacja wpisze je w formularz strony i ich nie zachowa.";
+"Ausfüllen" = "Wypełnij";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na tej stronie nie ma formularza logowania lub strona w międzyczasie się zmieniła.";

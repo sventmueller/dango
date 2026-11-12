@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Ceny společnosti Anthropic aplikace zná, OpenRouter uvádí vlastní a lokální modely nic nestojí. U ostatních zobrazí vlákno náklady, až když zde zadáte cenu.";
 "Die Umgebung der Login-Shell fehlt." = "Chybí prostředí přihlašovacího shellu.";
 "Dienste" = "Služby";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Tato relace zatím nespustila žádné procesy na pozadí";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Tato relace zatím nespustila žádné subagenty";
 "Diese Version wurde mit dieser App nicht erprobt." = "Tato verze nebyla s touto aplikací vyzkoušena.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Tento text nepochází od vás, ale z webové stránky, terminálu, logu CI nebo souboru mimo projekt. Může obsahovat pokyny, které mají agenta ovládat (prompt injection). Agent ho dostane s upozorněním, že jde o data, jejichž pokyny nemá následovat.";
 "Eigene Preise (US-$ je Million Tokens)" = "Vlastní ceny (USD za milion tokenů)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Uložená pravidla";
 "Git" = "Git";
 "Hilfe" = "Nápověda";
+"Hintergrundprozesse dieser Sitzung" = "Procesy na pozadí této relace";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Procesy na pozadí: běží {}, dokončeno {}";
 "Hooks: {} erfolgreich" = "Úspěšné hooky: {}";
 "Im Browser-Tab öffnen" = "Otevřít v panelu prohlížeče";
 "Im Dock ablegen" = "Minimalizovat";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Klíče jsou uložené v klíčence, nikdy v souboru s nastavením. Ollama a LM Studio žádný nepotřebují.";
 "Schlüssel …" = "Klíč…";
 "Schreiben" = "Zápis";
+"Subagenten dieser Sitzung" = "Subagenti této relace";
+"Subagenten: {} laufend, {} beendet" = "Subagenti: běží {}, dokončeno {}";
 "Text von einer Webseite" = "Text z webové stránky";
 "Text von {}" = "Text ze zdroje {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "V Nastavení v části „Agent“ zadejte poskytovatele s klíčem a vyberte model, nebo nastavte Ollama či LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} se nespustil";
 "{} ist nicht installiert" = "{} není nainstalován";
 "{} konnte nicht zurückgesetzt werden" = "{} se nepodařilo vrátit na předchozí verzi";
+"{} meldet keine Hintergrundprozesse" = "{} nehlásí žádné procesy na pozadí";
+"{} meldet keine Subagenten" = "{} nehlásí žádné subagenty";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} vyžaduje přihlášení, než otevře relaci.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} vyžaduje přihlášení, než otevře relaci. Pro přihlášení v terminálu je příkaz ve schránce.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requesty";
 "Was die Liste zeigt" = "Co seznam zobrazuje";
 "offen" = "otevřené";
+"Anmeldung ausfüllen" = "Vyplnit přihlašovací údaje";
+"Anmeldung für „{}“ ausfüllen" = "Vyplnit přihlašovací údaje pro „{}“";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Vyberte v poli přihlašovací údaje z aplikace Hesla; vyplní se do formuláře stránky a aplikace si je neponechá.";
+"Ausfüllen" = "Vyplnit";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na této stránce není žádný přihlašovací formulář, nebo se mezitím změnila.";

@@ -300,10 +300,16 @@ define_class!(
             self.on_tab(AgentTab::use_selection);
         }
 
-        #[unsafe(method(ideAgentTasks:))]
-        fn tasks(&self, sender: Option<&AnyObject>) {
+        #[unsafe(method(ideAgentSubagentList:))]
+        fn subagent_list(&self, sender: Option<&AnyObject>) {
             let view = sender.and_then(|s| s.downcast_ref::<NSView>()).map(NSView::retain);
-            self.on_tab(|tab| tab.show_tasks(view.as_deref()));
+            self.on_tab(|tab| tab.show_work(crate::activity::Part::Subagents, view.as_deref()));
+        }
+
+        #[unsafe(method(ideAgentBackgroundList:))]
+        fn background_list(&self, sender: Option<&AnyObject>) {
+            let view = sender.and_then(|s| s.downcast_ref::<NSView>()).map(NSView::retain);
+            self.on_tab(|tab| tab.show_work(crate::activity::Part::Background, view.as_deref()));
         }
 
         #[unsafe(method(ideAgentRemoteControl:))]

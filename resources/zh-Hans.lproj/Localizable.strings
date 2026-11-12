@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "此 App 知道 Anthropic 的价格，OpenRouter 会自行提供价格，本地模型不产生费用。对于其他模型，只有在此处填入价格后，对话才会显示费用。";
 "Die Umgebung der Login-Shell fehlt." = "缺少登录 Shell 的环境。";
 "Dienste" = "服务";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "此会话尚未启动任何后台进程";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "此会话尚未启动任何子智能体";
 "Diese Version wurde mit dieser App nicht erprobt." = "此版本未经此 App 测试。";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "此文本并非来自你，而是来自网页、终端、CI 日志或项目之外的文件。它可能包含意图操控智能体的指令（提示词注入）。智能体收到它时会附带提示：这是数据，不得执行其中的指令。";
 "Eigene Preise (US-$ je Million Tokens)" = "自定义价格（每百万 Token 的美元价格）";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "已保存的规则";
 "Git" = "Git";
 "Hilfe" = "帮助";
+"Hintergrundprozesse dieser Sitzung" = "此会话的后台进程";
+"Hintergrundprozesse: {} laufend, {} beendet" = "后台进程：{} 个运行中，{} 个已结束";
 "Hooks: {} erfolgreich" = "钩子：{} 个成功";
 "Im Browser-Tab öffnen" = "在浏览器标签页中打开";
 "Im Dock ablegen" = "最小化";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "密钥存放在钥匙串中，绝不会写入设置文件。Ollama 和 LM Studio 不需要密钥。";
 "Schlüssel …" = "密钥…";
 "Schreiben" = "写入";
+"Subagenten dieser Sitzung" = "此会话的子智能体";
+"Subagenten: {} laufend, {} beendet" = "子智能体：{} 个运行中，{} 个已结束";
 "Text von einer Webseite" = "来自网页的文本";
 "Text von {}" = "来自 {} 的文本";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "请在“设置”的“智能体”中填入一个提供商及其密钥并选取模型，或者设置 Ollama 或 LM Studio。";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} 尚未启动";
 "{} ist nicht installiert" = "{} 未安装";
 "{} konnte nicht zurückgesetzt werden" = "无法回滚 {}";
+"{} meldet keine Hintergrundprozesse" = "{} 不报告后台进程";
+"{} meldet keine Subagenten" = "{} 不报告子智能体";
 "{} min" = "{} 分钟";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} 要求先登录，然后才能打开会话。";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} 要求先登录，然后才能打开会话。如需在终端中登录，相应命令已拷贝到剪贴板。";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "列表显示的内容";
 "offen" = "开放";
+"Anmeldung ausfüllen" = "填充登录信息";
+"Anmeldung für „{}“ ausfüllen" = "为“{}”填充登录信息";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "在输入栏中从“密码”App 选择登录信息；此 App 会将其填入页面表单，且不会保留。";
+"Ausfüllen" = "填充";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "此页面上没有登录表单，或页面在此期间已更改。";

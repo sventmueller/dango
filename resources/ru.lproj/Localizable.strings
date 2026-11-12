@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Цены Anthropic приложению известны, OpenRouter сообщает свои сам, локальные модели бесплатны. Для остальных чат показывает стоимость, только если цена указана здесь.";
 "Die Umgebung der Login-Shell fehlt." = "Отсутствует окружение оболочки входа.";
 "Dienste" = "Службы";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Этот сеанс ещё не запускал фоновых процессов";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Этот сеанс ещё не запускал субагентов";
 "Diese Version wurde mit dieser App nicht erprobt." = "Эта версия не тестировалась с этим приложением.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Этот текст получен не от Вас, а с веб-страницы, из терминала, журнала CI или файла вне проекта. Он может содержать инструкции, призванные управлять агентом (prompt injection). Агент получает его с пометкой, что это данные, инструкциям из которых он не должен следовать.";
 "Eigene Preise (US-$ je Million Tokens)" = "Собственные цены (долл. США за миллион токенов)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Сохраненные правила";
 "Git" = "Git";
 "Hilfe" = "Справка";
+"Hintergrundprozesse dieser Sitzung" = "Фоновые процессы этого сеанса";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Фоновые процессы: выполняется {}, завершено {}";
 "Hooks: {} erfolgreich" = "Успешных хуков: {}";
 "Im Browser-Tab öffnen" = "Открыть во вкладке браузера";
 "Im Dock ablegen" = "Убрать в Dock";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Ключи хранятся в связке ключей, а не в файле настроек. Ollama и LM Studio ключ не нужен.";
 "Schlüssel …" = "Ключ…";
 "Schreiben" = "Запись";
+"Subagenten dieser Sitzung" = "Субагенты этого сеанса";
+"Subagenten: {} laufend, {} beendet" = "Субагенты: выполняется {}, завершено {}";
 "Text von einer Webseite" = "Текст с веб-страницы";
 "Text von {}" = "Текст с {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "В настройках в разделе «Агент» укажите провайдера с ключом и выберите модель или настройте Ollama либо LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} не запущен";
 "{} ist nicht installiert" = "{} не установлен";
 "{} konnte nicht zurückgesetzt werden" = "Не удалось вернуть прежнюю версию {}";
+"{} meldet keine Hintergrundprozesse" = "{} не сообщает о фоновых процессах";
+"{} meldet keine Subagenten" = "{} не сообщает о субагентах";
 "{} min" = "{} мин";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} требует входа, прежде чем открыть сеанс.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} требует входа, прежде чем открыть сеанс. Для входа через терминал команда скопирована в буфер обмена.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Что показывает список";
 "offen" = "открыто";
+"Anmeldung ausfüllen" = "Заполнить данные для входа";
+"Anmeldung für „{}“ ausfüllen" = "Заполнить данные для входа на «{}»";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Выберите в поле данные для входа из приложения «Пароли»; приложение вводит их в форму страницы и не хранит их.";
+"Ausfüllen" = "Заполнить";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "На этой странице нет формы входа, или она тем временем изменилась.";

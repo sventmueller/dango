@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "De app kent de prijzen van Anthropic, OpenRouter geeft zijn eigen prijzen door en lokale modellen kosten niets. Voor andere toont een thread pas kosten als je hier een prijs invoert.";
 "Die Umgebung der Login-Shell fehlt." = "De omgeving van de login-shell ontbreekt.";
 "Dienste" = "Voorzieningen";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Deze sessie heeft nog geen achtergrondprocessen gestart";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Deze sessie heeft nog geen subagents gestart";
 "Diese Version wurde mit dieser App nicht erprobt." = "Deze versie is niet getest met deze app.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Deze tekst komt niet van jou, maar van een webpagina, een terminal, een CI-log of een bestand buiten het project. Hij kan instructies bevatten die de agent moeten sturen (prompt injection). De agent krijgt hem met de opmerking dat het om gegevens gaat, waarvan hij de instructies niet mag opvolgen.";
 "Eigene Preise (US-$ je Million Tokens)" = "Eigen prijzen (US$ per miljoen tokens)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Bewaarde regels";
 "Git" = "Git";
 "Hilfe" = "Help";
+"Hintergrundprozesse dieser Sitzung" = "Achtergrondprocessen van deze sessie";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Achtergrondprocessen: {} actief, {} beëindigd";
 "Hooks: {} erfolgreich" = "Hooks: {} geslaagd";
 "Im Browser-Tab öffnen" = "Open in browsertabblad";
 "Im Dock ablegen" = "Minimaliseer";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Sleutels staan in de sleutelhanger, nooit in een instellingenbestand. Ollama en LM Studio hebben er geen nodig.";
 "Schlüssel …" = "Sleutel…";
 "Schreiben" = "Schrijven";
+"Subagenten dieser Sitzung" = "Subagents van deze sessie";
+"Subagenten: {} laufend, {} beendet" = "Subagents: {} actief, {} beëindigd";
 "Text von einer Webseite" = "Tekst van een webpagina";
 "Text von {}" = "Tekst van {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Voer in Instellingen onder 'Agent' een aanbieder met zijn sleutel in en kies een model, of stel Ollama of LM Studio in.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} is niet gestart";
 "{} ist nicht installiert" = "{} is niet geïnstalleerd";
 "{} konnte nicht zurückgesetzt werden" = "{} kon niet worden teruggezet";
+"{} meldet keine Hintergrundprozesse" = "{} meldt geen achtergrondprocessen";
+"{} meldet keine Subagenten" = "{} meldt geen subagents";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} wil dat je inlogt voordat het een sessie opent.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} wil dat je inlogt voordat het een sessie opent. Voor inloggen in een terminal staat het commando op het klembord.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Wat de lijst toont";
 "offen" = "open";
+"Anmeldung ausfüllen" = "Vul inloggegevens in";
+"Anmeldung für „{}“ ausfüllen" = "Vul inloggegevens in voor '{}'";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Kies in het veld inloggegevens uit Wachtwoorden; de app vult ze in het formulier van de pagina in en bewaart ze niet.";
+"Ausfüllen" = "Vul in";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Deze pagina heeft geen inlogformulier, of de pagina is inmiddels veranderd.";

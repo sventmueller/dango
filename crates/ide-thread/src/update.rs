@@ -97,7 +97,7 @@ pub enum Update {
     },
     /// Adds a subagent or changes the one with the patch's key.
     Subagent(SubagentPatch),
-    /// The complete set of background items; items not in it are gone.
+    /// The complete set of background items that run; known items not in it have ended and stay as such.
     Background(Vec<BackgroundItem>),
     /// Changes one background item, if it is there.
     BackgroundItem(BackgroundPatch),
@@ -228,6 +228,8 @@ pub struct BackgroundPatch {
     pub id: String,
     /// Where it stands.
     pub status: Option<TaskStatus>,
+    /// When it ended.
+    pub ended: Option<SystemTime>,
     /// Its latest output; fields that are `None` keep what was known.
     pub output: Option<OutputTail>,
     /// Whether it runs in the background.

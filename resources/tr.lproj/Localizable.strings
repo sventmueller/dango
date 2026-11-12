@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Uygulama Anthropic’in fiyatlarını bilir, OpenRouter kendi fiyatlarını bildirir, yerel modeller ücretsizdir. Diğerleri için sohbet, maliyetleri ancak burada bir fiyat girildiğinde gösterir.";
 "Die Umgebung der Login-Shell fehlt." = "Oturum açma kabuğunun ortamı eksik.";
 "Dienste" = "Servisler";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Bu oturum henüz arka plan işlemi başlatmadı";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Bu oturum henüz alt ajan başlatmadı";
 "Diese Version wurde mit dieser App nicht erprobt." = "Bu sürüm bu uygulamayla denenmedi.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Bu metin sizden değil; bir web sayfasından, bir terminalden, bir CI günlüğünden veya proje dışındaki bir dosyadan geliyor. Ajanı yönlendirmeye yönelik talimatlar içerebilir (prompt injection). Ajan onu, talimatlarına uymaması gereken veriler olduğu notuyla birlikte alır.";
 "Eigene Preise (US-$ je Million Tokens)" = "Özel Fiyatlar (Milyon Token Başına US$)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Kayıtlı Kurallar";
 "Git" = "Git";
 "Hilfe" = "Yardım";
+"Hintergrundprozesse dieser Sitzung" = "Bu Oturumdaki Arka Plan İşlemleri";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Arka plan işlemleri: {} çalışıyor, {} bitti";
 "Hooks: {} erfolgreich" = "Hook’lar: {} başarılı";
 "Im Browser-Tab öffnen" = "Tarayıcı Sekmesinde Aç";
 "Im Dock ablegen" = "Simge Durumuna Küçült";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Anahtarlar Anahtar Zinciri’nde durur, asla bir ayarlar dosyasında değil. Ollama ve LM Studio anahtar gerektirmez.";
 "Schlüssel …" = "Anahtar…";
 "Schreiben" = "Yaz";
+"Subagenten dieser Sitzung" = "Bu Oturumdaki Alt Ajanlar";
+"Subagenten: {} laufend, {} beendet" = "Alt ajanlar: {} çalışıyor, {} bitti";
 "Text von einer Webseite" = "Bir web sayfasından metin";
 "Text von {}" = "{} sitesinden metin";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Ayarlar’da “Ajan” altında anahtarıyla birlikte bir sağlayıcı girin ve bir model seçin ya da Ollama veya LM Studio’yu ayarlayın.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} başlatılmadı";
 "{} ist nicht installiert" = "{} yüklü değil";
 "{} konnte nicht zurückgesetzt werden" = "{} önceki sürüme döndürülemedi";
+"{} meldet keine Hintergrundprozesse" = "{} arka plan işlemi bildirmiyor";
+"{} meldet keine Subagenten" = "{} alt ajan bildirmiyor";
 "{} min" = "{} dk";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{}, bir oturum başlatmadan önce giriş yapmanızı istiyor.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{}, bir oturum başlatmadan önce giriş yapmanızı istiyor. Terminalde giriş yapmak için gereken komut panoda.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull Request’ler";
 "Was die Liste zeigt" = "Listenin gösterdikleri";
 "offen" = "açık";
+"Anmeldung ausfüllen" = "Giriş Bilgilerini Doldur";
+"Anmeldung für „{}“ ausfüllen" = "Giriş Bilgilerini Doldur: “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Alanda Parolalar uygulamasından giriş bilgilerini seçin; bilgiler sayfanın formuna doldurulur ve uygulama bunları saklamaz.";
+"Ausfüllen" = "Doldur";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Bu sayfada giriş formu yok veya sayfa bu arada değişti.";

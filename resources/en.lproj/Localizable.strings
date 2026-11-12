@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "The app knows Anthropic's prices, OpenRouter reports its own, and local models cost nothing. For others, a thread shows costs once a price is entered here.";
 "Die Umgebung der Login-Shell fehlt." = "The login shell's environment is missing.";
 "Dienste" = "Services";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "This session has not started any background processes yet";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "This session has not started any subagents yet";
 "Diese Version wurde mit dieser App nicht erprobt." = "This version has not been tested with this app.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "This text does not come from you but from a web page, a terminal, a CI log or a file outside the project. It may contain instructions meant to steer the agent (prompt injection). The agent gets it with the notice that it is data whose instructions it must not follow.";
 "Eigene Preise (US-$ je Million Tokens)" = "Own Prices (US$ per Million Tokens)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Stored Rules";
 "Git" = "Git";
 "Hilfe" = "Help";
+"Hintergrundprozesse dieser Sitzung" = "Background Processes of This Session";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Background processes: {} running, {} finished";
 "Hooks: {} erfolgreich" = "Hooks: {} succeeded";
 "Im Browser-Tab öffnen" = "Open in Browser Tab";
 "Im Dock ablegen" = "Minimize";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Keys live in the keychain, never in a settings file. Ollama and LM Studio need none.";
 "Schlüssel …" = "Key …";
 "Schreiben" = "Write";
+"Subagenten dieser Sitzung" = "Subagents of This Session";
+"Subagenten: {} laufend, {} beendet" = "Subagents: {} running, {} finished";
 "Text von einer Webseite" = "Text from a web page";
 "Text von {}" = "Text from {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "In Settings under “Agent”, enter a provider with its key and choose a model, or set up Ollama or LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} has not started";
 "{} ist nicht installiert" = "{} is not installed";
 "{} konnte nicht zurückgesetzt werden" = "{} could not be rolled back";
+"{} meldet keine Hintergrundprozesse" = "{} reports no background processes";
+"{} meldet keine Subagenten" = "{} reports no subagents";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} wants you to sign in before it opens a session.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} wants you to sign in before it opens a session. For signing in in a terminal, the command is on the clipboard.";
@@ -1278,3 +1286,8 @@
 "Pull Requests" = "Pull Requests";
 "Was die Liste zeigt" = "What the list shows";
 "offen" = "open";
+"Anmeldung ausfüllen" = "Fill In Sign-In";
+"Anmeldung für „{}“ ausfüllen" = "Fill In Sign-In for “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Choose a sign-in from Passwords in the field; the app fills it into the page’s form and doesn’t keep it.";
+"Ausfüllen" = "Fill In";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "This page has no sign-in form, or it changed in the meantime.";

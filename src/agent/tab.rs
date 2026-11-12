@@ -795,10 +795,11 @@ impl AgentTab {
         if now != Status::Idle {
             self.start_ticking();
         }
-        if refresh.overview
-            && let Some(controller) = self.controller()
-        {
-            super::changed(&controller);
+        if refresh.overview {
+            self.refresh_work();
+            if let Some(controller) = self.controller() {
+                super::changed(&controller);
+            }
         }
     }
 
@@ -882,6 +883,7 @@ impl AgentTab {
         self.header.set_title(&title);
         self.header.set_bookmarked(self.state.borrow().bookmarked);
         self.refresh_remote();
+        self.refresh_work();
         if let Some(controller) = self.controller() {
             controller.set_tab_title(self.tab_id.get(), &super::format::first_line(&title, 32));
         }
@@ -1092,6 +1094,16 @@ impl AgentTab {
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
         }
+    }
+
+    /// The tooltip of the head's button for `part`, whether it can be clicked and whether it shows the accent colour.
+    pub fn work_button(&self, part: crate::activity::Part) -> (String, bool, bool) {
+        let button = self.header.work_button(part);
+        let tip = button.toolTip().map(|t| t.to_string()).unwrap_or_default();
+        let accent = button
+            .contentTintColor()
+            .is_some_and(|c| c == objc2_app_kit::NSColor::controlAccentColor());
+        (tip, button.isEnabled(), accent)
     }
 
     /// Shows `title` in the head for a moment and measures it as [`Header::title_widths`] does.

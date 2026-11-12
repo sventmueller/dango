@@ -81,6 +81,8 @@
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Appen känner till Anthropics priser, OpenRouter anger sina egna och lokala modeller kostar ingenting. För andra visar tråden kostnader först när ett pris har angetts här.";
 "Die Umgebung der Login-Shell fehlt." = "Inloggningsskalets miljö saknas.";
 "Dienste" = "Tjänster";
+"Diese Sitzung hat noch keine Hintergrundprozesse gestartet" = "Den här sessionen har inte startat några bakgrundsprocesser än";
+"Diese Sitzung hat noch keine Subagenten gestartet" = "Den här sessionen har inte startat några underagenter än";
 "Diese Version wurde mit dieser App nicht erprobt." = "Den här versionen har inte testats med den här appen.";
 "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der Agent bekommt ihn mit dem Hinweis, dass es sich um Daten handelt, deren Anweisungen er nicht folgen soll." = "Den här texten kommer inte från dig, utan från en webbsida, en terminal, en CI-logg eller en fil utanför projektet. Den kan innehålla instruktioner som ska styra agenten (prompt injection). Agenten får den med en upplysning om att det är data vars instruktioner den inte ska följa.";
 "Eigene Preise (US-$ je Million Tokens)" = "Egna priser (USD per miljon tokens)";
@@ -109,6 +111,8 @@
 "Gespeicherte Regeln" = "Sparade regler";
 "Git" = "Git";
 "Hilfe" = "Hjälp";
+"Hintergrundprozesse dieser Sitzung" = "Bakgrundsprocesser i den här sessionen";
+"Hintergrundprozesse: {} laufend, {} beendet" = "Bakgrundsprocesser: {} körs, {} avslutade";
 "Hooks: {} erfolgreich" = "Hooks: {} lyckades";
 "Im Browser-Tab öffnen" = "Öppna i webbläsarflik";
 "Im Dock ablegen" = "Minimera";
@@ -165,6 +169,8 @@
 "Schlüssel liegen im Schlüsselbund, nie in einer Einstellungsdatei. Ollama und LM Studio brauchen keinen." = "Nycklar sparas i nyckelringen, aldrig i en inställningsfil. Ollama och LM Studio behöver ingen.";
 "Schlüssel …" = "Nyckel…";
 "Schreiben" = "Skriva";
+"Subagenten dieser Sitzung" = "Underagenter i den här sessionen";
+"Subagenten: {} laufend, {} beendet" = "Underagenter: {} körs, {} avslutade";
 "Text von einer Webseite" = "Text från en webbsida";
 "Text von {}" = "Text från {}";
 "Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein." = "Ange en leverantör med nyckel i Inställningar under ”Agent” och välj en modell, eller konfigurera Ollama eller LM Studio.";
@@ -242,6 +248,8 @@
 "{} ist nicht gestartet" = "{} har inte startat";
 "{} ist nicht installiert" = "{} är inte installerad";
 "{} konnte nicht zurückgesetzt werden" = "{} kunde inte återställas";
+"{} meldet keine Hintergrundprozesse" = "{} rapporterar inga bakgrundsprocesser";
+"{} meldet keine Subagenten" = "{} rapporterar inga underagenter";
 "{} min" = "{} min";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet." = "{} vill att du loggar in innan en session öppnas.";
 "{} möchte eine Anmeldung, bevor es eine Sitzung öffnet. Bei der Anmeldung im Terminal liegt der Befehl in der Zwischenablage." = "{} vill att du loggar in innan en session öppnas. För inloggning i en terminal finns kommandot i urklippet.";
@@ -1241,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Vad listan visar";
 "offen" = "öppen";
+"Anmeldung ausfüllen" = "Fyll i inloggningsuppgifter";
+"Anmeldung für „{}“ ausfüllen" = "Fyll i inloggningsuppgifter för ”{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Välj inloggningsuppgifter från Lösenord-appen i fältet; de fylls i i sidans formulär och appen behåller dem inte.";
+"Ausfüllen" = "Fyll i";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Den här sidan har inget inloggningsformulär, eller så har den ändrats under tiden.";

@@ -15,6 +15,7 @@ use serde_json::json;
 use splat_i18n::t;
 
 use super::{check, finish, snapshot};
+use crate::activity::Part;
 use crate::agent::AgentTab;
 use crate::util::{constant, main_after};
 use crate::window::{self, Panel, WindowController};
@@ -486,6 +487,17 @@ fn running(root: PathBuf, key: u64) {
         seen.background.iter().any(|b| b.contains("30-tick")),
         format!("{:?}", seen.background),
     );
+    for (part, wanted) in [
+        (Part::Subagents, "Subagenten: 1 laufend, 0 beendet"),
+        (Part::Background, "Hintergrundprozesse: 1 laufend, 0 beendet"),
+    ] {
+        let (tip, enabled, accent) = tab.work_button(part);
+        check(
+            "the head's button counts what runs in its tooltip and shows the accent colour",
+            tip == wanted && enabled && accent,
+            format!("{tip:?}, enabled {enabled}, accent {accent}"),
+        );
+    }
     check(
         "only the rows in view have cards",
         seen.built < seen.rows * 3,
@@ -806,17 +818,58 @@ fn terminal(root: PathBuf, first: u64) {
         return finish(NAME);
     };
     first.select();
-    first.show_tasks(None);
+    first.show_work(Part::All, None);
     let overview = crate::activity::overview_lines(&controller);
     check(
         "the session's overview lists its subagents and tasks",
         overview.iter().any(|l| l.contains("list files")) && overview.iter().any(|l| l.contains("review code")),
         overview.join(" | "),
     );
+    let key = first.key;
     main_after(Duration::from_millis(500), move || {
         if let Some(controller) = controller_of(&root) {
             if let Some(view) = crate::activity::popover_view(&controller) {
                 view_picture(&view, "agent-tasks");
+            }
+            crate::activity::close(&controller);
+        }
+        work_lists(root, key);
+    });
+}
+
+/// The head's lists of the session's subagents and of its background processes, each of its own kind.
+fn work_lists(root: PathBuf, key: u64) {
+    let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+        return finish(NAME);
+    };
+    tab.show_work(Part::Subagents, None);
+    let subagents = crate::activity::overview_lines(&controller);
+    check(
+        "the subagent list holds the session's subagents and no shell",
+        subagents.iter().any(|l| l.contains("list files")) && !subagents.iter().any(|l| l.contains("30-tick")),
+        subagents.join(" | "),
+    );
+    crate::activity::close(&controller);
+    tab.show_work(Part::Background, None);
+    let background = crate::activity::overview_lines(&controller);
+    check(
+        "the background list keeps the stopped shell, as stopped, and no subagent",
+        background
+            .iter()
+            .any(|l| l.contains("30-tick") && l.contains(splat_i18n::t("Gestoppt")))
+            && !background.iter().any(|l| l.contains("list files")),
+        background.join(" | "),
+    );
+    let (tip, enabled, accent) = tab.work_button(Part::Background);
+    check(
+        "the head's background button counts the ended shell and is calm",
+        tip == "Hintergrundprozesse: 0 laufend, 1 beendet" && enabled && !accent,
+        format!("{tip:?}, enabled {enabled}, accent {accent}"),
+    );
+    main_after(Duration::from_millis(500), move || {
+        if let Some(controller) = controller_of(&root) {
+            if let Some(view) = crate::activity::popover_view(&controller) {
+                view_picture(&view, "agent-background-list");
             }
             crate::activity::close(&controller);
         }
