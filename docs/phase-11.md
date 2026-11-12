@@ -1,6 +1,6 @@
 # Dango — Phase 11: Zed-Lücken und Architektur
 
-**Entwurf, nicht freigegeben.** Nach der Freigabe gehen die Entscheidungen E77–E96 und die Risiken R14–R19 und R21
+**Entwurf, nicht freigegeben.** Nach der Freigabe gehen die Entscheidungen E77–E97 und die Risiken R14–R19 und R21
 in [plan.md](plan.md) über; bis dahin gilt plan.md allein. E85, E86 und R20 sind mit B11 entfallen. Die Kürzel B…
 stammen aus dem Vergleich mit Zed (B1–B18) und aus dem Architektur-Auftrag des Owners (B19–B23). *Review:* Codex hat den Entwurf am 2026-11-12 gegen Code und
 plan.md geprüft; seine 18 Befunde (C1–C18) sind eingearbeitet und an der jeweiligen Stelle markiert. C8 (E76 ist in
@@ -22,7 +22,66 @@ B22 Thread-Locals · B23 Doku und Doctests.
 
 Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask selftest` mit neuen Szenarien,
 `make perf` (E25), VoiceOver-Prüfung der neuen Ansichten, neue Texte in `en.lproj` und den 33 weiteren Sprachen nach
-[glossary.md](glossary.md) (E15).
+[glossary.md](glossary.md) (E15), dazu die HIG-Abnahme (E97).
+
+## HIG-Konformität
+
+- **E97 Apples Human Interface Guidelines als Abnahme** *(ergänzt E3)*. Grundlage sind die HIG-Seiten
+  [Keyboards](https://developer.apple.com/design/human-interface-guidelines/keyboards) und
+  [Generative AI](https://developer.apple.com/design/human-interface-guidelines/generative-ai) (Stand 2026-06-08);
+  wo die HIG nichts sagt, ist Xcode das Vorbild, weil Mac-Entwickler dessen Bedienung kennen. Die Stufen 1, 3 und 5
+  ändern nichts an der Oberfläche; E97 betrifft B14, B15, B16, B4 und B1.
+- **Menüs.** Jeder neue Befehl steht in der Menüleiste, auch wenn er ein Kürzel, einen Knopf oder ein Kontextmenü
+  hat. Was gerade nicht geht, ist ausgegraut, nicht ausgeblendet; das gilt auch für die Knöpfe des Debuggers. Neues
+  Menü „Debuggen“ zwischen „Gehe zu“ und „Fenster“ (HIG-Reihenfolge: App, Ablage, Bearbeiten, Format, Darstellung,
+  App-eigene Menüs, Fenster, Hilfe).
+- **Kürzel.**
+  - Kein Standardkürzel aus der HIG-Tabelle wird für etwas anderes benutzt: ⌘. ist „Vorgang abbrechen“ (bei Dango:
+    Debug-Sitzung stoppen, wie in Xcode), ⇧⌘A ist „Auswahl aufheben“, ⌥⌘I ist „Inspektor“, F11 zeigt den
+    Schreibtisch, ⌃F1–⌃F7 gehören der Tastaturbedienung des Systems, ⇧⌘Leer und ⌥⌘Leer belegt das System.
+  - Eigene Kürzel nur für häufige Befehle, mit ⌘ als Hauptmodifikator; ⌃ nur, wo Xcode es vorgibt.
+  - Befund im heutigen Stand: `view.whitespace` liegt auf ⌥⌘I, dem Standard für den Inspektor
+    (`crates/ide-core/src/keymap.rs`). Es wandert ohne Kürzel ins Menü „Darstellung“; ⌥⌘I blendet künftig den
+    Inspektor ein und aus (E90).
+  - Bewusste, belegte Ausnahmen bleiben: ⌘T für „Neuer Tab“ und ⇧⌘[ / ⇧⌘] für den Tabwechsel wie in Safari
+    (die HIG-Bedeutungen Schriften-Fenster und Ausrichten ergeben in Dango keinen Sinn, was die HIG erlaubt).
+  - Neuer Test in `ide-core`: Die Vorgabe-Kürzel werden gegen die Standardtabelle der HIG geprüft; ein Treffer schlägt
+    fehl, außer er steht mit Begründung auf der Ausnahmeliste. Ein Selftest prüft zusätzlich gegen die eingeschalteten
+    Systemkürzel des Macs (`com.apple.symbolichotkeys`) und meldet Überschneidungen in den Einstellungen.
+  - Neuer Test: Jeder Befehl der Kürzeltabelle hat einen Menüeintrag.
+- **Aufteilung des Fensters.** Navigation steht in der Seitenleiste, Details zur Auswahl im Inspektor am hinteren
+  Rand (`NSSplitViewItem` als Inspektor, macOS 14+, E16), Vorübergehendes in Popovers und Menüs. Größere Bäume
+  gehören nicht in ein Popover.
+- **Steuerelemente.** Systemsteuerelemente statt eigener: Listen von Aktionen als `NSMenu`, Rückfragen als Sheet mit
+  `NSAlert`, zerstörerische Knöpfe mit `hasDestructiveAction` und nie als Standardknopf (wie schon im Git-Panel,
+  `src/git_panel/sheets.rs`), Symbole aus SF Symbols mit Beschriftung für VoiceOver.
+- **Materialien.** Seitenleiste und Inspektor bekommen ihr Material vom System (ab macOS 26 Liquid Glass); keine
+  eigenen Hintergründe darin, kein Glas auf Glas. Schwebende Fenster (Signaturhilfe, Vorschlags-Kasten) nutzen das
+  Systemmaterial für Popovers.
+- **Bedienungshilfen.** Alle neuen Ansichten laufen durch den Barrierefreiheits-Audit der Selftests
+  (`src/selftest/a11y/audit.rs`) und die Fotos hell, dunkel, erhöhter Kontrast und Rechts-nach-links.
+  - Alles geht ohne Maus: Haltepunkt der Cursorzeile mit ⌘\ (Xcode), Glühbirne über das Menü, Blame-Popover über
+    das Menü.
+  - Zustände nie nur über Farbe: ein ausgeschalteter Haltepunkt ist umrandet statt gefüllt, die angehaltene Zeile
+    trägt einen Pfeil.
+  - VoiceOver-Rotoren „Hinweise“ und „Haltepunkte“; Ansagen beim Anhalten am Haltepunkt und beim Übernehmen eines
+    Vorschlags.
+  - „Bewegung reduzieren“: kein eingeblendeter Ghost Text mit Animation.
+  - Farben nach E66 (3:1, mit erhöhtem Kontrast 4,5:1).
+  - Rechts-nach-links: Panels und Inspektor spiegeln, Code und Randspalte bleiben links-nach-rechts (E3).
+- **Generative AI** (B16 Commit-Message, B4 Edit Prediction):
+  - Kennzeichnen, wo AI arbeitet: Ghost Text ist als Vorschlag erkennbar. Eine erzeugte Commit-Message trägt bis
+    zur ersten eigenen Änderung die Zeile „Von AI erstellt, bitte prüfen“, daneben „Neu erzeugen“ und Undo.
+  - Vor dem ersten Senden an einen Anbieter außerhalb des Macs (Copilot, Cloud-Modell für Commit-Messages) fragt
+    ein Sheet einmal je Anbieter um Erlaubnis und sagt, was gesendet wird (Datei-Inhalt rund um den Cursor bzw. der
+    Diff). Die Erlaubnis lässt sich in den Einstellungen zurücknehmen. Lokale Modelle brauchen keine Erlaubnis; die
+    Einstellungen sagen, dass der Code den Mac nicht verlässt.
+  - „Gesendeten Inhalt zeigen“ neben dem Commit-Knopf zeigt genau den geprüften Text (E84).
+  - Fortschritt konkret („Fasst 12 geänderte Dateien zusammen …“) mit Abbrechen; Fehler in einfachen Worten mit dem
+    nächsten Schritt.
+- **Begriffe.** Neue Fachwörter (Haltepunkt, Aufrufliste, Überwachter Ausdruck, Schnellkorrektur, Inlay-Hinweis)
+  kommen zuerst in [glossary.md](glossary.md), dann in die Texte (E15); wo macOS einen Begriff schon benutzt, gilt
+  der des Systems.
 
 ## Stufe 1 — Absicherung
 
@@ -103,9 +162,11 @@ beim Aufruf, wie in Zed und VS Code. Die Anfragen stehen schon in `crates/ide-ls
 `workspace/applyEdit` ebenfalls.
 
 - **E78 Code Actions.** Glühbirne in der Randspalte (`ruler.rs`) der Cursorzeile, sobald es für die Stelle Aktionen
-  gibt (Anfrage nach kurzer Ruhe, abgebrochen beim nächsten Tastendruck). ⌘. und Kontextmenü „Schnellkorrektur …“
-  öffnen die Liste, bevorzugte Aktion oben; Bereiche „Refactoring …“ und „Quellaktionen …“ (u. a. Importe
-  ordnen) als eigene Menüpunkte. Befehle der Aktionen über `workspace/executeCommand`.
+  gibt (Anfrage nach kurzer Ruhe, abgebrochen beim nächsten Tastendruck). ⌥⌘A (nicht ⌘., das ist „Abbrechen“, und
+  nicht Xcodes ⇧⌘A, das ist „Auswahl aufheben“, E97), der Menüpunkt „Editor ▸ Schnellkorrektur …“ und das
+  Kontextmenü öffnen die Aktionen als `NSMenu` am Cursor, bevorzugte Aktion oben; „Refactoring …“ und
+  „Quellaktionen …“ (u. a. Importe ordnen) als eigene Menüpunkte. Die Glühbirne ist das SF Symbol `lightbulb`
+  mit VoiceOver-Beschriftung. Befehle der Aktionen über `workspace/executeCommand`.
 - **Voraussetzung für E78: ein neuer Anwendungsweg für Workspace-Edits** *(Review C1)*. Der heutige in
   `src/lsp/edits.rs` (`split`, `apply_workspace_edit`) ist für Code Actions nicht sicher genug: Er verwirft
   `TextDocumentEdit.version`, sammelt Edits je Pfad und führt alle Datei-Operationen (Anlegen, Umbenennen, Löschen)
@@ -124,9 +185,11 @@ beim Aufruf, wie in Zed und VS Code. Die Anfragen stehen schon in `crates/ide-ls
   Darstellung über E77 in Sekundärfarbe, kleinere Schrift. Neu abgefragt für den sichtbaren Bereich nach
   Änderung oder Scrollen und auf `workspace/inlayHint/refresh` (schon empfangen). Tooltip des Hints aus `tooltip`,
   Klick auf einen Hint mit Ort springt dorthin.
-- **E80 Signaturhilfe.** Kleines Fenster über dem Cursor (wie die Vervollständigungsliste in `complete.rs`),
-  ausgelöst durch die Trigger-Zeichen des Servers und ⇧⌘Leer; aktiver Parameter hervorgehoben, ↑/↓ blättert durch
-  Überladungen, solange die Vervollständigungsliste nicht offen ist; schließt bei Esc oder Verlassen des Aufrufs.
+- **E80 Signaturhilfe.** Kleines Fenster über dem Cursor (wie die Vervollständigungsliste in `complete.rs`, mit
+  Systemmaterial, nimmt nicht den Fokus), ausgelöst durch die Trigger-Zeichen des Servers und den Menüpunkt
+  „Editor ▸ Parameter zeigen“ ohne eigenes Kürzel (⇧⌘Leer belegt das System, E97); aktiver Parameter
+  hervorgehoben und von VoiceOver angesagt, ↑/↓ blättert durch Überladungen, solange die Vervollständigungsliste
+  nicht offen ist; schließt bei Esc oder Verlassen des Aufrufs.
 
 Abnahme: Selftest mit rust-analyzer und gopls je für Quick-Fix, Inlay Hint, Signaturhilfe; Leistungsbudget bei 10 000
 Zeilen mit Hints an.
@@ -150,8 +213,10 @@ Auswirkung: Springen über das ganze Projekt statt nur innerhalb einer Datei.
     Tests: Ablauf der Ausleihe ohne offenen Editor, Ordner mit drei Sprachen.
   - Implementierung, Typdefinition, Deklaration im Kontextmenü und Menü „Gehe zu“; mehrere Treffer in der
     vorhandenen Trefferliste der Referenzen (`navigate.rs`).
-  - Aufruf- und Typhierarchie als Popover mit aufklappbarem Baum unter dem Cursor (Kinder werden erst beim
-    Aufklappen abgefragt), Umschalter „Aufrufer / Aufgerufene“ bzw. „Obertypen / Untertypen“, Doppelklick springt.
+  - Aufruf- und Typhierarchie im Suche-Panel (E55) statt in einem Popover, wie Xcode sie im Such-Navigator zeigt:
+    ein Baum ist zu groß für ein Popover (E97). Kinder werden erst beim Aufklappen abgefragt, Umschalter
+    „Aufrufer / Aufgerufene“ bzw. „Obertypen / Untertypen“, Klick springt, der Suchverlauf bleibt erhalten.
+    Menüpunkte „Gehe zu ▸ Aufrufhierarchie“ (⌃⇧⌘H wie Xcode) und „Gehe zu ▸ Typhierarchie“.
 
 Abnahme: Selftest gegen rust-analyzer am eigenen Repo (Symbol finden, Implementierung eines Traits,
 Aufrufhierarchie über drei Ebenen).
@@ -160,14 +225,15 @@ Aufrufhierarchie über drei Ebenen).
 Auswirkung: Wer eine Zeile geschrieben hat, Zwischenstände parken, Commit-Messages ohne Tipparbeit.
 
 - **E82 Blame.** Am Ende der Cursorzeile nach kurzer Ruhe „Autor, vor 3 Tagen · Betreff“ in Sekundärfarbe (E77),
-  Einstellung, Standard an. „Blame zeigen“ (Menü und Kontextmenü) blendet zusätzlich eine Spalte vor den
-  Zeilennummern ein, ein Eintrag je Block. Daten über `git blame --porcelain --incremental`, im Hintergrund, je
+  Einstellung, Standard aus wie Xcodes „Authors“ (weniger Unruhe im Text), ein- und ausgeschaltet im Menü
+  „Darstellung“. „Blame zeigen“ (Menü und Kontextmenü) blendet zusätzlich eine Spalte vor den Zeilennummern ein,
+  ein Eintrag je Block. Daten über `git blame --porcelain --incremental`, im Hintergrund, je
   Datei und HEAD zwischengespeichert. Geänderte, ungesicherte Zeilen heißen „Nicht committet“; die Zuordnung der
   übrigen Zeilen läuft über die Abschnitte gegen HEAD, die die Randmarken schon haben (`changes.rs`). Popover beim
   Zeigen: ganze Nachricht, Hash kopieren, „Im Graph zeigen“ (E74), „Diff des Commits“. Nur in vertrauten Ordnern
   (E11, E22).
 - **E83 Stash.** Abschnitt „Stashes“ im Git-Panel im Stil von E74 (Zahl als Pille). Je Eintrag Anwenden, Anwenden und
-  entfernen (Pop), Löschen (mit Rückfrage), Diff im Tab. Neben „Commit“ ein Menü „Stash …“ (Nachricht, mit
+  entfernen (Pop), Löschen (Rückfrage als Sheet, „Löschen“ zerstörerisch und nicht Standard, E97), Diff im Tab. Neben „Commit“ ein Menü „Stash …“ (Nachricht, mit
   unversionierten Dateien) und „Nur Gestagtes stashen“.
   - *Review C14:* Vor jeder Stash-Aktion werden ungesicherte offene Dokumente angeboten zu sichern (Sichern /
     Abbrechen), weil Stash nur den Stand auf der Platte sieht; danach laden saubere Puffer still neu (E24).
@@ -307,11 +373,19 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
   - JavaScript/TypeScript: vscode-js-debug in fester Version mit Prüfsumme, installiert auf Nachfrage in den
     App-Ordner (wie vtsls); braucht Node.
   - Python: debugpy aus der Umgebung des Projekts; fehlt es, Installationsbefehl in der Statusleiste.
-- **E90 Panel „Debuggen“ als sechstes Panel** *(Abweichung von E55, fünf Panels)*, ⌘6: Sitzungen, Threads,
-  Aufrufliste, Variablen (Baum, Kinder erst beim Aufklappen), Überwachte Ausdrücke, Haltepunkte. Steuerleiste
-  während einer Sitzung: Fortsetzen, Überspringen, Hineinspringen, Heraus, Neu starten, Stopp (Kürzel nach E26).
-  Debug-Konsole als eigener Tab (E60) mit Auswertung im angehaltenen Frame. `runInTerminal` öffnet einen
-  Terminal-Tab. Die Aktivitätsübersicht führt Debug-Sitzungen.
+- **E90 Debugger in Seitenleiste, Inspektor und Menü** *(Abweichung von E55, fünf Panels; Aufteilung nach E97)*:
+  - Panel „Debuggen“ als sechstes Panel, ⌘6, für die Navigation: Sitzungen, Threads mit Aufrufliste, Haltepunkte.
+    In seiner Titelzeile die Steuerknöpfe Fortsetzen, Überspringen, Hineinspringen, Heraus, Neu starten, Stopp als
+    SF Symbols mit Beschriftung; was der Adapter nicht kann oder gerade nicht geht, ist ausgegraut.
+  - Inspektor am hinteren Fensterrand (`NSSplitViewItem` als Inspektor, macOS 14+) für die Details des gewählten
+    Frames: Variablen (Baum, Kinder erst beim Aufklappen) und Überwachte Ausdrücke. ⌥⌘I blendet ihn ein und aus
+    (HIG-Standard, E97); er wandert wie die Seitenleiste mit dem Tab im Vordergrund (E60), seine Breite kommt aus dem
+    View-Controller des Split-View-Items (macOS 27, CLAUDE.md). Die Toolbar bleibt, wie E73 sie festlegt.
+  - Menü „Debuggen“ mit allen Befehlen und Xcodes Kürzeln: Fortsetzen ⌃⌘Y, Überspringen F6, Hineinspringen F7,
+    Heraus F8, Stopp ⌘., Haltepunkt an der Cursorzeile ⌘\, Haltepunkte aus/ein ⌘Y. Auf Mac-Tastaturen brauchen F6–F8
+    meist fn; die Befehle stehen deshalb auch als Knöpfe im Panel.
+  - Debug-Konsole als eigener Tab (E60) mit Auswertung im angehaltenen Frame. `runInTerminal` öffnet einen
+    Terminal-Tab. Die Aktivitätsübersicht führt Debug-Sitzungen.
 - **Wem welcher Prozess gehört** *(Review C7)*. Der Supervisor nimmt nur Prozesse auf, die ihre eigene
   Prozessgruppe führen, und Stopp trifft die ganze Gruppe (`register`, `signal` in
   `crates/ide-process/src/supervisor.rs`). Ein Prozess, an den sich der Debugger anhängt, gehört nicht Dango.
@@ -340,7 +414,7 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
 
 Abnahme: Selftest mit Mitschnitt eines DAP-Adapters (wie die Claude-Mitschnitte) für das Protokoll; dazu
 Fenster-Selftests für Fokus mit ⌘6, Wiederherstellen von Panel und Konsole, Mitwandern der Haltepunkte bei Änderungen
-und Knöpfe, die nur erscheinen, wenn der Adapter sie kann; `make test-integration` mit lldb-dap an einem
+Knöpfe und Menüpunkte, die ausgegraut sind, wenn der Adapter sie nicht kann, Inspektor mit ⌥⌘I und beim Tabwechsel; `make test-integration` mit lldb-dap an einem
 Rust-Testprogramm, dlv an einem Go-Programm, js-debug an Node, jeweils Starten und Anhängen.
 
 ## Stufe 5 — Build
