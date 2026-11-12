@@ -1,11 +1,13 @@
-//! A view over the text for what TextKit does not draw: the placeholders of folds, the carets and selections beyond
-//! the first, and the insets of E81. Clicks pass through to the text, except on an inset that does something.
+//! A view over the text for what TextKit does not draw: the placeholders of folds and the carets and selections beyond
+//! the first. It also knows where the insets of E81 are, which the layout fragments draw, for their clicks, tooltips
+//! and pointer. Clicks pass through to the text, except on an inset that does something.
 
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSBezierPath, NSColor, NSCursor, NSEvent, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSStringDrawing, NSToolTipTag, NSView, NSViewToolTipOwner, NSWindowOrderingMode,
+    NSAccessibility, NSAffineTransformNSAppKitAdditions, NSBezierPath, NSColor, NSCursor, NSEvent, NSFont,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSStringDrawing, NSToolTipTag, NSView, NSViewToolTipOwner,
+    NSWindowOrderingMode,
 };
 use objc2_foundation::{NSDictionary, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
@@ -82,16 +84,16 @@ define_class!(
     }
 );
 
-/// Puts an overlay over `editor`, following its size.
+/// Puts an overlay over the part of `editor` on screen. It has a layer of its own: without one it would draw into the
+/// text view's layer, under the layers TextKit 2 draws the text in. Covering only what is on screen keeps that layer
+/// small in a long text.
 pub fn attach(editor: &EditorTextView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
     });
     // SAFETY: NSView's initializer, called once on the newly allocated object.
-    let this: Retained<Overlay> = unsafe { msg_send![super(this), initWithFrame: editor.bounds()] };
-    this.setAutoresizingMask(
-        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
-    );
+    let this: Retained<Overlay> = unsafe { msg_send![super(this), initWithFrame: editor.visibleRect()] };
+    this.setWantsLayer(true);
     this.setAccessibilityElement(false);
     editor.addSubview_positioned_relativeTo(&this, NSWindowOrderingMode::Above, None);
     *editor.ivars().overlay.borrow_mut() = Some(Weak::from(&*this));
@@ -101,13 +103,35 @@ pub fn attach(editor: &EditorTextView) {
 #[cfg(feature = "selftest")]
 pub static LAID_OUT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// TextKit laid out the lines on screen: draws the part of the overlay there again. Scrolling draws the overlay for
-/// lines that come into view before TextKit lays them out, and an inset whose line has no layout yet is left out.
+/// TextKit laid out the lines on screen: the overlay moves over them and draws again, as what it draws follows the
+/// layout.
 pub fn laid_out(editor: &EditorTextView) {
     #[cfg(feature = "selftest")]
     LAID_OUT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
-        overlay.setNeedsDisplayInRect(overlay.convertRect_fromView(editor.visibleRect(), Some(editor)));
+        let subviews = editor.subviews();
+        let on_top = subviews
+            .lastObject()
+            .is_some_and(|top| std::ptr::eq(&*top, &**overlay as &NSView));
+        // TextKit may put views of its own over the overlay as it lays out, which would hide what the overlay draws.
+        if !on_top {
+            editor.addSubview_positioned_relativeTo(&overlay, NSWindowOrderingMode::Above, None);
+        }
+    }
+    follow(editor);
+}
+
+/// Moves the overlay of `editor` over the part on screen and draws it there.
+pub fn follow(editor: &EditorTextView) {
+    if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
+        let seen = editor.visibleRect();
+        if overlay.frame() != seen {
+            overlay.setFrame(seen);
+            if let Some(window) = overlay.window() {
+                window.invalidateCursorRectsForView(&overlay);
+            }
+        }
+        overlay.setNeedsDisplay(true);
     }
 }
 
@@ -123,6 +147,11 @@ impl Overlay {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
+        // What follows draws in the editor's coordinates, of which the overlay shows the part on screen.
+        let origin = self.frame().origin;
+        let shift = objc2_foundation::NSAffineTransform::transform();
+        shift.translateXBy_yBy(-origin.x, -origin.y);
+        shift.concat();
         self.draw_placeholders(&editor);
         super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);
@@ -140,8 +169,9 @@ impl Overlay {
             )
             .is_some()
             {
+                let rect = self.convertRect_fromView(inset.rect, Some(editor));
                 // SAFETY: The overlay owns its tooltip areas and answers them as their owner; no user data is passed.
-                unsafe { self.addToolTipRect_owner_userData(inset.rect, self, std::ptr::null_mut()) };
+                unsafe { self.addToolTipRect_owner_userData(rect, self, std::ptr::null_mut()) };
             }
         }
         if let Some(window) = self.window() {
@@ -157,7 +187,10 @@ impl Overlay {
         for inset in super::insets::shown(&editor) {
             let middle = NSPoint::new(inset.rect.origin.x + 1.0, inset.rect.origin.y + 1.0);
             if super::insets::hits(&editor, middle) {
-                self.addCursorRect_cursor(inset.rect, &NSCursor::pointingHandCursor());
+                self.addCursorRect_cursor(
+                    self.convertRect_fromView(inset.rect, Some(&editor)),
+                    &NSCursor::pointingHandCursor(),
+                );
             }
         }
     }

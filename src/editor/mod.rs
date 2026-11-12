@@ -10,11 +10,13 @@ mod editing;
 mod fold;
 mod highlight;
 mod indent;
+mod inset_fragment;
 pub mod insets;
 mod multi;
 mod overlay;
 #[cfg(feature = "selftest")]
 pub use overlay::LAID_OUT;
+pub use overlay::follow as follow_overlay;
 pub mod recovery;
 mod ruler;
 mod style;

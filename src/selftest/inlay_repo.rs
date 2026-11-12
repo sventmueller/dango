@@ -73,6 +73,9 @@ fn look() {
     if let Some(window) = view.window() {
         window.displayIfNeeded();
         snapshot(&window, "inlay-repo");
+        let probe = std::env::temp_dir().join("inlay-repo-capture.png");
+        let real = super::capture(&["-o", "-l", &window.windowNumber().to_string()], &probe);
+        check("the picture comes from the screen, not from AppKit's drawing", real, "");
     }
     let seen = view.visibleRect();
     let lines = editor::utf16_in(&view, seen);

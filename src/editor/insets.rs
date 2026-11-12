@@ -119,6 +119,8 @@ pub struct Insets {
     full: bool,
     shown: Vec<Shown>,
     rotor: Option<Retained<Rotor>>,
+    /// The text layout's delegate that makes the fragments that draw the insets; the layout holds it weakly.
+    layout: Option<Retained<super::inset_fragment::InsetLayout>>,
 }
 
 /// Room around an inset's text inside its box.
@@ -193,6 +195,11 @@ pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
         inset.width = measure(inset, &attributes);
     }
     insets.sort_by_key(|inset| inset.at);
+    let changed = {
+        let state = view.ivars().insets.borrow();
+        let old = layer_insets(&state, layer).cloned().unwrap_or_default();
+        changed_span(&old, &insets)
+    };
     {
         let mut state = view.ivars().insets.borrow_mut();
         state.layers.retain(|(l, _)| *l != layer);
@@ -203,7 +210,41 @@ pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
         state.full = true;
     }
     settle(view);
+    if let Some(span) = changed {
+        redraw_text(view, span);
+    }
     super::overlay::redraw(view);
+}
+
+/// The offsets from the first to the last inset that differs between `old` and `new`, both ordered by offset.
+fn changed_span(old: &[Inset], new: &[Inset]) -> Option<Range<usize>> {
+    let same = |a: &Inset, b: &Inset| a.at == b.at && a.text == b.text && a.place == b.place;
+    let differs = old
+        .iter()
+        .filter(|a| !new.iter().any(|b| same(a, b)))
+        .chain(new.iter().filter(|b| !old.iter().any(|a| same(a, b))))
+        .map(|inset| inset.at);
+    differs.fold(None, |span: Option<Range<usize>>, at| {
+        Some(span.map_or(at..at + 1, |s| s.start.min(at)..s.end.max(at + 1)))
+    })
+}
+
+/// Has TextKit lay out and draw the paragraphs of `span` again, which draw their insets.
+fn redraw_text(view: &EditorTextView, span: Range<usize>) {
+    let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
+        return;
+    };
+    let length = view.storage().map_or(0, |s| s.length());
+    let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
+    let at = |offset: usize| content.locationFromLocation_withOffset(&start, isize::try_from(offset.min(length)).ok()?);
+    let (Some(from), Some(to)) = (at(span.start), at(span.end)) else {
+        return;
+    };
+    if let Some(range) =
+        objc2_app_kit::NSTextRange::initWithLocation_endLocation(objc2_app_kit::NSTextRange::alloc(), &from, Some(&to))
+    {
+        layout.invalidateLayoutForRange(&range);
+    }
 }
 
 /// Takes away everything `layer` shows in `view`.
@@ -554,17 +595,104 @@ pub fn draw(view: &EditorTextView, dirty: NSRect) {
     ) else {
         return;
     };
-    let font_size = view.ivars().font_size.get();
-    let attributes = attributes(font_size, &text_color(view));
-    if let Ok(state) = view.ivars().insets.try_borrow() {
-        for place in &shown {
-            if let Some(inset) = layer_insets(&state, place.layer).and_then(|insets| insets.get(place.index)) {
-                draw_box(place.rect, inset, &attributes, font_size);
-            }
-        }
-    }
     if let Ok(mut state) = view.ivars().insets.try_borrow_mut() {
         state.shown = shown;
+    }
+}
+
+/// The UTF-16 range of the paragraph `fragment` lays out.
+fn fragment_range(view: &EditorTextView, fragment: &objc2_app_kit::NSTextLayoutFragment) -> Option<Range<usize>> {
+    let content = view.textContentStorage()?;
+    let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
+    let range = fragment.rangeInElement();
+    let from = usize::try_from(content.offsetFromLocation_toLocation(&start, &range.location())).ok()?;
+    let to = usize::try_from(content.offsetFromLocation_toLocation(&start, &range.endLocation())).ok()?;
+    Some(from..to)
+}
+
+/// Where the insets of the paragraph `fragment` lays out go, in the editor's coordinates.
+fn fragment_insets(
+    view: &EditorTextView,
+    state: &Insets,
+    fragment: &objc2_app_kit::NSTextLayoutFragment,
+) -> Vec<Shown> {
+    let (Some(range), Some(storage)) = (fragment_range(view, fragment), view.storage()) else {
+        return Vec::new();
+    };
+    if state.layers.is_empty() {
+        return Vec::new();
+    }
+    let inside =
+        |at: usize| at >= range.start && (at < range.end || (at == range.end && range.end == storage.length()));
+    let placed: Vec<Placed> = resolve(view, state, &storage.string(), &range)
+        .into_iter()
+        .filter(|place| match &place.spot {
+            Spot::Gap { anchor } => inside(anchor.start),
+            Spot::End { line_end } => inside(*line_end),
+        })
+        .collect();
+    if placed.is_empty() {
+        return Vec::new();
+    }
+    lay_out(view, &storage, state, placed, &range)
+}
+
+/// Draws the insets of the paragraph `fragment` lays out after its text, at `point` in `context`, as the fragment
+/// draws itself: with the text, so that they scroll and show with it.
+pub fn draw_fragment(
+    view: &EditorTextView,
+    fragment: &objc2_app_kit::NSTextLayoutFragment,
+    point: NSPoint,
+    context: &objc2_core_graphics::CGContext,
+) {
+    let Ok(state) = view.ivars().insets.try_borrow() else {
+        return;
+    };
+    let shown = fragment_insets(view, &state, fragment);
+    if shown.is_empty() {
+        return;
+    }
+    let frame = fragment.layoutFragmentFrame();
+    let origin = view.textContainerOrigin();
+    let (dx, dy) = (point.x - frame.origin.x - origin.x, point.y - frame.origin.y - origin.y);
+    let graphics = objc2_app_kit::NSGraphicsContext::graphicsContextWithCGContext_flipped(context, true);
+    objc2_app_kit::NSGraphicsContext::saveGraphicsState_class();
+    objc2_app_kit::NSGraphicsContext::setCurrentContext(Some(&graphics));
+    let font_size = view.ivars().font_size.get();
+    let attributes = attributes(font_size, &text_color(view));
+    for place in &shown {
+        if let Some(inset) = layer_insets(&state, place.layer).and_then(|insets| insets.get(place.index)) {
+            let rect = NSRect::new(
+                NSPoint::new(place.rect.origin.x + dx, place.rect.origin.y + dy),
+                place.rect.size,
+            );
+            draw_box(rect, inset, &attributes, font_size);
+        }
+    }
+    objc2_app_kit::NSGraphicsContext::restoreGraphicsState_class();
+}
+
+/// How much wider than its text the paragraph `fragment` lays out draws, for the insets at the end of its lines. TextKit
+/// asks for every fragment on screen at every keystroke, so this adds up widths instead of laying the insets out.
+pub fn width_after_text(view: &EditorTextView, fragment: &objc2_app_kit::NSTextLayoutFragment) -> f64 {
+    let (Some(range), Ok(state)) = (fragment_range(view, fragment), view.ivars().insets.try_borrow()) else {
+        return 0.0;
+    };
+    let ends: f64 = state
+        .layers
+        .iter()
+        .flat_map(|(_, insets)| {
+            let first = insets.partition_point(|inset| inset.at < range.start);
+            let last = insets.partition_point(|inset| inset.at <= range.end);
+            insets[first..last].iter()
+        })
+        .map(|inset| inset.width + END_GAP)
+        .sum();
+    if ends > 0.0 {
+        // Room for a fold's placeholder, which an inset at the line's end goes after.
+        ends + END_GAP + 40.0
+    } else {
+        0.0
     }
 }
 
@@ -1080,6 +1208,12 @@ pub fn attach(view: &EditorTextView) {
     rotors.push(rotor);
     view.setAccessibilityCustomRotors(&NSArray::from_retained_slice(&rotors));
     view.ivars().insets.borrow_mut().rotor = Some(delegate);
+    let layout = super::inset_fragment::attach(view);
+    view.ivars().insets.borrow_mut().layout = layout;
+    if let Some(manager) = view.textLayoutManager() {
+        // Fragments laid out before the delegate came are plain ones.
+        manager.invalidateLayoutForRange(&objc2_app_kit::NSTextSelectionDataSource::documentRange(&*manager));
+    }
 }
 
 /// The rotor "Hinweise" of `view` and the entry it finds from `current` onward, as VoiceOver asks, for the self-test.

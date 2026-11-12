@@ -187,7 +187,10 @@ erhöhtem Kontrast; Barrierefreiheits-Audit.
 ## Stufe 2 — Editor
 
 ### E81 Einblendungen (gemeinsamer Baustein)
-*Umgesetzt am 2026-11-12, Sperre bestanden (`editor-insets`).* Abweichung nach R14: TextKit 2 übergeht ein Kern-Attribut auf
+*Umgesetzt am 2026-11-12, Sperre bestanden (`editor-insets`).* Abweichung beim Zeichnen: Die Einblendungen zeichnet
+nicht das Overlay, sondern TextKits Layout-Fragment der Zeile nach ihrem Text (`src/editor/inset_fragment.rs`); im
+Overlay fielen sie beim Scrollen hinter TextKits Text zurück, die Lücken standen leer. Das Overlay kennt ihre Lage
+weiter für Klicks, Tooltips und Zeiger. Abweichung nach R14: TextKit 2 übergeht ein Kern-Attribut auf
 dem letzten Codepunkt eines mehrteiligen Graphems; dort gilt der Ausweg ans Zeilenende. Ein Caret am Rand der Lücke
 rückt ein eigener `NSTextLayoutManager` an deren rechte Kante, ohne TextKit 1. Der Kasten unter der Zeile entsteht
 erst mit B4.

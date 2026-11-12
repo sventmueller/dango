@@ -321,6 +321,7 @@ pub fn follow_scrolling(scroll: &objc2_app_kit::NSScrollView, view: &EditorTextV
             hover::dismiss(&editor);
             signature::dismiss_for(&editor);
             inlay::scrolled(&editor);
+            crate::editor::follow_overlay(&editor);
         }
     });
     // SAFETY: The block only asks the editor to paint later; the weak reference makes it do nothing once it is gone.
