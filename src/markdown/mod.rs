@@ -2,8 +2,6 @@
 //! splat's toolbar, pasting from Word or the web as Markdown, exports to PDF, HTML and Word, and opening it in Splat.
 //! The commands go through the editor's one action `ideMarkdown:`, told apart by the menu item's tag.
 
-mod export;
-pub use export::Exports;
 mod format;
 mod paste;
 mod splat_app;
@@ -22,6 +20,7 @@ use splat_markdown::text::Byte;
 
 use crate::editor::EditorTextView;
 use crate::util::{ns, separator, submenu, tagged};
+use ide_ui_export as export;
 pub use splat_app::open_in_splat_item;
 
 /// A command of the menus, by the tag of its menu item.
@@ -159,9 +158,9 @@ pub fn perform(view: &EditorTextView, tag: isize) {
     let Some(command) = Command::of_tag(tag) else { return };
     match command {
         Command::PastePlain => paste::plain(view),
-        Command::ExportPdf => export::ask(view, export::Kind::Pdf),
-        Command::ExportHtml => export::ask(view, export::Kind::Html),
-        Command::ExportWord => export::ask(view, export::Kind::Word),
+        Command::ExportPdf => export_as(view, export::Kind::Pdf),
+        Command::ExportHtml => export_as(view, export::Kind::Html),
+        Command::ExportWord => export_as(view, export::Kind::Word),
         Command::OpenInSplat => {
             if let Some(path) = view.document().path() {
                 splat_app::open(view.mtm(), path);
@@ -169,6 +168,25 @@ pub fn perform(view: &EditorTextView, tag: isize) {
         }
         command => format::run(view, command),
     }
+}
+
+/// Asks where the Markdown document of `view` goes as `kind`, then writes it there.
+fn export_as(view: &EditorTextView, kind: export::Kind) {
+    if let Some(source) = source_of(view) {
+        export::ask(view.mtm(), view.window().as_deref(), source, kind);
+    }
+}
+
+/// What an export of the document `view` shows makes a file of.
+pub fn source_of(view: &EditorTextView) -> Option<export::Source> {
+    let document = view.document();
+    let path = document.path()?;
+    Some(export::Source {
+        text: document.text().to_string(),
+        doc_dir: path.parent().map(std::path::Path::to_path_buf),
+        title: path.file_stem()?.to_string_lossy().into_owned(),
+        trusted: view.controller().is_some_and(|c| c.is_trusted()),
+    })
 }
 
 /// Whether the menu item of an `ideMarkdown:` command applies to the editor `view`; `None` for other items.
@@ -260,4 +278,5 @@ pub mod selftest {
     pub use super::export::{Kind, Outcome, Source, start as export_to};
     pub use super::format::link_with;
     pub use super::paste::rich as paste_from;
+    pub use super::source_of;
 }

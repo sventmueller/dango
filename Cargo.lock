@@ -1317,6 +1317,9 @@ dependencies = [
  "ide-terminal",
  "ide-thread",
  "ide-ui-common",
+ "ide-ui-export",
+ "ide-ui-icons",
+ "ide-ui-terminal",
  "image",
  "kurbo",
  "libc",
@@ -1510,6 +1513,58 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "splat-markdown",
+]
+
+[[package]]
+name = "ide-ui-export"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-ui-common",
+ "image",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-foundation",
+ "splat-decoder",
+ "splat-file-state",
+ "splat-i18n",
+ "splat-markdown",
+ "splat-preview",
+ "splat-render",
+]
+
+[[package]]
+name = "ide-ui-icons"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-ui-common",
+ "kurbo",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-graphics",
+ "objc2-foundation",
+ "splat-markdown",
+]
+
+[[package]]
+name = "ide-ui-terminal"
+version = "0.0.0"
+dependencies = [
+ "ide-terminal",
+ "ide-ui-common",
+ "image",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-core-text",
+ "objc2-foundation",
+ "objc2-metal",
+ "objc2-quartz-core",
+ "splat-i18n",
 ]
 
 [[package]]

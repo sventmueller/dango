@@ -13,7 +13,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
-use crate::util::{guarded, ns};
+use ide_ui_common::util::{guarded, ns};
 
 pub struct SheetIvars {
     /// The export the sheet belongs to.

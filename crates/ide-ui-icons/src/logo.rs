@@ -12,7 +12,7 @@ use objc2_app_kit::{NSGraphicsContext, NSImage};
 use objc2_core_graphics::CGContext;
 use objc2_foundation::{NSRect, NSSize};
 
-use crate::util::guarded;
+use ide_ui_common::util::guarded;
 
 /// The side of an icon's square, in points.
 pub const SIDE: f64 = 16.0;
@@ -32,7 +32,7 @@ fn svg(name: &str) -> Option<&'static str> {
     macro_rules! logos {
         ($($name:literal),* $(,)?) => {
             match name {
-                $($name => Some(include_str!(concat!("../../assets/simple-icons/icons/", $name, ".svg"))),)*
+                $($name => Some(include_str!(concat!("../../../assets/simple-icons/icons/", $name, ".svg"))),)*
                 _ => None,
             }
         };

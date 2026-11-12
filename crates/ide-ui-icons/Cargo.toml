@@ -1,0 +1,20 @@
+[package]
+name = "ide-ui-icons"
+version = "0.0.0"
+description = "The icon of a file in lists: a language's logo from Simple Icons or an SF Symbol for its kind"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-ui-common.workspace = true
+splat-markdown.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-graphics.workspace = true
+objc2-foundation.workspace = true
+kurbo = "0.13"

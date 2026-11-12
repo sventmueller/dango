@@ -10,13 +10,13 @@ use std::cell::{Cell, RefCell};
 
 use ide_terminal::input::ModifierKey;
 use ide_terminal::{Key, KeyAction, KeyCode, Modifiers, NamedKey, Scroll};
+use ide_ui_terminal::keys;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{DefinedClass, Message, sel};
 use objc2_app_kit::{NSCursor, NSEvent, NSEventModifierFlags};
 use objc2_foundation::{NSArray, NSAttributedString, NSRange, NSRect, NSString, NSUInteger};
 
-use super::keys;
 use super::view::TerminalView;
 
 /// AppKit's `NSNotFound`, which ranges use to say "none".

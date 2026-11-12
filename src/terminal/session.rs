@@ -5,11 +5,11 @@ use std::time::{Duration, Instant};
 
 use ide_process::Supervisor;
 use ide_terminal::{Clipboard, Event, Foreground, Options, Session};
+use ide_ui_terminal::model::{self, BELL_FLASH, Bell};
 use objc2::DefinedClass;
 use objc2_app_kit::{NSBeep, NSPasteboard, NSWorkspace};
 use splat_i18n::{t, tf};
 
-use super::model::{self, BELL_FLASH, Bell};
 use super::view::TerminalView;
 use crate::util::main_after;
 

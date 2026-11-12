@@ -19,8 +19,8 @@ use objc2_metal::{
 };
 use objc2_quartz_core::{CAMetalDrawable, CAMetalLayer, CATransaction};
 
-use super::render::Fonts;
-use super::sprites::{Quad, QuadCanvas, Sprites};
+use crate::render::Fonts;
+use crate::sprites::{Quad, QuadCanvas, Sprites};
 
 const SHADER: &str = include_str!("terminal.metal");
 
@@ -47,7 +47,7 @@ pub fn shared() -> Option<Rc<Gpu>> {
                 return None;
             }
             Gpu::new()
-                .map_err(|error| crate::diag::report("drawing terminals with Metal", error))
+                .map_err(|error| ide_ui_common::diag::report("drawing terminals with Metal", error))
                 .ok()
                 .map(Rc::new)
         })
@@ -284,10 +284,10 @@ impl Surface {
 mod tests {
     use ide_terminal::{Cell, CellFlags, Cursor, CursorShape, Damage, Highlight, InputModes, Point, Snapshot};
 
-    use super::super::palette;
-    use super::super::render::{self, Overlay, rect};
-    use super::super::sprites;
     use super::*;
+    use crate::palette;
+    use crate::render::{self, Overlay, rect};
+    use crate::sprites;
 
     const LINES: [&str; 6] = [
         "plain text, then BOLD and italic and both",
@@ -441,10 +441,11 @@ mod tests {
             };
             let total = pixels.0 * pixels.1;
             let (some, clear) = (differing(48), differing(128));
-            let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+            let target = std::env::temp_dir().join("ide-ui-terminal-gpu-parity");
             let name = if dark { "dark" } else { "light" };
             let fits = some * 2000 <= total && clear == 0;
             if std::env::var_os("IDE_GPU_PICTURES").is_some() || !fits {
+                let _ = std::fs::create_dir_all(&target);
                 save(
                     &target.join(format!("gpu-parity-{name}-cpu.png")),
                     &cpu,
@@ -461,7 +462,8 @@ mod tests {
             assert!(
                 fits,
                 "{name}: of {total} pixels, {some} differ by more than 48 and {clear} by more than 128; the pictures are \
-                 in target/gpu-parity-{name}-*.png"
+                 in {}/gpu-parity-{name}-*.png",
+                target.display()
             );
         }
     }

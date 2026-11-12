@@ -2,6 +2,16 @@
 //! (see the README there), or an SF Symbol for its kind, in a system colour that keeps its contrast in every
 //! appearance (E66). Folders have no icon, only the outline view's disclosure triangle, and keep the icon's room so
 //! their names line up with the files'. The icons are decoration: VoiceOver reads the file's name beside them.
+//!
+//! A file's kind follows from its name alone:
+//!
+//! ```
+//! use ide_ui_icons::{Shape, icon_of};
+//!
+//! assert_eq!(icon_of("main.rs").shape, Shape::Logo("rust"));
+//! assert_eq!(icon_of("README.md").id, "readme");
+//! assert_eq!(icon_of("noextension").id, "document");
+//! ```
 
 mod kinds;
 mod logo;
@@ -35,7 +45,7 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
             view.setContentTintColor(Some(&color(icon.tint)));
         }
     }
-    crate::util::hide_from_voiceover(&view);
+    ide_ui_common::util::hide_from_voiceover(&view);
     view
 }
 
@@ -44,7 +54,7 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
 pub fn image(path: &Path) -> Option<Retained<NSImage>> {
     let icon = icon_of(&file_name(path));
     let template = template(&icon)?;
-    Some(crate::util::tinted(&template, &color(icon.tint)))
+    Some(ide_ui_common::util::tinted(&template, &color(icon.tint)))
 }
 
 fn file_name(path: &Path) -> String {
@@ -60,7 +70,7 @@ pub fn template(icon: &Icon) -> Option<Retained<NSImage>> {
             // SAFETY: AppKit sets its font weight constants when it loads.
             let weight = unsafe { NSFontWeightRegular };
             let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(SYMBOL_SIZE, weight);
-            crate::util::symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
+            ide_ui_common::util::symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
         }
     }
 }
@@ -82,7 +92,7 @@ fn color(tint: Tint) -> Retained<NSColor> {
         Tint::Teal => Rgb(0x59, 0xAD, 0xC4),
         Tint::Yellow => Rgb(0xFF, 0xCC, 0x00),
     };
-    crate::agent::style::accent(rgb)
+    ide_ui_common::style::accent(rgb)
 }
 
 #[cfg(test)]

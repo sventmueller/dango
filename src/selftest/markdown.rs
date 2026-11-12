@@ -14,7 +14,9 @@ use splat_i18n::{t, tf};
 use super::helpers::{editor, text_of, utf16_len, wait_until, window_of};
 use super::{check, finish, snapshot};
 use crate::editor::EditorTextView;
-use crate::markdown::selftest::{Command, Kind, Outcome, Source, export_seen, export_to, link_with, paste_from};
+use crate::markdown::selftest::{
+    Command, Kind, Outcome, Source, export_seen, export_to, link_with, paste_from, source_of,
+};
 use crate::util::{constant, main_after, ns};
 
 const SCENARIO: &str = "markdown";
@@ -230,7 +232,7 @@ fn exports(root: PathBuf) {
         (Kind::Html, "notiz.html"),
         (Kind::Word, "notiz.docx"),
     ] {
-        let Some(source) = Source::of(&view) else { continue };
+        let Some(source) = source_of(&view) else { continue };
         export_to(source, kind, out.join(name), None, move |outcome| {
             EXPORTED.with(|done| done.borrow_mut().push((kind, outcome)));
         });
@@ -376,7 +378,7 @@ fn failing(root: PathBuf, out: PathBuf) {
     let Some(view) = editor_of(&root, "notiz.md") else {
         return finish(SCENARIO);
     };
-    let Some(source) = Source::of(&view) else {
+    let Some(source) = source_of(&view) else {
         return finish(SCENARIO);
     };
     let window = window_of(&root).and_then(|c| c.window());

@@ -19,7 +19,7 @@ lint: ## Formatting, clippy, also with the selftest feature, the allowed thread-
 	cargo xtask thread-locals
 	cargo xtask structure
 	cargo clippy --workspace --all-targets -- -D warnings
-	cargo clippy --package ide-app --all-targets --features selftest -- -D warnings
+	cargo clippy --package ide-app --package ide-ui-export --all-targets --features ide-app/selftest,ide-ui-export/selftest -- -D warnings
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing -- -D warnings
 
 check: lint ## lint, then all cargo tests; needs no keychain, no window and no network

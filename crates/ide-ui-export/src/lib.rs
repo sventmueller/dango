@@ -11,13 +11,13 @@ mod pictures;
 mod sheet;
 
 use std::cell::{Cell, OnceCell, RefCell};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use objc2::MainThreadOnly;
+use objc2::MainThreadMarker;
 use objc2_app_kit::{NSModalResponseOK, NSSavePanel, NSWindow};
 use objc2_foundation::NSURL;
 use splat_file_state::Stamp;
@@ -30,8 +30,7 @@ use splat_render::images::ImageFile;
 use splat_render::js::{self, Key};
 use splat_render::remote;
 
-use crate::editor::EditorTextView;
-use crate::util::{main_after, main_soon, ns};
+use ide_ui_common::util::{main_after, main_soon, ns};
 use sheet::Sheet;
 
 /// How long an export waits for formulas and diagrams; what is not drawn by then goes in as its source.
@@ -45,7 +44,14 @@ pub enum Kind {
 }
 
 impl Kind {
-    fn extension(self) -> &'static str {
+    /// The extension of the files of this kind.
+    ///
+    /// ```
+    /// use ide_ui_export::Kind;
+    ///
+    /// assert_eq!(Kind::Word.extension(), "docx");
+    /// ```
+    pub fn extension(self) -> &'static str {
         match self {
             Kind::Pdf => "pdf",
             Kind::Html => "html",
@@ -74,23 +80,9 @@ pub struct Source {
     pub trusted: bool,
 }
 
-impl Source {
-    pub fn of(view: &EditorTextView) -> Option<Source> {
-        let document = view.document();
-        let path = document.path()?;
-        Some(Source {
-            text: document.text().to_string(),
-            doc_dir: path.parent().map(Path::to_path_buf),
-            title: path.file_stem()?.to_string_lossy().into_owned(),
-            trusted: view.controller().is_some_and(|c| c.is_trusted()),
-        })
-    }
-}
-
-/// Asks where the Markdown document of `view` goes as `kind`, then writes it there.
-pub fn ask(view: &EditorTextView, kind: Kind) {
-    let Some(source) = Source::of(view) else { return };
-    let panel = NSSavePanel::savePanel(view.mtm());
+/// Asks where `source` goes as `kind`, then writes it there, with a sheet on `window` while it runs.
+pub fn ask(mtm: MainThreadMarker, window: Option<&NSWindow>, source: Source, kind: Kind) {
+    let panel = NSSavePanel::savePanel(mtm);
     panel.setNameFieldStringValue(&ns(&format!("{}.{}", source.title, kind.extension())));
     panel.setCanCreateDirectories(true);
     if let Some(dir) = &source.doc_dir {
@@ -109,7 +101,7 @@ pub fn ask(view: &EditorTextView, kind: Kind) {
     else {
         return;
     };
-    start(source, kind, path, view.window().as_deref(), |_| {});
+    start(source, kind, path, window, |_| {});
 }
 
 /// Writes `source` as `kind` to `path`, with a sheet on `window` while it runs; `done` hears how it ended, an error
@@ -121,10 +113,7 @@ pub fn start(
     window: Option<&NSWindow>,
     done: impl FnOnce(Outcome) + 'static,
 ) -> u64 {
-    let number = crate::context::app()
-        .exports
-        .next
-        .replace(crate::context::app().exports.next.get() + 1);
+    let number = state().next.replace(state().next.get() + 1);
     let what = match kind {
         Kind::Pdf => tf("„{}“ wird als PDF exportiert …", &[&source.title]),
         Kind::Html => tf("„{}“ wird als HTML exportiert …", &[&source.title]),
@@ -184,17 +173,36 @@ fn sheet_button(number: u64, failed: bool) {
     }
 }
 
+/// The app the exports run in, as far as they need it.
+pub trait Host {
+    /// The exports of the running app.
+    fn state(&self) -> Rc<State>;
+}
+
+static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();
+
+/// Makes `host` the app the exports belong to; once, before the first export.
+pub fn install(host: &'static (dyn Host + Sync)) {
+    let _ = HOST.set(host);
+}
+
+fn state() -> Rc<State> {
+    HOST.get()
+        .expect("the app installs its host before the first export")
+        .state()
+}
+
 /// The exports that run and the sheets of those that failed.
-pub struct Exports {
+pub struct State {
     runs: RefCell<Vec<Rc<Run>>>,
     /// The sheets of exports that failed, which stay until the user closes them.
     failed: RefCell<Vec<(u64, Sheet)>>,
     next: Cell<u64>,
 }
 
-impl Default for Exports {
+impl Default for State {
     fn default() -> Self {
-        Exports {
+        State {
             runs: RefCell::new(Vec::new()),
             failed: RefCell::new(Vec::new()),
             next: Cell::new(1),
@@ -203,11 +211,11 @@ impl Default for Exports {
 }
 
 fn with_runs<R>(f: impl FnOnce(&RefCell<Vec<Rc<Run>>>) -> R) -> R {
-    f(&crate::context::app().exports.runs)
+    f(&state().runs)
 }
 
 fn with_failed<R>(f: impl FnOnce(&RefCell<Vec<(u64, Sheet)>>) -> R) -> R {
-    f(&crate::context::app().exports.failed)
+    f(&state().failed)
 }
 
 /// Who hears how an export ended.

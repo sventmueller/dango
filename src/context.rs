@@ -27,7 +27,7 @@ pub struct AppContext {
     pub editor: crate::editor::EditorState,
     pub predictions: crate::editor::predict::Predictions,
     pub previews: crate::preview::Previews,
-    pub exports: crate::markdown::Exports,
+    pub exports: Rc<ide_ui_export::State>,
     pub search_panels: crate::window::SearchPanels,
     pub hierarchy_panels: crate::window::HierarchyPanels,
     pub terminal_views: crate::terminal::TerminalViews,

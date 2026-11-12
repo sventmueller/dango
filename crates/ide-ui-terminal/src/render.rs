@@ -20,9 +20,10 @@ use objc2_core_text::{
 };
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSRange, NSString};
 
-use super::boxdraw::{self, Pen};
-use super::palette::Theme;
-use crate::util::{constant, ns};
+use crate::boxdraw::{self, Pen};
+use crate::palette::Theme;
+use ide_ui_common::constant;
+use ide_ui_common::util::ns;
 
 /// The space between the cells and the left and right edges of the view.
 pub const INSET_X: f64 = 8.0;

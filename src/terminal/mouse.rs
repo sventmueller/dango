@@ -11,13 +11,13 @@ use block2::RcBlock;
 
 use ide_terminal::input::MouseTracking;
 use ide_terminal::{CellSide, Modifiers, MouseAction, MouseButton, MouseEvent, Point, Scroll, SelectionKind};
+use ide_ui_terminal::links;
+use ide_ui_terminal::render::clamp_to;
 use objc2::DefinedClass;
 use objc2::rc::{Retained, Weak};
 use objc2_app_kit::{NSCursor, NSEvent, NSEventModifierFlags, NSWorkspace};
 use objc2_foundation::{NSPoint, NSTimer, NSURL};
 
-use super::links;
-use super::render::clamp_to;
 use super::view::TerminalView;
 use crate::util::{guarded, ns};
 

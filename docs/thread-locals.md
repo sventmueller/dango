@@ -25,6 +25,11 @@ needs a row here first, and a reason from the list above.
 | `crates/ide-ui-common/src/style.rs` | `ACCENT` | the terracotta as a dynamic colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `ACCENTS` | accent colours by base colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `TOKEN_COLORS` | colours by token kind | app, until the appearance changes | stays: cache |
+| `crates/ide-ui-export/src/lib.rs` | `FAILED` | the sheets of failed exports | until the user closes them | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
+| `crates/ide-ui-export/src/lib.rs` | `NEXT` | the next export number | app | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
+| `crates/ide-ui-export/src/lib.rs` | `RUNS` | the running exports | until they end | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
+| `crates/ide-ui-icons/src/logo.rs` | `IMAGES` | drawn logos by name | app | stays: cache |
+| `crates/ide-ui-terminal/src/gpu.rs` | `SHARED` | Metal device, queue and pipeline of every terminal | app | stays: once per process |
 | `src/activity/mod.rs` | `ACTIVITIES` | the activity items of every window's toolbar | from a window's first toolbar on | AppContext: `activities` |
 | `src/agent/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
 | `src/agent/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
@@ -66,7 +71,6 @@ needs a row here first, and a reason from the list above.
 | `src/editor/style.rs` | `STYLED_FONTS` | fonts by size and style | app | stays: cache |
 | `src/editor/style.rs` | `TOKEN_COLORS` | colours by token kind | app | stays: cache |
 | `src/editor/whitespace.rs` | `SHOWN` | the setting "show whitespace" as last chosen | app | stays: cache (of the setting) |
-| `src/file_icon/logo.rs` | `IMAGES` | drawn logos by name | app | stays: cache |
 | `src/git_panel/commands.rs` | `COMMANDS` | action target of the Git menu, without state; acts on the window in front | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no particular window) |
 | `src/git_panel/diff.rs` | `TABS` | the diff tabs of every window by id | from opening to closing | AppContext: `git.diff_tabs` |
 | `src/git_panel/panel.rs` | `PANELS` | the Git panels of every window | from creation until replaced | AppContext: `git.panels` |
@@ -85,9 +89,6 @@ needs a row here first, and a reason from the list above.
 | `src/lsp/project_symbols.rs` | `LEASES` | the servers lent to the project symbol search, by folder | until the lease runs out (5 min) | AppContext: `server_leases` |
 | `src/lsp/rename.rs` | `FORMATTING` | running format-on-save requests by editor | until the answer | AppContext: `formatting` |
 | `src/lsp/signature.rs` | `HELP` | the signature help on view | while it shows | AppContext: `signature_help` |
-| `src/markdown/export/mod.rs` | `FAILED` | the sheets of failed exports | until the user closes them | AppContext: `exports` |
-| `src/markdown/export/mod.rs` | `NEXT` | the next export number | app | AppContext: `exports` |
-| `src/markdown/export/mod.rs` | `RUNS` | the running exports | until they end | AppContext: `exports` |
 | `src/markdown/splat_app.rs` | `TARGET` | action target of the "open in splat" menu items, without state | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `src/navigation.rs` | `GROUPS` | the toolbars' arrow groups with their window | while the toolbar exists | AppContext: `navigation` |
 | `src/navigation.rs` | `HISTORIES` | the back and forward history of each window | while the window is open | AppContext: `navigation` |
@@ -117,7 +118,6 @@ needs a row here first, and a reason from the list above.
 | `src/settings/agents.rs` | `WINDOW` | the agent registry window | from the first opening on | AppContext: `settings.agent_registry` |
 | `src/settings/commit_message.rs` | `SHOWN` | the "commit messages" part of the settings on view | while it shows | AppContext: `settings.commit_message_settings` |
 | `src/settings/editor.rs` | `TAB` | the "editor" part of the settings on view | while it shows | AppContext: `settings.editor_settings` |
-| `src/terminal/gpu.rs` | `SHARED` | Metal device, queue and pipeline of every terminal | app | stays: once per process |
 | `src/terminal/mod.rs` | `VIEWS` | the terminal views of every window by id | from opening to closing | AppContext: `terminal_views` |
 | `src/updates.rs` | `CONTROLLER` | the Sparkle updater | app | stays: once per process |
 | `src/window/mod.rs` | `WINDOWS` | the open window controllers | from opening to just after closing | AppContext: `windows` (a `Registry` with an id per window) |

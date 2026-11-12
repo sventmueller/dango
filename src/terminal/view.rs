@@ -8,6 +8,10 @@ use std::rc::Rc;
 use block2::RcBlock;
 use ide_core::settings::{Settings, keys};
 use ide_terminal::{Session, Size, Snapshot};
+use ide_ui_terminal::gpu::Surface;
+use ide_ui_terminal::model::{self, Command, State};
+use ide_ui_terminal::palette::{self, Theme};
+use ide_ui_terminal::render::{self, Fonts};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -27,12 +31,8 @@ use objc2_foundation::{
 use splat_i18n::t;
 
 use super::banner::Banner;
-use super::gpu::Surface;
 use super::input::KeyState;
-use super::model::{self, Command, State};
 use super::mouse::MouseState;
-use super::palette::{self, Theme};
-use super::render::{self, Fonts};
 use crate::util::{constant, guarded, item, ns, separator, set_target};
 use crate::window::WindowController;
 

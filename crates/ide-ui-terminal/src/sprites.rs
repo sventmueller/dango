@@ -19,8 +19,8 @@ use objc2_metal::{
     MTLDevice, MTLOrigin, MTLPixelFormat, MTLRegion, MTLSize, MTLTexture, MTLTextureDescriptor, MTLTextureUsage,
 };
 
-use super::boxdraw::{self, Pen};
-use super::render::{self, Canvas, Face, Fonts, Glyph, Stroke, rect};
+use crate::boxdraw::{self, Pen};
+use crate::render::{self, Canvas, Face, Fonts, Glyph, Stroke, rect};
 
 /// The side of a view's first atlas in pixels; it doubles when a frame does not fit, up to `LAST_SIDE`.
 const FIRST_SIDE: usize = 1024;

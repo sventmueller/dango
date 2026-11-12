@@ -23,6 +23,9 @@ ide-project = { path = "crates/ide-project" }
 ide-terminal = { path = "crates/ide-terminal" }
 ide-thread = { path = "crates/ide-thread" }
 ide-ui-common = { path = "crates/ide-ui-common" }
+ide-ui-export = { path = "crates/ide-ui-export" }
+ide-ui-icons = { path = "crates/ide-ui-icons" }
+ide-ui-terminal = { path = "crates/ide-ui-terminal" }
 splat-decoder = { path = "../splat/crates/splat-decoder" }
 splat-editor-state = { path = "../splat/crates/splat-editor-state" }
 splat-file-state = { path = "../splat/crates/splat-file-state" }
@@ -109,6 +112,9 @@ ide-project.workspace = true
 ide-terminal.workspace = true
 ide-thread.workspace = true
 ide-ui-common.workspace = true
+ide-ui-export.workspace = true
+ide-ui-icons.workspace = true
+ide-ui-terminal.workspace = true
 splat-decoder.workspace = true
 splat-editor-state.workspace = true
 splat-file-state.workspace = true
@@ -145,7 +151,7 @@ serde_json.workspace = true
 splat-i18n.workspace = true
 
 [features]
-selftest = ["splat-decoder/selftest", "splat-render/selftest"]
+selftest = ["splat-decoder/selftest", "splat-render/selftest", "ide-ui-export/selftest"]
 # Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
 dictation = ["dep:lowspeak", "dep:objc2-application-services", "dep:objc2-av-foundation"]
 

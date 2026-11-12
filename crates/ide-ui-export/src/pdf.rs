@@ -30,7 +30,8 @@ use splat_render::render::{Drawn, RenderCtx};
 
 use super::pictures::{PRINT_SCALE, may_carry_along};
 use super::{Job, Outcome, find, finish};
-use crate::util::{constant, main_after, main_soon};
+use ide_ui_common::constant;
+use ide_ui_common::util::{main_after, main_soon};
 
 /// The page margins, in points.
 const MARGIN: f64 = 56.0;

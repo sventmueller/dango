@@ -12,8 +12,8 @@ mod diag;
 mod dictation;
 mod editor;
 mod environment;
-mod file_icon;
 mod git_panel;
+mod host;
 mod lsp;
 mod markdown;
 mod menu;
@@ -37,6 +37,8 @@ use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
 use objc2_foundation::NSBundle;
 use splat_i18n as i18n;
 
+pub(crate) use ide_ui_icons as file_icon;
+
 fn main() {
     // The self-test's ACP agent is this program, started by the self-test with this variable instead of a window.
     #[cfg(feature = "selftest")]
@@ -45,6 +47,7 @@ fn main() {
         return;
     }
     i18n::install(&app::localized_strings());
+    ide_ui_export::install(&host::AppHost);
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {
         ide_core::paths::set_identity(&id.to_string());
     }

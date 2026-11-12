@@ -6,6 +6,10 @@ use std::time::Instant;
 
 use block2::RcBlock;
 use ide_terminal::{Damage, Session, Snapshot};
+use ide_ui_terminal::model::{self, Frame};
+use ide_ui_terminal::palette::Theme;
+use ide_ui_terminal::render::{self, Canvas, Overlay};
+use ide_ui_terminal::sprites::QuadCanvas;
 use objc2::DefinedClass;
 use objc2::rc::Weak;
 use objc2::runtime::AnyObject;
@@ -14,10 +18,6 @@ use objc2_core_graphics::CGContext;
 use objc2_foundation::{NSDate, NSRect, NSTimer};
 use splat_i18n::t;
 
-use super::model::{self, Frame};
-use super::palette::Theme;
-use super::render::{self, Canvas, Overlay};
-use super::sprites::QuadCanvas;
 use super::view::TerminalView;
 use crate::util::{constant, guarded, main_after};
 
