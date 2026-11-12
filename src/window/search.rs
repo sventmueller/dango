@@ -14,7 +14,7 @@ use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSControl, NSControlTextEditingDelegate, NSEvent, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
-    NSOutlineViewDelegate, NSSearchFieldDelegate, NSTableColumn, NSTextField, NSTextFieldDelegate, NSTextView, NSView,
+    NSOutlineViewDelegate, NSTableColumn, NSTextField, NSTextFieldDelegate, NSTextView, NSView,
 };
 use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
@@ -40,6 +40,8 @@ const REFRESH_DELAY: Duration = Duration::from_millis(500);
 
 const RETURN_KEYS: [u16; 2] = [36, 76];
 const ESCAPE_KEY: u16 = 53;
+/// How far the rows move toward the leading edge from where a source list puts them.
+const OUTDENT: f64 = 4.0;
 
 thread_local! {
     static PANELS: RefCell<Vec<Weak<SearchPanel>>> = const { RefCell::new(Vec::new()) };
@@ -172,8 +174,6 @@ define_class!(
     }
 
     unsafe impl NSTextFieldDelegate for SearchPanel {}
-
-    unsafe impl NSSearchFieldDelegate for SearchPanel {}
 
     unsafe impl NSOutlineViewDataSource for SearchPanel {
         #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
@@ -314,6 +314,26 @@ define_class!(
     unsafe impl NSObjectProtocol for SearchOutlineView {}
 
     impl SearchOutlineView {
+        /// A file's disclosure triangle below the chevrons of the fields, not in the source list's margin.
+        #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn outline_cell_frame(&self, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
+            super::file_outline::outdent(self, frame, OUTDENT, false)
+        }
+
+        /// The rows moved along with the triangle; a match begins where its file's icon does.
+        #[unsafe(method(frameOfCellAtColumn:row:))]
+        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
+            if column != 0 {
+                return frame;
+            }
+            let by = OUTDENT + self.levelForRow(row).max(0) as f64 * self.indentationPerLevel();
+            super::file_outline::outdent(self, frame, by, true)
+        }
+
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             if !guarded(false, || self.key(event)) {
@@ -480,6 +500,11 @@ impl SearchPanel {
     /// The panel's page: the fields and their options above the matches.
     pub fn page(&self) -> Option<&NSView> {
         self.ivars().views.get().map(|views| &*views.page)
+    }
+
+    /// The option toggles for the panel's title row.
+    pub fn header(&self) -> Option<&NSView> {
+        self.ivars().views.get().map(|views| &*views.header as &NSView)
     }
 
     /// Puts the keyboard focus into the field, with what it holds selected.
@@ -793,7 +818,8 @@ impl SearchPanel {
             }
             Spot::Line(path, index) => {
                 let group = state.groups.get(*state.index.get(&path)?)?;
-                Some(rows::line_row(mtm, group.lines.get(index)?, replacing.as_ref()))
+                let widest = group.lines.iter().map(|l| l.line).max().unwrap_or_default();
+                Some(rows::line_row(mtm, group.lines.get(index)?, widest, replacing.as_ref()))
             }
         }
     }

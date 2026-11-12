@@ -789,6 +789,9 @@ impl WindowController {
             if let Some(page) = search.page() {
                 panels.set_page(Panel::Search, page);
             }
+            if let Some(header) = search.header() {
+                panels.set_accessory(Panel::Search, header);
+            }
         }
         *ivars.files.borrow_mut() = Some(tree);
         *ivars.search.borrow_mut() = Some(search);

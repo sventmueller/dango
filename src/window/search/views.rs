@@ -1,21 +1,20 @@
-//! The views of the search panel: the field with its option toggles, the replace field behind a disclosure, the file
-//! filters, the status line and the list of matches.
+//! The views of the search panel: the option toggles for the panel's title row, the field, the replace field behind a
+//! disclosure, the file filters, the status line and the list of matches.
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
+use objc2::runtime::ProtocolObject;
+use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSBezelStyle, NSButton, NSButtonType, NSCellImagePosition, NSColor,
-    NSControlSize, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLayoutAttribute,
-    NSLayoutConstraintOrientation, NSScrollView, NSSearchField, NSStackView, NSTableColumn,
-    NSTableColumnResizingOptions, NSTableViewColumnAutoresizingStyle, NSTableViewStyle, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSAutoresizingMaskOptions, NSButton, NSButtonType, NSCellImagePosition, NSColor, NSControlSize,
+    NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLayoutAttribute, NSLayoutConstraintOrientation,
+    NSScrollView, NSStackView, NSTableColumn, NSTableColumnResizingOptions, NSTableViewColumnAutoresizingStyle,
+    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSAttributedString, NSDictionary, NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::{SearchOutlineView, SearchPanel, Toggle};
-use crate::util::{constant, ns, pin_edges, set_action, symbol};
+use crate::util::{ns, pin_edges, set_action, symbol, symbol_button};
 
 const MARGIN: f64 = 8.0;
 const SMALL_FONT: f64 = 11.0;
@@ -23,17 +22,25 @@ const SMALL_FONT: f64 = 11.0;
 const CHEVRON_WIDTH: f64 = 12.0;
 /// The size of both chevrons, the same as the folder tree's.
 const CHEVRON_POINTS: f64 = 10.0;
+/// Where every field begins: after a chevron and the stack's spacing.
+const FIELD_INDENT: f64 = CHEVRON_WIDTH + 2.0;
+/// The width of "Alle ersetzen"; the fields without it end where the replace field does.
+const ALL_WIDTH: f64 = 18.0;
+/// As large as the symbols in the other panels' title rows.
+const HEADER_POINTS: f64 = 12.0;
 
 pub(super) struct Views {
     pub(super) page: Retained<NSView>,
-    pub(super) field: Retained<NSSearchField>,
+    /// The option toggles for the panel's title row.
+    pub(super) header: Retained<NSStackView>,
+    pub(super) field: Retained<NSTextField>,
     toggles: Vec<(Toggle, Retained<NSButton>)>,
     pub(super) replace_toggle: Retained<NSButton>,
     replace_row: Retained<NSStackView>,
     pub(super) replace: Retained<NSTextField>,
     pub(super) replace_all: Retained<NSButton>,
     disclosure: Retained<NSButton>,
-    pub(super) globs: Retained<NSStackView>,
+    pub(super) globs: Retained<NSView>,
     pub(super) include: Retained<NSTextField>,
     pub(super) exclude: Retained<NSTextField>,
     pub(super) status: Retained<NSTextField>,
@@ -47,15 +54,18 @@ impl Views {
         let field = search_field(mtm, panel);
         let toggles: Vec<(Toggle, Retained<NSButton>)> =
             Toggle::ALL.iter().map(|t| (*t, toggle(mtm, panel, *t))).collect();
+        let header = NSStackView::new(mtm);
+        header.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        header.setSpacing(2.0);
+        for (_, button) in &toggles {
+            header.addArrangedSubview(button);
+        }
         let replace_toggle = replace_toggle(mtm, panel);
         let field_row = NSStackView::new(mtm);
         field_row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         field_row.setSpacing(2.0);
         field_row.addArrangedSubview(&replace_toggle);
         field_row.addArrangedSubview(&field);
-        for (_, button) in &toggles {
-            field_row.addArrangedSubview(button);
-        }
         field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
         let (replace_row, replace, replace_all) = replace_row(mtm, panel);
         let disclosure = disclosure(mtm, panel);
@@ -71,12 +81,7 @@ impl Views {
             t("Ausschließen, z. B. tests, *.md"),
             t("Dateien ausschließen"),
         );
-        let globs = NSStackView::new(mtm);
-        globs.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        globs.setSpacing(4.0);
-        globs.addArrangedSubview(&include);
-        globs.addArrangedSubview(&exclude);
-        globs.setHidden(true);
+        let globs = glob_fields(mtm, &include, &exclude);
         let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
         status.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
         status.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -94,9 +99,14 @@ impl Views {
         for view in [&*field_row as &NSView, &replace_row, &disclosure, &globs, &status] {
             bar.addArrangedSubview(view);
         }
-        for view in [&*field_row as &NSView, &replace_row, &globs, &status] {
+        for (view, inset) in [
+            (&*field_row as &NSView, MARGIN + 2.0 + ALL_WIDTH),
+            (&replace_row, MARGIN),
+            (&globs, MARGIN + 2.0 + ALL_WIDTH),
+            (&status, MARGIN),
+        ] {
             view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&bar.trailingAnchor(), -MARGIN)
+                .constraintEqualToAnchor_constant(&bar.trailingAnchor(), -inset)
                 .setActive(true);
         }
         let (results, outline) = results(mtm, panel);
@@ -109,6 +119,7 @@ impl Views {
         layout(&page, &bar, &body);
         Views {
             page,
+            header,
             field,
             toggles,
             replace_toggle,
@@ -161,13 +172,10 @@ impl Views {
         self.paint_toggles();
     }
 
-    /// Writes the title of each toggle in the accent colour while it is on, as its bezel shows no state.
+    /// Draws each toggle in the accent colour while it is on, as a borderless button shows no state.
     pub(super) fn paint_toggles(&self) {
         for (_, button) in &self.toggles {
-            let on = button.state() == NSControlStateValueOn;
-            let title = toggle_title(&button.title().to_string(), on);
-            button.setAttributedTitle(&title);
-            button.setAttributedAlternateTitle(&title);
+            button.setContentTintColor(Some(&toggle_color(button.state() == NSControlStateValueOn)));
         }
     }
 
@@ -225,70 +233,47 @@ fn layout(page: &NSView, bar: &NSStackView, body: &NSView) {
     }
 }
 
-fn search_field(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSSearchField> {
-    let field = NSSearchField::new(mtm);
+/// A plain field like the replace field below it; typing, Return and Esc reach the panel through the delegate.
+fn search_field(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSTextField> {
+    let field = NSTextField::textFieldWithString(&ns(""), mtm);
     let title = t("Im Projekt suchen");
     field.setPlaceholderString(Some(&ns(title)));
     crate::util::set_label(&field, Some(title));
     field.setControlSize(NSControlSize::Small);
     field.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
-    // Typing reaches the panel through the delegate; the action comes only with Return and the clear button.
-    field.setSendsWholeSearchString(true);
-    set_action(&field, panel, sel!(ideSearchOptionChanged:));
     // SAFETY: The field holds its delegate weakly; the window controller keeps the panel alive while the field shows.
     unsafe { field.setDelegate(Some(ProtocolObject::from_ref(panel))) };
     field
 }
 
-/// A button that switches one search option, labelled for VoiceOver with what it switches.
+/// A button in the panel's title row that switches one search option, labelled for VoiceOver with what it switches.
 fn toggle(mtm: MainThreadMarker, panel: &SearchPanel, toggle: Toggle) -> Retained<NSButton> {
-    let (title, name) = match toggle {
-        Toggle::Case => ("Aa", t("Groß-/Kleinschreibung beachten")),
-        Toggle::Word => ("ab", t("Ganzes Wort")),
-        Toggle::Regex => (".*", t("Regulärer Ausdruck")),
+    let (name, description) = match toggle {
+        Toggle::Case => ("textformat", t("Groß-/Kleinschreibung beachten")),
+        Toggle::Word => ("textformat.abc.dottedunderline", t("Ganzes Wort")),
+        Toggle::Regex => ("asterisk", t("Regulärer Ausdruck")),
     };
-    // SAFETY: A nil target sends the action along the responder chain until `set_action` names the panel.
-    let button =
-        unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, Some(sel!(ideSearchOptionChanged:)), mtm) };
-    set_action(&button, panel, sel!(ideSearchOptionChanged:));
+    let button = symbol_button(
+        mtm,
+        name,
+        description,
+        HEADER_POINTS,
+        Some(panel),
+        sel!(ideSearchOptionChanged:),
+    );
     button.setButtonType(NSButtonType::PushOnPushOff);
-    button.setBezelStyle(NSBezelStyle::AccessoryBarAction);
-    button.setControlSize(NSControlSize::Small);
-    button.setToolTip(Some(&ns(name)));
-    crate::util::set_label(&button, Some(name));
+    crate::util::set_label(&button, Some(description));
     button.setState(NSControlStateValueOff);
-    button.setAttributedTitle(&toggle_title(title, false));
+    button.setContentTintColor(Some(&toggle_color(false)));
     button
 }
 
-fn toggle_title(title: &str, on: bool) -> Retained<NSAttributedString> {
-    // SAFETY: AppKit sets its font weight constants when it loads.
-    let weight = unsafe {
-        if on {
-            objc2_app_kit::NSFontWeightBold
-        } else {
-            objc2_app_kit::NSFontWeightRegular
-        }
-    };
-    let font = NSFont::monospacedSystemFontOfSize_weight(SMALL_FONT, weight);
-    let color = if on {
+fn toggle_color(on: bool) -> Retained<NSColor> {
+    if on {
         NSColor::controlAccentColor()
     } else {
         NSColor::secondaryLabelColor()
-    };
-    // The titles are patterns such as ".*", which a right-to-left interface would turn around.
-    let style = objc2_app_kit::NSMutableParagraphStyle::new();
-    style.setBaseWritingDirection(objc2_app_kit::NSWritingDirection::LeftToRight);
-    style.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-    let keys = [
-        constant!(objc2_app_kit::NSFontAttributeName),
-        constant!(objc2_app_kit::NSForegroundColorAttributeName),
-        constant!(objc2_app_kit::NSParagraphStyleAttributeName),
-    ];
-    let attributes =
-        NSDictionary::<NSString, AnyObject>::from_retained_objects(&keys, &[font.into(), color.into(), style.into()]);
-    // SAFETY: The dictionary holds a font, a colour and a paragraph style under their AppKit keys.
-    unsafe { NSAttributedString::initWithString_attributes(NSAttributedString::alloc(), &ns(title), Some(&attributes)) }
+    }
 }
 
 /// The chevron before the search field that shows the replace field, as in VS Code.
@@ -331,7 +316,7 @@ fn replace_row(
     // SAFETY: The field holds its delegate weakly; the window controller keeps the panel alive while the field shows.
     unsafe { field.setDelegate(Some(ProtocolObject::from_ref(panel))) };
     field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
-    let all = crate::util::symbol_button(
+    let all = symbol_button(
         mtm,
         "arrow.2.squarepath",
         t("Alle ersetzen"),
@@ -340,6 +325,7 @@ fn replace_row(
         sel!(ideSearchReplaceAll:),
     );
     all.setEnabled(false);
+    all.widthAnchor().constraintEqualToConstant(ALL_WIDTH).setActive(true);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setSpacing(2.0);
@@ -382,6 +368,34 @@ fn size_chevron(button: &NSButton) {
             unsafe { objc2_app_kit::NSFontWeightSemibold },
         ),
     ));
+}
+
+/// The include and exclude fields, beginning where the fields above do; hidden until the disclosure opens them.
+fn glob_fields(mtm: MainThreadMarker, include: &NSTextField, exclude: &NSTextField) -> Retained<NSView> {
+    let globs = NSView::new(mtm);
+    for field in [include, exclude] {
+        globs.addSubview(field);
+        field.setTranslatesAutoresizingMaskIntoConstraints(false);
+        field
+            .leadingAnchor()
+            .constraintEqualToAnchor_constant(&globs.leadingAnchor(), FIELD_INDENT)
+            .setActive(true);
+        field
+            .trailingAnchor()
+            .constraintEqualToAnchor(&globs.trailingAnchor())
+            .setActive(true);
+    }
+    for constraint in [
+        include.topAnchor().constraintEqualToAnchor(&globs.topAnchor()),
+        exclude
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&include.bottomAnchor(), 4.0),
+        exclude.bottomAnchor().constraintEqualToAnchor(&globs.bottomAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    globs.setHidden(true);
+    globs
 }
 
 fn glob_field(mtm: MainThreadMarker, panel: &SearchPanel, placeholder: &str, name: &str) -> Retained<NSTextField> {

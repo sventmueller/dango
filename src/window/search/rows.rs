@@ -22,7 +22,6 @@ use super::SearchPanel;
 use crate::util::{constant, guarded, label, ns};
 
 const FONT_SIZE: f64 = 11.0;
-const NUMBER_WIDTH: f64 = 30.0;
 
 /// What the rows need while the replace field shows: the panel their buttons talk to, the replacement and, for a
 /// regular expression, the options that fill in its groups.
@@ -223,16 +222,22 @@ pub(super) fn file_row(
 }
 
 /// A matching line: its number and the line with the matches marked, left to right in every interface language, as
-/// code is. VoiceOver reads "line n:" with the text.
-pub(super) fn line_row(mtm: MainThreadMarker, line: &LineResult, replacing: Option<&Replacing>) -> Retained<NSView> {
+/// code is. The numbers of a file are as wide as `widest`, its largest. VoiceOver reads "line n:" with the text.
+pub(super) fn line_row(
+    mtm: MainThreadMarker,
+    line: &LineResult,
+    widest: u64,
+    replacing: Option<&Replacing>,
+) -> Retained<NSView> {
     let cell = ResultCell::new(mtm);
     cell.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
-    let number = label(mtm, &line.line.to_string());
     // SAFETY: AppKit sets its font weight constants when it loads.
-    number.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-        FONT_SIZE,
-        unsafe { objc2_app_kit::NSFontWeightRegular },
-    )));
+    let font = NSFont::monospacedDigitSystemFontOfSize_weight(FONT_SIZE, unsafe { objc2_app_kit::NSFontWeightRegular });
+    let sample = label(mtm, &"0".repeat(widest.max(line.line).to_string().len()));
+    sample.setFont(Some(&font));
+    let number_width = sample.intrinsicContentSize().width;
+    let number = label(mtm, &line.line.to_string());
+    number.setFont(Some(&font));
     number.setTextColor(Some(&NSColor::secondaryLabelColor()));
     number.setAlignment(NSTextAlignment::Right);
     crate::util::hide_from_voiceover(&number);
@@ -252,7 +257,7 @@ pub(super) fn line_row(mtm: MainThreadMarker, line: &LineResult, replacing: Opti
     text.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
     for constraint in [
         number.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
-        number.widthAnchor().constraintEqualToConstant(NUMBER_WIDTH),
+        number.widthAnchor().constraintEqualToConstant(number_width),
         number.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         text.leadingAnchor()
             .constraintEqualToAnchor_constant(&number.trailingAnchor(), 6.0),
