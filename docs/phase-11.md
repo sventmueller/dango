@@ -1,36 +1,38 @@
 # Dango — Phase 11: Zed-Lücken und Architektur
 
-**Entwurf, nicht freigegeben.** Nach der Freigabe gehen die Entscheidungen E77–E97 und die Risiken R14–R19 und R21
-in [plan.md](plan.md) über; bis dahin gilt plan.md allein. E85, E86 und R20 sind mit B11 entfallen. Die Kürzel B…
-stammen aus dem Vergleich mit Zed (B1–B18) und aus dem Architektur-Auftrag des Owners (B19–B23). *Review:* Codex hat den Entwurf am 2026-11-12 gegen Code und
+**Freigegeben am 2026-11-12.** Die Entscheidungen E81–E102 und die Risiken R14–R19, R21 und R22 stehen als
+Kurzfassung in [plan.md](plan.md); die Einzelheiten hier sind ebenso verbindlich. E89, E90 und R20 sind mit B11
+entfallen. Die Nummern lauteten im Entwurf E77–E98 und wurden um vier verschoben, weil plan.md E77–E80 inzwischen
+selbst vergeben hat. Die Kürzel B…
+stammen aus dem Vergleich mit Zed (B1–B18) und aus dem Architektur-Auftrag des Owners (B19–B23); B24 ist ein späterer Wunsch des Owners. *Review:* Codex hat den Entwurf am 2026-11-12 gegen Code und
 plan.md geprüft; seine 18 Befunde (C1–C18) sind eingearbeitet und an der jeweiligen Stelle markiert. C8 (E76 ist in
-plan.md schon vergeben, Terminal mit Metal) ist durch die Nummern E77–E96 erledigt.
+plan.md schon vergeben, Terminal mit Metal) ist durch die Nummern E81–E100 erledigt.
 
 Umfang: B14 Code Actions/Inlay Hints/Signaturhilfe · B15 LSP-Navigation · B16 Git-Komfort ·
 B4 Edit Prediction · B1 Debugger · B19 UI-Crates · B20 Fuzzing und Property-Tests · B21 Model/View-Trennung ·
-B22 Thread-Locals · B23 Doku und Doctests.
+B22 Thread-Locals · B23 Doku und Doctests · B24 Subagents und Hintergrundprozesse im Sitzungskopf.
 
 ## Reihenfolge
 
 | Stufe | Inhalt | Größe | Warum an dieser Stelle |
 |---|---|---|---|
-| 1 Absicherung | B20, B23 | S–M | Unabhängig von allem; der neue DAP-Parser aus Stufe 4 bekommt sein Fuzz-Ziel von Anfang an |
-| 2 Editor | B14, B15, B16 | M–L | Beginnt mit dem Prototyp von E77 als Sperre: Erst wenn er die Abnahme besteht, bauen B14, B16 und später B4 und B1 darauf; vor E78 kommt der neue Anwendungsweg für Workspace-Edits |
+| 1 Absicherung | B20, B23, B24 | S–M | Unabhängig von allem; der neue DAP-Parser aus Stufe 4 bekommt sein Fuzz-Ziel von Anfang an. B24 baut nur auf Vorhandenem auf (Thread-Modell, Aktivitäts-Popover) und kann jederzeit dazwischen |
+| 2 Editor | B14, B15, B16 | M–L | Beginnt mit dem Prototyp von E81 als Sperre: Erst wenn er die Abnahme besteht, bauen B14, B16 und später B4 und B1 darauf; vor E82 kommt der neue Anwendungsweg für Workspace-Edits |
 | 3 Struktur | B22, B21 | M–L | Vor den großen neuen Oberflächen (Debug-Panel, Vorhersage), damit die gleich im neuen Muster entstehen |
-| 4 Vorhersage und Debugger | B4, B1 | L–XL | B4 braucht E77, B1 braucht E77 und die Struktur aus Stufe 3; B1 legt das Prozess-Eigentum fest, bevor die Oberfläche entsteht |
-| 5 Build | B19 | M | Teilschnitt (E95); profitiert von den Grenzen aus Stufe 3 |
+| 4 Vorhersage und Debugger | B4, B1 | L–XL | B4 braucht E81, B1 braucht E81 und die Struktur aus Stufe 3; B1 legt das Prozess-Eigentum fest, bevor die Oberfläche entsteht |
+| 5 Build | B19 | M | Teilschnitt (E99); profitiert von den Grenzen aus Stufe 3 |
 
 Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask selftest` mit neuen Szenarien,
 `make perf` (E25), VoiceOver-Prüfung der neuen Ansichten, neue Texte in `en.lproj` und den 33 weiteren Sprachen nach
-[glossary.md](glossary.md) (E15), dazu die HIG-Abnahme (E97).
+[glossary.md](glossary.md) (E15), dazu die HIG-Abnahme (E101).
 
 ## HIG-Konformität
 
-- **E97 Apples Human Interface Guidelines als Abnahme** *(ergänzt E3)*. Grundlage sind die HIG-Seiten
+- **E101 Apples Human Interface Guidelines als Abnahme** *(ergänzt E3)*. Grundlage sind die HIG-Seiten
   [Keyboards](https://developer.apple.com/design/human-interface-guidelines/keyboards) und
   [Generative AI](https://developer.apple.com/design/human-interface-guidelines/generative-ai) (Stand 2026-06-08);
   wo die HIG nichts sagt, ist Xcode das Vorbild, weil Mac-Entwickler dessen Bedienung kennen. Die Stufen 1, 3 und 5
-  ändern nichts an der Oberfläche; E97 betrifft B14, B15, B16, B4 und B1.
+  ändern nichts an der Oberfläche, außer B24; E101 betrifft B24, B14, B15, B16, B4 und B1.
 - **Menüs.** Jeder neue Befehl steht in der Menüleiste, auch wenn er ein Kürzel, einen Knopf oder ein Kontextmenü
   hat. Was gerade nicht geht, ist ausgegraut, nicht ausgeblendet; das gilt auch für die Knöpfe des Debuggers. Neues
   Menü „Debuggen“ zwischen „Gehe zu“ und „Fenster“ (HIG-Reihenfolge: App, Ablage, Bearbeiten, Format, Darstellung,
@@ -42,7 +44,7 @@ Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask sel
   - Eigene Kürzel nur für häufige Befehle, mit ⌘ als Hauptmodifikator; ⌃ nur, wo Xcode es vorgibt.
   - Befund im heutigen Stand: `view.whitespace` liegt auf ⌥⌘I, dem Standard für den Inspektor
     (`crates/ide-core/src/keymap.rs`). Es wandert ohne Kürzel ins Menü „Darstellung“; ⌥⌘I blendet künftig den
-    Inspektor ein und aus (E90).
+    Inspektor ein und aus (E94).
   - Bewusste, belegte Ausnahmen bleiben: ⌘T für „Neuer Tab“ und ⇧⌘[ / ⇧⌘] für den Tabwechsel wie in Safari
     (die HIG-Bedeutungen Schriften-Fenster und Ausrichten ergeben in Dango keinen Sinn, was die HIG erlaubt).
   - Neuer Test in `ide-core`: Die Vorgabe-Kürzel werden gegen die Standardtabelle der HIG geprüft; ein Treffer schlägt
@@ -76,7 +78,7 @@ Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask sel
     ein Sheet einmal je Anbieter um Erlaubnis und sagt, was gesendet wird (Datei-Inhalt rund um den Cursor bzw. der
     Diff). Die Erlaubnis lässt sich in den Einstellungen zurücknehmen. Lokale Modelle brauchen keine Erlaubnis; die
     Einstellungen sagen, dass der Code den Mac nicht verlässt.
-  - „Gesendeten Inhalt zeigen“ neben dem Commit-Knopf zeigt genau den geprüften Text (E84).
+  - „Gesendeten Inhalt zeigen“ neben dem Commit-Knopf zeigt genau den geprüften Text (E88).
   - Fortschritt konkret („Fasst 12 geänderte Dateien zusammen …“) mit Abbrechen; Fehler in einfachen Worten mit dem
     nächsten Schritt.
 - **Begriffe.** Neue Fachwörter (Haltepunkt, Aufrufliste, Überwachter Ausdruck, Schnellkorrektur, Inlay-Hinweis)
@@ -86,11 +88,15 @@ Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask sel
 ## Stufe 1 — Absicherung
 
 ### B20 Fuzzing und Property-Based Testing
+*Umgesetzt am 2026-11-12:* sieben Ziele in sechs Crates (`cargo xtask fuzz`, Einzelheiten in
+[development.md](development.md#fuzzing)), sieben Eigenschaften in `crates/ide-document/tests/properties.rs`, das
+Selftest-Szenario `editor-undo`.
+
 Auswirkung: Abstürze durch kaputte oder bösartige Eingaben von Language Servern, Agenten, Terminalprogrammen und git
 werden vor dem Nutzer gefunden. Fuzzing beweist keine Panic-Freiheit, es findet Abstürze in den Eingaben, die es
 durchprobiert; der Nutzen wächst mit der Laufzeit.
 
-- **E91 Fuzzing mit cargo-fuzz, getrennt von `make check`.** cargo-fuzz braucht nightly (Sanitizer), Dango ist auf
+- **E95 Fuzzing mit cargo-fuzz, getrennt von `make check`.** cargo-fuzz braucht nightly (Sanitizer), Dango ist auf
   1.99.1 festgelegt (E16). Deshalb `make fuzz` mit `cargo +nightly fuzz`, je Ziel eine feste Laufzeit (Standard
   60 s, `FUZZ_SECONDS=` überschreibt), Fundstücke werden als Regressionstest in die normale Testsuite übernommen und
   laufen dort mit 1.99.1. Startkorpus aus den vorhandenen Mitschnitten (`crates/ide-claude/tests/fixtures/*.ndjson`
@@ -103,7 +109,7 @@ durchprobiert; der Nutzen wächst mit der Laufzeit.
   5. Zusätzlich, weil der Auftrag „AI-Streamings“ nennt: `ide-claude` `protocol::parse` plus Abbildung und
      `ide-agent` `sse.rs` (SSE-Parser für alle Anbieter des eigenen Agenten).
   6. In Stufe 4 kommt der neue Parser dazu: `ide-dap`.
-- **E92 proptest in `make check`.** Feste Fallzahl, Fehlschläge in `proptest-regressions/` eingecheckt, kein
+- **E96 proptest in `make check`.** Feste Fallzahl, Fehlschläge in `proptest-regressions/` eingecheckt, kein
   Zufall zwischen zwei Läufen von `make check` (fester Seed). Ziele in `ide-document`: `Document::apply` und
   `replace_all` (Text bleibt gleich dem Ergebnis eines einfachen Referenzmodells), Positionsabbildung
   UTF-8/UTF-16/LSP (hin und zurück verlustfrei), `merge.rs` (Dreiwege-Zusammenführung des Konfliktbalkens).
@@ -114,9 +120,11 @@ durchprobiert; der Nutzen wächst mit der Laufzeit.
 Abnahme: Alle Ziele laufen je 10 Minuten ohne Fund oder mit behobenen Funden; proptest grün in `make check`.
 
 ### B23 Dokumentation und Doctests
+*Umgesetzt am 2026-11-12:* je Crate ein Doctest und eine README mit Diagramm, geprüft von `tests/crate_readmes.rs`.
+
 Auswirkung: Die zentralen Schnittstellen haben ein ausführbares Beispiel, das bei jeder Änderung mitgeprüft wird.
 
-- **E96 Doctests und Crate-READMEs.** `cargo test --workspace` führt Doctests bereits aus; es gibt nur keine. Je
+- **E100 Doctests und Crate-READMEs.** `cargo test --workspace` führt Doctests bereits aus; es gibt nur keine. Je
   Fenster-freiem Crate bekommt die zentrale API ein lauffähiges Beispiel im Doc-Kommentar, u. a. `Lane::ask`
   (ide-core), `Document::apply` (ide-document; ein `Document::edit` gibt es nicht), `Tree::expand`
   (ide-project), `Supervisor` (ide-process), `protocol::parse` (ide-claude), `diff` (ide-git). Beispiele ohne Netz und
@@ -127,9 +135,58 @@ Auswirkung: Die zentralen Schnittstellen haben ein ausführbares Beispiel, das b
 
 Abnahme: `cargo test --doc --workspace` mit mindestens einem Beispiel je Crate grün.
 
+### B24 Subagents und Hintergrundprozesse im Sitzungskopf
+*Umgesetzt am 2026-11-12.*
+
+Auswirkung: Man sieht der Sitzung an, ob sie gerade Subagents oder Shells laufen hat, und kommt mit einem Klick an
+deren Liste mit Laufzeit, letzter Ausgabe und Stopp, ohne `/tasks` zu tippen.
+
+Befund: Die Daten gibt es schon. Das Thread-Modell führt je Sitzung Subagents und Hintergrundarbeit
+(`ide-thread`, Claude füllt beides aus `task_started/progress/updated` und `background_tasks_changed`,
+`ide-claude/src/mapping.rs`). Der Kopf hat dafür heute einen einzigen Knopf „Aufgaben dieser Sitzung“
+(`list.bullet.indent`, `src/agent/header.rs`), der das Aktivitäts-Popover auf diese Sitzung beschränkt
+(`activity::show_tab`). ACP-Agenten (Codex, Gemini) melden weder Subagents noch Hintergrundarbeit.
+
+- **E102 Zwei Knöpfe statt „Aufgaben dieser Sitzung“** *(Wunsch des Owners, Symbol nach seiner Wahl; ändert die Kopfzeile aus E4/AI-Tab)*.
+  Rechts im Kopf des AI-Tabs, an der Stelle des bisherigen Knopfs: `person.2` für die Subagents und
+  `terminal` für die Hintergrundprozesse, 13 pt wie die Nachbarn.
+  - *Symbol:* SF Symbols hat kein Roboter-Motiv (auf macOS 27 geprüft: `robot`, `robot.fill` fehlen). Statt eines
+    eigenen Symbols nimmt der Knopf `person.2`, das die Aktivität schon für Subagent-Zeilen benutzt
+    (`src/activity/mod.rs`); Knopf und Liste sehen damit gleich aus, und E101 braucht keine Ausnahme. Verworfen:
+    `apple.intelligence` (Apples Marke, laut HIG nicht für eigene Funktionen), `brain` (verwechselbar mit „Denken“),
+    `arrow.triangle.branch` (Git-Branch), `sparkle` (steht für die Sitzung selbst).
+  - *Zustand ohne Zahl im Symbol* (wie E69 und die Aktivität): Läuft etwas, ist das Symbol in Akzentfarbe, sonst
+    sekundär; Nebensachen (`ambient`) zählen nicht als laufend. Die Zahl steht im Tooltip und in der VoiceOver-Beschriftung („Subagents: 2 laufen, 3 fertig“,
+    „Hintergrundprozesse: 1 läuft“), damit der Zustand nicht nur an der Farbe hängt (E101).
+  - *Ausgegraut statt ausgeblendet* (E101): ohne Einträge und bei Agenten, die nichts melden; der Tooltip sagt
+    warum („Diese Sitzung hat noch keine Subagenten gestartet“, „Codex meldet keine Subagenten“). Das gilt für
+    ACP-Agenten und den eigenen Agenten; nur Claude meldet beides.
+- **Liste.** Ein Klick öffnet das vorhandene Aktivitäts-Popover, beschränkt auf diese Sitzung und eine Art; kein
+  zweites Popover. `activity` bekommt dafür neben `only` einen Filter (Subagents / Hintergrund), die Zeilen bauen
+  die vorhandenen Funktionen, aufgeteilt in je eine für Subagents und Hintergrund.
+  - Subagents: alle Subagents der Sitzung, auch fertige, laufende oben, je Zeile Typ und Beschreibung, Status,
+    Laufzeit, Tokens, letztes Werkzeug; „Zeigen“ springt zur Karte in der Zeitleiste, „Stopp“, wo Claude es
+    anbietet. Workflows stehen hier, weil sie Agenten starten.
+  - Terminal: Hintergrund-Shells und Monitore der Sitzung, laufende oben, beendete mit Ende-Status darunter, bis
+    die Sitzung neu beginnt (das Thread-Modell behält dafür die letzten 50 beendeten; was die CLI beim Beenden
+    ihres Prozesses noch laufen hatte, steht als „Gestoppt“ da); je Zeile Befehl, Status, Laufzeit, letzte Ausgabezeile; „Ausgabe zeigen“ (ganze
+    Ausgabe im Tab), „Stopp“. Was der Agent als Nebensache meldet (`ambient`), steht gedämpft.
+  - Die Liste aktualisiert sich offen weiter; Anlass ist die vorhandene Meldung `refresh.overview`
+    (`src/agent/refresh.rs`), die auch die Knöpfe neu einfärbt.
+- **Menü und Tastatur** (E101): „Subagenten dieser Sitzung“ und „Hintergrundprozesse dieser Sitzung“ im Menü „Darstellung“,
+  ohne eigenes Kürzel, ausgegraut außerhalb eines AI-Tabs. `/tasks` öffnet weiter die gemeinsame Übersicht beider
+  Arten.
+- **Abgrenzung.** Claude im Terminal-Tab hat keinen Sitzungskopf; dessen Kindprozesse zeigt die Aktivität schon als
+  Vordergrundprozesse des Terminals.
+
+Abnahme: Selftest mit einem Claude-Mitschnitt, der zwei Subagents (einer im Hintergrund) und eine Hintergrund-Shell
+startet: Farbe, Tooltip und VoiceOver-Text beider Knöpfe vor, während und nach dem Lauf; beide Listen mit den
+erwarteten Zeilen; „Stopp“ und „Zeigen“; ausgegraute Knöpfe in einer ACP-Sitzung; Fotos hell, dunkel und mit
+erhöhtem Kontrast; Barrierefreiheits-Audit.
+
 ## Stufe 2 — Editor
 
-### E77 Einblendungen (gemeinsamer Baustein)
+### E81 Einblendungen (gemeinsamer Baustein)
 Inlay Hints, Ghost Text (B4), Blame (B16) und Inline-Werte des Debuggers (B1) zeigen Text, der nicht in der Datei
 steht. TextKit 2 kennt dafür nichts Fertiges, und der Text darf nicht in den Speicher des Editors (Undo, Sichern,
 Positionen).
@@ -149,7 +206,7 @@ Positionen).
 - Rechts-nach-links-Oberflächen ändern nichts, Code bleibt links-nach-rechts (E3).
 - VoiceOver: Das Overlay ist heute von der Bedienungshilfe ausgenommen. Einblendungen werden nicht als Teil der Zeile
   gelesen, sondern über einen eigenen Rotor „Hinweise“ mit Text und Zeile.
-- **Prototyp als Sperre.** Vor jedem Verbraucher entsteht E77 allein und muss im Selftest bestehen: leeres Dokument,
+- **Prototyp als Sperre.** Vor jedem Verbraucher entsteht E81 allein und muss im Selftest bestehen: leeres Dokument,
   Zeilenanfang, Emoji und kombinierende Zeichen, japanische Eingabe mit offener Markierung, Cursor- und
   Klickposition links und rechts der Lücke, Faltung, Zeilenumbruch, klickbarer Hint, VoiceOver-Rotor, unverändertes
   Undo und unveränderte Datei nach dem Sichern, und der Nachweis, dass der Editor auf TextKit 2 bleibt (kein Aufruf
@@ -161,13 +218,13 @@ beim Aufruf, wie in Zed und VS Code. Die Anfragen stehen schon in `crates/ide-ls
 (`code_actions`, `resolve_code_action`, `inlay_hints`, `signature_help`), das Anwenden fremder Edits über
 `workspace/applyEdit` ebenfalls.
 
-- **E78 Code Actions.** Glühbirne in der Randspalte (`ruler.rs`) der Cursorzeile, sobald es für die Stelle Aktionen
+- **E82 Code Actions.** Glühbirne in der Randspalte (`ruler.rs`) der Cursorzeile, sobald es für die Stelle Aktionen
   gibt (Anfrage nach kurzer Ruhe, abgebrochen beim nächsten Tastendruck). ⌥⌘A (nicht ⌘., das ist „Abbrechen“, und
-  nicht Xcodes ⇧⌘A, das ist „Auswahl aufheben“, E97), der Menüpunkt „Editor ▸ Schnellkorrektur …“ und das
+  nicht Xcodes ⇧⌘A, das ist „Auswahl aufheben“, E101), der Menüpunkt „Editor ▸ Schnellkorrektur …“ und das
   Kontextmenü öffnen die Aktionen als `NSMenu` am Cursor, bevorzugte Aktion oben; „Refactoring …“ und
   „Quellaktionen …“ (u. a. Importe ordnen) als eigene Menüpunkte. Die Glühbirne ist das SF Symbol `lightbulb`
   mit VoiceOver-Beschriftung. Befehle der Aktionen über `workspace/executeCommand`.
-- **Voraussetzung für E78: ein neuer Anwendungsweg für Workspace-Edits** *(Review C1)*. Der heutige in
+- **Voraussetzung für E82: ein neuer Anwendungsweg für Workspace-Edits** *(Review C1)*. Der heutige in
   `src/lsp/edits.rs` (`split`, `apply_workspace_edit`) ist für Code Actions nicht sicher genug: Er verwirft
   `TextDocumentEdit.version`, sammelt Edits je Pfad und führt alle Datei-Operationen (Anlegen, Umbenennen, Löschen)
   vor den Text-Edits aus, und das, bevor geprüft ist, ob ihre Pfade im Ordner liegen. Ein „bearbeiten, dann
@@ -181,13 +238,13 @@ beim Aufruf, wie in Zed und VS Code. Die Anfragen stehen schon in `crates/ide-ls
   - Scheitert ein Schritt beim Ausführen, endet der Vorgang; die Meldung nennt, welche Dateien schon geändert sind,
     und die geöffneten lassen sich je Datei per Undo zurücknehmen.
   - Tests: bearbeiten-dann-umbenennen, veraltete Version, Symlink aus dem Ordner hinaus, Undo nach Teilfehler.
-- **E79 Inlay Hints.** Standard an, Schalter im Menü Ansicht und in den Einstellungen, je Sprache abschaltbar.
-  Darstellung über E77 in Sekundärfarbe, kleinere Schrift. Neu abgefragt für den sichtbaren Bereich nach
+- **E83 Inlay Hints.** Standard an, Schalter im Menü Ansicht und in den Einstellungen, je Sprache abschaltbar.
+  Darstellung über E81 in Sekundärfarbe, kleinere Schrift. Neu abgefragt für den sichtbaren Bereich nach
   Änderung oder Scrollen und auf `workspace/inlayHint/refresh` (schon empfangen). Tooltip des Hints aus `tooltip`,
   Klick auf einen Hint mit Ort springt dorthin.
-- **E80 Signaturhilfe.** Kleines Fenster über dem Cursor (wie die Vervollständigungsliste in `complete.rs`, mit
+- **E84 Signaturhilfe.** Kleines Fenster über dem Cursor (wie die Vervollständigungsliste in `complete.rs`, mit
   Systemmaterial, nimmt nicht den Fokus), ausgelöst durch die Trigger-Zeichen des Servers und den Menüpunkt
-  „Editor ▸ Parameter zeigen“ ohne eigenes Kürzel (⇧⌘Leer belegt das System, E97); aktiver Parameter
+  „Editor ▸ Parameter zeigen“ ohne eigenes Kürzel (⇧⌘Leer belegt das System, E101); aktiver Parameter
   hervorgehoben und von VoiceOver angesagt, ↑/↓ blättert durch Überladungen, solange die Vervollständigungsliste
   nicht offen ist; schließt bei Esc oder Verlassen des Aufrufs.
 
@@ -197,7 +254,7 @@ Zeilen mit Hints an.
 ### B15 LSP-Navigation
 Auswirkung: Springen über das ganze Projekt statt nur innerhalb einer Datei.
 
-- **E81 Navigation.**
+- **E85 Navigation.**
   - Neue Anfragen in `ide-lsp`: `workspace/symbol` (+ `workspaceSymbol/resolve`), `textDocument/implementation`,
     `typeDefinition`, `declaration`, `prepareCallHierarchy` mit `incomingCalls`/`outgoingCalls`,
     `prepareTypeHierarchy` mit `supertypes`/`subtypes`; Fähigkeiten in `capabilities.rs` angemeldet.
@@ -214,7 +271,7 @@ Auswirkung: Springen über das ganze Projekt statt nur innerhalb einer Datei.
   - Implementierung, Typdefinition, Deklaration im Kontextmenü und Menü „Gehe zu“; mehrere Treffer in der
     vorhandenen Trefferliste der Referenzen (`navigate.rs`).
   - Aufruf- und Typhierarchie im Suche-Panel (E55) statt in einem Popover, wie Xcode sie im Such-Navigator zeigt:
-    ein Baum ist zu groß für ein Popover (E97). Kinder werden erst beim Aufklappen abgefragt, Umschalter
+    ein Baum ist zu groß für ein Popover (E101). Kinder werden erst beim Aufklappen abgefragt, Umschalter
     „Aufrufer / Aufgerufene“ bzw. „Obertypen / Untertypen“, Klick springt, der Suchverlauf bleibt erhalten.
     Menüpunkte „Gehe zu ▸ Aufrufhierarchie“ (⌃⇧⌘H wie Xcode) und „Gehe zu ▸ Typhierarchie“.
 
@@ -224,7 +281,7 @@ Aufrufhierarchie über drei Ebenen).
 ### B16 Git-Komfort
 Auswirkung: Wer eine Zeile geschrieben hat, Zwischenstände parken, Commit-Messages ohne Tipparbeit.
 
-- **E82 Blame.** Am Ende der Cursorzeile nach kurzer Ruhe „Autor, vor 3 Tagen · Betreff“ in Sekundärfarbe (E77),
+- **E86 Blame.** Am Ende der Cursorzeile nach kurzer Ruhe „Autor, vor 3 Tagen · Betreff“ in Sekundärfarbe (E81),
   Einstellung, Standard aus wie Xcodes „Authors“ (weniger Unruhe im Text), ein- und ausgeschaltet im Menü
   „Darstellung“. „Blame zeigen“ (Menü und Kontextmenü) blendet zusätzlich eine Spalte vor den Zeilennummern ein,
   ein Eintrag je Block. Daten über `git blame --porcelain --incremental`, im Hintergrund, je
@@ -232,8 +289,8 @@ Auswirkung: Wer eine Zeile geschrieben hat, Zwischenstände parken, Commit-Messa
   übrigen Zeilen läuft über die Abschnitte gegen HEAD, die die Randmarken schon haben (`changes.rs`). Popover beim
   Zeigen: ganze Nachricht, Hash kopieren, „Im Graph zeigen“ (E74), „Diff des Commits“. Nur in vertrauten Ordnern
   (E11, E22).
-- **E83 Stash.** Abschnitt „Stashes“ im Git-Panel im Stil von E74 (Zahl als Pille). Je Eintrag Anwenden, Anwenden und
-  entfernen (Pop), Löschen (Rückfrage als Sheet, „Löschen“ zerstörerisch und nicht Standard, E97), Diff im Tab. Neben „Commit“ ein Menü „Stash …“ (Nachricht, mit
+- **E87 Stash.** Abschnitt „Stashes“ im Git-Panel im Stil von E74 (Zahl als Pille). Je Eintrag Anwenden, Anwenden und
+  entfernen (Pop), Löschen (Rückfrage als Sheet, „Löschen“ zerstörerisch und nicht Standard, E101), Diff im Tab. Neben „Commit“ ein Menü „Stash …“ (Nachricht, mit
   unversionierten Dateien) und „Nur Gestagtes stashen“.
   - *Review C14:* Vor jeder Stash-Aktion werden ungesicherte offene Dokumente angeboten zu sichern (Sichern /
     Abbrechen), weil Stash nur den Stand auf der Platte sieht; danach laden saubere Puffer still neu (E24).
@@ -248,7 +305,7 @@ Auswirkung: Wer eine Zeile geschrieben hat, Zwischenstände parken, Commit-Messa
     `git stash clear` kommen dort dazu; Tests belegen, dass sie immer fragen, auch unter „Alles erlauben“, und dass
     es kein „Immer erlauben“ gibt (E27, E33). Für Claude und ACP-Agenten gilt E27 wie bisher über deren Freigaben.
   - Tests: Konflikt beim Anwenden, Pop mit Konflikt, ungesichertes offenes Dokument.
-- **E84 Commit-Message per AI.** Knopf im Commit-Feld (`commit_field.rs`); die Message erscheint dort Zeichen für
+- **E88 Commit-Message per AI.** Knopf im Commit-Feld (`commit_field.rs`); die Message erscheint dort Zeichen für
   Zeichen, bleibt editierbar, ein Undo stellt den alten Text her.
   - Eingabe: der gestagte Diff, ohne Gestagtes alle Änderungen (wie beim Commit selbst), Branch-Name und die letzten
     zehn Betreffzeilen für Stil und Sprache; große Diffs gekürzt je Datei auf eine Obergrenze.
@@ -276,7 +333,7 @@ Befund: `src/` hat 86 600 Zeilen, `crates/` 60 100. Die Module in `src/` greifen
 Auswirkung: Fenster und Tabs sind nicht mehr über verdeckte globale Listen verbunden; Selftests können einen
 Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
 
-- **E93 Ein App-Kontext statt Registern.** Befund: 56 `thread_local!` in 55 Dateien.
+- **E97 Ein App-Kontext statt Registern.** Befund: 56 `thread_local!` in 55 Dateien.
   - *Einteilung nach Zustand und Lebensdauer, nicht nach Behälter* *(Review C12)*. Alles, was offene Objekte,
     laufende Vorgänge oder App-Zustand hält, geht in einen `AppContext`, den der App-Delegate anlegt und der per
     `Rc` in die Ivars der Fenster-Controller und von dort an Panels und Tabs geht. Dazu gehören die Register
@@ -300,7 +357,7 @@ Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
 ### B21 Model und View trennen
 Auswirkung: Logik der Panels wird mit `cargo test` prüfbar statt nur im Fenster-Selftest; kleinere Dateien.
 
-- **E94 Model ohne AppKit, View ohne Logik.** Je Panel und Tab ein `model.rs` ohne `objc2`-Import (Zustand,
+- **E98 Model ohne AppKit, View ohne Logik.** Je Panel und Tab ein `model.rs` ohne `objc2`-Import (Zustand,
   Übergänge, die Effekte zurückgeben: „git ausführen“, „Datei öffnen“), eine View, die nur zeichnet und Ereignisse
   weiterreicht, und ein Controller, der Effekte ausführt. Das Git-Panel hat mit `model.rs` schon den Anfang;
   Vorbild für die übrigen. Reihenfolge nach Nutzen: Dateien (`window/files.rs`), Git-Panel, Suche, AI-Tab,
@@ -320,12 +377,12 @@ Abnahme: Alle Selftests unverändert grün; neue Unit-Tests für die Models; die
 ### B11 MCP-Server — gestrichen
 *Entscheidung des Owners (2026-11-12).* Claude, Codex und Antigravity laden ihre MCP-Server aus ihrer eigenen
 Konfiguration, auch wenn Dango sie startet; eine zentrale Liste in Dango wäre nur Komfort. Der eigene Agent (E6)
-bleibt ohne MCP-Werkzeuge. E85, E86 und R20 entfallen, die Review-Befunde C3, C5, C9 und C10 damit ebenso.
+bleibt ohne MCP-Werkzeuge. E89, E90 und R20 entfallen, die Review-Befunde C3, C5, C9 und C10 damit ebenso.
 
 ### B4 Edit Prediction
 Auswirkung: Vorschläge in grauer Schrift beim Tippen, mit Tab übernommen.
 
-- **E87 Anbieter: Copilot und lokal** *(Entscheidung des Owners)*, beide hinter einer gemeinsamen Schnittstelle,
+- **E91 Anbieter: Copilot und lokal** *(Entscheidung des Owners)*, beide hinter einer gemeinsamen Schnittstelle,
   Copilot zuerst; der Anbieter ist eine Einstellung:
   - GitHub Copilot über den offiziellen `@github/copilot-language-server` (npm, installiert auf Nachfrage wie vtsls,
     E10). Anfragen `textDocument/inlineCompletion`, Next-Edit-Vorschläge über `textDocument/copilotInlineEdit`,
@@ -338,12 +395,12 @@ Auswirkung: Vorschläge in grauer Schrift beim Tippen, mit Tab übernommen.
     `/api/generate` mit `suffix`, LM Studio über `/v1/completions` ohne Chat-Vorlage mit den FIM-Marken der
     Modellfamilie (eine feste Liste unterstützter Familien), Stoppfolgen und das Abschneiden von Text, der sich mit
     dem Rest der Zeile doppelt.
-- **E88 Verhalten.**
+- **E92 Verhalten.**
   - Anfrage nach kurzer Tipp-Pause, abgebrochen beim nächsten Tastendruck, nie wartet die Eingabe (E25).
   - *Gültigkeit* *(Review C6)*. Abbrechen allein reicht nicht, eine Antwort kann nach der nächsten Änderung
     eintreffen. Jeder Vorschlag ist an Dokument, Revision (E24), Auswahl und Zielbereich gebunden; ändert sich eins
     davon, wird er verworfen, bevor er gezeigt oder übernommen wird.
-  - Einfügen am Cursor: einzeilig über E77 hinter dem Cursor; mehrzeilig die erste Zeile im Text, der Rest in einem
+  - Einfügen am Cursor: einzeilig über E81 hinter dem Cursor; mehrzeilig die erste Zeile im Text, der Rest in einem
     Kasten unter der Zeile.
   - Ersetzen oder Löschen vorhandenen Texts (Copilot-Next-Edit liefert Bereich und neuen Text): im Kasten als
     Vorher/Nachher, der betroffene Bereich im Editor markiert.
@@ -364,7 +421,7 @@ Leistungsbudget; `make test-integration` mit Copilot und mit je einem echten FIM
 ### B1 Debugger
 Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zweiten Werkzeug.
 
-- **E89 Crate `ide-dap`.** Debug Adapter Protocol, Rahmung wie LSP (Content-Length); die Rahmung aus
+- **E93 Crate `ide-dap`.** Debug Adapter Protocol, Rahmung wie LSP (Content-Length); die Rahmung aus
   `ide-lsp/src/framing.rs` wird geteilt statt kopiert. Adapter über den Supervisor (E23) mit Login-Shell-Umgebung,
   nur in vertrauten Ordnern (E22). Adapter:
   - Rust, C, C++, Swift, Objective-C: `lldb-dap` aus den Entwicklerwerkzeugen über `xcrun`, nie über die Platzhalter
@@ -373,13 +430,13 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
   - JavaScript/TypeScript: vscode-js-debug in fester Version mit Prüfsumme, installiert auf Nachfrage in den
     App-Ordner (wie vtsls); braucht Node.
   - Python: debugpy aus der Umgebung des Projekts; fehlt es, Installationsbefehl in der Statusleiste.
-- **E90 Debugger in Seitenleiste, Inspektor und Menü** *(Abweichung von E55, fünf Panels; Aufteilung nach E97)*:
+- **E94 Debugger in Seitenleiste, Inspektor und Menü** *(Abweichung von E55, fünf Panels; Aufteilung nach E101)*:
   - Panel „Debuggen“ als sechstes Panel, ⌘6, für die Navigation: Sitzungen, Threads mit Aufrufliste, Haltepunkte.
     In seiner Titelzeile die Steuerknöpfe Fortsetzen, Überspringen, Hineinspringen, Heraus, Neu starten, Stopp als
     SF Symbols mit Beschriftung; was der Adapter nicht kann oder gerade nicht geht, ist ausgegraut.
   - Inspektor am hinteren Fensterrand (`NSSplitViewItem` als Inspektor, macOS 14+) für die Details des gewählten
     Frames: Variablen (Baum, Kinder erst beim Aufklappen) und Überwachte Ausdrücke. ⌥⌘I blendet ihn ein und aus
-    (HIG-Standard, E97); er wandert wie die Seitenleiste mit dem Tab im Vordergrund (E60), seine Breite kommt aus dem
+    (HIG-Standard, E101); er wandert wie die Seitenleiste mit dem Tab im Vordergrund (E60), seine Breite kommt aus dem
     View-Controller des Split-View-Items (macOS 27, CLAUDE.md). Die Toolbar bleibt, wie E73 sie festlegt.
   - Menü „Debuggen“ mit allen Befehlen und Xcodes Kürzeln: Fortsetzen ⌃⌘Y, Überspringen F6, Hineinspringen F7,
     Heraus F8, Stopp ⌘., Haltepunkt an der Cursorzeile ⌘\, Haltepunkte aus/ein ⌘Y. Auf Mac-Tastaturen brauchen F6–F8
@@ -406,7 +463,7 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
   Debug-Sitzung startet oder hängt sich nach einem Neustart von selbst an. Die gespeicherte Ansicht
   (`crates/ide-core/src/layout.rs`) bekommt die neue Tab-Art mit Migration (E26), alles je Projekt.
 - **Im Editor:** aktuelle Zeile hervorgehoben, Werte beim Zeigen auf eine Variable, Inline-Werte am Zeilenende im
-  angehaltenen Frame (E77).
+  angehaltenen Frame (E81).
 - **Startkonfiguration:** `.vscode/launch.json` wird gelesen (JSONC, `${workspaceFolder}` und die üblichen
   Variablen), nur in vertrauten Ordnern; dazu „Aktuelles Programm debuggen“ ohne Konfiguration: Rust über
   `cargo build --message-format=json` (Binary oder Test), Go über das Paket der Datei, Node und Python über die
@@ -433,7 +490,7 @@ Befund (gemessen 2026-11-12, Debug-Build, warm):
 - Was die Crates wirklich bringen, sind erzwungene Schnittstellen (ein Modul sieht nur das `pub` des anderen
   Crates) und getrennte Tests je Crate.
 
-- **E95 Teilschnitt** *(Entscheidung des Owners, statt des vollen Schnitts)*. Eigene Crates werden nur die
+- **E99 Teilschnitt** *(Entscheidung des Owners, statt des vollen Schnitts)*. Eigene Crates werden nur die
   Module, die ohne Kreis abtrennbar sind: `ide-ui-common` (`util/`, Stil, Symbole), `ide-ui-browser`
   (`browser`), `ide-ui-dictation` (`dictation`, mit dem Feature `dictation`), `ide-ui-icons` (`file_icon`),
   `ide-ui-export` (`markdown/export`) und `ide-ui-terminal` (Darstellung des Terminals: Zeichnen, Palette,
@@ -452,12 +509,12 @@ Befund (gemessen 2026-11-12, Debug-Build, warm):
     plan.md) und der Rückfall auf Core Text ziehen gemeinsam um.
   - `browser`: Zugriffe auf `window` als Ereignisse und Anfragen ohne AppKit-Typen des Kerns.
   - Vor dem ersten Umzug steht der Abhängigkeitsgraph der sechs neuen Crates in diesem Dokument; Cargo erzwingt danach,
-    dass er kreisfrei bleibt. Der App-Kontext aus E93 bleibt im App-Crate und wird nicht nach unten gereicht.
+    dass er kreisfrei bleibt. Der App-Kontext aus E97 bleibt im App-Crate und wird nicht nach unten gereicht.
 
 ## Risiken
 - **R14 Einblendungen über Kern-Attribut:** Kern ist ein Abstand zwischen Zeichen, keine Einfügung; TextKit 2
   kann die Lücke bei Umbruch, Graphemen oder Eingabemethoden falsch vermessen, und am Zeilenanfang gibt es kein
-  Zeichen davor. Abhilfe: Prototyp als Sperre am Anfang von Stufe 2 mit der Prüfliste aus E77; je Fall, der
+  Zeichen davor. Abhilfe: Prototyp als Sperre am Anfang von Stufe 2 mit der Prüfliste aus E81; je Fall, der
   durchfällt, der feste Ausweg (Zeilenende bzw. Kasten unter der Zeile).
 - **R15 Code verlässt den Mac:** Edit Prediction (Copilot) und Commit-Messages schicken Code an Dritte. Abhilfe:
   Ausschlussliste, Secrets-Scan, nur vertraute Ordner, Schalter je Sprache.
@@ -473,6 +530,9 @@ Befund (gemessen 2026-11-12, Debug-Build, warm):
 - **R21 Veraltete Vorschläge und Aktionen** *(Review C1, C6)*: Antworten von Servern und Anbietern können zu einem
   älteren Text gehören und neueren überschreiben. Abhilfe: Bindung an die Revision (E24) beim Anwenden von
   Workspace-Edits und Vorhersagen, Verwerfen statt Raten.
+- **R22 Ungeschriebene Meldungen von Claude** *(B24)*: Subagents und Hintergrundarbeit kommen aus Rahmen der
+  CLI, die nicht dokumentiert sind (I6); ändert ein Update sie, bleiben die Knöpfe grau, obwohl etwas läuft.
+  Abhilfe: die eingefrorenen Mitschnitte aus plan.md decken genau diese Rahmen ab und schlagen bei einer Änderung fehl.
 
 ## Annahmen
 - **A4** `lldb-dap` liegt in den aktuellen Command Line Tools; geprüft zu Beginn von B1, sonst CodeLLDB in fester

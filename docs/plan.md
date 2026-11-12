@@ -89,6 +89,10 @@ eingearbeitet (markiert mit *Review*).
 - **E17 Browser-Tab und „+“** *(gewünscht; „+“ seit E60 das native der Tableiste)*. „+“ am Ende jeder Tableiste und
   ⌘T: Neue Datei, Terminal, Browser, AI-Thread ▸, CLI-Thread ▸. Browser = `WKWebView` mit Adressfeld, Zurück/Vor/Neu laden, Suche, Web-Inspector; zugleich
   Dev-Server-Vorschau (I7). Downloads in den Download-Ordner mit Rückfrage, keine Dateizugriffe aus Webseiten.
+  *Nachtrag (Eigentümer):* Ein Schlüsselknopf in der Navigationszeile fragt in einem nativen Fenster nach einer
+  Anmeldung, die macOS-AutoFill aus Passwörter anbietet, und trägt sie ins Formular der Seite ein, nur solange sie den
+  Host zeigt, für den gefragt wurde. Ein `WKWebView` außerhalb von Safari bekommt kein eigenes Passwort-AutoFill;
+  Passkeys bräuchten die von Apple vergebene Berechtigung `com.apple.developer.web-browser.public-key-credential`.
 - **E10 LSP** *(bestätigt: nachfragen + in den App-Ordner installieren)*: gopls, rust-analyzer, TypeScript.
   *Review:* TypeScript per Sondierung statt fest verdrahtet — kann das `tsc` im Projekt `--lsp`, wird es genutzt, sonst
   vtsls; vtsls/npm-Installationen setzen Node voraus (Hinweis, falls es fehlt). Alle Prozesse mit der Umgebung der
@@ -284,6 +288,10 @@ VoiceOver-Prüfung der neuen Ansichten.
   rendern AI-Antworten über `splat_preview::layout` mit eigener kleiner Formatierung, Formeln/Diagramme als Code.
 - **Phase 10 — Release:** 35 Sprachen, Test scharf, Barrierefreiheits-Abnahme, README, Signatur, Notarisierung, DMG,
   Sparkle, Homebrew Cask; Test auf macOS 14 und Intel mit signiertem Build.
+- **Phase 11 — Zed-Lücken und Architektur** *(freigegeben 2026-11-12, Einzelheiten in [phase-11.md](phase-11.md))*:
+  Stufe 1 Absicherung (B20 Fuzzing und Property-Tests, B23 Doctests und Crate-READMEs, B24 Subagenten und
+  Hintergrundprozesse im Sitzungskopf), Stufe 2 Editor (Prototyp E81 als Sperre, dann B14, B15, B16), Stufe 3 Struktur
+  (B22, B21), Stufe 4 Vorhersage und Debugger (B4, B1), Stufe 5 Build (B19 als Teilschnitt).
 - **Danach:** Store-Lite (E20), I2.
 
 ## Risiken
@@ -491,6 +499,8 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   offenen Merge Requests (GitHub: Pull Requests) oder Issues, zuletzt geänderte zuerst, je höchstens 50; ein
   Doppelklick öffnet sie im Browser, „+“ legt im Browser einen neuen für den Branch oder ein neues Issue an.
   Bearbeiten, Kommentieren und Mergen bleiben im Browser. Schreibende Aufrufe brauchen bei GitLab den Bereich `api`.
+  *Nachtrag (Eigentümer):* Seiten des CI-Panels und des Log-Tabs öffnen im Browser-Tab (E17) des Fensters, nicht im
+  Standardbrowser; die Anmeldung (E12) bleibt im Standardbrowser, weil OAuth eingebettete Web-Views ausschließt (RFC 8252).
 - **E78 Agenten direkt im „+“-Menü, keine CLI-Threads** *(Entscheidung des Eigentümers, ändert E17, E60, E64, E68 und
   ersetzt I5)*: Das „+“-Menü und die Neuer-Tab-Seite nennen die installierten Agenten direkt, jeden als eigenen
   Eintrag bzw. Knopf untereinander, den eigenen Agenten mit seinen Endpunkten als Untermenü; darunter „In eigenem
@@ -506,6 +516,41 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   es aus oder wieder ein, in allen Fenstern und über den Neustart hinaus (Einstellung `hiddenSidebarPanels`). Das
   letzte sichtbare Symbol bleibt. Zeigt die Seitenleiste gerade das ausgeblendete Panel, rückt das erste sichtbare
   nach. Menüleiste und Tastenkürzel öffnen ein ausgeblendetes Panel weiterhin.
+
+Phase 11 *(freigegeben 2026-11-12)*: Kurzfassung; die Einzelheiten in [phase-11.md](phase-11.md) sind ebenso
+verbindlich. E89 und E90 sind mit dem gestrichenen MCP-Server (B11) entfallen.
+
+- **E81 Einblendungen:** ein gemeinsamer Baustein für Text, der nicht in der Datei steht (Inlay Hints, Ghost Text,
+  Blame, Inline-Werte), außerhalb von Undo und Sichern; Prototyp mit Prüfliste als Sperre vor Stufe 2.
+- **E82 Code Actions:** Glühbirne in der Randspalte, ⌥⌘A und „Editor ▸ Schnellkorrektur …“; Workspace-Edits an die
+  Revision gebunden (E24).
+- **E83 Inlay Hints:** Standard an, je Sprache abschaltbar, über E81.
+- **E84 Signaturhilfe:** kleines Fenster über dem Cursor, nimmt nicht den Fokus, „Editor ▸ Parameter zeigen“.
+- **E85 LSP-Navigation:** Projekt-Symbolsuche, Implementierung, Typdefinition, Deklaration, Aufrufhierarchie.
+- **E86 Blame:** am Zeilenende (Standard aus) und als Spalte, nur in vertrauten Ordnern.
+- **E87 Stash:** Abschnitt im Git-Panel; Löschen zerstörerisch mit Rückfrage, auch für den eigenen Agenten (E27, E33).
+- **E88 Commit-Message per AI:** genau der mit gitleaks geprüfte Text geht hinaus, sonst nichts.
+- **E91 Edit Prediction mit Copilot und lokal** (Ollama, LM Studio) hinter einer Schnittstelle.
+- **E92 Verhalten der Vorhersage:** nach Tipp-Pause, an die Revision gebunden, verworfen statt geraten.
+- **E93 Crate `ide-dap`:** Debug Adapter Protocol über den Supervisor, nur in vertrauten Ordnern.
+- **E94 Debugger:** sechstes Panel „Debuggen“ (⌘6, Abweichung von E55), Inspektor, Menü „Debuggen“.
+- **E95 Fuzzing mit cargo-fuzz** (`make fuzz`, nightly, außerhalb von `make check`), Funde werden Regressionstests.
+- **E96 proptest in `make check`** mit fester Fallzahl und festem Seed.
+- **E97 Ein App-Kontext statt Registern:** `thread_local!` nach Zustand und Lebensdauer aufgeteilt.
+- **E98 Model ohne AppKit, View ohne Logik** je Panel und Tab.
+- **E99 UI-Crates als Teilschnitt:** nur kreisfrei abtrennbare Module werden eigene Crates.
+- **E100 Doctests und Crate-READMEs** mit Mermaid-Diagramm des Kontrollflusses, ein Test prüft beides.
+- **E101 Apples Human Interface Guidelines als Abnahme** (ergänzt E3): Menüleiste für jeden Befehl, keine
+  HIG-Standardkürzel umbelegt, ausgegraut statt ausgeblendet, Barrierefreiheit, Kennzeichnung von AI.
+- **E102 Subagenten und Hintergrundprozesse im Sitzungskopf** *(umgesetzt)*: zwei Knöpfe (`person.2`,
+  `terminal`) statt „Aufgaben dieser Sitzung“, Akzentfarbe solange etwas läuft, Zahlen im Tooltip; beendete
+  Hintergrundprozesse bleiben in der Liste.
+
+Risiken aus Phase 11: **R14** Einblendungen über das Kern-Attribut, **R15** Code verlässt den Mac (Copilot,
+Commit-Messages), **R16** Lieferkette der Debug-Adapter, **R17** Umbau ohne neue Funktion, **R18** nightly für
+Fuzzing, **R19** Indexierung bei der Projekt-Symbolsuche, **R21** veraltete Vorschläge und Aktionen, **R22**
+undokumentierte Meldungen von Claude zu Subagenten und Hintergrundarbeit.
+
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
