@@ -8,6 +8,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSRect, NSString};
 
 /// Reads a constant that AppKit or Foundation exports.
+#[macro_export]
 macro_rules! constant {
     ($name:path) => {
         // SAFETY: the frameworks set their exported constants when they load, before any Rust code runs, and never
@@ -15,7 +16,6 @@ macro_rules! constant {
         unsafe { $name }
     };
 }
-pub(crate) use constant;
 
 pub fn ns(s: &str) -> Retained<NSString> {
     NSString::from_str(s)

@@ -22,6 +22,9 @@ needs a row here first, and a reason from the list above.
 | File | Static | Holds | Lives | Target |
 |---|---|---|---|---|
 | `crates/ide-claude/src/session.rs` | `LATER` | events of a Claude session that wait until the state lock is released | until the session's reader thread empties it | into the session: `Shared::later` (a mutex); the crate knows no app context |
+| `crates/ide-ui-common/src/style.rs` | `ACCENT` | the terracotta as a dynamic colour | app | stays: cache |
+| `crates/ide-ui-common/src/style.rs` | `ACCENTS` | accent colours by base colour | app | stays: cache |
+| `crates/ide-ui-common/src/style.rs` | `TOKEN_COLORS` | colours by token kind | app, until the appearance changes | stays: cache |
 | `src/activity/mod.rs` | `ACTIVITIES` | the activity items of every window's toolbar | from a window's first toolbar on | AppContext: `activities` |
 | `src/agent/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
 | `src/agent/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
@@ -38,9 +41,6 @@ needs a row here first, and a reason from the list above.
 | `src/agent/plan/ask.rs` | `ASK` | the question about a plan on view | while it shows | AppContext: `agent.plan.ask` |
 | `src/agent/plan/doc.rs` | `DOCS` | the open plan documents | from opening to closing | AppContext: `agent.plan.docs` |
 | `src/agent/plan/mod.rs` | `LAST_NOTE` | the id the last plan comment got | app | AppContext: `agent.plan.notes` |
-| `src/agent/style.rs` | `ACCENT` | the terracotta as a dynamic colour | app | stays: cache |
-| `src/agent/style.rs` | `ACCENTS` | accent colours by base colour | app | stays: cache |
-| `src/agent/style.rs` | `TOKEN_COLORS` | colours by token kind | app, until the appearance changes | stays: cache |
 | `src/agent/usage.rs` | `REPORT` | the last answer to `get_usage` with its time | until it is stale (2 min) | AppContext: `agent.usage`; the `ASKING` flag (a static `AtomicBool`) moves along |
 | `src/agent_panel/agents.rs` | `OFFERED` | the agents the "new session" menu offers, by tag | until the menu is filled again | AppContext: `agent_panels.offered_agents` |
 | `src/agent_panel/mod.rs` | `PANELS` | the agent panels of every window | from creation until replaced | AppContext: `agent_panels`; callbacks now carry an id instead of the address |

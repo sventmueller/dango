@@ -146,44 +146,12 @@ pub fn redraw_gutter(view: &EditorTextView) {
 
 pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
 pub use fold::hidden_by_fold;
+pub use ide_ui_common::util::undo_step;
 pub use style::{code_font, palette_color};
 
 /// Takes the language server's folding ranges, as first line and last hidden line, or `None` for the indentation's.
 pub fn set_server_folds(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
     fold::set_server_ranges(view, ranges);
-}
-
-/// Runs `edit`, whose changes of `view` become one undoable step of their own, also right after typing in the same
-/// turn of the run loop; inside a group a caller opened, they join it.
-pub fn undo_step(view: &objc2_app_kit::NSTextView, edit: impl FnOnce()) {
-    view.breakUndoCoalescing();
-    let undo = view.undoManager();
-    if let Some(undo) = &undo
-        && undo.groupsByEvent()
-        && undo.groupingLevel() == 1
-    {
-        // AppKit closes the turn's group only at its end and until then refuses registrations without an open group,
-        // so a fresh one replaces it, which the end of the turn or the next undo closes.
-        undo.endUndoGrouping();
-        undo.beginUndoGrouping();
-    }
-    let own = undo
-        .as_ref()
-        .is_some_and(|u| u.groupsByEvent() && u.groupingLevel() == 0);
-    if let Some(undo) = &undo {
-        if own {
-            undo.setGroupsByEvent(false);
-        }
-        undo.beginUndoGrouping();
-    }
-    edit();
-    if let Some(undo) = &undo {
-        undo.endUndoGrouping();
-        if own {
-            undo.setGroupsByEvent(true);
-        }
-    }
-    view.breakUndoCoalescing();
 }
 
 /// The file of `view` got a new name, as a server's rename of a file did: the tab follows.

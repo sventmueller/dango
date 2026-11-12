@@ -22,6 +22,7 @@ ide-product = { path = "crates/ide-product" }
 ide-project = { path = "crates/ide-project" }
 ide-terminal = { path = "crates/ide-terminal" }
 ide-thread = { path = "crates/ide-thread" }
+ide-ui-common = { path = "crates/ide-ui-common" }
 splat-decoder = { path = "../splat/crates/splat-decoder" }
 splat-editor-state = { path = "../splat/crates/splat-editor-state" }
 splat-file-state = { path = "../splat/crates/splat-file-state" }
@@ -107,6 +108,7 @@ ide-product.workspace = true
 ide-project.workspace = true
 ide-terminal.workspace = true
 ide-thread.workspace = true
+ide-ui-common.workspace = true
 splat-decoder.workspace = true
 splat-editor-state.workspace = true
 splat-file-state.workspace = true

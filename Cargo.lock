@@ -1316,6 +1316,7 @@ dependencies = [
  "ide-project",
  "ide-terminal",
  "ide-thread",
+ "ide-ui-common",
  "image",
  "kurbo",
  "libc",
@@ -1495,6 +1496,20 @@ dependencies = [
  "ide-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "ide-ui-common"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "dispatch2",
+ "ide-core",
+ "ide-product",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "splat-markdown",
 ]
 
 [[package]]
