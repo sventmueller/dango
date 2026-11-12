@@ -99,6 +99,8 @@ pub struct Mapper {
     prompts: u64,
     /// The ids of the prompts the app sent, whose echoes it leaves out.
     sent: HashSet<String>,
+    /// Whether the last status sent was other than idle.
+    busy: bool,
 }
 
 /// What the CLI counts for the whole session: its cost and tokens over all models.
@@ -128,6 +130,15 @@ fn tokens_since(now: Tokens, before: Tokens) -> Tokens {
 
 fn lane(parent: Option<&String>) -> Lane {
     parent.map_or(Lane::Main, |p| Lane::Subagent(p.clone()))
+}
+
+/// Whether `message` is the agent answering in the main conversation rather than in a subagent's.
+fn writes_in_main(message: &Message) -> bool {
+    match message {
+        Message::Assistant(a) => a.parent_tool_use_id.is_none(),
+        Message::StreamEvent(e) => e.parent_tool_use_id.is_none(),
+        _ => false,
+    }
 }
 
 fn put(lane: &Lane, key: Option<String>, at: SystemTime, entry: EntryKind) -> Update {
@@ -223,6 +234,22 @@ impl Mapper {
 
     /// The updates `message` makes, as of `now`.
     pub fn map(&mut self, message: &Message, now: SystemTime) -> Vec<Update> {
+        // The CLI starts a turn of its own when a background task ends, with no frame that says so.
+        let mut out = if !self.history && !self.busy && writes_in_main(message) {
+            vec![self.status(Status::Running)]
+        } else {
+            Vec::new()
+        };
+        out.extend(self.frame(message, now));
+        out
+    }
+
+    fn status(&mut self, status: Status) -> Update {
+        self.busy = status != Status::Idle;
+        Update::Status(status)
+    }
+
+    fn frame(&mut self, message: &Message, now: SystemTime) -> Vec<Update> {
         match message {
             Message::Assistant(a) => self.assistant(a, now),
             Message::User(u) => self.user(u, now),
@@ -292,7 +319,7 @@ impl Mapper {
             }),
         )];
         out.extend(self.link(&[key], uuid));
-        out.push(Update::Status(Status::Running));
+        out.push(self.status(Status::Running));
         out
     }
 
@@ -356,7 +383,7 @@ impl Mapper {
             }
         };
         self.asks.insert(request_id.to_string(), Ask { key, tool_use_id: call });
-        out.push(Update::Status(Status::RequiresAction));
+        out.push(self.status(Status::RequiresAction));
         out
     }
 
@@ -391,7 +418,7 @@ impl Mapper {
             state: RequestState::Decided(decision),
         });
         if self.asks.is_empty() {
-            out.push(Update::Status(Status::Running));
+            out.push(self.status(Status::Running));
         }
         out
     }
@@ -406,7 +433,7 @@ impl Mapper {
             state: RequestState::Withdrawn,
         }];
         if self.asks.is_empty() {
-            out.push(Update::Status(Status::Running));
+            out.push(self.status(Status::Running));
         }
         out
     }
@@ -489,7 +516,7 @@ impl Mapper {
         self.level.clear();
         out.push(Update::Background(Vec::new()));
         out.push(Update::Activity(None));
-        out.push(Update::Status(Status::Idle));
+        out.push(self.status(Status::Idle));
         out
     }
 
@@ -956,7 +983,7 @@ impl Mapper {
             out.push(notice(now, Notice::Interrupted));
         }
         out.push(Update::Activity(None));
-        out.push(Update::Status(Status::Idle));
+        out.push(self.status(Status::Idle));
         self.turn += 1;
         self.auth_reported = false;
         out
@@ -1068,9 +1095,9 @@ impl Mapper {
             System::BackgroundTasksChanged(tasks) => self.background_changed(tasks, now),
             System::Hook(hook) => vec![hook_notice(hook, now)],
             System::SessionStateChanged(state) => match state.as_str() {
-                "idle" => vec![Update::Status(Status::Idle)],
-                "running" => vec![Update::Status(Status::Running)],
-                "requires_action" => vec![Update::Status(Status::RequiresAction)],
+                "idle" => vec![self.status(Status::Idle)],
+                "running" => vec![self.status(Status::Running)],
+                "requires_action" => vec![self.status(Status::RequiresAction)],
                 _ => Vec::new(),
             },
             _ => self.other_system(s, now),
@@ -1788,5 +1815,37 @@ mod tests {
         assert_eq!(mapper.prompts(), 2);
         let mut history = Mapper::for_history();
         assert!(echo(&mut history, &replay("p-2", "", "from the phone")).is_empty());
+    }
+
+    fn statuses(mapper: &mut Mapper, frame: &str) -> Vec<Status> {
+        let message = crate::protocol::parse(frame).unwrap();
+        mapper
+            .map(&message, SystemTime::UNIX_EPOCH)
+            .into_iter()
+            .filter_map(|u| match u {
+                Update::Status(status) => Some(status),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_turn_the_cli_starts_after_a_background_task_runs() {
+        let start = |parent: &str| {
+            format!(
+                r#"{{"type":"stream_event","event":{{"type":"message_start","message":{{"id":"m","type":"message","role":"assistant","content":[]}}}},"parent_tool_use_id":{parent},"session_id":"s","uuid":"u"}}"#
+            )
+        };
+        let result = r#"{"type":"result","subtype":"success","is_error":false,"session_id":"s"}"#;
+        let mut mapper = Mapper::new();
+        mapper.user_message(UserMessage::default(), "u-1", SystemTime::UNIX_EPOCH);
+        assert!(statuses(&mut mapper, &start("null")).is_empty());
+        assert_eq!(statuses(&mut mapper, result), [Status::Idle]);
+        assert!(statuses(&mut mapper, &start(r#""toolu_bg""#)).is_empty());
+        assert_eq!(statuses(&mut mapper, &start("null")), [Status::Running]);
+        assert!(statuses(&mut mapper, &start("null")).is_empty());
+        assert_eq!(statuses(&mut mapper, result), [Status::Idle]);
+        let mut history = Mapper::for_history();
+        assert!(statuses(&mut history, &start("null")).is_empty());
     }
 }
