@@ -8,6 +8,7 @@ mod desk;
 mod engine;
 mod fn_key;
 mod keys;
+mod microphone;
 #[cfg(feature = "selftest")]
 pub mod selftest;
 
@@ -418,6 +419,15 @@ fn begin(target: Target, via: Via) {
         NSBeep();
         return;
     };
+    if microphone::undecided() {
+        microphone::ask(move |granted| {
+            // fn came up while macOS asked, so the recording it asked for is over.
+            if granted && via != Via::Fn {
+                begin(target, via);
+            }
+        });
+        return;
+    }
     let question = with_hub(|hub| {
         let missing = hub.engine().missing_key();
         keys::question(missing, &mut hub.asked, engine::lowspeak_has_key)

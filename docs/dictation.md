@@ -128,6 +128,9 @@ Other changes in lowspeak:
 - Info.plist gets `NSMicrophoneUsageDescription` (Dango's own words, translated with the other texts in the
   release phase) and the hardened runtime the `com.apple.security.device.audio-input` entitlement, both only in
   bundles built with the feature.
+- The first dictation asks macOS for the microphone (`src/dictation/microphone.rs`) and starts once the user allows
+  it; a dictation by fn ends with the question, since the key is up by then. Lowspeak's recorder never asks, it only
+  reports a missing permission, and macOS lists an app under Privacy & Security > Microphone only after it asked.
 
 ### Where dictation goes
 - A dictation is bound to the text field that had the focus when it started: an AI tab's composer or an editor.
