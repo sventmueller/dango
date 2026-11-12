@@ -17,7 +17,8 @@ use objc2_app_kit::{
     NSViewController, NSWindow, NSWindowStyleMask, NSWindowToolbarStyle,
 };
 use objc2_foundation::{
-    NSAttributedString, NSDictionary, NSMutableAttributedString, NSPoint, NSRect, NSSize, NSString,
+    NSAttributedString, NSDictionary, NSMutableAttributedString, NSNotificationCenter, NSObjectProtocol, NSPoint,
+    NSRect, NSSize, NSString,
 };
 use splat_i18n::{t, tf};
 
@@ -331,6 +332,15 @@ pub struct TabWindow {
     focused: Cell<usize>,
     /// The dot of the tab's state beside its title.
     status: Retained<NSImageView>,
+    /// The watch that keeps the toolbar clear above the sidebar in full screen.
+    sidebar_watch: Retained<ProtocolObject<dyn NSObjectProtocol>>,
+}
+
+impl Drop for TabWindow {
+    fn drop(&mut self) {
+        // SAFETY: The token came from this center's block-based `addObserverForName`.
+        unsafe { NSNotificationCenter::defaultCenter().removeObserver(self.sidebar_watch.as_ref()) };
+    }
 }
 
 impl TabWindow {
@@ -376,9 +386,6 @@ impl TabWindow {
         let sidebar = NSSplitViewItem::sidebarWithViewController(&sidebar_controller);
         // Above the content's, so resizing the window resizes the content and the sidebar keeps its width.
         sidebar.setHoldingPriority(260.0);
-        // The toolbar has a section of its own above the sidebar, which the window's separator style does not reach;
-        // in full screen it otherwise draws a line under the toolbar across the sidebar.
-        sidebar.setTitlebarSeparatorStyle(NSTitlebarSeparatorStyle::None);
 
         let content = NSView::new(mtm);
         let area = DocumentArea::new(mtm);
@@ -410,6 +417,7 @@ impl TabWindow {
         window.setToolbar(Some(&toolbar));
 
         let status = status_dot(mtm);
+        let sidebar_watch = super::full_screen::follow_sidebar(&window, &slot, &split.splitView());
         let tab = Rc::new(TabWindow {
             window,
             split,
@@ -423,6 +431,7 @@ impl TabWindow {
             documents: RefCell::new(Vec::new()),
             focused: Cell::new(0),
             status,
+            sidebar_watch,
         });
         TabWindow::follow_drags(&tab);
         tab
@@ -746,6 +755,11 @@ impl TabWindow {
     #[cfg(feature = "selftest")]
     pub fn shows_picture(&self) -> bool {
         !self.picture.isHidden()
+    }
+
+    /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.
+    pub fn clear_above_sidebar(&self, clear: bool) {
+        super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear);
     }
 
     /// The width of the sidebar now.

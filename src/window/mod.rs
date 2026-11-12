@@ -8,6 +8,7 @@ pub(crate) mod file_outline;
 mod files;
 mod files_header;
 mod frame;
+mod full_screen;
 pub mod layout;
 mod new_tab_button;
 mod notice;
@@ -164,8 +165,27 @@ define_class!(
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
                     self.make_current(&tab);
+                    tab.clear_above_sidebar(true);
                 }
                 crate::agent::show_pending(self);
+            });
+        }
+
+        #[unsafe(method(windowDidEnterFullScreen:))]
+        fn did_enter_full_screen(&self, notification: &NSNotification) {
+            guarded((), || {
+                if let Some(tab) = self.tab_of_notification(notification) {
+                    tab.clear_above_sidebar(true);
+                }
+            });
+        }
+
+        #[unsafe(method(windowWillExitFullScreen:))]
+        fn will_exit_full_screen(&self, notification: &NSNotification) {
+            guarded((), || {
+                if let Some(tab) = self.tab_of_notification(notification) {
+                    tab.clear_above_sidebar(false);
+                }
             });
         }
 
