@@ -24,16 +24,21 @@ pub fn tab_loop(window: &NSWindow) -> (Vec<Retained<NSView>>, bool) {
     let start = focused(window);
     let mut reached: Vec<Retained<NSView>> = Vec::new();
     let mut round = false;
+    let mut at = start.clone();
     for _ in 0..STEPS {
         // Tab in a text field ends its editing and moves on from the field, not from the field editor.
-        match focused(window) {
-            Some(view) => window.selectKeyViewFollowingView(&view),
-            None => window.selectNextKeyView(None),
-        }
+        let next = match &at {
+            Some(view) => step(window, view),
+            None => {
+                window.selectNextKeyView(None);
+                focused(window)
+            }
+        };
         // A popover's loop goes on into the window it points at, which has a walk of its own.
-        let Some(view) = focused(window).filter(|view| in_window(view, window)) else {
+        let Some(view) = next.filter(|view| in_window(view, window)) else {
             break;
         };
+        at = Some(view.clone());
         if reached.iter().any(|seen| std::ptr::eq(&**seen, &*view)) {
             round = true;
             break;
@@ -44,6 +49,19 @@ pub fn tab_loop(window: &NSWindow) -> (Vec<Retained<NSView>>, bool) {
         window.makeFirstResponder(Some(&start));
     }
     (reached, round)
+}
+
+/// Tab from `view` in `window`: the view it reaches, which then has the focus, unless it is a web view.
+fn step(window: &NSWindow, view: &NSView) -> Option<Retained<NSView>> {
+    // SAFETY: AppKit answers with a view of the window's key view loop or nil; the walk holds it retained.
+    let next = unsafe { view.nextValidKeyView() };
+    // WebKit answers the focus by focusing the page's first field and then asks for the focus once more, which would
+    // arrive after the walk put the focus back.
+    if let Some(web) = next.filter(|next| next.downcast_ref::<objc2_web_kit::WKWebView>().is_some()) {
+        return Some(web);
+    }
+    window.selectKeyViewFollowingView(view);
+    focused(window)
 }
 
 /// The view with the focus; for the field editor, the text field it edits.

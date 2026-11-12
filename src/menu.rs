@@ -402,6 +402,19 @@ fn window_menu(mtm: MainThreadMarker, keys: &Keys) -> (Retained<NSMenuItem>, Ret
             ),
             separator(mtm),
             item(mtm, t("Alle nach vorne bringen"), Some(sel!(arrangeInFront:)), ""),
-        ],
+        ]
+        .into_iter()
+        .chain(tab_stand_ins(mtm))
+        .collect(),
     )
+}
+
+/// Hidden items with the actions of AppKit's "Show Next Tab" and "Show Previous Tab", so that AppKit adds neither to
+/// the Window menu with ⌃Tab and ⌃⇧Tab, which the HIG keeps for moving the focus (E101).
+fn tab_stand_ins(mtm: MainThreadMarker) -> [Retained<NSMenuItem>; 2] {
+    [sel!(selectNextTab:), sel!(selectPreviousTab:)].map(|action| {
+        let entry = item(mtm, "", Some(action), "");
+        entry.setHidden(true);
+        entry
+    })
 }

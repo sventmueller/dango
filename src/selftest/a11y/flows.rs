@@ -433,10 +433,37 @@ fn prompt(root: PathBuf) {
                 );
                 let (on, detail) = control_tab_leaves(&window, composer, false);
                 check("⌃Tab leaves the message field for the view after it", on, detail);
+                let (free, detail) = tab_keys_free(&window);
+                check(
+                    "AppKit's items for the next and previous window tab leave ⌃Tab and ⌃⇧Tab to the focus",
+                    free,
+                    detail,
+                );
             }
             super::plan::start(root, open_folder);
         });
     });
+}
+
+/// Whether the Window menu has items with the actions of AppKit's "Show Next Tab" and "Show Previous Tab" without ⌃Tab
+/// and ⌃⇧Tab, so that AppKit, which adds its own with those keys where they are missing, leaves the keys alone.
+fn tab_keys_free(window: &NSWindow) -> (bool, String) {
+    let app = NSApplication::sharedApplication(MainThreadMarker::from(window));
+    let items: Vec<_> = app
+        .windowsMenu()
+        .map(|menu| menu.itemArray().to_vec())
+        .unwrap_or_default();
+    let mut free = true;
+    let mut found = Vec::new();
+    for action in [objc2::sel!(selectNextTab:), objc2::sel!(selectPreviousTab:)] {
+        let key = items
+            .iter()
+            .find(|item| item.action() == Some(action))
+            .map(|item| item.keyEquivalent().to_string());
+        free &= key.as_deref().is_some_and(|key| key != "\t");
+        found.push(format!("{}: {key:?}", action.name().to_string_lossy()));
+    }
+    (free, found.join(", "))
 }
 
 /// ⌘O opens the panel to choose a folder; a new window's welcome tab opens a recent folder with Tab and Space.
