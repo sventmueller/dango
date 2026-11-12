@@ -57,7 +57,7 @@ pub use context_view::{click as click_context, close as close_context, cost_text
 pub use figures::{asked_for as asked_for_figure, is_dark};
 #[cfg(feature = "selftest")]
 pub use format::percent;
-pub use format::{age, elapsed, iso_time, time_of_day, tokens};
+pub use format::{age, elapsed, iso_time, short_age, time_of_day, tokens};
 pub use outside::ci_log;
 pub use source::Resume;
 pub use tab::AgentTab;

@@ -5,9 +5,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use objc2::rc::Retained;
 use objc2_foundation::{
-    NSDate, NSDateFormatter, NSDateFormatterStyle, NSISO8601DateFormatter, NSNumber, NSNumberFormatter,
-    NSNumberFormatterStyle, NSRelativeDateTimeFormatter, NSRelativeDateTimeFormatterStyle,
-    NSRelativeDateTimeFormatterUnitsStyle,
+    NSCalendarUnit, NSDate, NSDateComponentsFormatter, NSDateComponentsFormatterUnitsStyle, NSDateFormatter,
+    NSDateFormatterStyle, NSISO8601DateFormatter, NSNumber, NSNumberFormatter, NSNumberFormatterStyle,
+    NSRelativeDateTimeFormatter, NSRelativeDateTimeFormatterStyle, NSRelativeDateTimeFormatterUnitsStyle,
 };
 use splat_i18n::{t, tf};
 
@@ -121,11 +121,34 @@ pub fn iso_time(text: &str) -> String {
 pub fn age(at: SystemTime) -> String {
     let at = at.min(SystemTime::now());
     let formatter = NSRelativeDateTimeFormatter::new();
-    formatter.setUnitsStyle(NSRelativeDateTimeFormatterUnitsStyle::Abbreviated);
+    // The abbreviated style mixes `vor 7 m` with `vor 2 Std.` in German; the short one abbreviates alike.
+    formatter.setUnitsStyle(NSRelativeDateTimeFormatterUnitsStyle::Short);
     formatter.setDateTimeStyle(NSRelativeDateTimeFormatterStyle::Named);
     formatter
         .localizedStringForDate_relativeToDate(&date(at), &NSDate::now())
         .to_string()
+}
+
+/// How long ago `at` was without the word for "ago", like `7 min`, for a column of times; `now` under a minute.
+pub fn short_age(at: SystemTime) -> String {
+    let at = at.min(SystemTime::now());
+    if SystemTime::now().duration_since(at).unwrap_or_default() < Duration::from_secs(60) {
+        return age(SystemTime::now());
+    }
+    let formatter = NSDateComponentsFormatter::new();
+    formatter.setUnitsStyle(NSDateComponentsFormatterUnitsStyle::Short);
+    formatter.setMaximumUnitCount(1);
+    formatter.setAllowedUnits(
+        NSCalendarUnit::Minute
+            | NSCalendarUnit::Hour
+            | NSCalendarUnit::Day
+            | NSCalendarUnit::WeekOfMonth
+            | NSCalendarUnit::Month
+            | NSCalendarUnit::Year,
+    );
+    formatter
+        .stringFromDate_toDate(&date(at), &NSDate::now())
+        .map_or_else(|| age(at), |s| s.to_string())
 }
 
 /// `path` relative to `cwd` when it lies inside, else with the home folder as `~`.

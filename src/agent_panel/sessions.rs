@@ -364,7 +364,7 @@ impl Source {
                 open,
                 title,
                 dim,
-                detail: &crate::agent::age(when),
+                detail: &crate::agent::short_age(when),
                 badge,
             },
         )
@@ -504,7 +504,7 @@ impl Source {
             .nodes
             .values()
             .filter_map(|node| match node {
-                Node::Thread { entry, .. } => Some(crate::agent::age(entry.last_activity)),
+                Node::Thread { entry, .. } => Some(crate::agent::short_age(entry.last_activity)),
                 _ => None,
             })
             .collect()
