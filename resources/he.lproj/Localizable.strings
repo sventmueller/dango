@@ -1249,3 +1249,8 @@
 "Pull Requests" = "‏Pull Requests";
 "Was die Liste zeigt" = "מה הרשימה מציגה";
 "offen" = "פתוח";
+"Anmeldung ausfüllen" = "מילוי פרטי התחברות";
+"Anmeldung für „{}“ ausfüllen" = "מילוי פרטי התחברות עבור ״{}״";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "יש לבחור בשדה פרטי התחברות מ״סיסמאות״; היישום ממלא אותם בטופס של הדף ואינו שומר אותם.";
+"Ausfüllen" = "מילוי";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "בדף זה אין טופס התחברות, או שהדף השתנה בינתיים.";

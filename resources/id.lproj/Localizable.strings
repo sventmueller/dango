@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "Yang ditampilkan daftar";
 "offen" = "terbuka";
+"Anmeldung ausfüllen" = "Isi Data Masuk";
+"Anmeldung für „{}“ ausfüllen" = "Isi Data Masuk untuk “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Di bidang tersebut, pilih data masuk dari aplikasi Kata Sandi; data itu diisikan ke formulir halaman dan tidak disimpan oleh aplikasi.";
+"Ausfüllen" = "Isi";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Halaman ini tidak memiliki formulir masuk, atau halaman telah berubah sementara itu.";

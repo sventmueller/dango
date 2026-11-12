@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requesty";
 "Was die Liste zeigt" = "Co seznam zobrazuje";
 "offen" = "otevřené";
+"Anmeldung ausfüllen" = "Vyplnit přihlašovací údaje";
+"Anmeldung für „{}“ ausfüllen" = "Vyplnit přihlašovací údaje pro „{}“";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Vyberte v poli přihlašovací údaje z aplikace Hesla; vyplní se do formuláře stránky a aplikace si je neponechá.";
+"Ausfüllen" = "Vyplnit";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na této stránce není žádný přihlašovací formulář, nebo se mezitím změnila.";

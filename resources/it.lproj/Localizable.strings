@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull request";
 "Was die Liste zeigt" = "Cosa mostra l’elenco";
 "offen" = "aperto";
+"Anmeldung ausfüllen" = "Compila dati di accesso";
+"Anmeldung für „{}“ ausfüllen" = "Compila dati di accesso per “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Scegli nel campo dei dati di accesso dall’app Password; vengono inseriti nel modulo della pagina e l’app non li conserva.";
+"Ausfüllen" = "Compila";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "In questa pagina non c’è alcun modulo di accesso, oppure nel frattempo è cambiata.";

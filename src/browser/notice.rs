@@ -1,4 +1,5 @@
-//! The bar below the navigation row that tells a download finished, with "Im Finder zeigen" and a close button.
+//! The bar below the navigation row that tells a download finished, with "Im Finder zeigen" and a close button,
+//! or why a login was not filled in.
 
 use std::cell::RefCell;
 
@@ -16,7 +17,9 @@ use crate::util::{borderless_button, constant, label, ns, symbol, symbol_button}
 
 pub struct Notice {
     view: Retained<NSView>,
+    icon: Retained<NSImageView>,
     text: Retained<NSTextField>,
+    show: Retained<objc2_app_kit::NSButton>,
     /// Keeps the bar at no height while it is hidden.
     collapsed: Retained<NSLayoutConstraint>,
     file: RefCell<Option<Retained<NSURL>>>,
@@ -87,7 +90,9 @@ impl Notice {
         view.setHidden(true);
         Notice {
             view,
+            icon,
             text,
+            show,
             collapsed,
             file: RefCell::new(None),
         }
@@ -102,8 +107,25 @@ impl Notice {
         let name = file
             .lastPathComponent()
             .map_or_else(String::new, |name| name.to_string());
+        self.icon
+            .setImage(symbol("arrow.down.circle", t("Download")).as_deref());
         self.text.setStringValue(&ns(&tf("„{}“ geladen", &[&name])));
+        self.show.setHidden(false);
         *self.file.borrow_mut() = Some(file.retain());
+        self.reveal_bar(t("Download"));
+    }
+
+    /// Tells why a login was not filled into the page.
+    pub fn show_login(&self, text: &str) {
+        self.icon.setImage(symbol("key", t("Anmeldung")).as_deref());
+        self.text.setStringValue(&ns(text));
+        self.show.setHidden(true);
+        *self.file.borrow_mut() = None;
+        self.reveal_bar(t("Anmeldung"));
+    }
+
+    fn reveal_bar(&self, title: &str) {
+        self.view.setAccessibilityLabel(Some(&ns(title)));
         self.collapsed.setActive(false);
         self.view.setHidden(false);
     }

@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requesti";
 "Was die Liste zeigt" = "Kaj prikazuje seznam";
 "offen" = "odprto";
+"Anmeldung ausfüllen" = "Izpolni podatke za vpis";
+"Anmeldung für „{}“ ausfüllen" = "Izpolni podatke za vpis v »{}«";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "V polju izberite podatke za vpis iz aplikacije Gesla; aplikacija jih vnese v obrazec strani in jih ne hrani.";
+"Ausfüllen" = "Izpolni";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na tej strani ni obrazca za vpis ali pa se je medtem spremenila.";

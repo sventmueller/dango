@@ -1,5 +1,6 @@
 //! The panels a page may ask for: `alert`, `confirm`, `prompt`, a login and choosing files to upload, each as a
-//! sheet on the tab's window and naming the site that asks, as WebKit asks of a browser.
+//! sheet on the tab's window and naming the site that asks, as WebKit asks of a browser; and the panel that takes a
+//! login from macOS AutoFill for the page's form.
 
 #[cfg(feature = "selftest")]
 use std::cell::RefCell;
@@ -9,8 +10,8 @@ use objc2::MainThreadOnly;
 use objc2::rc::Retained;
 use objc2::runtime::Bool;
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSModalResponse, NSModalResponseOK, NSOpenPanel, NSSecureTextField, NSTextField,
-    NSView, NSWindow,
+    NSAlert, NSAlertFirstButtonReturn, NSModalResponse, NSModalResponseOK, NSOpenPanel, NSSecureTextField,
+    NSTextContent, NSTextField, NSView, NSWindow,
 };
 use objc2_foundation::{
     NSArray, NSPoint, NSRect, NSSize, NSString, NSURL, NSURLAuthenticationChallenge, NSURLCredential,
@@ -19,7 +20,7 @@ use objc2_foundation::{
 use objc2_web_kit::{WKFrameInfo, WKOpenPanelParameters};
 use splat_i18n::{t, tf};
 
-use crate::util::{guarded, ns};
+use crate::util::{constant, guarded, ns};
 
 /// How WebKit takes the answer to a login.
 pub type LoginAnswer = RcBlock<dyn Fn(NSURLSessionAuthChallengeDisposition, *mut NSURLCredential)>;
@@ -73,6 +74,15 @@ fn text_field(window: &NSWindow, value: &str, placeholder: &str, secret: bool) -
     field
 }
 
+/// A user name field holding `user` and a password field, marked so macOS AutoFill offers the Passwords app's logins.
+fn credential_fields(window: &NSWindow, user: &str) -> Vec<Retained<NSTextField>> {
+    let name = text_field(window, user, t("Benutzername"), false);
+    name.setContentType(Some(constant!(objc2_app_kit::NSTextContentTypeUsername)));
+    let password = text_field(window, "", t("Passwort"), true);
+    password.setContentType(Some(constant!(objc2_app_kit::NSTextContentTypePassword)));
+    vec![name, password]
+}
+
 /// Puts `fields` below each other into `alert` and focuses the first.
 fn add_fields(alert: &NSAlert, fields: &[Retained<NSTextField>]) {
     let Some(first) = fields.first() else { return };
@@ -87,6 +97,10 @@ fn add_fields(alert: &NSAlert, fields: &[Retained<NSTextField>]) {
         let y = height - (index as f64 + 1.0) * FIELD_HEIGHT - index as f64 * gap;
         field.setFrameOrigin(NSPoint::new(0.0, y));
         stack.addSubview(field);
+    }
+    for pair in fields.windows(2) {
+        // SAFETY: Both fields live in the same accessory view, which keeps them for as long as the panel shows.
+        unsafe { pair[0].setNextKeyView(Some(&pair[1])) };
     }
     alert.setAccessoryView(Some(&stack));
     alert.layout();
@@ -217,10 +231,7 @@ pub fn login(window: Option<&NSWindow>, challenge: &NSURLAuthenticationChallenge
         .and_then(|credential| credential.user())
         .map(|user| user.to_string())
         .unwrap_or_default();
-    let fields = vec![
-        text_field(window, &proposed, t("Benutzername"), false),
-        text_field(window, "", t("Passwort"), true),
-    ];
+    let fields = credential_fields(window, &proposed);
     add_fields(&alert, &fields);
     ask(window, alert, fields, move |ok, texts| {
         let [user, password] = texts.as_slice() else {
@@ -238,6 +249,38 @@ pub fn login(window: Option<&NSWindow>, challenge: &NSURLAuthenticationChallenge
         );
         let pointer = Retained::as_ptr(&credential).cast_mut();
         done.call((NSURLSessionAuthChallengeDisposition::UseCredential, pointer));
+    });
+}
+
+/// Asks for the login to fill into the form of the page at `host`, offering what macOS AutoFill has; `done` gets
+/// the user name and password unless the user cancelled. `plain` for a page that sends them unencrypted.
+pub fn fill_login(window: &NSWindow, host: &str, plain: bool, done: impl Fn(String, String) + 'static) {
+    let alert = NSAlert::new(window.mtm());
+    alert.setMessageText(&ns(&tf("Anmeldung für „{}“ ausfüllen", &[host])));
+    let mut detail = vec![t(
+        "Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht.",
+    )];
+    if plain {
+        detail.push(t(
+            "Die Verbindung ist nicht verschlüsselt, das Passwort wird lesbar übertragen.",
+        ));
+    }
+    alert.setInformativeText(&ns(&detail.join(" ")));
+    alert.addButtonWithTitle(&ns(t("Ausfüllen")));
+    alert.addButtonWithTitle(&ns(t("Abbrechen")));
+    let fields = credential_fields(window, "");
+    add_fields(&alert, &fields);
+    // macOS AutoFill offers the Passwords app's logins for other sites only in the password field, and fills the
+    // user name field beside it from there.
+    if let Some(password) = fields.last() {
+        alert.window().setInitialFirstResponder(Some(password));
+    }
+    ask(window, alert, fields, move |ok, texts| {
+        if let (true, [user, password]) = (ok, texts.as_slice())
+            && !(user.is_empty() && password.is_empty())
+        {
+            done(user.clone(), password.clone());
+        }
     });
 }
 

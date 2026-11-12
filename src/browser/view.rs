@@ -28,7 +28,7 @@ use super::address::{self, Address};
 use super::controls::Controls;
 use super::failure::{Failure, FailurePage};
 use super::notice::Notice;
-use super::{dialogs, downloads, trust, web};
+use super::{autofill, dialogs, downloads, trust, web};
 use crate::util::{constant, guarded, item, ns, set_target};
 use crate::window::WindowController;
 
@@ -313,6 +313,11 @@ define_class!(
         #[unsafe(method(ideBrowserOpenExternally:))]
         fn open_externally_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.open_externally());
+        }
+
+        #[unsafe(method(ideBrowserFillLogin:))]
+        fn fill_login_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.fill_login());
         }
 
         #[unsafe(method(ideBrowserProceed:))]
@@ -642,6 +647,37 @@ impl BrowserView {
         }
     }
 
+    /// Asks for a login, which macOS AutoFill can offer, and writes it into the page's form; the page must still
+    /// show the same host when it arrives.
+    pub(super) fn fill_login(&self) {
+        let (Some(url), Some(window)) = (self.current_url(), self.window()) else {
+            return;
+        };
+        let scheme = address::scheme_of(&url);
+        let Some(page) = address::origin(&url)
+            .filter(|_| matches!(scheme.as_deref(), Some("http" | "https")))
+            .and_then(|origin| origin.split_once("://").map(|(_, authority)| authority.to_string()))
+        else {
+            return;
+        };
+        let host = address::host_of(&url).unwrap_or_else(|| page.clone());
+        let plain = scheme.as_deref() == Some("http") && !address::is_local(&url);
+        let view = Weak::from(self);
+        dialogs::fill_login(&window, &host, plain, move |user, password| {
+            let Some(view) = view.load() else { return };
+            let weak = Weak::from(&*view);
+            autofill::fill(&view.parts().web, &page, &user, &password, move |filled| {
+                if filled == 0
+                    && let Some(view) = weak.load()
+                {
+                    view.parts().notice.show_login(t(
+                        "Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt.",
+                    ));
+                }
+            });
+        });
+    }
+
     /// Answers an authentication challenge of the page's server through `done`, now or once the user did.
     fn answer_challenge(
         &self,
@@ -728,6 +764,13 @@ impl BrowserView {
             .and_then(address::scheme_of)
             .is_some_and(|scheme| matches!(scheme.as_str(), "http" | "https" | "file"));
         controls.external.setEnabled(external);
+        let web_page = url
+            .as_deref()
+            .and_then(address::scheme_of)
+            .is_some_and(|scheme| matches!(scheme.as_str(), "http" | "https"));
+        controls
+            .login
+            .setEnabled(web_page && self.ivars().failure.borrow().is_none());
         self.update_title(&state);
     }
 

@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Hva listen viser";
 "offen" = "åpen";
+"Anmeldung ausfüllen" = "Fyll ut pålogging";
+"Anmeldung für „{}“ ausfüllen" = "Fyll ut pålogging for «{}»";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Velg en pålogging fra Passord-appen i feltet; appen fyller den inn i sidens skjema og beholder den ikke.";
+"Ausfüllen" = "Fyll ut";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Denne siden har ikke noe påloggingsskjema, eller den har endret seg i mellomtiden.";

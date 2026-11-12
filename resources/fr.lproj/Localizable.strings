@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Ce que la liste affiche";
 "offen" = "ouvert";
+"Anmeldung ausfüllen" = "Remplir les données de connexion";
+"Anmeldung für „{}“ ausfüllen" = "Remplir les données de connexion pour « {} »";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Choisissez dans le champ des données de connexion de l’app Mots de passe ; elles sont saisies dans le formulaire de la page et l’app ne les conserve pas.";
+"Ausfüllen" = "Remplir";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Cette page ne contient aucun formulaire de connexion, ou elle a changé entre-temps.";

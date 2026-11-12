@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull Request’ler";
 "Was die Liste zeigt" = "Listenin gösterdikleri";
 "offen" = "açık";
+"Anmeldung ausfüllen" = "Giriş Bilgilerini Doldur";
+"Anmeldung für „{}“ ausfüllen" = "Giriş Bilgilerini Doldur: “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Alanda Parolalar uygulamasından giriş bilgilerini seçin; bilgiler sayfanın formuna doldurulur ve uygulama bunları saklamaz.";
+"Ausfüllen" = "Doldur";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Bu sayfada giriş formu yok veya sayfa bu arada değişti.";

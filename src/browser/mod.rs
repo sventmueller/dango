@@ -5,9 +5,11 @@
 //! schemes never and local files only inside the window's folder, read-only. Pop-ups and `target=_blank` open as tabs,
 //! downloads ask where to save, uploads take only what the user picks, camera and microphone stay off. A certificate
 //! macOS does not trust can be accepted only for a development server (see `trust`), HTTP logins are asked for and
-//! kept in memory until the app quits.
+//! kept in memory until the app quits. A login from macOS AutoFill goes only into the main frame of the host it was
+//! asked for (see `autofill`).
 
 mod address;
+mod autofill;
 mod controls;
 mod dialogs;
 mod downloads;
@@ -209,6 +211,14 @@ pub fn proceed(controller: &WindowController) -> bool {
 
 #[cfg(feature = "selftest")]
 pub use dialogs::answer_asking;
+
+/// Presses the key button of the browser tab in front, as the self-test's user.
+#[cfg(feature = "selftest")]
+pub fn fill_login(controller: &WindowController) {
+    if let Some(view) = front(controller) {
+        view.fill_login();
+    }
+}
 
 #[cfg(feature = "selftest")]
 pub fn inspect(controller: &WindowController) -> Vec<Seen> {

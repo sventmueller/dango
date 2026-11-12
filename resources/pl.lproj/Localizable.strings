@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requesty";
 "Was die Liste zeigt" = "Co pokazuje lista";
 "offen" = "otwarte";
+"Anmeldung ausfüllen" = "Wypełnij dane logowania";
+"Anmeldung für „{}“ ausfüllen" = "Wypełnij dane logowania dla „{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Wybierz w polu dane logowania z aplikacji Hasła; aplikacja wpisze je w formularz strony i ich nie zachowa.";
+"Ausfüllen" = "Wypełnij";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Na tej stronie nie ma formularza logowania lub strona w międzyczasie się zmieniła.";

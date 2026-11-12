@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Τι δείχνει η λίστα";
 "offen" = "ανοιχτό";
+"Anmeldung ausfüllen" = "Συμπλήρωση στοιχείων σύνδεσης";
+"Anmeldung für „{}“ ausfüllen" = "Συμπλήρωση στοιχείων σύνδεσης για «{}»";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Επιλέξτε στο πεδίο στοιχεία σύνδεσης από τα Συνθηματικά· η εφαρμογή τα συμπληρώνει στη φόρμα της σελίδας και δεν τα κρατά.";
+"Ausfüllen" = "Συμπλήρωση";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Αυτή η σελίδα δεν έχει φόρμα σύνδεσης ή έχει αλλάξει στο μεταξύ.";

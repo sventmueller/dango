@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull requestit";
 "Was die Liste zeigt" = "Mitä luettelo näyttää";
 "offen" = "avoin";
+"Anmeldung ausfüllen" = "Täytä kirjautumistiedot";
+"Anmeldung für „{}“ ausfüllen" = "Täytä kirjautumistiedot: ”{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Valitse kentässä kirjautumistiedot Salasanat-apista; appi täyttää ne sivun lomakkeeseen eikä säilytä niitä.";
+"Ausfüllen" = "Täytä";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Tällä sivulla ei ole kirjautumislomaketta, tai sivu on vaihtunut sillä välin.";

@@ -661,7 +661,10 @@ fn answer(mut stream: TcpStream) -> std::io::Result<()> {
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>{PAGE_TITLE}</title>\
              <style>body{{font:15px -apple-system;margin:40px;color:#1d1d1f}}\
              h1{{color:#0a66d8}}</style></head><body><h1>{PAGE_TITLE}</h1>\
-             <p>Served from 127.0.0.1 for the browser tab.</p></body></html>"
+             <p>Served from 127.0.0.1 for the browser tab.</p>\
+             <form><input name=user autocomplete=username> <input name=secret type=password></form>\
+             <script>addEventListener('input', () => {{ const f = document.forms[0]; \
+             document.title = `{FILLED} ${{f.user.value}} ${{f.secret.value.length}}`; }})</script></body></html>"
         );
         ("200 OK", body)
     };
@@ -825,6 +828,29 @@ fn browser_shortcut_reloaded(ok: bool) {
         "the menu bar offers reloading for the browser tab in front",
         crate::browser::validate(&controller, objc2::sel!(ideBrowserReload:)),
         "",
+    );
+    crate::browser::fill_login(&controller);
+    check(
+        "the key button asks for a login",
+        crate::browser::answer_asking(&["selftest", "secret"]),
+        "",
+    );
+    poll(
+        Instant::now() + Duration::from_secs(10),
+        || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == &format!("{FILLED} selftest 6"))),
+        browser_filled,
+    );
+}
+
+/// The title the self-test page takes once its login form was filled in.
+const FILLED: &str = "Filled";
+
+fn browser_filled(ok: bool) {
+    let Some(controller) = first_window() else { return };
+    check(
+        "the login lands in the page's form as typing would",
+        ok,
+        controller.tab_titles().join(", "),
     );
     let closed = TcpListener::bind("127.0.0.1:0")
         .and_then(|listener| listener.local_addr())

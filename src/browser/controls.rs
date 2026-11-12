@@ -1,6 +1,6 @@
-//! The navigation row above the page: back, forward, reload or stop, the address field, the loading indicator and
-//! "open in the default browser". A horizontal stack lays them out from leading to trailing, so the row mirrors in
-//! right-to-left languages; the address itself stays left to right like code (E3).
+//! The navigation row above the page: back, forward, reload or stop, the address field, the loading indicator,
+//! filling in a login and "open in the default browser". A horizontal stack lays them out from leading to trailing,
+//! so the row mirrors in right-to-left languages; the address itself stays left to right like code (E3).
 
 use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
@@ -25,6 +25,7 @@ pub struct Controls {
     pub reload: Retained<NSButton>,
     pub field: Retained<NSTextField>,
     pub spinner: Retained<NSProgressIndicator>,
+    pub login: Retained<NSButton>,
     pub external: Retained<NSButton>,
 }
 
@@ -39,6 +40,7 @@ impl Controls {
         let back = button("chevron.backward", t("Zurück"), sel!(ideBrowserBack:));
         let forward = button("chevron.forward", t("Vorwärts"), sel!(ideBrowserForward:));
         let reload = button("arrow.clockwise", t("Neu laden"), sel!(ideBrowserReloadOrStop:));
+        let login = button("key", t("Anmeldung ausfüllen"), sel!(ideBrowserFillLogin:));
         let external = button(
             "arrow.up.forward.app",
             t("In Standardbrowser öffnen"),
@@ -67,6 +69,7 @@ impl Controls {
             &reload,
             &field,
             &spinner,
+            &login,
             &external,
         ] {
             row.addArrangedSubview(view);
@@ -81,6 +84,7 @@ impl Controls {
             reload,
             field,
             spinner,
+            login,
             external,
         }
     }

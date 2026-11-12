@@ -1249,3 +1249,8 @@
 "Pull Requests" = "Pull request";
 "Was die Liste zeigt" = "Nội dung danh sách hiển thị";
 "offen" = "đang mở";
+"Anmeldung ausfüllen" = "Điền thông tin đăng nhập";
+"Anmeldung für „{}“ ausfüllen" = "Điền thông tin đăng nhập cho “{}”";
+"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Chọn thông tin đăng nhập từ ứng dụng Mật khẩu trong trường; ứng dụng điền thông tin đó vào biểu mẫu của trang và không giữ lại.";
+"Ausfüllen" = "Điền";
+"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Trang này không có biểu mẫu đăng nhập hoặc trang đã thay đổi trong lúc đó.";
