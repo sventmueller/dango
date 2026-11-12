@@ -498,8 +498,12 @@ impl Timeline {
             self.figures.borrow_mut().remove(id);
         }
         drop(old);
-        // Corrections name row positions, which may now belong to other entries.
-        self.corrections.borrow_mut().clear();
+        // A correction waiting for its flush would otherwise be lost, and its card stay squeezed into the old height.
+        let corrections = std::mem::take(&mut *self.corrections.borrow_mut());
+        *self.corrections.borrow_mut() = corrections
+            .into_values()
+            .filter_map(|correction| positions.get(&correction.id).map(|row| (*row, correction)))
+            .collect();
         *self.rows.borrow_mut() = new;
         *self.positions.borrow_mut() = positions;
         *self.list.borrow_mut() = list;

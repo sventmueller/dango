@@ -923,6 +923,69 @@ fn rewind(root: PathBuf) {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-rewind");
         }
+        squeezed(root);
+    });
+}
+
+/// A frame of the session the `squeezed` step plays.
+fn squeezed_frame(kind: &str, id: &str, content: serde_json::Value) -> String {
+    json!({"type": kind, "message": {"model": "claude-opus-5-5", "id": id, "type": "message",
+           "role": if kind == "user" { "user" } else { "assistant" }, "content": content, "stop_reason": null,
+           "usage": {"input_tokens": 10, "output_tokens": 20}},
+           "parent_tool_use_id": null, "session_id": "51e1f7e5-0000-4000-8000-0000000000ff", "uuid": format!("{id}-uuid")})
+    .to_string()
+}
+
+/// A shell starts in a timeline that has taken its width.
+fn squeezed(root: PathBuf) {
+    let Some(controller) = controller_of(&root) else {
+        return finish(NAME);
+    };
+    let Some(tab) = crate::agent::open_replay(&controller) else {
+        return finish(NAME);
+    };
+    tab.feed(&squeezed_frame(
+        "assistant",
+        "msg_sq_1",
+        json!([{"type": "tool_use", "id": "toolu_sq", "name": "Bash",
+                "input": {"command": "rg -n pattern src | head -40", "description": "Search the sources"}}]),
+    ));
+    let key = tab.key;
+    main_after(Duration::from_millis(300), move || squeezed_output(root, key));
+}
+
+/// The shell's output arrives, its card is built, and the next entry follows before the row took the card's height.
+fn squeezed_output(root: PathBuf, key: u64) {
+    let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+        return finish(NAME);
+    };
+    let output: String = (1..=40).map(|n| format!("line {n} of the output\n")).collect();
+    tab.feed(&squeezed_frame(
+        "user",
+        "msg_sq_2",
+        json!([{"tool_use_id": "toolu_sq", "type": "tool_result", "content": output}]),
+    ));
+    if let Some(window) = controller.window() {
+        window.layoutIfNeeded();
+        window.displayIfNeeded();
+    }
+    tab.feed(&squeezed_frame(
+        "assistant",
+        "msg_sq_3",
+        json!([{"type": "thinking", "thinking": "Next step.", "signature": ""}]),
+    ));
+    main_after(Duration::from_millis(300), move || {
+        if let Some(tab) = tab_of(key) {
+            let misfits = tab.timeline().misfits();
+            check(
+                "a shell card keeps its height when the next entry follows its output at once",
+                misfits.is_empty(),
+                misfits.join(" | "),
+            );
+        }
+        if let Some(controller) = controller_of(&root) {
+            picture(&controller, "agent-squeezed");
+        }
         super::agent_context::run(root, long);
     });
 }
