@@ -123,7 +123,7 @@ impl Model {
                 let resume = Resume {
                     session: session.id.clone(),
                     thread: None,
-                    title: session.title.clone().or_else(|| session.first_prompt.clone()),
+                    title: session.heading(),
                     transcript: Some(session.path.clone()),
                 };
                 let node = Node::Past {

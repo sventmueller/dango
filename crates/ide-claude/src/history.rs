@@ -37,6 +37,17 @@ pub struct PastSession {
     pub path: PathBuf,
 }
 
+impl PastSession {
+    /// What a list calls it, on one line: the title, else the first prompt's first line that is not blank.
+    pub fn heading(&self) -> Option<String> {
+        [&self.title, &self.first_prompt]
+            .into_iter()
+            .flatten()
+            .map(|text| ide_thread::title_from(text))
+            .find(|line| !line.is_empty())
+    }
+}
+
 /// The CLI's configuration folder: `CLAUDE_CONFIG_DIR` from `env`, else `~/.claude`.
 pub fn config_dir(env: &[(String, String)]) -> PathBuf {
     env.iter()
@@ -372,5 +383,32 @@ mod tests {
         let env = vec![("CLAUDE_CONFIG_DIR".to_string(), "/custom".to_string())];
         assert_eq!(config_dir(&env), PathBuf::from("/custom"));
         assert!(config_dir(&[]).ends_with(".claude"));
+    }
+
+    #[test]
+    fn a_heading_is_one_line_from_the_title_or_the_first_prompt() {
+        let session = |title: Option<&str>, prompt: Option<&str>| PastSession {
+            id: "s".into(),
+            title: title.map(Into::into),
+            first_prompt: prompt.map(Into::into),
+            last_prompt: None,
+            git_branch: None,
+            modified: SystemTime::UNIX_EPOCH,
+            path: PathBuf::new(),
+        };
+        let two_lines = Some("\nWhy is the list off?\nMove the age right");
+        assert_eq!(
+            session(None, two_lines).heading().as_deref(),
+            Some("Why is the list off?")
+        );
+        assert_eq!(
+            session(Some("Parser fix"), two_lines).heading().as_deref(),
+            Some("Parser fix")
+        );
+        assert_eq!(
+            session(Some("  "), two_lines).heading().as_deref(),
+            Some("Why is the list off?")
+        );
+        assert_eq!(session(None, None).heading(), None);
     }
 }

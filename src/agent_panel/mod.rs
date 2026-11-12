@@ -150,7 +150,7 @@ pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
         if known.contains(&session.id) {
             continue;
         }
-        let title = session.title.clone().or_else(|| session.first_prompt.clone());
+        let title = session.heading();
         past.push((
             Resume {
                 session: session.id.clone(),
