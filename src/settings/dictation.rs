@@ -9,10 +9,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSGridCellPlacement, NSGridView, NSStackView,
-    NSTextField, NSUserInterfaceLayoutOrientation, NSView, NSWorkspace,
+    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSGridCell, NSGridCellPlacement,
+    NSGridRowAlignment, NSGridView, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSView, NSWorkspace,
 };
-use objc2_foundation::{NSArray, NSObjectProtocol};
+use objc2_foundation::{NSArray, NSObjectProtocol, NSRange};
 use splat_i18n::{t, tf};
 
 use crate::dictation::{self, FnState, LOWSPEAK_APP, PROVIDERS};
@@ -277,27 +277,33 @@ fn layout(mtm: MainThreadMarker, views: &Views) -> Retained<NSView> {
         stack.into_super()
     };
     let caption = |text: &str| label(mtm, text).into_super().into_super();
+    let empty = || NSGridCell::emptyContentView(mtm);
     let mut rows: Vec<Vec<Retained<NSView>>> = vec![
-        vec![caption(t("Lowspeak:")), up(&views.lowspeak)],
-        vec![caption(""), up(&views.open)],
-        vec![caption(t("Transkription:")), up(&views.transcription)],
-        vec![caption(t("Sprache:")), up(&views.language)],
-        vec![caption(t("Nachbearbeitung:")), up(&views.post_processing)],
-        vec![caption(t("Mikrofon:")), up(&views.microphone)],
-        vec![caption(t("Vokabular:")), up(&views.vocabulary)],
+        vec![caption(t("Lowspeak:")), up(&views.lowspeak), empty()],
+        vec![caption(""), up(&views.open), empty()],
+        vec![caption(t("Transkription:")), up(&views.transcription), empty()],
+        vec![caption(t("Sprache:")), up(&views.language), empty()],
+        vec![caption(t("Nachbearbeitung:")), up(&views.post_processing), empty()],
+        vec![caption(t("Mikrofon:")), up(&views.microphone), empty()],
+        vec![caption(t("Vokabular:")), up(&views.vocabulary), empty()],
     ];
+    let first_key = rows.len();
     for (n, (state, button)) in views.keys.iter().enumerate() {
         let title = if n == 0 { t("API-Schlüssel:") } else { "" };
-        rows.push(vec![caption(title), side(&[state, button])]);
+        rows.push(vec![caption(title), up(state), up(button)]);
     }
-    rows.push(vec![caption(t("fn-Taste:")), up(&views.with_fn)]);
-    rows.push(vec![caption(""), side(&[&views.fn_note, &views.ask])]);
+    let after_keys = rows.len();
+    rows.push(vec![caption(t("fn-Taste:")), up(&views.with_fn), empty()]);
+    rows.push(vec![caption(""), side(&[&views.fn_note, &views.ask]), empty()]);
+    let count = rows.len();
     let rows: Vec<Retained<NSArray<NSView>>> = rows.iter().map(|row| NSArray::from_retained_slice(row)).collect();
     let grid = NSGridView::gridViewWithViews(&NSArray::from_retained_slice(&rows), mtm);
     grid.setRowSpacing(10.0);
     grid.setColumnSpacing(8.0);
-    if let Some(column) = grid.columnAtIndex(0).into() {
-        column.setXPlacement(NSGridCellPlacement::Trailing);
+    grid.setRowAlignment(NSGridRowAlignment::FirstBaseline);
+    grid.columnAtIndex(0).setXPlacement(NSGridCellPlacement::Trailing);
+    for row in (0..count).filter(|row| !(first_key..after_keys).contains(row)) {
+        grid.mergeCellsInHorizontalRange_verticalRange(NSRange::new(1, 2), NSRange::new(row, 1));
     }
     let view = NSView::new(mtm);
     view.addSubview(&grid);
