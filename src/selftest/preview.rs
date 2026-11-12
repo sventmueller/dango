@@ -184,13 +184,14 @@ fn scrolling(root: PathBuf) {
         return finish(SCENARIO);
     };
     let text = view.document().text().to_string();
-    if let Some(byte) = text.find("Absatz 60 ") {
+    // Far enough from the end that the editor can bring it to its top at any text size and window height.
+    if let Some(byte) = text.find("Absatz 40 ") {
         crate::editor::scroll_to_byte(&view, byte);
     }
     let path = root.join("doc.md");
     let shown = path.clone();
     super::helpers::wait_until(
-        move || seen::top_line(&shown).is_some_and(|line| line.starts_with("Absatz 6")),
+        move || seen::top_line(&shown).is_some_and(|line| line.starts_with("Absatz 40 ")),
         move |ok| {
             check(
                 "the preview scrolls with the editor",
@@ -207,7 +208,7 @@ fn scrolling(root: PathBuf) {
 }
 
 /// Each small step of one side moves the other a little, rather than in jumps from paragraph to paragraph; upwards,
-/// as the editor stands near the end of the text.
+/// across the start of the paragraph at the top, from a place the editor jumped to without laying out the text above.
 fn smooth_scrolling(root: &Path, path: &Path) {
     let Some(view) = window_of(root).and_then(|c| editor(&c, "doc.md")) else {
         return;
