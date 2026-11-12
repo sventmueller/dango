@@ -68,7 +68,7 @@ impl Views {
         field_row.addArrangedSubview(&field);
         field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
         let (replace_row, replace, replace_all) = replace_row(mtm, panel);
-        let disclosure = disclosure(mtm, panel);
+        let (disclosure_row, disclosure) = disclosure(mtm, panel);
         let include = glob_field(
             mtm,
             panel,
@@ -96,7 +96,7 @@ impl Views {
             bottom: 4.0,
             right: MARGIN,
         });
-        for view in [&*field_row as &NSView, &replace_row, &disclosure, &globs, &status] {
+        for view in [&*field_row as &NSView, &replace_row, &disclosure_row, &globs, &status] {
             bar.addArrangedSubview(view);
         }
         for (view, inset) in [
@@ -342,21 +342,40 @@ fn replace_row(
     (row, field, all)
 }
 
-fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSButton> {
+/// The row that opens the file filters: a chevron as wide as the replace chevron, so the title stays put whichever
+/// way the chevron points, and the title, which opens them as well.
+fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSStackView>, Retained<NSButton>) {
     let title = t("Dateien ein- und ausschließen");
+    let image = symbol("chevron.right", "").unwrap_or_default();
     // SAFETY: A nil target sends the action along the responder chain until `set_action` names the panel.
-    let button =
+    let chevron = unsafe { NSButton::buttonWithImage_target_action(&image, None, Some(sel!(ideSearchDisclose:)), mtm) };
+    set_action(&chevron, panel, sel!(ideSearchDisclose:));
+    chevron.setBordered(false);
+    size_chevron(&chevron);
+    chevron.setImagePosition(NSCellImagePosition::ImageOnly);
+    chevron.setButtonType(NSButtonType::PushOnPushOff);
+    chevron.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+    crate::util::set_label(&chevron, Some(title));
+    chevron.setAccessibilityExpanded(false);
+    chevron.setTranslatesAutoresizingMaskIntoConstraints(false);
+    chevron
+        .widthAnchor()
+        .constraintEqualToConstant(CHEVRON_WIDTH)
+        .setActive(true);
+    // SAFETY: A nil target sends the action along the responder chain until `set_action` names the panel.
+    let label =
         unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, Some(sel!(ideSearchDisclose:)), mtm) };
-    set_action(&button, panel, sel!(ideSearchDisclose:));
-    button.setBordered(false);
-    size_chevron(&button);
-    button.setButtonType(NSButtonType::PushOnPushOff);
-    button.setImage(symbol("chevron.right", "").as_deref());
-    button.setImagePosition(NSCellImagePosition::ImageLeading);
-    button.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
-    button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-    button.setAccessibilityExpanded(false);
-    button
+    set_action(&label, panel, sel!(ideSearchDisclose:));
+    label.setBordered(false);
+    label.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    label.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+    label.setAccessibilityElement(false);
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(2.0);
+    row.addArrangedSubview(&chevron);
+    row.addArrangedSubview(&label);
+    (row, chevron)
 }
 
 /// Draws the chevron of `button` at the size of every chevron of the sidebar, whatever its font.
