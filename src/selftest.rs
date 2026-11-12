@@ -47,6 +47,7 @@ mod files_header;
 mod git;
 mod helpers;
 mod inlay;
+mod inlay_repo;
 mod insets;
 mod lsp;
 mod lsp_actions;
@@ -153,6 +154,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "editor-undo" => editor_undo::run(),
         "editor-insets" => insets::run(),
         "inlay-hints" => inlay::run(),
+        "inlay-repo" => inlay_repo::run(),
         "editor-blame" => blame::run(),
         "search" => search::run(),
         "terminal" => terminal::run(),

@@ -248,6 +248,11 @@ define_class!(
             guarded((), || {
                 crate::lsp::mouse_moved(self, event);
                 super::blame::mouse_moved(self, event);
+                // The text view has just set its I-beam; over a hint that leads somewhere the hand wins.
+                let point = self.convertPoint_fromView(event.locationInWindow(), None);
+                if super::insets::hits(self, point) {
+                    objc2_app_kit::NSCursor::pointingHandCursor().set();
+                }
             });
         }
 
