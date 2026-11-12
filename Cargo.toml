@@ -39,6 +39,7 @@ objc2-core-foundation = "0.3.2"
 objc2-application-services = "0.3.2"
 objc2-av-foundation = "0.3.2"
 objc2-core-graphics = "0.3.2"
+objc2-core-image = "0.3.2"
 objc2-core-text = "0.3.2"
 objc2-foundation = "0.3.2"
 objc2-metal = "0.3.2"
@@ -121,6 +122,7 @@ objc2-core-foundation.workspace = true
 objc2-application-services = { workspace = true, optional = true }
 objc2-av-foundation = { workspace = true, optional = true }
 objc2-core-graphics.workspace = true
+objc2-core-image.workspace = true
 objc2-core-text.workspace = true
 objc2-foundation.workspace = true
 objc2-metal.workspace = true

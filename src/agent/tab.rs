@@ -1292,7 +1292,7 @@ impl AgentTab {
             .collect()
     }
 
-    /// Clicks the first picture tile above the composer's text; the size of the popover that opens, closed again.
+    /// Clicks the first picture tile above the composer's text; the size the picture opens at over the tab.
     #[cfg(feature = "selftest")]
     pub fn enlarge_thumbnail(&self) -> Option<objc2_foundation::NSSize> {
         fn clear_button(view: &objc2_app_kit::NSView) -> Option<Retained<objc2_app_kit::NSButton>> {
@@ -1306,7 +1306,13 @@ impl AgentTab {
         let button = clear_button(&self.composer.chips)?;
         // SAFETY: The button's target is the opener, which lives as long as the app.
         unsafe { button.performClick(None) };
-        super::enlarge::take_shown()
+        super::enlarge::shown()
+    }
+
+    /// The size of the picture open large over the tab, if one is.
+    #[cfg(feature = "selftest")]
+    pub fn enlarged(&self) -> Option<objc2_foundation::NSSize> {
+        super::enlarge::shown()
     }
 
     /// Whether a rewind waits for the agent to accept it.

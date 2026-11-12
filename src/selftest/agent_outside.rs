@@ -129,15 +129,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
         format!("pasted {pasted}, tiles {tiles:?}"),
     );
-    let enlarged = tab.enlarge_thumbnail();
-    check(
-        "a click on a pasted picture's tile opens the picture large, within the window",
-        enlarged.is_some_and(|size| {
-            let room = controller.window().map_or(0.0, |w| w.frame().size.width);
-            size.width > 76.0 && size.width <= room
-        }),
-        format!("{enlarged:?}"),
-    );
+    enlarge(&controller, &tab);
     let idle = tab.tab_mark();
     if let Some(png) = &shot {
         let frame = serde_json::json!({"type": "user", "uuid": "picture-sent", "message": {"role": "user", "content": [
@@ -194,4 +186,42 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
         }
         main_after(SETTLE, move || then(root));
     });
+}
+
+/// A click on the pasted picture's tile opens it large over the tab, and Escape closes it.
+fn enlarge(controller: &crate::window::WindowController, tab: &crate::agent::AgentTab) {
+    let enlarged = tab.enlarge_thumbnail();
+    check(
+        "a click on a pasted picture's tile opens the picture large, within the window",
+        enlarged.is_some_and(|size| {
+            let room = controller.window().map_or(0.0, |w| w.frame().size.width);
+            size.width > 76.0 && size.width <= room
+        }),
+        format!("{enlarged:?}"),
+    );
+    picture(controller, "agent-picture-large");
+    let escaped = controller.window().is_some_and(|window| {
+        let escape = objc2_app_kit::NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
+            objc2_app_kit::NSEventType::KeyDown,
+            objc2_foundation::NSPoint::new(0.0, 0.0),
+            objc2_app_kit::NSEventModifierFlags::empty(),
+            0.0,
+            window.windowNumber(),
+            None,
+            &ns("\u{1b}"),
+            &ns("\u{1b}"),
+            false,
+            53,
+        );
+        // The keys go to the focus itself, since a selftest app is never the active one.
+        escape.zip(window.firstResponder()).is_some_and(|(escape, responder)| {
+            responder.keyDown(&escape);
+            true
+        })
+    });
+    check(
+        "Escape closes the large picture",
+        escaped && tab.enlarged().is_none(),
+        format!("escaped {escaped}, still open {:?}", tab.enlarged()),
+    );
 }
