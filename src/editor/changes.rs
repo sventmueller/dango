@@ -48,6 +48,8 @@ pub struct Marks {
     hunks: Vec<Hunk>,
     /// The lines of the text the hunks were found in, to place a removal behind the last line.
     lines: usize,
+    /// The document's revision the hunks were found in.
+    revision: Option<u64>,
     /// Counts questions, so that the answer to an older one is dropped.
     asked: u64,
     popover: Option<Retained<NSPopover>>,
@@ -103,10 +105,10 @@ fn read_head(path: &Path, known: Option<Oid>) -> Option<Result<Head, Oid>> {
     Some(Ok(Head { commit, text }))
 }
 
-fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize) {
+fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, u64) {
     let text = snapshot.text().to_string();
     let lines = text.split_inclusive('\n').count();
-    (splat_git::diff::hunks(head, &text), lines)
+    (splat_git::diff::hunks(head, &text), lines, snapshot.revision())
 }
 
 /// Reads the file's last commit again and compares; `force` reads it even when the commit is the one already known.
@@ -128,8 +130,8 @@ pub fn reload(view: &EditorTextView, force: bool) {
             None => Answer::Gone,
             Some(Err(_same)) => Answer::Same,
             Some(Ok(head)) => {
-                let (hunks, lines) = hunks_of(&head.text, &snapshot);
-                Answer::Head(head, hunks, lines)
+                let (hunks, lines, revision) = hunks_of(&head.text, &snapshot);
+                Answer::Head(head, hunks, lines, revision)
             }
         };
         main_soon(move || deliver(serial, asked, answer));
@@ -157,8 +159,8 @@ pub fn compare(view: &EditorTextView) {
     let asked = next_question(view);
     let serial = view.ivars().lsp.borrow().serial;
     spawn(move || {
-        let (hunks, lines) = hunks_of(&text, &snapshot);
-        main_soon(move || deliver(serial, asked, Answer::Hunks(hunks, lines)));
+        let (hunks, lines, revision) = hunks_of(&text, &snapshot);
+        main_soon(move || deliver(serial, asked, Answer::Hunks(hunks, lines, revision)));
     });
 }
 
@@ -178,8 +180,8 @@ enum Answer {
     Gone,
     /// The commit is the one known, so only the text is compared again.
     Same,
-    Head(Head, Vec<Hunk>, usize),
-    Hunks(Vec<Hunk>, usize),
+    Head(Head, Vec<Hunk>, usize, u64),
+    Hunks(Vec<Hunk>, usize, u64),
 }
 
 fn deliver(serial: u64, asked: u64, answer: Answer) {
@@ -199,18 +201,21 @@ fn deliver(serial: u64, asked: u64, answer: Answer) {
                 marks.head = None;
                 marks.hunks.clear();
             }
-            Answer::Head(head, hunks, lines) => {
+            Answer::Head(head, hunks, lines, revision) => {
                 marks.head = Some(head);
                 marks.hunks = hunks;
                 marks.lines = lines;
+                marks.revision = Some(revision);
             }
-            Answer::Hunks(hunks, lines) => {
+            Answer::Hunks(hunks, lines, revision) => {
                 marks.hunks = hunks;
                 marks.lines = lines;
+                marks.revision = Some(revision);
             }
         }
     }
     super::redraw_gutter(&view);
+    super::blame::marks_changed(&view);
 }
 
 fn clear(view: &EditorTextView) {
@@ -245,6 +250,51 @@ fn hunk_at(hunks: &[Hunk], lines: usize, line: usize) -> Option<(&Hunk, Mark)> {
     removed(line + 1)
         .filter(|_| line + 1 >= lines)
         .map(|hunk| (hunk, Mark::RemovedBelow))
+}
+
+/// The commit the marks compare against, as its full hash.
+pub fn head_commit(view: &EditorTextView) -> Option<String> {
+    view.ivars().marks.borrow().head.as_ref().map(|h| h.commit.to_string())
+}
+
+/// Where each line of the text, counted from 0, stands in the file of the last commit: `None` for a line added or
+/// changed since; `None` as a whole while the marks have not caught up with the text.
+pub fn head_lines(view: &EditorTextView) -> Option<Vec<Option<usize>>> {
+    let marks = view.ivars().marks.borrow();
+    marks.head.as_ref()?;
+    if marks.revision != Some(view.document().revision()) {
+        return None;
+    }
+    Some(map_to_head(&marks.hunks, view.document().text().line_count()))
+}
+
+/// For `lines` lines of a text whose differences from the committed text are `hunks`, the committed line of each.
+fn map_to_head(hunks: &[Hunk], lines: usize) -> Vec<Option<usize>> {
+    let mut out = Vec::with_capacity(lines);
+    let mut shift: isize = 0;
+    let mut hunks = hunks.iter().peekable();
+    for line in 0..lines {
+        while let Some(hunk) = hunks.peek() {
+            let new = &hunk.change.lines;
+            let ended = if new.is_empty() {
+                new.start <= line
+            } else {
+                new.end <= line
+            };
+            if !ended {
+                break;
+            }
+            shift += isize::try_from(hunk.old_lines.len()).unwrap_or(0) - isize::try_from(new.len()).unwrap_or(0);
+            hunks.next();
+        }
+        let changed = hunks.peek().is_some_and(|hunk| hunk.change.lines.contains(&line));
+        out.push(if changed {
+            None
+        } else {
+            usize::try_from(isize::try_from(line).unwrap_or(0) + shift).ok()
+        });
+    }
+    out
 }
 
 /// How `line`, counted from 0, is marked.
@@ -546,6 +596,25 @@ mod tests {
         assert_eq!(committed_lines("a\nb\nc", &(1..3)), "b\nc");
         assert_eq!(with_breaks("b\r\nc\nd", "\r\n"), "b\r\nc\r\nd");
         assert_eq!(with_breaks("b\r\n", "\n"), "b\n");
+    }
+
+    #[test]
+    fn each_line_finds_its_committed_line_and_changed_ones_none() {
+        let (found, _) = hunks("a\nb\nc\nd\ne\n", "a\nB\nc\nnew\nmore\nd\ne\n");
+        assert_eq!(
+            map_to_head(&found, 7),
+            vec![Some(0), None, Some(2), None, None, Some(3), Some(4)]
+        );
+        let (found, _) = hunks("a\nb\nc\nd\n", "a\nd\n");
+        assert_eq!(
+            map_to_head(&found, 2),
+            vec![Some(0), Some(3)],
+            "lines after a removal move up"
+        );
+        let (found, _) = hunks("a\n", "a\n");
+        assert_eq!(map_to_head(&found, 1), vec![Some(0)]);
+        let (found, _) = hunks("a\nb\n", "x\na\nb\n");
+        assert_eq!(map_to_head(&found, 3), vec![None, Some(0), Some(1)]);
     }
 
     #[test]

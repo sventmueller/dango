@@ -186,8 +186,8 @@ app agree on this:
 3. A scenario passes when the app ends by itself within its time limit with status 0 and its report is readable,
    names the scenario, lists at least one check and every check is `ok`. The runner prints each check as
    `✓ name — detail` or `✗ name — detail`. At the limit it kills the app: 120 seconds, 300 for `a11y` and `a11y-rtl`, and 600 for
-   `lsp`, which waits for a real rust-analyzer to index and settle before each step (up to 180 s each, the wait in the
-   check's detail) and ends itself after 540.
+   `lsp`, `lsp-actions`, `lsp-actions-go` and `lsp-navigation`, which wait for a real rust-analyzer or gopls to index and settle before
+   each step (up to 180 s each, the wait in the check's detail) and end themselves after 540.
 4. The runner exits with an error if any scenario did not pass, and names it. A failed scenario's home folder stays
    for a look; a passed one's is removed.
 5. A scenario listed in `CRASHING` in `xtask/src/selftest.rs`, `recovery` so far, runs twice in the same home. The
@@ -271,7 +271,7 @@ without asking, so it also works unattended.
 
 | Group | What runs | Accounts |
 |---|---|---|
-| `lsp` | the ignored tests of `ide-lsp/tests/real_servers.rs`: gopls, rust-analyzer, TypeScript 7 through `tsc --lsp`, TypeScript 5 through vtsls, installing rust-analyzer and gopls; then `selftest lsp` | none; downloads from npm, GitHub and the Go proxy |
+| `lsp` | the ignored tests of `ide-lsp/tests/real_servers.rs`: gopls, rust-analyzer, TypeScript 7 through `tsc --lsp`, TypeScript 5 through vtsls, installing rust-analyzer and gopls; then `selftest lsp`, `lsp-actions` (rust-analyzer), `lsp-actions-go` (gopls) and `lsp-navigation` (rust-analyzer on this repository) | none; downloads from npm, GitHub and the Go proxy |
 | `git` | checkpoints restored around an edit of the user's, in a repository and a plain folder, with the git, HOME and global configuration of the login shell | none |
 | `ci` | `selftest ci-live` against a clone on github.com and one on a self-managed GitLab | none paid; reads with the token the app's CI finds through gh or glab or the login shell |
 | `claude` | the ignored real-CLI test of `ide-claude` and `selftest agent-live` | Claude: two short turns with haiku |

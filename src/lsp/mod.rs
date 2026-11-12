@@ -2,15 +2,22 @@
 //! supervisor with the login shell's environment (E23), and told about every edit without making typing wait (E25).
 //! A missing server is offered for installation in the editor's status bar, never installed silently.
 
+mod actions;
 mod agent;
+mod apply;
 mod complete;
 mod decorate;
 mod edits;
+mod hierarchy;
 mod hover;
+pub mod inlay;
+mod lease;
 mod markdown;
 mod navigate;
 mod outline;
+mod project_symbols;
 mod rename;
+mod signature;
 pub mod status;
 mod text;
 mod watch;
@@ -34,19 +41,19 @@ use splat_i18n::{t, tf};
 use crate::editor::{self, EditorTextView};
 use crate::util::{main_after, main_soon};
 
+pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::agent_diagnostics;
-pub use complete::{after_command, command};
 pub use decorate::{Severity, follow, line_marks, paint, text_range};
+pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
 pub use hover::{hover_at_cursor, hover_rest, mouse_moved, rect_of};
-pub use navigate::{definition, jump_to, next_problem, references, symbols};
-pub use outline::selection_moved;
+pub use navigate::{Goto, definition, go_to, jump_to, next_problem, references, symbols};
+#[cfg(feature = "selftest")]
+pub use project_symbols::held as symbol_servers;
+pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
 
 /// How long typing must pause before semantic tokens and pulled diagnostics are asked for again.
 const REFRESH_DELAY: f64 = 0.4;
-
-/// How long a server keeps running after the last editor it serves closed, so reopening one soon costs no new indexing.
-const IDLE_STOP: Duration = Duration::from_secs(5 * 60);
 
 /// The language servers the user set up, which take their files from the built-in ones.
 pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> = Key::user("languageServers", Vec::new);
@@ -68,6 +75,7 @@ pub struct ViewState {
     hover: hover::State,
     squiggles: Option<objc2::rc::Weak<decorate::Squiggles>>,
     crumbs: Vec<outline::Crumb>,
+    actions: actions::State,
 }
 
 /// A server for one language and project root, or what keeps it from running.
@@ -91,8 +99,10 @@ struct Slot {
     progress_at: std::cell::Cell<Option<std::time::Instant>>,
     /// The last message the server asked to show.
     message: RefCell<Option<String>>,
-    /// Counts the times an editor let go of the slot; a pending stop only goes ahead while it is still the latest.
-    released: Cell<u64>,
+    /// When editors and the project symbol search last let go of the slot.
+    hold: Cell<lease::Hold>,
+    /// Whether a look at the end of the slot is pending.
+    timer: Cell<bool>,
 }
 
 /// The servers of one window's folder.
@@ -209,6 +219,12 @@ pub fn validate(view: &EditorTextView, action: Option<objc2::runtime::Sel>) -> O
     if code.contains(&action) {
         return Some(server_of(view).is_some());
     }
+    if let Some(offered) = navigate::offered(view, action) {
+        return Some(offered);
+    }
+    if let Some(offered) = actions::validate(view, action).or_else(|| signature::validate(view, action)) {
+        return Some(offered);
+    }
     if action == sel!(ideNextProblem:) || action == sel!(idePreviousProblem:) {
         return Some(!view.ivars().lsp.borrow().marks.is_empty());
     }
@@ -235,6 +251,34 @@ pub fn typed(view: &EditorTextView, text: &objc2::runtime::AnyObject) {
     };
     hover::dismiss(view);
     complete::typed(view, &typed);
+    signature::typed(view, &typed);
+}
+
+/// A command of the keyboard reached `view`; whether the completion list, a snippet or the signature window took it.
+pub fn command(view: &EditorTextView, command: objc2::runtime::Sel) -> bool {
+    complete::command(view, command) || signature::command(view, command)
+}
+
+/// After a command the editor ran itself, such as deleting backwards: the completion list follows or closes.
+pub fn after_command(view: &EditorTextView, command: objc2::runtime::Sel) {
+    complete::after_command(view, command);
+}
+
+/// The cursor moved: the breadcrumbs, the code actions and the signature window follow.
+pub fn selection_moved(view: &EditorTextView) {
+    outline::selection_moved(view);
+    actions::moved(view);
+    signature::moved(view);
+}
+
+/// Lists the code actions of `kind` at the cursor of `view` in a menu there (E82).
+pub fn code_actions(view: &EditorTextView, kind: ActionKind) {
+    actions::open(view, kind);
+}
+
+/// Shows the signature of the call around the cursor of `view` (E84).
+pub fn signature_help(view: &EditorTextView) {
+    signature::show(view);
 }
 
 /// A click with ⌘ goes to the definition of what it hit; whether it was one.
@@ -275,6 +319,8 @@ pub fn follow_scrolling(scroll: &objc2_app_kit::NSScrollView, view: &EditorTextV
                 editor.later(sel!(ideDecorate), 0.05);
             }
             hover::dismiss(&editor);
+            signature::dismiss_for(&editor);
+            inlay::scrolled(&editor);
         }
     });
     // SAFETY: The block only asks the editor to paint later; the weak reference makes it do nothing once it is gone.
@@ -392,13 +438,18 @@ fn slot_for(workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Opti
             .cloned();
     }
     let root = ide_lsp::root(language, path, &workspace.root);
+    Some(slot_at(workspace, language, root).0)
+}
+
+/// The slot of `language` for the project root `root`, and whether it is new: started then, unless it was there.
+fn slot_at(workspace: &Rc<Workspace>, language: &Language, root: PathBuf) -> (Rc<Slot>, bool) {
     if let Some(found) = workspace
         .slots
         .borrow()
         .iter()
         .find(|s| s.language == *language && s.root == root)
     {
-        return Some(found.clone());
+        return (found.clone(), false);
     }
     let slot = Rc::new(Slot {
         id: next_id(),
@@ -409,11 +460,12 @@ fn slot_for(workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Opti
         #[cfg(feature = "selftest")]
         progress_at: std::cell::Cell::new(None),
         message: RefCell::new(None),
-        released: Cell::new(0),
+        hold: Cell::new(lease::Hold::default()),
+        timer: Cell::new(false),
     });
     workspace.slots.borrow_mut().push(slot.clone());
     find(&workspace.root, &slot);
-    Some(slot)
+    (slot, true)
 }
 
 /// Looks for the slot's server off the main thread and starts it when found.
@@ -476,6 +528,7 @@ fn refresh_slot(folder: &Path, id: u64) {
     for view in views_of(folder, id) {
         status::refresh(&view);
     }
+    project_symbols::pump(folder);
 }
 
 /// An edit of `view`'s document: passed on to its server at once, as the protocol's incremental change.
@@ -497,6 +550,7 @@ pub fn changed(view: &EditorTextView, change: &Change) {
         }
         view.later(sel!(ideLspRefresh), REFRESH_DELAY);
     }
+    actions::moved(view);
     if !view.ivars().lsp.borrow().marks.is_empty() || !view.ivars().lsp.borrow().tokens.is_empty() {
         view.later(sel!(ideDecorate), 0.0);
     }
@@ -534,6 +588,7 @@ pub fn closed(view: &EditorTextView) {
     release(view);
     complete::dismiss_for(view);
     hover::dismiss(view);
+    signature::dismiss_for(view);
 }
 
 /// The user trusts `root` now: its editors get their servers.
@@ -552,6 +607,7 @@ pub fn window_closed(root: &Path) {
         end(slot);
     }
     WORKSPACES.with(|all| all.borrow_mut().retain(|w| w.root != root));
+    project_symbols::forget(root);
 }
 
 /// Stops the slot's server or ends its installation.
@@ -566,7 +622,7 @@ fn end(slot: &Slot) {
     }
 }
 
-/// `view` no longer uses its slot: the slot goes once no editor has used it for `IDLE_STOP`.
+/// `view` no longer uses its slot: the slot goes once no editor has used it for `IDLE_STOP` and no lease holds it.
 fn release(view: &EditorTextView) {
     let Some(root) = view.controller().and_then(|c| c.project_root()) else {
         return;
@@ -575,18 +631,36 @@ fn release(view: &EditorTextView) {
         return;
     };
     let Some(slot) = slot(&root, id) else { return };
-    let turn = slot.released.get() + 1;
-    slot.released.set(turn);
-    main_after(IDLE_STOP, move || end_if_unused(&root, id, turn));
+    let mut hold = slot.hold.get();
+    hold.release(std::time::Instant::now());
+    slot.hold.set(hold);
+    end_later(&root, &slot);
 }
 
-/// Ends slot `id` of the window of `folder` unless an editor uses it again, or let go of it later, or it installs.
-fn end_if_unused(folder: &Path, id: u64, turn: u64) {
+/// Looks, once the lease and the grace after the last editor run out, whether the slot should end.
+fn end_later(folder: &Path, slot: &Slot) {
+    if slot.timer.replace(true) {
+        return;
+    }
+    let now = std::time::Instant::now();
+    let wait = slot.hold.get().next_check(now).saturating_duration_since(now);
+    let (folder, id) = (folder.to_path_buf(), slot.id);
+    main_after(wait, move || end_if_unused(&folder, id));
+}
+
+/// Ends slot `id` of the window of `folder` unless an editor or a lease holds it, or it installs.
+fn end_if_unused(folder: &Path, id: u64) {
     let (Some(workspace), Some(slot)) = (workspace(folder), slot(folder, id)) else {
         return;
     };
+    slot.timer.set(false);
     let installing = matches!(&*slot.state.borrow(), State::Installing(..));
-    if slot.released.get() != turn || installing || !views_of(folder, id).is_empty() {
+    let editors = views_of(folder, id).len();
+    if installing || editors > 0 {
+        return;
+    }
+    if !slot.hold.get().due(std::time::Instant::now(), editors) {
+        end_later(folder, &slot);
         return;
     }
     end(&slot);
@@ -599,6 +673,7 @@ pub fn refresh(view: &EditorTextView) {
         return;
     };
     outline::refresh(view, &server, &uri);
+    inlay::request(view);
     let serial = view.ivars().lsp.borrow().serial;
     let revision = view.document().revision();
     let _ = server.semantic_tokens(&uri, move |answer| {
@@ -676,13 +751,25 @@ fn event_arrived(folder: &Path, id: u64, event: Event) {
                 refresh(&view);
             }
         }
+        Event::Refresh(Refresh::InlayHints) => {
+            for view in views_of(folder, id) {
+                inlay::request(&view);
+            }
+        }
         Event::ApplyEdit { edit, reply, .. } => {
             let applied = edits::apply_workspace_edit(folder, &edit);
             reply.send(ide_lsp::lsp_types::ApplyWorkspaceEditResponse {
                 applied: applied.is_ok(),
-                failure_reason: applied.err(),
-                failed_change: None,
+                failed_change: applied
+                    .as_ref()
+                    .err()
+                    .and_then(|f| f.index)
+                    .and_then(|i| u32::try_from(i).ok()),
+                failure_reason: applied.as_ref().err().map(|f| f.message.clone()),
             });
+            if let Err(failure) = applied {
+                actions::failed(failure.message);
+            }
         }
         Event::MessageRequest {
             message,
@@ -982,12 +1069,16 @@ pub fn quiet_for(view: &EditorTextView) -> Option<std::time::Duration> {
 }
 
 #[cfg(feature = "selftest")]
+pub use actions::selftest as code_action_menu;
+#[cfg(feature = "selftest")]
 pub use complete::selftest as completion;
 pub use edits::apply_text_edits;
 #[cfg(feature = "selftest")]
 pub use hover::shown_text as hover_text;
 #[cfg(feature = "selftest")]
 pub use rename::rename_to;
+#[cfg(feature = "selftest")]
+pub use signature::selftest as signatures;
 #[cfg(feature = "selftest")]
 pub use {navigate::close_list, navigate::listed};
 

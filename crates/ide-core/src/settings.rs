@@ -81,6 +81,15 @@ pub mod keys {
     /// Shows spaces, tabs and whitespace at the end of lines in editors.
     pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", || false);
 
+    /// Shows the language server's inlay hints, such as inferred types and parameter names, in editors (E83).
+    pub const INLAY_HINTS: Key<bool> = Key::user("inlayHints", || true);
+
+    /// The languages, by name, whose editors leave inlay hints out although they are on.
+    pub const INLAY_HINTS_OFF: Key<Vec<String>> = Key::user("inlayHintsOffFor", Vec::new);
+
+    /// Shows who changed the cursor's line last at its end, after the cursor rests there (E86).
+    pub const BLAME_AT_LINE_END: Key<bool> = Key::user("blameAtLineEnd", || false);
+
     /// Whether a single click opens a file in the window's preview tab, which the next one replaces; off, every file
     /// gets a tab of its own (E62).
     pub const PREVIEW_TABS: Key<bool> = Key::user("previewTabs", || false);

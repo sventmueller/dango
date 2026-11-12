@@ -6,6 +6,7 @@ mod ci;
 mod commit_message;
 #[cfg(feature = "dictation")]
 mod dictation;
+mod editor;
 mod list_bar;
 mod servers;
 
@@ -189,6 +190,7 @@ pub fn show(mtm: MainThreadMarker) {
         controller.ivars().servers.reload();
         #[cfg(feature = "dictation")]
         controller.ivars().dictation.reload();
+        editor::reload();
         window.makeKeyAndOrderFront(None);
     });
     fit_agents();
@@ -228,6 +230,9 @@ pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
 
 #[cfg(feature = "selftest")]
 pub use servers::selftest as servers_selftest;
+
+#[cfg(feature = "selftest")]
+pub use editor::shown as editor_switches;
 
 /// Brings the settings window to the front on its Agents tab.
 pub fn show_agents(mtm: MainThreadMarker) {
@@ -549,6 +554,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         ],
         vec![engine_title.into_super().into_super(), engine],
     ];
+    rows.extend(editor::rows(mtm));
     for (path, locked) in settings.problems() {
         let reason = match locked {
             Locked::Damaged => t("Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst."),

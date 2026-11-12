@@ -322,6 +322,8 @@ impl LineNumbers {
         self.ivars().tips.borrow_mut().clear();
         let marks = crate::lsp::line_marks(&editor);
         let folds = super::fold::gutter(&editor);
+        let bulb = crate::lsp::bulb_line(&editor);
+        let bulb_row = std::cell::Cell::new(None);
         let bottom = visible.origin.y + visible.size.height;
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
             // SAFETY: TextKit keeps the fragment alive for the call.
@@ -342,9 +344,17 @@ impl LineNumbers {
                 let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
                 let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
                 let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
-                // SAFETY: As above.
-                unsafe { label.drawAtPoint_withAttributes(at, Some(&attributes)) };
                 let height = fragment.layoutFragmentFrame().size.height;
+                if bulb == Some(line - 1) && bulb_row.get().is_none() {
+                    let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
+                    bulb_row.set(Some(NSRect::new(
+                        NSPoint::new(NUMBERS_LEFT, point.y),
+                        NSSize::new(numbers, height),
+                    )));
+                } else {
+                    // SAFETY: As above.
+                    unsafe { label.drawAtPoint_withAttributes(at, Some(&attributes)) };
+                }
                 if let Some(folded) = folds.get(&(line - 1)) {
                     self.fold_mark(
                         NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height)),
@@ -371,5 +381,6 @@ impl LineNumbers {
             NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
             &block,
         );
+        crate::lsp::place_bulb(&editor, self, bulb_row.get());
     }
 }

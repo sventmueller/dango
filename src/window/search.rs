@@ -22,6 +22,7 @@ use splat_i18n::{t, tf};
 use super::WindowController;
 use crate::util::{guarded, main_after, main_soon, ns};
 
+mod hierarchy;
 mod replace;
 mod rows;
 mod views;
@@ -135,6 +136,7 @@ pub struct SearchIvars {
     controller: Weak<WindowController>,
     root: PathBuf,
     views: OnceCell<views::Views>,
+    hierarchy: OnceCell<Retained<hierarchy::HierarchyPanel>>,
     state: RefCell<State>,
 }
 
@@ -488,11 +490,18 @@ impl SearchPanel {
             controller: Weak::from(controller),
             root: root.to_path_buf(),
             views: OnceCell::new(),
+            hierarchy: OnceCell::new(),
             state: RefCell::new(State::default()),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(SearchPanel::alloc(mtm).set_ivars(ivars)), init] };
         let _ = this.ivars().views.set(views::Views::new(mtm, &this));
+        let hierarchy = hierarchy::HierarchyPanel::new(mtm, &this);
+        if let (Some(page), Some(tree)) = (this.page(), hierarchy.page()) {
+            page.addSubview(tree);
+            crate::util::pin_edges(tree, page);
+        }
+        let _ = this.ivars().hierarchy.set(hierarchy);
         PANELS.with(|panels| panels.borrow_mut().push(Weak::from(&*this)));
         this
     }
@@ -507,8 +516,31 @@ impl SearchPanel {
         self.ivars().views.get().map(|views| &*views.header as &NSView)
     }
 
-    /// Puts the keyboard focus into the field, with what it holds selected.
+    /// Shows `hierarchy` in place of the text search, which keeps what it holds.
+    pub fn show_hierarchy(&self, hierarchy: crate::lsp::Hierarchy) {
+        if let Some(views) = self.ivars().views.get() {
+            views.set_text_shown(false);
+        }
+        if let Some(panel) = self.ivars().hierarchy.get() {
+            panel.show(hierarchy);
+        }
+    }
+
+    /// Shows the text search again in place of a hierarchy.
+    fn show_text(&self) {
+        if let Some(panel) = self.ivars().hierarchy.get() {
+            panel.hide();
+        }
+        if let Some(views) = self.ivars().views.get() {
+            views.set_text_shown(true);
+        }
+    }
+
+    /// Puts the keyboard focus into the field, with what it holds selected, leaving a hierarchy on show.
     pub fn focus(&self) {
+        if self.ivars().hierarchy.get().is_some_and(|h| h.showing()) {
+            self.show_text();
+        }
         let Some(views) = self.ivars().views.get() else { return };
         if let Some(window) = views.page.window() {
             window.makeFirstResponder(Some(&views.field));
@@ -1230,6 +1262,52 @@ pub mod selftest {
         if let Some(views) = panel.ivars().views.get() {
             let field: &objc2_app_kit::NSControl = &views.field;
             panel.field_command(field, objc2::sel!(cancelOperation:));
+        }
+    }
+
+    /// The rows of the hierarchy on show, each with its level and name; empty while the text search shows.
+    pub fn hierarchy_rows(panel: &SearchPanel) -> Vec<(isize, String)> {
+        match panel.ivars().hierarchy.get() {
+            Some(h) if h.showing() => super::hierarchy::selftest::rows(h),
+            _ => vec![],
+        }
+    }
+
+    /// Opens row `row` of the hierarchy as its disclosure triangle does.
+    pub fn hierarchy_expand(panel: &SearchPanel, row: isize) {
+        if let Some(h) = panel.ivars().hierarchy.get() {
+            super::hierarchy::selftest::expand(h, row);
+        }
+    }
+
+    /// Clicks row `row` of the hierarchy.
+    pub fn hierarchy_click(panel: &SearchPanel, row: isize) {
+        if let Some(h) = panel.ivars().hierarchy.get() {
+            super::hierarchy::selftest::click(h, row);
+        }
+    }
+
+    /// Clicks segment `segment` of the hierarchy's direction switch.
+    pub fn hierarchy_direction(panel: &SearchPanel, segment: isize) {
+        if let Some(h) = panel.ivars().hierarchy.get() {
+            super::hierarchy::selftest::choose_direction(h, segment);
+        }
+    }
+
+    /// The titles of the hierarchy's menu of earlier searches.
+    pub fn hierarchy_history(panel: &SearchPanel) -> Vec<String> {
+        panel
+            .ivars()
+            .hierarchy
+            .get()
+            .map(|h| super::hierarchy::selftest::history(h))
+            .unwrap_or_default()
+    }
+
+    /// Chooses item `index` of the hierarchy's menu of earlier searches; 0 is the text search.
+    pub fn hierarchy_choose(panel: &SearchPanel, index: isize) {
+        if let Some(h) = panel.ivars().hierarchy.get() {
+            super::hierarchy::selftest::choose_history(h, index);
         }
     }
 

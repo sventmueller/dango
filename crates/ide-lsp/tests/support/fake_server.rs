@@ -208,6 +208,24 @@ impl Fake {
                 .cloned()
                 .unwrap_or(Value::Null),
             "textDocument/references" => Value::Array(self.occurrences(&uri, &params["position"])),
+            "textDocument/implementation" => Value::Array(self.occurrences(&uri, &params["position"])),
+            "textDocument/typeDefinition" | "textDocument/declaration" => self.link(&uri, &params["position"], method),
+            "workspace/symbol" => self.project_symbols(params["query"].as_str().unwrap_or_default()),
+            "workspaceSymbol/resolve" => {
+                let mut symbol = params.clone();
+                symbol["location"]["range"] = symbol["data"]["range"].clone();
+                symbol
+            }
+            "textDocument/prepareCallHierarchy" | "textDocument/prepareTypeHierarchy" => self
+                .hierarchy_item(&uri, &params["position"])
+                .map_or(Value::Null, |item| json!([item])),
+            "callHierarchy/incomingCalls" | "callHierarchy/outgoingCalls" => self.calls(&params["item"], method),
+            "typeHierarchy/supertypes" | "typeHierarchy/subtypes" => {
+                let mut item = params["item"].clone();
+                let prefix = if method.ends_with("supertypes") { "super" } else { "sub" };
+                item["name"] = json!(format!("{prefix} of {}", item["name"].as_str().unwrap_or_default()));
+                json!([item])
+            }
             "textDocument/prepareRename" => self.word_range(&uri, &params["position"]).unwrap_or(Value::Null),
             "textDocument/rename" => self.rename(&uri, &params["position"], &params["newName"]),
             "textDocument/semanticTokens/full" | "textDocument/semanticTokens/full/delta" => self.tokens(&uri, method),
@@ -290,6 +308,12 @@ impl Fake {
                 "completionProvider": {"resolveProvider": true, "triggerCharacters": ["."]},
                 "definitionProvider": true,
                 "referencesProvider": true,
+                "implementationProvider": true,
+                "typeDefinitionProvider": true,
+                "declarationProvider": true,
+                "workspaceSymbolProvider": {"resolveProvider": true},
+                "callHierarchyProvider": true,
+                "typeHierarchyProvider": true,
                 "renameProvider": {"prepareProvider": true},
                 "documentSymbolProvider": true,
                 "foldingRangeProvider": true,
@@ -415,6 +439,68 @@ impl Fake {
             }
         }
         found
+    }
+
+    /// The first occurrence of the word: as a link for a type definition, as a bare location for a declaration.
+    fn link(&self, uri: &str, position: &Value, method: &str) -> Value {
+        let Some(first) = self.occurrences(uri, position).into_iter().next() else {
+            return Value::Null;
+        };
+        if method.ends_with("declaration") {
+            return first;
+        }
+        json!([{"targetUri": uri, "targetRange": first["range"], "targetSelectionRange": first["range"]}])
+    }
+
+    /// Every occurrence of `query` in the open documents as a symbol with its range, and one more without a range for
+    /// the query `lazy`, which resolve fills in.
+    fn project_symbols(&self, query: &str) -> Value {
+        let mut found = vec![];
+        for (uri, (_, text)) in &self.docs {
+            for (n, line) in text.split('\n').enumerate() {
+                for (byte, _) in line.match_indices(query).filter(|_| !query.is_empty()) {
+                    let range = span(
+                        n,
+                        column(line, byte, &self.encoding),
+                        column(line, byte + query.len(), &self.encoding),
+                    );
+                    found.push(json!({"name": query, "kind": 12, "location": {"uri": uri, "range": range}}));
+                    if query == "lazy" {
+                        found.push(
+                            json!({"name": query, "kind": 12, "location": {"uri": uri}, "data": {"range": range}}),
+                        );
+                    }
+                }
+            }
+        }
+        Value::Array(found)
+    }
+
+    /// The word at `position` as a hierarchy item.
+    fn hierarchy_item(&self, uri: &str, position: &Value) -> Option<Value> {
+        let word = self.word(uri, position)?;
+        let range = self.word_range(uri, position)?;
+        Some(
+            json!({"name": word, "kind": 12, "uri": uri, "range": range, "selectionRange": range, "data": {"word": word}}),
+        )
+    }
+
+    /// One caller or callee of `item`, named after it, called wherever its name occurs in its document.
+    fn calls(&self, item: &Value, method: &str) -> Value {
+        let uri = item["uri"].as_str().unwrap_or_default();
+        let ranges: Vec<Value> = self
+            .occurrences(uri, &item["selectionRange"]["start"])
+            .into_iter()
+            .map(|l| l["range"].clone())
+            .collect();
+        let mut neighbour = item.clone();
+        let (prefix, key) = if method.ends_with("incomingCalls") {
+            ("caller", "from")
+        } else {
+            ("callee", "to")
+        };
+        neighbour["name"] = json!(format!("{prefix} of {}", item["name"].as_str().unwrap_or_default()));
+        json!([{key: neighbour, "fromRanges": ranges}])
     }
 
     fn rename(&self, uri: &str, position: &Value, new_name: &Value) -> Value {

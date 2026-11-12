@@ -187,6 +187,11 @@ erhöhtem Kontrast; Barrierefreiheits-Audit.
 ## Stufe 2 — Editor
 
 ### E81 Einblendungen (gemeinsamer Baustein)
+*Umgesetzt am 2026-11-12, Sperre bestanden (`editor-insets`).* Abweichung nach R14: TextKit 2 übergeht ein Kern-Attribut auf
+dem letzten Codepunkt eines mehrteiligen Graphems; dort gilt der Ausweg ans Zeilenende. Ein Caret am Rand der Lücke
+rückt ein eigener `NSTextLayoutManager` an deren rechte Kante, ohne TextKit 1. Der Kasten unter der Zeile entsteht
+erst mit B4.
+
 Inlay Hints, Ghost Text (B4), Blame (B16) und Inline-Werte des Debuggers (B1) zeigen Text, der nicht in der Datei
 steht. TextKit 2 kennt dafür nichts Fertiges, und der Text darf nicht in den Speicher des Editors (Undo, Sichern,
 Positionen).
@@ -213,6 +218,11 @@ Positionen).
   von `layoutManager`, E7). Fällt ein Punkt durch, gilt für ihn der Ausweg oben, nicht ein Umweg über TextKit 1.
 
 ### B14 Code Actions, Inlay Hints, Signaturhilfe
+*Umgesetzt am 2026-11-12.* Abweichungen: Die Glühbirne ersetzt die Zeilennummer der Cursorzeile, weil die Randspalte
+keinen freien Platz hat; „Anlegen“ einer vorhandenen Datei ohne `overwrite`/`ignoreIfExists` bricht den Edit ab, wie
+es das Protokoll beschreibt. Das Leistungsbudget misst, was Hinweise zum Tastendruck hinzufügen (unter 3 ms), weil
+der absolute Wert von 16 ms auf einem ausgelasteten Mac auch ohne Hinweise nicht zu halten ist.
+
 Auswirkung: Quick-Fixes (fehlender Import, Tippfehler, unbenutzte Variable), Typen im Text und die Parameterliste
 beim Aufruf, wie in Zed und VS Code. Die Anfragen stehen schon in `crates/ide-lsp/src/features.rs`
 (`code_actions`, `resolve_code_action`, `inlay_hints`, `signature_help`), das Anwenden fremder Edits über
@@ -252,6 +262,9 @@ Abnahme: Selftest mit rust-analyzer und gopls je für Quick-Fix, Inlay Hint, Sig
 Zeilen mit Hints an.
 
 ### B15 LSP-Navigation
+*Umgesetzt am 2026-11-12.* Projekt-Symbole auf ⌥⌘O; die Symbolsuche startet keine Server für JSON, YAML, TOML, CSS
+und HTML; rust-analyzer sucht mit `all_symbols`, sonst fände er nur Typen.
+
 Auswirkung: Springen über das ganze Projekt statt nur innerhalb einer Datei.
 
 - **E85 Navigation.**
@@ -279,6 +292,10 @@ Abnahme: Selftest gegen rust-analyzer am eigenen Repo (Symbol finden, Implementi
 Aufrufhierarchie über drei Ebenen).
 
 ### B16 Git-Komfort
+*Umgesetzt am 2026-11-12.* Abweichungen: neues Menü „Git“ zwischen „Editor“ und „Fenster“ (HIG-Reihenfolge, E101); die
+Texte folgen dem Glossar („Nur Vorgemerktes stashen“, „Commit-Nachricht“); ohne Rückfrage gelten nur Ollama und LM
+Studio auf dem eigenen Rechner als lokal.
+
 Auswirkung: Wer eine Zeile geschrieben hat, Zwischenstände parken, Commit-Messages ohne Tipparbeit.
 
 - **E86 Blame.** Am Ende der Cursorzeile nach kurzer Ruhe „Autor, vor 3 Tagen · Betreff“ in Sekundärfarbe (E81),

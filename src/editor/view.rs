@@ -10,8 +10,7 @@ use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_cl
 use objc2_app_kit::{
     NSEvent, NSSelectionAffinity, NSTextContainer, NSTextContentManager, NSTextContentManagerDelegate,
     NSTextContentManagerEnumerationOptions, NSTextContentStorage, NSTextContentStorageDelegate, NSTextElement,
-    NSTextLayoutManager, NSTextStorage, NSTextStorageDelegate, NSTextStorageEditActions, NSTextView, NSTrackingArea,
-    NSTrackingAreaOptions,
+    NSTextStorage, NSTextStorageDelegate, NSTextStorageEditActions, NSTextView, NSTrackingArea, NSTrackingAreaOptions,
 };
 use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSValue};
 
@@ -58,6 +57,10 @@ pub struct ViewIvars {
     pub(super) bar: RefCell<Option<super::conflict::Bar>>,
     /// The match the search panel revealed, in UTF-16 offsets, marked in the find colour until the selection moves.
     found: RefCell<Option<std::ops::Range<usize>>>,
+    /// Text shown that is not in the file: inlay hints and blame (E81).
+    pub(super) insets: RefCell<super::insets::Insets>,
+    /// Who changed which line last (E86).
+    pub(super) blame: RefCell<super::blame::State>,
 }
 
 define_class!(
@@ -125,6 +128,8 @@ define_class!(
             let _: () = unsafe { msg_send![super(self), setSelectedRanges: ranges, affinity: affinity, stillSelecting: still] };
             if !still {
                 guarded((), || {
+                    super::insets::strip_typing(self);
+                    super::blame::cursor_moved(self);
                     self.clear_found();
                     super::multi::selection_changed(self);
                     crate::lsp::selection_moved(self);
@@ -240,7 +245,15 @@ define_class!(
         fn mouse_moved(&self, event: &NSEvent) {
             // SAFETY: The superclass's implementation, with this method's signature.
             let _: () = unsafe { msg_send![super(self), mouseMoved: event] };
-            guarded((), || crate::lsp::mouse_moved(self, event));
+            guarded((), || {
+                crate::lsp::mouse_moved(self, event);
+                super::blame::mouse_moved(self, event);
+            });
+        }
+
+        #[unsafe(method(ideBlameHover))]
+        fn blame_hover(&self) {
+            guarded((), || super::blame::hover_rest(self));
         }
 
         #[unsafe(method_id(menuForEvent:))]
@@ -259,13 +272,83 @@ define_class!(
                 let point = self.convertPoint_fromView(event.locationInWindow(), None);
                 super::fold::click(self, point)
                     || super::multi::option_mouse(self, event)
+                    || super::insets::click_gap(self, event)
                     || crate::lsp::command_click(self, event)
             });
             if handled {
                 return;
             }
+            let moved = guarded(None, || super::insets::retarget(self, event));
+            let event = moved.as_deref().unwrap_or(event);
             // SAFETY: The superclass's implementation, with this method's signature.
             let _: () = unsafe { msg_send![super(self), mouseDown: event] };
+        }
+
+        #[unsafe(method(setTypingAttributes:))]
+        fn set_typing_attributes(&self, attributes: &objc2_foundation::NSDictionary<objc2_foundation::NSString, AnyObject>) {
+            let clean = guarded(None, || super::insets::without_kern(attributes));
+            let attributes = clean.as_deref().unwrap_or(attributes);
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let _: () = unsafe { msg_send![super(self), setTypingAttributes: attributes] };
+        }
+
+        #[unsafe(method(ideInsets))]
+        fn insets(&self) {
+            guarded((), || super::insets::settle(self));
+        }
+
+        #[unsafe(method(ideBlameRest))]
+        fn blame_rest(&self) {
+            guarded((), || super::blame::rest(self));
+        }
+
+        #[unsafe(method(ideToggleBlameAtLineEnd:))]
+        fn toggle_blame_at_line_end(&self, _sender: Option<&AnyObject>) {
+            guarded((), super::blame::toggle_line_end);
+        }
+
+        #[unsafe(method(ideToggleBlameColumn:))]
+        fn toggle_blame_column(&self, _sender: Option<&AnyObject>) {
+            guarded((), || super::blame::toggle_column(self));
+        }
+
+        #[unsafe(method(ideShowLineBlame:))]
+        fn show_line_blame(&self, _sender: Option<&AnyObject>) {
+            guarded((), || super::blame::show_for_cursor(self));
+        }
+
+        #[unsafe(method(ideBlameCopyHash:))]
+        fn blame_copy_hash(&self, _sender: Option<&AnyObject>) {
+            guarded((), || super::blame::copy_hash(self));
+        }
+
+        #[unsafe(method(ideBlameShowInGraph:))]
+        fn blame_show_in_graph(&self, _sender: Option<&AnyObject>) {
+            guarded((), || super::blame::show_in_graph(self));
+        }
+
+        #[unsafe(method(ideBlameShowDiff:))]
+        fn blame_show_diff(&self, _sender: Option<&AnyObject>) {
+            guarded((), || super::blame::show_diff(self));
+        }
+
+        #[unsafe(method(ideInlayHints))]
+        fn inlay_hints(&self) {
+            guarded((), || crate::lsp::inlay::request(self));
+        }
+
+        #[unsafe(method(ideToggleInlayHints:))]
+        fn toggle_inlay_hints(&self, _sender: Option<&AnyObject>) {
+            guarded((), crate::lsp::inlay::toggle);
+        }
+
+        #[unsafe(method(ideToggleInlayHintsLanguage:))]
+        fn toggle_inlay_hints_language(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(language) = crate::lsp::inlay::language(self) {
+                    crate::lsp::inlay::toggle_language(&language);
+                }
+            });
         }
 
         #[unsafe(method(updateTrackingAreas))]
@@ -279,6 +362,8 @@ define_class!(
         fn validate_menu_item(&self, item: &objc2_app_kit::NSMenuItem) -> bool {
             let answer = guarded(None, || {
                 super::whitespace::validate(item)
+                    .or_else(|| crate::lsp::inlay::validate(self, item))
+                    .or_else(|| super::blame::validate(self, item))
                     .or_else(|| crate::preview::validate(self, item.action()))
                     .or_else(|| crate::markdown::validate(self, item))
                     .or_else(|| crate::lsp::validate(self, item.action()))
@@ -317,6 +402,31 @@ define_class!(
             guarded((), || crate::lsp::references(self));
         }
 
+        #[unsafe(method(ideImplementation:))]
+        fn implementation_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::Implementation));
+        }
+
+        #[unsafe(method(ideTypeDefinition:))]
+        fn type_definition_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::TypeDefinition));
+        }
+
+        #[unsafe(method(ideDeclaration:))]
+        fn declaration_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::Declaration));
+        }
+
+        #[unsafe(method(ideCallHierarchy:))]
+        fn call_hierarchy_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::call_hierarchy(self));
+        }
+
+        #[unsafe(method(ideTypeHierarchy:))]
+        fn type_hierarchy_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::type_hierarchy(self));
+        }
+
         #[unsafe(method(ideSymbols:))]
         fn symbols_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::lsp::symbols(self));
@@ -330,6 +440,26 @@ define_class!(
         #[unsafe(method(ideFormat:))]
         fn format_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::lsp::format(self, None));
+        }
+
+        #[unsafe(method(ideQuickFix:))]
+        fn quick_fix_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Fixes));
+        }
+
+        #[unsafe(method(ideRefactor:))]
+        fn refactor_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Refactor));
+        }
+
+        #[unsafe(method(ideSourceActions:))]
+        fn source_actions(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Source));
+        }
+
+        #[unsafe(method(ideSignatureHelp:))]
+        fn signature_help_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::lsp::signature_help(self));
         }
 
         #[unsafe(method(ideNextProblem:))]
@@ -501,7 +631,7 @@ impl EditorTextView {
         recovery: RecoveryId,
     ) -> Retained<Self> {
         let content = NSTextContentStorage::new();
-        let layout = NSTextLayoutManager::new();
+        let layout = super::insets::GapLayoutManager::new();
         content.addTextLayoutManager(&layout);
         let container = NSTextContainer::initWithSize(NSTextContainer::alloc(), NSSize::new(1.0e7, 1.0e7));
         container.setWidthTracksTextView(false);
@@ -529,6 +659,8 @@ impl EditorTextView {
             conflict: RefCell::new(None),
             bar: RefCell::new(None),
             found: RefCell::new(None),
+            insets: RefCell::new(super::insets::Insets::default()),
+            blame: RefCell::new(super::blame::State::default()),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
@@ -585,6 +717,7 @@ impl EditorTextView {
         super::update_dirty(self);
         super::fold::shift(self, change);
         super::multi::shift(self, change);
+        super::insets::shift(self, change);
         super::notify_change(self, change);
         super::changes::schedule(self);
         super::whitespace::redraw(self);
@@ -603,6 +736,7 @@ impl EditorTextView {
         self.setString(&ns(&text));
         self.ivars().applying.set(false);
         super::highlight::recolor_all(self);
+        super::insets::reset(self);
     }
 
     /// Makes `changes` of the model in the view, as one undoable step.

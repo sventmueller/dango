@@ -46,6 +46,8 @@ pub(super) struct Views {
     pub(super) status: Retained<NSTextField>,
     results: Retained<NSScrollView>,
     pub(super) outline: Retained<SearchOutlineView>,
+    /// The fields and the matches, which give way to a hierarchy.
+    text: [Retained<NSView>; 2],
 }
 
 impl Views {
@@ -117,6 +119,7 @@ impl Views {
         page.addSubview(&bar);
         page.addSubview(&body);
         layout(&page, &bar, &body);
+        let text = [bar.into_super(), body];
         Views {
             page,
             header,
@@ -133,7 +136,16 @@ impl Views {
             status,
             results,
             outline,
+            text,
         }
+    }
+
+    /// Shows the text search, or hides it and its toggles for a hierarchy.
+    pub(super) fn set_text_shown(&self, shown: bool) {
+        for view in &self.text {
+            view.setHidden(!shown);
+        }
+        self.header.setHidden(!shown);
     }
 
     pub(super) fn replace_shown(&self) -> bool {

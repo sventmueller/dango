@@ -550,3 +550,55 @@ fn code_actions_signature_help_and_commands_keep_utf16_both_ways() {
     };
     assert_eq!(applied.changes.unwrap()[&doc][0].range, range((0, 1), (0, 3)));
 }
+
+#[test]
+fn navigation_across_the_project_comes_back_in_utf16() {
+    use ide_lsp::{Calls, Types};
+
+    let f = start("navigation", &[("FAKE_ENCODING", "utf-8")], utf8());
+    let doc = f.uri("nav.rs");
+    f.server.open(&doc, "rust", 1, "😀 name lazy\nname😀name");
+    let implementations = wait(|r| f.server.implementation(&doc, at(0, 4), r)).unwrap();
+    assert_eq!(implementations.len(), 3);
+    assert_eq!(implementations[2].target_selection_range, range((1, 6), (1, 10)));
+    let types = wait(|r| f.server.type_definition(&doc, at(0, 4), r)).unwrap();
+    assert_eq!(types[0].target_selection_range, range((0, 3), (0, 7)));
+    let declarations = wait(|r| f.server.declaration(&doc, at(0, 4), r)).unwrap();
+    assert_eq!(declarations[0].target_uri, doc);
+
+    let symbols = wait(|r| f.server.project_symbols("name", r)).unwrap();
+    let ranges: Vec<Range> = symbols.iter().filter_map(|s| s.range).collect();
+    assert_eq!(
+        ranges,
+        [range((0, 3), (0, 7)), range((1, 0), (1, 4)), range((1, 6), (1, 10))]
+    );
+    let lazy = wait(|r| f.server.project_symbols("lazy", r)).unwrap();
+    let unresolved = lazy
+        .into_iter()
+        .find(|s| s.range.is_none())
+        .expect("a symbol without range");
+    let resolved = wait(|r| f.server.resolve_project_symbol(unresolved, r)).unwrap();
+    assert_eq!(
+        resolved.range,
+        Some(range((0, 8), (0, 12))),
+        "resolved in bytes, back in UTF-16"
+    );
+
+    let prepared = wait(|r| f.server.prepare_call_hierarchy(&doc, at(1, 7), r)).unwrap();
+    assert_eq!(prepared[0].selection_range, range((1, 6), (1, 10)));
+    let callers = wait(|r| f.server.calls(&prepared[0], Calls::Incoming, r)).unwrap();
+    assert_eq!(callers[0].item.name, "caller of name");
+    assert_eq!(callers[0].calls.len(), 3);
+    assert_eq!(callers[0].calls[2], range((1, 6), (1, 10)));
+    let callees = wait(|r| f.server.calls(&callers[0].item, Calls::Outgoing, r)).unwrap();
+    assert_eq!(
+        callees[0].item.name, "callee of caller of name",
+        "the item goes back as the server sent it"
+    );
+    let typed = wait(|r| f.server.prepare_type_hierarchy(&doc, at(0, 4), r)).unwrap();
+    let supertypes = wait(|r| f.server.types(&typed[0], Types::Supertypes, r)).unwrap();
+    assert_eq!(supertypes[0].item.name, "super of name");
+    assert_eq!(supertypes[0].item.selection_range, range((0, 3), (0, 7)));
+    let subtypes = wait(|r| f.server.types(&typed[0], Types::Subtypes, r)).unwrap();
+    assert_eq!(subtypes[0].item.name, "sub of name");
+}

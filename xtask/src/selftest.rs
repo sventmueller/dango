@@ -15,11 +15,11 @@ pub(crate) const DEFAULT_SCENARIO: &str = "probe";
 /// Scenarios that need the program built with dictation, which the others go without.
 pub(crate) const DICTATING: &[&str] = &["dictation"];
 
-/// How long a scenario may run before it counts as hung and is killed. The `lsp` scenario waits for a real language
-/// server to index, which a busy Mac slows down by minutes; it ends itself before this limit.
+/// How long a scenario may run before it counts as hung and is killed. The `lsp` scenarios wait for a real language
+/// server to index, which a busy Mac slows down by minutes; they end themselves before this limit.
 pub(crate) fn time_limit(scenario: &str) -> Duration {
     match scenario {
-        "lsp" => Duration::from_secs(600),
+        "lsp" | "lsp-actions" | "lsp-actions-go" | "lsp-navigation" => Duration::from_secs(600),
         // Dozens of git commands, commits and pushes against local remotes; under the load of parallel builds they
         // take several minutes.
         "git" | "git-stash" | "git-message" | "worktree" | "ci" | "agent" => Duration::from_secs(360),

@@ -163,14 +163,29 @@ impl Registry {
         config.args.clone_from(&launch.args);
         match launch.language {
             Language::Go => {
-                // gopls leaves semantic tokens off unless asked.
-                config.settings = json!({"gopls": {"semanticTokens": true}});
-                config.initialization_options = Some(json!({"semanticTokens": true}));
+                // gopls leaves semantic tokens and every kind of inlay hint off unless asked.
+                let options = json!({
+                    "semanticTokens": true,
+                    "hints": {
+                        "assignVariableTypes": true,
+                        "compositeLiteralFields": true,
+                        "constantValues": true,
+                        "functionTypeParameters": true,
+                        "parameterNames": true,
+                        "rangeVariableTypes": true,
+                    },
+                });
+                config.settings = json!({"gopls": options.clone()});
+                config.initialization_options = Some(options);
             }
             Language::Rust => {
                 // Priming analyses every crate of the dependency graph up front, the largest part of rust-analyzer's
                 // memory; without it only what the open files reach is analysed.
-                let options = json!({"cachePriming": {"enable": false}});
+                // Its project symbol search finds only types unless told otherwise.
+                let options = json!({
+                    "cachePriming": {"enable": false},
+                    "workspace": {"symbol": {"search": {"kind": "all_symbols"}}},
+                });
                 config.settings = json!({"rust-analyzer": options.clone()});
                 config.initialization_options = Some(options);
             }

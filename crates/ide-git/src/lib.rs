@@ -14,6 +14,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs, unreachable_pub)]
 
+mod blame;
 mod branch;
 mod checkpoint;
 mod commit;
@@ -38,6 +39,7 @@ mod stash;
 mod status;
 mod worktree;
 
+pub use blame::{Blame, BlameCommit};
 pub use branch::{Branch, Commit};
 pub use checkpoint::{Checkpoint, CheckpointKind, Checkpoints, Created, Prune, Restore, RestoreOptions, Restored};
 pub use commit::CommitOptions;

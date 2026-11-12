@@ -1,0 +1,88 @@
+//! A commit shown from outside the panel, as blame's popover asks (E86): its row in the history (E74), read further
+//! back page by page when it is older than what the panel shows, and what it changed in one file.
+
+use std::path::Path;
+use std::time::{Duration, Instant};
+
+use objc2_foundation::NSIndexSet;
+
+use super::model::{RowKey, Section};
+use super::panel::{self, GitPanel, with_panel};
+use crate::util::main_after;
+use crate::window::{Panel, WindowController};
+
+/// How many further pages a reveal reads before it gives up on a commit.
+const MAX_PAGES: usize = 20;
+/// How long one page may take to read.
+const PAGE_WAIT: Duration = Duration::from_secs(10);
+const POLL: Duration = Duration::from_millis(150);
+
+/// Opens the Git panel of `controller` with the commit `hash` selected in its history.
+pub fn reveal_commit(controller: &WindowController, hash: &str) {
+    controller.activate_panel(Panel::Git);
+    if let Some(panel) = panel::of(controller) {
+        reveal(&panel, hash.to_string(), 0);
+    }
+}
+
+/// Shows what the commit `hash` changed in `path`, relative to the repository's root `repo_root`, in a diff tab.
+pub fn show_commit_diff(controller: &WindowController, repo_root: &Path, hash: &str, path: &Path) {
+    super::diff::show_commit(controller, repo_root, hash, path, false);
+}
+
+fn reveal(panel: &GitPanel, hash: String, pages: usize) {
+    if panel.read().model.commit(&hash).is_some() {
+        select(panel, &hash);
+        return;
+    }
+    let shown = panel.read().model.commits.len();
+    if pages >= MAX_PAGES || shown < panel.history_limit() && pages > 0 {
+        objc2_app_kit::NSBeep();
+        return;
+    }
+    panel.read_more();
+    wait(panel.id(), hash, pages + 1, shown, Instant::now() + PAGE_WAIT);
+}
+
+/// Waits for the next page of history to arrive, then looks for the commit again.
+fn wait(id: u64, hash: String, pages: usize, before: usize, until: Instant) {
+    main_after(POLL, move || {
+        with_panel(id, |panel| {
+            if panel.read().model.commits.len() > before || Instant::now() > until {
+                reveal(panel, hash, pages);
+            } else {
+                wait(id, hash, pages, before, until);
+            }
+        });
+    });
+}
+
+fn select(panel: &GitPanel, hash: &str) {
+    panel.state().collapsed.remove(&Section::Commits);
+    let outline = &panel.ui().outline;
+    let section = panel.item_for(&RowKey::Section(Section::Commits));
+    // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+    unsafe { outline.expandItem(Some(&section)) };
+    // SAFETY: As above.
+    let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Commit(hash.to_string())))) };
+    let Ok(index) = usize::try_from(row) else {
+        return;
+    };
+    outline.selectRowIndexes_byExtendingSelection(&NSIndexSet::indexSetWithIndex(index), false);
+    outline.scrollRowToVisible(row);
+    if let Some(window) = outline.window() {
+        window.makeFirstResponder(Some(outline));
+    }
+}
+
+/// The hash of the commit selected in the Git panel of `controller`, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn selected_commit(controller: &WindowController) -> Option<String> {
+    let panel = panel::of(controller)?;
+    let outline = &panel.ui().outline;
+    let item = outline.itemAtRow(outline.selectedRow())?;
+    match panel::key_of(&item)? {
+        RowKey::Commit(hash) => Some(hash),
+        _ => None,
+    }
+}

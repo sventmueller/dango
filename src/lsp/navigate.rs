@@ -1,5 +1,5 @@
-//! Going places: to a definition (⌘-click or the menu), to the uses of a symbol in a list, to a symbol of the file
-//! through a menu at the cursor, and from problem to problem.
+//! Going places: to a definition (⌘-click or the menu), an implementation, a type definition or a declaration, to
+//! the uses of a symbol in a list, to a symbol of the file through a menu at the cursor, and from problem to problem.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -30,12 +30,76 @@ pub fn definition(view: &EditorTextView) {
 
 /// Goes to the definition of the symbol at UTF-16 offset `index`, or lists them when there are several.
 pub fn definition_at(view: &EditorTextView, index: usize) {
+    go_to_at(view, index, Goto::Definition);
+}
+
+/// Where the editor can go from a symbol.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Goto {
+    Definition,
+    Implementation,
+    TypeDefinition,
+    Declaration,
+}
+
+impl Goto {
+    /// The menu command that goes there.
+    fn action(self) -> objc2::runtime::Sel {
+        match self {
+            Goto::Definition => sel!(ideDefinition:),
+            Goto::Implementation => sel!(ideImplementation:),
+            Goto::TypeDefinition => sel!(ideTypeDefinition:),
+            Goto::Declaration => sel!(ideDeclaration:),
+        }
+    }
+
+    /// The server's capability and request behind it.
+    fn capability(self) -> (&'static str, &'static str) {
+        match self {
+            Goto::Definition => ("definitionProvider", "textDocument/definition"),
+            Goto::Implementation => ("implementationProvider", "textDocument/implementation"),
+            Goto::TypeDefinition => ("typeDefinitionProvider", "textDocument/typeDefinition"),
+            Goto::Declaration => ("declarationProvider", "textDocument/declaration"),
+        }
+    }
+
+    /// The title of the list of several places.
+    fn title(self, count: usize) -> String {
+        let count = count.to_string();
+        match self {
+            Goto::Definition => tf("{} Definitionen", &[&count]),
+            Goto::Implementation => tf("{} Implementierungen", &[&count]),
+            Goto::TypeDefinition => tf("{} Typdefinitionen", &[&count]),
+            Goto::Declaration => tf("{} Deklarationen", &[&count]),
+        }
+    }
+}
+
+/// Whether the server of `view` offers what the menu command `action` asks for; `None` for the commands this module
+/// does not check.
+pub(super) fn offered(view: &EditorTextView, action: objc2::runtime::Sel) -> Option<bool> {
+    let goto = [Goto::Implementation, Goto::TypeDefinition, Goto::Declaration];
+    let (capability, method) = match goto.into_iter().find(|g| g.action() == action) {
+        Some(goto) => goto.capability(),
+        None if action == sel!(ideCallHierarchy:) => ("callHierarchyProvider", "textDocument/prepareCallHierarchy"),
+        None if action == sel!(ideTypeHierarchy:) => ("typeHierarchyProvider", "textDocument/prepareTypeHierarchy"),
+        None => return None,
+    };
+    Some(server_of(view).is_some_and(|(server, _)| server.offers(capability, method)))
+}
+
+/// Goes to where `goto` leads from the symbol at the cursor.
+pub fn go_to(view: &EditorTextView, goto: Goto) {
+    go_to_at(view, view.selectedRange().location, goto);
+}
+
+fn go_to_at(view: &EditorTextView, index: usize, goto: Goto) {
     let Some((server, uri)) = server_of(view) else { return };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
     let serial = view.ivars().lsp.borrow().serial;
-    let _ = server.definition(&uri, position, move |answer| {
+    let reply = move |answer: Result<Vec<ide_lsp::lsp_types::LocationLink>, ide_lsp::Error>| {
         let links = answer.unwrap_or_default();
         main_soon(move || {
             let Some(view) = editor::find_editor(serial) else {
@@ -48,14 +112,19 @@ pub fn definition_at(view: &EditorTextView, index: usize) {
             match locations.as_slice() {
                 [] => beep(),
                 [one] => go(&view, one),
-                _ => list(
-                    &view,
-                    &tf("{} Definitionen", &[&locations.len().to_string()]),
-                    locations,
-                ),
+                _ => list(&view, &goto.title(locations.len()), locations),
             }
         });
-    });
+    };
+    let asked = match goto {
+        Goto::Definition => server.definition(&uri, position, reply),
+        Goto::Implementation => server.implementation(&uri, position, reply),
+        Goto::TypeDefinition => server.type_definition(&uri, position, reply),
+        Goto::Declaration => server.declaration(&uri, position, reply),
+    };
+    if asked.is_err() {
+        beep();
+    }
 }
 
 /// Lists the uses of the symbol at the cursor.
@@ -98,7 +167,7 @@ fn go(view: &EditorTextView, location: &Location) {
 }
 
 /// Opens `path` in `controller`, or brings its editor forward, and selects `range`.
-fn open_at(controller: &WindowController, path: &Path, range: LspRange) -> bool {
+pub(crate) fn open_at(controller: &WindowController, path: &Path, range: LspRange) -> bool {
     controller.open_file(path);
     let Some(target) = editor::editor_for(controller, path) else {
         return false;

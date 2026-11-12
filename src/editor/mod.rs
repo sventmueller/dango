@@ -1,5 +1,7 @@
 //! The editor tab: a TextKit 2 text view over one document of the model in `ide-document`.
 
+mod blame;
+mod blame_column;
 mod changes;
 mod compare;
 mod conflict;
@@ -8,6 +10,7 @@ mod editing;
 mod fold;
 mod highlight;
 mod indent;
+pub mod insets;
 mod multi;
 mod overlay;
 pub mod recovery;
@@ -117,6 +120,7 @@ pub fn redraw_gutter(view: &EditorTextView) {
     }
 }
 
+pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
 pub use fold::hidden_by_fold;
 pub use style::{code_font, palette_color};
 
@@ -383,6 +387,7 @@ fn add_tab(
     crate::lsp::follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
     overlay::attach(&view);
+    insets::attach(&view);
     *view.ivars().gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
     let id = if preview {
         controller.add_preview_tab(TabKind::Editor, key, title, container)
@@ -407,14 +412,17 @@ fn editor_container(
     view: &EditorTextView,
 ) -> (Retained<objc2_app_kit::NSView>, Retained<ruler::LineNumbers>) {
     let gutter = ruler::LineNumbers::new(mtm, scroll, view);
+    let blame = blame_column::BlameColumn::new(mtm, scroll, view);
     let status = crate::lsp::status::bar(mtm, view);
     let bar = conflict::Bar::new(mtm);
     let container = objc2_app_kit::NSView::new(mtm);
+    container.addSubview(&blame);
     container.addSubview(&gutter);
     container.addSubview(scroll);
     container.addSubview(&status);
     container.addSubview(bar.view());
     bar.view().setTranslatesAutoresizingMaskIntoConstraints(false);
+    blame.setTranslatesAutoresizingMaskIntoConstraints(false);
     gutter.setTranslatesAutoresizingMaskIntoConstraints(false);
     scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
     status.setTranslatesAutoresizingMaskIntoConstraints(false);
@@ -427,7 +435,10 @@ fn editor_container(
             .trailingAnchor()
             .constraintEqualToAnchor(&container.trailingAnchor()),
         // Code and its line numbers stay left to right in a right-to-left interface (E3); the bars around follow it.
-        gutter.leftAnchor().constraintEqualToAnchor(&container.leftAnchor()),
+        blame.leftAnchor().constraintEqualToAnchor(&container.leftAnchor()),
+        blame.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
+        blame.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
+        gutter.leftAnchor().constraintEqualToAnchor(&blame.rightAnchor()),
         gutter.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
         gutter.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
         scroll.leftAnchor().constraintEqualToAnchor(&gutter.rightAnchor()),
@@ -450,6 +461,9 @@ fn editor_container(
     let width = gutter.widthAnchor().constraintEqualToConstant(0.0);
     width.setActive(true);
     gutter.set_width_constraint(width);
+    let width = blame.widthAnchor().constraintEqualToConstant(0.0);
+    width.setActive(true);
+    blame.set_width_constraint(width);
     *view.ivars().bar.borrow_mut() = Some(bar);
     (container, gutter)
 }
@@ -983,6 +997,15 @@ pub mod selftest {
         unfold_all,
     };
     pub use super::multi::{add_next_occurrence, add_vertical, carets, column, copied, paste_text, set as set_carets};
+}
+
+/// What the self-test does with blame, through the code the commands run.
+#[cfg(feature = "selftest")]
+pub mod blame_probe {
+    pub use super::blame::{
+        copy_hash, dismiss, line, popover_texts, show_diff, show_for_cursor, show_in_graph, toggle_column,
+    };
+    pub use super::blame_column::of as column;
 }
 
 /// Types `text` as the keyboard would, through the view's input path.

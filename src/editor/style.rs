@@ -49,6 +49,14 @@ pub fn styled_code_font(size: f64, bold: bool, italic: bool) -> Retained<NSFont>
     })
 }
 
+/// Whether `appearance` is one of increased contrast.
+pub(super) fn increased_contrast(appearance: &NSAppearance) -> bool {
+    matches!(
+        appearance_of(appearance),
+        Appearance::LightHighContrast | Appearance::DarkHighContrast
+    )
+}
+
 fn appearance_of(appearance: &NSAppearance) -> Appearance {
     let names = NSArray::from_slice(&[
         constant!(NSAppearanceNameAqua),

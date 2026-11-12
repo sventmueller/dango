@@ -348,7 +348,12 @@ define_class!(
 
         #[unsafe(method(ideQuickOpen:))]
         fn quick_open_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.show_quick_open());
+            guarded((), || self.show_quick_open(""));
+        }
+
+        #[unsafe(method(ideProjectSymbols:))]
+        fn project_symbols_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.show_quick_open("#"));
         }
 
         #[unsafe(method(ideSearchProject:))]
@@ -879,7 +884,7 @@ impl WindowController {
         }
     }
 
-    fn show_quick_open(&self) {
+    fn show_quick_open(&self, query: &str) {
         let Some(root) = self.ivars().workspace.borrow().as_ref().map(|p| p.root().to_path_buf()) else {
             return;
         };
@@ -890,7 +895,7 @@ impl WindowController {
             .borrow_mut()
             .get_or_insert_with(|| QuickOpenPanel::new(self.mtm(), self, root))
             .clone();
-        panel.show(&window);
+        panel.show(&window, query);
     }
 
     /// Shows the search panel with the keyboard focus in its field (⌘⇧F).
@@ -903,6 +908,18 @@ impl WindowController {
         }
         self.show_panel(Panel::Search);
         search.focus();
+    }
+
+    /// Shows `hierarchy` in the search panel in place of the text search (E85).
+    pub fn show_hierarchy(&self, hierarchy: crate::lsp::Hierarchy) {
+        let Some(search) = self.ivars().search.borrow().clone() else {
+            return;
+        };
+        if !self.ivars().panel_open.get() {
+            self.set_panel_open(true);
+        }
+        self.show_panel(Panel::Search);
+        search.show_hierarchy(hierarchy);
     }
 
     /// Asks the folder's index for up to `limit` files matching `query`; `answer` runs on another thread.
@@ -1738,6 +1755,11 @@ impl WindowController {
         if action == Some(sel!(ideQuickOpen:)) || action == Some(sel!(ideSearchProject:)) {
             return ivars.workspace.borrow().is_some();
         }
+        if action == Some(sel!(ideProjectSymbols:)) {
+            return self
+                .project_root()
+                .is_some_and(|root| crate::project::is_trusted(&root));
+        }
         if let Some(action) = action.filter(|action| browser_commands().contains(action)) {
             return crate::browser::validate(self, action);
         }
@@ -1837,7 +1859,7 @@ impl WindowController {
 
     /// Opens Open Quickly with `query` typed into it.
     pub fn quick_open_with(&self, query: &str) {
-        self.show_quick_open();
+        self.show_quick_open("");
         if let Some(panel) = self.ivars().quick_open.borrow().as_ref() {
             panel.type_query(query);
         }
@@ -1846,6 +1868,19 @@ impl WindowController {
     pub fn close_quick_open(&self) {
         if let Some(panel) = self.ivars().quick_open.borrow().as_ref() {
             panel.close();
+        }
+    }
+
+    /// What Open Quickly says in place of rows, if anything.
+    pub fn quick_open_status(&self) -> Option<String> {
+        self.ivars().quick_open.borrow().as_ref().and_then(|p| p.status())
+    }
+
+    /// Opens row `row` of Open Quickly as Return does.
+    pub fn quick_open_row(&self, row: usize) {
+        let panel = self.ivars().quick_open.borrow().clone();
+        if let Some(panel) = panel {
+            panel.open_row(row);
         }
     }
 

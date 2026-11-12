@@ -143,6 +143,15 @@ impl Language {
         }
     }
 
+    /// Whether its servers search the project's symbols; the servers of data and style formats do not, so a project
+    /// symbol search does not start them.
+    pub fn searches_project(&self) -> bool {
+        !matches!(
+            self,
+            Language::Json | Language::Yaml | Language::Toml | Language::Css | Language::Html
+        )
+    }
+
     /// How the server of a common language is found; `None` for Go, Rust, TypeScript and the user's own servers.
     pub(crate) fn common(&self) -> Option<Common> {
         const VSCODE: Option<&str> = Some("vscode-langservers-extracted");

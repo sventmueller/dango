@@ -113,7 +113,7 @@ pub fn rename_to(view: &EditorTextView, index: usize, name: &str) {
                 return;
             };
             let result = match answer {
-                Ok(Some(edit)) => super::edits::apply_workspace_edit(&folder, &edit),
+                Ok(Some(edit)) => super::edits::apply_workspace_edit(&folder, &edit).map_err(|f| f.message),
                 Ok(None) => Err(t("Der Sprachserver nennt nichts umzubenennen.").to_string()),
                 Err(error) => Err(error.to_string()),
             };

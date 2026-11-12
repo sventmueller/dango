@@ -1,11 +1,11 @@
-//! A view over the text for what TextKit does not draw: the placeholders of folds and the carets and selections
-//! beyond the first. Clicks pass through to the text.
+//! A view over the text for what TextKit does not draw: the placeholders of folds, the carets and selections beyond
+//! the first, and the insets of E81. Clicks pass through to the text, except on an inset that does something.
 
 use objc2::rc::{Retained, Weak};
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
+use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSBezierPath, NSColor, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSStringDrawing, NSView, NSWindowOrderingMode,
+    NSAccessibility, NSAutoresizingMaskOptions, NSBezierPath, NSColor, NSCursor, NSEvent, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSStringDrawing, NSToolTipTag, NSView, NSViewToolTipOwner, NSWindowOrderingMode,
 };
 use objc2_foundation::{NSDictionary, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
@@ -26,6 +26,23 @@ define_class!(
 
     unsafe impl NSObjectProtocol for Overlay {}
 
+    unsafe impl NSViewToolTipOwner for Overlay {
+        #[unsafe(method_id(view:stringForToolTip:point:userData:))]
+        unsafe fn tool_tip(
+            &self,
+            _view: &NSView,
+            _tag: NSToolTipTag,
+            point: NSPoint,
+            _data: *mut std::ffi::c_void,
+        ) -> Retained<NSString> {
+            let text = guarded(None, || {
+                let editor = self.ivars().editor.load()?;
+                super::insets::tooltip(&editor, self.convertPoint_toView(point, Some(&editor)))
+            });
+            ns(&text.unwrap_or_default())
+        }
+    }
+
     impl Overlay {
         #[unsafe(method(isFlipped))]
         fn is_flipped(&self) -> bool {
@@ -33,8 +50,29 @@ define_class!(
         }
 
         #[unsafe(method_id(hitTest:))]
-        fn hit_test(&self, _point: NSPoint) -> Option<Retained<NSView>> {
-            None
+        fn hit_test(&self, point: NSPoint) -> Option<Retained<NSView>> {
+            let hit = guarded(false, || {
+                self.ivars()
+                    .editor
+                    .load()
+                    .is_some_and(|editor| super::insets::hits(&editor, point))
+            });
+            hit.then(|| self.retain().into_super())
+        }
+
+        #[unsafe(method(mouseDown:))]
+        fn mouse_down(&self, event: &NSEvent) {
+            guarded((), || {
+                if let Some(editor) = self.ivars().editor.load() {
+                    let point = editor.convertPoint_fromView(event.locationInWindow(), None);
+                    super::insets::click(&editor, point);
+                }
+            });
+        }
+
+        #[unsafe(method(resetCursorRects))]
+        fn reset_cursor_rects(&self) {
+            guarded((), || self.point_at_insets());
         }
 
         #[unsafe(method(drawRect:))]
@@ -72,7 +110,42 @@ impl Overlay {
             return;
         };
         self.draw_placeholders(&editor);
+        super::insets::draw(&editor);
         self.draw_carets(&editor);
+        self.offer_tooltips(&editor);
+    }
+
+    /// Gives every inset with a tooltip a tooltip area, which the overlay answers from the inset under the mouse.
+    fn offer_tooltips(&self, editor: &EditorTextView) {
+        self.removeAllToolTips();
+        let shown = super::insets::shown(editor);
+        for inset in &shown {
+            if super::insets::tooltip(
+                editor,
+                NSPoint::new(inset.rect.origin.x + 1.0, inset.rect.origin.y + 1.0),
+            )
+            .is_some()
+            {
+                // SAFETY: The overlay owns its tooltip areas and answers them as their owner; no user data is passed.
+                unsafe { self.addToolTipRect_owner_userData(inset.rect, self, std::ptr::null_mut()) };
+            }
+        }
+        if let Some(window) = self.window() {
+            window.invalidateCursorRectsForView(self);
+        }
+    }
+
+    /// The pointing hand over every inset a click does something on.
+    fn point_at_insets(&self) {
+        let Some(editor) = self.ivars().editor.load() else {
+            return;
+        };
+        for inset in super::insets::shown(&editor) {
+            let middle = NSPoint::new(inset.rect.origin.x + 1.0, inset.rect.origin.y + 1.0);
+            if super::insets::hits(&editor, middle) {
+                self.addCursorRect_cursor(inset.rect, &NSCursor::pointingHandCursor());
+            }
+        }
     }
 
     /// A rounded box with an ellipsis after the first line of every fold on screen.

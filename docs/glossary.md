@@ -77,6 +77,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | replace | in the search panel and in a file |
 | Sprachserver | language server | LSP |
 | Hinweis (Schweregrad) | hint | the language server's lowest severity, after Fehler, Warnung and Info |
+| Inlay-Hinweis | inlay hint | what the language server shows inside a line without it being in the file, such as an inferred type (E83) |
+| Blame | blame | who changed a line last, at the line's end or in a column before the line numbers (E86); kept as git's word |
+| Hinweise (Rotor) | Hints | the VoiceOver rotor that lists an editor's inlay hints and blame |
+| Schnellkorrektur | quick fix | a change the language server offers for the place of the cursor, such as a missing import |
+| Refactoring | refactor | a change of the code's structure the language server offers, such as extracting a function |
+| Quellaktion | source action | a change of the whole file the language server offers, such as sorting its imports |
+| Implementierung / Typdefinition / Deklaration | implementation / type definition / declaration | where the language server finds a trait's or interface's implementations, the type of a symbol, and its declaration apart from its definition |
+| Aufrufhierarchie / Typhierarchie | call hierarchy / type hierarchy | the tree of a function's calls or of a type's relatives in the search panel |
+| Aufrufer / Aufgerufene | callers / callees | the two directions of the call hierarchy |
+| Obertypen / Untertypen | supertypes / subtypes | the two directions of the type hierarchy |
+| indexieren | index | a language server reads the project before it can answer; "Wird indexiert …" |
 | Lesezeichen / Verlauf / Adresse | bookmark / history / address | of the browser tab |
 | Bytes | bytes | the unit |
 | Exportieren | export | the submenu that writes Markdown as PDF, HTML or Word |
@@ -201,6 +212,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | استبدال |
 | Sprachserver | خادم اللغة |
 | Hinweis (Schweregrad) | تلميح |
+| Inlay-Hinweis | تلميح مضمّن |
+| Blame | Blame |
+| Hinweise (Rotor) | التلميحات |
+| Schnellkorrektur | إصلاح سريع |
+| Refactoring | إعادة هيكلة |
+| Quellaktion | إجراء على المصدر |
+| Implementierung / Typdefinition / Deklaration | التنفيذ / تعريف النوع / الإعلان |
+| Aufrufhierarchie / Typhierarchie | تسلسل الاستدعاءات / تسلسل الأنواع |
+| Aufrufer / Aufgerufene | الدوال المستدعية / الدوال المستدعاة |
+| Obertypen / Untertypen | الأنواع الأعلى / الأنواع الفرعية |
+| indexieren | الفهرسة |
 | Lesezeichen / Verlauf / Adresse | إشارة مرجعية / السجل / العنوان |
 | Bytes | بايت |
 | Exportieren | تصدير |
@@ -317,6 +339,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Substitueix |
 | Sprachserver | servidor de llenguatge |
 | Hinweis (Schweregrad) | Suggeriment |
+| Inlay-Hinweis | indicació inline |
+| Blame | Blame |
+| Hinweise (Rotor) | Indicacions |
+| Schnellkorrektur | correcció ràpida |
+| Refactoring | refactorització |
+| Quellaktion | acció de codi font |
+| Implementierung / Typdefinition / Deklaration | implementació / definició del tipus / declaració |
+| Aufrufhierarchie / Typhierarchie | Jerarquia de crides / Jerarquia de tipus |
+| Aufrufer / Aufgerufene | Cridadors / Cridats |
+| Obertypen / Untertypen | Supertipus / Subtipus |
+| indexieren | indexar |
 | Lesezeichen / Verlauf / Adresse | marcador / historial / adreça |
 | Bytes | bytes |
 | Exportieren | Exporta |
@@ -432,6 +465,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Nahradit |
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápověda |
+| Inlay-Hinweis | vložená nápověda |
+| Blame | Blame |
+| Hinweise (Rotor) | Nápovědy |
+| Schnellkorrektur | rychlá oprava |
+| Refactoring | refaktorování |
+| Quellaktion | akce zdrojového kódu |
+| Implementierung / Typdefinition / Deklaration | implementace / definice typu / deklarace |
+| Aufrufhierarchie / Typhierarchie | Hierarchie volání / Hierarchie typů |
+| Aufrufer / Aufgerufene | Volající / Volané |
+| Obertypen / Untertypen | Nadtypy / Podtypy |
+| indexieren | indexovat |
 | Lesezeichen / Verlauf / Adresse | záložka / historie / adresa |
 | Bytes | B |
 | Exportieren | Exportovat |
@@ -545,6 +589,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Erstat |
 | Sprachserver | sprogserver |
 | Hinweis (Schweregrad) | Tip |
+| Inlay-Hinweis | inlay-tip |
+| Blame | Blame |
+| Hinweise (Rotor) | Tips |
+| Schnellkorrektur | hurtig rettelse |
+| Refactoring | refaktorering |
+| Quellaktion | kildehandling |
+| Implementierung / Typdefinition / Deklaration | implementering / typedefinition / erklæring |
+| Aufrufhierarchie / Typhierarchie | Kaldhierarki / Typehierarki |
+| Aufrufer / Aufgerufene | Kaldere / Kaldte |
+| Obertypen / Untertypen | Supertyper / Undertyper |
+| indexieren | indeksere |
 | Lesezeichen / Verlauf / Adresse | bogmærke / historik / adresse |
 | Bytes | byte |
 | Exportieren | Eksporter |
@@ -661,6 +716,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Αντικατάσταση |
 | Sprachserver | διακομιστής γλώσσας |
 | Hinweis (Schweregrad) | Υπόδειξη |
+| Inlay-Hinweis | ενσωματωμένη υπόδειξη |
+| Blame | Blame |
+| Hinweise (Rotor) | Υποδείξεις |
+| Schnellkorrektur | γρήγορη διόρθωση |
+| Refactoring | αναδιάρθρωση |
+| Quellaktion | ενέργεια πηγαίου κώδικα |
+| Implementierung / Typdefinition / Deklaration | υλοποίηση / ορισμός τύπου / δήλωση |
+| Aufrufhierarchie / Typhierarchie | Ιεραρχία κλήσεων / Ιεραρχία τύπων |
+| Aufrufer / Aufgerufene | Καλούντες / Καλούμενες |
+| Obertypen / Untertypen | Υπερτύποι / Υποτύποι |
+| indexieren | ευρετηρίαση |
 | Lesezeichen / Verlauf / Adresse | σελιδοδείκτης / ιστορικό / διεύθυνση |
 | Bytes | byte |
 | Exportieren | Εξαγωγή |
@@ -777,6 +843,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Reemplazar |
 | Sprachserver | servidor de lenguaje |
 | Hinweis (Schweregrad) | Sugerencia |
+| Inlay-Hinweis | sugerencia insertada |
+| Blame | Blame |
+| Hinweise (Rotor) | Sugerencias |
+| Schnellkorrektur | corrección rápida |
+| Refactoring | refactorización |
+| Quellaktion | acción de código fuente |
+| Implementierung / Typdefinition / Deklaration | implementación / definición de tipo / declaración |
+| Aufrufhierarchie / Typhierarchie | Jerarquía de llamadas / Jerarquía de tipos |
+| Aufrufer / Aufgerufene | Llamadores / Llamados |
+| Obertypen / Untertypen | Supertipos / Subtipos |
+| indexieren | indexar |
 | Lesezeichen / Verlauf / Adresse | marcador / historial / dirección |
 | Bytes | bytes |
 | Exportieren | Exportar |
@@ -894,6 +971,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Korvaa |
 | Sprachserver | kielipalvelin |
 | Hinweis (Schweregrad) | Vihje |
+| Inlay-Hinweis | upotettu vihje |
+| Blame | Blame |
+| Hinweise (Rotor) | Vihjeet |
+| Schnellkorrektur | pikakorjaus |
+| Refactoring | refaktorointi |
+| Quellaktion | lähdekoodin toiminto |
+| Implementierung / Typdefinition / Deklaration | toteutus / tyypin määrittely / esittely |
+| Aufrufhierarchie / Typhierarchie | Kutsuhierarkia / Tyyppihierarkia |
+| Aufrufer / Aufgerufene | Kutsujat / Kutsuttavat |
+| Obertypen / Untertypen | Ylätyypit / Alatyypit |
+| indexieren | indeksoida |
 | Lesezeichen / Verlauf / Adresse | kirjanmerkki / historia / osoite |
 | Bytes | tavua |
 | Exportieren | Vie |
@@ -1008,6 +1096,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Remplacer |
 | Sprachserver | serveur de langage |
 | Hinweis (Schweregrad) | Suggestion |
+| Inlay-Hinweis | indication intégrée |
+| Blame | Blame |
+| Hinweise (Rotor) | Indications |
+| Schnellkorrektur | correction rapide |
+| Refactoring | refactorisation |
+| Quellaktion | action sur le code source |
+| Implementierung / Typdefinition / Deklaration | implémentation / définition de type / déclaration |
+| Aufrufhierarchie / Typhierarchie | Hiérarchie d’appels / Hiérarchie de types |
+| Aufrufer / Aufgerufene | Appelants / Appelés |
+| Obertypen / Untertypen | Supertypes / Sous-types |
+| indexieren | indexer |
 | Lesezeichen / Verlauf / Adresse | signet / historique / adresse |
 | Bytes | octets |
 | Exportieren | Exporter |
@@ -1126,6 +1225,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | החלפה |
 | Sprachserver | שרת שפה |
 | Hinweis (Schweregrad) | רמז |
+| Inlay-Hinweis | רמז מוטבע |
+| Blame | Blame |
+| Hinweise (Rotor) | רמזים |
+| Schnellkorrektur | תיקון מהיר |
+| Refactoring | ריפקטורינג |
+| Quellaktion | פעולת קוד מקור |
+| Implementierung / Typdefinition / Deklaration | מימוש / הגדרת טיפוס / הצהרה |
+| Aufrufhierarchie / Typhierarchie | היררכיית קריאות / היררכיית טיפוסים |
+| Aufrufer / Aufgerufene | קוראים / נקראים |
+| Obertypen / Untertypen | טיפוסי־על / תת־טיפוסים |
+| indexieren | אינדוקס |
 | Lesezeichen / Verlauf / Adresse | סימניה / היסטוריה / כתובת |
 | Bytes | בתים |
 | Exportieren | ייצוא |
@@ -1240,6 +1350,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | बदलें |
 | Sprachserver | लैंग्वेज सर्वर |
 | Hinweis (Schweregrad) | संकेत |
+| Inlay-Hinweis | इनलाइन संकेत |
+| Blame | Blame |
+| Hinweise (Rotor) | संकेत |
+| Schnellkorrektur | त्वरित सुधार |
+| Refactoring | रीफ़ैक्टरिंग |
+| Quellaktion | सोर्स ऐक्शन |
+| Implementierung / Typdefinition / Deklaration | इम्प्लीमेंटेशन / टाइप परिभाषा / डिक्लेरेशन |
+| Aufrufhierarchie / Typhierarchie | कॉल पदानुक्रम / टाइप पदानुक्रम |
+| Aufrufer / Aufgerufene | कॉल करने वाले / कॉल किए गए |
+| Obertypen / Untertypen | सुपरटाइप / सबटाइप |
+| indexieren | इंडेक्स करना |
 | Lesezeichen / Verlauf / Adresse | बुकमार्क / इतिहास / पता |
 | Bytes | बाइट |
 | Exportieren | एक्सपोर्ट करें |
@@ -1355,6 +1476,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Zamijeni |
 | Sprachserver | jezični poslužitelj |
 | Hinweis (Schweregrad) | Savjet |
+| Inlay-Hinweis | umetnuti savjet |
+| Blame | Blame |
+| Hinweise (Rotor) | Savjeti |
+| Schnellkorrektur | brzi popravak |
+| Refactoring | refaktoriranje |
+| Quellaktion | radnja izvornog koda |
+| Implementierung / Typdefinition / Deklaration | implementacija / definicija tipa / deklaracija |
+| Aufrufhierarchie / Typhierarchie | Hijerarhija poziva / Hijerarhija tipova |
+| Aufrufer / Aufgerufene | Pozivatelji / Pozvani |
+| Obertypen / Untertypen | Nadtipovi / Podtipovi |
+| indexieren | indeksirati |
 | Lesezeichen / Verlauf / Adresse | knjižna oznaka / povijest / adresa |
 | Bytes | B |
 | Exportieren | Eksportiraj |
@@ -1472,6 +1604,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Csere |
 | Sprachserver | nyelvi szerver |
 | Hinweis (Schweregrad) | Tipp |
+| Inlay-Hinweis | beágyazott tipp |
+| Blame | Blame |
+| Hinweise (Rotor) | Tippek |
+| Schnellkorrektur | gyorsjavítás |
+| Refactoring | refaktorálás |
+| Quellaktion | forráskód-művelet |
+| Implementierung / Typdefinition / Deklaration | implementáció / típusdefiníció / deklaráció |
+| Aufrufhierarchie / Typhierarchie | Hívási hierarchia / Típushierarchia |
+| Aufrufer / Aufgerufene | Hívók / Hívottak |
+| Obertypen / Untertypen | Szupertípusok / Altípusok |
+| indexieren | indexelés |
 | Lesezeichen / Verlauf / Adresse | könyvjelző / előzmények / cím |
 | Bytes | bájt |
 | Exportieren | Exportálás |
@@ -1587,6 +1730,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Ganti |
 | Sprachserver | server bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
+| Inlay-Hinweis | petunjuk sisipan |
+| Blame | Blame |
+| Hinweise (Rotor) | Petunjuk |
+| Schnellkorrektur | perbaikan cepat |
+| Refactoring | refaktor |
+| Quellaktion | tindakan sumber |
+| Implementierung / Typdefinition / Deklaration | implementasi / definisi tipe / deklarasi |
+| Aufrufhierarchie / Typhierarchie | Hierarki Panggilan / Hierarki Tipe |
+| Aufrufer / Aufgerufene | Pemanggil / Yang Dipanggil |
+| Obertypen / Untertypen | Supertipe / Subtipe |
+| indexieren | mengindeks |
 | Lesezeichen / Verlauf / Adresse | penanda / riwayat / alamat |
 | Bytes | byte |
 | Exportieren | Ekspor |
@@ -1702,6 +1856,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Sostituisci |
 | Sprachserver | server di linguaggio |
 | Hinweis (Schweregrad) | Suggerimento |
+| Inlay-Hinweis | suggerimento inline |
+| Blame | Blame |
+| Hinweise (Rotor) | Suggerimenti |
+| Schnellkorrektur | correzione rapida |
+| Refactoring | refactoring |
+| Quellaktion | azione sul codice sorgente |
+| Implementierung / Typdefinition / Deklaration | implementazione / definizione di tipo / dichiarazione |
+| Aufrufhierarchie / Typhierarchie | Gerarchia delle chiamate / Gerarchia dei tipi |
+| Aufrufer / Aufgerufene | Chiamanti / Chiamati |
+| Obertypen / Untertypen | Supertipi / Sottotipi |
+| indexieren | indicizzare |
 | Lesezeichen / Verlauf / Adresse | segnalibro / cronologia / indirizzo |
 | Bytes | byte |
 | Exportieren | Esporta |
@@ -1818,6 +1983,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | 置換 |
 | Sprachserver | 言語サーバ |
 | Hinweis (Schweregrad) | ヒント |
+| Inlay-Hinweis | インレイヒント |
+| Blame | Blame |
+| Hinweise (Rotor) | ヒント |
+| Schnellkorrektur | クイックフィックス |
+| Refactoring | リファクタリング |
+| Quellaktion | ソースアクション |
+| Implementierung / Typdefinition / Deklaration | 実装 / 型定義 / 宣言 |
+| Aufrufhierarchie / Typhierarchie | 呼び出し階層 / 型階層 |
+| Aufrufer / Aufgerufene | 呼び出し元 / 呼び出し先 |
+| Obertypen / Untertypen | スーパータイプ / サブタイプ |
+| indexieren | インデックス作成 |
 | Lesezeichen / Verlauf / Adresse | ブックマーク / 履歴 / アドレス |
 | Bytes | バイト |
 | Exportieren | 書き出す |
@@ -1933,6 +2109,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | 대치 |
 | Sprachserver | 언어 서버 |
 | Hinweis (Schweregrad) | 힌트 |
+| Inlay-Hinweis | 인레이 힌트 |
+| Blame | Blame |
+| Hinweise (Rotor) | 힌트 |
+| Schnellkorrektur | 빠른 수정 |
+| Refactoring | 리팩토링 |
+| Quellaktion | 소스 동작 |
+| Implementierung / Typdefinition / Deklaration | 구현 / 유형 정의 / 선언 |
+| Aufrufhierarchie / Typhierarchie | 호출 계층 / 유형 계층 |
+| Aufrufer / Aufgerufene | 호출자 / 호출 대상 |
+| Obertypen / Untertypen | 상위 유형 / 하위 유형 |
+| indexieren | 색인 생성 |
 | Lesezeichen / Verlauf / Adresse | 북마크 / 방문 기록 / 주소 |
 | Bytes | 바이트 |
 | Exportieren | 내보내기 |
@@ -2047,6 +2234,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Ganti |
 | Sprachserver | pelayan bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
+| Inlay-Hinweis | petunjuk sebaris |
+| Blame | Blame |
+| Hinweise (Rotor) | Petunjuk |
+| Schnellkorrektur | pembetulan pantas |
+| Refactoring | pemfaktoran semula |
+| Quellaktion | tindakan sumber |
+| Implementierung / Typdefinition / Deklaration | pelaksanaan / definisi jenis / pengisytiharan |
+| Aufrufhierarchie / Typhierarchie | Hierarki Panggilan / Hierarki Jenis |
+| Aufrufer / Aufgerufene | Pemanggil / Yang Dipanggil |
+| Obertypen / Untertypen | Superjenis / Subjenis |
+| indexieren | mengindeks |
 | Lesezeichen / Verlauf / Adresse | penanda buku / sejarah / alamat |
 | Bytes | bait |
 | Exportieren | Eksport |
@@ -2162,6 +2360,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Vervang |
 | Sprachserver | taalserver |
 | Hinweis (Schweregrad) | Hint |
+| Inlay-Hinweis | inlay-hint |
+| Blame | Blame |
+| Hinweise (Rotor) | Hints |
+| Schnellkorrektur | snelle oplossing |
+| Refactoring | refactoring |
+| Quellaktion | bronactie |
+| Implementierung / Typdefinition / Deklaration | implementatie / typedefinitie / declaratie |
+| Aufrufhierarchie / Typhierarchie | Aanroephiërarchie / Typehiërarchie |
+| Aufrufer / Aufgerufene | Aanroepers / Aangeroepen |
+| Obertypen / Untertypen | Supertypen / Subtypen |
+| indexieren | indexeren |
 | Lesezeichen / Verlauf / Adresse | bladwijzer / geschiedenis / adres |
 | Bytes | bytes |
 | Exportieren | Exporteer |
@@ -2277,6 +2486,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Erstatt |
 | Sprachserver | språktjener (macOS says tjener for server) |
 | Hinweis (Schweregrad) | Tips |
+| Inlay-Hinweis | innebygd tips |
+| Blame | Blame |
+| Hinweise (Rotor) | Tips |
+| Schnellkorrektur | hurtigretting |
+| Refactoring | refaktorering |
+| Quellaktion | kildehandling |
+| Implementierung / Typdefinition / Deklaration | implementering / typedefinisjon / deklarasjon |
+| Aufrufhierarchie / Typhierarchie | Kallhierarki / Typehierarki |
+| Aufrufer / Aufgerufene | Kallere / Kalte |
+| Obertypen / Untertypen | Supertyper / Undertyper |
+| indexieren | indeksere |
 | Lesezeichen / Verlauf / Adresse | bokmerke / logg (as Safari) / adresse |
 | Bytes | byte |
 | Exportieren | Eksporter |
@@ -2392,6 +2612,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Zastąp |
 | Sprachserver | serwer języka |
 | Hinweis (Schweregrad) | Wskazówka |
+| Inlay-Hinweis | wskazówka w tekście |
+| Blame | Blame |
+| Hinweise (Rotor) | Wskazówki |
+| Schnellkorrektur | szybka poprawka |
+| Refactoring | refaktoryzacja |
+| Quellaktion | akcja źródłowa |
+| Implementierung / Typdefinition / Deklaration | implementacja / definicja typu / deklaracja |
+| Aufrufhierarchie / Typhierarchie | Hierarchia wywołań / Hierarchia typów |
+| Aufrufer / Aufgerufene | Wywołujące / Wywoływane |
+| Obertypen / Untertypen | Nadtypy / Podtypy |
+| indexieren | indeksowanie |
 | Lesezeichen / Verlauf / Adresse | zakładka / historia / adres |
 | Bytes | bajty |
 | Exportieren | Eksportuj |
@@ -2508,6 +2739,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Substituir |
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Dica |
+| Inlay-Hinweis | dica embutida |
+| Blame | Blame |
+| Hinweise (Rotor) | Dicas |
+| Schnellkorrektur | correção rápida |
+| Refactoring | refatoração |
+| Quellaktion | ação de código-fonte |
+| Implementierung / Typdefinition / Deklaration | implementação / definição de tipo / declaração |
+| Aufrufhierarchie / Typhierarchie | Hierarquia de Chamadas / Hierarquia de Tipos |
+| Aufrufer / Aufgerufene | Chamadores / Chamados |
+| Obertypen / Untertypen | Supertipos / Subtipos |
+| indexieren | indexar |
 | Lesezeichen / Verlauf / Adresse | favorito (as Safari) / histórico / endereço |
 | Bytes | bytes |
 | Exportieren | Exportar |
@@ -2624,6 +2866,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Substituir |
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Sugestão |
+| Inlay-Hinweis | sugestão incorporada |
+| Blame | Blame |
+| Hinweise (Rotor) | Sugestões |
+| Schnellkorrektur | correção rápida |
+| Refactoring | refatorização |
+| Quellaktion | ação de código-fonte |
+| Implementierung / Typdefinition / Deklaration | implementação / definição de tipo / declaração |
+| Aufrufhierarchie / Typhierarchie | Hierarquia de chamadas / Hierarquia de tipos |
+| Aufrufer / Aufgerufene | Chamadores / Chamados |
+| Obertypen / Untertypen | Supertipos / Subtipos |
+| indexieren | indexar |
 | Lesezeichen / Verlauf / Adresse | marcador / histórico / endereço |
 | Bytes | bytes |
 | Exportieren | Exportar |
@@ -2740,6 +2993,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Înlocuiți |
 | Sprachserver | server de limbaj |
 | Hinweis (Schweregrad) | Sugestie |
+| Inlay-Hinweis | sugestie inline |
+| Blame | Blame |
+| Hinweise (Rotor) | Sugestii |
+| Schnellkorrektur | remediere rapidă |
+| Refactoring | refactorizare |
+| Quellaktion | acțiune pentru sursă |
+| Implementierung / Typdefinition / Deklaration | implementare / definiția tipului / declarație |
+| Aufrufhierarchie / Typhierarchie | Ierarhia apelurilor / Ierarhia tipurilor |
+| Aufrufer / Aufgerufene | Apelanți / Apelate |
+| Obertypen / Untertypen | Supertipuri / Subtipuri |
+| indexieren | indexare |
 | Lesezeichen / Verlauf / Adresse | marcaj / istoric / adresă |
 | Bytes | octeți |
 | Exportieren | Exportați |
@@ -2856,6 +3120,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Заменить |
 | Sprachserver | языковой сервер |
 | Hinweis (Schweregrad) | Подсказка |
+| Inlay-Hinweis | встроенная подсказка |
+| Blame | Blame |
+| Hinweise (Rotor) | Подсказки |
+| Schnellkorrektur | быстрое исправление |
+| Refactoring | рефакторинг |
+| Quellaktion | действие с исходным кодом |
+| Implementierung / Typdefinition / Deklaration | реализация / определение типа / объявление |
+| Aufrufhierarchie / Typhierarchie | Иерархия вызовов / Иерархия типов |
+| Aufrufer / Aufgerufene | Вызывающие / Вызываемые |
+| Obertypen / Untertypen | Супертипы / Подтипы |
+| indexieren | индексация |
 | Lesezeichen / Verlauf / Adresse | закладка / история / адрес |
 | Bytes | байт |
 | Exportieren | Экспортировать |
@@ -2972,6 +3247,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Nahradiť |
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápoveda |
+| Inlay-Hinweis | vložená nápoveda |
+| Blame | Blame |
+| Hinweise (Rotor) | Nápovedy |
+| Schnellkorrektur | rýchla oprava |
+| Refactoring | refaktorovanie |
+| Quellaktion | akcia zdrojového kódu |
+| Implementierung / Typdefinition / Deklaration | implementácia / definícia typu / deklarácia |
+| Aufrufhierarchie / Typhierarchie | Hierarchia volaní / Hierarchia typov |
+| Aufrufer / Aufgerufene | Volajúce / Volané |
+| Obertypen / Untertypen | Nadtypy / Podtypy |
+| indexieren | indexovanie |
 | Lesezeichen / Verlauf / Adresse | záložka / história / adresa |
 | Bytes | B |
 | Exportieren | Exportovať |
@@ -3089,6 +3375,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Zamenjaj |
 | Sprachserver | jezikovni strežnik |
 | Hinweis (Schweregrad) | Namig |
+| Inlay-Hinweis | vdelan namig |
+| Blame | Blame |
+| Hinweise (Rotor) | Namigi |
+| Schnellkorrektur | hitri popravek |
+| Refactoring | refaktoriranje |
+| Quellaktion | dejanje izvorne kode |
+| Implementierung / Typdefinition / Deklaration | implementacija / definicija tipa / deklaracija |
+| Aufrufhierarchie / Typhierarchie | Hierarhija klicev / Hierarhija tipov |
+| Aufrufer / Aufgerufene | Klicatelji / Klicani |
+| Obertypen / Untertypen | Nadtipi / Podtipi |
+| indexieren | indeksiranje |
 | Lesezeichen / Verlauf / Adresse | zaznamek / zgodovina / naslov |
 | Bytes | bajti |
 | Exportieren | Izvozi |
@@ -3204,6 +3501,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Ersätt |
 | Sprachserver | språkserver |
 | Hinweis (Schweregrad) | Tips |
+| Inlay-Hinweis | infällt tips |
+| Blame | Blame |
+| Hinweise (Rotor) | Tips |
+| Schnellkorrektur | snabbkorrigering |
+| Refactoring | refaktorering |
+| Quellaktion | källåtgärd |
+| Implementierung / Typdefinition / Deklaration | implementering / typdefinition / deklaration |
+| Aufrufhierarchie / Typhierarchie | Anropshierarki / Typhierarki |
+| Aufrufer / Aufgerufene | Anropare / Anropade |
+| Obertypen / Untertypen | Supertyper / Undertyper |
+| indexieren | indexera |
 | Lesezeichen / Verlauf / Adresse | bokmärke / historik / adress |
 | Bytes | byte |
 | Exportieren | Exportera |
@@ -3320,6 +3628,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | แทนที่ |
 | Sprachserver | เซิร์ฟเวอร์ภาษา |
 | Hinweis (Schweregrad) | คำแนะนำ |
+| Inlay-Hinweis | คำแนะนำแบบอินไลน์ |
+| Blame | Blame |
+| Hinweise (Rotor) | คำแนะนำ |
+| Schnellkorrektur | แก้ไขด่วน |
+| Refactoring | ปรับโครงสร้างโค้ด |
+| Quellaktion | การทำงานกับซอร์ส |
+| Implementierung / Typdefinition / Deklaration | การนำไปใช้ / คำจำกัดความของชนิด / การประกาศ |
+| Aufrufhierarchie / Typhierarchie | ลำดับชั้นการเรียก / ลำดับชั้นของชนิด |
+| Aufrufer / Aufgerufene | ผู้เรียก / ผู้ถูกเรียก |
+| Obertypen / Untertypen | ชนิดแม่ / ชนิดย่อย |
+| indexieren | ทำดัชนี |
 | Lesezeichen / Verlauf / Adresse | ที่คั่นหน้า / ประวัติ / ที่อยู่ |
 | Bytes | ไบต์ |
 | Exportieren | ส่งออก |
@@ -3437,6 +3756,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Değiştir |
 | Sprachserver | dil sunucusu |
 | Hinweis (Schweregrad) | İpucu |
+| Inlay-Hinweis | satır içi ipucu |
+| Blame | Blame |
+| Hinweise (Rotor) | İpuçları |
+| Schnellkorrektur | hızlı düzeltme |
+| Refactoring | yeniden düzenleme |
+| Quellaktion | kaynak işlemi |
+| Implementierung / Typdefinition / Deklaration | uygulama / tür tanımı / bildirim |
+| Aufrufhierarchie / Typhierarchie | Çağrı Hiyerarşisi / Tür Hiyerarşisi |
+| Aufrufer / Aufgerufene | Çağıranlar / Çağrılanlar |
+| Obertypen / Untertypen | Üst Türler / Alt Türler |
+| indexieren | dizinleme |
 | Lesezeichen / Verlauf / Adresse | yer işareti / geçmiş / adres |
 | Bytes | bayt |
 | Exportieren | Dışa Aktar |
@@ -3552,6 +3882,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Замінити |
 | Sprachserver | мовний сервер |
 | Hinweis (Schweregrad) | Підказка |
+| Inlay-Hinweis | вбудована підказка |
+| Blame | Blame |
+| Hinweise (Rotor) | Підказки |
+| Schnellkorrektur | швидке виправлення |
+| Refactoring | рефакторинг |
+| Quellaktion | дія з вихідним кодом |
+| Implementierung / Typdefinition / Deklaration | реалізація / визначення типу / оголошення |
+| Aufrufhierarchie / Typhierarchie | Ієрархія викликів / Ієрархія типів |
+| Aufrufer / Aufgerufene | Викликають / Викликані |
+| Obertypen / Untertypen | Супертипи / Підтипи |
+| indexieren | індексування |
 | Lesezeichen / Verlauf / Adresse | закладка / історія / адреса |
 | Bytes | Б |
 | Exportieren | Експортувати |
@@ -3667,6 +4008,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | Thay thế |
 | Sprachserver | máy chủ ngôn ngữ |
 | Hinweis (Schweregrad) | Gợi ý |
+| Inlay-Hinweis | gợi ý nội tuyến |
+| Blame | Blame |
+| Hinweise (Rotor) | Gợi ý |
+| Schnellkorrektur | sửa nhanh |
+| Refactoring | tái cấu trúc |
+| Quellaktion | tác vụ mã nguồn |
+| Implementierung / Typdefinition / Deklaration | triển khai / định nghĩa kiểu / khai báo |
+| Aufrufhierarchie / Typhierarchie | Phân cấp lệnh gọi / Phân cấp kiểu |
+| Aufrufer / Aufgerufene | Nơi gọi / Được gọi |
+| Obertypen / Untertypen | Kiểu cha / Kiểu con |
+| indexieren | lập chỉ mục |
 | Lesezeichen / Verlauf / Adresse | dấu trang / lịch sử / địa chỉ |
 | Bytes | byte |
 | Exportieren | Xuất |
@@ -3781,6 +4133,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | 替换 |
 | Sprachserver | 语言服务器 |
 | Hinweis (Schweregrad) | 提示 |
+| Inlay-Hinweis | 内嵌提示 |
+| Blame | Blame |
+| Hinweise (Rotor) | 提示 |
+| Schnellkorrektur | 快速修复 |
+| Refactoring | 重构 |
+| Quellaktion | 源代码操作 |
+| Implementierung / Typdefinition / Deklaration | 实现 / 类型定义 / 声明 |
+| Aufrufhierarchie / Typhierarchie | 调用层级 / 类型层级 |
+| Aufrufer / Aufgerufene | 调用方 / 被调用方 |
+| Obertypen / Untertypen | 超类型 / 子类型 |
+| indexieren | 索引 |
 | Lesezeichen / Verlauf / Adresse | 书签 / 历史记录 / 地址 |
 | Bytes | 字节 |
 | Exportieren | 导出 |
@@ -3896,6 +4259,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Ersetzen | 取代 |
 | Sprachserver | 語言伺服器 |
 | Hinweis (Schweregrad) | 提示 |
+| Inlay-Hinweis | 內嵌提示 |
+| Blame | Blame |
+| Hinweise (Rotor) | 提示 |
+| Schnellkorrektur | 快速修正 |
+| Refactoring | 重構 |
+| Quellaktion | 原始碼動作 |
+| Implementierung / Typdefinition / Deklaration | 實作 / 類型定義 / 宣告 |
+| Aufrufhierarchie / Typhierarchie | 呼叫階層 / 類型階層 |
+| Aufrufer / Aufgerufene | 呼叫者 / 被呼叫者 |
+| Obertypen / Untertypen | 超類型 / 子類型 |
+| indexieren | 建立索引 |
 | Lesezeichen / Verlauf / Adresse | 書籤 / 瀏覽記錄 / 網址 |
 | Bytes | 位元組 |
 | Exportieren | 輸出 |

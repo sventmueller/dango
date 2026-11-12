@@ -41,6 +41,17 @@ pub(crate) const METHODS: &[&str] = &[
     "textDocument/documentSymbol",
     "textDocument/diagnostic",
     "textDocument/inlayHint",
+    "textDocument/implementation",
+    "textDocument/typeDefinition",
+    "textDocument/declaration",
+    "workspace/symbol",
+    "workspaceSymbol/resolve",
+    "textDocument/prepareCallHierarchy",
+    "callHierarchy/incomingCalls",
+    "callHierarchy/outgoingCalls",
+    "textDocument/prepareTypeHierarchy",
+    "typeHierarchy/supertypes",
+    "typeHierarchy/subtypes",
 ];
 
 /// Hover text as Markdown, with the range it is about.
@@ -106,7 +117,7 @@ type Done<T> = Box<dyn FnOnce(Result<T, Error>) + Send>;
 impl Server {
     /// Sends `method` about `uri` if the server offers `capability`; `finish` turns the parsed answer into what the
     /// caller gets.
-    fn ask<R: DeserializeOwned, T: Send + 'static>(
+    pub(crate) fn ask<R: DeserializeOwned, T: Send + 'static>(
         &self,
         method: &'static str,
         capability: &'static str,
@@ -251,28 +262,7 @@ impl Server {
             "definitionProvider",
             uri,
             move |state, uri| at(state, uri, position),
-            |answer: Option<GotoDefinitionResponse>, uri, mapper| {
-                let link = |location: Location| LocationLink {
-                    origin_selection_range: None,
-                    target_uri: uri::normalize(&location.uri),
-                    target_range: location.range,
-                    target_selection_range: location.range,
-                };
-                let mut links: Vec<LocationLink> = match answer {
-                    None => vec![],
-                    Some(GotoDefinitionResponse::Scalar(location)) => vec![link(location)],
-                    Some(GotoDefinitionResponse::Array(locations)) => locations.into_iter().map(link).collect(),
-                    Some(GotoDefinitionResponse::Link(links)) => links
-                        .into_iter()
-                        .map(|l| LocationLink {
-                            target_uri: uri::normalize(&l.target_uri),
-                            ..l
-                        })
-                        .collect(),
-                };
-                mapper.recount(uri, &mut links);
-                Ok(links)
-            },
+            links,
             Box::new(reply),
         )
     }
@@ -684,7 +674,35 @@ impl Server {
     }
 }
 
-fn at(state: &State, uri: &Uri, position: Position) -> Result<Value, Error> {
+/// The targets of a definition-like answer as links, whichever of its three shapes the server chose.
+pub(crate) fn links(
+    answer: Option<GotoDefinitionResponse>,
+    uri: &Uri,
+    mapper: &mut Mapper,
+) -> Result<Vec<LocationLink>, Error> {
+    let link = |location: Location| LocationLink {
+        origin_selection_range: None,
+        target_uri: uri::normalize(&location.uri),
+        target_range: location.range,
+        target_selection_range: location.range,
+    };
+    let mut links: Vec<LocationLink> = match answer {
+        None => vec![],
+        Some(GotoDefinitionResponse::Scalar(location)) => vec![link(location)],
+        Some(GotoDefinitionResponse::Array(locations)) => locations.into_iter().map(link).collect(),
+        Some(GotoDefinitionResponse::Link(links)) => links
+            .into_iter()
+            .map(|l| LocationLink {
+                target_uri: uri::normalize(&l.target_uri),
+                ..l
+            })
+            .collect(),
+    };
+    mapper.recount(uri, &mut links);
+    Ok(links)
+}
+
+pub(crate) fn at(state: &State, uri: &Uri, position: Position) -> Result<Value, Error> {
     Ok(json!({"textDocument": {"uri": uri}, "position": state.to_server(uri, position)?}))
 }
 

@@ -62,6 +62,8 @@ pub struct Mark {
     pub range: Range<usize>,
     pub severity: Severity,
     pub message: String,
+    /// As the server sent it, for the code actions of its place.
+    pub diagnostic: Diagnostic,
 }
 
 /// A stretch the server gave a colour of its own.
@@ -127,6 +129,7 @@ pub fn set_diagnostics(view: &EditorTextView, diagnostics: &[Diagnostic]) {
                     range: super::text::range(document.text(), d.range),
                     severity: Severity::of(d),
                     message: format!("{}{code}", d.message),
+                    diagnostic: d.clone(),
                 }
             })
             .collect()

@@ -1,40 +1,41 @@
-//! Edits a server asks for: in an open editor as one undoable step, in a file nobody has open through the document
-//! model, so its encoding and line breaks stay; and the questions a server may ask the user.
+//! Edits a server asks for, in open editors as one undoable step each, through `apply` for a whole workspace; and the
+//! questions a server may ask the user.
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::ops::Range;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use block2::RcBlock;
-use ide_document::{Document, Edit};
 use ide_lsp::Reply;
-use ide_lsp::lsp_types::{
-    DocumentChangeOperation, DocumentChanges, MessageActionItem, OneOf, ResourceOp, TextEdit, WorkspaceEdit,
-};
+use ide_lsp::lsp_types::{MessageActionItem, TextEdit, WorkspaceEdit};
 use objc2::MainThreadOnly;
+use objc2::rc::Retained;
 use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse};
 use objc2_foundation::{NSFileManager, NSRange, NSURL};
 use splat_i18n::{t, tf};
 
+use super::apply::Failure;
 use crate::editor::{self, EditorTextView};
 use crate::util::{guarded, ns};
 
 /// Replaces `edits`, UTF-16 ranges of the text as it is now that do not overlap, as one undoable step that flows into
-/// the document model like typing.
-pub fn apply_text_edits(view: &EditorTextView, mut edits: Vec<(Range<usize>, String)>) {
-    let Some(storage) = view.storage() else { return };
-    edits.sort_by_key(|(range, _)| std::cmp::Reverse(range.start));
+/// the document model like typing; whether the view took every one.
+pub fn apply_text_edits(view: &EditorTextView, edits: Vec<(Range<usize>, String)>) -> bool {
+    let Some(storage) = view.storage() else { return false };
+    let mut took = true;
     editor::undo_step(view, || {
-        for (range, text) in edits {
+        for (range, text) in super::apply::back_to_front(edits) {
             let range = NSRange::new(range.start, range.end - range.start);
             let text = ns(&text);
             if view.shouldChangeTextInRange_replacementString(range, Some(&text)) {
                 storage.replaceCharactersInRange_withString(range, &text);
                 view.didChangeText();
+            } else {
+                took = false;
             }
         }
     });
+    took
 }
 
 /// `edits` of the protocol as ranges of `view`'s current text.
@@ -46,125 +47,64 @@ pub fn ranges(view: &EditorTextView, edits: &[TextEdit]) -> Vec<(Range<usize>, S
         .collect()
 }
 
-/// The text edits of `edit` by file, and its file operations, in order.
-fn split(edit: &WorkspaceEdit) -> (BTreeMap<PathBuf, Vec<TextEdit>>, Vec<ResourceOp>) {
-    let mut files: BTreeMap<PathBuf, Vec<TextEdit>> = BTreeMap::new();
-    let mut operations = vec![];
-    for (uri, edits) in edit.changes.iter().flatten() {
-        if let Some(path) = ide_lsp::uri::to_path(uri) {
-            files.entry(path).or_default().extend(edits.iter().cloned());
-        }
-    }
-    let mut add = |document: &ide_lsp::lsp_types::TextDocumentEdit| {
-        if let Some(path) = ide_lsp::uri::to_path(&document.text_document.uri) {
-            let edits = document.edits.iter().map(|one| match one {
-                OneOf::Left(edit) => edit.clone(),
-                OneOf::Right(annotated) => annotated.text_edit.clone(),
-            });
-            files.entry(path).or_default().extend(edits);
-        }
-    };
-    match &edit.document_changes {
-        Some(DocumentChanges::Edits(documents)) => documents.iter().for_each(&mut add),
-        Some(DocumentChanges::Operations(all)) => {
-            for operation in all {
-                match operation {
-                    DocumentChangeOperation::Edit(document) => add(document),
-                    DocumentChangeOperation::Op(op) => operations.push(op.clone()),
-                }
-            }
-        }
-        None => {}
-    }
-    (files, operations)
+/// Applies `edit` to the files under `folder` and to every open editor (Review C1).
+pub fn apply_workspace_edit(folder: &Path, edit: &WorkspaceEdit) -> Result<(), Failure> {
+    super::apply::apply(folder, edit, &mut OpenEditors)
 }
 
-/// Applies `edit` to the files under `folder` and to every open editor; the error says what failed.
-pub fn apply_workspace_edit(folder: &Path, edit: &WorkspaceEdit) -> Result<(), String> {
-    let (files, operations) = split(edit);
-    for operation in &operations {
-        resource(operation)?;
-    }
-    let mut problems = vec![];
-    for (path, edits) in files {
-        if !path.starts_with(folder) {
-            problems.push(tf("{} liegt außerhalb des Ordners", &[&path.display().to_string()]));
-            continue;
-        }
-        let open = editor::all_editors()
-            .into_iter()
-            .find(|v| v.document().path() == Some(&path));
-        match open {
-            Some(view) => {
-                let ranges = ranges(&view, &edits);
-                apply_text_edits(&view, ranges);
-            }
-            None => {
-                if let Err(error) = edit_file(&path, &edits) {
-                    problems.push(format!("{}: {error}", path.display()));
-                }
-            }
-        }
-    }
-    if problems.is_empty() {
-        Ok(())
-    } else {
-        Err(problems.join("\n"))
-    }
+/// Whether `shown`, the path of an editor's file, names `path`, whose symlinks are resolved; also for a file that
+/// was just renamed away, whose folder still resolves.
+fn names(shown: &Path, path: &Path) -> bool {
+    let resolved = shown.canonicalize().ok().or_else(|| {
+        let folder = shown.parent()?.canonicalize().ok()?;
+        Some(folder.join(shown.file_name()?))
+    });
+    shown == path || resolved.is_some_and(|resolved| resolved == path)
 }
 
-/// Edits a file that no editor shows, through the document model, and saves it.
-fn edit_file(path: &Path, edits: &[TextEdit]) -> Result<(), String> {
-    let mut document = Document::open(path).map_err(|e| e.to_string())?;
-    let mut ranges: Vec<(Range<usize>, String)> = edits
-        .iter()
-        .map(|e| (super::text::range(document.text(), e.range), e.new_text.clone()))
-        .collect();
-    ranges.sort_by_key(|(range, _)| std::cmp::Reverse(range.start));
-    for (range, text) in ranges {
-        document
-            .apply(Edit {
-                range_utf16: range,
-                text,
-            })
-            .map_err(|e| format!("{e:?}"))?;
-    }
-    document.save().map_err(|e| format!("{e:?}"))
+/// The editor that shows the file at `path`, whose symlinks are resolved.
+fn editor_at(path: &Path) -> Option<Retained<EditorTextView>> {
+    editor::all_editors()
+        .into_iter()
+        .find(|view| view.document().path().is_some_and(|shown| names(shown, path)))
 }
 
-/// Creates, renames or deletes a file as a server's edit asks; a deleted file goes to the Trash.
-fn resource(operation: &ResourceOp) -> Result<(), String> {
-    let path = |uri| ide_lsp::uri::to_path(uri).ok_or_else(|| t("Keine Datei").to_string());
-    match operation {
-        ResourceOp::Create(create) => {
-            let file = path(&create.uri)?;
-            let options = create.options.as_ref();
-            if file.exists() && !options.and_then(|o| o.overwrite).unwrap_or(false) {
-                return Ok(());
-            }
-            std::fs::write(&file, "").map_err(|e| e.to_string())
+/// The app's editors, as a workspace edit reaches them.
+struct OpenEditors;
+
+impl super::apply::Editors for OpenEditors {
+    fn version(&self, path: &Path) -> Option<i32> {
+        editor_at(path).map(|view| super::version(&view))
+    }
+
+    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), String>> {
+        let view = editor_at(path)?;
+        let refused = || tf("{} lässt sich nicht ändern", &[&path.display().to_string()]);
+        if view.document().read_only().is_some() {
+            return Some(Err(refused()));
         }
-        ResourceOp::Rename(rename) => {
-            let (from, to) = (path(&rename.old_uri)?, path(&rename.new_uri)?);
-            if to.exists() && !rename.options.as_ref().and_then(|o| o.overwrite).unwrap_or(false) {
-                return Err(tf("{} gibt es schon", &[&to.display().to_string()]));
-            }
-            std::fs::rename(&from, &to).map_err(|e| e.to_string())?;
-            for view in editor::all_editors() {
-                if view.document().path() == Some(&from) {
-                    view.document_mut().set_path(to.clone());
-                    editor::path_changed(&view);
-                }
-            }
+        let ranges = ranges(&view, edits);
+        Some(if apply_text_edits(&view, ranges) {
             Ok(())
+        } else {
+            Err(refused())
+        })
+    }
+
+    fn moved(&mut self, from: &Path, to: &Path) {
+        for view in editor::all_editors() {
+            if view.document().path().is_some_and(|shown| names(shown, from)) {
+                view.document_mut().set_path(to.to_path_buf());
+                editor::path_changed(&view);
+            }
         }
-        ResourceOp::Delete(delete) => {
-            let file = path(&delete.uri)?;
-            let url = NSURL::fileURLWithPath(&ns(&file.to_string_lossy()));
-            NSFileManager::defaultManager()
-                .trashItemAtURL_resultingItemURL_error(&url, None)
-                .map_err(|e| e.localizedDescription().to_string())
-        }
+    }
+
+    fn trash(&mut self, path: &Path) -> Result<(), String> {
+        let url = NSURL::fileURLWithPath(&ns(&path.to_string_lossy()));
+        NSFileManager::defaultManager()
+            .trashItemAtURL_resultingItemURL_error(&url, None)
+            .map_err(|e| format!("{}: {}", path.display(), e.localizedDescription()))
     }
 }
 

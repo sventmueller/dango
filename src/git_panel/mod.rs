@@ -14,6 +14,7 @@ mod panel;
 #[cfg(feature = "selftest")]
 pub mod probe;
 mod progress;
+mod reveal;
 mod rows;
 mod sheets;
 mod stashes;
@@ -27,6 +28,10 @@ use std::path::Path;
 
 use crate::window::WindowController;
 pub use commands::menu;
+#[cfg(feature = "selftest")]
+pub use reveal::selected_commit;
+pub use reveal::{reveal_commit, show_commit_diff};
+pub use text::ago;
 pub use toolbar::{TOOLBAR_ID, toolbar_item};
 #[cfg(feature = "selftest")]
 pub use toolbar::{choose as toolbar_choose, seen as toolbar_seen};

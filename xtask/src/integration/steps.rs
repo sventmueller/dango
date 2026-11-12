@@ -160,6 +160,21 @@ fn lsp(_: &Context) -> Vec<Step> {
             real("the_homebrew_servers_serve_toml_markdown_and_lua"),
         ),
         step("selftest lsp", vec![Need::RustAnalyzer], selftest("lsp", Vec::new())),
+        step(
+            "selftest lsp-actions",
+            vec![Need::RustAnalyzer],
+            selftest("lsp-actions", Vec::new()),
+        ),
+        step(
+            "selftest lsp-actions-go",
+            vec![Need::Program("gopls"), Need::Program("go")],
+            selftest("lsp-actions-go", Vec::new()),
+        ),
+        step(
+            "selftest lsp-navigation",
+            vec![Need::RustAnalyzer],
+            selftest("lsp-navigation", Vec::new()),
+        ),
     ]
 }
 

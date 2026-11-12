@@ -10,6 +10,7 @@ mod agent_outside;
 mod agent_perf;
 mod agent_plan;
 pub mod application;
+mod blame;
 mod browser_dev;
 mod markdown;
 mod markdown_editor;
@@ -45,7 +46,11 @@ mod file_icons;
 mod files_header;
 mod git;
 mod helpers;
+mod inlay;
+mod insets;
 mod lsp;
+mod lsp_actions;
+mod lsp_navigation;
 mod own_agent;
 mod recovery;
 mod replace;
@@ -140,9 +145,15 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "ci-settings" => ci::hosts(),
         "worktree" => worktree::run(),
         "lsp" => lsp::run(),
+        "lsp-navigation" => lsp_navigation::run(),
+        "lsp-actions" => lsp_actions::run_rust(),
+        "lsp-actions-go" => lsp_actions::run_go(),
         "language-servers" => servers::run(),
         "editor-multi" => editor_multi::run(),
         "editor-undo" => editor_undo::run(),
+        "editor-insets" => insets::run(),
+        "inlay-hints" => inlay::run(),
+        "editor-blame" => blame::run(),
         "search" => search::run(),
         "terminal" => terminal::run(),
         "paste-cli" => paste_cli::run(),

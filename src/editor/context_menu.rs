@@ -1,5 +1,5 @@
 //! The editor's context menu: the text view's own entries, with the Format menu in a Markdown document or the
-//! language server's formatting in code.
+//! language server's formatting and code actions in code.
 
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
@@ -11,13 +11,68 @@ use splat_i18n::t;
 use super::EditorTextView;
 use crate::util::{ns, set_target};
 
-/// Adds the format entry to `menu`, the text view's context menu, after its cut, copy and paste.
+/// Adds the format entry and the code actions to `menu`, the text view's context menu, after its cut, copy and paste.
 pub fn extend(view: &EditorTextView, menu: &NSMenu) {
-    let Some(item) = format_item(view) else { return };
-    aim(&item, view);
+    navigation(view, menu);
+    let items: Vec<Retained<NSMenuItem>> = format_item(view)
+        .into_iter()
+        .chain(action_items(view))
+        .chain(super::blame::context_items(view))
+        .collect();
+    if items.is_empty() {
+        return;
+    }
     let at = after_paste(menu);
     menu.insertItem_atIndex(&NSMenuItem::separatorItem(view.mtm()), at);
-    menu.insertItem_atIndex(&item, at + 1);
+    for (offset, item) in (1..).zip(&items) {
+        aim(item, view);
+        menu.insertItem_atIndex(item, at + offset);
+    }
+}
+
+/// Copies of the menu bar's code action items, where the language server offers code actions (E82).
+fn action_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
+    let Some(main) = NSApplication::sharedApplication(view.mtm()).mainMenu() else {
+        return vec![];
+    };
+    if crate::lsp::validate(view, Some(sel!(ideQuickFix:))) != Some(true) {
+        return vec![];
+    }
+    [sel!(ideQuickFix:), sel!(ideRefactor:), sel!(ideSourceActions:)]
+        .into_iter()
+        .filter_map(|action| find(&main, action).map(|item| item.copy()))
+        .collect()
+}
+
+/// Puts copies of the menu bar's places to go from the symbol at the top of `menu`, where a language server serves the
+/// editor (E85); those the server does not offer show greyed out.
+fn navigation(view: &EditorTextView, menu: &NSMenu) {
+    let Some(main) = NSApplication::sharedApplication(view.mtm()).mainMenu() else {
+        return;
+    };
+    if crate::lsp::validate(view, Some(sel!(ideDefinition:))) != Some(true) {
+        return;
+    }
+    let actions = [
+        sel!(ideDefinition:),
+        sel!(ideImplementation:),
+        sel!(ideTypeDefinition:),
+        sel!(ideDeclaration:),
+    ];
+    let items: Vec<Retained<NSMenuItem>> = actions
+        .into_iter()
+        .filter_map(|action| find(&main, action).map(|item| item.copy()))
+        .collect();
+    for (at, item) in (0..).zip(&items) {
+        aim(item, view);
+        menu.insertItem_atIndex(item, at);
+    }
+    if !items.is_empty() {
+        menu.insertItem_atIndex(
+            &NSMenuItem::separatorItem(view.mtm()),
+            isize::try_from(items.len()).unwrap_or(0),
+        );
+    }
 }
 
 /// A copy of the menu bar's Format menu for Markdown, or of its "Dokument formatieren" where a language server

@@ -83,6 +83,11 @@ fn workspace(client_watches_files: bool) -> Value {
         "diagnostics": {"refreshSupport": true},
         "codeLens": {"refreshSupport": true},
         "foldingRange": {"refreshSupport": true},
+        "symbol": {
+            "symbolKind": {"valueSet": (1..=26).collect::<Vec<u32>>()},
+            "tagSupport": {"valueSet": [1]},
+            "resolveSupport": {"properties": ["location.range"]},
+        },
     })
 }
 
@@ -108,6 +113,11 @@ fn text_document() -> Value {
             "contextSupport": true,
         },
         "definition": {"linkSupport": true},
+        "implementation": {"linkSupport": true},
+        "typeDefinition": {"linkSupport": true},
+        "declaration": {"linkSupport": true},
+        "callHierarchy": {},
+        "typeHierarchy": {},
         "references": {},
         "documentSymbol": {
             "hierarchicalDocumentSymbolSupport": true,
@@ -199,7 +209,12 @@ mod tests {
         let tokens = text.semantic_tokens.unwrap();
         assert_eq!(tokens.token_types.len(), TOKEN_TYPES.len());
         assert_eq!(text.folding_range.unwrap().line_folding_only, Some(true));
-        assert_eq!(parsed.workspace.unwrap().apply_edit, Some(true));
+        assert_eq!(text.implementation.unwrap().link_support, Some(true));
+        assert!(text.call_hierarchy.is_some() && text.type_hierarchy.is_some());
+        let workspace = parsed.workspace.unwrap();
+        assert_eq!(workspace.apply_edit, Some(true));
+        let resolve = workspace.symbol.unwrap().resolve_support.unwrap();
+        assert_eq!(resolve.properties, ["location.range"]);
     }
 
     #[test]
