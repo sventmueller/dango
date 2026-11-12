@@ -24,11 +24,21 @@ use crate::util::{main_after, ns};
 use crate::window::{TabKind, WindowController};
 use markdown::Preview;
 
-thread_local! {
-    /// The open Markdown previews of all windows.
-    static OPEN: RefCell<Vec<Rc<Preview>>> = const { RefCell::new(Vec::new()) };
-    static NEXT_KEY: Cell<u64> = const { Cell::new(1) };
-    static LOOKING: Cell<bool> = const { Cell::new(false) };
+/// The open Markdown previews of all windows.
+pub struct Previews {
+    open: RefCell<Vec<Rc<Preview>>>,
+    next_key: Cell<u64>,
+    looking: Cell<bool>,
+}
+
+impl Default for Previews {
+    fn default() -> Self {
+        Previews {
+            open: RefCell::default(),
+            next_key: Cell::new(1),
+            looking: Cell::default(),
+        }
+    }
 }
 
 /// How often the picture files of the open previews are compared with what they show, as in splat.
@@ -179,7 +189,8 @@ fn open_markdown(
     editor_tab: isize,
     automatic: bool,
 ) {
-    let key = NEXT_KEY.with(|n| n.replace(n.get() + 1));
+    let previews = &controller.context().previews;
+    let key = previews.next_key.replace(previews.next_key.get() + 1);
     let preview = Preview::new(controller, view, path, key, automatic);
     let title = splat_i18n::tf("Vorschau: {}", &[&crate::editor::display_name(path)]);
     let page: Retained<objc2_app_kit::NSView> = Retained::into_super(preview.views.page.clone());
@@ -188,7 +199,7 @@ fn open_markdown(
         id = controller.add_tab(TabKind::Preview, None, &title, page)
     });
     preview.set_tab(id);
-    OPEN.with(|open| open.borrow_mut().push(preview.clone()));
+    previews.open.borrow_mut().push(preview.clone());
     sync::attach(&preview, view);
     preview.lay_out();
     look_at_images_later();
@@ -217,14 +228,14 @@ pub fn edited(view: &EditorTextView) {
 
 /// The tab `id` of `controller` is about to close.
 pub fn closing(controller: &WindowController, id: isize) {
-    let closed: Vec<Rc<Preview>> = OPEN.with(|open| {
-        let mut open = open.borrow_mut();
+    let closed: Vec<Rc<Preview>> = {
+        let mut open = controller.context().previews.open.borrow_mut();
         let (closed, kept) = open
             .drain(..)
             .partition(|p| p.tab() == id && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
         *open = kept;
         closed
-    });
+    };
     for preview in closed {
         preview.close();
     }
@@ -251,30 +262,37 @@ fn with(key: u64, f: impl FnOnce(&Rc<Preview>)) {
 }
 
 fn find(matches: impl Fn(&Preview) -> bool) -> Option<Rc<Preview>> {
-    OPEN.with(|open| open.borrow().iter().find(|p| matches(p)).cloned())
+    crate::context::app()
+        .previews
+        .open
+        .borrow()
+        .iter()
+        .find(|p| matches(p))
+        .cloned()
 }
 
 /// The open previews; those whose window closed leave on the way.
 fn all() -> Vec<Rc<Preview>> {
-    let gone: Vec<Rc<Preview>> = OPEN.with(|open| {
-        let mut open = open.borrow_mut();
+    let cx = crate::context::app();
+    let gone: Vec<Rc<Preview>> = {
+        let mut open = cx.previews.open.borrow_mut();
         let (gone, kept) = open.drain(..).partition(|p| p.is_closed());
         *open = kept;
         gone
-    });
+    };
     for preview in gone {
         preview.close();
     }
-    OPEN.with(|open| open.borrow().clone())
+    cx.previews.open.borrow().clone()
 }
 
 /// Compares the picture files of the open previews with what they show every two seconds, while any is open.
 fn look_at_images_later() {
-    if LOOKING.replace(true) {
+    if crate::context::app().previews.looking.replace(true) {
         return;
     }
     main_after(LOOK_AT_IMAGES, || {
-        LOOKING.set(false);
+        crate::context::app().previews.looking.set(false);
         let open = all();
         if open.is_empty() {
             return;

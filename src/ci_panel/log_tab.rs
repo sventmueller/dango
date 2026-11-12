@@ -78,19 +78,25 @@ define_class!(
     }
 );
 
-thread_local! {
-    static TABS: RefCell<Vec<(u64, Weak<LogTab>)>> = const { RefCell::new(Vec::new()) };
+/// The CI log tabs of every window by id.
+#[derive(Default)]
+pub struct LogTabs {
+    tabs: RefCell<Vec<(u64, Weak<LogTab>)>>,
+}
+
+fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<(u64, Weak<LogTab>)>>) -> R) -> R {
+    f(&crate::context::app().ci_log_tabs.tabs)
 }
 
 fn with_tab(id: u64, f: impl FnOnce(&LogTab)) {
-    let tab = TABS.with(|tabs| tabs.borrow().iter().find(|(i, _)| *i == id).and_then(|(_, t)| t.load()));
+    let tab = with_tabs(|tabs| tabs.borrow().iter().find(|(i, _)| *i == id).and_then(|(_, t)| t.load()));
     if let Some(tab) = tab {
         f(&tab);
     }
 }
 
 fn live_tabs() -> Vec<Retained<LogTab>> {
-    TABS.with(|tabs| {
+    with_tabs(|tabs| {
         let mut tabs = tabs.borrow_mut();
         tabs.retain(|(_, tab)| tab.load().is_some());
         tabs.iter().filter_map(|(_, tab)| tab.load()).collect()
@@ -110,7 +116,7 @@ pub fn show(controller: &WindowController, window_root: &Path, client: Client, j
     }
     let title = tf("Log: {}", &[&job.name]);
     let tab = LogTab::new(controller, window_root.to_path_buf(), client, job, run);
-    TABS.with(|tabs| tabs.borrow_mut().push((tab.ivars().id, Weak::from(&*tab))));
+    with_tabs(|tabs| tabs.borrow_mut().push((tab.ivars().id, Weak::from(&*tab))));
     tab.reload();
     let text = tab.ui().text.clone();
     controller.add_tab(TabKind::Log, Some(key), &title, tab.into_super());

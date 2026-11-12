@@ -43,12 +43,18 @@ struct Help {
     announced: RefCell<String>,
 }
 
-thread_local! {
-    static HELP: RefCell<Option<std::rc::Rc<Help>>> = const { RefCell::new(None) };
+/// The signature help on view.
+#[derive(Default)]
+pub struct ShownSignature {
+    help: RefCell<Option<std::rc::Rc<Help>>>,
+}
+
+fn with_help<R>(f: impl FnOnce(&RefCell<Option<std::rc::Rc<Help>>>) -> R) -> R {
+    f(&crate::context::app().signature_help.help)
 }
 
 fn help(mtm: MainThreadMarker) -> std::rc::Rc<Help> {
-    HELP.with(|cell| {
+    with_help(|cell| {
         cell.borrow_mut()
             .get_or_insert_with(|| std::rc::Rc::new(build(mtm)))
             .clone()
@@ -97,7 +103,7 @@ fn build(mtm: MainThreadMarker) -> Help {
 
 /// The window, if it shows for `view`.
 fn open_for(view: &EditorTextView) -> Option<std::rc::Rc<Help>> {
-    let help = HELP.with(|cell| cell.borrow().clone())?;
+    let help = with_help(|cell| cell.borrow().clone())?;
     let ours = help.view.borrow().load().is_some_and(|v| std::ptr::eq(&*v, view));
     (ours && help.panel.isVisible()).then_some(help)
 }
@@ -458,7 +464,7 @@ pub mod selftest {
 
     /// The window, for a picture.
     pub fn panel() -> Option<objc2::rc::Retained<objc2_app_kit::NSPanel>> {
-        super::HELP.with(|cell| cell.borrow().as_ref().map(|h| h.panel.clone()))
+        super::with_help(|cell| cell.borrow().as_ref().map(|h| h.panel.clone()))
     }
 }
 

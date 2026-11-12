@@ -34,13 +34,16 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
 
+use crate::context::AppContext;
 use crate::util::{guarded, main_soon, ns};
 use activity_bar::ActivityBar;
 use files::FileTree;
+pub use new_tab_button::NewTabMenu;
 pub use notice::announce;
 use panels::Panels;
 use quick_open::QuickOpenPanel;
 pub use search::SearchPanel;
+pub use search::{HierarchyPanels, SearchPanels};
 #[cfg(feature = "selftest")]
 pub use search::{LIMIT as SEARCH_LIMIT, Toggle as SearchToggle, selftest as search_selftest};
 pub use search::{buffer_edited, files_changed as files_changed_on_disk};
@@ -119,8 +122,10 @@ impl Panel {
     }
 }
 
-#[derive(Default)]
 pub struct Ivars {
+    context: Rc<AppContext>,
+    /// The window's id among the open ones, which answers from other threads carry.
+    id: u64,
     project: RefCell<Option<PathBuf>>,
     panel: Cell<Option<Panel>>,
     panel_open: Cell<bool>,
@@ -468,40 +473,43 @@ define_class!(
     }
 );
 
-thread_local! {
-    static WINDOWS: RefCell<Vec<Retained<WindowController>>> = const { RefCell::new(Vec::new()) };
+/// Drops the window controller with `id` from the open windows once AppKit is done closing its window.
+fn main_soon_unregister(id: u64) {
+    main_soon(move || {
+        crate::context::app().windows.remove(id);
+        crate::session::changed();
+    });
 }
 
-/// Drops the window controller at `this` from the open windows once AppKit is done closing its window.
-fn main_soon_unregister(this: *const WindowController) {
-    let address = this as usize;
+/// Runs `f` with the controller of the window with `id` once the main queue gets to it, unless the window closed
+/// in the meantime; the way back for answers from other threads (Review C11).
+pub fn deliver(id: u64, f: impl FnOnce(&WindowController) + Send + 'static) {
     main_soon(move || {
-        WINDOWS.with(|windows| {
-            windows
-                .borrow_mut()
-                .retain(|w| std::ptr::from_ref::<WindowController>(w) as usize != address);
-        });
-        crate::session::changed();
+        if let Some(controller) = crate::context::app().windows.get(id) {
+            f(&controller);
+        }
     });
 }
 
 impl WindowController {
     /// Runs `f` with this window's controller once the main queue gets to it, if the window is still open.
     fn later(&self, f: impl FnOnce(&WindowController) + Send + 'static) {
-        let address = std::ptr::from_ref(self) as usize;
-        main_soon(move || {
-            let controller = WINDOWS.with(|windows| {
-                windows
-                    .borrow()
-                    .iter()
-                    .find(|w| std::ptr::from_ref::<WindowController>(w) as usize == address)
-                    .cloned()
-            });
-            if let Some(controller) = controller {
-                f(&controller);
-            }
-        });
+        deliver(self.id(), f);
     }
+
+    /// The window's id among the open ones.
+    pub fn id(&self) -> u64 {
+        self.ivars().id
+    }
+
+    pub fn context(&self) -> &Rc<AppContext> {
+        &self.ivars().context
+    }
+}
+
+/// The open windows, in the order they opened.
+fn windows() -> Vec<Retained<WindowController>> {
+    crate::context::app().windows.all()
 }
 
 /// `panel` unless its symbol is among `hidden`, else the first panel whose symbol shows.
@@ -535,15 +543,13 @@ fn browser_commands() -> [Sel; 4] {
 /// take what changed on disk.
 pub fn tree_changed(root: &Path, dirs: &[PathBuf]) {
     crate::editor::files_changed(dirs);
-    WINDOWS.with(|windows| {
-        for window in windows.borrow().iter() {
-            let ivars = window.ivars();
-            let same = ivars.workspace.borrow().as_ref().is_some_and(|p| p.root() == root);
-            if same && let Some(files) = ivars.files.borrow().as_ref() {
-                files.reload(dirs);
-            }
+    for window in windows() {
+        let ivars = window.ivars();
+        let same = ivars.workspace.borrow().as_ref().is_some_and(|p| p.root() == root);
+        if same && let Some(files) = ivars.files.borrow().as_ref() {
+            files.reload(dirs);
         }
-    });
+    }
 }
 
 /// Hides the symbol of `panel` in every window's activity bar, or shows it again, and remembers that; the last symbol
@@ -558,46 +564,42 @@ pub fn toggle_activity_symbol(panel: Panel) {
         return;
     }
     activity_bar::store_hidden(&hidden);
-    for window in WINDOWS.with(|windows| windows.borrow().clone()) {
+    for window in windows() {
         window.leave_out_symbols(&hidden);
     }
 }
 
 /// Lets the tree of every window list what Git ignores and the system hides, or leave it out again.
 pub fn show_ignored_files(on: bool) {
-    WINDOWS.with(|windows| {
-        for window in windows.borrow().iter() {
-            let ivars = window.ivars();
-            let Some(project) = ivars.workspace.borrow().clone() else {
-                continue;
-            };
-            let changed = project
-                .tree()
-                .set_options(ide_project::TreeOptions { show_ignored: on });
-            if let Some(files) = ivars.files.borrow().as_ref() {
-                files.reload(&changed);
-            }
+    for window in windows() {
+        let ivars = window.ivars();
+        let Some(project) = ivars.workspace.borrow().clone() else {
+            continue;
+        };
+        let changed = project
+            .tree()
+            .set_options(ide_project::TreeOptions { show_ignored: on });
+        if let Some(files) = ivars.files.borrow().as_ref() {
+            files.reload(&changed);
         }
-    });
+    }
 }
 
 /// Hands quick-open hits to the window whose folder is `root`.
 fn quick_open_answered(root: &Path, asked: u64, hits: Vec<ide_project::Hit>) {
-    WINDOWS.with(|windows| {
-        for window in windows.borrow().iter() {
-            if let Some(panel) = window.ivars().quick_open.borrow().as_ref()
-                && panel.root() == root
-            {
-                panel.answered(asked, hits);
-                return;
-            }
+    for window in windows() {
+        if let Some(panel) = window.ivars().quick_open.borrow().as_ref()
+            && panel.root() == root
+        {
+            panel.answered(asked, hits);
+            return;
         }
-    });
+    }
 }
 
 /// Saves the window tabs of every window for its folder, and where the window is, as the app quits.
 pub fn save_layouts() {
-    for window in WINDOWS.with(|windows| windows.borrow().clone()) {
+    for window in windows() {
         if !window.ivars().closed.get() {
             layout::save(&window);
             window.save_frame();
@@ -607,20 +609,14 @@ pub fn save_layouts() {
 
 /// The folders open in windows, front to back.
 pub fn open_projects() -> Vec<PathBuf> {
-    WINDOWS.with(|windows| windows.borrow().iter().filter_map(|w| w.project()).collect())
+    windows().iter().filter_map(|w| w.project()).collect()
 }
 
 /// The project window in front: the main window, else the first on screen.
 pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
     let app = objc2_app_kit::NSApplication::sharedApplication(mtm);
-    let controllers: Vec<Retained<WindowController>> = WINDOWS.with(|windows| {
-        windows
-            .borrow()
-            .iter()
-            .filter(|w| !w.ivars().closed.get())
-            .cloned()
-            .collect()
-    });
+    let mut controllers = AppContext::get(mtm).windows.all();
+    controllers.retain(|w| !w.ivars().closed.get());
     let mut order: Vec<Retained<NSWindow>> = app.mainWindow().into_iter().collect();
     order.extend(app.orderedWindows().iter());
     order
@@ -630,47 +626,36 @@ pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
 
 /// The window that shows `root`.
 pub fn for_project(root: &Path) -> Option<Retained<WindowController>> {
-    WINDOWS.with(|windows| {
-        windows
-            .borrow()
-            .iter()
-            .find(|w| w.project_root().as_deref() == Some(root))
-            .cloned()
-    })
+    crate::context::app()
+        .windows
+        .find(|w| w.project_root().as_deref() == Some(root))
 }
 
 /// What each open window shows, in the order they opened, for the next launch.
 pub fn records() -> Vec<crate::session::WindowRecord> {
-    WINDOWS.with(|windows| {
-        windows
-            .borrow()
-            .iter()
-            .filter(|w| !w.ivars().closed.get())
-            .map(|w| w.record())
-            .collect()
-    })
+    windows()
+        .iter()
+        .filter(|w| !w.ivars().closed.get())
+        .map(|w| w.record())
+        .collect()
 }
 
 /// The open windows, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn open_windows() -> Vec<Retained<WindowController>> {
-    WINDOWS.with(|windows| windows.borrow().clone())
+    windows()
 }
 
 impl WindowController {
     /// Brings the window of `project` to the front, or puts it into an empty window, or opens a new one.
     pub fn open(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
-        let existing = WINDOWS.with(|windows| {
-            let windows = windows.borrow();
-            match &project {
-                Some(path) => windows
-                    .iter()
-                    .find(|w| w.project().as_deref() == Some(path))
-                    .or_else(|| windows.iter().find(|w| w.project().is_none()))
-                    .cloned(),
-                None => None,
-            }
-        });
+        let open = &AppContext::get(mtm).windows;
+        let existing = match &project {
+            Some(path) => open
+                .find(|w| w.project().as_deref() == Some(path))
+                .or_else(|| open.find(|w| w.project().is_none())),
+            None => None,
+        };
         if let Some(controller) = existing {
             if controller.project().is_none() {
                 controller.set_project(project);
@@ -693,17 +678,34 @@ impl WindowController {
             controller.fit_sidebar(&tab, controller.saved_sidebar().collapsed);
             show_tab_bar(&tab.window);
         }
-        WINDOWS.with(|windows| windows.borrow_mut().push(controller.clone()));
+        controller.context().windows.insert(controller.id(), controller.clone());
         crate::session::changed();
         controller
     }
 
     fn new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
+        let context = AppContext::get(mtm);
         let ivars = Ivars {
+            id: context.windows.next_id(),
+            context,
             project: RefCell::new(project),
+            panel: Cell::default(),
+            panel_open: Cell::default(),
             panel_width: Cell::new(PANEL_DEFAULT_WIDTH),
+            activity: RefCell::default(),
+            panels: RefCell::default(),
+            sidebar: RefCell::default(),
+            tabs: RefCell::default(),
+            current: RefCell::default(),
             next_id: Cell::new(1),
-            ..Ivars::default()
+            beside: Cell::default(),
+            workspace: RefCell::default(),
+            files: RefCell::default(),
+            search: RefCell::default(),
+            quick_open: RefCell::default(),
+            notice: RefCell::default(),
+            closed: Cell::default(),
+            closing: Cell::default(),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -1573,8 +1575,7 @@ impl WindowController {
         }
         crate::agent::window_closed(self);
         crate::ci_panel::window_closed(self);
-        let this: *const WindowController = self;
-        main_soon_unregister(this);
+        main_soon_unregister(self.id());
     }
 
     /// The folder this window shows.

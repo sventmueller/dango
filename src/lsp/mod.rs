@@ -51,6 +51,10 @@ pub use navigate::{Goto, definition, go_to, jump_to, next_problem, references, s
 pub use project_symbols::held as symbol_servers;
 pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
+pub use {
+    actions::CodeActions, complete::Completion, navigate::LocationSheets, project_symbols::Leases, rename::Formatting,
+    signature::ShownSignature,
+};
 
 /// How long typing must pause before semantic tokens and pulled diagnostics are asked for again.
 const REFRESH_DELAY: f64 = 0.4;
@@ -112,9 +116,30 @@ struct Workspace {
 }
 
 thread_local! {
-    static WORKSPACES: RefCell<Vec<Rc<Workspace>>> = const { RefCell::new(Vec::new()) };
-    static NEXT_ID: Cell<u64> = const { Cell::new(1) };
     static CUSTOM: RefCell<Option<Vec<Arc<CustomServer>>>> = const { RefCell::new(None) };
+}
+
+/// The language server workspaces of every window and the id the next one gets.
+pub struct Workspaces {
+    workspaces: RefCell<Vec<Rc<Workspace>>>,
+    next_id: Cell<u64>,
+}
+
+impl Default for Workspaces {
+    fn default() -> Self {
+        Workspaces {
+            workspaces: RefCell::new(Vec::new()),
+            next_id: Cell::new(1),
+        }
+    }
+}
+
+fn with_workspaces<R>(f: impl FnOnce(&RefCell<Vec<Rc<Workspace>>>) -> R) -> R {
+    f(&crate::context::app().lsp_workspaces.workspaces)
+}
+
+fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
+    f(&crate::context::app().lsp_workspaces.next_id)
 }
 
 static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
@@ -181,7 +206,7 @@ pub fn servers_changed() {
 }
 
 fn next_id() -> u64 {
-    NEXT_ID.with(|next| {
+    with_next_id(|next| {
         let id = next.get();
         next.set(id + 1);
         id
@@ -349,7 +374,7 @@ fn registry() -> Arc<Registry> {
 }
 
 fn workspace(root: &Path) -> Option<Rc<Workspace>> {
-    WORKSPACES.with(|all| all.borrow().iter().find(|w| w.root == root).cloned())
+    with_workspaces(|all| all.borrow().iter().find(|w| w.root == root).cloned())
 }
 
 fn workspace_or_new(root: &Path) -> Rc<Workspace> {
@@ -358,7 +383,7 @@ fn workspace_or_new(root: &Path) -> Rc<Workspace> {
             root: root.to_path_buf(),
             slots: RefCell::new(vec![]),
         });
-        WORKSPACES.with(|all| all.borrow_mut().push(created.clone()));
+        with_workspaces(|all| all.borrow_mut().push(created.clone()));
         created
     })
 }
@@ -607,7 +632,7 @@ pub fn window_closed(root: &Path) {
     for slot in workspace.slots.borrow().iter() {
         end(slot);
     }
-    WORKSPACES.with(|all| all.borrow_mut().retain(|w| w.root != root));
+    with_workspaces(|all| all.borrow_mut().retain(|w| w.root != root));
     project_symbols::forget(root);
 }
 

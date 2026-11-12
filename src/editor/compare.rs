@@ -21,9 +21,14 @@ use crate::window::{TabKind, WindowController};
 /// Unchanged lines shown around each change.
 const CONTEXT: usize = 3;
 
-thread_local! {
-    /// The text views of the open comparison tabs, by tab key.
-    static SHOWN: RefCell<Vec<(String, Weak<NSTextView>)>> = const { RefCell::new(Vec::new()) };
+/// The text views of the open comparison tabs, by tab key.
+#[derive(Default)]
+pub struct Comparisons {
+    shown: RefCell<Vec<(String, Weak<NSTextView>)>>,
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<(String, Weak<NSTextView>)>>) -> R) -> R {
+    f(&crate::context::app().editor.comparisons.shown)
 }
 
 /// Shows the differences between `disk`, the file's version, and `buffer`, the editor's text, in a tab of
@@ -54,7 +59,7 @@ pub fn show(controller: &WindowController, path: &Path, disk: &str, buffer: &str
     if let Some(storage) = unsafe { text_view.textStorage() } {
         storage.setAttributedString(&styled(&merge::compare(disk, buffer, CONTEXT)));
     }
-    SHOWN.with(|shown| {
+    with_shown(|shown| {
         let mut shown = shown.borrow_mut();
         shown.retain(|(k, view)| *k != key && view.load().is_some());
         shown.push((key.clone(), Weak::from(&*text_view)));
@@ -140,7 +145,7 @@ fn background(change: LineChange) -> Retained<NSColor> {
 #[cfg(feature = "selftest")]
 pub fn shown(path: &Path) -> Option<String> {
     let key = format!("compare:{}", path.display());
-    SHOWN.with(|shown| {
+    with_shown(|shown| {
         shown
             .borrow()
             .iter()

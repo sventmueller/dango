@@ -1,8 +1,6 @@
 //! The branch beside the window's title: a pull-down with what the Git panel's branch popup offers, hidden where git
 //! does not run.
 
-use std::cell::RefCell;
-
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::NSObjectProtocol;
 use objc2::{MainThreadOnly, sel};
@@ -16,14 +14,10 @@ use crate::window::WindowController;
 
 pub const TOOLBAR_ID: &str = "ide.branch";
 
-struct Shown {
+pub(super) struct Shown {
     item: Weak<NSToolbarItem>,
     popup: Weak<NSPopUpButton>,
     controller: Weak<WindowController>,
-}
-
-thread_local! {
-    static SHOWN: RefCell<Vec<Shown>> = const { RefCell::new(Vec::new()) };
 }
 
 /// The toolbar item of `controller`'s window, filled from its Git panel once that read the repository.
@@ -41,12 +35,10 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
     item.setView(Some(&popup));
     item.setLabel(&ns(t("Branch")));
     item.setToolTip(Some(&ns(t("Branch wechseln oder anlegen"))));
-    SHOWN.with(|shown| {
-        shown.borrow_mut().push(Shown {
-            item: Weak::from(&*item),
-            popup: Weak::from(&*popup),
-            controller: Weak::from(controller),
-        });
+    controller.context().git.toolbar_items.borrow_mut().push(Shown {
+        item: Weak::from(&*item),
+        popup: Weak::from(&*popup),
+        controller: Weak::from(controller),
     });
     match super::panel::of(controller) {
         Some(panel) => panel.refresh_toolbar(),
@@ -68,15 +60,15 @@ impl GitPanel {
     /// Puts the branch and the branch popup's choices into the toolbar items of the panel's window.
     pub fn refresh_toolbar(&self) {
         let Some(controller) = self.controller() else { return };
-        let shown: Vec<(Retained<NSToolbarItem>, Retained<NSPopUpButton>)> = SHOWN.with(|shown| {
-            let mut shown = shown.borrow_mut();
+        let shown: Vec<(Retained<NSToolbarItem>, Retained<NSPopUpButton>)> = {
+            let mut shown = controller.context().git.toolbar_items.borrow_mut();
             shown.retain(|s| s.item.load().is_some() && s.controller.load().is_some());
             shown
                 .iter()
                 .filter(|s| s.controller.load().is_some_and(|c| std::ptr::eq(&*c, &*controller)))
                 .filter_map(|s| Some((s.item.load()?, s.popup.load()?)))
                 .collect()
-        });
+        };
         if shown.is_empty() {
             return;
         }
@@ -119,40 +111,39 @@ impl GitPanel {
 /// What the toolbar's branch item of `controller` shows: its title and its choices, `None` while it is hidden.
 #[cfg(feature = "selftest")]
 pub fn seen(controller: &WindowController) -> Vec<Option<(String, Vec<String>)>> {
-    SHOWN.with(|shown| {
-        shown
-            .borrow()
-            .iter()
-            .filter(|s| s.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller)))
-            .filter_map(|s| Some((s.item.load()?, s.popup.load()?)))
-            .map(|(item, popup)| {
-                let hidden = if item.respondsToSelector(sel!(isHidden)) {
-                    item.isHidden()
-                } else {
-                    !item.isEnabled()
-                };
-                (!hidden).then(|| {
-                    let titles: Vec<String> = popup.itemArray().iter().map(|i| i.title().to_string()).collect();
-                    (
-                        titles.first().cloned().unwrap_or_default(),
-                        titles.into_iter().skip(1).collect(),
-                    )
-                })
+    let shown = controller.context().git.toolbar_items.borrow();
+    shown
+        .iter()
+        .filter(|s| s.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .filter_map(|s| Some((s.item.load()?, s.popup.load()?)))
+        .map(|(item, popup)| {
+            let hidden = if item.respondsToSelector(sel!(isHidden)) {
+                item.isHidden()
+            } else {
+                !item.isEnabled()
+            };
+            (!hidden).then(|| {
+                let titles: Vec<String> = popup.itemArray().iter().map(|i| i.title().to_string()).collect();
+                (
+                    titles.first().cloned().unwrap_or_default(),
+                    titles.into_iter().skip(1).collect(),
+                )
             })
-            .collect()
-    })
+        })
+        .collect()
 }
 
 /// Chooses the entry `title` of the toolbar's branch item of `controller`, as a click on it does; whether it is there.
 #[cfg(feature = "selftest")]
 pub fn choose(controller: &WindowController, title: &str) -> bool {
-    let popup = SHOWN.with(|shown| {
-        shown
-            .borrow()
-            .iter()
-            .filter(|s| s.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller)))
-            .find_map(|s| s.popup.load())
-    });
+    let popup = controller
+        .context()
+        .git
+        .toolbar_items
+        .borrow()
+        .iter()
+        .filter(|s| s.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .find_map(|s| s.popup.load());
     let Some(menu) = popup.and_then(|popup| popup.menu()) else {
         return false;
     };

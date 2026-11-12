@@ -10,6 +10,7 @@ mod integration;
 mod licenses;
 mod release;
 mod selftest;
+mod thread_locals;
 mod universal;
 mod updates;
 
@@ -45,6 +46,7 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   acknowledgements                 target/Acknowledgements.txt, the license texts the distribution carries
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
+  thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
                                    Xcode";
 
@@ -103,6 +105,10 @@ fn task(args: &[String]) -> Result<(), String> {
         "icon" => {
             flags(rest, [])?;
             compile_icon()
+        }
+        "thread-locals" => {
+            flags(rest, [])?;
+            thread_locals::check()
         }
         _ => Err(USAGE.into()),
     }

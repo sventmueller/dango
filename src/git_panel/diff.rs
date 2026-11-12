@@ -174,23 +174,24 @@ define_class!(
     }
 );
 
-thread_local! {
-    static TABS: RefCell<Vec<(u64, Weak<DiffTab>)>> = const { RefCell::new(Vec::new()) };
-}
-
 fn with_tab(id: u64, f: impl FnOnce(&DiffTab)) {
-    let tab = TABS.with(|tabs| tabs.borrow().iter().find(|(i, _)| *i == id).and_then(|(_, t)| t.load()));
+    let tab = crate::context::app()
+        .git
+        .diff_tabs
+        .borrow()
+        .iter()
+        .find(|(i, _)| *i == id)
+        .and_then(|(_, t)| t.load());
     if let Some(tab) = tab {
         f(&tab);
     }
 }
 
 fn live_tabs() -> Vec<Retained<DiffTab>> {
-    TABS.with(|tabs| {
-        let mut tabs = tabs.borrow_mut();
-        tabs.retain(|(_, tab)| tab.load().is_some());
-        tabs.iter().filter_map(|(_, tab)| tab.load()).collect()
-    })
+    let cx = crate::context::app();
+    let mut tabs = cx.git.diff_tabs.borrow_mut();
+    tabs.retain(|(_, tab)| tab.load().is_some());
+    tabs.iter().filter_map(|(_, tab)| tab.load()).collect()
 }
 
 /// Keeps the worktree diff tabs of `controller`'s window in step with `trees` as the Git panel read them: a tab whose
@@ -371,7 +372,12 @@ pub fn show_stash(controller: &WindowController, repo_root: &Path, hash: &str, n
 }
 
 fn place(controller: &WindowController, tab: Retained<DiffTab>, key: String, title: &str, preview: bool) {
-    TABS.with(|tabs| tabs.borrow_mut().push((tab.ivars().id, Weak::from(&*tab))));
+    controller
+        .context()
+        .git
+        .diff_tabs
+        .borrow_mut()
+        .push((tab.ivars().id, Weak::from(&*tab)));
     tab.reload();
     if preview {
         controller.add_preview_tab(TabKind::Diff, Some(key), title, tab.into_super());

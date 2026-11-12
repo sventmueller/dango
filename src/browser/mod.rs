@@ -32,11 +32,21 @@ use crate::window::{TabKind, WindowController};
 use address::Address;
 use view::BrowserView;
 
-thread_local! {
+/// The browser tabs of every window.
+#[derive(Default)]
+pub struct BrowserTabs {
     /// The open browser tabs of all windows.
-    static TABS: RefCell<Vec<Weak<BrowserView>>> = const { RefCell::new(Vec::new()) };
+    tabs: RefCell<Vec<Weak<BrowserView>>>,
     /// Numbers the keys of tabs that show no particular address.
-    static SERIAL: Cell<u64> = const { Cell::new(0) };
+    serial: Cell<u64>,
+}
+
+fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Weak<BrowserView>>>) -> R) -> R {
+    f(&crate::context::app().browser_tabs.tabs)
+}
+
+fn with_serial<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
+    f(&crate::context::app().browser_tabs.serial)
 }
 
 /// Opens a browser tab at `url`, or empty. A URL whose tab is open selects that tab instead; a tab of a local server
@@ -107,7 +117,7 @@ fn open_popup(opener: &BrowserView, configuration: &WKWebViewConfiguration) -> O
 fn close_later(view: &BrowserView) {
     let address = std::ptr::from_ref(view) as usize;
     main_soon(move || {
-        let view = TABS.with(|tabs| {
+        let view = with_tabs(|tabs| {
             tabs.borrow()
                 .iter()
                 .filter_map(Weak::load)
@@ -129,12 +139,12 @@ fn attach(controller: &WindowController, view: &Retained<BrowserView>) {
         Retained::into_super(view.clone()),
     );
     view.set_tab(id);
-    TABS.with(|tabs| tabs.borrow_mut().push(Weak::from_retained(view)));
+    with_tabs(|tabs| tabs.borrow_mut().push(Weak::from_retained(view)));
 }
 
 /// The tab whose page is `web`.
 fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
-    TABS.with(|tabs| {
+    with_tabs(|tabs| {
         tabs.borrow()
             .iter()
             .filter_map(Weak::load)
@@ -162,7 +172,7 @@ pub fn validate(controller: &WindowController, action: objc2::runtime::Sel) -> b
 
 /// The open browser tabs of `controller`'s window; forgets closed ones.
 fn tabs_of(controller: &WindowController) -> Vec<Retained<BrowserView>> {
-    TABS.with(|tabs| {
+    with_tabs(|tabs| {
         let mut tabs = tabs.borrow_mut();
         tabs.retain(|tab| tab.load().is_some());
         tabs.iter()
@@ -174,7 +184,7 @@ fn tabs_of(controller: &WindowController) -> Vec<Retained<BrowserView>> {
 
 /// A key for a tab that shows no particular address, which no address ever has.
 fn unique_key() -> String {
-    let serial = SERIAL.with(|serial| {
+    let serial = with_serial(|serial| {
         serial.set(serial.get() + 1);
         serial.get()
     });
@@ -210,7 +220,11 @@ pub fn proceed(controller: &WindowController) -> bool {
 }
 
 #[cfg(feature = "selftest")]
+pub use dialogs::Dialogs;
+#[cfg(feature = "selftest")]
 pub use dialogs::answer_asking;
+pub use downloads::Downloading;
+pub use trust::Certificates;
 
 /// Presses the key button of the browser tab in front, as the self-test's user.
 #[cfg(feature = "selftest")]

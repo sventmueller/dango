@@ -6,7 +6,7 @@ use objc2::{DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSScreen, NSWindow};
 use objc2_foundation::{NSPoint, NSRect, NSString, NSUserDefaults};
 
-use super::{ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, WINDOWS, WindowController, tabs};
+use super::{ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, WindowController, tabs};
 use crate::util::ns;
 
 /// The name the window saved last is also kept under, for a folder without a name of its own.
@@ -99,15 +99,12 @@ impl WindowController {
 
 /// Moves `window` down and right while another window of the app has its top left corner.
 fn step_aside(window: &NSWindow) {
-    let others: Vec<NSPoint> = WINDOWS.with(|windows| {
-        windows
-            .borrow()
-            .iter()
-            .filter_map(|controller| controller.window())
-            .filter(|other| !std::ptr::eq(&**other, window))
-            .map(|other| top_left(other.frame()))
-            .collect()
-    });
+    let others: Vec<NSPoint> = super::windows()
+        .iter()
+        .filter_map(|controller| controller.window())
+        .filter(|other| !std::ptr::eq(&**other, window))
+        .map(|other| top_left(other.frame()))
+        .collect();
     let mut frame = window.frame();
     while others.iter().any(|other| near(*other, top_left(frame))) {
         frame.origin.x += CASCADE;

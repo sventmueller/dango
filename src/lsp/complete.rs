@@ -91,12 +91,18 @@ define_class!(
     }
 );
 
-thread_local! {
-    static LIST: RefCell<Option<Retained<CompletionList>>> = const { RefCell::new(None) };
+/// The completion list on view.
+#[derive(Default)]
+pub struct Completion {
+    list: RefCell<Option<Retained<CompletionList>>>,
+}
+
+fn with_list<R>(f: impl FnOnce(&RefCell<Option<Retained<CompletionList>>>) -> R) -> R {
+    f(&crate::context::app().completion.list)
 }
 
 fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
-    LIST.with(|cell| {
+    with_list(|cell| {
         cell.borrow_mut()
             .get_or_insert_with(|| {
                 let ivars = ListIvars {
@@ -120,7 +126,7 @@ fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
 
 /// The list, if it is shown for `view`.
 fn open_for(view: &EditorTextView) -> Option<Retained<CompletionList>> {
-    let list = LIST.with(|cell| cell.borrow().clone())?;
+    let list = with_list(|cell| cell.borrow().clone())?;
     let showing = list
         .ivars()
         .view
@@ -646,6 +652,6 @@ pub mod selftest {
 
     /// The completion panel, for a picture.
     pub fn panel() -> Option<objc2::rc::Retained<objc2_app_kit::NSPanel>> {
-        super::LIST.with(|cell| cell.borrow().as_ref().and_then(|l| l.ivars().panel.borrow().clone()))
+        super::with_list(|cell| cell.borrow().as_ref().and_then(|l| l.ivars().panel.borrow().clone()))
     }
 }

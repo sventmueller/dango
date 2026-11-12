@@ -146,6 +146,8 @@ struct Shared {
     closed: AtomicBool,
     end_expected: AtomicBool,
     sign_in_reported: AtomicBool,
+    /// Events that wait until the state lock is released.
+    later: Mutex<Vec<Event>>,
 }
 
 /// A running Claude session; clones share it. It runs until `stop`, `close_input` or the supervisor ends it.
@@ -240,6 +242,7 @@ impl Session {
             closed: AtomicBool::new(false),
             end_expected: AtomicBool::new(false),
             sign_in_reported: AtomicBool::new(false),
+            later: Mutex::new(Vec::new()),
         });
         let weak = Arc::downgrade(&shared);
         supervisor.on_stop(spawned.id, move || {
@@ -554,10 +557,6 @@ fn write_lines(mut stdin: ChildStdin, rx: &Receiver<Outgoing>) {
     }
 }
 
-thread_local! {
-    static LATER: std::cell::RefCell<Vec<Event>> = const { std::cell::RefCell::new(Vec::new()) };
-}
-
 /// The mapper for a session `launch` starts; a resumed session's totals are not known yet.
 fn mapper_for(launch: &Launch) -> Mapper {
     let mut mapper = Mapper::new();
@@ -715,11 +714,11 @@ impl Shared {
 
     /// Queues `event` for after the state lock is released.
     fn emit_later(&self, event: Event) {
-        LATER.with(|later| later.borrow_mut().push(event));
+        self.later.lock().unwrap_or_else(|e| e.into_inner()).push(event);
     }
 
     fn flush_later(&self) {
-        let events = LATER.with(|later| std::mem::take(&mut *later.borrow_mut()));
+        let events = std::mem::take(&mut *self.later.lock().unwrap_or_else(|e| e.into_inner()));
         for event in events {
             self.emit(event);
         }

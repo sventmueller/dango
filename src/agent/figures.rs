@@ -26,10 +26,20 @@ struct Asked {
     ready: HashSet<Key>,
 }
 
-thread_local! {
-    static ASKED: RefCell<Option<Asked>> = const { RefCell::new(None) };
-    static ASKING: Cell<bool> = const { Cell::new(false) };
-    static COLLECT: RefCell<Option<Vec<Key>>> = const { RefCell::new(None) };
+/// The figures the AI tabs asked the renderer for.
+#[derive(Default)]
+pub struct Figures {
+    asked: RefCell<Option<Asked>>,
+    asking: Cell<bool>,
+    collect: RefCell<Option<Vec<Key>>>,
+}
+
+fn with_asked<R>(f: impl FnOnce(&RefCell<Option<Asked>>) -> R) -> R {
+    f(&crate::context::app().agent.figures.asked)
+}
+
+fn with_collect<R>(f: impl FnOnce(&RefCell<Option<Vec<Key>>>) -> R) -> R {
+    f(&crate::context::app().agent.figures.collect)
 }
 
 /// Records the figures a card uses, including those it finds in the renderer's cache.
@@ -37,12 +47,12 @@ pub fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
     struct Capture(Option<Vec<Key>>);
     impl Drop for Capture {
         fn drop(&mut self) {
-            COLLECT.with(|slot| *slot.borrow_mut() = self.0.take());
+            with_collect(|slot| *slot.borrow_mut() = self.0.take());
         }
     }
-    let capture = Capture(COLLECT.with(|slot| slot.replace(Some(Vec::new()))));
+    let capture = Capture(with_collect(|slot| slot.replace(Some(Vec::new()))));
     let result = build();
-    let keys = COLLECT.with(|slot| slot.borrow_mut().take().unwrap_or_default());
+    let keys = with_collect(|slot| slot.borrow_mut().take().unwrap_or_default());
     drop(capture);
     (result, keys)
 }
@@ -58,7 +68,7 @@ pub fn is_dark(mtm: MainThreadMarker) -> bool {
 
 /// Asks for `keys` beside what earlier answers asked for, on a later turn: a card is built while the table lays out.
 pub fn want(keys: Vec<Key>) {
-    COLLECT.with(|slot| {
+    with_collect(|slot| {
         if let Some(collected) = slot.borrow_mut().as_mut() {
             collected.extend(keys.iter().cloned());
         }
@@ -66,7 +76,7 @@ pub fn want(keys: Vec<Key>) {
     if keys.is_empty() {
         return;
     }
-    let added = ASKED.with(|asked| {
+    let added = with_asked(|asked| {
         let mut asked = asked.borrow_mut();
         let asked = asked.get_or_insert_with(|| Asked {
             viewer: Rc::new(Answers),
@@ -86,9 +96,9 @@ pub fn want(keys: Vec<Key>) {
         asked.ready.retain(|key| kept.contains(key));
         asked.keys.len() != before || excess > 0
     });
-    if added && !ASKING.replace(true) {
+    if added && !crate::context::app().agent.figures.asking.replace(true) {
         main_soon(move || {
-            ASKING.set(false);
+            crate::context::app().agent.figures.asking.set(false);
             if let Some(mtm) = MainThreadMarker::new() {
                 ask(mtm);
             }
@@ -97,7 +107,7 @@ pub fn want(keys: Vec<Key>) {
 }
 
 fn ask(mtm: MainThreadMarker) {
-    let Some((viewer, owner, keys)) = ASKED.with(|asked| {
+    let Some((viewer, owner, keys)) = with_asked(|asked| {
         let asked = asked.borrow();
         let asked = asked.as_ref()?;
         Some((asked.viewer.clone(), asked.owner, asked.keys.clone()))
@@ -106,7 +116,7 @@ fn ask(mtm: MainThreadMarker) {
     };
     let renderer = js::renderer(mtm);
     let owner = owner.unwrap_or_else(|| renderer.listen(&viewer));
-    ASKED.with(|asked| {
+    with_asked(|asked| {
         if let Some(asked) = asked.borrow_mut().as_mut() {
             asked.owner = Some(owner);
         }
@@ -117,7 +127,7 @@ fn ask(mtm: MainThreadMarker) {
 /// Builds the cards anew when more of the answers' figures are drawn than when they were last built; the renderer
 /// tells every document when it has run empty, also when it drew only for a preview.
 fn arrived() {
-    let changed = ASKED.with(|asked| {
+    let changed = with_asked(|asked| {
         let mut asked = asked.borrow_mut();
         let Some(asked) = asked.as_mut() else { return Vec::new() };
         let ready: HashSet<_> = asked.keys.iter().filter(|key| js::ready(key)).cloned().collect();
@@ -158,5 +168,5 @@ impl Viewer for Answers {
 /// Whether the answers asked for `key`, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn asked_for(key: &Key) -> bool {
-    ASKED.with(|asked| asked.borrow().as_ref().is_some_and(|asked| asked.keys.contains(key)))
+    with_asked(|asked| asked.borrow().as_ref().is_some_and(|asked| asked.keys.contains(key)))
 }

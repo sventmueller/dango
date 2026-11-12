@@ -80,13 +80,19 @@ define_class!(
     }
 );
 
-thread_local! {
-    static DOWNLOADS: OnceCell<Retained<Downloads>> = const { OnceCell::new() };
+/// The delegate of every download with the downloads that run.
+#[derive(Default)]
+pub struct Downloading {
+    downloads: OnceCell<Retained<Downloads>>,
+}
+
+fn with_downloads<R>(f: impl FnOnce(&OnceCell<Retained<Downloads>>) -> R) -> R {
+    f(&crate::context::app().downloads.downloads)
 }
 
 /// The delegate of every download, which lives as long as the app, so a download outlives the tab it started in.
 pub fn delegate(mtm: MainThreadMarker) -> Retained<ProtocolObject<dyn WKDownloadDelegate>> {
-    let downloads = DOWNLOADS.with(|cell| {
+    let downloads = with_downloads(|cell| {
         cell.get_or_init(|| {
             let this = Downloads::alloc(mtm).set_ivars(Ivars::default());
             // SAFETY: NSObject's initializer, called once on the newly allocated object.

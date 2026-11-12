@@ -12,17 +12,34 @@ use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSEvent, NSEventMask, NSMenu, NSView, NSWindow};
 use objc2_foundation::{NSObjectProtocol, NSPoint};
 
-use super::{WINDOWS, WindowController, tabs};
+use super::{WindowController, tabs};
 use crate::util::guarded;
 
 thread_local! {
     static MONITOR: RefCell<Option<Retained<AnyObject>>> = const { RefCell::new(None) };
+}
+
+/// The menu of the "+" in the tab bar shown last, and what the self-test reads of it.
+#[derive(Default)]
+pub struct NewTabMenu {
     /// The menu shown last, kept until the next: AppKit sends the chosen entry's action after the menu closed.
-    static SHOWN: RefCell<Option<Retained<NSMenu>>> = const { RefCell::new(None) };
+    shown: RefCell<Option<Retained<NSMenu>>>,
     /// Whether the menu is only recorded instead of shown, so a self-test neither waits on it nor takes the focus.
-    static RECORD_ONLY: Cell<bool> = const { Cell::new(false) };
+    record_only: Cell<bool>,
     /// Whether the menu shown last stood below the "+", for the self-test.
-    static BELOW_PLUS: Cell<Option<bool>> = const { Cell::new(None) };
+    below_plus: Cell<Option<bool>>,
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<NSMenu>>>) -> R) -> R {
+    f(&crate::context::app().new_tab_menu.shown)
+}
+
+fn with_record_only<R>(f: impl FnOnce(&Cell<bool>) -> R) -> R {
+    f(&crate::context::app().new_tab_menu.record_only)
+}
+
+fn with_below_plus<R>(f: impl FnOnce(&Cell<Option<bool>>) -> R) -> R {
+    f(&crate::context::app().new_tab_menu.below_plus)
 }
 
 /// Starts watching the presses on the "+" of the app's tab bars; once.
@@ -78,9 +95,9 @@ pub(super) fn open(controller: &WindowController) {
 /// Opens the menu below `view`; a press still held drags through it, a click leaves it open.
 fn show_menu(controller: &WindowController, view: &NSView, below_plus: bool) {
     let menu = menu_for(controller);
-    SHOWN.with(|shown| *shown.borrow_mut() = Some(menu.clone()));
-    BELOW_PLUS.with(|below| below.set(Some(below_plus)));
-    if RECORD_ONLY.with(Cell::get) {
+    with_shown(|shown| *shown.borrow_mut() = Some(menu.clone()));
+    with_below_plus(|below| below.set(Some(below_plus)));
+    if with_record_only(Cell::get) {
         return;
     }
     let size = view.bounds().size;
@@ -116,24 +133,20 @@ fn aim(menu: &NSMenu, controller: &WindowController) {
 /// Makes the menu only recorded from now on, never shown, and forgets the one shown last.
 #[cfg(feature = "selftest")]
 pub(super) fn record_only() {
-    RECORD_ONLY.with(|record| record.set(true));
-    BELOW_PLUS.with(|below| below.set(None));
+    with_record_only(|record| record.set(true));
+    with_below_plus(|below| below.set(None));
 }
 
 /// Whether the menu was asked for since `record_only`, and whether below the "+"; forgets it.
 #[cfg(feature = "selftest")]
 pub(super) fn take_recorded() -> Option<bool> {
-    BELOW_PLUS.with(Cell::take)
+    with_below_plus(Cell::take)
 }
 
 fn controller_of(window: &NSWindow) -> Option<Retained<WindowController>> {
-    WINDOWS.with(|windows| {
-        windows
-            .borrow()
-            .iter()
-            .find(|controller| controller.tab_of_window(window).is_some())
-            .cloned()
-    })
+    crate::context::app()
+        .windows
+        .find(|controller| controller.tab_of_window(window).is_some())
 }
 
 /// The "+" at the end of `window`'s tab bar, AppKit's own button.

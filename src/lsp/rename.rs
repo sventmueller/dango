@@ -143,8 +143,14 @@ struct Pending {
     then: Option<Then>,
 }
 
-thread_local! {
-    static FORMATTING: RefCell<HashMap<u64, Pending>> = RefCell::new(HashMap::new());
+/// The format-on-save requests that run, by editor.
+#[derive(Default)]
+pub struct Formatting {
+    formatting: RefCell<HashMap<u64, Pending>>,
+}
+
+fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Pending>>) -> R) -> R {
+    f(&crate::context::app().formatting.formatting)
 }
 
 /// Formats the document with its server, as one undoable step; `then`, such as saving, runs afterwards, also when
@@ -165,7 +171,7 @@ pub fn format(view: &EditorTextView, then: Option<Then>) {
         Ok(_) => {
             let revision = view.document().revision();
             let waits = then.is_some();
-            FORMATTING.with(|all| all.borrow_mut().insert(serial, Pending { id, revision, then }));
+            with_formatting(|all| all.borrow_mut().insert(serial, Pending { id, revision, then }));
             if waits {
                 main_after(FORMAT_WAIT, move || finished(serial, id, None));
             }
@@ -179,7 +185,7 @@ pub fn format(view: &EditorTextView, then: Option<Then>) {
 
 /// The answer to formatting request `id`, or `None` when the wait ran out first.
 fn finished(serial: u64, id: u64, answer: Option<Result<Vec<TextEdit>, Error>>) {
-    let pending = FORMATTING.with(|all| {
+    let pending = with_formatting(|all| {
         let mut all = all.borrow_mut();
         if all.get(&serial).is_some_and(|p| p.id == id) {
             all.remove(&serial)

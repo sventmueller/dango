@@ -81,9 +81,19 @@ struct Shown {
     menu: Retained<NSMenu>,
 }
 
-thread_local! {
-    static SHOWN: RefCell<Option<Shown>> = const { RefCell::new(None) };
-    static CHOOSER: RefCell<Option<Retained<Chooser>>> = const { RefCell::new(None) };
+/// The code actions on view and the menu that offers them.
+#[derive(Default)]
+pub struct CodeActions {
+    shown: RefCell<Option<Shown>>,
+    chooser: RefCell<Option<Retained<Chooser>>>,
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
+    f(&crate::context::app().code_actions.shown)
+}
+
+fn with_chooser<R>(f: impl FnOnce(&RefCell<Option<Retained<Chooser>>>) -> R) -> R {
+    f(&crate::context::app().code_actions.chooser)
 }
 
 define_class!(
@@ -123,7 +133,7 @@ define_class!(
 );
 
 fn chooser(mtm: MainThreadMarker) -> Retained<Chooser> {
-    CHOOSER.with(|cell| {
+    with_chooser(|cell| {
         cell.borrow_mut()
             .get_or_insert_with(|| {
                 // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -354,7 +364,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>)
         menu: menu.clone(),
     };
     let serial = shown.serial;
-    SHOWN.with(|cell| *cell.borrow_mut() = Some(shown));
+    with_shown(|cell| *cell.borrow_mut() = Some(shown));
     // A tracking menu takes the keyboard even from the app in front, which a self-test must never do
     // (docs/development.md); the scenario chooses from the menu it built instead.
     #[cfg(feature = "selftest")]
@@ -364,7 +374,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>)
     // A menu tracks in a run loop of its own; from a dispatch callback it would hold up every other one until it
     // closed, the server's answers included.
     main_on_run_loop(move || {
-        let menu = SHOWN.with(|cell| {
+        let menu = with_shown(|cell| {
             let shown = cell.borrow();
             shown.as_ref().filter(|s| s.serial == serial).map(|s| s.menu.clone())
         });
@@ -376,7 +386,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>)
 
 /// The user chose item `index` of the menu shown.
 fn choose(index: usize) {
-    let Some((serial, revision, action)) = SHOWN.with(|cell| {
+    let Some((serial, revision, action)) = with_shown(|cell| {
         let shown = cell.borrow();
         let shown = shown.as_ref()?;
         Some((shown.serial, shown.revision, shown.actions.get(index)?.clone()))
@@ -538,7 +548,7 @@ pub mod selftest {
     /// The titles of the menu of actions on screen for `view`, in order.
     pub fn shown(view: &EditorTextView) -> Option<Vec<String>> {
         let serial = view.ivars().lsp.borrow().serial;
-        super::SHOWN.with(|cell| {
+        super::with_shown(|cell| {
             let shown = cell.borrow();
             let shown = shown.as_ref().filter(|s| s.serial == serial)?;
             Some(
@@ -554,7 +564,7 @@ pub mod selftest {
 
     /// Closes the menu on screen and chooses its first item whose title starts with `title`, as a click does.
     pub fn choose(title: &str) -> bool {
-        let found = super::SHOWN.with(|cell| {
+        let found = super::with_shown(|cell| {
             let shown = cell.borrow();
             let shown = shown.as_ref()?;
             shown.menu.cancelTrackingWithoutAnimation();
@@ -571,7 +581,7 @@ pub mod selftest {
 
     /// Forgets the menu shown, so the next one is told apart.
     pub fn forget() {
-        super::SHOWN.with(|cell| {
+        super::with_shown(|cell| {
             if let Some(shown) = cell.borrow_mut().take() {
                 shown.menu.cancelTrackingWithoutAnimation();
             }

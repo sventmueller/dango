@@ -25,13 +25,27 @@ use crate::window::WindowController;
 /// The longest passage a comment quotes back to the agent, in characters.
 const MAX_QUOTE: usize = 400;
 
-thread_local! {
-    static LAST_NOTE: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+/// The plans' documents, comments and questions on view.
+#[derive(Default)]
+pub struct PlanState {
+    notes: PlanNotes,
+    docs: doc::PlanDocs,
+    ask: ask::PlanAsk,
+}
+
+/// The id the last comment on a plan got.
+#[derive(Default)]
+pub struct PlanNotes {
+    last_note: std::cell::Cell<u64>,
+}
+
+fn with_last_note<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+    f(&crate::context::app().agent.plan.notes.last_note)
 }
 
 /// A new comment's id, which its controls carry as their tag.
 fn next_note() -> u64 {
-    LAST_NOTE.with(|last| {
+    with_last_note(|last| {
         last.set(last.get() + 1);
         last.get()
     })
@@ -472,8 +486,9 @@ mod tests {
     use super::*;
 
     fn note(location: usize, quote: &str, comment: &str) -> PlanNote {
+        static LAST: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         PlanNote {
-            id: next_note(),
+            id: LAST.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1,
             location,
             quote: quote.into(),
             comment: comment.into(),

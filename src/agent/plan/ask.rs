@@ -34,8 +34,14 @@ struct Ask {
     field: Retained<NSTextField>,
 }
 
-thread_local! {
-    static ASK: RefCell<Option<Ask>> = const { RefCell::new(None) };
+/// The question about a plan on view.
+#[derive(Default)]
+pub struct PlanAsk {
+    ask: RefCell<Option<Ask>>,
+}
+
+fn with_ask<R>(f: impl FnOnce(&RefCell<Option<Ask>>) -> R) -> R {
+    f(&crate::context::app().agent.plan.ask.ask)
 }
 
 /// Shows the popover at `rect` of `anchor` for comment `note` of plan `entry`, or a new one, on the passage `quote`
@@ -100,12 +106,12 @@ pub fn open(
         popover,
         field,
     };
-    ASK.with(|a| *a.borrow_mut() = Some(ask));
+    with_ask(|a| *a.borrow_mut() = Some(ask));
 }
 
 /// Closes the popover of plan `entry` in the AI tab `agent` and hands over what it holds.
 pub fn take(agent: u64, entry: u64) -> Option<Asked> {
-    let ask = ASK.with(|a| {
+    let ask = with_ask(|a| {
         let mut a = a.borrow_mut();
         if a.as_ref().is_some_and(|ask| ask.agent == agent && ask.entry == entry) {
             a.take()
@@ -123,7 +129,7 @@ pub fn take(agent: u64, entry: u64) -> Option<Asked> {
 }
 
 pub fn close() {
-    if let Some(ask) = ASK.with(|a| a.borrow_mut().take()) {
+    if let Some(ask) = with_ask(|a| a.borrow_mut().take()) {
         ask.popover.close();
     }
 }
@@ -131,7 +137,7 @@ pub fn close() {
 /// Types `text` into the open popover, for the self-test; whether one is open.
 #[cfg(feature = "selftest")]
 pub fn type_comment(text: &str) -> bool {
-    ASK.with(|a| {
+    with_ask(|a| {
         a.borrow()
             .as_ref()
             .map(|ask| ask.field.setStringValue(&ns(text)))
@@ -142,7 +148,7 @@ pub fn type_comment(text: &str) -> bool {
 /// The open popover's content and its field's text, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn view() -> Option<(Retained<NSView>, String)> {
-    ASK.with(|a| {
+    with_ask(|a| {
         let a = a.borrow();
         let ask = a.as_ref()?;
         let view = ask.popover.contentViewController()?.view();

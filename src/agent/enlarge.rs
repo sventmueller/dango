@@ -32,7 +32,16 @@ const NATURAL_SIZE: f32 = 200.0;
 
 thread_local! {
     static OPENER: OnceCell<Retained<Opener>> = const { OnceCell::new() };
-    static SHOWN: RefCell<Option<Retained<Shade>>> = const { RefCell::new(None) };
+}
+
+/// The picture shown large.
+#[derive(Default)]
+pub struct EnlargedPicture {
+    shown: RefCell<Option<Retained<Shade>>>,
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<Shade>>>) -> R) -> R {
+    f(&crate::context::app().agent.enlarged_picture.shown)
 }
 
 define_class!(
@@ -185,11 +194,11 @@ fn show(button: &NSButton) {
         *shade.ivars().before.borrow_mut() = window.firstResponder();
         window.makeFirstResponder(Some(&shade));
     }
-    SHOWN.with(|shown| *shown.borrow_mut() = Some(shade));
+    with_shown(|shown| *shown.borrow_mut() = Some(shade));
 }
 
 fn close() {
-    let Some(shade) = SHOWN.with(|shown| shown.borrow_mut().take()) else {
+    let Some(shade) = with_shown(|shown| shown.borrow_mut().take()) else {
         return;
     };
     let before = shade.ivars().before.borrow_mut().take();
@@ -372,7 +381,7 @@ fn loosen(view: &NSView) {
 /// The size the open picture takes, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn shown() -> Option<NSSize> {
-    SHOWN.with(|shown| {
+    with_shown(|shown| {
         let shade = shown.borrow().clone()?;
         // SAFETY: Asking for the superview only reads.
         unsafe { shade.superview() }?.layoutSubtreeIfNeeded();

@@ -1291,30 +1291,37 @@ impl AgentTab {
     }
 }
 
+/// The answers the self-test gives the rewind's questions, first first, and the questions it saw.
 #[cfg(feature = "selftest")]
-thread_local! {
-    /// The answers the self-test gives the rewind's questions, first first, and the questions it saw.
-    static ALERTS: std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)> =
-        std::cell::RefCell::new(Default::default());
+#[derive(Default)]
+pub struct RewindAlerts {
+    alerts: std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)>,
+}
+
+#[cfg(feature = "selftest")]
+fn with_alerts<R>(
+    f: impl FnOnce(&std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)>) -> R,
+) -> R {
+    f(&crate::context::app().agent.rewind_alerts.alerts)
 }
 
 /// Has the self-test answer the next questions of a code rewind with `answers` instead of the user.
 #[cfg(feature = "selftest")]
 pub fn answer_alerts(answers: &[objc2_app_kit::NSModalResponse]) {
-    ALERTS.with(|a| a.borrow_mut().0.extend(answers.iter().copied()));
+    with_alerts(|a| a.borrow_mut().0.extend(answers.iter().copied()));
 }
 
 /// The questions a code rewind asked since the self-test began answering them.
 #[cfg(feature = "selftest")]
 pub fn alerts_seen() -> Vec<String> {
-    ALERTS.with(|a| a.borrow().1.clone())
+    with_alerts(|a| a.borrow().1.clone())
 }
 
 /// Shows `alert` and waits for the answer; in the self-test, the answer it set up, if any.
 fn run_alert(alert: &NSAlert) -> objc2_app_kit::NSModalResponse {
     #[cfg(feature = "selftest")]
     {
-        let answer = ALERTS.with(|a| {
+        let answer = with_alerts(|a| {
             let mut alerts = a.borrow_mut();
             let answer = alerts.0.pop_front();
             if answer.is_some() {

@@ -267,7 +267,13 @@ impl TerminalView {
 
 /// The view of the terminal opened last, by its number, and the number.
 pub fn latest() -> Option<(u64, Retained<TerminalView>)> {
-    let id = super::VIEWS.with(|views| views.borrow().keys().max().copied())?;
+    let id = crate::context::app()
+        .terminal_views
+        .views
+        .borrow()
+        .keys()
+        .max()
+        .copied()?;
     super::find(id).map(|view| (id, view))
 }
 

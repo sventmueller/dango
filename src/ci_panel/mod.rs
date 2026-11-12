@@ -15,8 +15,10 @@ mod work;
 
 use std::path::Path;
 
+pub use log_tab::LogTabs;
 pub use login::CI_OAUTH_CLIENTS;
 pub use ops::sheet;
+pub use panel::CiPanels;
 pub use work::CI_HOSTS;
 
 use crate::window::WindowController;

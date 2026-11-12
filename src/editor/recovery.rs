@@ -21,33 +21,53 @@ const QUIET: Duration = Duration::from_secs(2);
 /// How long steady typing goes on before a copy is written all the same.
 const LONGEST: Duration = Duration::from_secs(10);
 
-thread_local! {
-    static DUE: RefCell<Debounce> = RefCell::new(Debounce::new(QUIET, LONGEST));
+/// The copies of unsaved text that are due and when the timer that writes them fires.
+pub struct RecoveryCopies {
+    due: RefCell<Debounce>,
     /// When the timer that writes the copies due fires, if one is set.
-    static TIMER: Cell<Option<Instant>> = const { Cell::new(None) };
+    timer: Cell<Option<Instant>>,
+}
+
+impl Default for RecoveryCopies {
+    fn default() -> Self {
+        RecoveryCopies {
+            due: RefCell::new(Debounce::new(QUIET, LONGEST)),
+            timer: Cell::new(None),
+        }
+    }
+}
+
+fn with_due<R>(f: impl FnOnce(&RefCell<Debounce>) -> R) -> R {
+    f(&crate::context::app().editor.recovery_copies.due)
 }
 
 /// The view's text changed; its copy is written once the change is due.
 pub fn changed(view: &EditorTextView) {
     let now = Instant::now();
-    DUE.with(|due| due.borrow_mut().changed(&view.ivars().recovery, now));
+    with_due(|due| due.borrow_mut().changed(&view.ivars().recovery, now));
     arm();
 }
 
 fn arm() {
-    let Some(next) = DUE.with(|due| due.borrow().next_due()) else {
+    let Some(next) = with_due(|due| due.borrow().next_due()) else {
         return;
     };
-    if TIMER.get().is_some_and(|set| set <= next) {
+    if crate::context::app()
+        .editor
+        .recovery_copies
+        .timer
+        .get()
+        .is_some_and(|set| set <= next)
+    {
         return;
     }
-    TIMER.set(Some(next));
+    crate::context::app().editor.recovery_copies.timer.set(Some(next));
     main_after(next.saturating_duration_since(Instant::now()), fire);
 }
 
 fn fire() {
-    TIMER.set(None);
-    let due = DUE.with(|due| due.borrow_mut().due(Instant::now()));
+    crate::context::app().editor.recovery_copies.timer.set(None);
+    let due = with_due(|due| due.borrow_mut().due(Instant::now()));
     if !due.is_empty() {
         for view in super::open_editors() {
             if due.contains(&view.ivars().recovery) {
@@ -82,7 +102,7 @@ pub fn store(view: &EditorTextView) {
         }
     };
     if COPIES.try_run(job).is_err() {
-        DUE.with(|due| due.borrow_mut().changed(&id, Instant::now()));
+        with_due(|due| due.borrow_mut().changed(&id, Instant::now()));
         arm();
     }
 }
@@ -93,7 +113,7 @@ pub fn discard(view: &EditorTextView) {
 }
 
 fn drop_copy(id: RecoveryId) {
-    DUE.with(|due| due.borrow_mut().forget(&id));
+    with_due(|due| due.borrow_mut().forget(&id));
     let job = {
         let id = id.clone();
         move || {

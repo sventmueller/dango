@@ -149,8 +149,23 @@ define_class!(
     }
 );
 
-thread_local! {
-    static WINDOW: RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>> = const { RefCell::new(None) };
+/// The settings window and the parts of it on view.
+#[derive(Default)]
+pub struct SettingsState {
+    settings_window: SettingsWindow,
+    agent_registry: agents::AgentRegistryWindow,
+    commit_message_settings: commit_message::CommitMessageShown,
+    editor_settings: editor::EditorSettingsShown,
+}
+
+/// The settings window while it exists, with its controller.
+#[derive(Default)]
+pub struct SettingsWindow {
+    window: RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>,
+}
+
+fn with_window<R>(f: impl FnOnce(&RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>) -> R) -> R {
+    f(&crate::context::app().settings.settings_window.window)
 }
 
 impl SettingsController {
@@ -181,7 +196,7 @@ impl SettingsController {
 
 /// Brings the settings window to the front, building it the first time.
 pub fn show(mtm: MainThreadMarker) {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         let mut cell = cell.borrow_mut();
         let (window, controller) = cell.get_or_insert_with(|| build(mtm));
         controller.ivars().ci.reload();
@@ -221,7 +236,7 @@ fn servers_found(lines: Vec<(String, String)>) {
 
 /// The language servers tab of the settings window, once it was built.
 pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| controller.ivars().servers.clone())
@@ -249,7 +264,7 @@ pub fn agents_changed() {
 
 /// Sizes the Agents tab to what it shows now, and the window with it while that tab is open.
 fn fit_agents() {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         let cell = cell.borrow();
         let Some((window, _)) = cell.as_ref() else { return };
         let Some(tabs) = window
@@ -280,7 +295,7 @@ fn fit_agents() {
 
 /// The Agents tab of the settings window, once it was built.
 fn agents_tab_now() -> Option<Retained<agents::AgentsSettings>> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| controller.ivars().agents.clone())
@@ -306,7 +321,7 @@ pub use agents::register_window;
 
 fn show_tab(mtm: MainThreadMarker, tab: isize) {
     show(mtm);
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         let tabs = cell
             .borrow()
             .as_ref()
@@ -320,7 +335,7 @@ fn show_tab(mtm: MainThreadMarker, tab: isize) {
 
 /// Something else changed the CI settings; an open settings window shows them again.
 pub fn ci_changed() {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         if let Some((_, controller)) = cell.borrow().as_ref() {
             controller.ivars().ci.reload();
         }
@@ -330,13 +345,13 @@ pub fn ci_changed() {
 /// The settings window, if it was opened, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn window() -> Option<Retained<NSWindow>> {
-    WINDOW.with(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
+    with_window(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
 }
 
 /// The CI tab of the open settings window, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn ci_tab() -> Option<Retained<ci::CiSettings>> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| controller.ivars().ci.clone())
@@ -348,7 +363,7 @@ pub use ci::{List as CiList, selftest as ci_selftest};
 
 /// The Agent tab of the settings window, once it was built.
 fn agent_tab_now() -> Option<Retained<agent::AgentSettings>> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| controller.ivars().agent.clone())
@@ -358,7 +373,7 @@ fn agent_tab_now() -> Option<Retained<agent::AgentSettings>> {
 /// The Agent tab of the open settings window, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn agent_tab() -> Option<Retained<agent::AgentSettings>> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| controller.ivars().agent.clone())
@@ -441,7 +456,7 @@ fn add_tab(tabs: &NSTabViewController, view: &NSView, title: &str, image: &str) 
 /// The dictation tab of the open settings window, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
 pub fn dictation_keys() -> Vec<String> {
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| dictation::key_lines(&controller.ivars().dictation))
@@ -453,7 +468,7 @@ pub fn dictation_keys() -> Vec<String> {
 #[cfg(all(feature = "selftest", feature = "dictation"))]
 pub fn show_dictation(mtm: MainThreadMarker) {
     show(mtm);
-    WINDOW.with(|cell| {
+    with_window(|cell| {
         let tabs = cell
             .borrow()
             .as_ref()

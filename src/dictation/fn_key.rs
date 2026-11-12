@@ -42,7 +42,7 @@ pub enum FnState {
 }
 
 #[derive(Default)]
-struct FnKey {
+pub(super) struct FnKey {
     hotkey: Option<Hotkey>,
     gesture: FnGesture,
     /// The recording fn started.
@@ -54,8 +54,8 @@ struct FnKey {
     observers: Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
 }
 
-thread_local! {
-    static FN: RefCell<FnKey> = RefCell::new(FnKey::default());
+fn with_fn<R>(f: impl FnOnce(&RefCell<FnKey>) -> R) -> R {
+    f(&crate::context::app().dictation.fn_key)
 }
 
 fn in_selftest() -> bool {
@@ -68,7 +68,7 @@ fn trusted() -> bool {
 }
 
 fn setting() -> bool {
-    FN.with(|f| {
+    with_fn(|f| {
         *f.borrow_mut()
             .setting
             .get_or_insert_with(|| Settings::load_user().get(&DICTATE_WITH_FN))
@@ -76,7 +76,7 @@ fn setting() -> bool {
 }
 
 fn asked() -> bool {
-    FN.with(|f| f.borrow().asked_now) || State::load_user().get(&ASKED)
+    with_fn(|f| f.borrow().asked_now) || State::load_user().get(&ASKED)
 }
 
 /// Calls `then` for each notification `name` of `center`, the app's own by default, for as long as the app runs. AppKit
@@ -93,12 +93,12 @@ pub fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>,
     let center = center.unwrap_or(&default);
     // SAFETY: The block runs on the posting thread and acts only there on the main thread, checked above.
     let observer = unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), None, None, &block) };
-    FN.with(|f| f.borrow_mut().observers.push(observer));
+    with_fn(|f| f.borrow_mut().observers.push(observer));
 }
 
 pub fn launched() {
     let lowspeak = NSRunningApplication::runningApplicationsWithBundleIdentifier(&ns(LOWSPEAK_APP));
-    FN.with(|f| f.borrow_mut().lowspeak_runs = lowspeak.iter().any(|app| !app.isTerminated()));
+    with_fn(|f| f.borrow_mut().lowspeak_runs = lowspeak.iter().any(|app| !app.isTerminated()));
     let workspace = NSWorkspace::sharedWorkspace().notificationCenter();
     observe(
         constant!(objc2_app_kit::NSWorkspaceDidLaunchApplicationNotification),
@@ -119,7 +119,7 @@ pub fn launched() {
         constant!(objc2_app_kit::NSApplicationDidResignActiveNotification),
         None,
         |_| {
-            if let Some(target) = FN.with(|f| f.borrow_mut().recording.take()) {
+            if let Some(target) = with_fn(|f| f.borrow_mut().recording.take()) {
                 super::end_with_fn(target);
             }
             arm();
@@ -137,7 +137,7 @@ fn lowspeak_changed(notification: &NSNotification, runs: bool) {
         .and_then(|app| app.bundleIdentifier())
         .is_some_and(|id| id.to_string() == LOWSPEAK_APP)
     {
-        FN.with(|f| f.borrow_mut().lowspeak_runs = runs);
+        with_fn(|f| f.borrow_mut().lowspeak_runs = runs);
         arm();
     }
 }
@@ -145,7 +145,7 @@ fn lowspeak_changed(notification: &NSNotification, runs: bool) {
 pub fn fn_state() -> FnState {
     if !setting() {
         FnState::Off
-    } else if FN.with(|f| f.borrow().lowspeak_runs) {
+    } else if with_fn(|f| f.borrow().lowspeak_runs) {
         FnState::LowspeakHasIt
     } else if trusted() {
         FnState::Ready
@@ -162,9 +162,9 @@ fn arm() {
     let wanted = !in_selftest()
         && setting()
         && NSApplication::sharedApplication(mtm).isActive()
-        && !FN.with(|f| f.borrow().lowspeak_runs)
-        && (trusted() || FN.with(|f| f.borrow().asked_now));
-    let stopped = FN.with(|f| {
+        && !with_fn(|f| f.borrow().lowspeak_runs)
+        && (trusted() || with_fn(|f| f.borrow().asked_now));
+    let stopped = with_fn(|f| {
         let mut f = f.borrow_mut();
         match (&f.hotkey, wanted) {
             (None, true) => {
@@ -186,13 +186,13 @@ fn arm() {
 
 /// The user switched fn in the settings.
 pub fn setting_changed(on: bool) {
-    FN.with(|f| f.borrow_mut().setting = Some(on));
+    with_fn(|f| f.borrow_mut().setting = Some(on));
     arm();
 }
 
 fn pressed(key: Pressed) {
     let now = Instant::now();
-    let command = FN.with(|f| {
+    let command = with_fn(|f| {
         let mut f = f.borrow_mut();
         match key {
             Pressed::FnDown { shift } => f.gesture.down(now, shift),
@@ -207,12 +207,12 @@ fn obey(command: Command) {
     match command {
         Command::Start | Command::StartHandsFree => start(),
         Command::Stop => {
-            if let Some(target) = FN.with(|f| f.borrow_mut().recording.take()) {
+            if let Some(target) = with_fn(|f| f.borrow_mut().recording.take()) {
                 super::end_with_fn(target);
             }
         }
         Command::AwaitSecondTap(tap) => main_after(SECOND_TAP_WINDOW, move || {
-            obey(FN.with(|f| f.borrow_mut().gesture.second_tap_missed(tap)));
+            obey(with_fn(|f| f.borrow_mut().gesture.second_tap_missed(tap)));
         }),
         Command::Lock | Command::None => {}
     }
@@ -222,7 +222,7 @@ fn obey(command: Command) {
 fn start() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let started = super::focused(mtm).filter(|target| super::begin_with_fn(*target));
-    FN.with(|f| {
+    with_fn(|f| {
         let mut f = f.borrow_mut();
         f.recording = started;
         if started.is_none() {
@@ -236,7 +236,7 @@ fn start() {
 
 /// The recording of `target` ended some other way, such as its limit or a click on its button.
 pub fn ended(target: Target) {
-    FN.with(|f| {
+    with_fn(|f| {
         let mut f = f.borrow_mut();
         if f.recording == Some(target) {
             f.recording = None;
@@ -263,7 +263,7 @@ fn request(open_pane: bool) {
     if let Err(error) = state.set(&ASKED, &true) {
         crate::diag::report("dictation", error);
     }
-    FN.with(|f| f.borrow_mut().asked_now = true);
+    with_fn(|f| f.borrow_mut().asked_now = true);
     if in_selftest() {
         return;
     }

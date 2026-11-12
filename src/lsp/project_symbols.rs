@@ -65,8 +65,14 @@ struct Lease {
     answer: Option<Rc<dyn Fn(SymbolAnswer)>>,
 }
 
-thread_local! {
-    static LEASES: RefCell<HashMap<PathBuf, Lease>> = RefCell::new(HashMap::new());
+/// The language servers lent to the project symbol search, by folder.
+#[derive(Default)]
+pub struct Leases {
+    leases: RefCell<HashMap<PathBuf, Lease>>,
+}
+
+fn with_leases<R>(f: impl FnOnce(&RefCell<HashMap<PathBuf, Lease>>) -> R) -> R {
+    f(&crate::context::app().server_leases.leases)
 }
 
 /// Searches the symbols of the window folder `folder` for `query`; `answer` hears what was found each time a server
@@ -81,7 +87,7 @@ pub fn search_symbols(folder: &Path, query: &str, answer: impl Fn(SymbolAnswer) 
         return;
     }
     let now = Instant::now();
-    let survey = LEASES.with(|leases| {
+    let survey = with_leases(|leases| {
         let mut leases = leases.borrow_mut();
         let fresh = leases.get(folder).is_some_and(|lease| now < lease.last + IDLE_STOP);
         let lease = leases.entry(folder.to_path_buf()).or_insert_with(|| Lease {
@@ -133,7 +139,7 @@ fn start_survey(folder: &Path) {
 }
 
 fn surveyed(folder: &Path, plan: Vec<(Language, PathBuf)>) {
-    LEASES.with(|leases| {
+    with_leases(|leases| {
         if let Some(lease) = leases.borrow_mut().get_mut(folder) {
             lease.plan = Plan::Ready(plan);
         }
@@ -175,7 +181,7 @@ fn survey(folder: &Path, custom: &[Arc<CustomServer>]) -> Vec<(Language, PathBuf
 
 /// Renews the lease of every slot the search of `folder` holds and queues the planned servers that do not run.
 fn renew(folder: &Path, now: Instant) {
-    LEASES.with(|leases| {
+    with_leases(|leases| {
         let mut leases = leases.borrow_mut();
         let Some(lease) = leases.get_mut(folder) else { return };
         lease.slots.retain(|id| slot(folder, *id).is_some());
@@ -207,7 +213,7 @@ fn renew(folder: &Path, now: Instant) {
 
 /// Starts queued servers while fewer than two start, and lets go of servers that cannot search symbols.
 pub(super) fn pump(folder: &Path) {
-    LEASES.with(|leases| {
+    with_leases(|leases| {
         let mut leases = leases.borrow_mut();
         let Some(lease) = leases.get_mut(folder) else { return };
         lease
@@ -266,7 +272,7 @@ fn indexing(lease: &Lease, folder: &Path) -> bool {
 
 /// Sends the query of the search of `folder` to every running server it holds, or answers at once without any.
 fn ask(folder: &Path) {
-    let (query, generation, servers) = LEASES.with(|leases| {
+    let (query, generation, servers) = with_leases(|leases| {
         let leases = leases.borrow();
         let Some(lease) = leases.get(folder) else {
             return (String::new(), 0, vec![]);
@@ -296,7 +302,7 @@ fn ask(folder: &Path) {
             tickets.push(ticket);
         }
     }
-    LEASES.with(|leases| {
+    with_leases(|leases| {
         if let Some(lease) = leases.borrow_mut().get_mut(folder)
             && lease.generation == generation
         {
@@ -308,7 +314,7 @@ fn ask(folder: &Path) {
 }
 
 fn arrived(folder: &Path, generation: u64, server: &Server, answer: Result<Vec<ProjectSymbol>, ide_lsp::Error>) {
-    let current = LEASES.with(|leases| {
+    let current = with_leases(|leases| {
         let mut leases = leases.borrow_mut();
         let Some(lease) = leases.get_mut(folder).filter(|l| l.generation == generation) else {
             return false;
@@ -335,7 +341,7 @@ fn arrived(folder: &Path, generation: u64, server: &Server, answer: Result<Vec<P
 
 /// Hands what the search of `folder` found so far, best matches first, to its listener.
 fn deliver(folder: &Path) {
-    let delivered = LEASES.with(|leases| {
+    let delivered = with_leases(|leases| {
         let leases = leases.borrow();
         let lease = leases.get(folder)?;
         let mut symbols = lease.found.clone();
@@ -395,7 +401,7 @@ pub fn open_symbol(folder: &Path, found: &FoundSymbol) {
 
 /// The window of `folder` closed: its search lets go of everything.
 pub(super) fn forget(folder: &Path) {
-    LEASES.with(|leases| {
+    with_leases(|leases| {
         if let Some(lease) = leases.borrow_mut().remove(folder) {
             for ticket in lease.tickets {
                 ticket.cancel();
@@ -408,7 +414,7 @@ pub(super) fn forget(folder: &Path) {
 /// it, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn held(folder: &Path) -> Vec<(String, bool, usize)> {
-    let ids = LEASES.with(|leases| leases.borrow().get(folder).map(|l| l.slots.clone()).unwrap_or_default());
+    let ids = with_leases(|leases| leases.borrow().get(folder).map(|l| l.slots.clone()).unwrap_or_default());
     ids.into_iter()
         .filter_map(|id| slot(folder, id))
         .map(|slot| {

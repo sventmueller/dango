@@ -16,9 +16,14 @@ use crate::agent::{AcpAgent, Agent, Availability};
 use crate::util::{guarded, item, set_action};
 use crate::window::WindowController;
 
-thread_local! {
-    /// Agents installed from the registry that the "new session" menu offers, by its tags.
-    static OFFERED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+/// Agents installed from the registry that the "new session" menu offers, by its tags.
+#[derive(Default)]
+pub struct OfferedAgents {
+    offered: RefCell<Vec<String>>,
+}
+
+fn with_offered<R>(f: impl FnOnce(&RefCell<Vec<String>>) -> R) -> R {
+    f(&crate::context::app().agent_panels.offered_agents.offered)
 }
 
 pub struct TargetIvars {
@@ -50,7 +55,7 @@ define_class!(
         #[unsafe(method(ideAgentsOpen:))]
         fn open(&self, sender: Option<&AnyObject>) {
             guarded((), || {
-                let id = OFFERED.with(|o| usize::try_from(tag(sender)).ok().and_then(|n| o.borrow().get(n).cloned()));
+                let id = with_offered(|o| usize::try_from(tag(sender)).ok().and_then(|n| o.borrow().get(n).cloned()));
                 if let (Some(controller), Some(agent)) = (self.ivars().controller.load(), id.and_then(|id| AcpAgent::find(&id))) {
                     crate::agent::open_agent(&controller, Agent::Acp(agent), None);
                 }
@@ -155,7 +160,7 @@ fn session_menu(target: &Target) -> Retained<NSMenu> {
         entry.setTag(isize::try_from(n).unwrap_or(-1));
         menu.addItem(&entry);
     }
-    OFFERED.with(|o| *o.borrow_mut() = installed.into_iter().map(|(id, _)| id).collect());
+    with_offered(|o| *o.borrow_mut() = installed.into_iter().map(|(id, _)| id).collect());
     if menu.numberOfItems() > 0 {
         menu.addItem(&NSMenuItem::separatorItem(mtm));
     }

@@ -496,13 +496,15 @@ define_class!(
     }
 );
 
-thread_local! {
-    static PANELS: RefCell<Vec<Retained<GitPanel>>> = const { RefCell::new(Vec::new()) };
-}
-
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&GitPanel)) {
-    let panel = PANELS.with(|panels| panels.borrow().iter().find(|p| p.ivars().id == id).cloned());
+    let panel = crate::context::app()
+        .git
+        .panels
+        .borrow()
+        .iter()
+        .find(|p| p.ivars().id == id)
+        .cloned();
     if let Some(panel) = panel {
         f(&panel);
     }
@@ -511,22 +513,22 @@ pub fn with_panel(id: u64, f: impl FnOnce(&GitPanel)) {
 /// The panels of windows that show `root`.
 pub fn for_root(root: &Path) -> Vec<Retained<GitPanel>> {
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-    PANELS.with(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.ivars().controller.load().is_some());
-        panels.iter().filter(|p| p.ivars().root == root).cloned().collect()
-    })
+    let cx = crate::context::app();
+    let mut panels = cx.git.panels.borrow_mut();
+    panels.retain(|p| p.ivars().controller.load().is_some());
+    panels.iter().filter(|p| p.ivars().root == root).cloned().collect()
 }
 
 /// The panel of `controller`'s window.
 pub fn of(controller: &WindowController) -> Option<Retained<GitPanel>> {
-    PANELS.with(|panels| {
-        panels
-            .borrow()
-            .iter()
-            .find(|p| p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-            .cloned()
-    })
+    controller
+        .context()
+        .git
+        .panels
+        .borrow()
+        .iter()
+        .find(|p| p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .cloned()
 }
 
 impl GitPanel {
@@ -534,15 +536,16 @@ impl GitPanel {
     pub fn attach(controller: &WindowController) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
-        PANELS.with(|panels| {
-            panels
-                .borrow_mut()
-                .retain(|p| p.controller().is_some_and(|c| !std::ptr::eq(&*c, controller)));
-        });
+        controller
+            .context()
+            .git
+            .panels
+            .borrow_mut()
+            .retain(|p| p.controller().is_some_and(|c| !std::ptr::eq(&*c, controller)));
         let panel = GitPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Git, &panel.ui().page);
         panel.update_placeholder();
-        PANELS.with(|panels| panels.borrow_mut().push(panel.clone()));
+        controller.context().git.panels.borrow_mut().push(panel.clone());
         panel.start_refresh();
         panel.schedule_ages();
     }

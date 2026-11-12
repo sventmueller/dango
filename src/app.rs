@@ -1,17 +1,19 @@
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 use ide_core::settings::{State, remembered};
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
-use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSApplicationDelegate, NSApplicationTerminateReply, NSMenu, NSMenuDelegate, NSMenuItem,
     NSModalResponseOK, NSOpenPanel,
 };
 use objc2_foundation::{NSArray, NSBundle, NSNotification, NSObjectProtocol, NSString, NSURL};
 
+use crate::context::AppContext;
 use crate::util::{guarded, item, main_soon, ns, separator, set_target};
 use crate::window::{self, WindowController};
 use splat_i18n::t;
@@ -35,6 +37,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAppDelegate"]
+    #[ivars = Rc<AppContext>]
     pub struct AppDelegate;
 
     unsafe impl NSObjectProtocol for AppDelegate {}
@@ -158,9 +161,13 @@ define_class!(
 
 impl AppDelegate {
     pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(());
+        let this = Self::alloc(mtm).set_ivars(Rc::new(AppContext::default()));
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
+    }
+
+    pub fn context(&self) -> Rc<AppContext> {
+        self.ivars().clone()
     }
 }
 

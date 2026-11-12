@@ -350,6 +350,25 @@ Befund: `src/` hat 86 600 Zeilen, `crates/` 60 100. Die Module in `src/` greifen
 (u. a. `window` ↔ `editor`, `editor` ↔ `lsp`, `window` ↔ `agent`, `agent` ↔ `activity`, `terminal` ↔ `window`).
 
 ### B22 Thread-Locals
+*Umgesetzt am 2026-11-12.* Die Bestandsaufnahme fand 108 Statics in 72 `thread_local!`-Blöcken in 71 Dateien; sie
+steht mit Zustand, Lebensdauer und Ziel in [thread-locals.md](thread-locals.md), und `make lint` prüft gegen sie
+(`cargo xtask thread-locals`, scheitert an jedem neuen und an jeder veralteten Zeile). Der Kontext ist `AppContext` in
+`src/context.rs`; Fenster haben eine Kennung, Antworten finden sie über `window::deliver`, und der Selftest
+`app-context` schließt ein Fenster, bevor die Antwort eines Workers ankommt. 34 Statics bleiben. Abweichungen:
+- Eine dritte Gruppe darf bleiben: die 14 Statics des Selftests (nur mit dem Feature `selftest`). Sie sind kein
+  Zustand der App, und `selftest::prepare` meldet Prüfungen, bevor der App-Delegate existiert.
+- Zustandslose Aktionsziele, die auf kein bestimmtes Fenster zielen (Menü „Git“, Diktat, „In splat öffnen“,
+  Vergrößern, Kontextanzeige), zählen als Cache; das Ziel der Navigationspfeile zieht in den Kontext, weil es über
+  seine Gruppen ein Fenster trifft. Einstellungen, wie zuletzt gelesen (`CUSTOM`, `CHOSEN`, Leerzeichen, Blame am
+  Zeilenende), bleiben ebenfalls als Cache.
+- Der Fenster-Controller hält das `Rc<AppContext>` in seinen Ivars und gibt es dort weiter, wo er zur Hand ist (Git-
+  Panel, Vorschau, Symbolleiste, Agenten-Panel). Code ohne Controller in Reichweite (freie Funktionen, Rückrufe über
+  `main_soon`, AppKit-Delegates) löst den Kontext über den App-Delegate auf (`context::app()`), statt das `Rc` durch
+  jede Signatur zu reichen; Panels und Tabs haben dafür kein eigenes Feld.
+- `LATER` in `crates/ide-claude` zieht in die Sitzung (`Shared::later`), weil Crates den App-Kontext nicht kennen.
+- Antworten an das Agenten-Panel und an die Aktivitätsanzeige trugen die Adresse des Objekts; sie tragen jetzt eine
+  Kennung (Panel bzw. Fenster). Die Nutzungsanzeige (`REPORT`) zieht mit ihrem `ASKING`-Flag in den Kontext.
+
 Auswirkung: Fenster und Tabs sind nicht mehr über verdeckte globale Listen verbunden; Selftests können einen
 Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
 

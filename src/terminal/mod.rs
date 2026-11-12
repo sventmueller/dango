@@ -35,8 +35,14 @@ pub use view::TerminalView;
 /// How long a new terminal waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
 
-thread_local! {
-    static VIEWS: RefCell<HashMap<u64, Weak<TerminalView>>> = RefCell::new(HashMap::new());
+/// The terminal views of every window by id.
+#[derive(Default)]
+pub struct TerminalViews {
+    pub(super) views: RefCell<HashMap<u64, Weak<TerminalView>>>,
+}
+
+fn with_views<R>(f: impl FnOnce(&RefCell<HashMap<u64, Weak<TerminalView>>>) -> R) -> R {
+    f(&crate::context::app().terminal_views.views)
 }
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
@@ -65,21 +71,23 @@ fn next_id() -> u64 {
 }
 
 fn register(view: &TerminalView) {
-    VIEWS.with(|views| views.borrow_mut().insert(view.id(), Weak::from(view)));
+    with_views(|views| views.borrow_mut().insert(view.id(), Weak::from(view)));
 }
 
 fn forget(id: u64) {
-    let _ = VIEWS.try_with(|views| views.borrow_mut().remove(&id));
+    if let Some(cx) = crate::context::try_app() {
+        cx.terminal_views.views.borrow_mut().remove(&id);
+    }
 }
 
 fn find(id: u64) -> Option<Retained<TerminalView>> {
-    VIEWS.with(|views| views.borrow().get(&id).and_then(Weak::load))
+    with_views(|views| views.borrow().get(&id).and_then(Weak::load))
 }
 
 /// The folder the shell of the terminal in tab `tab` of `controller`'s window last reported, for opening it again.
 pub fn folder_of_tab(controller: &WindowController, tab: isize) -> Option<std::path::PathBuf> {
     use objc2::DefinedClass;
-    VIEWS.with(|views| {
+    with_views(|views| {
         views.borrow().values().filter_map(Weak::load).find_map(|view| {
             let ivars = view.ivars();
             let mine = ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller));
@@ -118,7 +126,7 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
 
 /// The terminals open now, in every window.
 fn all_views() -> Vec<Retained<TerminalView>> {
-    VIEWS.with(|views| views.borrow().values().filter_map(Weak::load).collect())
+    with_views(|views| views.borrow().values().filter_map(Weak::load).collect())
 }
 
 /// The programs that run in the terminals of `controller`'s window in place of a shell that waits.
@@ -172,7 +180,7 @@ fn start(view: &TerminalView) {
 /// The terminals of `controller`'s window, the one in view first.
 fn of_window(controller: &WindowController) -> Vec<Retained<TerminalView>> {
     let mut views: Vec<Retained<TerminalView>> =
-        VIEWS.with(|views| views.borrow().values().filter_map(Weak::load).collect());
+        with_views(|views| views.borrow().values().filter_map(Weak::load).collect());
     views.retain(|view| {
         view.ivars()
             .controller

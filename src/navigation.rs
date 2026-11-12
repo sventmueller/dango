@@ -107,14 +107,28 @@ impl History {
     }
 }
 
-thread_local! {
-    static HISTORIES: RefCell<Vec<(Weak<WindowController>, History)>> = const { RefCell::new(Vec::new()) };
-    static NAVIGATOR: OnceCell<Retained<Navigator>> = const { OnceCell::new() };
-    static GROUPS: RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>> = const { RefCell::new(Vec::new()) };
+/// The back and forward history of every window and the target of the toolbar's arrows.
+#[derive(Default)]
+pub struct Navigation {
+    histories: RefCell<Vec<(Weak<WindowController>, History)>>,
+    navigator: OnceCell<Retained<Navigator>>,
+    groups: RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>,
+}
+
+fn with_histories<R>(f: impl FnOnce(&RefCell<Vec<(Weak<WindowController>, History)>>) -> R) -> R {
+    f(&crate::context::app().navigation.histories)
+}
+
+fn with_navigator<R>(f: impl FnOnce(&OnceCell<Retained<Navigator>>) -> R) -> R {
+    f(&crate::context::app().navigation.navigator)
+}
+
+fn with_groups<R>(f: impl FnOnce(&RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>) -> R) -> R {
+    f(&crate::context::app().navigation.groups)
 }
 
 fn with_history<R>(controller: &WindowController, f: impl FnOnce(&mut History) -> R) -> R {
-    HISTORIES.with(|all| {
+    with_histories(|all| {
         let mut all = all.borrow_mut();
         all.retain(|(owner, _)| owner.load().is_some());
         let index = match all
@@ -242,7 +256,7 @@ define_class!(
 
 /// The object that menu items and the toolbar send back and forward to.
 pub fn navigator(mtm: MainThreadMarker) -> Retained<Navigator> {
-    NAVIGATOR.with(|cell| {
+    with_navigator(|cell| {
         cell.get_or_init(|| {
             // SAFETY: NSObject's initializer, called once on the newly allocated object.
             unsafe { msg_send![Navigator::alloc(mtm), init] }
@@ -292,14 +306,14 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
     for item in group.subitems().iter() {
         item.setAutovalidates(false);
     }
-    GROUPS.with(|groups| groups.borrow_mut().push((Weak::from(&*group), Weak::from(controller))));
+    with_groups(|groups| groups.borrow_mut().push((Weak::from(&*group), Weak::from(controller))));
     refresh();
     Retained::into_super(group)
 }
 
 /// Enables the toolbar's buttons as their window has places to go to.
 fn refresh() {
-    let groups: Vec<(Retained<NSToolbarItemGroup>, Retained<WindowController>)> = GROUPS.with(|groups| {
+    let groups: Vec<(Retained<NSToolbarItemGroup>, Retained<WindowController>)> = with_groups(|groups| {
         let mut groups = groups.borrow_mut();
         groups.retain(|(group, owner)| group.load().is_some() && owner.load().is_some());
         groups

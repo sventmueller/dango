@@ -85,12 +85,18 @@ define_class!(
     }
 );
 
-thread_local! {
-    static ACTIVITIES: RefCell<Vec<Retained<Activity>>> = const { RefCell::new(Vec::new()) };
+/// The activity items of every window.
+#[derive(Default)]
+pub struct Activities {
+    activities: RefCell<Vec<Retained<Activity>>>,
+}
+
+fn with_activities<R>(f: impl FnOnce(&RefCell<Vec<Retained<Activity>>>) -> R) -> R {
+    f(&crate::context::app().activities.activities)
 }
 
 fn of(controller: &WindowController) -> Option<Retained<Activity>> {
-    ACTIVITIES.with(|all| {
+    with_activities(|all| {
         all.borrow()
             .iter()
             .find(|a| {
@@ -119,7 +125,7 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let activity: Retained<Activity> = unsafe { msg_send![super(Activity::alloc(mtm).set_ivars(ivars)), init] };
-        ACTIVITIES.with(|all| all.borrow_mut().push(activity.clone()));
+        with_activities(|all| all.borrow_mut().push(activity.clone()));
         activity
     });
     let item = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), &ns(ID));
@@ -143,7 +149,7 @@ fn watch_supervisor() {
     WATCH.call_once(|| {
         Supervisor::global().subscribe(|_| {
             main_soon(|| {
-                let all: Vec<Retained<Activity>> = ACTIVITIES.with(|a| a.borrow().clone());
+                let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
                 for activity in all {
                     activity.changed();
                 }
@@ -421,10 +427,12 @@ impl Activity {
         self.update_count();
         let shown = self.ivars().popover.borrow().as_ref().is_some_and(|p| p.isShown());
         if shown && !self.ivars().scheduled.replace(true) {
-            let address = self as *const Activity as usize;
+            let Some(window) = self.controller().map(|c| c.id()) else {
+                return;
+            };
             main_after(Duration::from_millis(300), move || {
-                let all: Vec<Retained<Activity>> = ACTIVITIES.with(|a| a.borrow().clone());
-                if let Some(activity) = all.into_iter().find(|a| &**a as *const Activity as usize == address) {
+                let controller = crate::context::app().windows.get(window);
+                if let Some(activity) = controller.and_then(|c| of(&c)) {
                     activity.ivars().scheduled.set(false);
                     activity.fill();
                 }
@@ -511,10 +519,12 @@ impl Activity {
 
     /// Keeps the running times of an open popover current.
     fn tick(&self) {
-        let address = self as *const Activity as usize;
+        let Some(window) = self.controller().map(|c| c.id()) else {
+            return;
+        };
         main_after(Duration::from_secs(1), move || {
-            let all: Vec<Retained<Activity>> = ACTIVITIES.with(|a| a.borrow().clone());
-            if let Some(activity) = all.into_iter().find(|a| &**a as *const Activity as usize == address)
+            let controller = crate::context::app().windows.get(window);
+            if let Some(activity) = controller.and_then(|c| of(&c))
                 && activity.ivars().popover.borrow().as_ref().is_some_and(|p| p.isShown())
             {
                 activity.fill();

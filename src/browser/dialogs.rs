@@ -33,9 +33,15 @@ const FIELD_HEIGHT: f64 = 24.0;
 type Asking = (Retained<NSAlert>, Vec<Retained<NSTextField>>);
 
 #[cfg(feature = "selftest")]
-thread_local! {
-    /// The panel with text fields that shows, for the self-test to fill in.
-    static ASKING: RefCell<Option<Asking>> = const { RefCell::new(None) };
+/// The panel with text fields that shows, for the self-test to fill in.
+#[derive(Default)]
+pub struct Dialogs {
+    asking: RefCell<Option<Asking>>,
+}
+
+#[cfg(feature = "selftest")]
+fn with_asking<R>(f: impl FnOnce(&RefCell<Option<Asking>>) -> R) -> R {
+    f(&crate::context::app().browser_dialogs.asking)
 }
 
 /// The host of the frame that asks, which the panel names so a page cannot pass itself off as the app.
@@ -115,11 +121,11 @@ fn ask(
     done: impl Fn(bool, Vec<String>) + 'static,
 ) {
     #[cfg(feature = "selftest")]
-    ASKING.with(|asking| *asking.borrow_mut() = Some((alert.clone(), fields.clone())));
+    with_asking(|asking| *asking.borrow_mut() = Some((alert.clone(), fields.clone())));
     let read = fields.clone();
     let handler = RcBlock::new(move |response: NSModalResponse| {
         #[cfg(feature = "selftest")]
-        ASKING.with(|asking| asking.borrow_mut().take());
+        with_asking(|asking| asking.borrow_mut().take());
         let texts = read.iter().map(|field| field.stringValue().to_string()).collect();
         done(response == NSAlertFirstButtonReturn, texts);
     });
@@ -130,7 +136,7 @@ fn ask(
 /// user; whether a panel was asking.
 #[cfg(feature = "selftest")]
 pub fn answer_asking(texts: &[&str]) -> bool {
-    let Some((alert, fields)) = ASKING.with(|asking| asking.borrow().clone()) else {
+    let Some((alert, fields)) = with_asking(|asking| asking.borrow().clone()) else {
         return false;
     };
     for (field, text) in fields.iter().zip(texts) {

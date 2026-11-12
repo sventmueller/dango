@@ -147,20 +147,27 @@ fn text_color(view: &EditorTextView) -> Retained<NSColor> {
     }
 }
 
+/// Whether editors draw as with increased contrast, for the self-test.
 #[cfg(feature = "selftest")]
-thread_local! {
-    static FORCED_CONTRAST: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+#[derive(Default)]
+pub struct ForcedContrast {
+    forced_contrast: std::cell::Cell<bool>,
+}
+
+#[cfg(feature = "selftest")]
+fn with_forced_contrast<R>(f: impl FnOnce(&std::cell::Cell<bool>) -> R) -> R {
+    f(&crate::context::app().editor.forced_contrast.forced_contrast)
 }
 
 /// Draws as with increased contrast, which AppKit gives a window only through the system setting, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn force_increased_contrast(on: bool) {
-    FORCED_CONTRAST.with(|forced| forced.set(on));
+    with_forced_contrast(|forced| forced.set(on));
 }
 
 #[cfg(feature = "selftest")]
 fn forced_contrast() -> bool {
-    FORCED_CONTRAST.with(std::cell::Cell::get)
+    with_forced_contrast(std::cell::Cell::get)
 }
 
 #[cfg(not(feature = "selftest"))]

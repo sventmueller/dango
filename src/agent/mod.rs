@@ -67,9 +67,28 @@ pub use ui::{framed, icon, insets, separator};
 #[cfg(feature = "selftest")]
 pub use usage::inject as inject_usage;
 
-thread_local! {
-    /// Every open AI tab, in the order they were opened; a tab leaves when it is closed.
-    static TABS: RefCell<Vec<Rc<AgentTab>>> = const { RefCell::new(Vec::new()) };
+/// Every open AI tab, in the order they were opened; a tab leaves when it is closed.
+#[derive(Default)]
+pub struct AgentTabs {
+    tabs: RefCell<Vec<Rc<AgentTab>>>,
+}
+
+/// The state of the AI tabs and what they show.
+#[derive(Default)]
+pub struct AgentState {
+    agent_tabs: AgentTabs,
+    plan: plan::PlanState,
+    figures: figures::Figures,
+    enlarged_picture: enlarge::EnlargedPicture,
+    context_gauges: context_view::ContextGauges,
+    page_selections: context::PageSelections,
+    usage: usage::Usage,
+    #[cfg(feature = "selftest")]
+    rewind_alerts: actions::RewindAlerts,
+}
+
+fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentTab>>>) -> R) -> R {
+    f(&crate::context::app().agent.agent_tabs.tabs)
 }
 
 /// Opens an AI tab with a new Claude session in the window's folder, or with the past session `resume`.
@@ -91,7 +110,7 @@ pub fn open_agent(controller: &WindowController, agent: Agent, resume: Option<Re
 }
 
 fn started(controller: &WindowController, tab: &Rc<AgentTab>) {
-    TABS.with(|tabs| tabs.borrow_mut().push(tab.clone()));
+    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
     tab.start();
     changed(controller);
 }
@@ -116,7 +135,7 @@ pub fn open_agent_in(
     if let Some(title) = title {
         tab.set_custom_title(title);
     }
-    TABS.with(|tabs| tabs.borrow_mut().push(tab.clone()));
+    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
     tab.start();
     changed(controller);
     Some(tab)
@@ -124,7 +143,7 @@ pub fn open_agent_in(
 
 /// Whether an open AI tab works in `folder`.
 pub fn working_in(folder: &std::path::Path) -> bool {
-    TABS.with(|tabs| tabs.borrow().iter().any(|tab| tab.cwd() == folder))
+    with_tabs(|tabs| tabs.borrow().iter().any(|tab| tab.cwd() == folder))
 }
 
 pub use own::{fill_menu as fill_own_menu, menu_choice as own_menu_choice};
@@ -179,7 +198,7 @@ pub fn claude_program(env: &[(String, String)]) -> Option<std::path::PathBuf> {
 
 /// The tab with `key`, if it is open.
 fn get(key: u64) -> Option<Rc<AgentTab>> {
-    TABS.with(|tabs| tabs.borrow().iter().find(|t| t.key == key).cloned())
+    with_tabs(|tabs| tabs.borrow().iter().find(|t| t.key == key).cloned())
 }
 
 /// The window of the AI tab with `key`, for a dictation whose composer closed.
@@ -208,7 +227,7 @@ pub fn answer_height(mtm: objc2::MainThreadMarker, markdown: &str, width: f64) -
 
 /// Every open AI tab.
 pub fn all() -> Vec<Rc<AgentTab>> {
-    TABS.with(|tabs| tabs.borrow().clone())
+    with_tabs(|tabs| tabs.borrow().clone())
 }
 
 /// The AI tabs of `controller`'s window.
@@ -225,7 +244,7 @@ pub fn find_session(controller: &WindowController, session: &str) -> Option<Rc<A
 
 /// Forgets the tab with `key` and ends its session.
 fn remove(key: u64) {
-    let removed = TABS.with(|tabs| {
+    let removed = with_tabs(|tabs| {
         let mut tabs = tabs.borrow_mut();
         let position = tabs.iter().position(|t| t.key == key)?;
         Some(tabs.remove(position))
@@ -346,7 +365,7 @@ pub fn notifications_posted() -> usize {
 pub fn open_replay_in(controller: &WindowController, cwd: std::path::PathBuf, title: &str) -> Rc<AgentTab> {
     let tab = AgentTab::open_replay_in(controller, cwd);
     tab.set_custom_title(title);
-    TABS.with(|tabs| tabs.borrow_mut().push(tab.clone()));
+    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
     changed(controller);
     tab
 }
@@ -355,7 +374,7 @@ pub fn open_replay_in(controller: &WindowController, cwd: std::path::PathBuf, ti
 #[cfg(feature = "selftest")]
 pub fn open_replay(controller: &WindowController) -> Option<Rc<AgentTab>> {
     let tab = AgentTab::open_replay(controller)?;
-    TABS.with(|tabs| tabs.borrow_mut().push(tab.clone()));
+    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
     changed(controller);
     Some(tab)
 }

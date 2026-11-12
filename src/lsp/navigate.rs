@@ -340,8 +340,14 @@ define_class!(
     }
 );
 
-thread_local! {
-    static SHEET: RefCell<Option<Retained<LocationSheet>>> = const { RefCell::new(None) };
+/// The sheet of locations on view.
+#[derive(Default)]
+pub struct LocationSheets {
+    sheet: RefCell<Option<Retained<LocationSheet>>>,
+}
+
+fn with_sheet<R>(f: impl FnOnce(&RefCell<Option<Retained<LocationSheet>>>) -> R) -> R {
+    f(&crate::context::app().location_sheet.sheet)
 }
 
 /// The line `range` starts on, from the open editor of `path` or else from the file, read once per file.
@@ -397,7 +403,7 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
     let sheet: Retained<LocationSheet> = unsafe { msg_send![super(sheet), init] };
     let panel = sheet.build(mtm, title);
-    SHEET.with(|cell| *cell.borrow_mut() = Some(sheet.clone()));
+    with_sheet(|cell| *cell.borrow_mut() = Some(sheet.clone()));
     window.beginSheet_completionHandler(&panel, None);
     if let Some(table) = sheet.ivars().table.borrow().as_ref() {
         panel.makeFirstResponder(Some(table));
@@ -503,14 +509,14 @@ impl LocationSheet {
         {
             parent.endSheet(sheet);
         }
-        SHEET.with(|cell| cell.borrow_mut().take());
+        with_sheet(|cell| cell.borrow_mut().take());
     }
 }
 
 /// The titles the open location sheet lists, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn listed() -> Vec<String> {
-    SHEET.with(|cell| {
+    with_sheet(|cell| {
         cell.borrow()
             .as_ref()
             .map(|s| s.ivars().entries.borrow().iter().map(|e| e.title.clone()).collect())
@@ -521,7 +527,7 @@ pub fn listed() -> Vec<String> {
 /// Closes the open location sheet, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn close_list() {
-    let sheet = SHEET.with(|cell| cell.borrow().clone());
+    let sheet = with_sheet(|cell| cell.borrow().clone());
     if let Some(sheet) = sheet {
         sheet.close();
     }

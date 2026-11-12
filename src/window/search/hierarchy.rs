@@ -29,13 +29,31 @@ use crate::util::{guarded, label, ns, set_action, set_label, symbol};
 const HISTORY: usize = 10;
 const SMALL_FONT: f64 = 11.0;
 
-thread_local! {
-    static PANELS: RefCell<Vec<Weak<HierarchyPanel>>> = const { RefCell::new(Vec::new()) };
-    static NEXT_ID: Cell<u64> = const { Cell::new(1) };
+/// The call and type hierarchy panels of every window and the id the next one gets.
+pub struct HierarchyPanels {
+    panels: RefCell<Vec<Weak<HierarchyPanel>>>,
+    next_id: Cell<u64>,
+}
+
+impl Default for HierarchyPanels {
+    fn default() -> Self {
+        HierarchyPanels {
+            panels: RefCell::new(Vec::new()),
+            next_id: Cell::new(1),
+        }
+    }
+}
+
+fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<HierarchyPanel>>>) -> R) -> R {
+    f(&crate::context::app().hierarchy_panels.panels)
+}
+
+fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
+    f(&crate::context::app().hierarchy_panels.next_id)
 }
 
 fn next_id() -> u64 {
-    NEXT_ID.with(|next| {
+    with_next_id(|next| {
         let id = next.get();
         next.set(id + 1);
         id
@@ -254,7 +272,7 @@ fn index_of(item: &AnyObject) -> Option<usize> {
 }
 
 fn panel(id: u64) -> Option<Retained<HierarchyPanel>> {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         let mut panels = panels.borrow_mut();
         panels.retain(|p| p.load().is_some());
         panels.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
@@ -274,7 +292,7 @@ impl HierarchyPanel {
         let this: Retained<HierarchyPanel> =
             unsafe { msg_send![super(HierarchyPanel::alloc(mtm).set_ivars(ivars)), init] };
         let _ = this.ivars().views.set(build(mtm, &this));
-        PANELS.with(|panels| panels.borrow_mut().push(Weak::from(&*this)));
+        with_panels(|panels| panels.borrow_mut().push(Weak::from(&*this)));
         this
     }
 

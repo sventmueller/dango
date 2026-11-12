@@ -15,6 +15,7 @@ use objc2::MainThreadMarker;
 use serde::{Deserialize, Serialize};
 use splat_i18n::{t, tf};
 
+use crate::context::app;
 use crate::util::{main_after, main_on_run_loop};
 use crate::window::WindowController;
 use crate::window::layout::Document;
@@ -48,35 +49,38 @@ pub enum TabRecord {
     },
 }
 
-thread_local! {
-    static WRITE_PENDING: Cell<bool> = const { Cell::new(false) };
-    static QUITTING: Cell<bool> = const { Cell::new(false) };
+/// Where writing down the record stands.
+#[derive(Default)]
+pub struct Saving {
+    write_pending: Cell<bool>,
+    quitting: Cell<bool>,
 }
 
 /// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
 pub fn quitting() {
-    QUITTING.set(true);
+    app().session.quitting.set(true);
 }
 
 /// Whether the app quits, after which nothing more is written down.
 pub fn is_quitting() -> bool {
-    QUITTING.get()
+    app().session.quitting.get()
 }
 
 /// The windows or their tabs changed; the record follows a moment later.
 pub fn changed() {
-    if QUITTING.get() || WRITE_PENDING.replace(true) {
+    let cx = app();
+    if cx.session.quitting.get() || cx.session.write_pending.replace(true) {
         return;
     }
     main_after(SETTLE, || {
-        WRITE_PENDING.set(false);
+        app().session.write_pending.set(false);
         remember();
     });
 }
 
 /// Writes down what the windows show now, and each folder's panels.
 pub fn remember() {
-    if QUITTING.get() {
+    if is_quitting() {
         return;
     }
     crate::window::save_layouts();

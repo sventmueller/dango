@@ -72,13 +72,31 @@ fn web_views(view: &NSView, found: &mut Vec<Retained<WKWebView>>) {
 /// What runs once a page said what is selected on it.
 type Waiting = Box<dyn FnOnce(Option<String>)>;
 
-thread_local! {
-    static WAITING: RefCell<HashMap<u64, Waiting>> = RefCell::new(HashMap::new());
-    static NEXT: std::cell::Cell<u64> = const { std::cell::Cell::new(1) };
+/// The answers awaited from pages about what is selected on them, by id.
+pub struct PageSelections {
+    waiting: RefCell<HashMap<u64, Waiting>>,
+    next: std::cell::Cell<u64>,
+}
+
+impl Default for PageSelections {
+    fn default() -> Self {
+        PageSelections {
+            waiting: RefCell::new(HashMap::new()),
+            next: std::cell::Cell::new(1),
+        }
+    }
+}
+
+fn with_waiting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Waiting>>) -> R) -> R {
+    f(&crate::context::app().agent.page_selections.waiting)
+}
+
+fn with_next<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+    f(&crate::context::app().agent.page_selections.next)
 }
 
 fn settle(key: u64, selection: Option<String>) {
-    if let Some(done) = WAITING.with(|w| w.borrow_mut().remove(&key)) {
+    if let Some(done) = with_waiting(|w| w.borrow_mut().remove(&key)) {
         done(selection);
     }
 }
@@ -104,13 +122,13 @@ pub fn browser(controller: &WindowController, done: impl FnOnce(Option<Attachmen
         .map(|s| s.to_string())
         .unwrap_or_default();
     let title = title.map(|t| t.to_string()).unwrap_or_default();
-    let key = NEXT.with(|n| {
+    let key = with_next(|n| {
         let key = n.get();
         n.set(key + 1);
         key
     });
     let page = (url, title);
-    WAITING.with(|w| {
+    with_waiting(|w| {
         w.borrow_mut().insert(
             key,
             Box::new(move |selection: Option<String>| done(Some(page_attachment(&page.0, &page.1, selection)))),

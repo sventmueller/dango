@@ -47,7 +47,7 @@ define_class!(
                 }
                 let (agent, entry) = (self.ivars().agent, self.ivars().entry);
                 main_soon(move || {
-                    DOCS.with(|docs| {
+                    with_docs(|docs| {
                         docs.borrow_mut()
                             .retain(|d| !(d.agent == agent && d.entry == entry && d.root.window().is_none()));
                     });
@@ -70,12 +70,18 @@ struct PlanDoc {
     buttons: [Retained<NSButton>; 4],
 }
 
-thread_local! {
-    static DOCS: RefCell<Vec<Rc<PlanDoc>>> = const { RefCell::new(Vec::new()) };
+/// The open plan documents.
+#[derive(Default)]
+pub struct PlanDocs {
+    docs: RefCell<Vec<Rc<PlanDoc>>>,
+}
+
+fn with_docs<R>(f: impl FnOnce(&RefCell<Vec<Rc<PlanDoc>>>) -> R) -> R {
+    f(&crate::context::app().agent.plan.docs.docs)
 }
 
 fn doc(agent: u64, entry: u64) -> Option<Rc<PlanDoc>> {
-    DOCS.with(|docs| {
+    with_docs(|docs| {
         docs.borrow()
             .iter()
             .find(|d| d.agent == agent && d.entry == entry)
@@ -332,7 +338,7 @@ pub fn open(tab: &AgentTab, id: u64) {
         return focus(&controller, tab.key, id);
     }
     let doc = PlanDoc::build(tab, id, &plan.plan);
-    DOCS.with(|docs| docs.borrow_mut().push(doc.clone()));
+    with_docs(|docs| docs.borrow_mut().push(doc.clone()));
     doc.show(tab, &plan, &tab.plan_notes(id));
     let view: Retained<NSView> = Retained::into_super(doc.root.clone());
     let title = tf("Plan · {}", &[&super::super::format::first_line(&tab.title(), 32)]);
@@ -360,7 +366,7 @@ pub fn show(tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
 
 /// The plans of the AI tab `agent` that are open as documents.
 pub fn open_entries(agent: u64) -> Vec<u64> {
-    DOCS.with(|docs| {
+    with_docs(|docs| {
         docs.borrow()
             .iter()
             .filter(|d| d.agent == agent)

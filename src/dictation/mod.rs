@@ -100,16 +100,21 @@ struct Hub {
 }
 
 thread_local! {
-    static HUB: RefCell<Option<Hub>> = const { RefCell::new(None) };
     static TARGET: OnceCell<Retained<DictationTarget>> = const { OnceCell::new() };
+}
+
+/// The dictations and what fn does.
+#[derive(Default)]
+pub struct DictationState {
+    hub: RefCell<Option<Hub>>,
+    fn_key: RefCell<fn_key::FnKey>,
 }
 
 /// `f` with the hub, made on first use; `None` while the hub is in use further up, which a modal session can cause.
 fn with_hub<R>(f: impl FnOnce(&mut Hub) -> R) -> Option<R> {
-    HUB.with(|cell| {
-        let mut hub = cell.try_borrow_mut().ok()?;
-        Some(f(hub.get_or_insert_with(Hub::new)))
-    })
+    let cx = crate::context::app();
+    let mut hub = cx.dictation.hub.try_borrow_mut().ok()?;
+    Some(f(hub.get_or_insert_with(Hub::new)))
 }
 
 impl Hub {

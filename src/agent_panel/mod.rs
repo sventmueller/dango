@@ -32,6 +32,8 @@ const SIDE: f64 = 8.0;
 
 /// The panel of one window.
 pub struct AgentPanel {
+    /// The panel's id among the open ones, which callbacks carry.
+    id: usize,
     controller: Weak<WindowController>,
     root: std::path::PathBuf,
     view: Retained<NSStackView>,
@@ -42,12 +44,20 @@ pub struct AgentPanel {
     agents: agents::Agents,
 }
 
-thread_local! {
-    static PANELS: RefCell<Vec<Rc<AgentPanel>>> = const { RefCell::new(Vec::new()) };
+/// The agent panels of every window.
+#[derive(Default)]
+pub struct AgentPanels {
+    panels: RefCell<Vec<Rc<AgentPanel>>>,
+    last_id: Cell<usize>,
+    offered_agents: agents::OfferedAgents,
+}
+
+fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentPanel>>>) -> R) -> R {
+    f(&crate::context::app().agent_panels.panels)
 }
 
 fn panel_of(controller: &WindowController) -> Option<Rc<AgentPanel>> {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         panels
             .borrow()
             .iter()
@@ -57,12 +67,12 @@ fn panel_of(controller: &WindowController) -> Option<Rc<AgentPanel>> {
 }
 
 fn panel_by_key(key: usize) -> Option<Rc<AgentPanel>> {
-    PANELS.with(|panels| panels.borrow().iter().find(|p| Rc::as_ptr(p) as usize == key).cloned())
+    with_panels(|panels| panels.borrow().iter().find(|p| p.id == key).cloned())
 }
 
 /// Puts the AI panel of the window's folder in place of the Agents page.
 pub fn attach(controller: &WindowController) {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         panels
             .borrow_mut()
             .retain(|p| p.controller.load().is_some_and(|c| !std::ptr::eq(&*c, controller)))
@@ -70,7 +80,7 @@ pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     let panel = AgentPanel::new(controller, root);
     controller.set_panel_page(Panel::Agents, &panel.view);
-    PANELS.with(|panels| panels.borrow_mut().push(panel.clone()));
+    with_panels(|panels| panels.borrow_mut().push(panel.clone()));
     panel.reload();
 }
 
@@ -80,7 +90,7 @@ pub fn refresh(controller: &WindowController) {
     if panel.scheduled.replace(true) {
         return;
     }
-    let key = Rc::as_ptr(&panel) as usize;
+    let key = panel.id;
     main_after(Duration::from_millis(400), move || {
         if let Some(panel) = panel_by_key(key) {
             panel.scheduled.set(false);
@@ -203,7 +213,10 @@ impl AgentPanel {
             bottom: 8.0,
             right: ACCESSORY_INSET,
         });
+        let ids = &controller.context().agent_panels.last_id;
+        ids.set(ids.get() + 1);
         let panel = Rc::new(AgentPanel {
+            id: ids.get(),
             controller: Weak::from(controller),
             root,
             view,
@@ -213,7 +226,7 @@ impl AgentPanel {
             scheduled: Cell::new(false),
             agents,
         });
-        panel.sessions_source.set_panel(Rc::as_ptr(&panel) as usize);
+        panel.sessions_source.set_panel(panel.id);
         let scroll = scroll(mtm, &panel.sessions);
         panel.view.addArrangedSubview(&scroll);
         scroll.setTranslatesAutoresizingMaskIntoConstraints(false);

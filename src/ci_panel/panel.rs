@@ -310,13 +310,19 @@ define_class!(
     }
 );
 
-thread_local! {
-    static PANELS: RefCell<Vec<Retained<CiPanel>>> = const { RefCell::new(Vec::new()) };
+/// The CI panels of every window.
+#[derive(Default)]
+pub struct CiPanels {
+    panels: RefCell<Vec<Retained<CiPanel>>>,
+}
+
+fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Retained<CiPanel>>>) -> R) -> R {
+    f(&crate::context::app().ci_panels.panels)
 }
 
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
-    let panel = PANELS.with(|panels| panels.borrow().iter().find(|p| p.ivars().id == id).cloned());
+    let panel = with_panels(|panels| panels.borrow().iter().find(|p| p.ivars().id == id).cloned());
     if let Some(panel) = panel {
         f(&panel);
     }
@@ -325,7 +331,7 @@ pub fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
 /// The panels of windows that show `root`.
 pub fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         let mut panels = panels.borrow_mut();
         panels.retain(|p| p.ivars().controller.load().is_some());
         panels.iter().filter(|p| p.ivars().root == root).cloned().collect()
@@ -334,7 +340,7 @@ pub fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
 
 /// The panels of all open windows.
 pub fn all() -> Vec<Retained<CiPanel>> {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         let mut panels = panels.borrow_mut();
         panels.retain(|p| p.ivars().controller.load().is_some());
         panels.clone()
@@ -343,7 +349,7 @@ pub fn all() -> Vec<Retained<CiPanel>> {
 
 /// The panel of `controller`'s window.
 pub fn of(controller: &WindowController) -> Option<Retained<CiPanel>> {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         panels
             .borrow()
             .iter()
@@ -357,7 +363,7 @@ impl CiPanel {
     pub fn attach(controller: &WindowController) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
-        PANELS.with(|panels| {
+        with_panels(|panels| {
             panels
                 .borrow_mut()
                 .retain(|p| p.controller().is_some_and(|c| !std::ptr::eq(&*c, controller)));
@@ -365,7 +371,7 @@ impl CiPanel {
         let panel = CiPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Ci, &panel.ui().page);
         controller.set_panel_accessory(Panel::Ci, &panel.ui().header);
-        PANELS.with(|panels| panels.borrow_mut().push(panel.clone()));
+        with_panels(|panels| panels.borrow_mut().push(panel.clone()));
         panel.refresh(true);
     }
 

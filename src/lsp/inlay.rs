@@ -25,12 +25,29 @@ const SCROLL_DELAY: f64 = 0.15;
 thread_local! {
     /// Whether hints are on, and the languages that leave them out, as the user last chose.
     static CHOSEN: RefCell<Option<(bool, Vec<String>)>> = const { RefCell::new(None) };
+}
+
+/// Where the inlay hint requests of the editors stand.
+#[derive(Default)]
+pub struct InlayRequests {
     /// The last question of each editor by serial, so that the answer to an older one is dropped.
-    static ASKED: RefCell<HashMap<u64, u64>> = RefCell::new(HashMap::new());
-    static NEXT: Cell<u64> = const { Cell::new(0) };
+    asked: RefCell<HashMap<u64, u64>>,
+    next: Cell<u64>,
     /// The document revision the hints of each editor by serial belong to. While it holds, an answer for the lines on
     /// screen keeps the hints elsewhere, so scrolling back neither waits for them nor moves the text again.
-    static SHOWN: RefCell<HashMap<u64, u64>> = RefCell::new(HashMap::new());
+    shown: RefCell<HashMap<u64, u64>>,
+}
+
+fn with_asked<R>(f: impl FnOnce(&RefCell<HashMap<u64, u64>>) -> R) -> R {
+    f(&crate::context::app().inlay_requests.asked)
+}
+
+fn with_next<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
+    f(&crate::context::app().inlay_requests.next)
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<HashMap<u64, u64>>) -> R) -> R {
+    f(&crate::context::app().inlay_requests.shown)
 }
 
 fn chosen() -> (bool, Vec<String>) {
@@ -145,11 +162,11 @@ pub fn request(view: &EditorTextView) {
     };
     let serial = view.ivars().lsp.borrow().serial;
     let revision = view.document().revision();
-    let asked = NEXT.with(|next| {
+    let asked = with_next(|next| {
         next.set(next.get() + 1);
         next.get()
     });
-    ASKED.with(|all| all.borrow_mut().insert(serial, asked));
+    with_asked(|all| all.borrow_mut().insert(serial, asked));
     let sent = server.inlay_hints(&uri, range, move |answer| {
         main_soon(move || arrived(serial, revision, asked, visible, answer));
     });
@@ -168,7 +185,7 @@ pub fn scrolled(view: &EditorTextView) {
 /// The server's hints of `view` may have changed everywhere: the next answer replaces them all.
 pub fn forget(view: &EditorTextView) {
     let serial = view.ivars().lsp.borrow().serial;
-    SHOWN.with(|shown| shown.borrow_mut().remove(&serial));
+    with_shown(|shown| shown.borrow_mut().remove(&serial));
 }
 
 fn arrived(
@@ -178,11 +195,11 @@ fn arrived(
     lines: std::ops::Range<usize>,
     answer: Result<Vec<InlayHint>, ide_lsp::Error>,
 ) {
-    if ASKED.with(|all| all.borrow().get(&serial).copied()) != Some(asked) {
+    if with_asked(|all| all.borrow().get(&serial).copied()) != Some(asked) {
         return;
     }
     let Some(view) = editor::find_editor(serial) else {
-        ASKED.with(|all| all.borrow_mut().remove(&serial));
+        with_asked(|all| all.borrow_mut().remove(&serial));
         return;
     };
     match answer {
@@ -191,7 +208,7 @@ fn arrived(
                 let document = view.document();
                 hints.into_iter().map(|hint| inset(document.text(), hint)).collect()
             };
-            let same = SHOWN.with(|shown| shown.borrow_mut().insert(serial, revision)) == Some(revision);
+            let same = with_shown(|shown| shown.borrow_mut().insert(serial, revision)) == Some(revision);
             if same {
                 let elsewhere = insets::of(&view, Layer::Inlay)
                     .into_iter()

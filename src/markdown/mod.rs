@@ -3,6 +3,7 @@
 //! The commands go through the editor's one action `ideMarkdown:`, told apart by the menu item's tag.
 
 mod export;
+pub use export::Exports;
 mod format;
 mod paste;
 mod splat_app;

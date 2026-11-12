@@ -44,13 +44,27 @@ const INSET: f64 = 9.0;
 /// The width of the dot before an agent's name.
 const MARK: f64 = 16.0;
 
-thread_local! {
+/// The agent registry window, what its installations have got to and what it lists.
+#[derive(Default)]
+pub struct AgentRegistryWindow {
     /// What each installation running now has got to, by the agent's id; the registry's fetch under the empty id.
-    static PROGRESS: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+    progress: RefCell<HashMap<String, String>>,
     /// The registry window, kept while the app runs.
-    static WINDOW: RefCell<Option<Retained<NSPanel>>> = const { RefCell::new(None) };
+    window: RefCell<Option<Retained<NSPanel>>>,
     /// The registry's ids in the window's order, which its buttons' tags count.
-    static SHOWN: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    shown: RefCell<Vec<String>>,
+}
+
+fn with_progress<R>(f: impl FnOnce(&RefCell<HashMap<String, String>>) -> R) -> R {
+    f(&crate::context::app().settings.agent_registry.progress)
+}
+
+fn with_window<R>(f: impl FnOnce(&RefCell<Option<Retained<NSPanel>>>) -> R) -> R {
+    f(&crate::context::app().settings.agent_registry.window)
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<String>>) -> R) -> R {
+    f(&crate::context::app().settings.agent_registry.shown)
 }
 
 /// A button of a line: its title, its action and its tag.
@@ -122,7 +136,7 @@ define_class!(
         #[unsafe(method(ideAgentsInstallEntry:))]
         fn install_entry_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
-                let id = SHOWN.with(|s| usize::try_from(tag(sender)).ok().and_then(|n| s.borrow().get(n).cloned()));
+                let id = with_shown(|s| usize::try_from(tag(sender)).ok().and_then(|n| s.borrow().get(n).cloned()));
                 let entry = id.and_then(|id| crate::agent::cached_register().and_then(|(r, _)| r.entry(&id).cloned()));
                 if let Some(entry) = entry
                     && let Ok(plan) = Plan::of_entry(&entry)
@@ -204,11 +218,11 @@ fn mark_view(mtm: MainThreadMarker, mark: Mark) -> Retained<NSView> {
 
 /// Installs `plan` after the user agreed, showing how far it got in the tab.
 fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
-    if PROGRESS.with(|p| p.borrow().contains_key(id)) || !crate::agent::confirm_install(mtm, name, &plan) {
+    if with_progress(|p| p.borrow().contains_key(id)) || !crate::agent::confirm_install(mtm, name, &plan) {
         return;
     }
     let (id, name) = (id.to_string(), name.to_string());
-    PROGRESS.with(|p| p.borrow_mut().insert(id.clone(), tf("{} wird installiert …", &[&name])));
+    with_progress(|p| p.borrow_mut().insert(id.clone(), tf("{} wird installiert …", &[&name])));
     super::agents_changed();
     let _ = std::thread::Builder::new().name("acp-install".into()).spawn(move || {
         let env = crate::environment::wait(Duration::from_secs(15))
@@ -217,7 +231,7 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
         let installer = Installer::new(Supervisor::global(), env, installs(), Arc::new(Http::new()));
         let result = installer.install(&plan, true, &|_| {});
         main_soon(move || {
-            PROGRESS.with(|p| p.borrow_mut().remove(&id));
+            with_progress(|p| p.borrow_mut().remove(&id));
             if let Err(error) = result
                 && let Some(mtm) = MainThreadMarker::new()
             {
@@ -231,7 +245,7 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
 
 /// Fetches the registry on the user's request and keeps it.
 fn fetch() {
-    PROGRESS.with(|p| {
+    with_progress(|p| {
         p.borrow_mut()
             .insert(String::new(), t("Register wird geladen …").to_string())
     });
@@ -239,7 +253,7 @@ fn fetch() {
     let _ = std::thread::Builder::new().name("acp-register".into()).spawn(|| {
         let result = Register::fetch(&Http::new()).map(|r| r.entries.len());
         main_soon(move || {
-            PROGRESS.with(|p| p.borrow_mut().remove(""));
+            with_progress(|p| p.borrow_mut().remove(""));
             if let Err(error) = result
                 && let Some(mtm) = MainThreadMarker::new()
             {
@@ -255,7 +269,7 @@ fn fetch() {
 /// program is there says so, and Claude over ACP, only a fallback for Claude's own connection, never reads as Claude
 /// missing.
 fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (Mark, String, Vec<Action>) {
-    if let Some(progress) = PROGRESS.with(|p| p.borrow().get(preset.id).cloned()) {
+    if let Some(progress) = with_progress(|p| p.borrow().get(preset.id).cloned()) {
         return (Mark::Busy, progress, Vec::new());
     }
     let launch = crate::agent::launch_of(&AcpAgent::of_preset(preset), env, std::path::Path::new("/"));
@@ -328,7 +342,7 @@ fn claude_state(env: &[(String, String)]) -> (Mark, String) {
 /// What the tab says about the registry, and what it offers.
 fn register_state() -> (String, Vec<Action>) {
     match (
-        PROGRESS.with(|p| p.borrow().get("").cloned()),
+        with_progress(|p| p.borrow().get("").cloned()),
         crate::agent::cached_register(),
     ) {
         (Some(progress), _) => (progress, Vec::new()),
@@ -670,7 +684,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
         );
         crate::util::set_label(&install, Some(&format!("{}: {}", t("Installieren …"), entry.name)));
         install.setHidden(!installable);
-        install.setEnabled(PROGRESS.with(|p| !p.borrow().contains_key(&entry.id)));
+        install.setEnabled(with_progress(|p| !p.borrow().contains_key(&entry.id)));
         let head = NSStackView::stackViewWithViews(
             &objc2_foundation::NSArray::from_retained_slice(&[
                 Retained::into_super(Retained::into_super(name)),
@@ -702,7 +716,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
         }
         shown.push(entry.id.clone());
     }
-    SHOWN.with(|s| *s.borrow_mut() = shown);
+    with_shown(|s| *s.borrow_mut() = shown);
     column
 }
 
@@ -712,7 +726,7 @@ fn show_register(target: &AgentsSettings) {
     let Some((register, _)) = crate::agent::cached_register() else {
         return;
     };
-    let panel = WINDOW.with(|w| {
+    let panel = with_window(|w| {
         w.borrow_mut()
             .get_or_insert_with(|| {
                 let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
@@ -761,7 +775,7 @@ fn show_register(target: &AgentsSettings) {
 
 /// Redraws the registry window, if it is open, after an installation or a new fetch.
 fn refresh_register() {
-    let open = WINDOW.with(|w| w.borrow().as_ref().is_some_and(|p| p.isVisible()));
+    let open = with_window(|w| w.borrow().as_ref().is_some_and(|p| p.isVisible()));
     if open && let Some(target) = super::agents_tab_now() {
         show_register(&target);
     }
@@ -770,8 +784,8 @@ fn refresh_register() {
 /// The registry window and the ids it lists, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn register_window() -> Option<(Retained<NSPanel>, Vec<String>)> {
-    let panel = WINDOW.with(|w| w.borrow().clone())?;
-    let ids = SHOWN.with(|s| s.borrow().clone());
+    let panel = with_window(|w| w.borrow().clone())?;
+    let ids = with_shown(|s| s.borrow().clone());
     Some((panel, ids))
 }
 

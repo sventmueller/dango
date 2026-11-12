@@ -30,9 +30,22 @@ const PARTS_SHOWN: usize = 6;
 
 thread_local! {
     static OPENER: OnceCell<Retained<Opener>> = const { OnceCell::new() };
+}
+
+/// The context gauges of the AI tabs and the breakdown on view.
+#[derive(Default)]
+pub struct ContextGauges {
     /// The gauge of each tab, by the tab's key.
-    static GAUGES: RefCell<HashMap<u64, Weak<NSButton>>> = RefCell::new(HashMap::new());
-    static SHOWN: RefCell<Option<Shown>> = const { RefCell::new(None) };
+    gauges: RefCell<HashMap<u64, Weak<NSButton>>>,
+    shown: RefCell<Option<Shown>>,
+}
+
+fn with_gauges<R>(f: impl FnOnce(&RefCell<HashMap<u64, Weak<NSButton>>>) -> R) -> R {
+    f(&crate::context::app().agent.context_gauges.gauges)
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
+    f(&crate::context::app().agent.context_gauges.shown)
 }
 
 /// The popover on show, the tab it belongs to and the breakdown it shows.
@@ -97,7 +110,7 @@ pub fn gauge(mtm: MainThreadMarker, key: u64, row: &NSStackView, ring: &NSView, 
     ] {
         constraint.setActive(true);
     }
-    GAUGES.with(|gauges| gauges.borrow_mut().insert(key, Weak::from(&*button)));
+    with_gauges(|gauges| gauges.borrow_mut().insert(key, Weak::from(&*button)));
     button
 }
 
@@ -107,7 +120,7 @@ pub fn follow(gauge: &NSButton, usage: &Usage) {
     let Some(breakdown) = &usage.breakdown else { return };
     let key = u64::try_from(gauge.tag()).unwrap_or(0);
     let answered = (breakdown.at, breakdown.exact);
-    let open = SHOWN.with(|shown| {
+    let open = with_shown(|shown| {
         let mut shown = shown.borrow_mut();
         let open = shown
             .as_mut()
@@ -129,7 +142,7 @@ fn show(key: u64, anchor: &NSView) {
     let Some(breakdown) = &thread.usage().breakdown else {
         return;
     };
-    if let Some(shown) = SHOWN.with(|shown| shown.borrow_mut().take()) {
+    if let Some(shown) = with_shown(|shown| shown.borrow_mut().take()) {
         shown.popover.close();
     }
     let mtm = anchor.mtm();
@@ -142,7 +155,7 @@ fn show(key: u64, anchor: &NSView) {
     popover.setContentViewController(Some(&controller));
     popover.setContentSize(view.fittingSize());
     popover.showRelativeToRect_ofView_preferredEdge(anchor.bounds(), anchor, NSRectEdge::MaxY);
-    SHOWN.with(|shown| {
+    with_shown(|shown| {
         *shown.borrow_mut() = Some(Shown {
             key,
             popover,
@@ -614,7 +627,7 @@ pub fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
 /// Clicks the gauge of the tab with `key`, as the mouse would; whether it was there to click.
 #[cfg(feature = "selftest")]
 pub fn click(key: u64) -> bool {
-    let gauge = GAUGES.with(|gauges| gauges.borrow().get(&key).and_then(Weak::load));
+    let gauge = with_gauges(|gauges| gauges.borrow().get(&key).and_then(Weak::load));
     match gauge {
         Some(gauge) if !gauge.isHidden() => {
             // SAFETY: A click without a sender, which sends the button's action to its target as the mouse would.
@@ -638,14 +651,14 @@ pub struct Seen {
 
 #[cfg(feature = "selftest")]
 pub fn seen(key: u64) -> Seen {
-    let offered = GAUGES.with(|gauges| {
+    let offered = with_gauges(|gauges| {
         gauges
             .borrow()
             .get(&key)
             .and_then(Weak::load)
             .is_some_and(|g| !g.isHidden())
     });
-    let view = SHOWN.with(|shown| {
+    let view = with_shown(|shown| {
         shown
             .borrow()
             .as_ref()
@@ -668,7 +681,7 @@ pub fn seen(key: u64) -> Seen {
 /// Closes the popover, if one is shown.
 #[cfg(feature = "selftest")]
 pub fn close() {
-    if let Some(shown) = SHOWN.with(|shown| shown.borrow_mut().take()) {
+    if let Some(shown) = with_shown(|shown| shown.borrow_mut().take()) {
         shown.popover.close();
     }
 }

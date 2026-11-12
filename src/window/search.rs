@@ -23,6 +23,7 @@ use super::WindowController;
 use crate::util::{guarded, main_after, main_soon, ns};
 
 mod hierarchy;
+pub use hierarchy::HierarchyPanels;
 mod replace;
 mod rows;
 mod views;
@@ -44,9 +45,27 @@ const ESCAPE_KEY: u16 = 53;
 /// How far the rows move toward the leading edge from where a source list puts them.
 const OUTDENT: f64 = 4.0;
 
-thread_local! {
-    static PANELS: RefCell<Vec<Weak<SearchPanel>>> = const { RefCell::new(Vec::new()) };
-    static NEXT_ID: std::cell::Cell<u64> = const { std::cell::Cell::new(1) };
+/// The search panels of every window and the id the next one gets.
+pub struct SearchPanels {
+    panels: RefCell<Vec<Weak<SearchPanel>>>,
+    next_id: std::cell::Cell<u64>,
+}
+
+impl Default for SearchPanels {
+    fn default() -> Self {
+        SearchPanels {
+            panels: RefCell::new(Vec::new()),
+            next_id: std::cell::Cell::new(1),
+        }
+    }
+}
+
+fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<SearchPanel>>>) -> R) -> R {
+    f(&crate::context::app().search_panels.panels)
+}
+
+fn with_next_id<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+    f(&crate::context::app().search_panels.next_id)
 }
 
 /// Which option a toggle button stands for.
@@ -121,7 +140,7 @@ pub fn buffer_edited(path: &Path) {
 }
 
 fn panels() -> Vec<Retained<SearchPanel>> {
-    PANELS.with(|panels| panels.borrow().iter().filter_map(Weak::load).collect())
+    with_panels(|panels| panels.borrow().iter().filter_map(Weak::load).collect())
 }
 
 /// Where an outline item points.
@@ -375,7 +394,7 @@ impl SearchOutlineView {
 
 /// The panel with `id`, if its window is still open.
 fn panel(id: u64) -> Option<Retained<SearchPanel>> {
-    PANELS.with(|panels| {
+    with_panels(|panels| {
         let mut panels = panels.borrow_mut();
         panels.retain(|p| p.load().is_some());
         panels.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
@@ -480,7 +499,7 @@ fn status_text(state: &State) -> (String, bool) {
 impl SearchPanel {
     /// The search of `controller`'s folder at `root`.
     pub fn new(mtm: MainThreadMarker, controller: &WindowController, root: &Path) -> Retained<Self> {
-        let id = NEXT_ID.with(|next| {
+        let id = with_next_id(|next| {
             let id = next.get();
             next.set(id + 1);
             id
@@ -502,7 +521,7 @@ impl SearchPanel {
             crate::util::pin_edges(tree, page);
         }
         let _ = this.ivars().hierarchy.set(hierarchy);
-        PANELS.with(|panels| panels.borrow_mut().push(Weak::from(&*this)));
+        with_panels(|panels| panels.borrow_mut().push(Weak::from(&*this)));
         this
     }
 

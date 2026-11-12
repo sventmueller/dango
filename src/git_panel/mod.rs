@@ -24,7 +24,10 @@ mod trees;
 mod ui;
 mod work;
 
+use std::cell::RefCell;
 use std::path::Path;
+
+use objc2::rc::{Retained, Weak};
 
 use crate::window::WindowController;
 pub use commands::menu;
@@ -37,6 +40,14 @@ pub use toolbar::{TOOLBAR_ID, toolbar_item};
 pub use toolbar::{choose as toolbar_choose, seen as toolbar_seen};
 pub(crate) use ui::empty_state;
 pub use work::git;
+
+/// The Git panels, diff tabs and branch toolbar items of every window.
+#[derive(Default)]
+pub struct Open {
+    panels: RefCell<Vec<Retained<panel::GitPanel>>>,
+    diff_tabs: RefCell<Vec<(u64, Weak<diff::DiffTab>)>>,
+    toolbar_items: RefCell<Vec<toolbar::Shown>>,
+}
 
 /// Puts the Git panel of the window's folder in place.
 pub fn attach(controller: &WindowController) {

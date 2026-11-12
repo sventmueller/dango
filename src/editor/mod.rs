@@ -23,7 +23,6 @@ mod style;
 mod view;
 mod whitespace;
 
-use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use ide_document::recovery::{Recovered, RecoveryId};
@@ -42,17 +41,21 @@ use crate::util::{constant, ns};
 use crate::window::{TabKind, WindowController};
 pub use view::EditorTextView;
 
-thread_local! {
-    static OPEN: RefCell<Vec<Weak<EditorTextView>>> = const { RefCell::new(Vec::new()) };
+/// The state of the editors beside the list of them.
+#[derive(Default)]
+pub struct EditorState {
+    comparisons: compare::Comparisons,
+    recovery_copies: recovery::RecoveryCopies,
+    #[cfg(feature = "selftest")]
+    forced_contrast: insets::ForcedContrast,
 }
 
 /// The editors still open.
 fn open_editors() -> Vec<Retained<EditorTextView>> {
-    OPEN.with(|open| {
-        let mut open = open.borrow_mut();
-        open.retain(|view| view.load().is_some());
-        open.iter().filter_map(Weak::load).collect()
-    })
+    let cx = crate::context::app();
+    let mut open = cx.editors.borrow_mut();
+    open.retain(|view| view.load().is_some());
+    open.iter().filter_map(Weak::load).collect()
 }
 
 /// The editors still open, in every window.
@@ -218,10 +221,10 @@ pub fn closing(controller: &WindowController, id: isize) {
     if let Some(view) = view {
         crate::lsp::closed(&view);
         crate::markdown::closing(&view);
-        OPEN.with(|open| {
-            open.borrow_mut()
-                .retain(|w| w.load().is_some_and(|v| !std::ptr::eq(&*v, &*view)));
-        });
+        crate::context::app()
+            .editors
+            .borrow_mut()
+            .retain(|w| w.load().is_some_and(|v| !std::ptr::eq(&*v, &*view)));
     }
 }
 
@@ -404,7 +407,7 @@ fn add_tab(
         controller.add_tab(TabKind::Editor, key, title, container)
     };
     view.ivars().tab.set(id);
-    OPEN.with(|open| open.borrow_mut().push(Weak::from(&*view)));
+    crate::context::app().editors.borrow_mut().push(Weak::from(&*view));
     highlight::recolor_all(&view);
     crate::lsp::opened(&view);
     changes::reload(&view, true);

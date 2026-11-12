@@ -65,9 +65,14 @@ define_class!(
     }
 );
 
-thread_local! {
+#[derive(Default)]
+pub struct CommitMessageShown {
     /// The part on view, which its controls send their actions to.
-    static SHOWN: RefCell<Option<Retained<CommitMessageSettings>>> = const { RefCell::new(None) };
+    shown: RefCell<Option<Retained<CommitMessageSettings>>>,
+}
+
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<CommitMessageSettings>>>) -> R) -> R {
+    f(&crate::context::app().settings.commit_message_settings.shown)
 }
 
 /// The heading, notes and controls of the part, for the Agent tab's column of views.
@@ -132,7 +137,7 @@ pub fn views(
         revoke,
     });
     this.fill();
-    SHOWN.with(|shown| *shown.borrow_mut() = Some(this));
+    with_shown(|shown| *shown.borrow_mut() = Some(this));
     views
 }
 
@@ -235,7 +240,7 @@ impl CommitMessageSettings {
             return;
         }
         own_agent::load_models(endpoint, |result| {
-            let Some(this) = SHOWN.with(|shown| shown.borrow().clone()) else {
+            let Some(this) = with_shown(|shown| shown.borrow().clone()) else {
                 return;
             };
             let Some(views) = this.ivars().views.get() else { return };
@@ -271,7 +276,7 @@ pub mod selftest {
 
     /// The line about consent and whether its button can take permissions back.
     pub fn allowed() -> Option<(String, bool)> {
-        let shown = super::SHOWN.with(|shown| shown.borrow().clone())?;
+        let shown = super::with_shown(|shown| shown.borrow().clone())?;
         let views = shown.ivars().views.get()?;
         Some((views.allowed.stringValue().to_string(), views.revoke.isEnabled()))
     }
@@ -279,7 +284,7 @@ pub mod selftest {
     /// How far right the part's controls reach past the left edge of the provider's menu, and the column's width;
     /// scrolls the part into view first.
     pub fn reach() -> Option<(f64, f64)> {
-        let shown = super::SHOWN.with(|shown| shown.borrow().clone())?;
+        let shown = super::with_shown(|shown| shown.borrow().clone())?;
         let views = shown.ivars().views.get()?;
         views.revoke.scrollRectToVisible(views.revoke.bounds());
         let in_window = |view: &objc2_app_kit::NSView| view.convertRect_toView(view.bounds(), None);
@@ -301,7 +306,7 @@ pub mod selftest {
 
     /// Takes every permission back, as the button does.
     pub fn revoke() {
-        if let Some(shown) = super::SHOWN.with(|shown| shown.borrow().clone()) {
+        if let Some(shown) = super::with_shown(|shown| shown.borrow().clone()) {
             crate::git_panel::message::source::revoke_all();
             shown.fill();
         }

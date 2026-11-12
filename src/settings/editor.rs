@@ -67,8 +67,14 @@ define_class!(
     }
 );
 
-thread_local! {
-    static TAB: RefCell<Option<Retained<EditorSettings>>> = const { RefCell::new(None) };
+/// The editor part of the settings on view, which its controls send their actions to.
+#[derive(Default)]
+pub struct EditorSettingsShown {
+    tab: RefCell<Option<Retained<EditorSettings>>>,
+}
+
+fn with_tab<R>(f: impl FnOnce(&RefCell<Option<Retained<EditorSettings>>>) -> R) -> R {
+    f(&crate::context::app().settings.editor_settings.tab)
 }
 
 fn state(on: bool) -> isize {
@@ -144,7 +150,7 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
         blame: blame.clone(),
     });
     target.reload();
-    TAB.with(|tab| *tab.borrow_mut() = Some(target));
+    with_tab(|tab| *tab.borrow_mut() = Some(target));
     vec![
         vec![
             label(mtm, t("Inlay-Hinweise:")).into_super().into_super(),
@@ -159,7 +165,7 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
 
 /// Shows the editor's switches as the settings are now, when the window comes to the front.
 pub fn reload() {
-    TAB.with(|tab| {
+    with_tab(|tab| {
         if let Some(tab) = tab.borrow().as_ref() {
             tab.reload();
         }
@@ -170,7 +176,7 @@ pub fn reload() {
 /// blame at the line's end, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn shown() -> Option<(bool, Vec<String>, bool)> {
-    TAB.with(|tab| {
+    with_tab(|tab| {
         let tab = tab.borrow();
         let views = tab.as_ref()?.ivars().views.borrow();
         let views = views.as_ref()?;

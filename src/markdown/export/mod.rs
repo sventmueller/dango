@@ -121,7 +121,10 @@ pub fn start(
     window: Option<&NSWindow>,
     done: impl FnOnce(Outcome) + 'static,
 ) -> u64 {
-    let number = NEXT.replace(NEXT.get() + 1);
+    let number = crate::context::app()
+        .exports
+        .next
+        .replace(crate::context::app().exports.next.get() + 1);
     let what = match kind {
         Kind::Pdf => tf("„{}“ wird als PDF exportiert …", &[&source.title]),
         Kind::Html => tf("„{}“ wird als HTML exportiert …", &[&source.title]),
@@ -143,7 +146,7 @@ pub fn start(
     });
     let viewer: Rc<dyn Viewer> = Rc::new(Drawing(Rc::downgrade(&run)));
     let _ = run.viewer.set(viewer.clone());
-    RUNS.with(|runs| runs.borrow_mut().push(run));
+    with_runs(|runs| runs.borrow_mut().push(run));
     if keys.iter().all(drawn) {
         main_soon(move || go(number));
         return number;
@@ -170,7 +173,7 @@ pub fn cancel(number: u64) {
 /// The button of the sheet of the export `number`: it cancels a running export and closes a failed one's sheet.
 fn sheet_button(number: u64, failed: bool) {
     if failed {
-        FAILED.with(|failed| {
+        with_failed(|failed| {
             let mut failed = failed.borrow_mut();
             if let Some(at) = failed.iter().position(|(n, _)| *n == number) {
                 failed.remove(at).1.close();
@@ -181,11 +184,30 @@ fn sheet_button(number: u64, failed: bool) {
     }
 }
 
-thread_local! {
-    static RUNS: RefCell<Vec<Rc<Run>>> = const { RefCell::new(Vec::new()) };
+/// The exports that run and the sheets of those that failed.
+pub struct Exports {
+    runs: RefCell<Vec<Rc<Run>>>,
     /// The sheets of exports that failed, which stay until the user closes them.
-    static FAILED: RefCell<Vec<(u64, Sheet)>> = const { RefCell::new(Vec::new()) };
-    static NEXT: Cell<u64> = const { Cell::new(1) };
+    failed: RefCell<Vec<(u64, Sheet)>>,
+    next: Cell<u64>,
+}
+
+impl Default for Exports {
+    fn default() -> Self {
+        Exports {
+            runs: RefCell::new(Vec::new()),
+            failed: RefCell::new(Vec::new()),
+            next: Cell::new(1),
+        }
+    }
+}
+
+fn with_runs<R>(f: impl FnOnce(&RefCell<Vec<Rc<Run>>>) -> R) -> R {
+    f(&crate::context::app().exports.runs)
+}
+
+fn with_failed<R>(f: impl FnOnce(&RefCell<Vec<(u64, Sheet)>>) -> R) -> R {
+    f(&crate::context::app().exports.failed)
 }
 
 /// Who hears how an export ended.
@@ -221,11 +243,11 @@ impl Run {
 }
 
 fn find(number: u64) -> Option<Rc<Run>> {
-    RUNS.with(|runs| runs.borrow().iter().find(|run| run.number == number).cloned())
+    with_runs(|runs| runs.borrow().iter().find(|run| run.number == number).cloned())
 }
 
 fn take(number: u64) -> Option<Rc<Run>> {
-    RUNS.with(|runs| {
+    with_runs(|runs| {
         let mut runs = runs.borrow_mut();
         let at = runs.iter().position(|run| run.number == number)?;
         Some(runs.remove(at))
@@ -240,7 +262,7 @@ fn finish(number: u64, outcome: Outcome) {
         match &outcome {
             Outcome::Failed(reason) => {
                 sheet.failed(reason);
-                FAILED.with(|failed| failed.borrow_mut().push((number, sheet)));
+                with_failed(|failed| failed.borrow_mut().push((number, sheet)));
             }
             _ => sheet.close(),
         }
@@ -454,7 +476,7 @@ pub mod seen {
         if let Some(text) = super::find(number).and_then(|run| run.sheet.borrow().as_ref().map(super::Sheet::text)) {
             return Some(text);
         }
-        super::FAILED.with(|failed| {
+        super::with_failed(|failed| {
             failed
                 .borrow()
                 .iter()
@@ -465,7 +487,7 @@ pub mod seen {
 
     /// Presses the button of the sheet of the export `number`.
     pub fn press_sheet_button(number: u64) {
-        let failed = super::FAILED.with(|failed| failed.borrow().iter().any(|(n, _)| *n == number));
+        let failed = super::with_failed(|failed| failed.borrow().iter().any(|(n, _)| *n == number));
         super::sheet_button(number, failed);
     }
 }

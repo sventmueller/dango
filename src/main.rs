@@ -5,6 +5,7 @@ mod app;
 mod browser;
 mod ci_panel;
 mod command_line;
+mod context;
 mod diag;
 #[cfg(feature = "dictation")]
 mod dictation;
