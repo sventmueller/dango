@@ -193,8 +193,45 @@ fn scrolling(root: PathBuf) {
             if let Some(window) = window_of(&root).and_then(|c| c.window()) {
                 snapshot(&window, "preview-scrolled");
             }
+            smooth_scrolling(&root, &path);
             answers(root);
         },
+    );
+}
+
+/// Each small step of one side moves the other a little, rather than in jumps from paragraph to paragraph; upwards,
+/// as the editor stands near the end of the text.
+fn smooth_scrolling(root: &Path, path: &Path) {
+    let Some(view) = window_of(root).and_then(|c| editor(&c, "doc.md")) else {
+        return;
+    };
+    let editor_top = || view.visibleRect().origin.y;
+    let preview_top = || seen::scrolled(path).unwrap_or_default();
+    let step = |lead: &dyn Fn(f64), top: &dyn Fn() -> f64, other: &dyn Fn() -> f64| {
+        let start = top();
+        let mut seen = vec![other()];
+        for k in 1..=12 {
+            lead(start - 4.0 * f64::from(k));
+            seen.push(other());
+        }
+        seen
+    };
+    let follows = |seen: &[f64]| seen.windows(2).all(|w| w[1] < w[0]);
+    let by_editor = step(
+        &|y| view.scrollPoint(objc2_foundation::NSPoint::new(0.0, y)),
+        &editor_top,
+        &preview_top,
+    );
+    check(
+        "scrolling the editor in small steps moves the preview at every step",
+        follows(&by_editor),
+        format!("{by_editor:?}"),
+    );
+    let by_preview = step(&|y| seen::scroll_to(path, y), &preview_top, &editor_top);
+    check(
+        "scrolling the preview in small steps moves the editor at every step",
+        follows(&by_preview),
+        format!("{by_preview:?}"),
     );
 }
 

@@ -83,27 +83,26 @@ pub fn top_byte(view: &EditorTextView) -> Option<usize> {
 }
 
 /// Scrolls `view` so that the line holding byte `byte` is the first on screen.
+#[cfg(feature = "selftest")]
 pub fn scroll_to_byte(view: &EditorTextView, byte: usize) {
-    let Ok(at) = view.document().text().byte_to_utf16(byte) else {
-        return;
-    };
-    let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
-        return;
-    };
+    if let Some(y) = byte_y(view, byte) {
+        view.scrollPoint(NSPoint::new(view.visibleRect().origin.x, y));
+    }
+}
+
+/// The top of the line holding byte `byte`, in the view's coordinates.
+pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
+    let at = view.document().text().byte_to_utf16(byte).ok()?;
+    let layout = view.textLayoutManager()?;
+    let content = view.textContentStorage()?;
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
-    let Some(location) = content.locationFromLocation_withOffset(&start, isize::try_from(at).unwrap_or(isize::MAX))
-    else {
-        return;
-    };
+    let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).unwrap_or(isize::MAX))?;
     layout.ensureLayoutForRange(&objc2_app_kit::NSTextRange::initWithLocation(
         objc2_app_kit::NSTextRange::alloc(),
         &location,
     ));
-    let Some(fragment) = layout.textLayoutFragmentForLocation(&location) else {
-        return;
-    };
-    let y = fragment.layoutFragmentFrame().origin.y + view.textContainerOrigin().y;
-    view.scrollPoint(NSPoint::new(view.visibleRect().origin.x, y));
+    let fragment = layout.textLayoutFragmentForLocation(&location)?;
+    Some(fragment.layoutFragmentFrame().origin.y + view.textContainerOrigin().y)
 }
 
 /// The tab that shows `view`.

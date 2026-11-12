@@ -11,7 +11,8 @@ use objc2::runtime::ProtocolObject;
 use objc2_app_kit::{NSScrollView, NSViewBoundsDidChangeNotification};
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRange};
 use splat_markdown::text::Byte;
-use splat_preview::map::{Shown, preview_offset};
+use splat_preview::layout::Layout;
+use splat_preview::map::{Index, ParaPos, Shown, preview_offset};
 
 use super::markdown::Preview;
 use super::page::Views;
@@ -117,7 +118,21 @@ fn editor_scrolled(preview: &Preview) {
     let Some(byte) = crate::editor::top_byte(&editor) else {
         return;
     };
-    scroll_preview_to(preview, byte);
+    while_moving(preview, || {
+        let y = {
+            let shown = preview.shown.borrow();
+            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown) else {
+                return;
+            };
+            let guess = anchors.index.paras[..anchors.paras]
+                .partition_point(|place| para_src(anchors.laid, place).is_some_and(|src| src <= byte));
+            anchors.follow(guess, editor.visibleRect().origin.y, |pair| pair)
+        };
+        preview.sync.top.set(Some(byte));
+        if let Some(y) = y {
+            preview.views.text.scrollPoint(NSPoint::new(0.0, y));
+        }
+    });
 }
 
 fn scroll_preview_to(preview: &Preview, byte: usize) {
@@ -146,9 +161,105 @@ fn preview_scrolled(preview: &Preview) {
     }
     let Some(byte) = top_of_preview(preview) else { return };
     preview.sync.top.set(Some(byte));
-    if let Some(editor) = visible_editor(preview) {
-        while_moving(preview, || crate::editor::scroll_to_byte(&editor, byte));
+    let Some(editor) = visible_editor(preview) else { return };
+    while_moving(preview, || {
+        let y = {
+            let shown = preview.shown.borrow();
+            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown) else {
+                return;
+            };
+            let guess = char_at_top(&preview.views)
+                .and_then(|at| shown.index.para_at(Shown::new(at)))
+                .map_or(0, |i| i + 1);
+            anchors.follow(guess, preview.views.text.visibleRect().origin.y, |(e, p)| (p, e))
+        };
+        if let Some(y) = y {
+            editor.scrollPoint(NSPoint::new(editor.visibleRect().origin.x, y));
+        }
+    });
+}
+
+/// Places that show the same text, as the editor's y and the preview's: anchor 0 is both tops, the last both ends, and
+/// those between are the starts of the paragraphs in source order. Scrolling interpolates between the two around the
+/// top, so that the following side moves as smoothly as the leading one.
+struct Anchors<'a> {
+    editor: &'a EditorTextView,
+    views: &'a Views,
+    laid: &'a Layout,
+    index: &'a Index,
+    /// The paragraphs before the footnote definitions comrak moved to the end.
+    paras: usize,
+}
+
+impl<'a> Anchors<'a> {
+    fn new(editor: &'a EditorTextView, views: &'a Views, shown: &'a super::markdown::Shown) -> Option<Self> {
+        let laid = shown.layout.as_ref()?;
+        let index = &shown.index;
+        if laid.blocks.is_empty() || !index.fits(laid) {
+            return None;
+        }
+        let paras = index.paras.partition_point(|place| place.block < index.in_order);
+        Some(Self {
+            editor,
+            views,
+            laid,
+            index,
+            paras,
+        })
     }
+
+    fn last(&self) -> usize {
+        self.paras + 1
+    }
+
+    fn get(&self, k: usize) -> Option<(f64, f64)> {
+        if k == 0 {
+            return Some((0.0, 0.0));
+        }
+        if k > self.paras {
+            return Some((self.editor.frame().size.height, self.views.text.frame().size.height));
+        }
+        let place = self.index.paras.get(k - 1)?;
+        let src = para_src(self.laid, place)?;
+        Some((
+            crate::editor::byte_y(self.editor, src)?,
+            y_of(self.views, place.start.get())?,
+        ))
+    }
+
+    /// The other side's y for `top` on the leading side, which `lead` puts first in each anchor; the search starts
+    /// at anchor `guess`.
+    fn follow(&self, guess: usize, top: f64, lead: fn((f64, f64)) -> (f64, f64)) -> Option<f64> {
+        let at = |k| self.get(k).map(lead);
+        let mut k = guess.min(self.last());
+        let mut lower = at(k)?;
+        while k > 0 && lower.0 > top {
+            k -= 1;
+            lower = at(k)?;
+        }
+        while k < self.last() {
+            let upper = at(k + 1)?;
+            if upper.0 > top {
+                let part = ((top - lower.0) / (upper.0 - lower.0)).clamp(0.0, 1.0);
+                return Some(lower.1 + part * (upper.1 - lower.1));
+            }
+            k += 1;
+            lower = upper;
+        }
+        Some(lower.1)
+    }
+}
+
+/// The source offset where paragraph `place` starts.
+fn para_src(laid: &Layout, place: &ParaPos) -> Option<usize> {
+    let block = laid.blocks.get(place.block)?;
+    Some(
+        block
+            .paras
+            .get(place.para)
+            .map_or(block.src.start, |para| para.src.start)
+            .get(),
+    )
 }
 
 /// The source offset of the paragraph at the top of the preview.
@@ -160,15 +271,7 @@ fn top_of_preview(preview: &Preview) -> Option<usize> {
         return None;
     }
     let i = shown.index.para_at(Shown::new(at))?;
-    let place = shown.index.paras.get(i)?;
-    let block = laid.blocks.get(place.block)?;
-    Some(
-        block
-            .paras
-            .get(place.para)
-            .map_or(block.src.start, |para| para.src.start)
-            .get(),
-    )
+    para_src(laid, shown.index.paras.get(i)?)
 }
 
 /// The top of the line holding character `at` of the preview, in its text view's coordinates.

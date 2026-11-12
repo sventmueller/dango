@@ -339,6 +339,13 @@ pub mod seen {
         Some(String::from_utf16_lossy(&units[start..end]))
     }
 
+    /// Scrolls the preview of `path` so that `y` of its view is at the top.
+    pub fn scroll_to(path: &Path, y: f64) {
+        if let Some(preview) = find(|p| p.path() == path) {
+            preview.views.text.scrollPoint(objc2_foundation::NSPoint::new(0.0, y));
+        }
+    }
+
     /// The visible top of the preview of `path`, in its view's coordinates.
     pub fn scrolled(path: &Path) -> Option<f64> {
         Some(find(|p| p.path() == path)?.views.text.visibleRect().origin.y)
