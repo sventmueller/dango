@@ -56,7 +56,7 @@ pub fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<
 pub mod selftest {
     pub use super::super::fold::{
         click as click_fold, fold_all, fold_at_cursor, folded, from_server, gutter, laid_out_lines, placeholders,
-        unfold_all,
+        toggle as toggle_fold, unfold_all,
     };
     pub use super::super::multi::{
         add_next_occurrence, add_vertical, carets, column, copied, paste_text, set as set_carets,

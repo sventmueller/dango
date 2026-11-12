@@ -7,7 +7,7 @@ use std::ops::Range;
 
 use ide_document::Change;
 use objc2::DefinedClass;
-use objc2_app_kit::{NSTextContentManager, NSTextElement, NSTextElementProvider};
+use objc2_app_kit::{NSTextContentManager, NSTextElement, NSTextElementProvider, NSView};
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize};
 
 use super::view::EditorTextView;
@@ -135,10 +135,20 @@ pub fn relayout(view: &EditorTextView) {
         layout.textViewportLayoutController().layoutViewport();
     }
     view.setNeedsDisplay(true);
+    redraw_fragments(view);
     super::redraw_gutter(view);
     super::overlay::redraw(view);
     super::whitespace::redraw(view);
     crate::lsp::paint(view);
+}
+
+/// Has every view that draws a paragraph draw again: TextKit keeps the drawing of a paragraph whose own text did not
+/// change, and its insets at the line's end move when the fold's placeholder after it comes or goes.
+fn redraw_fragments(view: &NSView) {
+    for child in view.subviews().iter() {
+        child.setNeedsDisplay(true);
+        redraw_fragments(&child);
+    }
 }
 
 /// Folds the innermost range around the cursor's line, or the one starting on it.

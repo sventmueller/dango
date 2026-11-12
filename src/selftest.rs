@@ -44,6 +44,7 @@ mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
 mod editor_multi;
+mod editor_scroll;
 mod editor_undo;
 mod extras;
 mod file_icons;
@@ -157,6 +158,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "lsp-actions-go" => lsp_actions::run_go(),
         "language-servers" => servers::run(),
         "editor-multi" => editor_multi::run(),
+        "editor-scroll" => editor_scroll::run(),
         "editor-undo" => editor_undo::run(),
         "edit-prediction" => predict::run(),
         "editor-insets" => insets::run(),
