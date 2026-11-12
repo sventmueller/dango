@@ -111,8 +111,8 @@ fn ready(root: PathBuf, key: u64) {
     );
     let (texts, other) = tab.empty_state();
     check(
-        "the empty tab names its own agent, without an image and without Claude's /model tip",
-        texts == ["Gemini"] && !other,
+        "the empty tab shows neither the agent's name nor an image nor Claude's /model tip",
+        texts.is_empty() && !other,
         format!("{texts:?}, more {other}"),
     );
     let caps = tab.acp_capabilities().unwrap_or_default();

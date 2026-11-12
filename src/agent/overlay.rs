@@ -3,7 +3,7 @@
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, sel};
-use objc2_app_kit::{NSColor, NSFont, NSLayoutAttribute, NSStackView, NSTextAlignment, NSView};
+use objc2_app_kit::{NSColor, NSLayoutAttribute, NSStackView, NSTextAlignment, NSView};
 use splat_i18n::{t, tf};
 
 use super::source::Problem;
@@ -19,15 +19,9 @@ fn centered(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSStackView> {
     stack
 }
 
-/// The name of the tab's agent, and for Claude a tip.
+/// The empty state: Claude's /model tip, nothing for the other agents.
 pub fn empty(mtm: MainThreadMarker, agent: &super::Agent) -> Retained<NSStackView> {
-    let name = ui::label(
-        mtm,
-        agent.name(),
-        &NSFont::systemFontOfSize_weight(26.0, crate::util::constant!(objc2_app_kit::NSFontWeightSemibold)),
-        &NSColor::labelColor(),
-    );
-    let mut views: Vec<Retained<NSView>> = vec![ui::view(&name)];
+    let mut views: Vec<Retained<NSView>> = Vec::new();
     // `/model` is a command of Claude Code; the other agents choose their model elsewhere.
     if *agent == super::Agent::Claude {
         let tip = ui::wrapping(
