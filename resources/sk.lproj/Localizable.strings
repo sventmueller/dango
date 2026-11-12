@@ -8,7 +8,6 @@
 "ACP-Register" = "Register ACP";
 "Adapter installieren …" = "Inštalovať adaptér…";
 "Agenten verwalten …" = "Spravovať agentov…";
-"AI-Thread" = "AI vlákno";
 "Ablage" = "Súbor";
 "Adresse von {}" = "Adresa pre {}";
 "Adresse …" = "Adresa…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Log CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude cez ACP (náhradná cesta)";
-"CLI-Thread" = "CLI vlákno";
 "Code, Terminal und Agenten in einem Fenster." = "Kód, terminál a agenti v jednom okne.";
 "Cursor darunter hinzufügen" = "Pridať kurzor nižšie";
 "Cursor darüber hinzufügen" = "Pridať kurzor vyššie";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Odstrániť aplikáciu OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Aplikácie OAuth na prihlásenie cez prehliadač";
 "„{}“ ist kein Host, den die App versteht." = "„{}“ nie je hostiteľ, ktorému aplikácia rozumie.";
-"Beendet" = "Ukončené";
-"Nicht im PATH der Login-Shell gefunden" = "Nenašiel sa v PATH prihlasovacieho shellu";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Iba v dôveryhodných priečinkoch: CLI spúšťajú hooky a nastavenia projektu.";
 "1 Datei geändert" = "1 zmenený súbor";
 "Als Branch behalten" = "Ponechať ako vetvu";
 "Auch den Branch {} löschen" = "Vymazať aj vetvu {}";

@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP Kayıt Defteri";
 "Adapter installieren …" = "Bağdaştırıcıyı Yükle…";
 "Agenten verwalten …" = "Ajanları Yönet…";
-"AI-Thread" = "AI Sohbeti";
 "Ablage" = "Dosya";
 "Adresse von {}" = "{} adresi";
 "Adresse …" = "Adres…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI günlüğü: {}";
 "Claude über ACP (Ausweichweg)" = "ACP üzerinden Claude (yedek yol)";
-"CLI-Thread" = "CLI Sohbeti";
 "Code, Terminal und Agenten in einem Fenster." = "Kod, terminal ve ajanlar tek pencerede.";
 "Cursor darunter hinzufügen" = "Alta İmleç Ekle";
 "Cursor darüber hinzufügen" = "Üste İmleç Ekle";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "OAuth Uygulamasını Kaldır";
 "OAuth-Apps für die Browser-Anmeldung" = "Tarayıcıyla Giriş İçin OAuth Uygulamaları";
 "„{}“ ist kein Host, den die App versteht." = "“{}”, uygulamanın anlayabildiği bir sunucu değil.";
-"Beendet" = "Sona Erdi";
-"Nicht im PATH der Login-Shell gefunden" = "Oturum açma kabuğunun PATH’inde bulunamadı";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Yalnızca güvenilen klasörlerde: CLI’lar projenin hook’larını ve ayarlarını çalıştırır.";
 "1 Datei geändert" = "1 dosya değiştirildi";
 "Als Branch behalten" = "Dal Olarak Koru";
 "Auch den Branch {} löschen" = "{} dalını da sil";

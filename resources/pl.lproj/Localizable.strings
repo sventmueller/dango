@@ -8,7 +8,6 @@
 "ACP-Register" = "Rejestr ACP";
 "Adapter installieren …" = "Zainstaluj adapter…";
 "Agenten verwalten …" = "Zarządzaj agentami…";
-"AI-Thread" = "Wątek AI";
 "Ablage" = "Plik";
 "Adresse von {}" = "Adres: {}";
 "Adresse …" = "Adres…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Log CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude przez ACP (zastępczo)";
-"CLI-Thread" = "Wątek CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Kod, terminal i agenty w jednym oknie.";
 "Cursor darunter hinzufügen" = "Dodaj kursor poniżej";
 "Cursor darüber hinzufügen" = "Dodaj kursor powyżej";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Usuń aplikację OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Aplikacje OAuth do logowania przez przeglądarkę";
 "„{}“ ist kein Host, den die App versteht." = "„{}” nie jest hostem zrozumiałym dla aplikacji.";
-"Beendet" = "Zakończono";
-"Nicht im PATH der Login-Shell gefunden" = "Nie znaleziono w PATH powłoki logowania";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Tylko w zaufanych folderach: CLI wykonują hooki i ustawienia projektu.";
 "1 Datei geändert" = "Zmieniono 1 plik";
 "Als Branch behalten" = "Zachowaj jako gałąź";
 "Auch den Branch {} löschen" = "Usuń również gałąź {}";

@@ -8,7 +8,6 @@
 "ACP-Register" = "รีจิสทรี ACP";
 "Adapter installieren …" = "ติดตั้งอะแดปเตอร์…";
 "Agenten verwalten …" = "จัดการเอเจนต์…";
-"AI-Thread" = "เธรด AI";
 "Ablage" = "ไฟล์";
 "Adresse von {}" = "ที่อยู่ของ {}";
 "Adresse …" = "ที่อยู่…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "ล็อก CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude ผ่าน ACP (ทางสำรอง)";
-"CLI-Thread" = "เธรด CLI";
 "Code, Terminal und Agenten in einem Fenster." = "โค้ด เทอร์มินัล และเอเจนต์ในหน้าต่างเดียว";
 "Cursor darunter hinzufügen" = "เพิ่มเคอร์เซอร์ด้านล่าง";
 "Cursor darüber hinzufügen" = "เพิ่มเคอร์เซอร์ด้านบน";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "เอาแอป OAuth ออก";
 "OAuth-Apps für die Browser-Anmeldung" = "แอป OAuth สำหรับการลงชื่อเข้าด้วยเบราว์เซอร์";
 "„{}“ ist kein Host, den die App versteht." = "“{}” ไม่ใช่โฮสต์ที่แอปเข้าใจ";
-"Beendet" = "สิ้นสุดแล้ว";
-"Nicht im PATH der Login-Shell gefunden" = "ไม่พบใน PATH ของ login shell";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "เฉพาะในโฟลเดอร์ที่เชื่อถือ: CLI จะเรียกใช้ Hook และการตั้งค่าของโปรเจ็กต์";
 "1 Datei geändert" = "เปลี่ยนแปลงไฟล์ 1 รายการ";
 "Als Branch behalten" = "เก็บไว้เป็น Branch";
 "Auch den Branch {} löschen" = "ลบ Branch {} ด้วย";

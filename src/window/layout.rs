@@ -1,8 +1,8 @@
 //! Saving a folder's window tabs and their documents, and opening them again when the folder opens (E24, E60).
 //!
 //! Documents come back by opening what they showed: files, a new shell in the terminal's last folder, a page, an AI
-//! session, a CLI that continues its session. Terminals, AI sessions and CLIs run what the folder configures, so they
-//! come back only in a trusted folder (E22); a document whose file is gone stays away, and a tab left without documents with it. Editors open through
+//! session; a CLI thread of an older version comes back as a terminal. Terminals and AI sessions run what the folder
+//! configures, so they come back only in a trusted folder (E22); a document whose file is gone stays away, and a tab left without documents with it. Editors open through
 //! the caller, so a launch can put the copies a crash left in their places (`session::restore`).
 
 use std::cell::RefCell;
@@ -74,9 +74,6 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
                 .and_then(|tab| tab.session_id())
                 .map(|session| Tab::Agent { session })
         }
-        TabKind::Cli => {
-            crate::terminal::cli_thread_of_tab(controller, id).map(|(name, session)| Tab::Cli { name, session })
-        }
         TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview | TabKind::NewTab => None,
     }
 }
@@ -97,7 +94,6 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
         root: &root,
         trusted: controller.is_trusted(),
         editor: RefCell::new(editor),
-        clis: RefCell::new(Vec::new()),
     };
     let mut firsts = Vec::with_capacity(layout.tabs.len());
     let mut shares = Vec::new();
@@ -150,9 +146,6 @@ struct Documents<'a, 'b> {
     root: &'a Path,
     trusted: bool,
     editor: RefCell<&'a mut Opener<'b>>,
-    /// The CLI threads opened so far, which continue a session once: those without a session of their own continue
-    /// the CLI's latest.
-    clis: RefCell<Vec<(String, Option<String>)>>,
 }
 
 impl Documents<'_, '_> {
@@ -173,13 +166,9 @@ impl Documents<'_, '_> {
                 true
             }
             Tab::Agent { session } if trusted => resume_agent(controller, root, session),
-            Tab::Cli { name, session } if trusted => {
-                let thread = (name.clone(), session.clone());
-                if self.clis.borrow().contains(&thread) {
-                    return false;
-                }
-                self.clis.borrow_mut().push(thread);
-                crate::terminal::reopen_cli_thread(controller, name, session.as_deref())
+            Tab::Cli { .. } if trusted => {
+                crate::terminal::open_tab(controller, Some(root));
+                true
             }
             _ => false,
         }

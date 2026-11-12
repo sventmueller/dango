@@ -335,6 +335,9 @@ fn new_tab_page(controller: &WindowController, root: &Path) {
         controller.tab_count() == before + 1 && !entries.is_empty() && entries == offered,
         format!("{entries:?}"),
     );
+    if let Some(window) = controller.window() {
+        snapshot(&window, "tabs-new-tab-page");
+    }
     controller.open_file(&root.join("e.rs"));
     check(
         "a file opened from the page takes its place",
@@ -365,19 +368,8 @@ fn turned_off(controller: &WindowController, root: &Path) {
 }
 
 /// Every entry of the held "+"'s menu opens what it names, chosen in an untrusted folder, where no agent starts; the
-/// agents listed are the installed ones, the own agent last.
+/// agents listed are the installed ones, directly in the menu, the own agent last, a thread in a worktree below them.
 fn every_plus_entry(controller: &WindowController, root: &Path) {
-    let clis: Vec<(String, bool)> = controller
-        .plus_menu_entries()
-        .into_iter()
-        .filter(|(path, _, _)| path.first().map(String::as_str) == Some(t("CLI-Thread")))
-        .map(|(path, _, enabled)| (path.join(" ▸ "), enabled))
-        .collect();
-    check(
-        "in a trusted folder the CLI threads of the held + are enabled",
-        !clis.is_empty() && clis.iter().all(|(_, enabled)| *enabled),
-        format!("{clis:?}"),
-    );
     crate::project::distrust(root);
     let entries = controller.plus_menu_entries();
     let mut results = Vec::new();
@@ -413,17 +405,35 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
         !entries.is_empty() && failed.is_empty(),
         format!("{failed:?} of {results:?}"),
     );
+    let is_agent = |(path, action, _): &(Vec<String>, String, bool)| {
+        matches!(action.as_str(), "ideNewClaudeThread:" | "ideNewAcpThread:")
+            || path.first().map(String::as_str) == Some(t("Eigener Agent"))
+    };
     let agents: Vec<String> = entries
         .iter()
-        .filter(|(path, _, _)| path.first().map(String::as_str) == Some(t("AI-Thread")) && path.len() >= 2)
-        .map(|(path, _, _)| path[1].clone())
-        .filter(|name| name != t("In eigenem Worktree") && name != t("Agenten verwalten …"))
+        .filter(|entry| is_agent(entry))
+        .map(|(path, _, _)| path[0].clone())
         .fold(Vec::new(), |mut names, name| {
             if names.last() != Some(&name) {
                 names.push(name);
             }
             names
         });
+    let last_agent = entries.iter().rposition(is_agent);
+    let worktree = entries
+        .iter()
+        .position(|(path, _, _)| path.first().map(String::as_str) == Some(t("In eigenem Worktree")));
+    check(
+        "the agents stand directly in the held +'s menu, a thread in a worktree below them",
+        entries
+            .iter()
+            .filter(|entry| is_agent(entry))
+            .all(|(path, _, _)| path.len() == 1 || path[0] == t("Eigener Agent"))
+            && last_agent
+                .zip(worktree)
+                .is_none_or(|(agent, worktree)| worktree > agent),
+        format!("{entries:?}"),
+    );
     let installed: Vec<String> = crate::agent::installed(&crate::agent::Agent::Claude)
         .then(|| "Claude".to_string())
         .into_iter()
@@ -431,7 +441,7 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
         .chain(crate::agent::installed(&crate::agent::Agent::Own).then(|| t("Eigener Agent").to_string()))
         .collect();
     check(
-        "the AI-Thread menu lists only installed agents, the own agent last",
+        "the menu lists only installed agents, the own agent last",
         agents == installed,
         format!("{agents:?}, installed {installed:?}"),
     );

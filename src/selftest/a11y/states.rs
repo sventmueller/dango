@@ -29,8 +29,6 @@ pub(super) const SUBAGENT: &str =
 const EDIT: &str = include_str!("../../../crates/ide-claude/tests/fixtures/recorded_edit_diff.ndjson");
 /// The lines of `SUBAGENT` after which its subagent and background shell both run.
 const RUNNING: usize = 174;
-/// The stand-in for a CLI thread: it greets and echoes what it gets.
-const STAND_IN: &str = "#!/bin/sh\nprintf '\\033]0;stand-in\\007'\necho 'stand-in ready'\nexec cat\n";
 
 /// Calls `then` with `root` once `ready` holds for its window, or with false after the usual wait.
 fn when(
@@ -291,32 +289,6 @@ fn terminal(root: PathBuf, ok: bool) {
     check("the terminal's shell starts", ok, "");
     walk("the terminal misses nothing");
     picture(&root, "terminal");
-    let Some(controller) = window_of(&root) else { return };
-    let script = ide_core::paths::home().join("stand-in/claude");
-    let written = script
-        .parent()
-        .map_or(Ok(()), std::fs::create_dir_all)
-        .and_then(|()| std::fs::write(&script, STAND_IN))
-        .and_then(|()| {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))
-        });
-    check("the stand-in CLI is written", written.is_ok(), format!("{written:?}"));
-    crate::terminal::open_cli_program(&controller, "claude", script);
-    let id = crate::terminal::inspect::latest().map_or(0, |(id, _)| id);
-    when(
-        root,
-        move |_| {
-            crate::terminal::inspect::view(id)
-                .is_some_and(|v| v.visible_lines().iter().any(|line| line == "stand-in ready"))
-        },
-        cli_thread,
-    );
-}
-
-fn cli_thread(root: PathBuf, ok: bool) {
-    check("the CLI thread starts", ok, "");
-    walk("the CLI thread misses nothing");
     let Some(controller) = window_of(&root) else { return };
     match crate::selftest::serve_page() {
         Ok(port) => crate::selftest::PAGE_PORT.store(port, std::sync::atomic::Ordering::SeqCst),

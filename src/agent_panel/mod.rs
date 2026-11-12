@@ -167,6 +167,7 @@ pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
 }
 
 /// The configuration folder of Claude Code, where it keeps its sessions.
+#[cfg(feature = "selftest")]
 pub(crate) fn claude_config_dir() -> std::path::PathBuf {
     config_dir()
 }
@@ -242,11 +243,6 @@ impl AgentPanel {
                 Vec::new()
             } else {
                 terminal_sessions(&self.root)
-            },
-            cli: if archived {
-                Vec::new()
-            } else {
-                crate::terminal::cli_threads(&controller)
             },
             bookmarks: &bookmarks(),
         });

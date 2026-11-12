@@ -1,8 +1,7 @@
 //! The `restore` scenario, run twice in one home: the first launch sets up two folder windows, one with documents
-//! of every kind that comes back, CLI threads of stand-ins included, a frame of its own, a wider sidebar and the Git
-//! panel, the other with its sidebar folded away, and quits as the user does; the second checks that both come back
-//! that way, the CLIs continuing their sessions, and that a folder opened for the first time takes the frame of the
-//! window saved last.
+//! of every kind that comes back, a frame of its own, a wider sidebar and the Git panel, the other with its sidebar
+//! folded away, and quits as the user does; the second checks that both come back that way, and that a folder opened
+//! for the first time takes the frame of the window saved last.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -25,10 +24,6 @@ const FRAME: NSRect = NSRect::new(NSPoint::new(120.0, 140.0), NSSize::new(1100.0
 const SIDEBAR: f64 = 380.0;
 /// The model, effort and mode picked in the AI thread before the quit.
 const PICKS: (&str, &str, &str) = ("opus", "high", "acceptEdits");
-/// The session of the Claude Code stand-in, as a transcript in the CLI's folder names it.
-const CLI_SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000dd";
-/// A stand-in for a coding agent's CLI: it says how it was started and waits.
-const STAND_IN: &str = "#!/bin/sh\necho \"stand-in {name} args: $*\"\nwhile IFS= read -r line; do :; done\n";
 
 /// What the first launch left, for the second to compare.
 #[derive(Serialize, Deserialize)]
@@ -65,14 +60,6 @@ pub(super) fn run() {
         let _ = std::fs::write(a.join("main.rs"), "fn main() {}\n");
         let _ = std::fs::write(a.join("notes.md"), "# Notizen\n");
         let _ = std::fs::write(b.join("lib.rs"), "pub fn lib() {}\n");
-        for name in ["claude", "codex"] {
-            let path = ide_core::paths::home().join(format!("stand-in-{name}"));
-            let written = std::fs::write(&path, STAND_IN.replace("{name}", name)).and_then(|()| {
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
-            });
-            check("a stand-in CLI is written", written.is_ok(), format!("{written:?}"));
-        }
         for folder in [&a, &b, &c] {
             crate::project::trust(folder);
         }
@@ -101,11 +88,6 @@ fn arrange(a: PathBuf, b: PathBuf) {
     if let Some(tab) = crate::agent::of_window(&first).first() {
         tab.pick_all(PICKS.0, PICKS.1, PICKS.2);
     }
-    for name in ["claude", "codex"] {
-        let program = ide_core::paths::home().join(format!("stand-in-{name}"));
-        crate::terminal::open_cli_program(&first, name, program);
-    }
-    claude_transcript(&a);
     first.activate_panel(Panel::Git);
     first.set_sidebar_width(SIDEBAR);
     if let Some(window) = first.window() {
@@ -115,28 +97,6 @@ fn arrange(a: PathBuf, b: PathBuf) {
     second.toggle_sidebar();
     check("the AI thread plays its recording before the quit", replayed, "");
     main_after(PAUSE, move || quit(&a, &b));
-}
-
-/// The transcript Claude Code would begin in `folder`, in the CLI's folder of this run's home only.
-fn claude_transcript(folder: &Path) {
-    let config = crate::agent_panel::claude_config_dir();
-    if !config.starts_with(ide_core::paths::home()) {
-        return check("the CLI's folder is this run's", false, config.display().to_string());
-    }
-    let project = config
-        .join("projects")
-        .join(ide_claude::history::project_folder(folder));
-    let written = std::fs::create_dir_all(&project).and_then(|()| {
-        std::fs::write(
-            project.join(format!("{CLI_SESSION}.jsonl")),
-            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"hallo\"}}\n",
-        )
-    });
-    check(
-        "the stand-in's transcript is written",
-        written.is_ok(),
-        format!("{written:?}"),
-    );
 }
 
 fn quit(a: &Path, b: &Path) {
@@ -217,31 +177,7 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         format!("{} / {}", second.sidebar_folded(), first.sidebar_folded()),
     );
     newcomer(&c, &before);
-    let wanted = [
-        ("claude", format!("stand-in claude args: --resume {CLI_SESSION}")),
-        ("codex", "stand-in codex args: resume --last".to_string()),
-    ];
-    let probe = a.clone();
-    let shown = move |name: &str, line: &str| {
-        let controller = window_of(&probe);
-        let id = controller.as_ref().and_then(|c| super::helpers::tab(c, name));
-        controller
-            .zip(id)
-            .and_then(|(c, id)| crate::terminal::inspect::of_tab(&c, id))
-            .is_some_and(|view| view.visible_lines().iter().any(|l| l == line))
-    };
-    let lines = wanted.clone();
-    wait_until(
-        move || lines.iter().all(|(name, line)| shown(name, line)),
-        move |ok| {
-            check(
-                "the CLI threads come back continuing their sessions: Claude Code its own, Codex its latest",
-                ok,
-                format!("{wanted:?}"),
-            );
-            finish(SCENARIO);
-        },
-    );
+    finish(SCENARIO);
 }
 
 /// The AI thread that came back: its session, the panel's one row for it, the agent of another agent's session, the

@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP Registry";
 "Adapter installieren …" = "Install Adapter …";
 "Agenten verwalten …" = "Manage Agents …";
-"AI-Thread" = "AI Thread";
 "Ablage" = "File";
 "Adresse von {}" = "Address of {}";
 "Adresse …" = "Address …";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI log: {}";
 "Claude über ACP (Ausweichweg)" = "Claude over ACP (fallback)";
-"CLI-Thread" = "CLI Thread";
 "Code, Terminal und Agenten in einem Fenster." = "Code, terminal and agents in one window.";
 "Cursor darunter hinzufügen" = "Add Cursor Below";
 "Cursor darüber hinzufügen" = "Add Cursor Above";
@@ -974,9 +972,6 @@
 "„{}“ ist kein Host, den die App versteht." = "“{}” is not a host the app understands.";
 
 /* CLI threads */
-"Beendet" = "Ended";
-"Nicht im PATH der Login-Shell gefunden" = "Not found on the login shell's PATH";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Only in trusted folders: CLIs run the project's hooks and settings.";
 
 /* Panels */
 

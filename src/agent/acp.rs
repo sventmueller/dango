@@ -155,28 +155,6 @@ impl Agent {
     }
 }
 
-/// The colour of the agent whose CLI is `name`, as the tabs of its CLI threads show it.
-pub fn cli_colour(name: &str) -> Retained<NSColor> {
-    if name == "claude" {
-        return Agent::Claude.colour();
-    }
-    if let Some(rgb) = brand(name) {
-        return super::style::accent(rgb);
-    }
-    AcpAgent::presets()
-        .into_iter()
-        .find(|agent| {
-            register::preset(&agent.id)
-                .is_some_and(|p| p.cli == Some(name) || p.on_path.is_some_and(|(program, _)| program == name))
-        })
-        .map_or_else(NSColor::controlAccentColor, |agent| Agent::Acp(agent).colour())
-}
-
-/// The colours of the left, top, right and bottom point of the CLI `name`'s mark, for one that shows four.
-pub fn cli_four_colours(name: &str) -> Option<[Retained<NSColor>; 4]> {
-    four_colours_of(name)
-}
-
 /// The colour the owner gave an agent the app ships with, by the agent's or its CLI's id (E66).
 fn brand(id: &str) -> Option<splat_markdown::palette::Rgb> {
     use splat_markdown::palette::Rgb;

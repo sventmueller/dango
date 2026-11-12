@@ -8,7 +8,6 @@
 "ACP-Register" = "Registo ACP";
 "Adapter installieren …" = "Instalar adaptador…";
 "Agenten verwalten …" = "Gerir agentes…";
-"AI-Thread" = "Thread de IA";
 "Ablage" = "Ficheiro";
 "Adresse von {}" = "Endereço de {}";
 "Adresse …" = "Endereço…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Log de CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (alternativa)";
-"CLI-Thread" = "Thread de CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Código, terminal e agentes numa só janela.";
 "Cursor darunter hinzufügen" = "Adicionar cursor abaixo";
 "Cursor darüber hinzufügen" = "Adicionar cursor acima";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Remover aplicação OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Aplicações OAuth para o início de sessão no navegador";
 "„{}“ ist kein Host, den die App versteht." = "“{}” não é um anfitrião que a aplicação entenda.";
-"Beendet" = "Terminado";
-"Nicht im PATH der Login-Shell gefunden" = "Não encontrado no PATH da shell de início de sessão";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Só em pastas de confiança: as CLI executam os hooks e as definições do projeto.";
 "1 Datei geändert" = "1 ficheiro alterado";
 "Als Branch behalten" = "Manter como branch";
 "Auch den Branch {} löschen" = "Apagar também o branch {}";

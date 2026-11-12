@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP-rekisteri";
 "Adapter installieren …" = "Asenna sovitin…";
 "Agenten verwalten …" = "Hallitse agentteja…";
-"AI-Thread" = "AI-ketju";
 "Ablage" = "Tiedosto";
 "Adresse von {}" = "Päätepisteen {} osoite";
 "Adresse …" = "Osoite…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI-loki: {}";
 "Claude über ACP (Ausweichweg)" = "Claude ACP:n kautta (varareitti)";
-"CLI-Thread" = "CLI-ketju";
 "Code, Terminal und Agenten in einem Fenster." = "Koodi, pääte ja agentit samassa ikkunassa.";
 "Cursor darunter hinzufügen" = "Lisää kohdistin alapuolelle";
 "Cursor darüber hinzufügen" = "Lisää kohdistin yläpuolelle";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Poista OAuth-appi";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth-apit selainkirjautumista varten";
 "„{}“ ist kein Host, den die App versteht." = "”{}” ei ole palvelin, jonka appi ymmärtää.";
-"Beendet" = "Päättynyt";
-"Nicht im PATH der Login-Shell gefunden" = "Ei löytynyt kirjautumiskomentotulkin PATH-muuttujasta";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Vain luotetuissa kansioissa: CLI-työkalut suorittavat projektin hookit ja asetukset.";
 "1 Datei geändert" = "1 tiedosto muutettu";
 "Als Branch behalten" = "Säilytä haarana";
 "Auch den Branch {} löschen" = "Poista myös haara {}";

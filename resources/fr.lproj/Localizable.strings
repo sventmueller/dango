@@ -8,7 +8,6 @@
 "ACP-Register" = "Registre ACP";
 "Adapter installieren …" = "Installer l’adaptateur…";
 "Agenten verwalten …" = "Gérer les agents…";
-"AI-Thread" = "Fil IA";
 "Ablage" = "Fichier";
 "Adresse von {}" = "Adresse de {}";
 "Adresse …" = "Adresse…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Journal CI : {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (solution de repli)";
-"CLI-Thread" = "Fil CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Le code, le terminal et les agents dans une seule fenêtre.";
 "Cursor darunter hinzufügen" = "Ajouter un curseur en dessous";
 "Cursor darüber hinzufügen" = "Ajouter un curseur au-dessus";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Supprimer l’app OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Apps OAuth pour la connexion via le navigateur";
 "„{}“ ist kein Host, den die App versteht." = "« {} » n’est pas un hôte compris par l’app.";
-"Beendet" = "Terminé";
-"Nicht im PATH der Login-Shell gefunden" = "Introuvable dans le PATH du shell de connexion";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Uniquement dans les dossiers de confiance : les CLI exécutent les hooks et les réglages du projet.";
 "1 Datei geändert" = "1 fichier modifié";
 "Als Branch behalten" = "Conserver comme branche";
 "Auch den Branch {} löschen" = "Supprimer aussi la branche {}";

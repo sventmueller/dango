@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -152,9 +152,6 @@ pub struct Options {
     pub kitty_keyboard: bool,
     /// How long closing waits at each step before it escalates: hang-up, SIGTERM, SIGKILL.
     pub close_grace: Duration,
-    /// Closing starts with Ctrl+C twice instead of a hang-up, as coding agents' CLIs expect to be ended; SIGTERM and
-    /// SIGKILL to the program's group follow as usual.
-    pub interrupt_on_close: bool,
 }
 
 impl Options {
@@ -170,7 +167,6 @@ impl Options {
             allow_clipboard_read: false,
             kitty_keyboard: true,
             close_grace: Duration::from_secs(2),
-            interrupt_on_close: false,
         }
     }
 }
@@ -221,8 +217,6 @@ pub(crate) struct Shared {
     pub(crate) size: Mutex<Size>,
     pub(crate) clipboard_reply: Mutex<Option<ClipboardReply>>,
     redraw_pending: AtomicBool,
-    /// Counts the chunks of output that changed the text, as `OutputWatch` tells.
-    pub(crate) content: AtomicU64,
     full_redraw: AtomicBool,
     pub(crate) running: AtomicBool,
     closed: AtomicBool,
@@ -307,7 +301,6 @@ impl Session {
             size: Mutex::new(options.size),
             clipboard_reply: Mutex::new(None),
             redraw_pending: AtomicBool::new(false),
-            content: AtomicU64::new(0),
             full_redraw: AtomicBool::new(true),
             running: AtomicBool::new(true),
             closed: AtomicBool::new(false),
@@ -316,11 +309,7 @@ impl Session {
         let process = supervisor.register(pid, Kind::Terminal, label(&options.program));
         let shell = i32::try_from(pid).unwrap_or(0);
         let grace = options.close_grace;
-        if options.interrupt_on_close {
-            supervisor.on_stop(process, move || interrupt(&hang_up_master));
-        } else {
-            supervisor.on_stop(process, move || hang_up(&hang_up_master, shell, grace));
-        }
+        supervisor.on_stop(process, move || hang_up(&hang_up_master, shell, grace));
         let (input, inbox) = channel();
         let reader = reader::Reader::new(pty, Arc::clone(&shared), inbox, Arc::clone(&poller), term_events);
         let thread = reader.start(supervisor.clone(), process);
@@ -524,16 +513,6 @@ impl Session {
         foreground::of_terminal(&self.master)
     }
 
-    /// How many chunks of output changed the text so far; titles, colours and cursor moves alone do not count.
-    pub fn content_changes(&self) -> u64 {
-        self.shared.content.load(Ordering::Relaxed)
-    }
-
-    /// The names of the programs in the foreground process group, such as `claude` and the `cargo` it started.
-    pub fn foreground_programs(&self) -> Vec<String> {
-        foreground::programs_of_terminal(&self.master)
-    }
-
     /// Pastes the PNG `png` as `paste::paste_image` decides, storing it in `dir` when its path is pasted.
     pub fn paste_image(&self, png: &[u8], dir: &Path) -> io::Result<PasteAction> {
         let front = self.foreground();
@@ -643,15 +622,6 @@ fn direction(side: CellSide) -> Direction {
         CellSide::Left => Direction::Left,
         CellSide::Right => Direction::Right,
     }
-}
-
-/// What closing a CLI's terminal does first: Ctrl+C twice, the second after the CLI had time to take the first, as
-/// some ask for a second one before they quit.
-fn interrupt(master: &File) {
-    let mut master = master;
-    let _ = std::io::Write::write_all(&mut master, b"\x03");
-    std::thread::sleep(Duration::from_millis(150));
-    let _ = std::io::Write::write_all(&mut master, b"\x03");
 }
 
 /// What closing a terminal window does: SIGHUP to the shell and to the job in front, which lives in a process group

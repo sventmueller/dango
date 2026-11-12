@@ -21,7 +21,6 @@ use alacritty_terminal::vte::ansi::{Processor, Rgb as TermRgb};
 use ide_process::{Ending, ProcessId, Supervisor};
 use polling::{Event as Interest, Events, PollMode, Poller};
 
-use crate::activity::OutputWatch;
 use crate::event::{Clipboard, Event};
 use crate::scan::Scanner;
 use crate::session::{Shared, TermEvents, locked};
@@ -52,7 +51,6 @@ pub(crate) struct Reader {
     term_events: Arc<Mutex<Vec<TermEvent>>>,
     parser: Processor,
     scanner: Scanner,
-    watch: OutputWatch,
     pending: VecDeque<Vec<u8>>,
     written: usize,
 }
@@ -73,7 +71,6 @@ impl Reader {
             term_events: term_events.0,
             parser: Processor::new(),
             scanner: Scanner::new(),
-            watch: OutputWatch::default(),
             pending: VecDeque::new(),
             written: 0,
         }
@@ -200,9 +197,6 @@ impl Reader {
             let chunk = &buffer[..unprocessed];
             self.parser.advance(&mut **term, chunk);
             self.scanner.feed(chunk);
-            if self.watch.feed(chunk).content {
-                shared.content.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            }
             processed += unprocessed;
             unprocessed = 0;
             if stop || processed >= MAX_LOCKED_READ {

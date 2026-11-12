@@ -8,7 +8,6 @@
 "ACP-Register" = "Registru ACP";
 "Adapter installieren …" = "Instalați adaptorul…";
 "Agenten verwalten …" = "Gestionați agenții…";
-"AI-Thread" = "Conversație IA";
 "Ablage" = "Fișier";
 "Adresse von {}" = "Adresa pentru {}";
 "Adresse …" = "Adresă…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Jurnal CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude prin ACP (cale de rezervă)";
-"CLI-Thread" = "Conversație CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Cod, terminal și agenți într-o singură fereastră.";
 "Cursor darunter hinzufügen" = "Adăugați un cursor dedesubt";
 "Cursor darüber hinzufügen" = "Adăugați un cursor deasupra";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Eliminați aplicația OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Aplicații OAuth pentru autentificarea prin browser";
 "„{}“ ist kein Host, den die App versteht." = "„{}” nu este o gazdă pe care aplicația o înțelege.";
-"Beendet" = "Încheiat";
-"Nicht im PATH der Login-Shell gefunden" = "Nu a fost găsit în PATH-ul shellului de login";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Doar în dosare de încredere: CLI-urile execută hookurile și configurările proiectului.";
 "1 Datei geändert" = "1 fișier modificat";
 "Als Branch behalten" = "Păstrați ca ramură";
 "Auch den Branch {} löschen" = "Ștergeți și ramura {}";

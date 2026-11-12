@@ -4,7 +4,6 @@
 mod access;
 mod banner;
 mod boxdraw;
-mod cli;
 mod clip;
 mod gpu;
 mod input;
@@ -31,7 +30,6 @@ use splat_i18n::{t, tf};
 
 use crate::util::main_soon;
 use crate::window::{TabKind, WindowController};
-pub use cli::{CliStatus, CliThread};
 pub use view::TerminalView;
 
 /// How long a new terminal waits for the login shell's environment, which the app reads once at launch.
@@ -109,7 +107,7 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
         .or_else(|| controller.project())
         .filter(|dir| dir.is_dir())
         .unwrap_or_else(ide_core::paths::home);
-    let (view, root) = TerminalView::new(controller.mtm(), controller, cwd, None);
+    let (view, root) = TerminalView::new(controller.mtm(), controller, cwd);
     let tab = controller.add_tab(TabKind::Terminal, None, t("Terminal"), root);
     view.set_tab(tab);
     if let Some(window) = controller.window() {
@@ -142,69 +140,6 @@ pub fn running_in(controller: &WindowController) -> Vec<String> {
             .flatten()
         })
         .collect()
-}
-
-/// The CLI threads of `controller`'s window, oldest first.
-pub fn cli_threads(controller: &WindowController) -> Vec<CliThread> {
-    cli::threads(controller)
-}
-
-/// The supervisor's numbers of the programs of every CLI thread, which the activity view lists as threads.
-pub fn cli_processes() -> Vec<ide_process::ProcessId> {
-    cli::processes()
-}
-
-/// Brings the tab of the CLI thread `key` forward.
-pub fn show_cli_thread(controller: &WindowController, key: u64) {
-    cli::show(controller, key);
-}
-
-/// Ends the CLI thread `key` by closing its tab: Ctrl+C, then SIGTERM to its group.
-pub fn stop_cli_thread(controller: &WindowController, key: u64) {
-    cli::stop(controller, key);
-}
-
-/// Fills the CLI-Thread submenu of the "+" menu: the CLIs found on the login PATH, in trusted folders only.
-pub fn fill_cli_menu(controller: &WindowController, menu: &objc2_app_kit::NSMenu) {
-    cli::fill_menu(controller, menu);
-}
-
-/// Opens a CLI thread of the CLI `name` in the window's folder (I5).
-pub fn open_cli_thread(controller: &WindowController, name: &str) {
-    cli::open(controller, name);
-}
-
-/// Opens a CLI thread that runs `program` as the CLI `name`, for the self-test's stand-in.
-#[cfg(feature = "selftest")]
-pub fn open_cli_program(controller: &WindowController, name: &str, program: std::path::PathBuf) {
-    cli::open_program(controller, name, program);
-}
-
-/// The CLI thread in the tab `tab` of `controller`'s window, as a layout keeps it: its CLI and, for Claude Code, its
-/// session.
-pub fn cli_thread_of_tab(controller: &WindowController, tab: isize) -> Option<(String, Option<String>)> {
-    cli::of_tab(controller, tab)
-}
-
-/// Opens a CLI thread of a layout again, continuing its session; whether it did.
-pub fn reopen_cli_thread(controller: &WindowController, name: &str, session: Option<&str>) -> bool {
-    cli::reopen(controller, name, session)
-}
-
-/// The CLI, working folder and start of the CLI thread in the tab `tab` of `controller`'s window.
-fn cli_of_tab(
-    controller: &WindowController,
-    tab: isize,
-) -> Option<(String, std::path::PathBuf, std::time::SystemTime)> {
-    use objc2::DefinedClass;
-    VIEWS.with(|views| {
-        views.borrow().values().filter_map(Weak::load).find_map(|view| {
-            let ivars = view.ivars();
-            let mine = ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller));
-            let cli = ivars.cli.as_ref()?;
-            (mine && ivars.tab.get() == Some(tab)).then(|| (cli.name.clone(), ivars.cwd.borrow().clone(), cli.started))
-        })
-    })
 }
 
 /// Starts the shell now if the login shell's environment is known, else once it is.

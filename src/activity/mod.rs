@@ -29,8 +29,6 @@ const WIDTH: f64 = 420.0;
 /// What a button of the popover does.
 #[derive(Clone, PartialEq)]
 enum Action {
-    ShowCli(u64),
-    StopCli(u64),
     ShowTab(u64),
     StopTurn(u64),
     Reveal(u64, String),
@@ -315,44 +313,12 @@ fn count(tabs: &[std::rc::Rc<AgentTab>], processes: &[ide_process::ProcessInfo])
     agents + processes.len()
 }
 
-/// The supervisor's processes the popover lists: not the agents and CLI threads, which have their own lines, and not
-/// git.
+/// The supervisor's processes the popover lists: not the agents, which have their own lines, and not git.
 fn processes() -> Vec<ide_process::ProcessInfo> {
-    let clis = crate::terminal::cli_processes();
     Supervisor::global()
         .running()
         .into_iter()
-        .filter(|p| !matches!(p.kind, Kind::Agent | Kind::Git) && !clis.contains(&p.id))
-        .collect()
-}
-
-/// The CLI threads of the window (I5), each with its status, what it shows and its running time.
-fn cli_lines(threads: &[crate::terminal::CliThread], now: SystemTime) -> Vec<Line> {
-    threads
-        .iter()
-        .map(|thread| {
-            let seconds = now.duration_since(thread.started).map_or(0, |d| d.as_secs());
-            let mut detail = format!(
-                "{} · {}",
-                thread.status.text(),
-                crate::window::toolbar::duration(seconds)
-            );
-            if let Some(shown) = &thread.detail {
-                detail.push_str(&format!(" · {shown}"));
-            }
-            let mut buttons = vec![(t("Zeigen"), Action::ShowCli(thread.key))];
-            if thread.status != crate::terminal::CliStatus::Finished {
-                buttons.push((t("Stopp"), Action::StopCli(thread.key)));
-            }
-            Line {
-                symbol: "apple.terminal",
-                tint: thread.status.color(),
-                title: thread.name.clone(),
-                detail,
-                indent: false,
-                buttons,
-            }
-        })
+        .filter(|p| !matches!(p.kind, Kind::Agent | Kind::Git))
         .collect()
 }
 
@@ -515,11 +481,7 @@ impl Activity {
     fn update_count(&self) {
         let Some(controller) = self.controller() else { return };
         let tabs = crate::agent::of_window(&controller);
-        let clis = crate::terminal::cli_threads(&controller)
-            .iter()
-            .filter(|thread| thread.status != crate::terminal::CliStatus::Finished)
-            .count();
-        let count = count(&tabs, &processes()) + clis;
+        let count = count(&tabs, &processes());
         for item in self.items() {
             item.setToolTip(Some(&ns(&tf("Was gerade läuft: {}", &[&count.to_string()]))));
         }
@@ -607,10 +569,7 @@ impl Activity {
         let mut tabs = crate::agent::of_window(controller);
         tabs.retain(|tab| only.is_none_or(|key| tab.key == key));
         let processes = if only.is_some() { Vec::new() } else { processes() };
-        let mut agents = agent_lines(&tabs, now, only.is_some());
-        if only.is_none() {
-            agents.extend(cli_lines(&crate::terminal::cli_threads(controller), now));
-        }
+        let agents = agent_lines(&tabs, now, only.is_some());
         let heading = if only.is_some() {
             t("Aufgaben dieser Sitzung")
         } else {
@@ -816,8 +775,6 @@ impl Activity {
         let Some(controller) = self.controller() else { return };
         let tab = |key: u64| crate::agent::of_window(&controller).into_iter().find(|t| t.key == key);
         match action {
-            Action::ShowCli(key) => crate::terminal::show_cli_thread(&controller, key),
-            Action::StopCli(key) => crate::terminal::stop_cli_thread(&controller, key),
             Action::ShowTab(key) => {
                 if let Some(tab) = tab(key) {
                     tab.select();
@@ -869,7 +826,6 @@ pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
     let tabs = crate::agent::of_window(controller);
     let lines: Vec<String> = agent_lines(&tabs, SystemTime::now(), false)
         .into_iter()
-        .chain(cli_lines(&crate::terminal::cli_threads(controller), SystemTime::now()))
         .chain(process_lines(controller, &processes(), SystemTime::now()))
         .map(|l| {
             let buttons: Vec<&str> = l.buttons.iter().map(|(title, _)| *title).collect();

@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP 注册表";
 "Adapter installieren …" = "安装适配器…";
 "Agenten verwalten …" = "管理智能体…";
-"AI-Thread" = "AI 对话";
 "Ablage" = "文件";
 "Adresse von {}" = "{} 的地址";
 "Adresse …" = "地址…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI 日志：{}";
 "Claude über ACP (Ausweichweg)" = "通过 ACP 使用 Claude（备用方式）";
-"CLI-Thread" = "CLI 对话";
 "Code, Terminal und Agenten in einem Fenster." = "代码、终端和智能体，集于一个窗口。";
 "Cursor darunter hinzufügen" = "在下方添加光标";
 "Cursor darüber hinzufügen" = "在上方添加光标";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "移除 OAuth App";
 "OAuth-Apps für die Browser-Anmeldung" = "用于浏览器登录的 OAuth App";
 "„{}“ ist kein Host, den die App versteht." = "“{}”不是此 App 能识别的主机。";
-"Beendet" = "已结束";
-"Nicht im PATH der Login-Shell gefunden" = "在登录 Shell 的 PATH 中找不到";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "仅限受信任的文件夹：CLI 会执行项目的钩子和设置。";
 "1 Datei geändert" = "已更改 1 个文件";
 "Als Branch behalten" = "保留为分支";
 "Auch den Branch {} löschen" = "同时删除分支 {}";

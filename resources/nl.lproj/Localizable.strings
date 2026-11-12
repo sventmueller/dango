@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP-register";
 "Adapter installieren …" = "Installeer adapter…";
 "Agenten verwalten …" = "Beheer agents…";
-"AI-Thread" = "AI-thread";
 "Ablage" = "Archief";
 "Adresse von {}" = "Adres van {}";
 "Adresse …" = "Adres…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI-log: {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (uitwijkroute)";
-"CLI-Thread" = "CLI-thread";
 "Code, Terminal und Agenten in einem Fenster." = "Code, terminal en agents in één venster.";
 "Cursor darunter hinzufügen" = "Voeg cursor eronder toe";
 "Cursor darüber hinzufügen" = "Voeg cursor erboven toe";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Verwijder OAuth-app";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth-apps voor inloggen via browser";
 "„{}“ ist kein Host, den die App versteht." = "'{}' is geen host die de app begrijpt.";
-"Beendet" = "Beëindigd";
-"Nicht im PATH der Login-Shell gefunden" = "Niet gevonden in het PATH van de login-shell";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Alleen in vertrouwde mappen: CLI's voeren hooks en instellingen van het project uit.";
 "1 Datei geändert" = "1 bestand gewijzigd";
 "Als Branch behalten" = "Behoud als branch";
 "Auch den Branch {} löschen" = "Verwijder ook branch {}";

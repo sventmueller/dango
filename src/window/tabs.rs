@@ -46,8 +46,6 @@ pub enum TabKind {
     Agent,
     Diff,
     Log,
-    /// A coding agent's CLI in a terminal (I5).
-    Cli,
     /// A plan an agent asks to approve, as a document to comment on.
     Plan,
     /// A document as it reads, beside its editor: Markdown rendered, or a PDF file.
@@ -66,7 +64,6 @@ impl TabKind {
             TabKind::Agent => "sparkle",
             TabKind::Diff => "plusminus",
             TabKind::Log => "doc.plaintext",
-            TabKind::Cli => "apple.terminal",
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
             TabKind::NewTab => "plus",
@@ -206,15 +203,9 @@ impl Document {
             TabKind::Preview if let Some(image) = path.and_then(crate::file_icon::image) => return Some(image),
             kind => kind.symbol(),
         };
-        let cli = self.title().split_whitespace().next().unwrap_or_default().to_string();
-        let four = self.four_colours.borrow().clone().or_else(|| {
-            (self.kind == TabKind::Cli)
-                .then(|| crate::agent::cli_four_colours(&cli))
-                .flatten()
-        });
+        let four = self.four_colours.borrow().clone();
         let color = match (tint, self.kind) {
             (Some(tint), _) => tint,
-            (None, TabKind::Cli) => crate::agent::cli_colour(&cli),
             (None, TabKind::Agent | TabKind::Plan) => crate::agent::Agent::Claude.colour(),
             (None, _) => NSColor::secondaryLabelColor(),
         };
@@ -367,7 +358,6 @@ impl TabWindow {
         // Documents and their views come and go after the window shows, past the key view loop AppKit makes once.
         window.setAutorecalculatesKeyViewLoop(true);
         window.setToolbarStyle(NSWindowToolbarStyle::Unified);
-        // In full screen AppKit draws a line under the toolbar across the sidebar, which the window otherwise lacks.
         window.setTitlebarSeparatorStyle(NSTitlebarSeparatorStyle::None);
         window.setTabbingIdentifier(&ns(identifier));
         window.setDelegate(Some(ProtocolObject::from_ref(controller)));
@@ -386,6 +376,9 @@ impl TabWindow {
         let sidebar = NSSplitViewItem::sidebarWithViewController(&sidebar_controller);
         // Above the content's, so resizing the window resizes the content and the sidebar keeps its width.
         sidebar.setHoldingPriority(260.0);
+        // The toolbar has a section of its own above the sidebar, which the window's separator style does not reach;
+        // in full screen it otherwise draws a line under the toolbar across the sidebar.
+        sidebar.setTitlebarSeparatorStyle(NSTitlebarSeparatorStyle::None);
 
         let content = NSView::new(mtm);
         let area = DocumentArea::new(mtm);
@@ -847,9 +840,8 @@ pub(super) fn first_responder_in(view: &NSView) -> Option<Retained<NSView>> {
     find(view, &|view| text(view) && takes(view)).or_else(|| find(view, &|view| takes(view)))
 }
 
-/// The agents a thread in a worktree of its own can run (I1), each tagged with its place in
-/// `crate::worktrees::agents`; the window enables them as it does the agents above.
-/// The installed agents' entries for a thread in a worktree of its own, if any agent is installed.
+/// The installed agents' entries for a thread in a worktree of its own (I1), if any agent is installed, each tagged with
+/// its place in `crate::worktrees::agents`; the window enables them as they can start.
 fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
     let agents: Vec<Retained<NSMenuItem>> = crate::worktrees::agents()
         .into_iter()
@@ -870,7 +862,8 @@ fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
     Some(parent)
 }
 
-/// What a new tab can show (E17): the page of a new tab lists it, and ⌘T and the tab bar's "+" open that page.
+/// What a new tab can show (E17): the page of a new tab lists it, and ⌘T and the tab bar's "+" open that page. The
+/// installed agents stand in it directly, a thread in a worktree of its own below them.
 pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);
@@ -880,45 +873,39 @@ pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
         entry.setEnabled(action.is_some());
         entry
     };
-    // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
-    let claude = crate::agent::installed(&crate::agent::Agent::Claude)
-        .then(|| entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
-    let presets = crate::agent::installed_presets().into_iter().map(|(index, name)| {
-        let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
-        agent.setTag(isize::try_from(index).unwrap_or(-1));
-        agent
-    });
-    let own = crate::agent::installed(&crate::agent::Agent::Own).then(|| {
-        let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
-        own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
-        own
-    });
-    let mut agents: Vec<Retained<NSMenuItem>> = claude.into_iter().chain(presets).chain(own).collect();
-    if let Some(worktree) = worktree_menu(mtm) {
-        agents.push(separator(mtm));
-        agents.push(worktree);
-    }
-    if !agents.is_empty() {
-        agents.push(separator(mtm));
-    }
-    agents.push(entry(
-        t("Agenten verwalten …"),
-        "gearshape",
-        Some(sel!(ideOpenAgentsSettings:)),
-    ));
-    let (agent_item, agent_menu) = submenu(mtm, t("AI-Thread"), agents);
-    // The agents are enabled as they are there or can be installed, which the window checks each time.
-    agent_menu.setAutoenablesItems(true);
-    agent_item.setImage(symbol("sparkles", t("AI-Thread")).as_deref());
-    // The terminal module fills it each time the menu opens, from the login PATH and the folder's trust.
-    let (cli_item, _) = submenu(mtm, t("CLI-Thread"), Vec::new());
-    cli_item.setImage(symbol("apple.terminal", t("CLI-Thread")).as_deref());
     for entry in [
         entry(t("Neue Datei"), "doc.badge.plus", Some(sel!(ideNewFile:))),
         entry(t("Terminal"), "terminal", Some(sel!(ideNewTerminal:))),
         entry(t("Browser"), "globe", Some(sel!(ideNewBrowser:))),
-        agent_item,
-        cli_item,
+        separator(mtm),
+    ] {
+        menu.addItem(&entry);
+    }
+    // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
+    if crate::agent::installed(&crate::agent::Agent::Claude) {
+        menu.addItem(&entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
+    }
+    let usable = crate::agent::preset_menu();
+    for (index, name) in crate::agent::installed_presets() {
+        let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
+        agent.setTag(isize::try_from(index).unwrap_or(-1));
+        agent.setEnabled(usable.get(index).is_some_and(|(_, usable)| *usable));
+        menu.addItem(&agent);
+    }
+    if crate::agent::installed(&crate::agent::Agent::Own) {
+        let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
+        own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
+        menu.addItem(&own);
+    }
+    if let Some(worktree) = worktree_menu(mtm) {
+        menu.addItem(&worktree);
+    }
+    for entry in [
+        entry(
+            t("Agenten verwalten …"),
+            "gearshape",
+            Some(sel!(ideOpenAgentsSettings:)),
+        ),
         separator(mtm),
         entry(t("Willkommen"), "house", Some(sel!(ideOpenWelcome:))),
     ] {
@@ -927,16 +914,10 @@ pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
     menu
 }
 
-/// Fills the parts of `menu` that change: the CLIs on the login PATH and the own agent's endpoints.
+/// Fills the parts of `menu` that change: the own agent's endpoints.
 pub fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
-    let clis = menu.itemWithTitle(&ns(t("CLI-Thread"))).and_then(|item| item.submenu());
-    if let Some(clis) = clis {
-        crate::terminal::fill_cli_menu(controller, &clis);
-    }
     let own = menu
-        .itemWithTitle(&ns(t("AI-Thread")))
-        .and_then(|item| item.submenu())
-        .and_then(|agents| agents.itemWithTitle(&ns(t("Eigener Agent"))))
+        .itemWithTitle(&ns(t("Eigener Agent")))
         .and_then(|item| item.submenu());
     if let Some(own) = own {
         crate::agent::fill_own_menu(controller.mtm(), &own);

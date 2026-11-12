@@ -8,7 +8,6 @@
 "ACP-Register" = "Реєстр ACP";
 "Adapter installieren …" = "Інсталювати адаптер…";
 "Agenten verwalten …" = "Керувати агентами…";
-"AI-Thread" = "ШІ-чат";
 "Ablage" = "Файл";
 "Adresse von {}" = "Адреса {}";
 "Adresse …" = "Адреса…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Журнал CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude через ACP (запасний шлях)";
-"CLI-Thread" = "CLI-чат";
 "Code, Terminal und Agenten in einem Fenster." = "Код, термінал і агенти в одному вікні.";
 "Cursor darunter hinzufügen" = "Додати курсор нижче";
 "Cursor darüber hinzufügen" = "Додати курсор вище";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Вилучити застосунок OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Застосунки OAuth для входу через браузер";
 "„{}“ ist kein Host, den die App versteht." = "«{}» не є хостом, зрозумілим програмі.";
-"Beendet" = "Завершено";
-"Nicht im PATH der Login-Shell gefunden" = "Не знайдено в PATH оболонки входу";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Лише в папках, яким ви довіряєте: CLI виконують хуки й параметри проєкту.";
 "1 Datei geändert" = "Змінено 1 файл";
 "Als Branch behalten" = "Залишити як гілку";
 "Auch den Branch {} löschen" = "Також видалити гілку {}";

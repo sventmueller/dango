@@ -138,9 +138,6 @@ impl TerminalView {
         }
         NSCursor::setHiddenUntilMouseMoves(true);
         self.wake_cursor();
-        if let Some(cli) = &self.ivars().cli {
-            cli.key(std::time::Instant::now());
-        }
         let action = action_of(event);
         if !self.has_marked() {
             if event.modifierFlags().contains(NSEventModifierFlags::Command) {

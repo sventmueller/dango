@@ -8,7 +8,6 @@
 "ACP-Register" = "מרשם ACP";
 "Adapter installieren …" = "התקנת המתאם…";
 "Agenten verwalten …" = "ניהול סוכנים…";
-"AI-Thread" = "שרשור AI";
 "Ablage" = "קובץ";
 "Adresse von {}" = "הכתובת של {}";
 "Adresse …" = "כתובת…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "יומן CI: {}";
 "Claude über ACP (Ausweichweg)" = "‏Claude דרך ACP (דרך חלופית)";
-"CLI-Thread" = "שרשור CLI";
 "Code, Terminal und Agenten in einem Fenster." = "קוד, מסוף וסוכנים בחלון אחד.";
 "Cursor darunter hinzufügen" = "הוספת סמן מתחת";
 "Cursor darüber hinzufügen" = "הוספת סמן מעל";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "הסרת יישום OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "יישומי OAuth להתחברות דרך הדפדפן";
 "„{}“ ist kein Host, den die App versteht." = "״{}״ אינו מארח שהיישום מבין.";
-"Beendet" = "הסתיים";
-"Nicht im PATH der Login-Shell gefunden" = "לא נמצא ב-PATH של מעטפת ההתחברות";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "רק בתיקיות מהימנות: כלי CLI מריצים Hooks והגדרות של הפרויקט.";
 "1 Datei geändert" = "קובץ אחד שונה";
 "Als Branch behalten" = "השארה כ-Branch";
 "Auch den Branch {} löschen" = "מחיקת ה-Branch {} גם כן";

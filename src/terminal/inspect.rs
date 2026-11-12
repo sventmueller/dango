@@ -153,11 +153,6 @@ impl TerminalView {
             .unwrap_or(Foreground::Unknown)
     }
 
-    /// How the CLI of a CLI thread stands.
-    pub fn cli_status(&self) -> Option<super::CliStatus> {
-        self.ivars().cli.as_ref().map(super::cli::CliState::status)
-    }
-
     /// The id of the view's tab.
     pub fn tab(&self) -> Option<isize> {
         self.ivars().tab.get()
@@ -278,14 +273,4 @@ pub fn latest() -> Option<(u64, Retained<TerminalView>)> {
 
 pub fn view(id: u64) -> Option<Retained<TerminalView>> {
     super::find(id)
-}
-
-/// The terminal of the document `tab` in `controller`'s window.
-pub fn of_tab(controller: &crate::window::WindowController, tab: isize) -> Option<Retained<TerminalView>> {
-    super::VIEWS.with(|views| {
-        views.borrow().values().filter_map(objc2::rc::Weak::load).find(|view| {
-            let ivars = view.ivars();
-            ivars.tab.get() == Some(tab) && ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller))
-        })
-    })
 }

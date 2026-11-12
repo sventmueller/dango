@@ -330,17 +330,6 @@ define_class!(
             guarded((), || crate::terminal::open_tab(self, None));
         }
 
-        #[unsafe(method(ideNewCliThread:))]
-        fn new_cli_thread_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || {
-                let item = sender.and_then(|s| s.downcast_ref::<NSMenuItem>());
-                let name = item.and_then(|i| i.representedObject()?.downcast::<objc2_foundation::NSString>().ok());
-                if let Some(name) = name {
-                    crate::terminal::open_cli_thread(self, &name.to_string());
-                }
-            });
-        }
-
         #[unsafe(method(ideNewBrowser:))]
         fn new_browser_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::browser::open_tab(self, None));
@@ -1680,10 +1669,10 @@ impl WindowController {
         true
     }
 
-    /// The agents the menu of new tabs lists under AI-Thread ▸ "In eigenem Worktree".
+    /// The agents the menu of new tabs lists under "In eigenem Worktree".
     #[cfg(feature = "selftest")]
     pub fn worktree_menu_titles(&self) -> Vec<String> {
-        menu_titles(&self.new_tab_menu(), &[t("AI-Thread"), t("In eigenem Worktree")])
+        menu_titles(&self.new_tab_menu(), &[t("In eigenem Worktree")])
     }
 
     #[cfg(feature = "selftest")]

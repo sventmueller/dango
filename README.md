@@ -37,8 +37,8 @@ are signed with the app's own key, which Sparkle checks before it installs anyth
 2. **The sidebar** on the left switches between Files (⌘1), Search (⌘2), AI (⌘3), Git (⌘4) and CI (⌘5); clicking the
    sidebar button in the toolbar or ⌃⌘S folds it away.
 3. **Every document is a tab** of the window, macOS's own tabs. A click on the "+" at the end of the tab bar or ⌘T opens
-   a new tab that offers a new file, a terminal, a browser, an AI thread with a chosen agent, or a CLI thread (an agent's
-   own command-line interface in a terminal); holding the "+" shows the same as a menu, whose entry opens at once.
+   a new tab that offers a new file, a terminal, a browser, an AI thread with each installed agent, or one in a worktree
+   of its own; holding the "+" shows the same as a menu, whose entry opens at once.
    "Open to the Side" in the file list's context menu shows a second
    document beside the one in front.
 4. **Quick open** with ⌘P, search and replace in the project with ⇧⌘F.
@@ -62,8 +62,7 @@ checkpointed before each prompt and can be reviewed and rewound per message.
 **Settings › Agents** shows which agents this Mac has, installs the others and their updates, and opens the ACP
 registry; "+ New Session" in the AI panel offers the agents that are ready. Agents the app installs are pinned to
 tested versions and checked against their published checksums (npm integrity or SHA-256); the app does not run
-unversioned `npx` packages. A CLI thread runs `claude`, `codex`, `agy` or `gemini` unchanged in a terminal
-tab, for those who prefer the agent's own interface.
+unversioned `npx` packages.
 
 New threads start in the mode "Manual": the agent asks before it changes files or runs commands. For destructive git
 commands (`push --force`, `reset --hard`, `clean -fd`) the app offers no "always allow". The own agent keeps its
@@ -108,7 +107,7 @@ A folder can make programs run as soon as something is started in it: git hooks 
 `core.fsmonitor`, language servers from `node_modules`, agent hooks, `.mcp.json`. The first time you open a folder,
 the app asks whether you trust it.
 
-- **Trusted:** git, language servers, agents, CLI threads and CI run for this folder and everything below it.
+- **Trusted:** git, language servers, agents and CI run for this folder and everything below it.
 - **Restricted:** you can read and edit; the change marks in the editor come from reading `.git` directly. Nothing
   the folder configures is started: no git processes, no language servers, no agents. The Git, CI and AI panels say
   so and offer to trust the folder.

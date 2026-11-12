@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP-jegyzék";
 "Adapter installieren …" = "Adapter telepítése…";
 "Agenten verwalten …" = "Ügynökök kezelése…";
-"AI-Thread" = "AI-szál";
 "Ablage" = "Fájl";
 "Adresse von {}" = "A(z) {} címe";
 "Adresse …" = "Cím…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI-napló: {}";
 "Claude über ACP (Ausweichweg)" = "Claude ACP-n keresztül (tartalékút)";
-"CLI-Thread" = "CLI-szál";
 "Code, Terminal und Agenten in einem Fenster." = "Kód, terminál és ügynökök egy ablakban.";
 "Cursor darunter hinzufügen" = "Kurzor hozzáadása alá";
 "Cursor darüber hinzufügen" = "Kurzor hozzáadása fölé";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "OAuth-app eltávolítása";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth-appok a böngészős bejelentkezéshez";
 "„{}“ ist kein Host, den die App versteht." = "A(z) „{}” nem olyan hoszt, amelyet az app megért.";
-"Beendet" = "Befejeződött";
-"Nicht im PATH der Login-Shell gefunden" = "Nem található a bejelentkezési shell PATH-jában";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Csak megbízható mappákban: a CLI-k futtatják a projekt hookjait és beállításait.";
 "1 Datei geändert" = "1 fájl módosítva";
 "Als Branch behalten" = "Megtartás ágként";
 "Auch den Branch {} löschen" = "A(z) {} ág törlése is";

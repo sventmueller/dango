@@ -8,7 +8,6 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs, unreachable_pub)]
 
-pub mod activity;
 mod devserver;
 pub mod event;
 pub mod foreground;
@@ -21,7 +20,6 @@ pub mod session;
 pub mod snapshot;
 mod sys;
 
-pub use activity::{OutputWatch, Seen};
 pub use event::{Clipboard, Event, WorkingDirectory};
 pub use foreground::{Agent, Foreground};
 pub use input::{

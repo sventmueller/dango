@@ -63,7 +63,6 @@ oder wartet, während du woanders bist.
 - **Eigener Agent:** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio und Server mit der API von OpenAI
   oder Anthropic, mit Werkzeugen für Dateien, Suche, Befehle, Diagnosen und Webabrufe; Schlüssel bleiben im
   Schlüsselbund.
-- **CLI-Threads** starten `claude`, `codex`, `agy` oder `gemini` unverändert in einem Terminal-Tab.
 - Ein Sandbox-Schalter je Thread begrenzt, was die Befehle eines Agenten dürfen, soweit der Agent das unterstützt.
 
 ## Panels und Wiederherstellung

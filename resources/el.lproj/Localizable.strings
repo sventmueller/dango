@@ -8,7 +8,6 @@
 "ACP-Register" = "Μητρώο ACP";
 "Adapter installieren …" = "Εγκατάσταση προσαρμογέα…";
 "Agenten verwalten …" = "Διαχείριση πρακτόρων…";
-"AI-Thread" = "Νήμα AI";
 "Ablage" = "Αρχείο";
 "Adresse von {}" = "Διεύθυνση του {}";
 "Adresse …" = "Διεύθυνση…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Αρχείο καταγραφής CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude μέσω ACP (εναλλακτική οδός)";
-"CLI-Thread" = "Νήμα CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Κώδικας, τερματικό και πράκτορες σε ένα παράθυρο.";
 "Cursor darunter hinzufügen" = "Προσθήκη δρομέα από κάτω";
 "Cursor darüber hinzufügen" = "Προσθήκη δρομέα από πάνω";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Αφαίρεση εφαρμογής OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Εφαρμογές OAuth για σύνδεση μέσω προγράμματος περιήγησης";
 "„{}“ ist kein Host, den die App versteht." = "Το «{}» δεν είναι host που αναγνωρίζει η εφαρμογή.";
-"Beendet" = "Τερματίστηκε";
-"Nicht im PATH der Login-Shell gefunden" = "Δεν βρέθηκε στο PATH του κελύφους σύνδεσης";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Μόνο σε φακέλους που εμπιστεύεστε: τα CLI εκτελούν τα hook και τις ρυθμίσεις του έργου.";
 "1 Datei geändert" = "Άλλαξε 1 αρχείο";
 "Als Branch behalten" = "Διατήρηση ως branch";
 "Auch den Branch {} löschen" = "Διαγραφή και του branch {}";

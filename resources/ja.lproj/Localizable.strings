@@ -8,7 +8,6 @@
 "ACP-Register" = "ACPレジストリ";
 "Adapter installieren …" = "アダプタをインストール…";
 "Agenten verwalten …" = "エージェントを管理…";
-"AI-Thread" = "AIスレッド";
 "Ablage" = "ファイル";
 "Adresse von {}" = "{}のアドレス";
 "Adresse …" = "アドレス…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CIログ: {}";
 "Claude über ACP (Ausweichweg)" = "ACP経由のClaude（代替手段）";
-"CLI-Thread" = "CLIスレッド";
 "Code, Terminal und Agenten in einem Fenster." = "コード、ターミナル、エージェントを1つのウインドウに。";
 "Cursor darunter hinzufügen" = "下にカーソルを追加";
 "Cursor darüber hinzufügen" = "上にカーソルを追加";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "OAuthアプリを削除";
 "OAuth-Apps für die Browser-Anmeldung" = "ブラウザでのサインイン用のOAuthアプリ";
 "„{}“ ist kein Host, den die App versteht." = "“{}”はアプリが認識できるホストではありません。";
-"Beendet" = "終了";
-"Nicht im PATH der Login-Shell gefunden" = "ログインシェルのPATHに見つかりません";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "信頼済みのフォルダでのみ: CLIはプロジェクトのフックと設定を実行します。";
 "1 Datei geändert" = "1個のファイルを変更";
 "Als Branch behalten" = "ブランチとして保持";
 "Auch den Branch {} löschen" = "ブランチ{}も削除";

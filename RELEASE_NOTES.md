@@ -61,7 +61,6 @@ and the Dock icon say when a session finishes or waits while you look elsewhere.
   installed agents are pinned to tested versions and checked against their checksums.
 - **Own agent:** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio and servers that speak OpenAI's or
   Anthropic's API, with tools for files, search, commands, diagnostics and web requests; keys stay in the keychain.
-- **CLI threads** run `claude`, `codex`, `agy` or `gemini` unchanged in a terminal tab.
 - A sandbox switch per thread limits what an agent's commands may do, as far as the agent supports it.
 
 ## Panels and recovery

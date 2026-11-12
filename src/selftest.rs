@@ -11,7 +11,6 @@ mod agent_perf;
 mod agent_plan;
 pub mod application;
 mod browser_dev;
-mod cli_thread;
 mod markdown;
 mod markdown_editor;
 mod panels;
@@ -143,7 +142,6 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "search" => search::run(),
         "terminal" => terminal::run(),
         "paste-cli" => paste_cli::run(),
-        "cli-thread" => cli_thread::run(),
         "recovery" => recovery::run(),
         "restore" => restore::run(),
         "conflict" => conflict::run(),
@@ -272,8 +270,7 @@ fn probe_window(controller: &window::WindowController) {
         t("Neue Datei"),
         t("Terminal"),
         t("Browser"),
-        t("AI-Thread"),
-        t("CLI-Thread"),
+        t("Agenten verwalten …"),
         t("Willkommen"),
     ];
     check(

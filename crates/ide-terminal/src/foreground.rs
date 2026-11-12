@@ -72,21 +72,6 @@ pub(crate) fn of_terminal(master: &File) -> Foreground {
     classify_group(&processes)
 }
 
-/// The names of the programs in the foreground process group of the terminal whose master side is `master`.
-pub(crate) fn programs_of_terminal(master: &File) -> Vec<String> {
-    let Some(group) = sys::foreground_group(master) else {
-        return Vec::new();
-    };
-    sys::group_members(group)
-        .into_iter()
-        .filter_map(|pid| {
-            let first = sys::arguments(pid).and_then(|argv| argv.into_iter().next());
-            first.or_else(|| sys::process_name(pid))
-        })
-        .map(|arg0| program_name(&arg0).to_string())
-        .collect()
-}
-
 /// The foreground of a process group from its processes' arguments; an agent anywhere in the group wins, then a
 /// remote session, then any program other than a shell.
 pub fn classify_group(processes: &[Vec<String>]) -> Foreground {

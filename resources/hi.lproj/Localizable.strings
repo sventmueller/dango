@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP रजिस्ट्री";
 "Adapter installieren …" = "एडैप्टर इंस्टॉल करें…";
 "Agenten verwalten …" = "एजेंट प्रबंधित करें…";
-"AI-Thread" = "AI थ्रेड";
 "Ablage" = "फ़ाइल";
 "Adresse von {}" = "{} का पता";
 "Adresse …" = "पता…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI लॉग : {}";
 "Claude über ACP (Ausweichweg)" = "ACP के ज़रिए Claude (वैकल्पिक तरीका)";
-"CLI-Thread" = "CLI थ्रेड";
 "Code, Terminal und Agenten in einem Fenster." = "कोड, टर्मिनल और एजेंट एक ही विंडो में।";
 "Cursor darunter hinzufügen" = "नीचे कर्सर जोड़ें";
 "Cursor darüber hinzufügen" = "ऊपर कर्सर जोड़ें";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "OAuth ऐप हटाएँ";
 "OAuth-Apps für die Browser-Anmeldung" = "ब्राउज़र साइन इन के लिए OAuth ऐप";
 "„{}“ ist kein Host, den die App versteht." = "“{}” ऐसा होस्ट नहीं है, जिसे ऐप समझता हो।";
-"Beendet" = "समाप्त";
-"Nicht im PATH der Login-Shell gefunden" = "लॉगिन शेल के PATH में नहीं मिला";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "केवल भरोसेमंद फ़ोल्डरों में : CLI प्रोजेक्ट के हुक और सेटिंग्ज़ लागू करते हैं।";
 "1 Datei geändert" = "1 फ़ाइल बदली गई";
 "Als Branch behalten" = "ब्रांच के रूप में रखें";
 "Auch den Branch {} löschen" = "ब्रांच {} भी डिलीट करें";

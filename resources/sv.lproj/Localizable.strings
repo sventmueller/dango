@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP-register";
 "Adapter installieren …" = "Installera adapter…";
 "Agenten verwalten …" = "Hantera agenter…";
-"AI-Thread" = "AI-tråd";
 "Ablage" = "Arkiv";
 "Adresse von {}" = "Adress för {}";
 "Adresse …" = "Adress…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI-logg: {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (reservväg)";
-"CLI-Thread" = "CLI-tråd";
 "Code, Terminal und Agenten in einem Fenster." = "Kod, terminal och agenter i ett fönster.";
 "Cursor darunter hinzufügen" = "Lägg till markör nedanför";
 "Cursor darüber hinzufügen" = "Lägg till markör ovanför";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Ta bort OAuth-app";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth-appar för inloggning via webbläsaren";
 "„{}“ ist kein Host, den die App versteht." = "”{}” är inte en värd som appen förstår.";
-"Beendet" = "Avslutad";
-"Nicht im PATH der Login-Shell gefunden" = "Hittades inte i inloggningsskalets PATH";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Bara i betrodda mappar: CLI:er kör projektets hooks och inställningar.";
 "1 Datei geändert" = "1 fil ändrad";
 "Als Branch behalten" = "Behåll som gren";
 "Auch den Branch {} löschen" = "Radera även grenen {}";

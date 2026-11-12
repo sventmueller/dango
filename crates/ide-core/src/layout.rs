@@ -47,7 +47,7 @@ pub enum Tab {
         /// The agent's id for the session.
         session: String,
     },
-    /// A CLI thread, opened again by starting its CLI so that it continues its session.
+    /// A CLI thread of an older version, which the app no longer has; it opens again as a terminal.
     Cli {
         /// The CLI's name, such as `claude`.
         name: String,
@@ -248,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cli_thread_keeps_its_name_and_a_session_only_where_known() {
+    fn a_cli_thread_of_an_older_version_still_reads() {
         let known = Tab::Cli {
             name: "claude".into(),
             session: Some("s1".into()),

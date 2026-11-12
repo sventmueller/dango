@@ -8,7 +8,6 @@
 "ACP-Register" = "Реестр ACP";
 "Adapter installieren …" = "Установить адаптер…";
 "Agenten verwalten …" = "Управлять агентами…";
-"AI-Thread" = "ИИ-чат";
 "Ablage" = "Файл";
 "Adresse von {}" = "Адрес {}";
 "Adresse …" = "Адрес…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Журнал CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude через ACP (запасной путь)";
-"CLI-Thread" = "CLI-чат";
 "Code, Terminal und Agenten in einem Fenster." = "Код, терминал и агенты в одном окне.";
 "Cursor darunter hinzufügen" = "Добавить курсор ниже";
 "Cursor darüber hinzufügen" = "Добавить курсор выше";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Удалить приложение OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Приложения OAuth для входа через браузер";
 "„{}“ ist kein Host, den die App versteht." = "«{}» не является хостом, понятным приложению.";
-"Beendet" = "Завершено";
-"Nicht im PATH der Login-Shell gefunden" = "Не найдено в PATH оболочки входа";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Только в доверенных папках: CLI выполняют хуки и настройки проекта.";
 "1 Datei geändert" = "Изменен 1 файл";
 "Als Branch behalten" = "Оставить как ветку";
 "Auch den Branch {} löschen" = "Также удалить ветку {}";

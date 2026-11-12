@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP 레지스트리";
 "Adapter installieren …" = "어댑터 설치…";
 "Agenten verwalten …" = "에이전트 관리…";
-"AI-Thread" = "AI 스레드";
 "Ablage" = "파일";
 "Adresse von {}" = "{}의 주소";
 "Adresse …" = "주소…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI 로그: {}";
 "Claude über ACP (Ausweichweg)" = "ACP를 통한 Claude(대체 경로)";
-"CLI-Thread" = "CLI 스레드";
 "Code, Terminal und Agenten in einem Fenster." = "코드, 터미널, 에이전트를 하나의 윈도우에서.";
 "Cursor darunter hinzufügen" = "아래에 커서 추가";
 "Cursor darüber hinzufügen" = "위에 커서 추가";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "OAuth 앱 제거";
 "OAuth-Apps für die Browser-Anmeldung" = "브라우저 로그인용 OAuth 앱";
 "„{}“ ist kein Host, den die App versteht." = "‘{}’은(는) 앱이 이해하는 호스트가 아닙니다.";
-"Beendet" = "종료됨";
-"Nicht im PATH der Login-Shell gefunden" = "로그인 셸의 PATH에서 찾을 수 없음";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "신뢰하는 폴더에서만: CLI는 프로젝트의 훅과 설정을 실행합니다.";
 "1 Datei geändert" = "파일 1개 변경됨";
 "Als Branch behalten" = "브랜치로 유지";
 "Auch den Branch {} löschen" = "브랜치 {}도 삭제";

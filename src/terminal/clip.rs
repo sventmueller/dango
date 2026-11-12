@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use ide_terminal::{PasteAction, Refusal};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{AnyThread, ClassType, DefinedClass};
+use objc2::{AnyThread, ClassType};
 use objc2_app_kit::{
     NSBitmapImageFileType, NSBitmapImageRep, NSImage, NSPasteboard, NSPasteboardTypePNG, NSPasteboardTypeString,
     NSPasteboardTypeTIFF, NSPasteboardURLReadingFileURLsOnlyKey,
@@ -85,9 +85,6 @@ impl TerminalView {
     /// Pastes what `pasteboard` holds: files as their paths, text, else an image as `Session::paste_image` decides,
     /// which is returned.
     pub(super) fn paste_from(&self, pasteboard: &NSPasteboard) -> Option<PasteAction> {
-        if let Some(cli) = &self.ivars().cli {
-            cli.key(std::time::Instant::now());
-        }
         let paths = files(pasteboard);
         if !paths.is_empty() {
             self.with_session(|session| session.paste_paths(&paths));

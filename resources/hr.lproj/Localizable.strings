@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP registar";
 "Adapter installieren …" = "Instaliraj adapter…";
 "Agenten verwalten …" = "Upravljaj agentima…";
-"AI-Thread" = "AI nit";
 "Ablage" = "Datoteka";
 "Adresse von {}" = "Adresa za {}";
 "Adresse …" = "Adresa…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI zapisnik: {}";
 "Claude über ACP (Ausweichweg)" = "Claude preko ACP-a (zamjenski put)";
-"CLI-Thread" = "CLI nit";
 "Code, Terminal und Agenten in einem Fenster." = "Kod, terminal i agenti u jednom prozoru.";
 "Cursor darunter hinzufügen" = "Dodaj kursor ispod";
 "Cursor darüber hinzufügen" = "Dodaj kursor iznad";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Ukloni OAuth aplikaciju";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth aplikacije za prijavu putem preglednika";
 "„{}“ ist kein Host, den die App versteht." = "“{}” nije host koji aplikacija razumije.";
-"Beendet" = "Završeno";
-"Nicht im PATH der Login-Shell gefunden" = "Nije pronađeno u PATH-u ljuske za prijavu";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Samo u pouzdanim mapama: CLI alati izvršavaju hookove i postavke projekta.";
 "1 Datei geändert" = "Promijenjena 1 datoteka";
 "Als Branch behalten" = "Zadrži kao granu";
 "Auch den Branch {} löschen" = "Obriši i granu {}";

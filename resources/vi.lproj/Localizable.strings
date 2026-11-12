@@ -8,7 +8,6 @@
 "ACP-Register" = "Sổ đăng ký ACP";
 "Adapter installieren …" = "Cài đặt bộ chuyển đổi…";
 "Agenten verwalten …" = "Quản lý tác nhân…";
-"AI-Thread" = "Luồng AI";
 "Ablage" = "Tệp";
 "Adresse von {}" = "Địa chỉ của {}";
 "Adresse …" = "Địa chỉ…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Nhật ký CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude qua ACP (đường dự phòng)";
-"CLI-Thread" = "Luồng CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Mã, terminal và tác nhân trong một cửa sổ.";
 "Cursor darunter hinzufügen" = "Thêm con trỏ bên dưới";
 "Cursor darüber hinzufügen" = "Thêm con trỏ bên trên";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Xóa ứng dụng OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Ứng dụng OAuth để đăng nhập bằng trình duyệt";
 "„{}“ ist kein Host, den die App versteht." = "“{}” không phải là máy chủ mà ứng dụng hiểu được.";
-"Beendet" = "Đã kết thúc";
-"Nicht im PATH der Login-Shell gefunden" = "Không tìm thấy trong PATH của shell đăng nhập";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Chỉ trong thư mục được tin cậy: CLI chạy hook và cài đặt của dự án.";
 "1 Datei geändert" = "Đã thay đổi 1 tệp";
 "Als Branch behalten" = "Giữ làm nhánh";
 "Auch den Branch {} löschen" = "Xóa luôn nhánh {}";

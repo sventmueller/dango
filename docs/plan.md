@@ -249,7 +249,7 @@ vibeedit/
   Schnappschuss-Ablage. Versteckte Refs bleiben lokal (nie gepusht). Wiederherstellen erkennt zwischenzeitliche
   Nutzeränderungen und fragt. Agent-Änderungen als Diff mit Annehmen/Verwerfen je Abschnitt; klare Regel je Anschluss,
   ob eine Änderung schon auf der Platte liegt („Verwerfen“ = zurücknehmen) oder erst vorgeschlagen ist.
-- **I1** Worktree-Threads, **I3** Kontext/Kosten, **I4** Secrets-Schutz (gitleaks), **I5** CLI-Threads, **I7**
+- **I1** Worktree-Threads, **I3** Kontext/Kosten, **I4** Secrets-Schutz (gitleaks), **I5** CLI-Threads *(entfallen, E78)*, **I7**
   Dev-Server → Browser-Tab, **I8** CI-Fehler an Agent (mit Prompt-Injection-Hinweis, E22), **I9** Mitteilungen und
   Dock-Zahl — alle *bestätigt*, Einordnung in die Phasen unten.
 
@@ -288,7 +288,7 @@ VoiceOver-Prüfung der neuen Ansichten.
 
 ## Risiken
 - **R1 Claude im AI-Tab zählt als Agent-SDK-Nutzung**; die angekündigte getrennte Abrechnung ist seit 2026-06-15
-  pausiert. CLI-Threads (I5) bleiben unberührt.
+  pausiert.
 - **R2 ACP-Crate bricht fast monatlich**; Version erst zur ACP-Phase festlegen, gekapselt. *(Seit 5.0 folgt die stabile v1-API semver; Dango nutzt 5.2.0, siehe docs/acp.md.)*
 - **R3 Eingriffe in splat und lowspeak** betreffen ausgelieferte Apps; deshalb spät (Phase 9), eigener Branch, deren
   Testsuites plus Tests für die neue Fremdnutzung.
@@ -491,6 +491,12 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   offenen Merge Requests (GitHub: Pull Requests) oder Issues, zuletzt geänderte zuerst, je höchstens 50; ein
   Doppelklick öffnet sie im Browser, „+“ legt im Browser einen neuen für den Branch oder ein neues Issue an.
   Bearbeiten, Kommentieren und Mergen bleiben im Browser. Schreibende Aufrufe brauchen bei GitLab den Bereich `api`.
+- **E78 Agenten direkt im „+“-Menü, keine CLI-Threads** *(Entscheidung des Eigentümers, ändert E17, E60, E64, E68 und
+  ersetzt I5)*: Das „+“-Menü und die Neuer-Tab-Seite nennen die installierten Agenten direkt, jeden als eigenen
+  Eintrag bzw. Knopf untereinander, den eigenen Agenten mit seinen Endpunkten als Untermenü; darunter „In eigenem
+  Worktree ▸“ und „Agenten verwalten …“. Das Untermenü „AI-Thread“ entfällt. CLI-Threads (I5) entfallen ganz: kein
+  Start mehr, keine Zeilen in AI-Panel und Aktivitätsübersicht, kein Statuspunkt. Ein CLI-Thread aus einem früher
+  gesicherten Fensterlayout öffnet als Terminal im Projektordner.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

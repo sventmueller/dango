@@ -8,7 +8,6 @@
 "ACP-Register" = "فهرس ACP";
 "Adapter installieren …" = "تثبيت المحوّل…";
 "Agenten verwalten …" = "إدارة الوكلاء…";
-"AI-Thread" = "سلسلة AI";
 "Ablage" = "ملف";
 "Adresse von {}" = "عنوان {}";
 "Adresse …" = "العنوان…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "سجل CI: {}";
 "Claude über ACP (Ausweichweg)" = "‏Claude عبر ACP (مسار بديل)";
-"CLI-Thread" = "سلسلة CLI";
 "Code, Terminal und Agenten in einem Fenster." = "الرمز البرمجي والطرفية والوكلاء في نافذة واحدة.";
 "Cursor darunter hinzufügen" = "إضافة مؤشر بالأسفل";
 "Cursor darüber hinzufügen" = "إضافة مؤشر بالأعلى";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "إزالة تطبيق OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "تطبيقات OAuth لتسجيل الدخول عبر المتصفح";
 "„{}“ ist kein Host, den die App versteht." = "ليس “{}” مضيفًا يفهمه التطبيق.";
-"Beendet" = "انتهى";
-"Nicht im PATH der Login-Shell gefunden" = "غير موجود في PATH الخاص بصدفة تسجيل الدخول";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "في المجلدات الموثوقة فقط: تنفّذ واجهات CLI خطافات المشروع وإعداداته.";
 "1 Datei geändert" = "تم تغيير ملف واحد";
 "Als Branch behalten" = "الاحتفاظ كفرع";
 "Auch den Branch {} löschen" = "حذف الفرع {} أيضًا";

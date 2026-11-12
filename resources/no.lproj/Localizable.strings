@@ -8,7 +8,6 @@
 "ACP-Register" = "ACP-register";
 "Adapter installieren …" = "Installer adapter…";
 "Agenten verwalten …" = "Administrer agenter…";
-"AI-Thread" = "KI-tråd";
 "Ablage" = "Fil";
 "Adresse von {}" = "Adressen til {}";
 "Adresse …" = "Adresse…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "CI-logg: {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (reservevei)";
-"CLI-Thread" = "CLI-tråd";
 "Code, Terminal und Agenten in einem Fenster." = "Kode, terminal og agenter i ett vindu.";
 "Cursor darunter hinzufügen" = "Legg til markør under";
 "Cursor darüber hinzufügen" = "Legg til markør over";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Fjern OAuth-app";
 "OAuth-Apps für die Browser-Anmeldung" = "OAuth-apper for pålogging med nettleser";
 "„{}“ ist kein Host, den die App versteht." = "«{}» er ikke en vert appen forstår.";
-"Beendet" = "Avsluttet";
-"Nicht im PATH der Login-Shell gefunden" = "Ikke funnet i PATH for påloggingsskallet";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Bare i mapper du stoler på: CLI-er kjører prosjektets hooks og innstillinger.";
 "1 Datei geändert" = "1 fil endret";
 "Als Branch behalten" = "Behold som branch";
 "Auch den Branch {} löschen" = "Slett også branchen {}";

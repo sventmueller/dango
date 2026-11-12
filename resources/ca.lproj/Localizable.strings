@@ -8,7 +8,6 @@
 "ACP-Register" = "Registre d’ACP";
 "Adapter installieren …" = "Instal·la l’adaptador…";
 "Agenten verwalten …" = "Gestiona els agents…";
-"AI-Thread" = "Fil d’IA";
 "Ablage" = "Arxiu";
 "Adresse von {}" = "Adreça per a {}";
 "Adresse …" = "Adreça…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Log de CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude via ACP (alternativa)";
-"CLI-Thread" = "Fil de CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Codi, terminal i agents en una sola finestra.";
 "Cursor darunter hinzufügen" = "Afegeix un cursor a sota";
 "Cursor darüber hinzufügen" = "Afegeix un cursor a sobre";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Elimina l’app OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Apps OAuth per a l’inici de sessió amb el navegador";
 "„{}“ ist kein Host, den die App versteht." = "“{}” no és un host que l’app entengui.";
-"Beendet" = "Finalitzat";
-"Nicht im PATH der Login-Shell gefunden" = "No s’ha trobat al PATH de l’intèrpret d’ordres d’inici de sessió";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Només en carpetes de confiança: les CLI executen els hooks i la configuració del projecte.";
 "1 Datei geändert" = "1 fitxer modificat";
 "Als Branch behalten" = "Conserva com a branca";
 "Auch den Branch {} löschen" = "Elimina també la branca {}";

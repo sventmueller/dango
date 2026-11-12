@@ -8,7 +8,6 @@
 "ACP-Register" = "Registri ACP";
 "Adapter installieren …" = "Instal Adaptor…";
 "Agenten verwalten …" = "Kelola Agen…";
-"AI-Thread" = "Thread AI";
 "Ablage" = "File";
 "Adresse von {}" = "Alamat {}";
 "Adresse …" = "Alamat…";
@@ -56,7 +55,6 @@
 "CI" = "CI";
 "CI-Log: {}" = "Log CI: {}";
 "Claude über ACP (Ausweichweg)" = "Claude melalui ACP (jalur cadangan)";
-"CLI-Thread" = "Thread CLI";
 "Code, Terminal und Agenten in einem Fenster." = "Kode, terminal, dan agen dalam satu jendela.";
 "Cursor darunter hinzufügen" = "Tambahkan Kursor di Bawah";
 "Cursor darüber hinzufügen" = "Tambahkan Kursor di Atas";
@@ -946,9 +944,6 @@
 "OAuth-App entfernen" = "Hapus Aplikasi OAuth";
 "OAuth-Apps für die Browser-Anmeldung" = "Aplikasi OAuth untuk Masuk melalui Browser";
 "„{}“ ist kein Host, den die App versteht." = "“{}” bukan host yang dipahami aplikasi.";
-"Beendet" = "Berakhir";
-"Nicht im PATH der Login-Shell gefunden" = "Tidak ditemukan di PATH shell login";
-"Nur in vertrauten Ordnern: CLIs führen Hooks und Einstellungen des Projekts aus." = "Hanya di folder tepercaya: CLI menjalankan hook dan pengaturan proyek.";
 "1 Datei geändert" = "1 file diubah";
 "Als Branch behalten" = "Pertahankan sebagai Branch";
 "Auch den Branch {} löschen" = "Hapus juga branch {}";

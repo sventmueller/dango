@@ -50,7 +50,11 @@ impl NewTabPage {
             return;
         };
         let menu = &self.ivars().menu;
-        let Some(entry) = menu.itemWithTag(button.tag()) else {
+        let Some(entry) = (0..menu.numberOfItems())
+            .contains(&(button.tag() - TAG_BASE))
+            .then(|| menu.itemAtIndex(button.tag() - TAG_BASE))
+            .flatten()
+        else {
             return;
         };
         if let Some(submenu) = entry.submenu() {
@@ -103,7 +107,6 @@ pub fn view(mtm: MainThreadMarker, controller: &WindowController) -> Retained<Ne
         if entry.isSeparatorItem() {
             continue;
         }
-        entry.setTag(isize::try_from(index).unwrap_or(-1) + TAG_BASE);
         let name = if entry.submenu().is_some() {
             format!("{} ▸", entry.title())
         } else {
@@ -112,7 +115,7 @@ pub fn view(mtm: MainThreadMarker, controller: &WindowController) -> Retained<Ne
         // SAFETY: The page answers the action with a method that takes the sender, and is set as the target below.
         let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(&name), None, None, mtm) };
         set_action(&button, &page, sel!(ideChooseNewTab:));
-        button.setTag(entry.tag());
+        button.setTag(isize::try_from(index).unwrap_or(-1) + TAG_BASE);
         button.setBezelStyle(NSBezelStyle::Push);
         button.setControlSize(NSControlSize::Large);
         button.setImage(entry.image().as_deref());
@@ -138,5 +141,5 @@ pub fn view(mtm: MainThreadMarker, controller: &WindowController) -> Retained<Ne
     page
 }
 
-/// Where the tags of the page's entries start, clear of the tags some entries' actions read.
+/// Where the tags of the page's buttons start, which name their entry's place in the menu.
 const TAG_BASE: isize = 1000;

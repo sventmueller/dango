@@ -569,7 +569,7 @@ fn button_titled(window: &NSWindow, title: &str) -> Option<Retained<NSView>> {
     find(&content, title)
 }
 
-/// Closes the CLI thread with Ctrl+C, then every window, and ends once their processes did.
+/// Closes every tab, then every window, and ends once their processes did.
 fn close_all(root: PathBuf) {
     if let Some(controller) = window_of(&root) {
         for id in controller.tab_ids() {

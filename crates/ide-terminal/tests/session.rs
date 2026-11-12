@@ -58,53 +58,6 @@ fn clearing_drops_the_history_and_the_lines_above_the_prompt() {
 }
 
 #[test]
-fn a_cli_session_is_interrupted_when_it_closes() {
-    let dir = temporary("interrupt");
-    let marker = dir.join("interrupted");
-    let script = format!(
-        "trap 'echo yes > {}; exit 0' INT; echo ready; while :; do sleep 0.1; done",
-        marker.display()
-    );
-    let options = Options {
-        interrupt_on_close: true,
-        ..command("/bin/sh", &["-c", &script], &dir)
-    };
-    let mut harness = Harness::start(options, &dir);
-    assert!(harness.wait_until(|h| h.screen_line("ready")));
-    let shell = i32::try_from(harness.session.pid()).unwrap();
-    harness.session.close();
-    let deadline = Instant::now() + Duration::from_secs(5);
-    while !marker.exists() && Instant::now() < deadline {
-        std::thread::sleep(Duration::from_millis(20));
-    }
-    assert!(marker.exists(), "Ctrl+C did not reach the program");
-    assert!(gone_within(shell, Duration::from_secs(5)));
-}
-
-#[test]
-fn a_title_alone_changes_no_text() {
-    let dir = temporary("content");
-    let script = "printf '\\033]0;quiet\\007'; sleep 1; printf x; sleep 30";
-    let mut harness = Harness::start(command("/bin/sh", &["-c", script], &dir), &dir);
-    assert!(harness.wait_until(|h| h.saw(&Event::Title(Some("quiet".into())))));
-    assert_eq!(harness.session.content_changes(), 0);
-    assert!(harness.wait_until(|h| h.screen_line("x")));
-    assert!(harness.session.content_changes() > 0);
-}
-
-#[test]
-fn the_programs_in_front_are_named() {
-    let dir = temporary("programs");
-    let mut harness = interactive_sh(&dir);
-    harness.session.write("sleep 30\n");
-    assert!(
-        harness.wait_until(|h| h.session.foreground_programs().contains(&"sleep".to_string())),
-        "{:?}",
-        harness.session.foreground_programs()
-    );
-}
-
-#[test]
 fn closing_a_session_returns_at_once_and_ends_the_job_in_front() {
     let dir = temporary("close");
     let mut harness = interactive_sh(&dir);

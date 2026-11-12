@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use block2::RcBlock;
 use ide_core::settings::{Settings, keys};
 use ide_process::Supervisor;
-use ide_terminal::{Clipboard, Damage, Event, Foreground, Options, Program, Session, Size, Snapshot};
+use ide_terminal::{Clipboard, Damage, Event, Foreground, Options, Session, Size, Snapshot};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -31,7 +31,6 @@ use objc2_foundation::{
 use splat_i18n::{t, tf};
 
 use super::banner::Banner;
-use super::cli::{CliState, Launch};
 use super::gpu::Surface;
 use super::input::KeyState;
 use super::mouse::MouseState;
@@ -72,8 +71,6 @@ pub struct Ivars {
     gpu: Option<RefCell<Surface>>,
     blink: RefCell<Option<Retained<NSTimer>>>,
     observers: RefCell<Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
-    /// The CLI the terminal runs instead of a shell, for a CLI thread (I5).
-    pub(super) cli: Option<CliState>,
 }
 
 impl Drop for Ivars {
@@ -84,12 +81,6 @@ impl Drop for Ivars {
         remove_observers(self.observers.get_mut());
         self.mouse.stop_autoscroll();
         super::forget(self.id);
-        if self.cli.is_some()
-            && let Some(controller) = self.controller.load()
-        {
-            crate::activity::refresh(&controller);
-            crate::agent_panel::refresh(&controller);
-        }
     }
 }
 
@@ -545,7 +536,6 @@ impl TerminalView {
         mtm: MainThreadMarker,
         controller: &WindowController,
         cwd: PathBuf,
-        cli: Option<Launch>,
     ) -> (Retained<TerminalView>, Retained<NSView>) {
         let settings = Settings::load_user();
         super::set_option_as_meta(settings.get(&keys::OPTION_AS_META));
@@ -567,7 +557,6 @@ impl TerminalView {
             gpu: Surface::new().map(RefCell::new),
             blink: RefCell::new(None),
             observers: RefCell::new(vec![]),
-            cli: cli.map(CliState::new),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
@@ -657,18 +646,10 @@ impl TerminalView {
         }
     }
 
-    /// Starts the shell, or the CLI of a CLI thread, with the login shell's environment `env`.
+    /// Starts the shell with the login shell's environment `env`.
     pub(super) fn spawn(&self, env: &[(String, String)]) {
         let mut options = Options::new(self.ivars().cwd.borrow().clone());
         options.palette = self.ivars().theme.borrow().palette.clone();
-        if let Some(cli) = &self.ivars().cli {
-            options.program = Program::Command {
-                program: cli.program.clone(),
-                args: cli.args.clone(),
-            };
-            options.shell_integration = None;
-            options.interrupt_on_close = true;
-        }
         if let Some(size) = self.grid_size() {
             options.size = size;
             self.ivars().state.size.set(Some(size));
@@ -694,24 +675,6 @@ impl TerminalView {
 
     /// Reacts to what the session reports.
     pub(super) fn handle(&self, event: Event) {
-        if let Some(cli) = &self.ivars().cli {
-            let now = std::time::Instant::now();
-            match &event {
-                Event::Redraw => cli.output(self.with_session(Session::content_changes).unwrap_or(0), now),
-                Event::Title(title) => cli.title(title.as_deref()),
-                Event::Bell => cli.bell(now),
-                Event::Exited(_) => cli.exited(),
-                _ => {}
-            }
-        }
-        let watched = matches!(event, Event::Redraw | Event::Title(_) | Event::Bell | Event::Exited(_));
-        self.dispatch(event);
-        if watched {
-            self.cli_changed(false);
-        }
-    }
-
-    fn dispatch(&self, event: Event) {
         match event {
             Event::Redraw => self.redraw_requested(),
             Event::Title(title) => self.set_title(title),
@@ -747,10 +710,6 @@ impl TerminalView {
         let (Some(controller), Some(tab)) = (self.ivars().controller.load(), self.ivars().tab.get()) else {
             return;
         };
-        // A CLI thread's tab keeps the CLI's name; its title shows in the activity view.
-        if self.ivars().cli.is_some() {
-            return;
-        }
         controller.set_tab_title(tab, shown.as_deref().unwrap_or(t("Terminal")));
     }
 

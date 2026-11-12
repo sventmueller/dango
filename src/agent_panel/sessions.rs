@@ -38,8 +38,6 @@ pub enum Node {
     },
     /// A session the CLI saved from a terminal, which the index does not know.
     Past { resume: Resume, when: SystemTime },
-    /// A CLI thread (I5): a coding agent's CLI in a terminal tab of the window.
-    Cli(crate::terminal::CliThread),
 }
 
 impl Node {
@@ -48,7 +46,6 @@ impl Node {
         match self {
             Node::Thread { tab, .. } => tab.is_some(),
             Node::Past { .. } => false,
-            Node::Cli(_) => true,
         }
     }
 }
@@ -67,8 +64,6 @@ pub struct Inputs<'a> {
     pub tabs: &'a [Rc<AgentTab>],
     pub archived: bool,
     pub terminal: Vec<ide_claude::history::PastSession>,
-    /// The window's CLI threads, which run in its terminal tabs.
-    pub cli: Vec<crate::terminal::CliThread>,
     pub bookmarks: &'a BTreeSet<String>,
 }
 
@@ -108,14 +103,6 @@ impl Model {
                     SystemTime::now(),
                     format!("thread:{}", tab.thread_id()),
                     node,
-                ));
-            }
-            for thread in &inputs.cli {
-                rows.push((
-                    false,
-                    thread.started,
-                    format!("cli:{}", thread.key),
-                    Node::Cli(thread.clone()),
                 ));
             }
             // A session an AI tab continues shows once, as that tab's.
@@ -370,7 +357,6 @@ impl Source {
                 bookmarked.then(|| ("bookmark.fill", NSColor::controlAccentColor())),
             ),
             Node::Past { resume, when } => (resume.title.as_deref().unwrap_or(&resume.session), false, *when, None),
-            Node::Cli(thread) => (thread.name.as_str(), false, thread.started, None),
         };
         rows::cell(
             self.mtm(),
@@ -411,7 +397,6 @@ impl Source {
             Node::Past { resume, .. } => {
                 crate::agent::open_tab(&controller, Some(resume));
             }
-            Node::Cli(thread) => crate::terminal::show_cli_thread(&controller, thread.key),
         }
     }
 
@@ -536,7 +521,6 @@ impl Source {
             .map(|node| match node {
                 Node::Thread { entry, .. } => ("AI", node.open(), entry.title.clone()),
                 Node::Past { resume, .. } => ("CLI", false, resume.title.clone().unwrap_or_default()),
-                Node::Cli(thread) => ("CLI", true, thread.name.clone()),
             })
             .collect()
     }
