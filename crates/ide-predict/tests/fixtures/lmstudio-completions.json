@@ -1,0 +1,1 @@
+{"id":"cmpl-5x1q9tqk2v8y0m3n7c4d","object":"text_completion","created":1762938843,"model":"qwen2.5-coder-1.5b-instruct","choices":[{"index":0,"text":"a + b<|endoftext|>","logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":28,"completion_tokens":5,"total_tokens":33},"stats":{}}

@@ -6,15 +6,22 @@
 //! each to the document, revision, selection and target range it was asked for and drops it when any of them changed
 //! (Review C6). Offsets are byte offsets into [`Request::text`], which is UTF-8.
 //!
-//! Providers: GitHub Copilot through its language server, and fill-in-the-middle models under Ollama and LM Studio;
-//! [`stub::Stub`] answers from a script, for tests and the self-test.
+//! Providers: GitHub Copilot through its language server ([`copilot::Copilot`]), and fill-in-the-middle models under
+//! Ollama and LM Studio ([`fim::Ollama`], [`fim::LmStudio`]); [`stub::Stub`] answers from a script, for tests and the
+//! self-test. A cancelled request stops at once: Copilot is told, a local server's connection is closed.
 
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
+pub mod copilot;
+pub mod fim;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
 pub mod stub;
+mod texts;
 
 /// What a provider is asked for: the whole text of one document and where the caret is in it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,20 +97,51 @@ pub enum Error {
 /// cancel.cancel();
 /// assert_eq!(rx.recv().unwrap(), Err(Error::Cancelled));
 /// ```
-#[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<AtomicBool>);
+#[derive(Clone, Default)]
+pub struct Cancel(Arc<CancelState>);
+
+#[derive(Default)]
+struct CancelState {
+    cancelled: AtomicBool,
+    hooks: Mutex<Vec<Box<dyn FnOnce() + Send>>>,
+}
 
 impl Cancel {
     pub fn new() -> Cancel {
         Cancel::default()
     }
 
+    /// Cancels the request and runs the hooks the provider set, on the caller's thread; they only close connections
+    /// or send a cancel note, so this does not block.
     pub fn cancel(&self) {
-        self.0.store(true, Ordering::SeqCst);
+        if self.0.cancelled.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        let hooks = std::mem::take(&mut *self.0.hooks.lock().unwrap_or_else(|e| e.into_inner()));
+        for hook in hooks {
+            hook();
+        }
     }
 
     pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
+        self.0.cancelled.load(Ordering::SeqCst)
+    }
+
+    /// Runs `hook` when the request is cancelled, or now if it already was; how a provider stops work under way.
+    pub fn on_cancel(&self, hook: impl FnOnce() + Send + 'static) {
+        let mut hooks = self.0.hooks.lock().unwrap_or_else(|e| e.into_inner());
+        if self.is_cancelled() {
+            drop(hooks);
+            hook();
+        } else {
+            hooks.push(Box::new(hook));
+        }
+    }
+}
+
+impl std::fmt::Debug for Cancel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Cancel").field(&self.is_cancelled()).finish()
     }
 }
 
@@ -120,4 +158,9 @@ pub trait Provider: Send + Sync {
 
     /// The user took `prediction`; sends what the provider asked to hear, if anything.
     fn accepted(&self, prediction: &Prediction);
+}
+
+/// Runs `job` on a thread of its own, where a reply must not run on the caller's.
+pub(crate) fn on_own_thread(job: impl FnOnce() + Send + 'static) {
+    let _ = std::thread::Builder::new().name("predict-reply".into()).spawn(job);
 }

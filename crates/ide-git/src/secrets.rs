@@ -1,12 +1,12 @@
 //! The secrets check before a commit or push (I4), with gitleaks when the login shell's PATH has it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
 use crate::repo::Repository;
-use crate::run::Call;
+use crate::run::{Call, Git};
 
 /// The exit code gitleaks is told to use for findings, so that 1 still means it failed.
 const LEAKS_FOUND: i32 = 3;
@@ -78,37 +78,55 @@ impl Repository {
     /// Runs `gitleaks <command>` on the repository, or on `input` for its `stdin` command; `None` when the login
     /// shell's PATH has no gitleaks.
     pub(crate) fn gitleaks(&self, command: &[&str], input: Option<Vec<u8>>) -> Result<Option<Vec<Finding>>> {
-        let Some(gitleaks) = self.git().find("gitleaks") else {
-            return Ok(None);
-        };
-        let mut call = Call::new(self.root(), command).args([
-            "--no-banner",
-            "--no-color",
-            "--redact",
-            "--report-format=json",
-            "--report-path=-",
-            "--log-level=error",
-            &format!("--exit-code={LEAKS_FOUND}"),
-        ]);
-        call = match input {
-            Some(input) => call.input(input),
-            None => call.args(["."]),
-        };
-        let output = self.git().run_program(&gitleaks, call)?;
-        // gitleaks exits with 0 even when git failed under it, and says so only in its log.
-        let failed = output
-            .stderr
-            .lines()
-            .any(|l| l.contains(" ERR ") || l.contains(" FTL "));
-        if !(output.code == 0 || output.code == LEAKS_FOUND) || (failed && output.code == 0) {
-            return Err(Error::Failed {
-                command: format!("gitleaks {}", command.first().unwrap_or(&"")),
-                code: Some(output.code),
-                output: output.said(),
-            });
-        }
-        parse(&output.stdout).map(Some)
+        gitleaks(self.git(), self.root(), command, input)
     }
+}
+
+impl Git {
+    /// Checks `text` as gitleaks reads standard input, run in the folder `dir`, which needs no repository: for text
+    /// that is about to leave the Mac outside a commit.
+    pub fn scan_text(&self, dir: &Path, text: &str) -> Result<SecretScan> {
+        Ok(match gitleaks(self, dir, &["stdin"], Some(text.as_bytes().to_vec()))? {
+            None => SecretScan::NotInstalled,
+            Some(findings) if findings.is_empty() => SecretScan::Clean,
+            Some(findings) => SecretScan::Found(findings),
+        })
+    }
+}
+
+/// Runs `gitleaks <command>` in `dir`, or on `input` for its `stdin` command; `None` when the login shell's PATH has no
+/// gitleaks.
+fn gitleaks(git: &Git, dir: &Path, command: &[&str], input: Option<Vec<u8>>) -> Result<Option<Vec<Finding>>> {
+    let Some(gitleaks) = git.find("gitleaks") else {
+        return Ok(None);
+    };
+    let mut call = Call::new(dir, command).args([
+        "--no-banner",
+        "--no-color",
+        "--redact",
+        "--report-format=json",
+        "--report-path=-",
+        "--log-level=error",
+        &format!("--exit-code={LEAKS_FOUND}"),
+    ]);
+    call = match input {
+        Some(input) => call.input(input),
+        None => call.args(["."]),
+    };
+    let output = git.run_program(&gitleaks, call)?;
+    // gitleaks exits with 0 even when git failed under it, and says so only in its log.
+    let failed = output
+        .stderr
+        .lines()
+        .any(|l| l.contains(" ERR ") || l.contains(" FTL "));
+    if !(output.code == 0 || output.code == LEAKS_FOUND) || (failed && output.code == 0) {
+        return Err(Error::Failed {
+            command: format!("gitleaks {}", command.first().unwrap_or(&"")),
+            code: Some(output.code),
+            output: output.said(),
+        });
+    }
+    parse(&output.stdout).map(Some)
 }
 
 fn parse(report: &[u8]) -> Result<Vec<Finding>> {

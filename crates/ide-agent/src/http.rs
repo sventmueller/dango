@@ -57,8 +57,35 @@ impl Http {
         Ok(BufReader::new(response.into_body().into_reader()))
     }
 
+    /// Posts `body` and reads the JSON answer.
+    pub fn post_json(&self, url: &str, body: &Value) -> Result<Value, ProviderError> {
+        let text = serde_json::to_vec(body).map_err(|e| ProviderError::new(ErrorKind::Malformed, e.to_string()))?;
+        let mut response = self
+            .agent
+            .post(url)
+            .header("content-type", "application/json")
+            .send(&text[..])
+            .map_err(network)?;
+        if !response.status().is_success() {
+            return Err(failure(response));
+        }
+        let bytes = response
+            .body_mut()
+            .with_config()
+            .limit(BODY_LIMIT)
+            .read_to_vec()
+            .map_err(network)?;
+        serde_json::from_slice(&bytes).map_err(|e| ProviderError::new(ErrorKind::Malformed, e.to_string()))
+    }
+
+    /// Ends every request of this client and its clones at once, also one waiting for an answer, by closing their
+    /// connections; the server sees the client go. The client takes no further requests.
+    pub fn close(&self) {
+        self.agent.clone().shutdown();
+    }
+
     /// Gets `url` and reads its JSON.
-    pub(crate) fn get_json(&self, url: &str, headers: &[(&str, String)]) -> Result<Value, ProviderError> {
+    pub fn get_json(&self, url: &str, headers: &[(&str, String)]) -> Result<Value, ProviderError> {
         let mut call = self.agent.get(url);
         for (name, value) in headers {
             call = call.header(*name, value);

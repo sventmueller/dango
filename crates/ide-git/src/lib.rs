@@ -1,7 +1,8 @@
 //! git for the app, through the `git` program: repositories, status, diffs, staging down to single hunks, commits,
 //! remotes, branches, the history as a graph with what each commit changed, the stash, worktrees and bringing a branch's
-//! work over by merge or cherry-pick, checkpoints of a folder before an agent's turn, a secrets check before commits,
-//! and the checked text a model gets to write a commit message.
+//! work over by merge or cherry-pick, checkpoints of a folder before an agent's turn, a secrets check before commits
+//! and of any text before it leaves the Mac ([`Git::scan_text`]), and the checked text a model gets to write a commit
+//! message.
 //!
 //! git runs code a repository controls — hooks, `core.fsmonitor`, filters from its configuration — so callers use this
 //! crate only in folders the user trusts (E22). The crate does not check that itself; the project's trust decision

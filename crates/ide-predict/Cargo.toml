@@ -9,5 +9,21 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
+[features]
+fuzzing = []
+
+# A stand-in for copilot-language-server in the tests; Cargo builds bins before integration tests and names their path.
+[[bin]]
+name = "ide-predict-fake-copilot"
+path = "tests/support/fake_copilot.rs"
+test = false
+doc = false
+
 [dependencies]
+ide-agent = { path = "../ide-agent" }
+ide-lsp = { path = "../ide-lsp" }
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
 serde_json = "1.0.154"
+splat-i18n.workspace = true
