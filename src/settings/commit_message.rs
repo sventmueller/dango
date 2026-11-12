@@ -17,6 +17,11 @@ use crate::git_panel::message::source::{self, CLAUDE, CONSENT, MODEL};
 use crate::own_agent::{self, ModelChoice};
 use crate::util::{guarded, label, ns, set_action};
 
+use super::agent::TABLE_WIDTH;
+
+/// The width of the model field, as in the row for new threads less what the provider's title needs here.
+const MODEL_WIDTH: f64 = 180.0;
+
 pub struct Ivars {
     endpoints: RefCell<Vec<Endpoint>>,
     views: OnceCell<Views>,
@@ -79,14 +84,26 @@ pub fn views(
     let this: Retained<CommitMessageSettings> = unsafe { msg_send![super(this), init] };
     let endpoint = NSPopUpButton::new(mtm);
     set_action(&endpoint, &this, sel!(ideCommitMessageEndpoint:));
+    // The provider's names may be long; its title gives way before the row grows past the tab's column.
+    endpoint.setContentCompressionResistancePriority_forOrientation(
+        250.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    endpoint
+        .widthAnchor()
+        .constraintLessThanOrEqualToConstant(TABLE_WIDTH - MODEL_WIDTH - 4.0)
+        .setActive(true);
     let model = NSComboBox::new(mtm);
     model.setCompletes(true);
-    model.widthAnchor().constraintEqualToConstant(220.0).setActive(true);
+    model
+        .widthAnchor()
+        .constraintEqualToConstant(MODEL_WIDTH)
+        .setActive(true);
     set_action(&model, &this, sel!(ideCommitMessageModel:));
     crate::util::set_label(&model, Some(t("Modell")));
     let allowed = NSTextField::wrappingLabelWithString(&ns(""), mtm);
     allowed.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    allowed.setPreferredMaxLayoutWidth(330.0);
+    allowed.setPreferredMaxLayoutWidth(TABLE_WIDTH);
     // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
     let revoke =
         unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Erlaubnisse zurücknehmen")), None, None, mtm) };
@@ -94,13 +111,16 @@ pub fn views(
     revoke.setBezelStyle(NSBezelStyle::Push);
     let caption = label(mtm, t("Modell für Commit-Nachrichten:"));
     crate::util::set_title_element(&endpoint, &caption);
+    crate::util::set_title_element(&model, &caption);
     let views = vec![
         heading(t("Commit-Nachrichten")),
         note(t(
             "Der Knopf im Commit-Feld lässt ein Modell die Nachricht schreiben. Ohne gewähltes Modell schreibt claude mit einem kleinen Modell und ohne Werkzeuge. Vorher prüft gitleaks den Text auf Secrets; bei einem Fund geht nichts hinaus.",
         )),
-        row(mtm, &[&caption, &endpoint, &model]),
-        row(mtm, &[&allowed, &revoke]),
+        caption.into_super().into_super(),
+        row(mtm, &[&endpoint, &model]),
+        allowed.clone().into_super().into_super(),
+        revoke.clone().into_super().into_super(),
         note(t(
             "Anbieter außerhalb des Macs fragen einmal um Erlaubnis. Ollama und LM Studio auf diesem Mac brauchen keine: Der Code verlässt den Mac nicht.",
         )),
@@ -169,6 +189,9 @@ impl CommitMessageSettings {
             .model
             .setStringValue(&ns(choice.as_ref().map_or("", |c| c.model.as_str())));
         views.model.setEnabled(index > 0);
+        // Without a provider, claude writes with this model; the field says so instead of standing empty.
+        let automatic = (index == 0).then(|| ns(crate::git_panel::message::CLAUDE_MODEL));
+        views.model.setPlaceholderString(automatic.as_deref());
         let consent = settings.get(&CONSENT);
         views.allowed.setStringValue(&ns(&allowed_text(&consent, &endpoints)));
         views.allowed.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -251,6 +274,29 @@ pub mod selftest {
         let shown = super::SHOWN.with(|shown| shown.borrow().clone())?;
         let views = shown.ivars().views.get()?;
         Some((views.allowed.stringValue().to_string(), views.revoke.isEnabled()))
+    }
+
+    /// How far right the part's controls reach past the left edge of the provider's menu, and the column's width;
+    /// scrolls the part into view first.
+    pub fn reach() -> Option<(f64, f64)> {
+        let shown = super::SHOWN.with(|shown| shown.borrow().clone())?;
+        let views = shown.ivars().views.get()?;
+        views.revoke.scrollRectToVisible(views.revoke.bounds());
+        let in_window = |view: &objc2_app_kit::NSView| view.convertRect_toView(view.bounds(), None);
+        let left = in_window(&views.endpoint).origin.x;
+        let right = |view: &objc2_app_kit::NSView| {
+            let frame = in_window(view);
+            frame.origin.x + frame.size.width - left
+        };
+        let reach = [
+            right(&views.endpoint),
+            right(&views.model),
+            right(&views.allowed),
+            right(&views.revoke),
+        ]
+        .into_iter()
+        .fold(0.0, f64::max);
+        Some((reach, super::TABLE_WIDTH))
     }
 
     /// Takes every permission back, as the button does.

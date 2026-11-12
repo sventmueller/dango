@@ -17,7 +17,7 @@ use splat_i18n::{t, tf};
 use super::source::{Failure, SYSTEM};
 
 /// The small model `claude` knows by this alias.
-const MODEL: &str = "haiku";
+pub(crate) const MODEL: &str = "haiku";
 /// How long a stopped `claude` gets before it is killed.
 const STOP_GRACE: Duration = Duration::from_millis(500);
 /// How often a running request looks at its cancel.

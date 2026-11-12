@@ -24,7 +24,7 @@ use super::list_bar;
 use crate::own_agent::{self, ModelChoice};
 use crate::util::{guarded, label, ns, set_action};
 
-const TABLE_WIDTH: f64 = 480.0;
+pub(super) const TABLE_WIDTH: f64 = 480.0;
 /// The height of the endpoints' table, which lists the services and the user's endpoints.
 const TABLE_HEIGHT: f64 = 120.0;
 /// The height of the other tables, which start empty.

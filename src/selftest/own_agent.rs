@@ -203,6 +203,13 @@ fn settings(root: PathBuf, url: String) {
                     format!("{bars:?}"),
                 );
                 super::snapshot(&window, "own-agent-settings-folders");
+                let reach = crate::settings::commit_message_selftest::reach();
+                check(
+                    "the commit message part stays inside the column of the agent settings",
+                    reach.is_some_and(|(reach, column)| reach <= column + 0.5),
+                    format!("{reach:?}"),
+                );
+                super::snapshot(&window, "own-agent-settings-commit");
                 window.orderOut(None);
             }
             let choice = Settings::load_user().get(&own_agent::MODEL);

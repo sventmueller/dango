@@ -4,6 +4,8 @@
 //! What went out can be read again; nothing goes out when the check finds something, fails or cannot run.
 
 mod claude;
+
+pub(crate) use claude::MODEL as CLAUDE_MODEL;
 pub mod source;
 
 use std::sync::atomic::{AtomicU64, Ordering};
