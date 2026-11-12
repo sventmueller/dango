@@ -300,16 +300,16 @@ pub fn open_recovered(controller: &WindowController, recovered: Recovered, font_
     view
 }
 
-/// Opens `path` in `controller`, or selects its tab, and selects `columns`, in UTF-16 code units, of line `line`,
-/// counted from 1.
-pub fn reveal(controller: &WindowController, path: &Path, line: u64, columns: std::ops::Range<usize>) {
+/// Opens `path` in `controller`, or selects its tab, and marks `columns`, in UTF-16 code units, of line `line`,
+/// counted from 1; `focus` selects them in the editor and gives it the keyboard focus.
+pub fn reveal(controller: &WindowController, path: &Path, line: u64, columns: std::ops::Range<usize>, focus: bool) {
     controller.open_file(path);
     let view = open_editors()
         .into_iter()
         .find(|v| v.document().path() == Some(path) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
     if let Some(view) = view {
         let line = usize::try_from(line.saturating_sub(1)).unwrap_or(usize::MAX);
-        view.select_columns(line, columns);
+        view.select_columns(line, columns, focus);
     }
 }
 

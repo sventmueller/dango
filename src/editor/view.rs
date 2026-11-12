@@ -56,6 +56,8 @@ pub struct ViewIvars {
     pub(super) conflict: RefCell<Option<super::conflict::State>>,
     /// The bar above the editor.
     pub(super) bar: RefCell<Option<super::conflict::Bar>>,
+    /// The match the search panel revealed, in UTF-16 offsets, marked in the find colour until the selection moves.
+    found: RefCell<Option<std::ops::Range<usize>>>,
 }
 
 define_class!(
@@ -123,6 +125,7 @@ define_class!(
             let _: () = unsafe { msg_send![super(self), setSelectedRanges: ranges, affinity: affinity, stillSelecting: still] };
             if !still {
                 guarded((), || {
+                    self.clear_found();
                     super::multi::selection_changed(self);
                     crate::lsp::selection_moved(self);
                     crate::navigation::moved(self, false);
@@ -525,6 +528,7 @@ impl EditorTextView {
             overlay: RefCell::new(None),
             conflict: RefCell::new(None),
             bar: RefCell::new(None),
+            found: RefCell::new(None),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
@@ -665,9 +669,10 @@ impl EditorTextView {
             .and_then(|byte| text.byte_to_utf16(byte).ok())
     }
 
-    /// Selects `columns`, in UTF-16 code units, of line `line`, both counted from 0 and kept within the text, scrolls
-    /// them into view and takes the keyboard focus.
-    pub fn select_columns(&self, line: usize, columns: std::ops::Range<usize>) {
+    /// Marks `columns`, in UTF-16 code units, of line `line`, both counted from 0 and kept within the text, in the
+    /// find colour and scrolls them into view; with `focus` it selects them and takes the keyboard focus, else the
+    /// caret goes before them.
+    pub fn select_columns(&self, line: usize, columns: std::ops::Range<usize>, focus: bool) {
         let range = {
             let document = self.document();
             let text = document.text();
@@ -680,10 +685,57 @@ impl EditorTextView {
             let start = at(columns.start);
             NSRange::new(start, at(columns.end).saturating_sub(start))
         };
-        self.setSelectedRange(range);
+        self.setSelectedRange(if focus { range } else { NSRange::new(range.location, 0) });
+        *self.ivars().found.borrow_mut() = Some(range.location..range.end());
+        self.paint_found();
         self.scrollRangeToVisible(range);
-        if let Some(window) = self.window() {
+        if focus && let Some(window) = self.window() {
             window.makeFirstResponder(Some(self));
+        }
+    }
+
+    /// Draws the revealed match as the search panel's list does.
+    pub(crate) fn paint_found(&self) {
+        let Some(found) = self.ivars().found.borrow().clone() else {
+            return;
+        };
+        let (Some(layout), Some(content)) = (self.textLayoutManager(), self.textContentStorage()) else {
+            return;
+        };
+        let Some(range) = crate::lsp::text_range(&content, &found) else {
+            return;
+        };
+        let marker: Retained<AnyObject> = objc2_app_kit::NSColor::findHighlightColor().into();
+        let color: Retained<AnyObject> = objc2_app_kit::NSColor::blackColor().into();
+        let (marker_key, color_key) = (
+            crate::util::constant!(objc2_app_kit::NSBackgroundColorAttributeName),
+            crate::util::constant!(objc2_app_kit::NSForegroundColorAttributeName),
+        );
+        // SAFETY: Both values are colours, as the background and foreground colour keys expect.
+        unsafe {
+            layout.addRenderingAttribute_value_forTextRange(marker_key, Some(&marker), &range);
+            layout.addRenderingAttribute_value_forTextRange(color_key, Some(&color), &range);
+        }
+    }
+
+    fn clear_found(&self) {
+        let Some(found) = self.ivars().found.take() else { return };
+        let (Some(layout), Some(content)) = (self.textLayoutManager(), self.textContentStorage()) else {
+            return;
+        };
+        let Some(range) = crate::lsp::text_range(&content, &found) else {
+            return;
+        };
+        layout.removeRenderingAttribute_forTextRange(
+            crate::util::constant!(objc2_app_kit::NSBackgroundColorAttributeName),
+            &range,
+        );
+        layout.removeRenderingAttribute_forTextRange(
+            crate::util::constant!(objc2_app_kit::NSForegroundColorAttributeName),
+            &range,
+        );
+        if self.ivars().lsp.try_borrow_mut().is_ok() {
+            crate::lsp::paint(self);
         }
     }
 

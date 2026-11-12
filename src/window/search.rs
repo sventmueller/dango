@@ -860,7 +860,7 @@ impl SearchPanel {
         let (Some((path, line, columns)), Some(controller)) = (target, self.ivars().controller.load()) else {
             return;
         };
-        crate::editor::reveal(&controller, &path, line, columns);
+        crate::editor::reveal(&controller, &path, line, columns, focus);
         if !focus && let Some(window) = views.page.window() {
             window.makeFirstResponder(Some(&views.outline));
         }

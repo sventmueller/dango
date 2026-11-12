@@ -217,6 +217,7 @@ pub fn paint(view: &EditorTextView) {
         }
     }
     drop(state);
+    view.paint_found();
     if let Some(overlay) = view.ivars().lsp.borrow().squiggles.as_ref().and_then(Weak::load) {
         overlay.setNeedsDisplay(true);
     }
