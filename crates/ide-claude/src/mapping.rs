@@ -15,7 +15,7 @@ use serde_json::Value;
 use crate::control::{self, ContextUsage, PermissionAsk, Suggestion, TaskOutput, UsageReport};
 use crate::protocol::{
     ApiUsage, Assistant, BackgroundTask, Block, Delta, Hook, ImageSource, Message, ModelUsage, RateLimitInfo, RawEvent,
-    StreamEvent, System, TaskNotification, TaskProgress, TaskStarted, TaskUpdated, TurnResult, User,
+    StreamEvent, System, TaskNotification, TaskProgress, TaskStarted, TaskUpdated, TaskUsage, TurnResult, User,
 };
 use crate::tools::{self, Shape};
 
@@ -160,6 +160,35 @@ fn seconds(secs: f64) -> Option<Duration> {
 
 fn epoch_millis(ms: f64) -> Option<SystemTime> {
     seconds(ms / 1000.0).map(|d| UNIX_EPOCH + d)
+}
+
+/// The end of a task as a user-role message tells it: the transcript keeps a background task's end only so, without
+/// the `task_notification` frame the live stream has, and the CLI echoes it so too.
+fn notification_in(text: &str) -> Option<TaskNotification> {
+    let body = text.trim_start().strip_prefix("<task-notification>")?;
+    let field = |within: &str, name: &str| {
+        let (open, close) = (format!("<{name}>"), format!("</{name}>"));
+        let start = within.find(&open)? + open.len();
+        let end = within[start..].find(&close)? + start;
+        Some(within[start..end].trim().to_string())
+    };
+    // The result, which comes before the counts, is the agent's own text and may quote anything.
+    let head = &body[..body.find("<result>").unwrap_or(body.len())];
+    let usage = body.rfind("<usage>").map(|at| &body[at..]);
+    let count = |name: &str| usage.and_then(|u| field(u, name)).and_then(|v| v.parse::<u64>().ok());
+    Some(TaskNotification {
+        task_id: field(head, "task-id")?,
+        run_id: None,
+        tool_use_id: field(head, "tool-use-id"),
+        status: field(head, "status").unwrap_or_default(),
+        output_file: field(head, "output-file"),
+        summary: field(head, "summary"),
+        usage: count("subagent_tokens").map(|total_tokens| TaskUsage {
+            total_tokens,
+            tool_uses: count("tool_uses").unwrap_or(0),
+            duration_ms: count("duration_ms").unwrap_or(0),
+        }),
+    })
 }
 
 fn task_status(status: &str) -> Option<TaskStatus> {
@@ -760,7 +789,18 @@ impl Mapper {
 
     fn user(&mut self, u: &User, now: SystemTime) -> Vec<Update> {
         if u.is_replay == Some(true) {
-            return self.prompt_from_elsewhere(u, now);
+            let mut out: Vec<Update> = u
+                .message
+                .blocks()
+                .into_iter()
+                .filter_map(|block| match block {
+                    Block::Text { text } => notification_in(&text),
+                    _ => None,
+                })
+                .flat_map(|notification| self.task_notification(&notification, now))
+                .collect();
+            out.extend(self.prompt_from_elsewhere(u, now));
+            return out;
         }
         let lane = lane(u.parent_tool_use_id.as_ref());
         let mut out = Vec::new();
@@ -784,7 +824,10 @@ impl Mapper {
                     );
                     keys.push(tool_use_id);
                 }
-                Block::Text { text: t } => text.push(t),
+                Block::Text { text: t } => match notification_in(&t) {
+                    Some(notification) => out.extend(self.task_notification(&notification, now)),
+                    None => text.push(t),
+                },
                 Block::Image { source: Some(source) } => images.extend(image(&source)),
                 _ => {}
             }
@@ -933,6 +976,9 @@ impl Mapper {
         now: SystemTime,
     ) -> Option<Update> {
         let result = structured.unwrap_or(&Value::Null);
+        if result.get("status").and_then(Value::as_str) == Some("async_launched") {
+            return self.async_launched(id, result, now);
+        }
         let status = match (failed, result.get("status").and_then(Value::as_str)) {
             (true, _) => TaskStatus::Failed,
             (false, Some("completed")) => TaskStatus::Completed,
@@ -948,6 +994,22 @@ impl Mapper {
         patch.tool_uses = number("totalToolUseCount");
         patch.elapsed = number("totalDurationMs").map(Duration::from_millis);
         patch.cancellable = Some(false);
+        Some(Update::Subagent(patch))
+    }
+
+    /// An agent the call started in the background: its id is the task id that its end names, at times without
+    /// the call.
+    fn async_launched(&mut self, id: &str, result: &Value, now: SystemTime) -> Option<Update> {
+        let task_id = result.get("agentId").and_then(Value::as_str)?;
+        self.tasks.entry(task_id.to_string()).or_insert_with(|| Task {
+            tool_use_id: Some(id.to_string()),
+            subagent: Some(id.to_string()),
+            started: now,
+            output_file: None,
+        });
+        let mut patch = SubagentPatch::new(id, now);
+        patch.task_id = Some(task_id.to_string());
+        patch.backgrounded = Some(true);
         Some(Update::Subagent(patch))
     }
 
@@ -1842,6 +1904,31 @@ mod tests {
             .iter()
             .position(|u| matches!(u, Update::Background(items) if items.is_empty()));
         assert!(stopped.zip(emptied).is_some_and(|(s, e)| s < e), "{updates:?}");
+    }
+
+    #[test]
+    fn a_background_agent_ends_with_the_notification_the_transcript_keeps() {
+        let frames = [
+            r#"{"type":"assistant","message":{"id":"m1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_bg","name":"Agent","input":{"description":"review code","subagent_type":"general-purpose","prompt":"Review","run_in_background":true}}]},"session_id":"s","uuid":"a1"}"#,
+            r#"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_bg","content":"Async agent launched successfully."}]},"session_id":"s","uuid":"u1"}"#,
+            r#"{"type":"user","message":{"role":"user","content":"<task-notification>\n<task-id>a1b2</task-id>\n<tool-use-id>toolu_bg</tool-use-id>\n<status>completed</status>\n<summary>Agent \"review code\" finished</summary>\n<result>It quotes <status>failed</status> and <task-id>x</task-id>.</result>\n<usage><subagent_tokens>1234</subagent_tokens><tool_uses>7</tool_uses><duration_ms>65000</duration_ms></usage>\n</task-notification>"},"session_id":"s","uuid":"u2"}"#,
+        ];
+        let mut mapper = Mapper::for_history();
+        let mut thread = ide_thread::Thread::new(ide_thread::ThreadId::new(), "claude", "/");
+        for frame in frames {
+            let message = crate::protocol::parse(frame).unwrap();
+            thread.apply_all(mapper.map(&message, SystemTime::UNIX_EPOCH));
+        }
+        let agent = thread.subagent("toolu_bg").expect("the agent call starts a subagent");
+        assert_eq!(agent.status, TaskStatus::Completed);
+        assert_eq!((agent.tokens, agent.tool_uses), (1234, 7));
+        assert_eq!(agent.elapsed, Duration::from_secs(65));
+        let users = thread
+            .entries(&Lane::Main)
+            .iter()
+            .filter(|e| matches!(e.kind, EntryKind::UserMessage(_)))
+            .count();
+        assert_eq!(users, 0, "the notification is no message of the user");
     }
 
     fn statuses(mapper: &mut Mapper, frame: &str) -> Vec<Status> {

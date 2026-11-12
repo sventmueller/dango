@@ -193,6 +193,18 @@ fn frame(mut record: Value) -> Option<Message> {
             Some(Message::from_value(record))
         }
         "assistant" => Some(Message::from_value(record)),
+        // A task's end that arrived while a turn ran: the transcript keeps it as a queued command, not as a message.
+        "attachment"
+            if record.pointer("/attachment/commandMode").and_then(Value::as_str) == Some("task-notification") =>
+        {
+            let prompt = record.pointer("/attachment/prompt").and_then(Value::as_str)?;
+            Some(Message::from_value(serde_json::json!({
+                "type": "user",
+                "isReplay": true,
+                "origin": {"kind": "task-notification"},
+                "message": {"role": "user", "content": prompt},
+            })))
+        }
         "system" if record.get("subtype").and_then(Value::as_str) == Some("local_command") => {
             let content = record.get("content").and_then(Value::as_str)?;
             let output = between(content, "<local-command-stdout>", "</local-command-stdout>")
@@ -291,6 +303,31 @@ mod tests {
             .map(|e| (e.uuid.as_deref(), e.follows.as_deref()))
             .collect();
         assert_eq!(frames, [(Some("u1"), None), (Some("a1"), Some("u1"))]);
+    }
+
+    #[test]
+    fn a_background_agent_ends_where_its_end_came_during_a_turn_without_its_call() {
+        let folder = scratch("async");
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("s3.jsonl");
+        let transcript = [
+            r#"{"type":"assistant","uuid":"a1","message":{"id":"m1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_bg","name":"Agent","input":{"description":"review code","subagent_type":"general-purpose","prompt":"Review","run_in_background":true}}]}}"#,
+            r#"{"type":"user","uuid":"u1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_bg","content":"Async agent launched successfully."}]},"toolUseResult":{"isAsync":true,"status":"async_launched","agentId":"agent7"}}"#,
+            r#"{"type":"attachment","uuid":"q1","attachment":{"type":"queued_command","commandMode":"task-notification","prompt":"<task-notification>\n<task-id>agent7</task-id>\n<status>completed</status>\n<summary>Agent finished</summary>\n<usage><subagent_tokens>10</subagent_tokens><tool_uses>2</tool_uses><duration_ms>3000</duration_ms></usage>\n</task-notification>"}}"#,
+        ];
+        std::fs::write(&path, transcript.join("\n")).unwrap();
+        let thread = rebuild(Thread::new(ide_thread::ThreadId::from("t"), "claude", &folder), &path).unwrap();
+        let agent = thread.subagent("toolu_bg").expect("the call starts a subagent");
+        assert_eq!(agent.status, ide_thread::TaskStatus::Completed);
+        assert_eq!(agent.task_id.as_deref(), Some("agent7"));
+        assert_eq!((agent.tokens, agent.elapsed), (10, std::time::Duration::from_secs(3)));
+        assert!(
+            !thread
+                .entries(&ide_thread::Lane::Main)
+                .iter()
+                .any(|e| matches!(e.kind, ide_thread::EntryKind::UserMessage(_))),
+            "the notification is no message of the user"
+        );
     }
 
     #[test]
