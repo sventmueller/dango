@@ -1306,9 +1306,11 @@ dependencies = [
  "ide-ci",
  "ide-claude",
  "ide-core",
+ "ide-dap",
  "ide-document",
  "ide-git",
  "ide-lsp",
+ "ide-predict",
  "ide-process",
  "ide-product",
  "ide-project",
@@ -1381,6 +1383,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ide-dap"
+version = "0.0.0"
+dependencies = [
+ "ide-core",
+ "ide-lsp",
+ "ide-process",
+ "ide-product",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "ide-document"
 version = "0.0.0"
 dependencies = [
@@ -1425,7 +1441,12 @@ dependencies = [
 name = "ide-predict"
 version = "0.0.0"
 dependencies = [
+ "ide-agent",
+ "ide-lsp",
+ "ide-process",
+ "ide-product",
  "serde_json",
+ "splat-i18n",
 ]
 
 [[package]]

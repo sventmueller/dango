@@ -612,7 +612,7 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
 /// What the self-test reads from and does with the completion list.
 #[cfg(feature = "selftest")]
 pub mod selftest {
-    use objc2::DefinedClass;
+    use objc2::{DefinedClass, MainThreadOnly};
 
     use crate::editor::EditorTextView;
 
@@ -648,6 +648,29 @@ pub mod selftest {
             table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
         }
         super::command(view, objc2::sel!(insertNewline:))
+    }
+
+    /// Opens the list for `view` with items of `labels`, as an answer of its server would.
+    pub fn show(view: &EditorTextView, labels: &[&str]) {
+        let items = labels
+            .iter()
+            .map(|label| ide_lsp::lsp_types::CompletionItem {
+                label: (*label).to_string(),
+                ..Default::default()
+            })
+            .collect();
+        super::list(view.mtm()).show(
+            view,
+            ide_lsp::Completions {
+                incomplete: false,
+                items,
+            },
+        );
+    }
+
+    /// Starts filling in a snippet whose tab stops still to visit are `stops`, in UTF-16 code units.
+    pub fn snippet(view: &EditorTextView, stops: Vec<std::ops::Range<usize>>) {
+        view.ivars().lsp.borrow_mut().snippet = Some(super::Session { stops });
     }
 
     /// The completion panel, for a picture.

@@ -86,16 +86,24 @@ fn complete() -> Fake {
         "taplo",
         "marksman",
         "lua-language-server",
+        "ollama",
+        "lms",
+        "dlv",
+        "cargo",
     ]);
     fake.vars.extend([("GEMINI_API_KEY", "g"), ("OPENAI_API_KEY", "o")]);
     fake.files
         .extend([home(".local/bin/claude"), home(".claude/.credentials.json")]);
+    fake.files.insert(home(".config/github-copilot/apps.json"));
     fake.hosts
         .extend(["registry.npmjs.org", "github.com", "proxy.golang.org", "dl.google.com"]);
+    fake.hosts.insert("api.githubcopilot.com");
     fake.succeeding.extend([
+        "sh -c /usr/sbin/DevToolsSecurity -status | /usr/bin/grep -q 'currently enabled'".to_string(),
         "gh auth status --hostname github.com".to_string(),
         "glab auth status --hostname gitlab.example.org".to_string(),
         "xcode-select -p".to_string(),
+        "ollama show qwen2.5-coder:1.5b".to_string(),
     ]);
     fake.origins
         .insert(home("Repos/splat"), "https://github.com/someone/splat.git");
@@ -209,6 +217,15 @@ fn the_developer_tools_count_when_xcode_select_names_them() {
 }
 
 #[test]
+fn debugging_counts_only_when_developer_mode_is_on() {
+    let mut fake = Fake::default();
+    assert!(unmet(&Need::Debugging, &fake).is_some());
+    fake.succeeding
+        .insert("sh -c /usr/sbin/DevToolsSecurity -status | /usr/bin/grep -q 'currently enabled'".into());
+    assert_eq!(unmet(&Need::Debugging, &fake), None);
+}
+
+#[test]
 fn a_sign_in_shows_by_a_variable_a_file_or_a_keychain_item_without_being_read() {
     let claude = steps::CLAUDE;
     let mut fake = Fake::default();
@@ -234,17 +251,25 @@ fn selected(args: &[&str]) -> Vec<&'static str> {
 
 #[test]
 fn paid_groups_run_only_when_named_or_asked_for_and_the_run_says_so() {
-    assert_eq!(selected(&[]), ["lsp", "git", "ci"]);
-    assert_eq!(selected(&["--paid"]), ["lsp", "git", "ci", "claude", "paste", "acp"]);
+    assert_eq!(selected(&[]), ["lsp", "git", "ci", "dap", "predict"]);
+    assert_eq!(
+        selected(&["--paid"]),
+        [
+            "lsp", "git", "ci", "dap", "claude", "paste", "acp", "predict", "copilot"
+        ]
+    );
     assert_eq!(selected(&["--only", "acp"]), ["acp"]);
     assert_eq!(
         selected(&["--only", "lsp", "--paid"]),
-        ["lsp", "claude", "paste", "acp"]
+        ["lsp", "claude", "paste", "acp", "copilot"]
     );
     let notice = |args: &[&str]| Options::parse(&strings(args)).unwrap().paid_notice();
     assert_eq!(
         notice(&[]).as_deref(),
-        Some("not run, as they use the owner's paid accounts: claude, paste, acp; name them in --only or add --paid")
+        Some(
+            "not run, as they use the owner's paid accounts: claude, paste, acp, copilot; name them in --only or add \
+             --paid"
+        )
     );
     assert_eq!(
         notice(&["--only", "claude,git"]).as_deref(),
@@ -337,7 +362,7 @@ fn steps_of(probe: &dyn Probe, group: &str) -> Vec<Step> {
 #[test]
 fn the_groups_that_start_coding_agents_say_they_use_paid_accounts() {
     let paid: Vec<&str> = GROUPS.iter().filter(|g| g.paid).map(|g| g.name).collect();
-    assert_eq!(paid, ["claude", "paste", "acp"]);
+    assert_eq!(paid, ["claude", "paste", "acp", "copilot"]);
     let group = GROUPS.iter().find(|g| g.name == "acp").unwrap();
     assert!(heading(group).contains("uses the owner's paid accounts"));
     let fake = complete();

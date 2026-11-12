@@ -10,8 +10,8 @@ use objc2_app_kit::{NSBezierPath, NSColor, NSEvent, NSKernAttributeName, NSStrin
 use objc2_foundation::{NSDictionary, NSPoint, NSRange, NSRect, NSSize, NSString};
 
 use super::{
-    END_GAP, Inset, Insets, MARGIN, PADDING, Placed, Shown, Spot, attributes, find_kern, layer_insets, resolve,
-    text_color, text_size,
+    END_GAP, Inset, Insets, MARGIN, PADDING, Placed, Shown, Spot, attributes, find_kern, ghost_attributes,
+    layer_insets, resolve, text_color, text_size,
 };
 use crate::editor::EditorTextView;
 use crate::util::{constant, ns};
@@ -93,13 +93,19 @@ pub fn draw_fragment(
     objc2_app_kit::NSGraphicsContext::setCurrentContext(Some(&graphics));
     let font_size = view.ivars().font_size.get();
     let attributes = attributes(font_size, &text_color(view));
+    let ghost = ghost_attributes(font_size);
     for place in &shown {
         if let Some(inset) = layer_insets(&state, place.layer).and_then(|insets| insets.get(place.index)) {
             let rect = NSRect::new(
                 NSPoint::new(place.rect.origin.x + dx, place.rect.origin.y + dy),
                 place.rect.size,
             );
-            draw_box(rect, inset, &attributes, font_size);
+            if inset.ghost {
+                // SAFETY: The attributes hold a font and a colour, as the method expects.
+                unsafe { ns(&inset.text).drawAtPoint_withAttributes(rect.origin, Some(&ghost)) };
+            } else {
+                draw_box(rect, inset, &attributes, font_size);
+            }
         }
     }
     objc2_app_kit::NSGraphicsContext::restoreGraphicsState_class();
@@ -195,7 +201,7 @@ fn lay_out(
                 else {
                     continue;
                 };
-                let mut x = caret.origin.x + END_GAP;
+                let mut x = caret.origin.x + if inset.ghost { 0.0 } else { END_GAP };
                 if let Some(folded) = placeholders
                     .iter()
                     .find(|p| (p.origin.y - 1.0 - caret.origin.y).abs() < 2.0 && p.origin.x + 1.0 >= caret.origin.x)

@@ -25,6 +25,7 @@ pub struct AppContext {
     /// The editors of every window.
     pub editors: RefCell<Vec<Weak<EditorTextView>>>,
     pub editor: crate::editor::EditorState,
+    pub predictions: crate::editor::predict::Predictions,
     pub previews: crate::preview::Previews,
     pub exports: crate::markdown::Exports,
     pub search_panels: crate::window::SearchPanels,
@@ -43,6 +44,7 @@ pub struct AppContext {
     pub git: crate::git_panel::Open,
     pub ci_panels: crate::ci_panel::CiPanels,
     pub ci_log_tabs: crate::ci_panel::LogTabs,
+    pub debug: crate::debug::DebugState,
     pub browser_tabs: crate::browser::BrowserTabs,
     pub downloads: crate::browser::Downloading,
     pub certificates: crate::browser::Certificates,

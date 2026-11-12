@@ -51,6 +51,8 @@ pub enum TabKind {
     Plan,
     /// A document as it reads, beside its editor: Markdown rendered, or a PDF file.
     Preview,
+    /// A debug console (E94).
+    Console,
 }
 
 impl TabKind {
@@ -65,6 +67,7 @@ impl TabKind {
             TabKind::Log => "doc.plaintext",
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
+            TabKind::Console => "ladybug",
         }
     }
 }
@@ -314,6 +317,9 @@ pub struct TabWindow {
     pub window: Retained<NSWindow>,
     split: Retained<NSSplitViewController>,
     sidebar: Retained<NSSplitViewItem>,
+    /// The inspector at the trailing edge (E94, E101), and where the folder's inspector goes while the tab is in front.
+    pub(super) inspector: Retained<NSSplitViewItem>,
+    pub(super) inspector_slot: Retained<NSView>,
     /// Where the folder's sidebar goes while the tab is in front.
     slot: Retained<NSView>,
     /// What the sidebar looked like when it left, for a window that stays on screen beside the one in front.
@@ -406,6 +412,8 @@ impl TabWindow {
         content_item.setMinimumThickness(360.0);
         split.addSplitViewItem(&sidebar);
         split.addSplitViewItem(&content_item);
+        let (inspector, inspector_slot) = super::inspector::split_item(mtm);
+        split.addSplitViewItem(&inspector);
         window.setContentViewController(Some(&split));
 
         let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), &ns("IDEProjectToolbar"));
@@ -419,6 +427,8 @@ impl TabWindow {
             window,
             split,
             sidebar,
+            inspector,
+            inspector_slot,
             slot,
             picture,
             content,

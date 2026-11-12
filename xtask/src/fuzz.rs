@@ -20,6 +20,9 @@ const TARGETS: &[(&str, &str, &[&str])] = &[
     ("ide-git", "diff", &["crates/ide-git/fuzz/seeds/diff"]),
     ("ide-claude", "stream_json", &["crates/ide-claude/tests/fixtures"]),
     ("ide-agent", "stream", &["crates/ide-agent/tests/fixtures"]),
+    ("ide-predict", "answer", &["crates/ide-predict/tests/fixtures"]),
+    ("ide-dap", "dap_messages", &["crates/ide-dap/fuzz/seeds/dap_messages"]),
+    ("ide-dap", "launch_json", &["crates/ide-dap/fuzz/seeds/launch_json"]),
 ];
 
 /// Runs the targets `names` names, or all of them.

@@ -202,6 +202,7 @@ impl WindowController {
     fn forget_document(&self, tab: &TabWindow, id: isize) {
         crate::editor::closing(self, id);
         crate::preview::closing(self, id);
+        crate::debug::closing(self, id);
         tab.remove(id);
     }
 
@@ -425,6 +426,7 @@ impl WindowController {
         if let Some(previous) = &previous {
             collapsed = previous.sidebar_collapsed();
             self.remember_sidebar_width(previous);
+            self.remember_inspector(previous);
             if let Some(view) = self.ivars().sidebar.borrow().as_ref() {
                 previous.keep_picture_of(view);
             }
@@ -434,6 +436,7 @@ impl WindowController {
             tab.adopt_sidebar(view);
         }
         self.fit_sidebar(tab, collapsed);
+        self.inspector_follows(tab);
         self.list_front_tabs();
     }
 

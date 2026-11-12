@@ -59,6 +59,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::Agent => t("Agent"),
         Kind::DevServer => t("Dev-Server"),
         Kind::Git => t("Git"),
+        Kind::DebugAdapter => t("Debug-Adapter"),
         Kind::Tool => t("Werkzeug"),
     }
 }

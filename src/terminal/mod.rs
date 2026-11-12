@@ -127,6 +127,39 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
     start(&view);
 }
 
+/// Opens a terminal tab in `cwd` and types `line` into its shell once the shell runs, as a debug adapter's
+/// `runInTerminal` asks; the program then belongs to the terminal like any other (Review C7). `then` gets the shell's
+/// process number, or `None` if it did not start.
+pub fn open_running(
+    controller: &WindowController,
+    cwd: &Path,
+    line: String,
+    then: impl FnOnce(Option<u32>) + Send + 'static,
+) {
+    open_tab(controller, Some(cwd));
+    let Some(view) = of_window(controller).into_iter().next() else {
+        return then(None);
+    };
+    type_when_started(view.id(), line, Box::new(then), 100);
+}
+
+/// Types `line` into the shell of terminal `id` once it has started, trying `tries` more times.
+fn type_when_started(id: u64, line: String, then: Box<dyn FnOnce(Option<u32>) + Send>, tries: u32) {
+    let typed = find(id).and_then(|view| {
+        view.with_session(|session| {
+            session.write(line.clone().into_bytes());
+            session.pid()
+        })
+    });
+    match typed {
+        Some(pid) => then(Some(pid)),
+        None if tries > 0 && find(id).is_some() => crate::util::main_after(Duration::from_millis(100), move || {
+            type_when_started(id, line, then, tries - 1);
+        }),
+        None => then(None),
+    }
+}
+
 /// The terminals open now, in every window.
 fn all_views() -> Vec<Retained<TerminalView>> {
     with_views(|views| views.borrow().values().filter_map(Weak::load).collect())

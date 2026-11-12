@@ -1,5 +1,5 @@
-//! Text shown in the editor that is not in the file (E81): inlay hints and blame, later ghost text and the debugger's
-//! values. None of it enters the text, its undo or the saved file. At the end of a line it is only drawn, in the
+//! Text shown in the editor that is not in the file (E81): inlay hints, blame and edit prediction's ghost text, later
+//! the debugger's values. None of it enters the text, its undo or the saved file. At the end of a line it is only drawn, in the
 //! overlay. In the middle of a line the last code point before it gets a kern attribute as wide as the text, an
 //! attribute change without a text change or an undo step, and the overlay draws into the gap. Where no character
 //! precedes it on its line, it goes to the line's end.
@@ -38,10 +38,15 @@ pub use rotor::rotor_step;
 /// The part of the app an inset belongs to; each sets and clears its own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Layer {
+    /// What edit prediction proposes to write at the caret, and where a proposal elsewhere waits (E92); first in a gap
+    /// and at a line's end, right where the caret is.
+    Prediction,
     /// The language server's inlay hints (E83).
     Inlay,
     /// Who changed the cursor's line last (E86).
     Blame,
+    /// The values of the paused frame's variables at the ends of the lines that use them (E94).
+    Debug,
 }
 
 /// Where an inset wants to show.
@@ -69,6 +74,9 @@ pub struct Inset {
     /// Room for a space before or after it, as the language server asks.
     pub pad_left: bool,
     pub pad_right: bool,
+    /// Ghost text: drawn as code would be, italic in the secondary colour and without a box, with the caret before it;
+    /// at a line's end it follows the text without a space.
+    pub ghost: bool,
     /// Its width on screen, with its margins, measured when it is set.
     width: f64,
 }
@@ -83,6 +91,7 @@ impl Inset {
             action: None,
             pad_left: false,
             pad_right: false,
+            ghost: false,
             width: 0.0,
         }
     }
@@ -104,6 +113,8 @@ impl std::fmt::Debug for Inset {
 struct Kerned {
     range: Range<usize>,
     width: f64,
+    /// Whether the caret after the kerned code point stands at the gap's left edge, before ghost text.
+    left: bool,
 }
 
 /// Where an inset was drawn last, in the editor's coordinates.
@@ -198,7 +209,27 @@ fn attributes(font_size: f64, color: &NSColor) -> Retained<NSDictionary<NSString
     )
 }
 
-fn measure(inset: &Inset, attributes: &NSDictionary<NSString, AnyObject>) -> f64 {
+/// The attributes of ghost text in an editor whose text has `font_size`.
+fn ghost_attributes(font_size: f64) -> Retained<NSDictionary<NSString, AnyObject>> {
+    NSDictionary::<NSString, AnyObject>::from_retained_objects(
+        &[
+            constant!(NSFontAttributeName),
+            constant!(NSForegroundColorAttributeName),
+        ],
+        &[
+            super::style::styled_code_font(font_size, false, true).into(),
+            NSColor::secondaryLabelColor().into(),
+        ],
+    )
+}
+
+fn measure(inset: &Inset, attributes: &NSDictionary<NSString, AnyObject>, font_size: f64) -> f64 {
+    if inset.ghost {
+        // SAFETY: The attributes hold a font and a colour, as the method expects.
+        return unsafe { ns(&inset.text).sizeWithAttributes(Some(&ghost_attributes(font_size))) }
+            .width
+            .ceil();
+    }
     // SAFETY: The attributes hold a font and a colour, as the method expects.
     let text = unsafe { ns(&inset.text).sizeWithAttributes(Some(attributes)) }.width;
     let pads = f64::from(u8::from(inset.pad_left) + u8::from(inset.pad_right)) * PADDING;
@@ -207,9 +238,10 @@ fn measure(inset: &Inset, attributes: &NSDictionary<NSString, AnyObject>) -> f64
 
 /// Shows `insets` for `layer` in `view`, in place of the ones it had.
 pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
-    let attributes = attributes(view.ivars().font_size.get(), &NSColor::secondaryLabelColor());
+    let font_size = view.ivars().font_size.get();
+    let attributes = attributes(font_size, &NSColor::secondaryLabelColor());
     for inset in &mut insets {
-        inset.width = measure(inset, &attributes);
+        inset.width = measure(inset, &attributes, font_size);
     }
     insets.sort_by_key(|inset| inset.at);
     let changed = {
@@ -224,7 +256,15 @@ pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
             state.layers.push((layer, insets));
             state.layers.sort_by_key(|(l, _)| *l);
         }
-        state.full = true;
+        // Only the gaps of the insets that changed need a look; the others keep their kern.
+        match &changed {
+            Some(span) => {
+                let swept = state.sweep.take();
+                state.sweep =
+                    Some(swept.map_or_else(|| span.clone(), |s| s.start.min(span.start)..s.end.max(span.end)));
+            }
+            None => state.full = true,
+        }
     }
     settle(view);
     if let Some(span) = changed {
@@ -235,7 +275,7 @@ pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
 
 /// The offsets from the first to the last inset that differs between `old` and `new`, both ordered by offset.
 fn changed_span(old: &[Inset], new: &[Inset]) -> Option<Range<usize>> {
-    let same = |a: &Inset, b: &Inset| a.at == b.at && a.text == b.text && a.place == b.place;
+    let same = |a: &Inset, b: &Inset| a.at == b.at && a.text == b.text && a.place == b.place && a.ghost == b.ghost;
     let differs = old
         .iter()
         .filter(|a| !new.iter().any(|b| same(a, b)))
@@ -370,6 +410,20 @@ fn anchor(
     (grapheme(start).start == start).then_some((start..at, at))
 }
 
+/// Whether an inline inset at UTF-16 offset `at` of `view` gets a gap of its line, rather than going to the line's end.
+pub fn gap_possible(view: &EditorTextView, at: usize) -> bool {
+    let Some(storage) = view.storage() else {
+        return false;
+    };
+    let string = storage.string();
+    let units = |i: usize| string.characterAtIndex(i);
+    let grapheme = |i: usize| {
+        let range = string.rangeOfComposedCharacterSequenceAtIndex(i);
+        range.location..range.location + range.length
+    };
+    anchor(units, grapheme, at, string.length()).is_some()
+}
+
 /// Where an inset shows, before drawing.
 #[derive(Debug, Clone, PartialEq)]
 enum Spot {
@@ -385,6 +439,7 @@ struct Placed {
     index: usize,
     spot: Spot,
     width: f64,
+    ghost: bool,
 }
 
 /// The UTF-16 offset where the content of the line holding `at` ends, before its line break.
@@ -427,6 +482,7 @@ fn resolve(view: &EditorTextView, state: &Insets, string: &NSString, window: &Ra
                 index,
                 spot,
                 width: inset.width,
+                ghost: inset.ghost,
             });
         }
     }
@@ -435,19 +491,26 @@ fn resolve(view: &EditorTextView, state: &Insets, string: &NSString, window: &Ra
 
 /// The kern each gap needs, ordered by place: the widths of its insets together.
 fn wanted(placed: &[Placed]) -> Vec<Kerned> {
-    let mut gaps: Vec<(Range<usize>, f64)> = placed
+    let mut gaps: Vec<(Range<usize>, f64, bool)> = placed
         .iter()
         .filter_map(|place| match &place.spot {
-            Spot::Gap { anchor } => Some((anchor.clone(), place.width)),
+            Spot::Gap { anchor } => Some((anchor.clone(), place.width, place.ghost)),
             Spot::End { .. } => None,
         })
         .collect();
-    gaps.sort_by_key(|(range, _)| (range.start, range.end));
+    gaps.sort_by_key(|(range, _, _)| (range.start, range.end));
     let mut kerns: Vec<Kerned> = Vec::with_capacity(gaps.len());
-    for (range, width) in gaps {
+    for (range, width, ghost) in gaps {
         match kerns.last_mut() {
-            Some(last) if last.range == range => last.width += width,
-            _ => kerns.push(Kerned { range, width }),
+            Some(last) if last.range == range => {
+                last.width += width;
+                last.left |= ghost;
+            }
+            _ => kerns.push(Kerned {
+                range,
+                width,
+                left: ghost,
+            }),
         }
     }
     kerns
@@ -610,13 +673,18 @@ fn publish(view: &EditorTextView, kerned: &[Kerned]) {
         return;
     };
     if let Ok(gaps) = layout.downcast::<GapLayoutManager>() {
-        *gaps.ivars().gaps.borrow_mut() = kerned.iter().map(|k| (k.range.end, k.width)).collect::<Vec<_>>().into();
+        *gaps.ivars().gaps.borrow_mut() = kerned
+            .iter()
+            .map(|k| (k.range.end, k.width, k.left))
+            .collect::<Vec<_>>()
+            .into();
     }
 }
 
 pub struct GapIvars {
-    /// The offset after each gap's character and the gap's width, ordered by offset.
-    gaps: std::cell::RefCell<Rc<[(usize, f64)]>>,
+    /// The offset after each gap's character, the gap's width and whether the caret stands at its left edge, ordered
+    /// by offset.
+    gaps: std::cell::RefCell<Rc<[(usize, f64, bool)]>>,
 }
 
 define_class!(
@@ -679,19 +747,26 @@ define_class!(
 );
 
 /// TextKit 2 puts the caret after a kerned character in the middle of the kern: a segment that starts there starts at
-/// the gap's right edge instead, and one that ends there ends at its left edge.
-fn caret_right_of_gap(gaps: &[(usize, f64)], mut rect: NSRect, from: isize, to: isize) -> NSRect {
-    let width_at = |offset: isize| {
+/// the gap's right edge instead, and one that ends there ends at its left edge. A caret before ghost text stands at the
+/// gap's left edge, so the proposal follows it.
+fn caret_right_of_gap(gaps: &[(usize, f64, bool)], mut rect: NSRect, from: isize, to: isize) -> NSRect {
+    let gap_at = |offset: isize| {
         let offset = usize::try_from(offset).ok()?;
-        let index = gaps.partition_point(|(end, _)| *end < offset);
-        gaps.get(index).filter(|(end, _)| *end == offset).map(|(_, w)| *w / 2.0)
+        let index = gaps.partition_point(|(end, _, _)| *end < offset);
+        gaps.get(index)
+            .filter(|(end, _, _)| *end == offset)
+            .map(|(_, w, left)| (*w / 2.0, *left))
     };
-    if let Some(half) = width_at(from) {
-        rect.origin.x += half;
-        rect.size.width = (rect.size.width - half).max(0.0);
+    match gap_at(from) {
+        Some((half, true)) if to == from => rect.origin.x -= half,
+        Some((half, _)) => {
+            rect.origin.x += half;
+            rect.size.width = (rect.size.width - half).max(0.0);
+        }
+        None => {}
     }
     if to > from
-        && let Some(half) = width_at(to)
+        && let Some((half, _)) = gap_at(to)
     {
         rect.size.width = (rect.size.width - half).max(0.0);
     }
@@ -869,6 +944,26 @@ mod tests {
             "text after it does not matter"
         );
         assert_eq!(at, 5);
+    }
+
+    #[test]
+    fn the_caret_stands_right_of_an_inlay_gap_and_left_of_ghost_text() {
+        let rect = |x: f64, width: f64| {
+            NSRect::new(
+                objc2_foundation::NSPoint::new(x, 0.0),
+                objc2_foundation::NSSize::new(width, 10.0),
+            )
+        };
+        let hint = [(5, 20.0, false)];
+        assert_eq!(caret_right_of_gap(&hint, rect(50.0, 0.0), 5, 5).origin.x, 60.0);
+        let ghost = [(5, 20.0, true)];
+        assert_eq!(caret_right_of_gap(&ghost, rect(50.0, 0.0), 5, 5).origin.x, 40.0);
+        let selected = caret_right_of_gap(&ghost, rect(50.0, 30.0), 5, 8);
+        assert_eq!(
+            (selected.origin.x, selected.size.width),
+            (60.0, 20.0),
+            "a selection after it starts past the gap"
+        );
     }
 
     #[test]

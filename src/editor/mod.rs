@@ -14,6 +14,7 @@ mod inset_fragment;
 pub mod insets;
 mod multi;
 mod overlay;
+pub mod predict;
 #[cfg(feature = "selftest")]
 mod probe;
 #[cfg(feature = "selftest")]
@@ -215,6 +216,7 @@ pub fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
 /// Adds the controls of the editor's whitespace rules, and of dictation, to its status bar's `stack`.
 pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     indent::status_items(mtm, view, stack);
+    predict::status_items(mtm, view, stack);
     #[cfg(feature = "dictation")]
     crate::dictation::editor_items(mtm, view, stack);
 }
@@ -411,6 +413,7 @@ fn add_tab(
     whitespace::attach(&view, &scroll);
     overlay::attach(&view);
     insets::attach(&view);
+    crate::debug::attach_rotor(&view);
     *view.ivars().gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
     let id = if preview {
         controller.add_preview_tab(TabKind::Editor, key, title, container)
@@ -559,7 +562,9 @@ pub(crate) fn update_dirty(view: &EditorTextView) {
 /// What other parts of the app follow: the language server and a project search that shows unsaved text.
 fn notify_change(view: &EditorTextView, change: &Change) {
     crate::lsp::changed(view, change);
+    predict::changed(view);
     crate::preview::edited(view);
+    crate::debug::edited(view, change);
     if let Some(path) = view.document().path() {
         crate::window::buffer_edited(path);
     }

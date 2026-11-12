@@ -41,6 +41,10 @@ enum Action {
     StopProcess(ProcessId),
     /// Selects the terminal tab with this number.
     ShowTerminal(isize),
+    /// Shows the debug panel, from the line of the session with this number.
+    ShowDebug(u64),
+    /// Stops the debug session with this number.
+    StopDebug(u64),
 }
 
 pub struct ActivityIvars {
@@ -380,6 +384,24 @@ fn session_lines(tabs: &[std::rc::Rc<AgentTab>], key: u64, part: Part, now: Syst
     }
 }
 
+/// The lines of the window's debug sessions.
+fn debug_lines(controller: &WindowController) -> Vec<Line> {
+    crate::debug::activity(controller)
+        .into_iter()
+        .map(|(id, name, detail)| Line {
+            symbol: "ladybug",
+            tint: NSColor::controlAccentColor(),
+            title: name,
+            detail,
+            indent: false,
+            buttons: vec![
+                (t("Zeigen"), Action::ShowDebug(id)),
+                (t("Stopp"), Action::StopDebug(id)),
+            ],
+        })
+        .collect()
+}
+
 /// The lines of the supervisor's processes; those of a terminal, or started in one, can show its tab.
 fn process_lines(controller: &WindowController, processes: &[ide_process::ProcessInfo], now: SystemTime) -> Vec<Line> {
     processes
@@ -398,6 +420,7 @@ fn process_lines(controller: &WindowController, processes: &[ide_process::Proces
                     Kind::Terminal => "terminal",
                     Kind::LanguageServer => "curlybraces",
                     Kind::DevServer => "server.rack",
+                    Kind::DebugAdapter => "ladybug",
                     _ => "gearshape",
                 },
                 tint: NSColor::secondaryLabelColor(),
@@ -541,6 +564,7 @@ impl Activity {
             Some((key, part)) => vec![(part.heading(), session_lines(&tabs, key, part, now))],
             None => vec![
                 (t("Agenten"), agent_lines(&tabs, now, false)),
+                (t("Debuggen"), debug_lines(controller)),
                 (t("Prozesse"), process_lines(controller, &processes(), now)),
             ],
         }
@@ -768,6 +792,8 @@ impl Activity {
             }
             Action::StopProcess(id) => Supervisor::global().stop(id, Duration::from_secs(2)),
             Action::ShowTerminal(tab) => controller.select_tab_by_id(tab),
+            Action::ShowDebug(_) => crate::debug::show(&controller),
+            Action::StopDebug(id) => crate::debug::stop(&controller, id),
         }
         self.changed();
     }

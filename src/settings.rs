@@ -8,6 +8,7 @@ mod commit_message;
 mod dictation;
 mod editor;
 mod list_bar;
+mod predict;
 mod servers;
 
 use std::cell::RefCell;
@@ -156,6 +157,7 @@ pub struct SettingsState {
     agent_registry: agents::AgentRegistryWindow,
     commit_message_settings: commit_message::CommitMessageShown,
     editor_settings: editor::EditorSettingsShown,
+    prediction: predict::PredictionShown,
 }
 
 /// The settings window while it exists, with its controller.
@@ -210,6 +212,18 @@ pub fn show(mtm: MainThreadMarker) {
     });
     fit_agents();
 }
+
+/// Where the tab of edit prediction sits in the toolbar: the last.
+const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 6 } else { 5 };
+
+/// Brings the settings window to the front on the tab of edit prediction.
+pub fn show_prediction(mtm: MainThreadMarker) {
+    show_tab(mtm, PREDICTION_TAB);
+}
+
+pub use predict::prediction_changed;
+#[cfg(feature = "selftest")]
+pub use predict::shown as prediction_shown;
 
 /// Brings the settings window to the front on its CI tab.
 pub fn show_ci(mtm: MainThreadMarker) {
@@ -342,8 +356,7 @@ pub fn ci_changed() {
     });
 }
 
-/// The settings window, if it was opened, for the self-test.
-#[cfg(feature = "selftest")]
+/// The settings window, if it was opened.
 pub fn window() -> Option<Retained<NSWindow>> {
     with_window(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
 }
@@ -433,6 +446,7 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
     );
     #[cfg(feature = "dictation")]
     add_tab(&tabs, &controller.ivars().dictation.view(), t("Diktat"), "mic");
+    add_tab(&tabs, &predict::view(mtm), t("Vorhersage"), "text.cursor");
     let window = NSWindow::windowWithContentViewController(&tabs);
     window.setStyleMask(NSWindowStyleMask::Titled | NSWindowStyleMask::Closable);
     // SAFETY: Switching it off keeps AppKit from releasing the window behind Rust's back; the thread-local owns it.

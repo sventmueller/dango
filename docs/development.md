@@ -54,7 +54,9 @@ Markdown render, including definitions that arrive after their references. Repor
 ## Fuzzing
 The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the
 terminal's scanner and `KERN_PROCARGS2` reader, the language servers' framing with the positions they send, ACP and
-Claude stream-json into the thread model, `git diff` output, and the providers' server-sent events. They reach
+Claude stream-json into the thread model, `git diff` output, the providers' server-sent events, and the answers of
+local fill-in-the-middle models and Copilot that become edit predictions, and the debug adapters' messages and
+`.vscode/launch.json`. They reach
 crate-private parts through the feature `fuzzing`, which only the fuzz crates turn on. cargo-fuzz needs a nightly
 compiler; `xtask/src/fuzz.rs` pins its date (R18), and `rustup toolchain install nightly-<date> --profile minimal`
 plus `cargo install cargo-fuzz` set it up. `make fuzz` runs every target for `FUZZ_SECONDS` (60 by default),
@@ -264,8 +266,9 @@ failed. A test can also skip itself by printing `integration skip: <why>`, and a
 `skipped: …` counts as skipped. `make test-integration ARGS=--list` shows the plan without running anything,
 `ARGS="--only lsp,git"` runs only those groups.
 
-The groups `claude`, `paste` and `acp` start coding agents signed in to the owner's paid accounts (R11, E53). A bare
-`make test-integration` runs only `lsp`, `git` and `ci` and names the paid groups it left out; a paid group runs only
+The groups `claude`, `paste` and `acp` start coding agents signed in to the owner's paid accounts (R11, E53), and
+`copilot` uses the owner's Copilot account. A bare `make test-integration` runs only `lsp`, `git`, `ci` and `predict`
+and names the paid groups it left out; a paid group runs only
 when `--only` names it, and `--paid` adds all of them. The run then prints which paid groups it starts and goes on
 without asking, so it also works unattended.
 
@@ -277,6 +280,8 @@ without asking, so it also works unattended.
 | `claude` | the ignored real-CLI test of `ide-claude` and `selftest agent-live` | Claude: two short turns with haiku |
 | `paste` | `selftest paste-cli`: an image pasted into claude, codex, gemini and agy, without a prompt | the sign-ins of the four CLIs |
 | `acp` | `ide-acp/tests/live.rs`: gemini, agy and codex-acp, each from the PATH and as the preset pins it, against one tiny prompt | Google and OpenAI accounts, a few tokens each |
+| `predict` | `ide-predict/tests/real_providers.rs`: a fill-in-the-middle proposal and a cancel with a real model under Ollama (`IDE_INTEGRATION_OLLAMA_MODEL`, else `qwen2.5-coder:1.5b`) and under LM Studio's server (`IDE_INTEGRATION_LMSTUDIO_MODEL`, else `qwen2.5-coder-1.5b-instruct`) | none; nothing leaves the Mac |
+| `copilot` | the same file: copilot-language-server, from the tools folder or installed with npm, proposes a completion for a made-up file; only once the user signed in to Copilot | Copilot: two completions |
 
 The clones `ci` reads are `IDE_INTEGRATION_GITHUB_REPO`, else `~/Repos/splat`, and `IDE_INTEGRATION_GITLAB_REPO`, else
 the first clone in `~/Repos` whose origin is on a self-managed GitLab the app finds a token for. `claude` takes the CLI

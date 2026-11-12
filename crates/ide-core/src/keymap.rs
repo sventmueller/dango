@@ -35,7 +35,8 @@ pub const DEFAULTS: &[Binding] = &[
     bind("edit.toggleComment", "cmd+/"),
     bind("edit.goToLine", "ctrl+g"),
     bind("view.wrap", "alt+z"),
-    bind("view.whitespace", "alt+cmd+i"),
+    bind("view.whitespace", ""),
+    bind("view.inspector", "alt+cmd+i"),
     bind("view.preview", "shift+cmd+v"),
     bind("edit.pastePlain", "alt+shift+cmd+v"),
     bind("format.bold", "cmd+b"),
@@ -56,6 +57,7 @@ pub const DEFAULTS: &[Binding] = &[
     bind("panel.agents", "cmd+3"),
     bind("panel.git", "cmd+4"),
     bind("panel.ci", "cmd+5"),
+    bind("panel.debug", "cmd+6"),
     bind("window.nextPanel", "alt+cmd+`"),
     bind("terminal.new", "ctrl+`"),
     bind("terminal.clear", "cmd+k"),
@@ -87,6 +89,13 @@ pub const DEFAULTS: &[Binding] = &[
     bind("edit.addCaretBelow", "ctrl+shift+down"),
     bind("edit.addNextOccurrence", "cmd+d"),
     bind("dictation.toggle", "ctrl+alt+d"),
+    bind("debug.continue", "ctrl+cmd+y"),
+    bind("debug.stepOver", "f6"),
+    bind("debug.stepInto", "f7"),
+    bind("debug.stepOut", "f8"),
+    bind("debug.stop", "cmd+."),
+    bind("debug.toggleBreakpoint", "cmd+\\"),
+    bind("debug.toggleBreakpoints", "cmd+y"),
 ];
 
 /// The modifiers a shortcut may name, in the order the table writes them.
@@ -184,7 +193,12 @@ mod tests {
     #[test]
     fn the_defaults_are_valid_and_free_of_conflicts() {
         for binding in DEFAULTS {
-            assert!(split(binding.key).is_some(), "{} has {}", binding.command, binding.key);
+            assert!(
+                binding.key.is_empty() || split(binding.key).is_some(),
+                "{} has {}",
+                binding.command,
+                binding.key
+            );
         }
         assert_eq!(Keymap::default().conflicts(), vec![]);
         let mut commands: Vec<_> = DEFAULTS.iter().map(|b| b.command).collect();

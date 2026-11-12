@@ -91,7 +91,7 @@ pub fn mouse_moved(view: &EditorTextView, event: &NSEvent) {
     if leave {
         dismiss(view);
     }
-    if server_of(view).is_some() {
+    if server_of(view).is_some() || crate::debug::paused_in(view) {
         view.later(sel!(ideHoverRest), REST);
     }
 }
@@ -112,7 +112,9 @@ pub fn hover_rest(view: &EditorTextView) {
     if shown {
         return;
     }
-    if let Some(index) = character_at(view, point) {
+    if let Some(index) = character_at(view, point)
+        && !crate::debug::hover(view, index)
+    {
         ask(view, index);
     }
 }

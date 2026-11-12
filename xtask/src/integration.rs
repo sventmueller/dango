@@ -52,6 +52,9 @@ pub(crate) enum Need {
     RustAnalyzer,
     /// Apple's developer tools, which bring clangd and sourcekit-lsp.
     DeveloperTools,
+    /// macOS lets debuggers take control of other processes without asking for a password each time
+    /// (`DevToolsSecurity -enable`).
+    Debugging,
     /// A host that takes connections on port 443.
     Network(&'static str),
     /// A sign-in with `service`, shown by any of `evidence`.
@@ -211,6 +214,11 @@ pub(crate) fn unmet(need: &Need, probe: &dyn Probe) -> Option<String> {
         }
         Need::DeveloperTools => (!probe.succeeds(Path::new("/usr/bin/xcode-select"), &["-p"]))
             .then(|| "Apple's developer tools are not installed".into()),
+        Need::Debugging => (!probe.succeeds(
+            Path::new("/bin/sh"),
+            &["-c", "/usr/sbin/DevToolsSecurity -status | /usr/bin/grep -q 'currently enabled'"],
+        ))
+        .then(|| "developer mode is off, so macOS asks for a password at every launch; turn it on with sudo DevToolsSecurity -enable".into()),
         Need::Network(host) => (!probe.reachable(host)).then(|| format!("{host} cannot be reached")),
         Need::SignIn { service, evidence } => (!evidence.iter().any(|e| shows(e, probe))).then(|| {
             let looked: Vec<String> = evidence.iter().map(describe).collect();

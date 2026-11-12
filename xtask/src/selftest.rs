@@ -44,7 +44,7 @@ pub(crate) const CRASHING: &[&str] = &["recovery"];
 
 /// Scenarios that run the app twice in the same home: the first launch quits as the user does, and the second checks
 /// what it put back.
-pub(crate) const QUITTING: &[&str] = &["restore"];
+pub(crate) const QUITTING: &[&str] = &["restore", "debug-restore"];
 
 /// The signal a crashing launch ends with, which neither runs any of the app's code nor asks macOS for a crash report.
 pub(crate) const SIGKILL: i32 = 9;

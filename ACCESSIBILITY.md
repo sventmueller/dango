@@ -25,6 +25,7 @@ checked by hand.
 | AI panel and Activity | The session list and the list of running sessions and tasks are named. In the Activity overview, each button names its action together with the line it belongs to. |
 | Git panel | File rows say the file and its state. The actions that otherwise appear on hover (show diff, stage, unstage, discard) are VoiceOver actions of the row. The branch menu, the commit message and the state of a running push or pull are named. |
 | CI panel | Each run is spoken with its state; a job's log tab is named after the job. |
+| Debugger | The panel's list ("Debug sessions and breakpoints") and the inspector's ("Variables and watch expressions") are named outline views; the six controls in the panel's title row are named and greyed out when they cannot act, and Stop says "Detach" for a program the session attached to. The editor's rotor "Breakpoints" lists the file's breakpoints, said as enabled, disabled, logpoint or with a condition, and the line where the program paused; VoiceOver announces where the program paused. Breakpoints are never told apart by colour alone: a disabled one is outlined, a logpoint a diamond, the paused line has an arrow beside its number. The debug console's history is a read-only text named after its session. |
 | Browser | Back, forward, reload, the address field and the loading indicator are named; downloads are a named group. Web pages are WebKit's own accessibility. |
 | Dictation | The microphone buttons say whether they start or stop and read the state (listening, transcribing) as their value; the status lines show the same in words. |
 | Settings | Tables are named after their first column; controls such as the font size stepper and the search engine menu are named by the label beside them. In the Agents tab, each button names its agent as well as its action. |
@@ -39,7 +40,8 @@ in the message field ⌃⇧Tab goes back.
 
 | Moving around | Shortcut |
 |---|---|
-| Files, Search, AI, Git, CI in the sidebar, with the focus moving into the panel; again to fold the sidebar | ⌘1, ⌘2, ⌘3, ⌘4, ⌘5 |
+| Files, Search, AI, Git, CI, Debug in the sidebar, with the focus moving into the panel; again to fold the sidebar | ⌘1, ⌘2, ⌘3, ⌘4, ⌘5, ⌘6 |
+| Show or hide the inspector (the paused program's variables and watch expressions) | ⌥⌘I |
 | Fold or show the sidebar | ⌃⌘S |
 | Next, previous tab | ⇧⌘], ⇧⌘[ |
 | The other document, when two share a tab | ⌥⌘` |
@@ -51,6 +53,8 @@ in the message field ⌃⇧Tab goes back.
 | Quick open, search the project, go to symbol | ⌘P, ⇧⌘F, ⇧⌘O |
 | Next, previous problem | ⌘', ⇧⌘' |
 | Start or stop dictation in the focused field (release builds) | ⌃⌥D |
+| Debugger: continue, step over, step into, step out, stop (detach from an attached program) | ⌃⌘Y, F6, F7, F8, ⌘. |
+| Breakpoint at the caret's line, all breakpoints off or on | ⌘\, ⌘Y |
 
 In the AI tab's timeline, Space or Return opens and closes the selected card's details, and Esc stops the agent's
 turn (background work goes on). With a plan's row selected, Tab goes into the plan's text and ⇧Tab back to the

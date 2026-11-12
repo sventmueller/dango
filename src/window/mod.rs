@@ -10,6 +10,7 @@ mod files_header;
 mod finding;
 mod frame;
 mod full_screen;
+mod inspector;
 pub mod layout;
 mod new_tab_button;
 mod notice;
@@ -82,10 +83,18 @@ pub enum Panel {
     Agents,
     Git,
     Ci,
+    Debug,
 }
 
 impl Panel {
-    pub const ALL: [Panel; 5] = [Panel::Files, Panel::Search, Panel::Agents, Panel::Git, Panel::Ci];
+    pub const ALL: [Panel; 6] = [
+        Panel::Files,
+        Panel::Search,
+        Panel::Agents,
+        Panel::Git,
+        Panel::Ci,
+        Panel::Debug,
+    ];
 
     /// The tag of the menu items and buttons that show it.
     pub fn tag(self) -> isize {
@@ -95,6 +104,7 @@ impl Panel {
             Panel::Agents => 3,
             Panel::Git => 4,
             Panel::Ci => 5,
+            Panel::Debug => 6,
         }
     }
 
@@ -109,6 +119,7 @@ impl Panel {
             Panel::Agents => t("Agenten"),
             Panel::Git => t("Git"),
             Panel::Ci => t("CI"),
+            Panel::Debug => t("Debuggen"),
         }
     }
 
@@ -120,6 +131,7 @@ impl Panel {
             Panel::Agents => "agents",
             Panel::Git => "git",
             Panel::Ci => "ci",
+            Panel::Debug => "debug",
         }
     }
 
@@ -130,6 +142,7 @@ impl Panel {
             Panel::Agents => "sparkles",
             Panel::Git => "arrow.triangle.branch",
             Panel::Ci => "checkmark.seal",
+            Panel::Debug => "ladybug",
         }
     }
 }
@@ -144,6 +157,7 @@ pub struct Ivars {
     panel_width: Cell<f64>,
     activity: RefCell<Option<ActivityBar>>,
     panels: RefCell<Option<Panels>>,
+    inspector: inspector::State,
     /// The activity bar and the panel beside it, which the window tab in front shows.
     sidebar: RefCell<Option<Retained<NSView>>>,
     /// The window tabs, in the order they opened.
@@ -588,6 +602,7 @@ impl WindowController {
             panel_width: Cell::new(PANEL_DEFAULT_WIDTH),
             activity: RefCell::default(),
             panels: RefCell::default(),
+            inspector: inspector::State::default(),
             sidebar: RefCell::default(),
             tabs: RefCell::default(),
             current: RefCell::default(),
@@ -710,6 +725,7 @@ impl WindowController {
         crate::git_panel::attach(self);
         crate::ci_panel::attach(self);
         crate::agent_panel::attach(self);
+        crate::debug::attach(self);
         if !crate::project::is_trusted(&root) {
             self.ask_trust(root);
         }
@@ -751,6 +767,7 @@ impl WindowController {
                     crate::git_panel::trust_changed(&root);
                     crate::ci_panel::trust_changed(&root);
                     crate::lsp::trust_changed(&root);
+                    crate::debug::trust_changed(&root);
                 }
             });
         });
@@ -872,6 +889,7 @@ impl WindowController {
         }
         crate::agent::window_closed(self);
         crate::ci_panel::window_closed(self);
+        crate::debug::window_closed(self);
         main_soon_unregister(self.id());
     }
 

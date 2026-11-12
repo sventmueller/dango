@@ -8,7 +8,7 @@
 
 pub(super) mod audit;
 mod flows;
-mod keys;
+pub(super) mod keys;
 mod plan;
 mod popover;
 mod read;

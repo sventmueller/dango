@@ -34,8 +34,9 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
         crate::markdown::format_menu(mtm, &|command| keys.get(command)),
         crate::editor::with_view_items(mtm, view_menu(mtm, &keys)),
         go_menu(mtm, &keys),
-        code_menu(mtm, &keys),
+        crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
         crate::git_panel::menu(mtm),
+        crate::debug::menu(mtm, &|command| keys.get(command), &delegate.context()),
         window_item,
         help_item,
     ] {
@@ -212,6 +213,7 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             panel(Panel::Agents, "panel.agents"),
             panel(Panel::Git, "panel.git"),
             panel(Panel::Ci, "panel.ci"),
+            panel(Panel::Debug, "panel.debug"),
             separator(mtm),
             item(
                 mtm,
@@ -255,6 +257,12 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
                 t("Seitenleiste ein-/ausblenden"),
                 Some(sel!(toggleSidebar:)),
                 &keys.get("sidebar.toggle"),
+            ),
+            item(
+                mtm,
+                t("Inspektor ein-/ausblenden"),
+                Some(sel!(toggleInspector:)),
+                &keys.get("view.inspector"),
             ),
             separator(mtm),
             item(

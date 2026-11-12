@@ -722,7 +722,7 @@ fn appearances(view: &EditorTextView) {
 }
 
 /// The CPU time of the main thread, so other work on this Mac does not count against a budget.
-fn thread_time() -> Duration {
+pub fn thread_time() -> Duration {
     let mut now = libc::timespec { tv_sec: 0, tv_nsec: 0 };
     // SAFETY: `now` is a valid timespec to fill.
     unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &raw mut now) };

@@ -56,6 +56,11 @@ impl WindowController {
             self.ivars()
                 .panel_width
                 .set(width.clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+            let defaults = NSUserDefaults::standardUserDefaults();
+            self.set_saved_inspector(
+                defaults.boolForKey(&key("Inspector open", &saved)),
+                defaults.doubleForKey(&key("Inspector", &saved)),
+            );
         }
     }
 
@@ -85,7 +90,10 @@ impl WindowController {
         self.remember_sidebar_width(&tab);
         let ivars = self.ivars();
         let defaults = NSUserDefaults::standardUserDefaults();
+        let (inspector_shown, inspector_width) = self.saved_inspector();
         for name in [self.frame_name().as_str(), LAST] {
+            defaults.setBool_forKey(inspector_shown, &key("Inspector open", name));
+            defaults.setDouble_forKey(inspector_width, &key("Inspector", name));
             tab.window.saveFrameUsingName(&ns(name));
             defaults.setDouble_forKey(ACTIVITY_WIDTH + ivars.panel_width.get(), &key("Sidebar", name));
             if let Some(panel) = ivars.panel.get() {

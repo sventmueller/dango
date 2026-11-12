@@ -11,7 +11,7 @@ use crate::paths;
 use crate::store::{Migration, Store};
 
 /// The migrations of a layout file.
-const MIGRATIONS: &[Migration] = &[panels_to_tabs];
+pub(crate) const MIGRATIONS: &[Migration] = &[panels_to_tabs, crate::debugging::add_debugging];
 
 /// The field that holds the window tabs.
 const FIELD: &str = "tabs";
@@ -46,6 +46,14 @@ pub enum Tab {
     Agent {
         /// The agent's id for the session.
         session: String,
+    },
+    /// A debug console, which comes back as the finished history of its session, only to read; no session starts.
+    Debug {
+        /// The name of the session it belonged to.
+        title: String,
+        /// What it showed, oldest first.
+        #[serde(default)]
+        history: Vec<crate::debugging::ConsoleLine>,
     },
     /// A CLI thread of an older version, which the app no longer has; it opens again as a terminal.
     Cli {
@@ -173,8 +181,16 @@ fn panels_to_tabs(values: &mut Map<String, Value>) {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    pub(crate) fn save_layout(file: PathBuf, layout: &Layout) {
+        save_to(file, layout).unwrap();
+    }
+
+    pub(crate) fn load_layout(file: PathBuf) -> Option<Layout> {
+        load_from(file)
+    }
 
     fn sample() -> Layout {
         Layout {

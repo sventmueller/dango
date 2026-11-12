@@ -28,6 +28,13 @@ pub(crate) const GROUPS: &[Group] = &[
         steps: ci,
     },
     Group {
+        name: "dap",
+        title: "real debug adapters launching and attaching to small programs",
+        paid: false,
+        uses: "downloads js-debug from github.com into a temporary folder",
+        steps: dap,
+    },
+    Group {
         name: "claude",
         title: "the claude CLI and a live turn in the app",
         paid: true,
@@ -47,6 +54,20 @@ pub(crate) const GROUPS: &[Group] = &[
         paid: true,
         uses: "the Google and OpenAI accounts behind gemini, agy and codex-acp",
         steps: acp,
+    },
+    Group {
+        name: "predict",
+        title: "edit predictions from a real fill-in-the-middle model under Ollama and LM Studio",
+        paid: false,
+        uses: "local models only; nothing leaves the Mac",
+        steps: predict,
+    },
+    Group {
+        name: "copilot",
+        title: "edit predictions from GitHub Copilot for the signed-in user",
+        paid: true,
+        uses: "the Copilot account: two completions of a tiny made-up file",
+        steps: copilot,
     },
 ];
 
@@ -174,6 +195,27 @@ fn lsp(_: &Context) -> Vec<Step> {
             "selftest lsp-navigation",
             vec![Need::RustAnalyzer],
             selftest("lsp-navigation", Vec::new()),
+        ),
+    ]
+}
+
+fn dap(_: &Context) -> Vec<Step> {
+    let real = |name| test("ide-dap", "real_adapters", name);
+    vec![
+        step(
+            "lldb-dap on a Rust program",
+            vec![Need::DeveloperTools, Need::Debugging, Need::Program("cargo")],
+            real("lldb_dap_launches_and_attaches_to_a_rust_program"),
+        ),
+        step(
+            "dlv on a Go program",
+            vec![Need::Program("dlv"), Need::Program("go"), Need::Debugging],
+            real("dlv_launches_and_attaches_to_a_go_program"),
+        ),
+        step(
+            "js-debug on a Node program",
+            vec![Need::Program("node"), Need::Network("github.com")],
+            real("js_debug_launches_and_attaches_to_a_node_program"),
         ),
     ]
 }
@@ -343,4 +385,58 @@ fn acp(cx: &Context) -> Vec<Step> {
             recorded("codex_as_pinned_answers_a_tiny_prompt"),
         ),
     ]
+}
+
+fn predict(cx: &Context) -> Vec<Step> {
+    let probe = cx.probe;
+    let real = |name| test("ide-predict", "real_providers", name);
+    let ollama_model = probe
+        .process_var("IDE_INTEGRATION_OLLAMA_MODEL")
+        .unwrap_or_else(|| "qwen2.5-coder:1.5b".into());
+    let ollama_needs = match probe.program("ollama") {
+        None => vec![Need::Program("ollama")],
+        Some(ollama) if probe.succeeds(&ollama, &["show", &ollama_model]) => Vec::new(),
+        Some(_) => vec![Need::Unmet(format!(
+            "Ollama does not run or lacks {ollama_model}: ollama pull {ollama_model}, or set IDE_INTEGRATION_OLLAMA_MODEL"
+        ))],
+    };
+    vec![
+        step(
+            "Ollama fills a gap with a real model",
+            ollama_needs,
+            real("ollama_fills_the_gap_with_a_real_model"),
+        ),
+        step(
+            "LM Studio fills a gap with a real model",
+            vec![Need::Program("lms")],
+            real("lm_studio_fills_the_gap_with_a_real_model"),
+        ),
+    ]
+}
+
+/// Where copilot-language-server keeps the user's sign-in.
+const COPILOT: Need = Need::SignIn {
+    service: "GitHub Copilot",
+    evidence: &[
+        Evidence::File(".config/github-copilot/apps.json"),
+        Evidence::File(".config/github-copilot/hosts.json"),
+    ],
+};
+
+fn copilot(_: &Context) -> Vec<Step> {
+    vec![step(
+        "Copilot proposes a completion",
+        vec![
+            Need::Program("node"),
+            Need::Program("npm"),
+            Need::Network(NPM),
+            Need::Network("api.githubcopilot.com"),
+            COPILOT,
+        ],
+        test(
+            "ide-predict",
+            "real_providers",
+            "copilot_proposes_a_completion_for_the_signed_in_user",
+        ),
+    )]
 }

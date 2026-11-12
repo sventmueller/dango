@@ -152,6 +152,7 @@ impl Overlay {
         let shift = objc2_foundation::NSAffineTransform::transform();
         shift.translateXBy_yBy(-origin.x, -origin.y);
         shift.concat();
+        crate::debug::draw_paused_line(&editor);
         self.draw_placeholders(&editor);
         super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);

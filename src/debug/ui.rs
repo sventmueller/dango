@@ -1,0 +1,548 @@
+//! The views of the debug panel and the inspector: the controls in the panel's title row, the start row with its
+//! configurations, the list of sessions and breakpoints, the note of a folder not trusted, and the inspector's list
+//! with the field for a new watch expression.
+
+use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, ProtocolObject, Sel};
+use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2_app_kit::{
+    NSAccessibility, NSButton, NSColor, NSControl, NSEvent, NSFont, NSLayoutAttribute, NSLayoutConstraintOrientation,
+    NSMenu, NSOutlineView, NSPopUpButton, NSScrollView, NSStackView, NSStackViewDistribution, NSTableColumn,
+    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
+use splat_i18n::t;
+
+use super::model::Command;
+use super::panel::DebugPanel;
+use crate::util::{label, ns, pin_edges, set_action, symbol_button};
+
+/// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
+const MARGIN: f64 = 8.0;
+/// The size of the controls' symbols, a little larger than the other panels' title buttons, as they are used often.
+const SYMBOL_POINTS: f64 = 14.0;
+/// The room each control takes, so the six can be told apart and hit.
+const CONTROL_SIZE: f64 = 24.0;
+
+/// Return and the keypad's Enter.
+const RETURN_KEYS: [u16; 2] = [36, 76];
+/// Delete and forward delete.
+const DELETE_KEYS: [u16; 2] = [51, 117];
+
+define_class!(
+    // SAFETY: NSOutlineView has no subclassing requirements and `DebugOutlineView` does not implement Drop.
+    /// Return shows a frame or opens a row, Delete removes a breakpoint or a watch expression.
+    #[unsafe(super(NSOutlineView))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDEDebugOutlineView"]
+    pub struct DebugOutlineView;
+
+    unsafe impl NSObjectProtocol for DebugOutlineView {}
+
+    impl DebugOutlineView {
+        #[unsafe(method(keyDown:))]
+        fn key_down(&self, event: &NSEvent) {
+            let handled = crate::util::guarded(false, || {
+                let Some(panel) = self.panel() else { return false };
+                let code = event.keyCode();
+                if RETURN_KEYS.contains(&code) {
+                    panel.activate_in(self, self.selectedRow());
+                    true
+                } else if DELETE_KEYS.contains(&code) {
+                    panel.delete_in(self, self.selectedRow())
+                } else {
+                    false
+                }
+            });
+            if !handled {
+                // SAFETY: The superclass's implementation, with this method's signature.
+                let _: () = unsafe { msg_send![super(self), keyDown: event] };
+            }
+        }
+    }
+);
+
+impl DebugOutlineView {
+    fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<DebugOutlineView> {
+        // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
+        unsafe { msg_send![DebugOutlineView::alloc(mtm), initWithFrame: frame] }
+    }
+
+    fn panel(&self) -> Option<Retained<DebugPanel>> {
+        // SAFETY: Only `outline` below makes this view, and it sets the panel as the data source.
+        let source = unsafe { self.dataSource() }?;
+        let object: Retained<AnyObject> = source.into();
+        object.downcast::<DebugPanel>().ok()
+    }
+}
+
+/// The views of the panel.
+pub struct Ui {
+    pub page: Retained<NSView>,
+    /// The controls for the panel's title row.
+    pub header: Retained<NSStackView>,
+    /// The controls in the order of `Command::CONTROLS`.
+    pub controls: Vec<Retained<NSButton>>,
+    pub configurations: Retained<NSPopUpButton>,
+    pub start: Retained<NSButton>,
+    pub outline: Retained<NSOutlineView>,
+    /// Why nothing starts in a folder the user does not trust, with the way to trust it.
+    pub untrusted: Retained<NSStackView>,
+    pub inspector: InspectorUi,
+}
+
+/// The views of the inspector.
+pub struct InspectorUi {
+    pub page: Retained<NSView>,
+    pub outline: Retained<NSOutlineView>,
+    /// The field for a new watch expression, which the self-test types into.
+    #[cfg(feature = "selftest")]
+    pub watch: Retained<NSTextField>,
+}
+
+/// The symbol and the name of a control.
+pub fn control_look(command: Command) -> (&'static str, &'static str) {
+    match command {
+        Command::Continue => ("play.fill", t("Fortsetzen")),
+        Command::StepOver => ("arrow.uturn.right", t("Überspringen")),
+        Command::StepInto => ("arrow.down.to.line", t("Hineinspringen")),
+        Command::StepOut => ("arrow.up.to.line", t("Heraus")),
+        Command::Restart => ("arrow.clockwise", t("Neu starten")),
+        Command::Stop => ("stop.fill", t("Stopp")),
+        Command::ToggleBreakpoints => ("arrowshape.right", t("Haltepunkte ausschalten")),
+        Command::ClearBreakpoints => ("trash", t("Alle Haltepunkte entfernen")),
+    }
+}
+
+/// The keymap's command of a control, whose shortcut its tooltip names.
+fn shortcut_of(command: Command) -> Option<&'static str> {
+    match command {
+        Command::Continue => Some("debug.continue"),
+        Command::StepOver => Some("debug.stepOver"),
+        Command::StepInto => Some("debug.stepInto"),
+        Command::StepOut => Some("debug.stepOut"),
+        Command::Stop => Some("debug.stop"),
+        Command::Restart | Command::ToggleBreakpoints | Command::ClearBreakpoints => None,
+    }
+}
+
+/// A shortcut of the keymap, such as `ctrl+cmd+y`, as macOS writes it: ⌃⌘Y.
+pub fn key_symbols(keys: &str) -> String {
+    let Some((modifiers, key)) = ide_core::keymap::split(keys) else {
+        return keys.to_string();
+    };
+    let mut text: String = ["ctrl", "alt", "shift", "cmd"]
+        .into_iter()
+        .filter(|m| modifiers.contains(m))
+        .map(|m| match m {
+            "ctrl" => "⌃",
+            "alt" => "⌥",
+            "shift" => "⇧",
+            _ => "⌘",
+        })
+        .collect();
+    text.push_str(&key.to_uppercase());
+    text
+}
+
+/// The command of a control that sent an action.
+pub fn command_of(sender: Option<&AnyObject>) -> Option<Command> {
+    let tag = sender?.downcast_ref::<NSControl>()?.tag();
+    Command::CONTROLS.get(usize::try_from(tag).ok()?).copied()
+}
+
+impl Ui {
+    pub fn new(mtm: MainThreadMarker, panel: &DebugPanel) -> Ui {
+        let (header, controls) = header(mtm, panel);
+        let page = NSView::new(mtm);
+        let content = NSStackView::new(mtm);
+        content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+        content.setAlignment(NSLayoutAttribute::Leading);
+        content.setDistribution(NSStackViewDistribution::Fill);
+        content.setSpacing(6.0);
+        content.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+            top: 0.0,
+            left: 0.0,
+            bottom: MARGIN,
+            right: 0.0,
+        });
+        page.addSubview(&content);
+        pin_edges(&content, &page);
+        let (start_row, configurations, start) = start_row(mtm, panel);
+        let untrusted = untrusted(mtm, panel);
+        let (list, outline) = outline(
+            mtm,
+            panel,
+            t("Debug-Sitzungen und Haltepunkte"),
+            Some(sel!(ideDebugDoubleClicked:)),
+        );
+        // The list comes first, so ⌘6 puts the focus there (E54).
+        for (view, inset) in [(&*list as &NSView, 0.0), (&untrusted, MARGIN), (&start_row, MARGIN)] {
+            content.addArrangedSubview(view);
+            view.leadingAnchor()
+                .constraintEqualToAnchor_constant(&content.leadingAnchor(), inset)
+                .setActive(true);
+            view.trailingAnchor()
+                .constraintEqualToAnchor_constant(&content.trailingAnchor(), -inset)
+                .setActive(true);
+            view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
+        }
+        list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
+        untrusted.setHidden(true);
+        Ui {
+            page,
+            header,
+            controls,
+            configurations,
+            start,
+            outline,
+            untrusted,
+            inspector: InspectorUi::new(mtm, panel),
+        }
+    }
+
+    /// Greys out the controls that cannot run now (E101) and names Stop "Trennen" for a program the session only
+    /// attached to.
+    pub fn enable_controls(&self, can: &dyn Fn(Command) -> bool, detaches: bool) {
+        for (command, button) in Command::CONTROLS.into_iter().zip(&self.controls) {
+            button.setEnabled(can(command));
+            if command == Command::Stop {
+                let (_, stop) = control_look(Command::Stop);
+                let name = if detaches { t("Trennen") } else { stop };
+                let tip = button.toolTip().map(|t| t.to_string()).unwrap_or_default();
+                let keys = tip.rfind(" (").map_or("", |at| &tip[at..]);
+                button.setToolTip(Some(&ns(&format!("{name}{keys}"))));
+                crate::util::set_label(button, Some(name));
+            }
+        }
+    }
+}
+
+impl InspectorUi {
+    fn new(mtm: MainThreadMarker, panel: &DebugPanel) -> InspectorUi {
+        let page = NSView::new(mtm);
+        let (list, outline) = outline(mtm, panel, t("Variablen und überwachte Ausdrücke"), None);
+        let watch = NSTextField::new(mtm);
+        watch.setPlaceholderString(Some(&ns(t("Ausdruck überwachen …"))));
+        watch.setAccessibilityLabel(Some(&ns(t("Neuer überwachter Ausdruck"))));
+        watch.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+        set_action(&watch, panel, sel!(ideDebugAddWatch:));
+        // SAFETY: The field holds its delegate weakly; the panel registry keeps the panel alive.
+        unsafe { watch.setDelegate(Some(ProtocolObject::from_ref(panel))) };
+        page.addSubview(&list);
+        page.addSubview(&watch);
+        list.setTranslatesAutoresizingMaskIntoConstraints(false);
+        watch.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let guide = page.safeAreaLayoutGuide();
+        for constraint in [
+            list.topAnchor().constraintEqualToAnchor(&guide.topAnchor()),
+            list.leadingAnchor().constraintEqualToAnchor(&page.leadingAnchor()),
+            list.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
+            list.bottomAnchor()
+                .constraintEqualToAnchor_constant(&watch.topAnchor(), -6.0),
+            watch
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&page.leadingAnchor(), MARGIN),
+            watch
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&page.trailingAnchor(), -MARGIN),
+            watch
+                .bottomAnchor()
+                .constraintEqualToAnchor_constant(&page.bottomAnchor(), -MARGIN),
+        ] {
+            constraint.setActive(true);
+        }
+        InspectorUi {
+            page,
+            outline,
+            #[cfg(feature = "selftest")]
+            watch,
+        }
+    }
+}
+
+/// The six controls of the title row (E94), SF Symbols named for VoiceOver.
+fn header(mtm: MainThreadMarker, panel: &DebugPanel) -> (Retained<NSStackView>, Vec<Retained<NSButton>>) {
+    let stack = NSStackView::new(mtm);
+    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    stack.setSpacing(2.0);
+    let keymap = ide_core::keymap::Keymap::load(&ide_core::keymap::Keymap::user_path()).0;
+    let controls: Vec<Retained<NSButton>> = Command::CONTROLS
+        .into_iter()
+        .enumerate()
+        .map(|(index, command)| {
+            let (symbol, name) = control_look(command);
+            let button = symbol_button(mtm, symbol, name, SYMBOL_POINTS, Some(panel), sel!(ideDebugControl:));
+            button.setTag(isize::try_from(index).unwrap_or(-1));
+            crate::util::set_label(&button, Some(name));
+            if let Some(keys) = shortcut_of(command).and_then(|c| keymap.key(c)) {
+                button.setToolTip(Some(&ns(&format!("{name} ({})", key_symbols(keys)))));
+            }
+            button.setEnabled(false);
+            for constraint in [
+                button.widthAnchor().constraintEqualToConstant(CONTROL_SIZE),
+                button.heightAnchor().constraintEqualToConstant(CONTROL_SIZE),
+            ] {
+                constraint.setActive(true);
+            }
+            stack.addArrangedSubview(&button);
+            button
+        })
+        .collect();
+    (stack, controls)
+}
+
+/// The configurations to start with and the button that starts the chosen one.
+fn start_row(
+    mtm: MainThreadMarker,
+    panel: &DebugPanel,
+) -> (Retained<NSStackView>, Retained<NSPopUpButton>, Retained<NSButton>) {
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(6.0);
+    let choices = NSPopUpButton::initWithFrame_pullsDown(
+        NSPopUpButton::alloc(mtm),
+        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(160.0, 24.0)),
+        false,
+    );
+    choices.setControlSize(objc2_app_kit::NSControlSize::Small);
+    choices.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    choices.setAccessibilityLabel(Some(&ns(t("Startkonfiguration"))));
+    choices.setToolTip(Some(&ns(t("Startkonfiguration"))));
+    set_action(&choices, panel, sel!(ideDebugChoose:));
+    choices.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
+    // The configuration's name gets the room; the start button is its symbol, named for VoiceOver and its tooltip.
+    let image = crate::util::symbol("play.fill", t("Starten")).unwrap_or_default();
+    // SAFETY: A nil target sends the action along the responder chain; `set_action` aims it at the panel.
+    let start = unsafe { NSButton::buttonWithImage_target_action(&image, None, Some(sel!(ideDebugStart:)), mtm) };
+    set_action(&start, panel, sel!(ideDebugStart:));
+    start.setControlSize(objc2_app_kit::NSControlSize::Small);
+    start.setToolTip(Some(&ns(t("Starten"))));
+    crate::util::set_label(&start, Some(t("Starten")));
+    row.addArrangedSubview(&choices);
+    row.addArrangedSubview(&start);
+    (row, choices, start)
+}
+
+/// The note of a folder the user does not trust: nothing it configures starts, the debugger neither (E22).
+fn untrusted(mtm: MainThreadMarker, panel: &DebugPanel) -> Retained<NSStackView> {
+    let stack = NSStackView::new(mtm);
+    stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+    stack.setAlignment(NSLayoutAttribute::Leading);
+    stack.setSpacing(4.0);
+    let note = NSTextField::wrappingLabelWithString(
+        &ns(t(
+            "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust.",
+        )),
+        mtm,
+    );
+    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    let trust = crate::util::borderless_button(mtm, t("Ordner vertrauen …"), Some(panel), sel!(ideDebugTrust:));
+    trust.setContentTintColor(Some(&NSColor::controlAccentColor()));
+    stack.addArrangedSubview(&note);
+    stack.addArrangedSubview(&trust);
+    stack
+}
+
+/// A list of `panel`'s, in a scroll view, named `name` for VoiceOver; `double` runs on a double click.
+fn outline(
+    mtm: MainThreadMarker,
+    panel: &DebugPanel,
+    name: &str,
+    double: Option<Sel>,
+) -> (Retained<NSScrollView>, Retained<NSOutlineView>) {
+    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
+    let view = DebugOutlineView::new(mtm, frame);
+    let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("debug"));
+    column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
+    column.setWidth(frame.size.width);
+    view.addTableColumn(&column);
+    // SAFETY: The column was just added to this outline view, which keeps it.
+    unsafe { view.setOutlineTableColumn(Some(&column)) };
+    view.setHeaderView(None);
+    view.setStyle(NSTableViewStyle::SourceList);
+    // A floating group row is drawn faded over the rows scrolling under it, so the first section looked disabled.
+    view.setFloatsGroupRows(false);
+    view.setIndentationPerLevel(12.0);
+    view.setAutoresizesOutlineColumn(false);
+    view.setColumnAutoresizingStyle(
+        objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
+    );
+    view.setAccessibilityLabel(Some(&ns(name)));
+    // SAFETY: The outline view holds its data source and delegate weakly; the panel registry keeps the panel alive.
+    unsafe {
+        view.setDataSource(Some(ProtocolObject::from_ref(panel)));
+        view.setDelegate(Some(ProtocolObject::from_ref(panel)));
+    }
+    if let Some(double) = double {
+        set_action(&view, panel, double);
+        // SAFETY: The panel answers the double action with a method that takes the sender; `set_action` checked it.
+        unsafe { view.setDoubleAction(Some(double)) };
+    }
+    // SAFETY: A plain action does nothing on a single click; selecting a row is what a click does.
+    unsafe { view.setAction(None) };
+    let menu = NSMenu::new(mtm);
+    menu.setDelegate(Some(ProtocolObject::from_ref(panel)));
+    // SAFETY: The view keeps the menu; its delegate, the panel, outlives the view through the registry.
+    unsafe { view.setMenu(Some(&menu)) };
+    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    scroll.setDrawsBackground(false);
+    scroll.setDocumentView(Some(&view));
+    view.sizeLastColumnToFit();
+    (scroll, view.into_super())
+}
+
+/// A row of two texts after a symbol: a name and, dimmer, what it is or where.
+pub fn row(mtm: MainThreadMarker, symbol: Option<(&str, &NSColor)>, title: &str, detail: &str) -> Retained<NSView> {
+    // The parts sit directly in a table cell view, which hands the selection's background style on to them, so the
+    // texts turn light on a selected row.
+    let cell = objc2_app_kit::NSTableCellView::new(mtm);
+    let mut leading = cell.leadingAnchor();
+    let mut gap = 0.0;
+    if let Some((name, tint)) = symbol {
+        let icon = objc2_app_kit::NSImageView::new(mtm);
+        icon.setImage(crate::util::symbol(name, "").as_deref());
+        icon.setContentTintColor(Some(tint));
+        icon.setSymbolConfiguration(Some(
+            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+                11.0,
+                // SAFETY: AppKit sets its font weight constants when it loads.
+                unsafe { objc2_app_kit::NSFontWeightRegular },
+            ),
+        ));
+        crate::util::hide_from_voiceover(&icon);
+        cell.addSubview(&icon);
+        icon.setTranslatesAutoresizingMaskIntoConstraints(false);
+        for constraint in [
+            icon.leadingAnchor().constraintEqualToAnchor(&leading),
+            icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+            icon.widthAnchor().constraintEqualToConstant(16.0),
+        ] {
+            constraint.setActive(true);
+        }
+        // SAFETY: The cell holds its image view weakly; the view is its subview and lives as long.
+        unsafe { cell.setImageView(Some(&icon)) };
+        leading = icon.trailingAnchor();
+        gap = 4.0;
+    }
+    let name = label(mtm, title);
+    name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    name.setContentCompressionResistancePriority_forOrientation(300.0, NSLayoutConstraintOrientation::Horizontal);
+    name.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
+    cell.addSubview(&name);
+    name.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        name.leadingAnchor().constraintEqualToAnchor_constant(&leading, gap),
+        name.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        name.trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+    ] {
+        constraint.setActive(true);
+    }
+    // SAFETY: The cell holds its text field weakly; the field is its subview and lives as long.
+    unsafe { cell.setTextField(Some(&name)) };
+    if !detail.is_empty() {
+        let more = label(mtm, detail);
+        more.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        more.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingMiddle);
+        more.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
+        more.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
+        cell.addSubview(&more);
+        more.setTranslatesAutoresizingMaskIntoConstraints(false);
+        for constraint in [
+            more.leadingAnchor()
+                .constraintEqualToAnchor_constant(&name.trailingAnchor(), 5.0),
+            more.firstBaselineAnchor()
+                .constraintEqualToAnchor(&name.firstBaselineAnchor()),
+            more.trailingAnchor()
+                .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        ] {
+            constraint.setActive(true);
+        }
+    }
+    cell.into_super()
+}
+
+/// The height of a session's row, its name above how it stands.
+pub const SESSION_HEIGHT: f64 = 36.0;
+
+/// A row with `title` above `detail`, after a symbol, for a session whose state may be a long sentence.
+pub fn two_lines(mtm: MainThreadMarker, symbol: (&str, &NSColor), title: &str, detail: &str) -> Retained<NSView> {
+    let cell = objc2_app_kit::NSTableCellView::new(mtm);
+    let icon = objc2_app_kit::NSImageView::new(mtm);
+    icon.setImage(crate::util::symbol(symbol.0, "").as_deref());
+    icon.setContentTintColor(Some(symbol.1));
+    crate::util::hide_from_voiceover(&icon);
+    let name = label(mtm, title);
+    name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    let more = label(mtm, detail);
+    more.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    more.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    more.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    for view in [&*icon as &NSView, &name, &more] {
+        cell.addSubview(view);
+        view.setTranslatesAutoresizingMaskIntoConstraints(false);
+    }
+    for field in [&name, &more] {
+        field.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
+    }
+    for constraint in [
+        icon.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+        icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        icon.widthAnchor().constraintEqualToConstant(16.0),
+        name.leadingAnchor()
+            .constraintEqualToAnchor_constant(&icon.trailingAnchor(), 4.0),
+        name.trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        name.bottomAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        more.leadingAnchor().constraintEqualToAnchor(&name.leadingAnchor()),
+        more.trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        more.topAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    // SAFETY: The cell holds its text field and image view weakly; both are its subviews and live as long.
+    unsafe {
+        cell.setTextField(Some(&name));
+        cell.setImageView(Some(&icon));
+    }
+    cell.into_super()
+}
+
+/// The height of a row that says why a list is empty, in two lines.
+pub const NOTE_HEIGHT: f64 = 40.0;
+
+/// A row that says why a list is empty, wrapping onto a second line.
+pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
+    let cell = objc2_app_kit::NSTableCellView::new(mtm);
+    let field = NSTextField::wrappingLabelWithString(&ns(text), mtm);
+    field.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    field.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    field.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
+    cell.addSubview(&field);
+    field.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        field.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+        field
+            .trailingAnchor()
+            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        field.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    // SAFETY: The cell holds its text field weakly; the field is its subview and lives as long.
+    unsafe { cell.setTextField(Some(&field)) };
+    cell.into_super()
+}
+
+/// The title of a section row.
+pub fn section(mtm: MainThreadMarker, title: &str) -> Retained<NSView> {
+    let text = label(mtm, title);
+    text.setFont(Some(&NSFont::boldSystemFontOfSize(11.0)));
+    text.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    text.into_super().into_super()
+}

@@ -39,6 +39,8 @@ use crate::window::{self, Panel};
 
 mod ci;
 mod conflict;
+mod debug;
+mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
 mod editor_multi;
@@ -55,6 +57,7 @@ mod lsp;
 mod lsp_actions;
 mod lsp_navigation;
 mod own_agent;
+mod predict;
 mod recovery;
 mod replace;
 mod restore;
@@ -155,6 +158,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "language-servers" => servers::run(),
         "editor-multi" => editor_multi::run(),
         "editor-undo" => editor_undo::run(),
+        "edit-prediction" => predict::run(),
         "editor-insets" => insets::run(),
         "inlay-hints" => inlay::run(),
         "inlay-repo" => inlay_repo::run(),
@@ -165,6 +169,8 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "recovery" => recovery::run(),
         "restore" => restore::run(),
         "conflict" => conflict::run(),
+        "debug" => debug::run(),
+        "debug-restore" => debug_restore::run(),
         #[cfg(feature = "dictation")]
         "dictation" => dictation::run(),
         "show" => show(),
@@ -255,8 +261,8 @@ fn probe_window(controller: &window::WindowController) {
         format!("{} pt", seen.sidebar_width),
     );
     check(
-        "the activity bar has five panels and settings",
-        seen.activity_buttons == 6,
+        "the activity bar has six panels and settings",
+        seen.activity_buttons == 7,
         format!("{} buttons", seen.activity_buttons),
     );
     check(
@@ -345,7 +351,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         !controller.shown_symbols().contains(&Panel::Git) && stored == ["git"] && after == Some(Panel::Files),
         format!("{:?}, stored {stored:?}, showing {after:?}", controller.shown_symbols()),
     );
-    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Ci] {
+    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Debug, Panel::Ci] {
         window::toggle_activity_symbol(panel);
     }
     let (ticked, enabled) = symbol_menu_state(controller, Panel::Ci);
@@ -361,7 +367,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         window.displayIfNeeded();
         snapshot(&window, "probe-symbols-hidden");
     }
-    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Git] {
+    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Git, Panel::Debug] {
         window::toggle_activity_symbol(panel);
     }
     controller.activate_panel(Panel::Agents);

@@ -482,6 +482,15 @@ Auswirkung: Vorschläge in grauer Schrift beim Tippen, mit Tab übernommen.
 Abnahme: Selftest mit einem Stub-Anbieter (Ghost Text, Tab, Wort, Esc, Vorrang der Liste, die Tests oben);
 Leistungsbudget; `make test-integration` mit Copilot und mit je einem echten FIM-Modell unter Ollama und LM Studio.
 
+*Umgesetzt am 2026-11-12* (`edit-prediction`, Anbieter in `ide-predict`). Abweichungen: Der Kasten unter der Zeile ist
+eine Ansicht im Editor, kein eigenes Fenster; am Zeilenende steht der Vorschlag ohne Kern-Lücke; ein getippter
+Buchstabe, der dem Vorschlag entspricht, verwirft ihn (strenge Lesart von C6). Den Secrets-Scan (R15) macht gitleaks
+vor jedem Versand an einen Anbieter außerhalb des Macs, je Revision einmal, nie auf dem Main-Thread; bei einem Fund
+geht nichts hinaus. Abbrechen schließt die HTTP-Verbindung zum lokalen Modell, ohne Tokio. Offen: `make
+test-integration` mit Copilot, Ollama und LM Studio lief nicht, weil keins davon auf dem Entwicklungs-Mac
+eingerichtet ist; die gespeicherten FIM-Antworten in den Tests sind nach der Dokumentation geschrieben, nicht
+mitgeschnitten.
+
 ### B1 Debugger
 Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zweiten Werkzeug.
 
@@ -537,6 +546,15 @@ Abnahme: Selftest mit Mitschnitt eines DAP-Adapters (wie die Claude-Mitschnitte)
 Fenster-Selftests für Fokus mit ⌘6, Wiederherstellen von Panel und Konsole, Mitwandern der Haltepunkte bei Änderungen
 Knöpfe und Menüpunkte, die ausgegraut sind, wenn der Adapter sie nicht kann, Inspektor mit ⌥⌘I und beim Tabwechsel; `make test-integration` mit lldb-dap an einem
 Rust-Testprogramm, dlv an einem Go-Programm, js-debug an Node, jeweils Starten und Anhängen.
+
+*Umgesetzt am 2026-11-12* (`debug`, `debug-restore`, Mitschnitt `crates/ide-dap/tests/fixtures/lldb_rust.ndjson`;
+`make test-integration` mit lldb-dap, dlv und js-debug grün). Die Rahmung liegt jetzt in `ide-process` und wird von
+`ide-lsp` und `ide-dap` geteilt. Abweichungen: Die Steuerknöpfe im Panel tragen ihre Beschriftung als Tooltip und für
+VoiceOver, sichtbar wären sechs Beschriftungen in 260 pt zu breit; der Inspektor liegt unter der Titelleiste, weil die
+Tab-Leiste über die ganze Fensterbreite läuft. Rust baut zum Debuggen im eigenen Profil `ide-debug` mit voller
+Debug-Info, Go mit `-trimpath=false`, weil ein `-trimpath` aus `GOFLAGS` Delve jeden Haltepunkt verlieren lässt.
+Ohne Entwicklermodus fragt macOS beim Start von lldb nach dem Passwort; die Sitzung zeigt dann „Wartet auf Freigabe
+durch macOS …“.
 
 ## Stufe 5 — Build
 

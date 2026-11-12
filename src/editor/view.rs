@@ -61,6 +61,8 @@ pub struct ViewIvars {
     pub(super) insets: RefCell<super::insets::Insets>,
     /// Who changed which line last (E86).
     pub(super) blame: RefCell<super::blame::State>,
+    /// What edit prediction proposes and asks (E92).
+    pub(super) predict: RefCell<super::predict::State>,
 }
 
 define_class!(
@@ -109,6 +111,7 @@ define_class!(
 
         #[unsafe(method(insertText:replacementRange:))]
         fn insert_text(&self, text: &AnyObject, range: NSRange) {
+            guarded((), || super::predict::before_edit(self));
             if guarded(false, || super::multi::insert(self, text)) {
                 return;
             }
@@ -132,6 +135,7 @@ define_class!(
                     super::blame::cursor_moved(self);
                     self.clear_found();
                     super::multi::selection_changed(self);
+                    super::predict::moved(self);
                     crate::lsp::selection_moved(self);
                     crate::navigation::moved(self, false);
                 });
@@ -225,9 +229,14 @@ define_class!(
             {
                 return;
             }
-            if guarded(false, || crate::lsp::command(self, command) || super::multi::command(self, command)) {
+            if guarded(false, || {
+                crate::lsp::command(self, command)
+                    || super::predict::command(self, command)
+                    || super::multi::command(self, command)
+            }) {
                 return;
             }
+            guarded((), || super::predict::before_command(self, command));
             // SAFETY: The superclass's implementation, with this method's signature.
             let _: () = unsafe { msg_send![super(self), doCommandBySelector: command] };
             guarded((), || crate::lsp::after_command(self, command));
@@ -344,6 +353,16 @@ define_class!(
             guarded((), || super::blame::show_diff(self));
         }
 
+        #[unsafe(method(idePredict))]
+        fn predict(&self) {
+            guarded((), || super::predict::request(self));
+        }
+
+        #[unsafe(method(idePrediction:))]
+        fn prediction(&self, sender: Option<&AnyObject>) {
+            guarded((), || super::predict::perform(self, sender));
+        }
+
         #[unsafe(method(ideInlayHints))]
         fn inlay_hints(&self) {
             guarded((), || crate::lsp::inlay::request(self));
@@ -374,6 +393,7 @@ define_class!(
         fn validate_menu_item(&self, item: &objc2_app_kit::NSMenuItem) -> bool {
             let answer = guarded(None, || {
                 super::whitespace::validate(item)
+                    .or_else(|| super::predict::validate(self, item))
                     .or_else(|| crate::lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
                     .or_else(|| crate::preview::validate(self, item.action()))
@@ -673,6 +693,7 @@ impl EditorTextView {
             found: RefCell::new(None),
             insets: RefCell::new(super::insets::Insets::default()),
             blame: RefCell::new(super::blame::State::default()),
+            predict: RefCell::new(super::predict::State::default()),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));

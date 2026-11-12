@@ -46,6 +46,17 @@ fn number_attributes(font_size: f64) -> Retained<NSDictionary<NSString, objc2::r
     )
 }
 
+/// The numbers' attributes on a filled breakpoint, white as Xcode draws them.
+fn light_number_attributes(font_size: f64) -> Retained<NSDictionary<NSString, objc2::runtime::AnyObject>> {
+    NSDictionary::<NSString, objc2::runtime::AnyObject>::from_retained_objects(
+        &[
+            constant!(NSFontAttributeName),
+            constant!(NSForegroundColorAttributeName),
+        ],
+        &[number_font(font_size).into(), NSColor::whiteColor().into()],
+    )
+}
+
 /// The column's width for a text of `lines` lines in `font_size`: as wide as its highest number needs.
 pub fn width_for(lines: usize, font_size: f64) -> f64 {
     let digits = lines.max(1).to_string();
@@ -92,6 +103,15 @@ define_class!(
             guarded((), || self.clicked(event));
         }
 
+        #[unsafe(method_id(menuForEvent:))]
+        fn menu_for_event(&self, event: &NSEvent) -> Option<Retained<objc2_app_kit::NSMenu>> {
+            guarded(None, || {
+                let editor = self.ivars().editor.load()?;
+                let line = self.line_of(&editor, event)?;
+                crate::debug::gutter_menu(&editor, line)
+            })
+        }
+
         #[unsafe(method(mouseEntered:))]
         fn mouse_entered(&self, _event: &NSEvent) {
             guarded((), || self.set_hovered(true));
@@ -112,7 +132,8 @@ define_class!(
 );
 
 impl LineNumbers {
-    /// A click on the change strip opens a change mark's committed lines, one on the fold strip folds or unfolds.
+    /// A click on the change strip opens a change mark's committed lines, one on the fold strip folds or unfolds, one
+    /// on a line number sets or clears a breakpoint.
     fn clicked(&self, event: &NSEvent) {
         let x = self.convertPoint_fromView(event.locationInWindow(), None).x;
         let fold = self.fold_left();
@@ -120,7 +141,18 @@ impl LineNumbers {
             let _ = self.click_change(event);
         } else if (fold - 3.0..fold + FOLD_WIDTH).contains(&x) {
             self.fold_click(event);
+        } else if let Some(editor) = self.ivars().editor.load()
+            && let Some(line) = self.line_of(&editor, event)
+            && crate::debug::gutter_click(&editor, line)
+        {
+            self.setNeedsDisplay(true);
         }
+    }
+
+    /// The line beside `event`'s place, from 0.
+    fn line_of(&self, editor: &EditorTextView, event: &NSEvent) -> Option<usize> {
+        let in_editor = editor.convertPoint_fromView(event.locationInWindow(), None);
+        super::highlight::line_at(editor, NSPoint::new(0.0, in_editor.y))
     }
 
     /// Where the strip of fold triangles begins, right of the numbers.
@@ -150,7 +182,7 @@ impl LineNumbers {
 
     /// Draws the triangle of a fold that starts in `row`: pointing right when folded, always shown; pointing down when
     /// open, shown while the mouse is over the column.
-    fn fold_mark(&self, row: NSRect, folded: bool) {
+    fn fold_mark(&self, row: NSRect, folded: bool, on_tag: bool) {
         if !folded && !self.ivars().hovered.get() {
             return;
         }
@@ -168,7 +200,11 @@ impl LineNumbers {
             path.lineToPoint(NSPoint::new(x + side / 2.0, y + side));
         }
         path.closePath();
-        NSColor::secondaryLabelColor().setFill();
+        if on_tag {
+            NSColor::whiteColor().setFill();
+        } else {
+            NSColor::secondaryLabelColor().setFill();
+        }
         path.fill();
     }
 
@@ -311,6 +347,7 @@ impl LineNumbers {
             return;
         };
         let attributes = number_attributes(editor.ivars().font_size.get());
+        let light_attributes = light_number_attributes(editor.ivars().font_size.get());
         let origin = editor.textContainerOrigin();
         let visible = editor.visibleRect();
         let start = layout
@@ -345,6 +382,9 @@ impl LineNumbers {
                 let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
                 let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
                 let height = fragment.layoutFragmentFrame().size.height;
+                let (look, paused) = crate::debug::gutter_mark(&editor, line - 1);
+                let fold_strip = NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
+                let mut tagged = false;
                 if bulb == Some(line - 1) && bulb_row.get().is_none() {
                     let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
                     bulb_row.set(Some(NSRect::new(
@@ -352,14 +392,23 @@ impl LineNumbers {
                         NSSize::new(numbers, height),
                     )));
                 } else {
-                    // SAFETY: As above.
-                    unsafe { label.drawAtPoint_withAttributes(at, Some(&attributes)) };
-                }
-                if let Some(folded) = folds.get(&(line - 1)) {
-                    self.fold_mark(
-                        NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height)),
-                        *folded,
+                    let gutter = NSRect::new(
+                        NSPoint::new(2.0, point.y),
+                        NSSize::new(self.fold_left() + FOLD_WIDTH - 2.0, height),
                     );
+                    tagged = crate::debug::draw_gutter_mark(look, gutter);
+                    if paused {
+                        crate::debug::draw_paused_arrow(gutter);
+                        tagged = true;
+                    }
+                    let shown = if tagged { &light_attributes } else { &attributes };
+                    // SAFETY: As above.
+                    unsafe { label.drawAtPoint_withAttributes(at, Some(shown)) };
+                }
+                if paused && !tagged {
+                    crate::debug::draw_paused_arrow(fold_strip);
+                } else if let Some(folded) = folds.get(&(line - 1)) {
+                    self.fold_mark(fold_strip, *folded, tagged);
                 }
                 if let Some((severity, message)) = marks.get(&(line - 1)) {
                     self.mark(

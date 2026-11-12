@@ -74,6 +74,9 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
                 .and_then(|tab| tab.session_id())
                 .map(|session| Tab::Agent { session })
         }
+        TabKind::Console => {
+            crate::debug::console_of_tab(controller, id).map(|(title, history)| Tab::Debug { title, history })
+        }
         TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview => None,
     }
 }
@@ -166,6 +169,8 @@ impl Documents<'_, '_> {
                 true
             }
             Tab::Agent { session } if trusted => resume_agent(controller, root, session),
+            // Only the history comes back; no session starts or attaches (Review C18).
+            Tab::Debug { title, history } => crate::debug::reopen_console(controller, title, history.clone()),
             Tab::Cli { .. } if trusted => {
                 crate::terminal::open_tab(controller, Some(root));
                 true

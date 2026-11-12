@@ -10,8 +10,8 @@ changes the table first.
   them one after the other. Where the language wants another order, the sentence is rephrased.
 - **Symbols and names:** `⌘ ⌥ ⇧ ⌃ ↩ ⎋`, key names such as Esc, and file names, commands and flags stay as they are.
   Product and service names are never translated: Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI, OpenRouter,
-  Ollama, LM Studio, Lowspeak, Git, GitHub, GitLab, ACP, MCP, CI, OAuth, PATH, JSON, Finder, macOS, Mac, claude.ai,
-  Remote Control (Anthropic's feature of that name).
+  Ollama, LM Studio, GitHub Copilot (Copilot), Lowspeak, Git, GitHub, GitLab, ACP, MCP, CI, OAuth, PATH, JSON,
+  Finder, macOS, Mac, claude.ai, Remote Control (Anthropic's feature of that name).
 - **The app's name** never appears in a translation; where a key names the app, it has a `{}` for it.
 - **macOS first:** menu items, buttons and system words that macOS has (the Standard terms below) take the wording
   of macOS in that language, letter for letter, including how it writes the ellipsis of an item that opens a
@@ -78,6 +78,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | language server | LSP |
 | Hinweis (Schweregrad) | hint | the language server's lowest severity, after Fehler, Warnung and Info |
 | Inlay-Hinweis | inlay hint | what the language server shows inside a line without it being in the file, such as an inferred type (E83) |
+| Vorschlag | suggestion | what edit prediction proposes to write next, in grey until Tab takes it (E92) |
+| Vorhersage | Prediction | edit prediction: making suggestions while typing, and its settings tab |
+| Ausschlussliste | exclusion list | patterns of file names that never go to a provider |
 | Blame | blame | who changed a line last, at the line's end or in a column before the line numbers (E86); kept as git's word |
 | Hinweise (Rotor) | Hints | the VoiceOver rotor that lists an editor's inlay hints and blame |
 | Schnellkorrektur | quick fix | a change the language server offers for the place of the cursor, such as a missing import |
@@ -128,6 +131,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API key | |
 | Register | registry | the ACP registry of agents |
 | Adapter | adapter | the program that connects an agent's CLI over ACP |
+| Debug-Adapter | debug adapter | the program that speaks the Debug Adapter Protocol for one language, such as lldb-dap |
 | Bereit | ready | an agent whose program is there and can start |
 | Prüfsumme | checksum | |
 | Anmeldung, anmelden | sign-in, sign in | with an agent's or a forge's service |
@@ -151,6 +155,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host | the server of a CI service, such as a self-managed GitLab |
 | Job | job | of CI |
 | Log | log | |
+| **Debugger** | | |
+| Debuggen | Debug | the menu, the sixth panel and the act of running a program under the debugger (E94) |
+| Haltepunkt, Haltepunkte | breakpoint, breakpoints | where a debug session pauses the program, set beside a line number |
+| Logpunkt | logpoint | a breakpoint that writes a message to the debug console instead of pausing |
+| Bedingung / Trefferzahl | condition / hit count | when a breakpoint pauses: an expression that must be true, how often it must be hit |
+| Aufrufliste | call stack | the frames of a paused thread, innermost first |
+| Frame | frame | one level of the call stack, a function with its variables; kept as the developers' word |
+| Überwachter Ausdruck, Überwachte Ausdrücke | watch expression, watch expressions | an expression the inspector evaluates whenever the program pauses |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continue / Step Over / Step Into / Step Out | the debugger's commands, as Xcode names them in each language |
+| Anhängen / Trennen | attach / detach | joining a running program, and leaving it running when the session stops |
+| Angehalten | paused | a program the debugger stopped, as at a breakpoint |
+| Debug-Konsole | debug console | the tab with the program's output and the expressions evaluated in the paused frame |
+| Startkonfiguration | launch configuration | how a program is started for debugging, as `.vscode/launch.json` describes it |
+| Inspektor | Inspector | the column at the window's trailing edge with details, ⌥⌘I (macOS's word) |
 
 ## Languages
 
@@ -213,6 +231,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | خادم اللغة |
 | Hinweis (Schweregrad) | تلميح |
 | Inlay-Hinweis | تلميح مضمّن |
+| Vorschlag | اقتراح |
+| Vorhersage | التنبؤ |
+| Ausschlussliste | قائمة الاستبعاد |
 | Blame | Blame |
 | Hinweise (Rotor) | التلميحات |
 | Schnellkorrektur | إصلاح سريع |
@@ -262,6 +283,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | مفتاح API |
 | Register | فهرس (فهرس ACP) |
 | Adapter | المحوّل |
+| Debug-Adapter | محوّل التصحيح |
 | Bereit | جاهز |
 | Prüfsumme | المجموع الاختباري |
 | Anmeldung, anmelden | تسجيل الدخول |
@@ -284,6 +306,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | مضيف |
 | Job | وظيفة |
 | Log | سجل |
+| **Debugger** | |
+| Debuggen | تصحيح |
+| Haltepunkt, Haltepunkte | نقطة توقف، نقاط التوقف |
+| Logpunkt | نقطة تسجيل |
+| Bedingung / Trefferzahl | الشرط / عدد الإصابات |
+| Aufrufliste | مكدس الاستدعاءات |
+| Frame | إطار |
+| Überwachter Ausdruck, Überwachte Ausdrücke | تعبير مراقَب، تعبيرات مراقَبة |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | متابعة / تخطٍّ / دخول / خروج |
+| Anhängen / Trennen | إرفاق / فصل |
+| Angehalten | متوقف مؤقتًا |
+| Debug-Konsole | وحدة تحكم التصحيح |
+| Startkonfiguration | إعداد التشغيل |
+| Inspektor | المفتش |
 
 ### Catalan (`ca`)
 - Address: informal "tu", as macOS Catalan does ("Vols desar els canvis?", "Torna‑ho a provar"); menu items and buttons
@@ -340,6 +376,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de llenguatge |
 | Hinweis (Schweregrad) | Suggeriment |
 | Inlay-Hinweis | indicació inline |
+| Vorschlag | suggeriment |
+| Vorhersage | Predicció |
+| Ausschlussliste | llista d’exclusió |
 | Blame | Blame |
 | Hinweise (Rotor) | Indicacions |
 | Schnellkorrektur | correcció ràpida |
@@ -389,6 +428,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | clau d’API |
 | Register | registre |
 | Adapter | adaptador |
+| Debug-Adapter | adaptador de depuració |
 | Bereit | A punt |
 | Prüfsumme | suma de verificació |
 | Anmeldung, anmelden | inici de sessió, iniciar la sessió |
@@ -411,6 +451,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Depura |
+| Haltepunkt, Haltepunkte | punt d’interrupció, punts d’interrupció |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condició / nombre d’encerts |
+| Aufrufliste | pila de crides |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expressió vigilada, expressions vigilades |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continua / Passa per sobre / Entra / Surt |
+| Anhängen / Trennen | adjunta / separa |
+| Angehalten | en pausa |
+| Debug-Konsole | consola de depuració |
+| Startkonfiguration | configuració d’inici |
+| Inspektor | Inspector |
 
 ### Czech (`cs`)
 - Address: formal "vy" (vykání) with plural imperatives ("Zadejte", "Vyberte"), as macOS Czech; menu items and buttons
@@ -466,6 +520,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápověda |
 | Inlay-Hinweis | vložená nápověda |
+| Vorschlag | návrh |
+| Vorhersage | Předpověď |
+| Ausschlussliste | seznam vyloučení |
 | Blame | Blame |
 | Hinweise (Rotor) | Nápovědy |
 | Schnellkorrektur | rychlá oprava |
@@ -515,6 +572,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | klíč API |
 | Register | registr |
 | Adapter | adaptér |
+| Debug-Adapter | ladicí adaptér |
 | Bereit | Připraveno |
 | Prüfsumme | kontrolní součet |
 | Anmeldung, anmelden | přihlášení, přihlásit se |
@@ -537,6 +595,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | hostitel |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Ladit |
+| Haltepunkt, Haltepunkte | zarážka, zarážky |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | podmínka / počet zásahů |
+| Aufrufliste | zásobník volání |
+| Frame | rámec |
+| Überwachter Ausdruck, Überwachte Ausdrücke | sledovaný výraz, sledované výrazy |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovat / Překročit / Vstoupit / Vystoupit |
+| Anhängen / Trennen | připojit / odpojit |
+| Angehalten | pozastaveno |
+| Debug-Konsole | konzole ladění |
+| Startkonfiguration | konfigurace spuštění |
+| Inspektor | Inspektor |
 
 ### Danish (`da`)
 - Address: informal "du", as Danish macOS addresses the user
@@ -590,6 +662,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | sprogserver |
 | Hinweis (Schweregrad) | Tip |
 | Inlay-Hinweis | inlay-tip |
+| Vorschlag | forslag |
+| Vorhersage | Forudsigelse |
+| Ausschlussliste | udelukkelsesliste |
 | Blame | Blame |
 | Hinweise (Rotor) | Tips |
 | Schnellkorrektur | hurtig rettelse |
@@ -639,6 +714,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-nøgle |
 | Register | register |
 | Adapter | adapter |
+| Debug-Adapter | debug-adapter |
 | Bereit | Klar |
 | Prüfsumme | kontrolsum |
 | Anmeldung, anmelden | login, log ind |
@@ -661,6 +737,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | vært |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Fejlfind |
+| Haltepunkt, Haltepunkte | brudpunkt, brudpunkter |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | betingelse / antal træffere |
+| Aufrufliste | kaldstak |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | overvåget udtryk, overvågede udtryk |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsæt / Træd over / Træd ind / Træd ud |
+| Anhängen / Trennen | tilknyt / frakobl |
+| Angehalten | standset |
+| Debug-Konsole | fejlfindingskonsol |
+| Startkonfiguration | startkonfiguration |
+| Inspektor | Inspektør |
 
 ### Greek (`el`)
 - Address: formal plural (εσείς), imperatives such as "Επιλέξτε", "Εισαγάγετε", "Δοκιμάστε ξανά", as macOS Greek does;
@@ -717,6 +807,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | διακομιστής γλώσσας |
 | Hinweis (Schweregrad) | Υπόδειξη |
 | Inlay-Hinweis | ενσωματωμένη υπόδειξη |
+| Vorschlag | πρόταση |
+| Vorhersage | Πρόβλεψη |
+| Ausschlussliste | λίστα εξαιρέσεων |
 | Blame | Blame |
 | Hinweise (Rotor) | Υποδείξεις |
 | Schnellkorrektur | γρήγορη διόρθωση |
@@ -766,6 +859,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | κλειδί API |
 | Register | μητρώο |
 | Adapter | προσαρμογέας |
+| Debug-Adapter | προσαρμογέας αποσφαλμάτωσης |
 | Bereit | Έτοιμο |
 | Prüfsumme | άθροισμα ελέγχου |
 | Anmeldung, anmelden | σύνδεση, συνδέομαι |
@@ -788,6 +882,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | αρχείο καταγραφής |
+| **Debugger** | |
+| Debuggen | Αποσφαλμάτωση |
+| Haltepunkt, Haltepunkte | σημείο διακοπής, σημεία διακοπής |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | συνθήκη / αριθμός προσπελάσεων |
+| Aufrufliste | στοίβα κλήσεων |
+| Frame | πλαίσιο |
+| Überwachter Ausdruck, Überwachte Ausdrücke | παρακολουθούμενη έκφραση, παρακολουθούμενες εκφράσεις |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Συνέχεια / Βήμα πάνω από / Είσοδος / Έξοδος |
+| Anhängen / Trennen | σύνδεση / αποσύνδεση |
+| Angehalten | σε παύση |
+| Debug-Konsole | κονσόλα αποσφαλμάτωσης |
+| Startkonfiguration | διαμόρφωση εκκίνησης |
+| Inspektor | Επιθεωρητής |
 
 ### Spanish (`es`)
 - Address: "tú", as macOS in Spanish (Spain) does: imperatives "Introduce", "Elige", "Abre"; possessives "tu", "tus"
@@ -844,6 +952,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de lenguaje |
 | Hinweis (Schweregrad) | Sugerencia |
 | Inlay-Hinweis | sugerencia insertada |
+| Vorschlag | propuesta |
+| Vorhersage | Predicción |
+| Ausschlussliste | lista de exclusión |
 | Blame | Blame |
 | Hinweise (Rotor) | Sugerencias |
 | Schnellkorrektur | corrección rápida |
@@ -893,6 +1004,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | clave de API |
 | Register | registro |
 | Adapter | adaptador |
+| Debug-Adapter | adaptador de depuración |
 | Bereit | Listo |
 | Prüfsumme | suma de comprobación |
 | Anmeldung, anmelden | inicio de sesión, iniciar sesión |
@@ -915,6 +1027,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Depurar |
+| Haltepunkt, Haltepunkte | punto de interrupción, puntos de interrupción |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condición / número de aciertos |
+| Aufrufliste | pila de llamadas |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expresión vigilada, expresiones vigiladas |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Pasar por encima / Entrar / Salir |
+| Anhängen / Trennen | asociar / desasociar |
+| Angehalten | en pausa |
+| Debug-Konsole | consola de depuración |
+| Startkonfiguration | configuración de inicio |
+| Inspektor | Inspector |
 
 ### Finnish (`fi`)
 - Address: informal singular "sinä", as Finnish macOS uses it ("Haluatko tallentaa…?", imperatives "Valitse", "Avaa");
@@ -972,6 +1098,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | kielipalvelin |
 | Hinweis (Schweregrad) | Vihje |
 | Inlay-Hinweis | upotettu vihje |
+| Vorschlag | ehdotus |
+| Vorhersage | Ennustus |
+| Ausschlussliste | poissulkemisluettelo |
 | Blame | Blame |
 | Hinweise (Rotor) | Vihjeet |
 | Schnellkorrektur | pikakorjaus |
@@ -1021,6 +1150,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-avain |
 | Register | rekisteri |
 | Adapter | sovitin |
+| Debug-Adapter | virheenjäljityssovitin |
 | Bereit | Valmis |
 | Prüfsumme | tarkistussumma |
 | Anmeldung, anmelden | kirjautuminen, kirjautua sisään |
@@ -1043,6 +1173,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | palvelin |
 | Job | työ |
 | Log | loki |
+| **Debugger** | |
+| Debuggen | Virheenjäljitys |
+| Haltepunkt, Haltepunkte | keskeytyskohta, keskeytyskohdat |
+| Logpunkt | lokipiste |
+| Bedingung / Trefferzahl | ehto / osumien määrä |
+| Aufrufliste | kutsupino |
+| Frame | kehys |
+| Überwachter Ausdruck, Überwachte Ausdrücke | tarkkailtava lauseke, tarkkailtavat lausekkeet |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Jatka / Askella yli / Askella sisään / Askella ulos |
+| Anhängen / Trennen | liitä / irrota |
+| Angehalten | pysäytetty |
+| Debug-Konsole | virheenjäljityskonsoli |
+| Startkonfiguration | käynnistysmääritys |
+| Inspektor | Tarkastus |
 
 ### French (`fr`)
 - Address: "vous", with "vous" imperatives ("Saisissez…", "Ouvrez…"), as macOS does
@@ -1097,6 +1241,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | serveur de langage |
 | Hinweis (Schweregrad) | Suggestion |
 | Inlay-Hinweis | indication intégrée |
+| Vorschlag | suggestion |
+| Vorhersage | Prédiction |
+| Ausschlussliste | liste d’exclusion |
 | Blame | Blame |
 | Hinweise (Rotor) | Indications |
 | Schnellkorrektur | correction rapide |
@@ -1146,6 +1293,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | clé d’API |
 | Register | registre |
 | Adapter | adaptateur |
+| Debug-Adapter | adaptateur de débogage |
 | Bereit | Prêt |
 | Prüfsumme | somme de contrôle |
 | Anmeldung, anmelden | connexion, se connecter |
@@ -1168,6 +1316,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | hôte |
 | Job | job |
 | Log | journal |
+| **Debugger** | |
+| Debuggen | Déboguer |
+| Haltepunkt, Haltepunkte | point d’arrêt, points d’arrêt |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condition / nombre de passages |
+| Aufrufliste | pile d’appels |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expression espionnée, expressions espionnées |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuer / Pas à pas principal / Pas à pas détaillé / Pas à pas sortant |
+| Anhängen / Trennen | attacher / détacher |
+| Angehalten | en pause |
+| Debug-Konsole | console de débogage |
+| Startkonfiguration | configuration de lancement |
+| Inspektor | Inspecteur |
 
 ### Hebrew (`he`)
 - Address: neutral, as macOS Hebrew: commands and buttons as verbal nouns ("שמירה", "סגירת הכרטיסיה"), confirmation
@@ -1226,6 +1388,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | שרת שפה |
 | Hinweis (Schweregrad) | רמז |
 | Inlay-Hinweis | רמז מוטבע |
+| Vorschlag | הצעה |
+| Vorhersage | חיזוי |
+| Ausschlussliste | רשימת החרגה |
 | Blame | Blame |
 | Hinweise (Rotor) | רמזים |
 | Schnellkorrektur | תיקון מהיר |
@@ -1275,6 +1440,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | מפתח API |
 | Register | מרשם |
 | Adapter | מתאם |
+| Debug-Adapter | מתאם ניפוי באגים |
 | Bereit | מוכן |
 | Prüfsumme | סכום ביקורת |
 | Anmeldung, anmelden | התחברות, להתחבר |
@@ -1297,6 +1463,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | מארח |
 | Job | Job |
 | Log | יומן |
+| **Debugger** | |
+| Debuggen | ניפוי באגים |
+| Haltepunkt, Haltepunkte | נקודת עצירה, נקודות עצירה |
+| Logpunkt | נקודת רישום |
+| Bedingung / Trefferzahl | תנאי / מספר פגיעות |
+| Aufrufliste | מחסנית קריאות |
+| Frame | Frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | ביטוי במעקב, ביטויים במעקב |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | המשך / דילוג מעל / כניסה / יציאה |
+| Anhängen / Trennen | הצמדה / ניתוק |
+| Angehalten | מושהה |
+| Debug-Konsole | מסוף ניפוי באגים |
+| Startkonfiguration | תצורת הפעלה |
+| Inspektor | חוקר |
 
 ### Hindi (`hi`)
 - Address: formal "आप", with polite "-ें/-एँ" imperatives ("खोलें", "दर्ज करें", "दिखाएँ"), as macOS does
@@ -1351,6 +1531,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | लैंग्वेज सर्वर |
 | Hinweis (Schweregrad) | संकेत |
 | Inlay-Hinweis | इनलाइन संकेत |
+| Vorschlag | सुझाव |
+| Vorhersage | पूर्वानुमान |
+| Ausschlussliste | बहिष्करण सूची |
 | Blame | Blame |
 | Hinweise (Rotor) | संकेत |
 | Schnellkorrektur | त्वरित सुधार |
@@ -1400,6 +1583,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API कुंजी |
 | Register | रजिस्ट्री |
 | Adapter | एडैप्टर |
+| Debug-Adapter | डीबग एडैप्टर |
 | Bereit | तैयार |
 | Prüfsumme | चेकसम |
 | Anmeldung, anmelden | साइन इन, साइन इन करें |
@@ -1422,6 +1606,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | होस्ट |
 | Job | जॉब |
 | Log | लॉग |
+| **Debugger** | |
+| Debuggen | डीबग करें |
+| Haltepunkt, Haltepunkte | ब्रेकपॉइंट, ब्रेकपॉइंट |
+| Logpunkt | लॉगपॉइंट |
+| Bedingung / Trefferzahl | शर्त / हिट संख्या |
+| Aufrufliste | कॉल स्टैक |
+| Frame | फ़्रेम |
+| Überwachter Ausdruck, Überwachte Ausdrücke | वॉच एक्सप्रेशन, वॉच एक्सप्रेशन |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | जारी रखें / स्टेप ओवर / स्टेप इन / स्टेप आउट |
+| Anhängen / Trennen | अटैच करें / डिटैच करें |
+| Angehalten | रुका हुआ |
+| Debug-Konsole | डीबग कंसोल |
+| Startkonfiguration | लॉन्च कॉन्फ़िगरेशन |
+| Inspektor | इंस्पेक्टर |
 
 ### Croatian (`hr`)
 - Address: formal "vi" in sentences, lowercase as macOS writes it ("Želite li…", "Odaberite…", "vaš"); menu items and
@@ -1477,6 +1675,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jezični poslužitelj |
 | Hinweis (Schweregrad) | Savjet |
 | Inlay-Hinweis | umetnuti savjet |
+| Vorschlag | prijedlog |
+| Vorhersage | Predviđanje |
+| Ausschlussliste | popis izuzeća |
 | Blame | Blame |
 | Hinweise (Rotor) | Savjeti |
 | Schnellkorrektur | brzi popravak |
@@ -1526,6 +1727,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API ključ |
 | Register | registar |
 | Adapter | adapter |
+| Debug-Adapter | adapter za otklanjanje pogrešaka |
 | Bereit | Spremno |
 | Prüfsumme | kontrolni zbroj |
 | Anmeldung, anmelden | prijava, prijaviti se |
@@ -1548,6 +1750,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | posao |
 | Log | zapisnik |
+| **Debugger** | |
+| Debuggen | Otklanjanje pogrešaka |
+| Haltepunkt, Haltepunkte | prekidna točka, prekidne točke |
+| Logpunkt | točka zapisivanja |
+| Bedingung / Trefferzahl | uvjet / broj pogodaka |
+| Aufrufliste | stog poziva |
+| Frame | okvir |
+| Überwachter Ausdruck, Überwachte Ausdrücke | praćeni izraz, praćeni izrazi |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Nastavi / Preskoči / Uđi u funkciju / Iziđi iz funkcije |
+| Anhängen / Trennen | priključi / odvoji |
+| Angehalten | zaustavljeno |
+| Debug-Konsole | konzola za otklanjanje pogrešaka |
+| Startkonfiguration | konfiguracija pokretanja |
+| Inspektor | Inspektor |
 
 ### Hungarian (`hu`)
 - Address: formal, as Hungarian macOS: the polite third-person (Ön) verb forms with the pronoun left out ("Biztosan
@@ -1605,6 +1821,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | nyelvi szerver |
 | Hinweis (Schweregrad) | Tipp |
 | Inlay-Hinweis | beágyazott tipp |
+| Vorschlag | javaslat |
+| Vorhersage | Előrejelzés |
+| Ausschlussliste | kizárási lista |
 | Blame | Blame |
 | Hinweise (Rotor) | Tippek |
 | Schnellkorrektur | gyorsjavítás |
@@ -1654,6 +1873,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-kulcs |
 | Register | jegyzék |
 | Adapter | adapter |
+| Debug-Adapter | hibakereső adapter |
 | Bereit | Kész |
 | Prüfsumme | ellenőrzőösszeg |
 | Anmeldung, anmelden | bejelentkezés, bejelentkezik |
@@ -1676,6 +1896,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | hoszt |
 | Job | job |
 | Log | napló |
+| **Debugger** | |
+| Debuggen | Hibakeresés |
+| Haltepunkt, Haltepunkte | töréspont, töréspontok |
+| Logpunkt | naplópont |
+| Bedingung / Trefferzahl | feltétel / találatszám |
+| Aufrufliste | hívási verem |
+| Frame | keret |
+| Überwachter Ausdruck, Überwachte Ausdrücke | figyelt kifejezés, figyelt kifejezések |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Folytatás / Átlépés / Belépés a függvénybe / Kilépés a függvényből |
+| Anhängen / Trennen | csatolás / leválasztás |
+| Angehalten | szüneteltetve |
+| Debug-Konsole | hibakeresési konzol |
+| Startkonfiguration | indítási konfiguráció |
+| Inspektor | Inspektor |
 
 ### Indonesian (`id`)
 - Address: formal "Anda", capitalized, as Indonesian macOS ("Apakah Anda ingin…", "Buka tautan hanya jika Anda
@@ -1731,6 +1965,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Inlay-Hinweis | petunjuk sisipan |
+| Vorschlag | saran |
+| Vorhersage | Prediksi |
+| Ausschlussliste | daftar pengecualian |
 | Blame | Blame |
 | Hinweise (Rotor) | Petunjuk |
 | Schnellkorrektur | perbaikan cepat |
@@ -1780,6 +2017,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | kunci API |
 | Register | registri |
 | Adapter | adaptor |
+| Debug-Adapter | adaptor debug |
 | Bereit | Siap |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | masuk (Masuk ke {}), proses masuk |
@@ -1802,6 +2040,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Debug |
+| Haltepunkt, Haltepunkte | breakpoint, breakpoint |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | kondisi / jumlah hit |
+| Aufrufliste | tumpukan panggilan |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | ekspresi pantauan, ekspresi pantauan |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Lanjutkan / Langkahi / Masuki / Keluari |
+| Anhängen / Trennen | kaitkan / lepaskan |
+| Angehalten | dijeda |
+| Debug-Konsole | konsol debug |
+| Startkonfiguration | konfigurasi peluncuran |
+| Inspektor | Inspektur |
 
 ### Italian (`it`)
 - Address: "tu", as Italian macOS ("Vuoi riprovare?", "Apri il link solo se ti fidi della fonte"); menu items and
@@ -1857,6 +2109,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server di linguaggio |
 | Hinweis (Schweregrad) | Suggerimento |
 | Inlay-Hinweis | suggerimento inline |
+| Vorschlag | proposta |
+| Vorhersage | Previsione |
+| Ausschlussliste | elenco di esclusione |
 | Blame | Blame |
 | Hinweise (Rotor) | Suggerimenti |
 | Schnellkorrektur | correzione rapida |
@@ -1906,6 +2161,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | chiave API |
 | Register | registro |
 | Adapter | adattatore |
+| Debug-Adapter | adattatore di debug |
 | Bereit | Pronto |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | accesso, accedere |
@@ -1928,6 +2184,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Debug |
+| Haltepunkt, Haltepunkte | breakpoint, breakpoint |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condizione / numero di passaggi |
+| Aufrufliste | stack di chiamate |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | espressione osservata, espressioni osservate |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continua / Salta / Entra / Esci |
+| Anhängen / Trennen | collega / scollega |
+| Angehalten | in pausa |
+| Debug-Konsole | console di debug |
+| Startkonfiguration | configurazione di avvio |
+| Inspektor | Inspector |
 
 ### Japanese (`ja`)
 - Address: no pronoun; explanations and questions in the polite です/ます form ("保存しますか?", "…してください"); menu items and
@@ -1984,6 +2254,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 言語サーバ |
 | Hinweis (Schweregrad) | ヒント |
 | Inlay-Hinweis | インレイヒント |
+| Vorschlag | 提案 |
+| Vorhersage | 予測 |
+| Ausschlussliste | 除外リスト |
 | Blame | Blame |
 | Hinweise (Rotor) | ヒント |
 | Schnellkorrektur | クイックフィックス |
@@ -2033,6 +2306,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | APIキー |
 | Register | レジストリ |
 | Adapter | アダプタ |
+| Debug-Adapter | デバッグアダプタ |
 | Bereit | 準備完了 |
 | Prüfsumme | チェックサム |
 | Anmeldung, anmelden | サインイン, サインインする |
@@ -2055,6 +2329,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | ホスト |
 | Job | ジョブ |
 | Log | ログ |
+| **Debugger** | |
+| Debuggen | デバッグ |
+| Haltepunkt, Haltepunkte | ブレークポイント、ブレークポイント |
+| Logpunkt | ログポイント |
+| Bedingung / Trefferzahl | 条件 / ヒット回数 |
+| Aufrufliste | コールスタック |
+| Frame | フレーム |
+| Überwachter Ausdruck, Überwachte Ausdrücke | ウォッチ式、ウォッチ式 |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | 続行 / ステップオーバー / ステップイン / ステップアウト |
+| Anhängen / Trennen | アタッチ / デタッチ |
+| Angehalten | 一時停止中 |
+| Debug-Konsole | デバッグコンソール |
+| Startkonfiguration | 起動構成 |
+| Inspektor | インスペクタ |
 
 ### Korean (`ko`)
 - Address: no pronoun; sentences in the formal 합쇼체, as Korean macOS ("저장하겠습니까?", "…하십시오", "…합니다"); menu items and
@@ -2110,6 +2398,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 언어 서버 |
 | Hinweis (Schweregrad) | 힌트 |
 | Inlay-Hinweis | 인레이 힌트 |
+| Vorschlag | 제안 |
+| Vorhersage | 예측 |
+| Ausschlussliste | 제외 목록 |
 | Blame | Blame |
 | Hinweise (Rotor) | 힌트 |
 | Schnellkorrektur | 빠른 수정 |
@@ -2159,6 +2450,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API 키 |
 | Register | 레지스트리 |
 | Adapter | 어댑터 |
+| Debug-Adapter | 디버그 어댑터 |
 | Bereit | 준비됨 |
 | Prüfsumme | 체크섬 |
 | Anmeldung, anmelden | 로그인, 로그인하다 |
@@ -2181,6 +2473,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | 호스트 |
 | Job | 잡 (작업 is the agent's task) |
 | Log | 로그 |
+| **Debugger** | |
+| Debuggen | 디버그 |
+| Haltepunkt, Haltepunkte | 중단점, 중단점 |
+| Logpunkt | 로그포인트 |
+| Bedingung / Trefferzahl | 조건 / 적중 횟수 |
+| Aufrufliste | 호출 스택 |
+| Frame | 프레임 |
+| Überwachter Ausdruck, Überwachte Ausdrücke | 감시식, 감시식 |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | 계속 / 스텝 오버 / 스텝 인 / 스텝 아웃 |
+| Anhängen / Trennen | 연결 / 연결 해제 |
+| Angehalten | 일시 정지됨 |
+| Debug-Konsole | 디버그 콘솔 |
+| Startkonfiguration | 실행 구성 |
+| Inspektor | 인스펙터 |
 
 ### Malay (`ms`)
 - Address: "anda" in lower case, as Malay macOS ("Adakah anda ingin…", "Buka pautan hanya jika anda mempercayai
@@ -2235,6 +2541,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | pelayan bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Inlay-Hinweis | petunjuk sebaris |
+| Vorschlag | cadangan |
+| Vorhersage | Ramalan |
+| Ausschlussliste | senarai pengecualian |
 | Blame | Blame |
 | Hinweise (Rotor) | Petunjuk |
 | Schnellkorrektur | pembetulan pantas |
@@ -2284,6 +2593,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | kunci API |
 | Register | registry |
 | Adapter | penyesuai |
+| Debug-Adapter | penyesuai nyahpepijat |
 | Bereit | Sedia |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | daftar masuk, daftar masuk ke |
@@ -2306,6 +2616,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | hos |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Nyahpepijat |
+| Haltepunkt, Haltepunkte | titik henti, titik henti |
+| Logpunkt | titik log |
+| Bedingung / Trefferzahl | syarat / kiraan hit |
+| Aufrufliste | tindanan panggilan |
+| Frame | bingkai |
+| Überwachter Ausdruck, Überwachte Ausdrücke | ungkapan pantauan, ungkapan pantauan |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Teruskan / Langkah Lalu / Langkah Masuk / Langkah Keluar |
+| Anhängen / Trennen | lampirkan / tanggalkan |
+| Angehalten | dijeda |
+| Debug-Konsole | konsol nyahpepijat |
+| Startkonfiguration | konfigurasi pelancaran |
+| Inspektor | Pemeriksa |
 
 ### Dutch (`nl`)
 - Address: "je", as Dutch macOS ("Wil je…", "Weet je zeker dat…"); menu items and buttons as imperatives, verb first
@@ -2361,6 +2685,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | taalserver |
 | Hinweis (Schweregrad) | Hint |
 | Inlay-Hinweis | inlay-hint |
+| Vorschlag | voorstel |
+| Vorhersage | Voorspelling |
+| Ausschlussliste | uitsluitingslijst |
 | Blame | Blame |
 | Hinweise (Rotor) | Hints |
 | Schnellkorrektur | snelle oplossing |
@@ -2410,6 +2737,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-sleutel |
 | Register | register |
 | Adapter | adapter |
+| Debug-Adapter | debugadapter |
 | Bereit | Gereed |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | inloggen (button: Log in) |
@@ -2432,6 +2760,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Debug |
+| Haltepunkt, Haltepunkte | breakpoint, breakpoints |
+| Logpunkt | logpunt |
+| Bedingung / Trefferzahl | voorwaarde / aantal treffers |
+| Aufrufliste | aanroepstack |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | bewaakte expressie, bewaakte expressies |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Ga door / Stap over / Stap in / Stap uit |
+| Anhängen / Trennen | koppel / maak los |
+| Angehalten | onderbroken |
+| Debug-Konsole | debugconsole |
+| Startkonfiguration | startconfiguratie |
+| Inspektor | Inspecteur |
 
 ### Norwegian Bokmål (`no`)
 - Address: "du", as Norwegian macOS ("Vil du…", "Er du sikker på at…"); menu items and buttons as imperatives ("Åpne",
@@ -2487,6 +2829,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | språktjener (macOS says tjener for server) |
 | Hinweis (Schweregrad) | Tips |
 | Inlay-Hinweis | innebygd tips |
+| Vorschlag | forslag |
+| Vorhersage | Forutsigelse |
+| Ausschlussliste | utelatelsesliste |
 | Blame | Blame |
 | Hinweise (Rotor) | Tips |
 | Schnellkorrektur | hurtigretting |
@@ -2536,6 +2881,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-nøkkel |
 | Register | register |
 | Adapter | adapter |
+| Debug-Adapter | feilsøkingsadapter |
 | Bereit | Klar |
 | Prüfsumme | sjekksum |
 | Anmeldung, anmelden | pålogging, logge på |
@@ -2558,6 +2904,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | vert |
 | Job | jobb |
 | Log | logg |
+| **Debugger** | |
+| Debuggen | Feilsøk |
+| Haltepunkt, Haltepunkte | brytepunkt, brytepunkter |
+| Logpunkt | loggpunkt |
+| Bedingung / Trefferzahl | betingelse / antall treff |
+| Aufrufliste | anropsstakk |
+| Frame | ramme |
+| Überwachter Ausdruck, Überwachte Ausdrücke | overvåket uttrykk, overvåkede uttrykk |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsett / Gå over / Gå inn / Gå ut |
+| Anhängen / Trennen | koble til / koble fra |
+| Angehalten | pauset |
+| Debug-Konsole | feilsøkingskonsoll |
+| Startkonfiguration | startkonfigurasjon |
+| Inspektor | Inspektør |
 
 ### Polish (`pl`)
 - Address: informal second person singular with the pronoun left out, as Polish macOS ("Czy chcesz…", "Otwieraj łącze
@@ -2613,6 +2973,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | serwer języka |
 | Hinweis (Schweregrad) | Wskazówka |
 | Inlay-Hinweis | wskazówka w tekście |
+| Vorschlag | propozycja |
+| Vorhersage | Przewidywanie |
+| Ausschlussliste | lista wykluczeń |
 | Blame | Blame |
 | Hinweise (Rotor) | Wskazówki |
 | Schnellkorrektur | szybka poprawka |
@@ -2662,6 +3025,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | klucz API |
 | Register | rejestr |
 | Adapter | adapter |
+| Debug-Adapter | adapter debugowania |
 | Bereit | Gotowy |
 | Prüfsumme | suma kontrolna |
 | Anmeldung, anmelden | logowanie, zalogować się |
@@ -2684,6 +3048,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Debuguj |
+| Haltepunkt, Haltepunkte | punkt przerwania, punkty przerwania |
+| Logpunkt | punkt rejestrowania |
+| Bedingung / Trefferzahl | warunek / liczba trafień |
+| Aufrufliste | stos wywołań |
+| Frame | ramka |
+| Überwachter Ausdruck, Überwachte Ausdrücke | obserwowane wyrażenie, obserwowane wyrażenia |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Kontynuuj / Przejdź nad / Wejdź / Wyjdź |
+| Anhängen / Trennen | dołącz / odłącz |
+| Angehalten | wstrzymano |
+| Debug-Konsole | konsola debugowania |
+| Startkonfiguration | konfiguracja uruchamiania |
+| Inspektor | Inspektor |
 
 ### Portuguese (Brazil) (`pt_BR`)
 - Address: "você" with third-person verbs and "seu/sua", as Brazilian macOS ("Deseja tentar novamente?", "Abra o link
@@ -2740,6 +3118,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Dica |
 | Inlay-Hinweis | dica embutida |
+| Vorschlag | sugestão |
+| Vorhersage | Previsão |
+| Ausschlussliste | lista de exclusão |
 | Blame | Blame |
 | Hinweise (Rotor) | Dicas |
 | Schnellkorrektur | correção rápida |
@@ -2789,6 +3170,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | chave de API |
 | Register | registro |
 | Adapter | adaptador |
+| Debug-Adapter | adaptador de depuração |
 | Bereit | Pronto |
 | Prüfsumme | soma de verificação |
 | Anmeldung, anmelden | início de sessão, iniciar sessão |
@@ -2811,6 +3193,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | host |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Depurar |
+| Haltepunkt, Haltepunkte | ponto de interrupção, pontos de interrupção |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condição / contagem de acertos |
+| Aufrufliste | pilha de chamadas |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expressão monitorada, expressões monitoradas |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Passar por Cima / Entrar / Sair |
+| Anhängen / Trennen | anexar / desanexar |
+| Angehalten | pausado |
+| Debug-Konsole | console de depuração |
+| Startkonfiguration | configuração de inicialização |
+| Inspektor | Inspetor |
 
 ### Portuguese (Portugal) (`pt_PT`)
 - Address: formal third person with the pronoun left out, as European Portuguese macOS ("Pretende ignorar as
@@ -2867,6 +3263,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Sugestão |
 | Inlay-Hinweis | sugestão incorporada |
+| Vorschlag | proposta |
+| Vorhersage | Previsão |
+| Ausschlussliste | lista de exclusão |
 | Blame | Blame |
 | Hinweise (Rotor) | Sugestões |
 | Schnellkorrektur | correção rápida |
@@ -2916,6 +3315,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | chave da API |
 | Register | registo |
 | Adapter | adaptador |
+| Debug-Adapter | adaptador de depuração |
 | Bereit | Pronto |
 | Prüfsumme | checksum |
 | Anmeldung, anmelden | início de sessão, iniciar sessão |
@@ -2938,6 +3338,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | anfitrião |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Depurar |
+| Haltepunkt, Haltepunkte | ponto de interrupção, pontos de interrupção |
+| Logpunkt | logpoint |
+| Bedingung / Trefferzahl | condição / contagem de acertos |
+| Aufrufliste | pilha de chamadas |
+| Frame | frame |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expressão observada, expressões observadas |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Passar por cima / Entrar / Sair |
+| Anhängen / Trennen | anexar / desanexar |
+| Angehalten | em pausa |
+| Debug-Konsole | consola de depuração |
+| Startkonfiguration | configuração de arranque |
+| Inspektor | Inspetor |
 
 ### Romanian (`ro`)
 - Address: formal "dumneavoastră" (written "dvs."), as macOS Romanian; menu items, buttons and instructions in the
@@ -2994,6 +3408,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server de limbaj |
 | Hinweis (Schweregrad) | Sugestie |
 | Inlay-Hinweis | sugestie inline |
+| Vorschlag | propunere |
+| Vorhersage | Predicție |
+| Ausschlussliste | listă de excludere |
 | Blame | Blame |
 | Hinweise (Rotor) | Sugestii |
 | Schnellkorrektur | remediere rapidă |
@@ -3043,6 +3460,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | cheie API |
 | Register | registru |
 | Adapter | adaptor |
+| Debug-Adapter | adaptor de depanare |
 | Bereit | Gata |
 | Prüfsumme | sumă de control |
 | Anmeldung, anmelden | autentificare, a se autentifica |
@@ -3065,6 +3483,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | gazdă |
 | Job | job, joburi |
 | Log | jurnal |
+| **Debugger** | |
+| Debuggen | Depanare |
+| Haltepunkt, Haltepunkte | punct de întrerupere, puncte de întrerupere |
+| Logpunkt | punct de jurnal |
+| Bedingung / Trefferzahl | condiție / număr de atingeri |
+| Aufrufliste | stivă de apeluri |
+| Frame | cadru |
+| Überwachter Ausdruck, Überwachte Ausdrücke | expresie urmărită, expresii urmărite |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuați / Treceți peste / Intrați / Ieșiți |
+| Anhängen / Trennen | atașare / detașare |
+| Angehalten | întrerupt |
+| Debug-Konsole | consolă de depanare |
+| Startkonfiguration | configurație de pornire |
+| Inspektor | Inspector |
 
 ### Russian (`ru`)
 - Address: formal "Вы", capitalized as macOS Russian writes it ("Вы", "Ваш"); menu items and buttons in the infinitive
@@ -3121,6 +3553,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | языковой сервер |
 | Hinweis (Schweregrad) | Подсказка |
 | Inlay-Hinweis | встроенная подсказка |
+| Vorschlag | предложение |
+| Vorhersage | Предсказание |
+| Ausschlussliste | список исключений |
 | Blame | Blame |
 | Hinweise (Rotor) | Подсказки |
 | Schnellkorrektur | быстрое исправление |
@@ -3170,6 +3605,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | ключ API |
 | Register | реестр |
 | Adapter | адаптер |
+| Debug-Adapter | адаптер отладки |
 | Bereit | Готов |
 | Prüfsumme | контрольная сумма |
 | Anmeldung, anmelden | вход, войти |
@@ -3192,6 +3628,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | хост |
 | Job | задание |
 | Log | журнал |
+| **Debugger** | |
+| Debuggen | Отладка |
+| Haltepunkt, Haltepunkte | точка останова, точки останова |
+| Logpunkt | точка журнала |
+| Bedingung / Trefferzahl | условие / число срабатываний |
+| Aufrufliste | стек вызовов |
+| Frame | фрейм |
+| Überwachter Ausdruck, Überwachte Ausdrücke | отслеживаемое выражение, отслеживаемые выражения |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продолжить / Перешагнуть / Войти / Выйти |
+| Anhängen / Trennen | подключить / отключить |
+| Angehalten | приостановлено |
+| Debug-Konsole | консоль отладки |
+| Startkonfiguration | конфигурация запуска |
+| Inspektor | Инспектор |
 
 ### Slovak (`sk`)
 - Address: formal "vy" (vykanie), lowercase; menu items and buttons in the infinitive, as macOS Slovak has them
@@ -3248,6 +3698,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápoveda |
 | Inlay-Hinweis | vložená nápoveda |
+| Vorschlag | návrh |
+| Vorhersage | Predpoveď |
+| Ausschlussliste | zoznam vylúčení |
 | Blame | Blame |
 | Hinweise (Rotor) | Nápovedy |
 | Schnellkorrektur | rýchla oprava |
@@ -3297,6 +3750,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | kľúč API |
 | Register | register |
 | Adapter | adaptér |
+| Debug-Adapter | ladiaci adaptér |
 | Bereit | Pripravené |
 | Prüfsumme | kontrolný súčet |
 | Anmeldung, anmelden | prihlásenie, prihlásiť sa |
@@ -3319,6 +3773,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | hostiteľ |
 | Job | job |
 | Log | log |
+| **Debugger** | |
+| Debuggen | Ladenie |
+| Haltepunkt, Haltepunkte | bod prerušenia, body prerušenia |
+| Logpunkt | bod záznamu |
+| Bedingung / Trefferzahl | podmienka / počet zásahov |
+| Aufrufliste | zásobník volaní |
+| Frame | rámec (rámec zásobníka) |
+| Überwachter Ausdruck, Überwachte Ausdrücke | sledovaný výraz, sledované výrazy |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovať / Prejsť cez / Vstúpiť do / Vystúpiť |
+| Anhängen / Trennen | pripojiť / odpojiť |
+| Angehalten | pozastavené |
+| Debug-Konsole | ladiaca konzola |
+| Startkonfiguration | konfigurácia spustenia |
+| Inspektor | Inšpektor |
 
 ### Slovenian (`sl`)
 - Address: formal "vi" (vikanje), lowercase; menu items and buttons in the singular imperative, as macOS Slovenian has
@@ -3376,6 +3844,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jezikovni strežnik |
 | Hinweis (Schweregrad) | Namig |
 | Inlay-Hinweis | vdelan namig |
+| Vorschlag | predlog |
+| Vorhersage | Napovedovanje |
+| Ausschlussliste | seznam izključitev |
 | Blame | Blame |
 | Hinweise (Rotor) | Namigi |
 | Schnellkorrektur | hitri popravek |
@@ -3425,6 +3896,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | ključ API |
 | Register | register |
 | Adapter | adapter |
+| Debug-Adapter | adapter za razhroščevanje |
 | Bereit | Pripravljeno |
 | Prüfsumme | kontrolna vsota |
 | Anmeldung, anmelden | vpis, vpisati se |
@@ -3447,6 +3919,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | gostitelj |
 | Job | job |
 | Log | dnevnik |
+| **Debugger** | |
+| Debuggen | Odpravljanje napak |
+| Haltepunkt, Haltepunkte | prekinitvena točka, prekinitvene točke |
+| Logpunkt | točka dnevnika |
+| Bedingung / Trefferzahl | pogoj / število zadetkov |
+| Aufrufliste | sklad klicev |
+| Frame | okvir (okvir sklada) |
+| Überwachter Ausdruck, Überwachte Ausdrücke | opazovani izraz, opazovani izrazi |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Nadaljuj / Preskoči / Vstopi / Izstopi |
+| Anhängen / Trennen | pripni / odklopi |
+| Angehalten | ustavljeno |
+| Debug-Konsole | konzola za odpravljanje napak |
+| Startkonfiguration | konfiguracija zagona |
+| Inspektor | Inšpektor |
 
 ### Swedish (`sv`)
 - Address: "du", as macOS Swedish ("Vill du …?", "Välj …"); menu items and buttons in the imperative ("Spara", "Göm
@@ -3502,6 +3988,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | språkserver |
 | Hinweis (Schweregrad) | Tips |
 | Inlay-Hinweis | infällt tips |
+| Vorschlag | förslag |
+| Vorhersage | Förutsägelse |
+| Ausschlussliste | undantagslista |
 | Blame | Blame |
 | Hinweise (Rotor) | Tips |
 | Schnellkorrektur | snabbkorrigering |
@@ -3551,6 +4040,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API-nyckel |
 | Register | register |
 | Adapter | adapter |
+| Debug-Adapter | felsökningsadapter |
 | Bereit | Redo |
 | Prüfsumme | kontrollsumma |
 | Anmeldung, anmelden | inloggning, logga in |
@@ -3573,6 +4063,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | värd |
 | Job | jobb |
 | Log | logg |
+| **Debugger** | |
+| Debuggen | Felsökning |
+| Haltepunkt, Haltepunkte | brytpunkt, brytpunkter |
+| Logpunkt | loggpunkt |
+| Bedingung / Trefferzahl | villkor / antal träffar |
+| Aufrufliste | anropsstack |
+| Frame | ram (stackram) |
+| Überwachter Ausdruck, Überwachte Ausdrücke | bevakat uttryck, bevakade uttryck |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsätt / Kliv över / Kliv in / Kliv ut |
+| Anhängen / Trennen | anslut / koppla från |
+| Angehalten | pausad |
+| Debug-Konsole | felsökningskonsol |
+| Startkonfiguration | startkonfiguration |
+| Inspektor | Inspektör |
 
 ### Thai (`th`)
 - Address: polite neutral "คุณ", as macOS Thai; menu items and buttons are bare verbs ("บันทึก", "ซ่อนแถบเครื่องมือ");
@@ -3629,6 +4133,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | เซิร์ฟเวอร์ภาษา |
 | Hinweis (Schweregrad) | คำแนะนำ |
 | Inlay-Hinweis | คำแนะนำแบบอินไลน์ |
+| Vorschlag | ข้อเสนอ |
+| Vorhersage | การคาดการณ์ |
+| Ausschlussliste | รายการยกเว้น |
 | Blame | Blame |
 | Hinweise (Rotor) | คำแนะนำ |
 | Schnellkorrektur | แก้ไขด่วน |
@@ -3678,6 +4185,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | คีย์ API |
 | Register | รีจิสทรี |
 | Adapter | อะแดปเตอร์ |
+| Debug-Adapter | อะแดปเตอร์ดีบัก |
 | Bereit | พร้อม |
 | Prüfsumme | เช็คซัม |
 | Anmeldung, anmelden | การลงชื่อเข้า, ลงชื่อเข้า |
@@ -3700,6 +4208,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | โฮสต์ |
 | Job | Job |
 | Log | ล็อก |
+| **Debugger** | |
+| Debuggen | ดีบัก |
+| Haltepunkt, Haltepunkte | เบรกพอยต์ |
+| Logpunkt | ล็อกพอยต์ |
+| Bedingung / Trefferzahl | เงื่อนไข / จำนวนครั้งที่เข้าถึง |
+| Aufrufliste | สแตกการเรียก |
+| Frame | เฟรม (เฟรมสแตก) |
+| Überwachter Ausdruck, Überwachte Ausdrücke | นิพจน์ที่เฝ้าดู |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | ดำเนินการต่อ / ข้ามไป / ก้าวเข้า / ก้าวออก |
+| Anhängen / Trennen | แนบ / ตัดการเชื่อมต่อ |
+| Angehalten | หยุดชั่วคราว |
+| Debug-Konsole | คอนโซลดีบัก |
+| Startkonfiguration | การกำหนดค่าการเริ่มต้น |
+| Inspektor | ตัวตรวจสอบ |
 
 ### Turkish (`tr`)
 - Address: formal "siz", as macOS Turkish ("… istediğinizden emin misiniz?", "Seçin"); menu items and buttons in the
@@ -3757,6 +4279,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | dil sunucusu |
 | Hinweis (Schweregrad) | İpucu |
 | Inlay-Hinweis | satır içi ipucu |
+| Vorschlag | öneri |
+| Vorhersage | Tahmin |
+| Ausschlussliste | hariç tutma listesi |
 | Blame | Blame |
 | Hinweise (Rotor) | İpuçları |
 | Schnellkorrektur | hızlı düzeltme |
@@ -3806,6 +4331,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API anahtarı |
 | Register | kayıt defteri |
 | Adapter | bağdaştırıcı |
+| Debug-Adapter | hata ayıklama bağdaştırıcısı |
 | Bereit | Hazır |
 | Prüfsumme | sağlama toplamı |
 | Anmeldung, anmelden | giriş, giriş yap |
@@ -3828,6 +4354,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | sunucu |
 | Job | iş |
 | Log | günlük |
+| **Debugger** | |
+| Debuggen | Hata Ayıkla |
+| Haltepunkt, Haltepunkte | kesme noktası, kesme noktaları |
+| Logpunkt | günlük noktası |
+| Bedingung / Trefferzahl | koşul / vuruş sayısı |
+| Aufrufliste | çağrı yığını |
+| Frame | çerçeve (yığın çerçevesi) |
+| Überwachter Ausdruck, Überwachte Ausdrücke | izlenen ifade, izlenen ifadeler |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Devam / Üzerinden Adımla / İçeri Adımla / Dışarı Adımla |
+| Anhängen / Trennen | bağlan / bağlantıyı kes |
+| Angehalten | duraklatıldı |
+| Debug-Konsole | hata ayıklama konsolu |
+| Startkonfiguration | başlatma yapılandırması |
+| Inspektor | Denetçi |
 
 ### Ukrainian (`uk`)
 - Address: formal "ви", lowercase as macOS Ukrainian writes it ("ви", "ваш"); menu items and buttons in the infinitive
@@ -3883,6 +4423,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | мовний сервер |
 | Hinweis (Schweregrad) | Підказка |
 | Inlay-Hinweis | вбудована підказка |
+| Vorschlag | пропозиція |
+| Vorhersage | Передбачення |
+| Ausschlussliste | список винятків |
 | Blame | Blame |
 | Hinweise (Rotor) | Підказки |
 | Schnellkorrektur | швидке виправлення |
@@ -3932,6 +4475,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | ключ API |
 | Register | реєстр |
 | Adapter | адаптер |
+| Debug-Adapter | адаптер налагодження |
 | Bereit | Готово |
 | Prüfsumme | контрольна сума |
 | Anmeldung, anmelden | вхід, увійти |
@@ -3954,6 +4498,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | хост |
 | Job | завдання |
 | Log | журнал |
+| **Debugger** | |
+| Debuggen | Налагодження |
+| Haltepunkt, Haltepunkte | точка зупину, точки зупину |
+| Logpunkt | точка журналювання |
+| Bedingung / Trefferzahl | умова / кількість влучань |
+| Aufrufliste | стек викликів |
+| Frame | кадр |
+| Überwachter Ausdruck, Überwachte Ausdrücke | контрольний вираз, контрольні вирази |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продовжити / Перейти через / Увійти / Вийти |
+| Anhängen / Trennen | приєднати / відʼєднати |
+| Angehalten | призупинено |
+| Debug-Konsole | консоль налагодження |
+| Startkonfiguration | конфігурація запуску |
+| Inspektor | Інспектор |
 
 ### Vietnamese (`vi`)
 - Address: "bạn", as macOS Vietnamese ("Bạn có chắc chắn muốn …?"); menu items and buttons are bare verbs ("Lưu", "Ẩn
@@ -4009,6 +4567,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | máy chủ ngôn ngữ |
 | Hinweis (Schweregrad) | Gợi ý |
 | Inlay-Hinweis | gợi ý nội tuyến |
+| Vorschlag | đề xuất |
+| Vorhersage | Dự đoán |
+| Ausschlussliste | danh sách loại trừ |
 | Blame | Blame |
 | Hinweise (Rotor) | Gợi ý |
 | Schnellkorrektur | sửa nhanh |
@@ -4058,6 +4619,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | khóa API |
 | Register | sổ đăng ký |
 | Adapter | bộ chuyển đổi |
+| Debug-Adapter | bộ chuyển đổi gỡ lỗi |
 | Bereit | Sẵn sàng |
 | Prüfsumme | tổng kiểm tra |
 | Anmeldung, anmelden | đăng nhập |
@@ -4080,6 +4642,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | máy chủ |
 | Job | job |
 | Log | nhật ký |
+| **Debugger** | |
+| Debuggen | Gỡ lỗi |
+| Haltepunkt, Haltepunkte | điểm ngắt |
+| Logpunkt | điểm ghi nhật ký |
+| Bedingung / Trefferzahl | điều kiện / số lần chạm |
+| Aufrufliste | ngăn xếp lệnh gọi |
+| Frame | khung |
+| Überwachter Ausdruck, Überwachte Ausdrücke | biểu thức theo dõi |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Tiếp tục / Bước qua / Bước vào / Bước ra |
+| Anhängen / Trennen | đính kèm / tách |
+| Angehalten | đã tạm dừng |
+| Debug-Konsole | bảng điều khiển gỡ lỗi |
+| Startkonfiguration | cấu hình khởi chạy |
+| Inspektor | Bộ kiểm tra |
 
 ### Chinese, Simplified (`zh-Hans`)
 - Address: "你", as macOS Simplified Chinese (never "您"); menu items and buttons are bare verbs ("保存", "隐藏工具栏")
@@ -4134,6 +4710,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 语言服务器 |
 | Hinweis (Schweregrad) | 提示 |
 | Inlay-Hinweis | 内嵌提示 |
+| Vorschlag | 建议 |
+| Vorhersage | 预测 |
+| Ausschlussliste | 排除列表 |
 | Blame | Blame |
 | Hinweise (Rotor) | 提示 |
 | Schnellkorrektur | 快速修复 |
@@ -4183,6 +4762,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API 密钥 |
 | Register | 注册表 |
 | Adapter | 适配器 |
+| Debug-Adapter | 调试适配器 |
 | Bereit | 就绪 |
 | Prüfsumme | 校验和 |
 | Anmeldung, anmelden | 登录 |
@@ -4205,6 +4785,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | 主机 |
 | Job | 作业 |
 | Log | 日志 |
+| **Debugger** | |
+| Debuggen | 调试 |
+| Haltepunkt, Haltepunkte | 断点 |
+| Logpunkt | 日志点 |
+| Bedingung / Trefferzahl | 条件 / 命中次数 |
+| Aufrufliste | 调用堆栈 |
+| Frame | 栈帧 |
+| Überwachter Ausdruck, Überwachte Ausdrücke | 监视表达式 |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | 继续 / 单步跳过 / 单步进入 / 单步跳出 |
+| Anhängen / Trennen | 附加 / 分离 |
+| Angehalten | 已暂停 |
+| Debug-Konsole | 调试控制台 |
+| Startkonfiguration | 启动配置 |
+| Inspektor | 检查器 |
 
 ### Chinese, Traditional (`zh-Hant`)
 - Address: "你", as macOS Traditional Chinese (never "您"); Taiwan usage and macOS's Taiwan words (檔案, 視窗, 設定, 打開); menu
@@ -4260,6 +4854,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 語言伺服器 |
 | Hinweis (Schweregrad) | 提示 |
 | Inlay-Hinweis | 內嵌提示 |
+| Vorschlag | 建議 |
+| Vorhersage | 預測 |
+| Ausschlussliste | 排除列表 |
 | Blame | Blame |
 | Hinweise (Rotor) | 提示 |
 | Schnellkorrektur | 快速修正 |
@@ -4309,6 +4906,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | API-Schlüssel | API 金鑰 |
 | Register | 登錄庫 |
 | Adapter | 轉接器 |
+| Debug-Adapter | 除錯轉接器 |
 | Bereit | 就緒 |
 | Prüfsumme | 核對碼 |
 | Anmeldung, anmelden | 登入 |
@@ -4331,3 +4929,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Host | 主機 |
 | Job | 作業 |
 | Log | 記錄 |
+| **Debugger** | |
+| Debuggen | 除錯 |
+| Haltepunkt, Haltepunkte | 中斷點 |
+| Logpunkt | 記錄點 |
+| Bedingung / Trefferzahl | 條件 / 命中次數 |
+| Aufrufliste | 呼叫堆疊 |
+| Frame | 堆疊框 |
+| Überwachter Ausdruck, Überwachte Ausdrücke | 監看運算式 |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | 繼續 / 步過 / 步入 / 步出 |
+| Anhängen / Trennen | 附加 / 分離 |
+| Angehalten | 已暫停 |
+| Debug-Konsole | 除錯主控台 |
+| Startkonfiguration | 啟動設定 |
+| Inspektor | 檢閱器 |

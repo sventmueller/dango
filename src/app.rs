@@ -67,6 +67,8 @@ define_class!(
                     return NSApplicationTerminateReply::TerminateNow;
                 }
                 std::thread::spawn(|| {
+                    // Launched programs end and attached ones are let go before the supervisor ends the adapters.
+                    ide_dap::stop_all(QUIT_GRACE);
                     Supervisor::global().shutdown(QUIT_GRACE);
                     main_soon(|| {
                         if let Some(mtm) = MainThreadMarker::new() {

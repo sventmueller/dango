@@ -12,9 +12,11 @@ ide-agent = { path = "crates/ide-agent" }
 ide-claude = { path = "crates/ide-claude" }
 ide-ci = { path = "crates/ide-ci" }
 ide-core = { path = "crates/ide-core" }
+ide-dap = { path = "crates/ide-dap" }
 ide-document = { path = "crates/ide-document" }
 ide-git = { path = "crates/ide-git" }
 ide-lsp = { path = "crates/ide-lsp" }
+ide-predict = { path = "crates/ide-predict" }
 ide-process = { path = "crates/ide-process" }
 ide-product = { path = "crates/ide-product" }
 ide-project = { path = "crates/ide-project" }
@@ -95,9 +97,11 @@ ide-agent.workspace = true
 ide-claude.workspace = true
 ide-ci.workspace = true
 ide-core.workspace = true
+ide-dap.workspace = true
 ide-document.workspace = true
 ide-git.workspace = true
 ide-lsp.workspace = true
+ide-predict.workspace = true
 ide-process.workspace = true
 ide-product.workspace = true
 ide-project.workspace = true
