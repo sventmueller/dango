@@ -218,7 +218,7 @@ impl Composer {
             mic.view.setTranslatesAutoresizingMaskIntoConstraints(false);
             mic.view
                 .trailingAnchor()
-                .constraintEqualToAnchor(&editor.trailingAnchor())
+                .constraintLessThanOrEqualToAnchor(&editor.trailingAnchor())
                 .setActive(true);
             mic.view
                 .topAnchor()
@@ -237,7 +237,7 @@ impl Composer {
                 .constraintEqualToAnchor_constant(&trailing.0, trailing.1),
             placeholder
                 .leadingAnchor()
-                .constraintEqualToAnchor_constant(&scroll.leadingAnchor(), 5.0),
+                .constraintEqualToAnchor(&scroll.leadingAnchor()),
             placeholder
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&scroll.topAnchor(), 2.0),
@@ -262,6 +262,11 @@ impl Composer {
             ],
         );
         let card = card(mtm, &ui::column(mtm, 8.0, &[&chips, &editor, &footer]));
+        #[cfg(feature = "dictation")]
+        mic.button
+            .centerXAnchor()
+            .constraintEqualToAnchor(&parts.send.centerXAnchor())
+            .setActive(true);
         Composer {
             card,
             text,
@@ -444,6 +449,10 @@ fn text_view(mtm: MainThreadMarker, key: u64, target: &AgentTarget, frame: NSRec
     text.setAutomaticQuoteSubstitutionEnabled(false);
     text.setAutomaticDashSubstitutionEnabled(false);
     text.setTextContainerInset(NSSize::new(0.0, 2.0));
+    // SAFETY: A text view keeps its text container alive as long as it lives.
+    if let Some(container) = unsafe { text.textContainer() } {
+        container.setLineFragmentPadding(0.0);
+    }
     text.setAccessibilityLabel(Some(&ns(t("Nachricht an Claude"))));
     text.setDelegate(Some(ProtocolObject::from_ref(target)));
     text.registerForDraggedTypes(&NSArray::from_slice(&[
