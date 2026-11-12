@@ -6,15 +6,15 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use ide_git::{Branch, BranchStatus, Cancel, Commit, Operation, Repository, Status, StatusOptions};
+use ide_git::{Branch, BranchStatus, Cancel, Commit, Operation, Repository, Stash, StashApply, Status, StatusOptions};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
-    NSOutlineViewDelegate, NSTableColumn, NSTableRowView, NSTextDelegate, NSTextViewDelegate, NSView,
+    NSOutlineViewDelegate, NSTableColumn, NSTableRowView, NSTextDelegate, NSTextView, NSTextViewDelegate, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSString, NSUndoManager};
 
 use super::model::{Model, RowKey, Section};
 use super::text::{Problem, problem};
@@ -57,6 +57,10 @@ pub enum Task {
     Abort,
     /// A thread's worktree is taken over, kept as a branch or removed.
     TakeOver,
+    /// Changes go into the stash, or an entry comes back or goes.
+    Stash,
+    /// A model writes the commit message (E88).
+    Message,
 }
 
 pub struct Busy {
@@ -79,6 +83,16 @@ pub struct State {
     pub branches: Vec<Branch>,
     /// The merge or rebase that stopped at conflicts.
     pub operation: Option<Operation>,
+    /// The stash apply that stopped at conflicts (E87).
+    pub stash_apply: Option<StashApply>,
+    /// The stash entries whose files show.
+    pub open_stashes: HashSet<String>,
+    /// What stash entries changed, by commit, as far as read.
+    pub stash_changes: HashMap<String, Vec<ide_git::ChangedFile>>,
+    /// The stash entries whose changes are being read.
+    pub reading_stashes: HashSet<String>,
+    /// The commit message a model writes or wrote (E88).
+    pub message: super::message::MessageState,
     pub model: Model,
     pub collapsed: HashSet<Section>,
     /// The thread worktrees whose files show.
@@ -111,6 +125,9 @@ pub struct PanelIvars {
     state: RefCell<State>,
     /// The objects that stand for rows in the outline view, which keeps no reference of its own.
     items: RefCell<HashMap<String, Retained<NSString>>>,
+    /// The commit message's own undo, apart from the window's, so that a message a model wrote is one step to take
+    /// back (E88).
+    undo: Retained<NSUndoManager>,
 }
 
 /// What a refresh read from git.
@@ -125,7 +142,14 @@ pub enum Loaded {
         log: Vec<Commit>,
         operation: Option<Operation>,
         worktrees: Vec<crate::worktrees::TreeState>,
+        stash: Box<StashRead>,
     },
+}
+
+/// The stash as a refresh read it: its entries and the apply that waits at its conflicts.
+pub struct StashRead {
+    entries: Vec<Stash>,
+    apply: Option<StashApply>,
 }
 
 define_class!(
@@ -157,7 +181,7 @@ define_class!(
         #[unsafe(method(outlineView:isItemExpandable:))]
         fn expandable(&self, _view: &NSOutlineView, item: &AnyObject) -> bool {
             guarded(false, || match key_of(item) {
-                Some(RowKey::Section(_)) => true,
+                Some(RowKey::Section(_) | RowKey::Stash(_)) => true,
                 Some(RowKey::Worktree(path)) => !self.read().model.tree_keys(&path).is_empty(),
                 Some(RowKey::Commit(_)) => true,
                 _ => false,
@@ -212,11 +236,19 @@ define_class!(
     unsafe impl NSTextDelegate for GitPanel {
         #[unsafe(method(textDidChange:))]
         fn text_did_change(&self, _notification: &NSNotification) {
-            guarded((), || self.update_placeholder());
+            guarded((), || {
+                self.update_placeholder();
+                self.message_edited();
+            });
         }
     }
 
-    unsafe impl NSTextViewDelegate for GitPanel {}
+    unsafe impl NSTextViewDelegate for GitPanel {
+        #[unsafe(method_id(undoManagerForTextView:))]
+        fn undo_manager_for(&self, _view: &NSTextView) -> Option<Retained<NSUndoManager>> {
+            Some(self.ivars().undo.clone())
+        }
+    }
 
     impl GitPanel {
         #[unsafe(method(ideGitStage:))]
@@ -246,12 +278,24 @@ define_class!(
 
         #[unsafe(method(ideGitContinue:))]
         fn continue_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.continue_operation());
+            guarded((), || {
+                if self.read().stash_apply.is_some() {
+                    self.finish_stash_conflict();
+                } else {
+                    self.continue_operation();
+                }
+            });
         }
 
         #[unsafe(method(ideGitAbort:))]
         fn abort_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.abort_operation());
+            guarded((), || {
+                if self.read().stash_apply.is_some() {
+                    self.abort_stash_conflict();
+                } else {
+                    self.abort_operation();
+                }
+            });
         }
 
         #[unsafe(method(ideGitDiff:))]
@@ -308,6 +352,54 @@ define_class!(
             guarded((), || self.commit_then(Some(Task::Pull)));
         }
 
+        #[unsafe(method(ideGitStash:))]
+        fn stash_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.ask_stash());
+        }
+
+        #[unsafe(method(ideGitStashStaged:))]
+        fn stash_staged_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.stash_staged());
+        }
+
+        #[unsafe(method(ideGitApplyStash:))]
+        fn apply_stash_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.apply_stash(&self.keys_for(sender), false));
+        }
+
+        #[unsafe(method(ideGitPopStash:))]
+        fn pop_stash_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.apply_stash(&self.keys_for(sender), true));
+        }
+
+        #[unsafe(method(ideGitDropStash:))]
+        fn drop_stash_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.drop_stash(&self.keys_for(sender)));
+        }
+
+        #[unsafe(method(ideGitMessage:))]
+        fn message_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.generate_message());
+        }
+
+        #[unsafe(method(ideGitUndoMessage:))]
+        fn undo_message_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.undo_message());
+        }
+
+        #[unsafe(method(ideGitShowSent:))]
+        fn show_sent_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.show_sent());
+        }
+
+        #[unsafe(method(validateMenuItem:))]
+        fn validate_menu_item(&self, item: &objc2_app_kit::NSMenuItem) -> bool {
+            guarded(false, || {
+                let keys = self.read().menu_keys.clone();
+                item.action().is_none_or(|action| self.can(action, &keys))
+            })
+        }
+
         #[unsafe(method(ideGitRowClicked:))]
         fn clicked(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.preview_row(self.ui().outline.clickedRow()));
@@ -359,6 +451,7 @@ define_class!(
                 if let Some(cancel) = self.state().busy.as_ref().and_then(|b| b.cancel.clone()) {
                     cancel.cancel();
                 }
+                self.cancel_message();
             });
         }
 
@@ -486,6 +579,7 @@ impl GitPanel {
             ui: OnceCell::new(),
             state: RefCell::new(State::default()),
             items: RefCell::new(HashMap::new()),
+            undo: NSUndoManager::new(mtm),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<GitPanel> = unsafe { msg_send![super(GitPanel::alloc(mtm).set_ivars(ivars)), init] };
@@ -511,6 +605,11 @@ impl GitPanel {
 
     pub fn read(&self) -> std::cell::Ref<'_, State> {
         self.ivars().state.borrow()
+    }
+
+    /// The commit message's undo.
+    pub fn message_undo(&self) -> &NSUndoManager {
+        &self.ivars().undo
     }
 
     pub fn controller(&self) -> Option<Retained<WindowController>> {
@@ -604,6 +703,7 @@ impl GitPanel {
                     log,
                     operation,
                     worktrees,
+                    stash,
                     ..
                 } = &loaded
             {
@@ -611,12 +711,14 @@ impl GitPanel {
                     status,
                     log.clone(),
                     worktrees.clone(),
+                    stash.entries.clone(),
                     HISTORY_PAGE * (state.more_pages + 1),
                 );
                 if state.model == model
                     && state.branch == status.branch
                     && state.branches == *branches
                     && state.operation == *operation
+                    && state.stash_apply == stash.apply
                 {
                     return;
                 }
@@ -633,13 +735,30 @@ impl GitPanel {
                     log,
                     operation,
                     worktrees,
+                    stash,
                 } => {
+                    let StashRead {
+                        entries: stashes,
+                        apply,
+                    } = *stash;
                     state.phase = Phase::Ready;
                     state.operation = operation;
+                    state.stash_apply = apply;
                     state.repo = Some(repo);
                     state.branch = status.branch.clone();
                     state.branches = branches;
-                    state.model = Model::new(&status, log, worktrees, HISTORY_PAGE * (state.more_pages + 1));
+                    let limit = HISTORY_PAGE * (state.more_pages + 1);
+                    state.model = Model::new(&status, log, worktrees, stashes, limit);
+                    let kept: HashSet<&String> = state.model.stashes.iter().map(|s| &s.hash).collect();
+                    let gone: Vec<String> = state
+                        .open_stashes
+                        .iter()
+                        .filter(|h| !kept.contains(h))
+                        .cloned()
+                        .collect();
+                    for hash in gone {
+                        state.open_stashes.remove(&hash);
+                    }
                 }
             }
             if state.phase != Phase::Ready {
@@ -679,6 +798,12 @@ impl GitPanel {
             None if item.is_none() => state.model.sections().into_iter().map(RowKey::Section).collect(),
             Some(RowKey::Section(section)) => state.model.keys(section),
             Some(RowKey::Worktree(path)) => state.model.tree_keys(&path),
+            Some(RowKey::Stash(hash)) => state.stash_changes.get(&hash).map_or_else(Vec::new, |files| {
+                files
+                    .iter()
+                    .map(|f| RowKey::StashFile(hash.clone(), f.path.clone()))
+                    .collect()
+            }),
             Some(RowKey::Commit(hash)) => state.commit_changes.get(&hash).map_or_else(Vec::new, |changes| {
                 changes
                     .files
@@ -729,6 +854,14 @@ impl GitPanel {
                     self.read_changes(&hash);
                 } else {
                     self.state().open_commits.remove(&hash);
+                }
+            }
+            Some(RowKey::Stash(hash)) => {
+                if expanded {
+                    self.state().open_stashes.insert(hash.clone());
+                    self.read_stash_changes(&hash);
+                } else {
+                    self.state().open_stashes.remove(&hash);
                 }
             }
             _ => {}
@@ -787,6 +920,10 @@ fn load(root: &Path, limit: usize) -> Loaded {
         .unwrap_or_default();
     let operation = repo.operation().unwrap_or(None);
     let worktrees = crate::worktrees::read(&git, &repo, root, &branches);
+    let stash = Box::new(StashRead {
+        entries: repo.stashes().unwrap_or_default(),
+        apply: repo.stash_apply().unwrap_or(None),
+    });
     Loaded::Ready {
         repo,
         status: Box::new(status),
@@ -794,5 +931,6 @@ fn load(root: &Path, limit: usize) -> Loaded {
         log,
         operation,
         worktrees,
+        stash,
     }
 }

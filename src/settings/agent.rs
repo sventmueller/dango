@@ -1,7 +1,7 @@
 //! The Agent tab of the settings (E6): the providers and endpoints with their keys, which the keychain keeps; the
 //! model, effort and prices of new threads of the own agent; the rules stored per project (E27), which only the user
-//! adds and which can be removed here; and the folders the thread's sandbox lets the agent reach besides the project
-//! (E19).
+//! adds and which can be removed here; the folders the thread's sandbox lets the agent reach besides the project
+//! (E19); and the model for commit messages with the permissions given for it (E88).
 
 use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
@@ -747,6 +747,11 @@ impl AgentSettings {
             t("Mit eingeschalteter Sandbox erreichen die Datei- und Webwerkzeuge des eigenen Agenten nur das Projekt, den temporären Ordner und diese Ordner; Befehle schreiben nirgends sonst hin, und es gibt kein Netzwerk. Gilt für Threads, die danach starten."),
         ));
         views.extend([folders_scroll, list_bar::bar(mtm, &[&add_folder, &remove_folder], &[])]);
+        views.extend(super::commit_message::views(
+            mtm,
+            |text| note(mtm, text),
+            |text| heading(mtm, text),
+        ));
         let _ = self.ivars().views.set(Views {
             endpoints,
             prices,

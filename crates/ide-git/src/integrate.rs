@@ -83,7 +83,7 @@ impl Repository {
     }
 
     /// The untracked files among `paths`, or all of them when `paths` is empty; ignored ones are left out.
-    fn untracked(&self, paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
+    pub(crate) fn untracked(&self, paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
         let mut args: Vec<OsString> = ["ls-files", "-z", "--others", "--exclude-standard", "--"]
             .map(OsString::from)
             .to_vec();

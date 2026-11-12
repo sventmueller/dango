@@ -35,6 +35,7 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
         view_menu(mtm, &keys),
         go_menu(mtm, &keys),
         code_menu(mtm, &keys),
+        crate::git_panel::menu(mtm),
         window_item,
         help_item,
     ] {

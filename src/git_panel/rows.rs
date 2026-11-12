@@ -283,6 +283,20 @@ impl HoverCell {
         cell
     }
 
+    /// The buttons that show on hover, with the constraints that keep the text clear of them and, without them, of the
+    /// row's far end.
+    pub fn set_actions(
+        &self,
+        actions: Retained<NSView>,
+        beside: Retained<NSLayoutConstraint>,
+        to_edge: Retained<NSLayoutConstraint>,
+    ) {
+        let ivars = self.ivars();
+        let _ = ivars.actions.set(actions);
+        let _ = ivars.beside_actions.set(beside);
+        let _ = ivars.to_edge.set(to_edge);
+    }
+
     fn show_actions(&self, visible: bool) {
         let ivars = self.ivars();
         if let (Some(actions), Some(beside), Some(edge)) =
@@ -328,6 +342,14 @@ impl GitPanel {
                 let change = state.model.tree(tree)?.changed.iter().find(|f| f.path == *file)?.change;
                 drop(state);
                 Some(self.tree_file_cell(mtm, tree, file, change))
+            }
+            RowKey::Stash(hash) => {
+                drop(state);
+                self.stash_cell(mtm, hash)
+            }
+            RowKey::StashFile(hash, file) => {
+                drop(state);
+                self.stash_file_cell(mtm, hash, file)
             }
         }
     }
@@ -444,6 +466,12 @@ impl GitPanel {
             self.keep_branch(&keys);
         } else if action == sel!(ideGitRemoveTree:) {
             self.remove_tree(&keys);
+        } else if action == sel!(ideGitApplyStash:) {
+            self.apply_stash(&keys, false);
+        } else if action == sel!(ideGitPopStash:) {
+            self.apply_stash(&keys, true);
+        } else if action == sel!(ideGitDropStash:) {
+            self.drop_stash(&keys);
         } else {
             self.run_history_action(action, &keys);
         }
@@ -555,6 +583,8 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
     }
     let files = match (section, count) {
         (Section::Commits, _) => tf("{}, {} Commits", &[section.title(), &count.to_string()]),
+        (Section::Stashes, 1) => tf("{}, 1 Eintrag", &[section.title()]),
+        (Section::Stashes, _) => tf("{}, {} Einträge", &[section.title(), &count.to_string()]),
         (_, 1) => tf("{}, 1 Datei", &[section.title()]),
         _ => tf("{}, {} Dateien", &[section.title(), &count.to_string()]),
     };
@@ -615,10 +645,12 @@ impl GitPanel {
             return;
         }
         match super::panel::key_of(&item) {
-            Some(key @ (RowKey::File(..) | RowKey::WorktreeFile(..) | RowKey::CommitFile(..))) => {
+            Some(
+                key @ (RowKey::File(..) | RowKey::WorktreeFile(..) | RowKey::CommitFile(..) | RowKey::StashFile(..)),
+            ) => {
                 self.show_diff(&key, true);
             }
-            Some(RowKey::Commit(_)) => self.toggle(&item),
+            Some(RowKey::Commit(_) | RowKey::Stash(_)) => self.toggle(&item),
             Some(RowKey::More) => self.read_more(),
             _ => {}
         }
@@ -645,9 +677,11 @@ impl GitPanel {
         };
         match super::panel::key_of(&item) {
             Some(key @ RowKey::File(Section::Conflicts, _)) => self.open(vec![key]),
-            Some(key @ (RowKey::File(..) | RowKey::CommitFile(..))) => self.show_diff(&key, false),
+            Some(key @ (RowKey::File(..) | RowKey::CommitFile(..) | RowKey::StashFile(..))) => {
+                self.show_diff(&key, false)
+            }
             Some(RowKey::WorktreeFile(tree, file)) => self.show_tree_diff(&tree, &file, false),
-            Some(RowKey::Section(_) | RowKey::Worktree(_) | RowKey::Commit(_)) => self.toggle(&item),
+            Some(RowKey::Section(_) | RowKey::Worktree(_) | RowKey::Commit(_) | RowKey::Stash(_)) => self.toggle(&item),
             Some(RowKey::More) => self.read_more(),
             None => {}
         }
@@ -686,18 +720,21 @@ impl GitPanel {
             // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
             unsafe { outline.expandItem(Some(&item)) };
         }
-        let (open, commits): (Vec<_>, Vec<_>) = {
+        let (open, commits, stashes): (Vec<_>, Vec<_>, Vec<_>) = {
             let state = self.read();
             let shown = |hash: &&String| state.model.commit(hash).is_some();
+            let stashed = |hash: &&String| state.model.stash(hash).is_some();
             (
                 state.open_trees.iter().cloned().collect(),
                 state.open_commits.iter().filter(shown).cloned().collect(),
+                state.open_stashes.iter().filter(stashed).cloned().collect(),
             )
         };
         let keys = open
             .into_iter()
             .map(RowKey::Worktree)
-            .chain(commits.into_iter().map(RowKey::Commit));
+            .chain(commits.into_iter().map(RowKey::Commit))
+            .chain(stashes.into_iter().map(RowKey::Stash));
         for key in keys {
             let item = self.item_for(&key);
             // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
@@ -747,7 +784,7 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
         return match section {
             Section::Staged => vec![(t("Alle zurücknehmen"), Some(sel!(ideGitUnstageAll:)))],
             Section::Changes => vec![(t("Alle vormerken"), Some(sel!(ideGitStageAll:)))],
-            Section::Conflicts | Section::Worktrees | Section::Commits => vec![],
+            Section::Conflicts | Section::Stashes | Section::Worktrees | Section::Commits => vec![],
         };
     }
     if let [RowKey::Worktree(_) | RowKey::WorktreeFile(..)] = keys {
@@ -755,6 +792,9 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
     }
     if let [RowKey::Commit(_) | RowKey::CommitFile(..)] = keys {
         return super::history::menu(keys);
+    }
+    if let [RowKey::Stash(_) | RowKey::StashFile(..)] = keys {
+        return super::stashes::menu(keys);
     }
     if files.is_empty() {
         return vec![];

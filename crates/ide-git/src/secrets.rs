@@ -66,10 +66,22 @@ impl Repository {
     }
 
     fn scan(&self, what: &[&str]) -> Result<SecretScan> {
+        let mut args = vec!["git"];
+        args.extend_from_slice(what);
+        Ok(match self.gitleaks(&args, None)? {
+            None => SecretScan::NotInstalled,
+            Some(findings) if findings.is_empty() => SecretScan::Clean,
+            Some(findings) => SecretScan::Found(findings),
+        })
+    }
+
+    /// Runs `gitleaks <command>` on the repository, or on `input` for its `stdin` command; `None` when the login
+    /// shell's PATH has no gitleaks.
+    pub(crate) fn gitleaks(&self, command: &[&str], input: Option<Vec<u8>>) -> Result<Option<Vec<Finding>>> {
         let Some(gitleaks) = self.git().find("gitleaks") else {
-            return Ok(SecretScan::NotInstalled);
+            return Ok(None);
         };
-        let call = Call::new(self.root(), ["git"]).args(what).args([
+        let mut call = Call::new(self.root(), command).args([
             "--no-banner",
             "--no-color",
             "--redact",
@@ -77,8 +89,11 @@ impl Repository {
             "--report-path=-",
             "--log-level=error",
             &format!("--exit-code={LEAKS_FOUND}"),
-            ".",
         ]);
+        call = match input {
+            Some(input) => call.input(input),
+            None => call.args(["."]),
+        };
         let output = self.git().run_program(&gitleaks, call)?;
         // gitleaks exits with 0 even when git failed under it, and says so only in its log.
         let failed = output
@@ -87,17 +102,12 @@ impl Repository {
             .any(|l| l.contains(" ERR ") || l.contains(" FTL "));
         if !(output.code == 0 || output.code == LEAKS_FOUND) || (failed && output.code == 0) {
             return Err(Error::Failed {
-                command: "gitleaks git".into(),
+                command: format!("gitleaks {}", command.first().unwrap_or(&"")),
                 code: Some(output.code),
                 output: output.said(),
             });
         }
-        let findings = parse(&output.stdout)?;
-        Ok(if findings.is_empty() {
-            SecretScan::Clean
-        } else {
-            SecretScan::Found(findings)
-        })
+        parse(&output.stdout).map(Some)
     }
 }
 

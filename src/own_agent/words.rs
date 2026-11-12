@@ -37,6 +37,8 @@ impl Wording for Words {
             }
             Reason::Destructive(Destructive::ResetHard) => t("git reset --hard verwirft nicht gesicherte Änderungen"),
             Reason::Destructive(Destructive::Clean) => t("git clean -f löscht Dateien, die git nicht verfolgt"),
+            Reason::Destructive(Destructive::StashDrop) => t("git stash drop löscht einen Stash endgültig"),
+            Reason::Destructive(Destructive::StashClear) => t("git stash clear löscht alle Stashes endgültig"),
         }
         .to_string()
     }

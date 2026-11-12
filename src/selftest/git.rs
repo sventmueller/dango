@@ -5,7 +5,9 @@
 //! appearance.
 
 mod flows;
+pub(super) mod message;
 mod sheets;
+pub(super) mod stash;
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

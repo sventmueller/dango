@@ -143,14 +143,16 @@ impl GitPanel {
         );
         ui.fetch.setEnabled(idle);
         ui.commit.setEnabled(idle && !stepping);
+        let stash_conflict = self.read().stash_apply.is_some();
         ui.banner
             .resume
-            .setEnabled(idle && self.read().model.conflicts.is_empty());
+            .setEnabled(idle && (stash_conflict || self.read().model.conflicts.is_empty()));
         ui.banner.abort.setEnabled(idle);
         ui.pull.setEnabled(idle && !detached);
         ui.push.setEnabled(idle && !detached);
         ui.branch.setEnabled(idle);
         ui.progress_row.setHidden(idle);
+        self.update_message_controls();
         let Some((task, cancellable)) = busy else {
             // SAFETY: A nil sender is what AppKit's own callers pass.
             unsafe { ui.progress.stopAnimation(None) };
@@ -170,8 +172,13 @@ impl GitPanel {
             Task::Continue => t("Wird fortgesetzt …"),
             Task::Abort => t("Wird abgebrochen …"),
             Task::TakeOver => t("Worktree wird übernommen …"),
+            Task::Stash => t("Stash läuft …"),
+            Task::Message => "",
         };
+        let progress = self.read().message.progress.clone();
+        let text = if task == Task::Message { progress.as_str() } else { text };
         ui.progress_label.setStringValue(&ns(text));
+        crate::util::set_label(&ui.progress_label, Some(text));
     }
 
     pub fn show_progress(&self, progress: &Progress) {
@@ -193,22 +200,45 @@ impl GitPanel {
         }
     }
 
-    /// Shows the banner while a merge or rebase waits, saying how many conflicts are left.
+    /// Shows the banner while a merge, rebase or stash apply waits, saying how many conflicts are left.
     pub fn update_banner(&self) {
         let banner = &self.ui().banner;
-        let (operation, open) = {
+        let (operation, stash, open) = {
             let state = self.read();
-            (state.operation, state.model.conflicts.len())
+            (state.operation, state.stash_apply.clone(), state.model.conflicts.len())
         };
+        let left = match open {
+            1 => t("1 Konflikt ist noch offen.").to_string(),
+            n => tf("{} Konflikte sind noch offen.", &[&n.to_string()]),
+        };
+        if let Some(stash) = stash {
+            let mut detail = match open {
+                0 => t("Alle Konflikte gelöst. Fertig schließt das Anwenden ab.").to_string(),
+                _ => left,
+            };
+            if stash.pop {
+                detail.push(' ');
+                detail.push_str(t("Der Stash bleibt erhalten, weil sein Anwenden Konflikte hatte."));
+            }
+            banner.title.setStringValue(&ns(t("Stash-Konflikt")));
+            banner.resume.setTitle(&ns(t("Fertig")));
+            banner.abort.setTitle(&ns(t("Abbrechen …")));
+            banner.detail.setStringValue(&ns(&detail));
+            banner.detail.setPreferredMaxLayoutWidth(self.ui().text_width(16.0));
+            banner.view.setHidden(false);
+            self.update_busy();
+            return;
+        }
         let Some(operation) = operation else {
             banner.view.setHidden(true);
             return;
         };
         banner.title.setStringValue(&ns(running(operation)));
+        banner.resume.setTitle(&ns(t("Fortsetzen")));
+        banner.abort.setTitle(&ns(t("Vorgang abbrechen …")));
         let detail = match open {
             0 => t("Alle Konflikte gelöst. Fortsetzen schließt den Vorgang ab.").to_string(),
-            1 => t("1 Konflikt ist noch offen.").to_string(),
-            n => tf("{} Konflikte sind noch offen.", &[&n.to_string()]),
+            _ => left,
         };
         banner.detail.setStringValue(&ns(&detail));
         banner.detail.setPreferredMaxLayoutWidth(self.ui().text_width(16.0));

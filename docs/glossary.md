@@ -133,6 +133,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote | |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase | Git operations |
 | Worktree | worktree | a second working copy for a thread |
+| Stash, Stashes | stash, stashes | changes parked with `git stash` and applied again later; one entry is a Stash |
 | Übernehmen (Worktree) | take over | bring a worktree thread's work into the user's branch |
 | Arbeitskopie | working tree | |
 | Lauf, Läufe | run, runs | of CI |
@@ -254,6 +255,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | فرع / المستودع البعيد |
 | Push / Pull / Fetch / Rebase | Push / Pull / Fetch / Rebase |
 | Worktree | Worktree |
+| Stash | Stash |
 | Übernehmen (Worktree) | ضم |
 | Arbeitskopie | نسخة العمل |
 | Lauf, Läufe | تشغيل، عمليات التشغيل |
@@ -369,6 +371,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branca / remot |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | incorporar |
 | Arbeitskopie | còpia de treball |
 | Lauf, Läufe | execució, execucions |
@@ -483,6 +486,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | větev / vzdálený repozitář |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | převzít |
 | Arbeitskopie | pracovní kopie |
 | Lauf, Läufe | běh, běhy |
@@ -595,6 +599,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | overfør |
 | Arbeitskopie | arbejdskopi |
 | Lauf, Läufe | kørsel, kørsler |
@@ -710,6 +715,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | ενσωμάτωση |
 | Arbeitskopie | αντίγραφο εργασίας |
 | Lauf, Läufe | εκτέλεση, εκτελέσεις |
@@ -825,6 +831,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | rama / remoto |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | incorporar |
 | Arbeitskopie | copia de trabajo |
 | Lauf, Läufe | ejecución, ejecuciones |
@@ -941,6 +948,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | haara / etärepositorio |
 | Push / Pull / Fetch / Rebase | Push / Pull / Fetch / Rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | ota käyttöön |
 | Arbeitskopie | työkopio |
 | Lauf, Läufe | ajo, ajot |
@@ -1054,6 +1062,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branche / dépôt distant |
 | Push / Pull / Fetch / Rebase | Push / Pull / Fetch / Rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | intégrer |
 | Arbeitskopie | copie de travail |
 | Lauf, Läufe | exécution, exécutions |
@@ -1171,6 +1180,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | Branch / Remote |
 | Push / Pull / Fetch / Rebase | Push / Pull / Fetch / Rebase |
 | Worktree | Worktree |
+| Stash | Stash |
 | Übernehmen (Worktree) | שילוב |
 | Arbeitskopie | עותק העבודה |
 | Lauf, Läufe | הרצה, הרצות |
@@ -1284,6 +1294,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | ब्रांच / रिमोट |
 | Push / Pull / Fetch / Rebase | पुश / पुल / फ़ेच / रीबेस |
 | Worktree | वर्कट्री |
+| Stash | स्टैश |
 | Übernehmen (Worktree) | शामिल करना |
 | Arbeitskopie | वर्किंग ट्री |
 | Lauf, Läufe | रन |
@@ -1398,6 +1409,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | grana / udaljeni repozitorij |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | preuzeti |
 | Arbeitskopie | radna kopija |
 | Lauf, Läufe | pokretanje, pokretanja |
@@ -1514,6 +1526,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | ág / távoli tároló |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | átvétel |
 | Arbeitskopie | munkakönyvtár |
 | Lauf, Läufe | futás, futások |
@@ -1628,6 +1641,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | ambil |
 | Arbeitskopie | salinan kerja |
 | Lauf, Läufe | run |
@@ -1742,6 +1756,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | riprendi |
 | Arbeitskopie | copia di lavoro |
 | Lauf, Läufe | esecuzione, esecuzioni |
@@ -1857,6 +1872,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | ブランチ / リモート |
 | Push / Pull / Fetch / Rebase | プッシュ / プル / フェッチ / リベース |
 | Worktree | ワークツリー |
+| Stash | スタッシュ |
 | Übernehmen (Worktree) | 取り込む |
 | Arbeitskopie | 作業ツリー |
 | Lauf, Läufe | 実行 |
@@ -1971,6 +1987,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | 브랜치 / 원격 |
 | Push / Pull / Fetch / Rebase | 푸시 / 풀 / 페치 / 리베이스 |
 | Worktree | 워크트리 |
+| Stash | 스태시 |
 | Übernehmen (Worktree) | 가져오기 |
 | Arbeitskopie | 작업 트리 |
 | Lauf, Läufe | 실행 |
@@ -2084,6 +2101,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | ambil alih |
 | Arbeitskopie | salinan kerja |
 | Lauf, Läufe | larian |
@@ -2198,6 +2216,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | overnemen |
 | Arbeitskopie | werkkopie |
 | Lauf, Läufe | run, runs |
@@ -2312,6 +2331,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | overta |
 | Arbeitskopie | arbeidskopi |
 | Lauf, Läufe | kjøring, kjøringer |
@@ -2426,6 +2446,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | gałąź / repozytorium zdalne |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | przejmij |
 | Arbeitskopie | kopia robocza |
 | Lauf, Läufe | uruchomienie, uruchomienia |
@@ -2541,6 +2562,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remoto |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | incorporar |
 | Arbeitskopie | cópia de trabalho |
 | Lauf, Läufe | execução, execuções |
@@ -2656,6 +2678,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | branch / remoto |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | incorporar |
 | Arbeitskopie | cópia de trabalho |
 | Lauf, Läufe | execução, execuções |
@@ -2771,6 +2794,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | ramură / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | preluați |
 | Arbeitskopie | copie de lucru |
 | Lauf, Läufe | rulare, rulări |
@@ -2886,6 +2910,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | ветка / удаленный репозиторий |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | перенести |
 | Arbeitskopie | рабочая копия |
 | Lauf, Läufe | запуск, запуски |
@@ -3001,6 +3026,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | vetva / vzdialený repozitár |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | prevziať |
 | Arbeitskopie | pracovná kópia |
 | Lauf, Läufe | spustenie, spustenia |
@@ -3117,6 +3143,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | veja / oddaljeni repozitorij |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | prevzemi |
 | Arbeitskopie | delovna kopija |
 | Lauf, Läufe | zagon, zagoni |
@@ -3231,6 +3258,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | gren / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | ta över |
 | Arbeitskopie | arbetskopia |
 | Lauf, Läufe | körning, körningar |
@@ -3346,6 +3374,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | Branch / Remote |
 | Push / Pull / Fetch / Rebase | Push / Pull / Fetch / Rebase |
 | Worktree | Worktree |
+| Stash | Stash |
 | Übernehmen (Worktree) | นำมาใช้ |
 | Arbeitskopie | สำเนาที่ใช้งาน |
 | Lauf, Läufe | การรัน |
@@ -3462,6 +3491,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | dal / uzak depo |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | aktar |
 | Arbeitskopie | çalışma kopyası |
 | Lauf, Läufe | çalıştırma, çalıştırmalar |
@@ -3576,6 +3606,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | гілка / віддалений репозиторій |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | перенести |
 | Arbeitskopie | робоча копія |
 | Lauf, Läufe | запуск, запуски |
@@ -3690,6 +3721,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | nhánh / remote |
 | Push / Pull / Fetch / Rebase | push / pull / fetch / rebase |
 | Worktree | worktree |
+| Stash | stash |
 | Übernehmen (Worktree) | tiếp nhận |
 | Arbeitskopie | bản sao làm việc |
 | Lauf, Läufe | lần chạy |
@@ -3803,6 +3835,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | 分支 / 远程仓库 |
 | Push / Pull / Fetch / Rebase | 推送 / 拉取 / 抓取 / 变基 |
 | Worktree | 工作树 |
+| Stash | 储藏 |
 | Übernehmen (Worktree) | 并入 |
 | Arbeitskopie | 工作区 |
 | Lauf, Läufe | 运行 |
@@ -3917,6 +3950,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Branch / Remote | 分支 / 遠端 |
 | Push / Pull / Fetch / Rebase | 推送 / 提取 / 擷取 / 重訂基底 |
 | Worktree | 工作樹 |
+| Stash | 儲藏 |
 | Übernehmen (Worktree) | 整合 |
 | Arbeitskopie | 工作目錄 |
 | Lauf, Läufe | 執行 |

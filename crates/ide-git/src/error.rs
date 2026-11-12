@@ -115,6 +115,8 @@ pub enum Error {
         /// The path.
         path: PathBuf,
     },
+    /// A stash entry is no longer at the place it was listed at, as after a stash made or dropped elsewhere.
+    StashMoved,
     /// The caller cancelled the operation, or the process was stopped.
     Cancelled,
     /// The operation took longer than its limit and was stopped.
@@ -162,6 +164,7 @@ impl fmt::Display for Error {
             Error::Untracked { paths } => write!(f, "{} files are untracked", paths.len()),
             Error::InvalidName { name } => write!(f, "{name:?} is not a valid name"),
             Error::OutsideFolder { path } => write!(f, "{} is outside the folder", path.display()),
+            Error::StashMoved => write!(f, "the stash changed since it was read"),
             Error::Cancelled => write!(f, "cancelled"),
             Error::TimedOut => write!(f, "git took too long"),
             Error::OutputTooLarge => write!(f, "git printed too much"),

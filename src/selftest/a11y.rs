@@ -6,7 +6,7 @@
 //! once, in the first state that shows it, and all of them are written to `<scenario>-findings.txt` beside the report.
 //! See "Accessibility audit" in docs/development.md.
 
-mod audit;
+pub(super) mod audit;
 mod flows;
 mod keys;
 mod plan;

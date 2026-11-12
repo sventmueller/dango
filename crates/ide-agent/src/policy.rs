@@ -135,6 +135,10 @@ pub enum Destructive {
     ResetHard,
     /// `git clean -f` deletes untracked files.
     Clean,
+    /// `git stash drop` deletes a stash entry.
+    StashDrop,
+    /// `git stash clear` deletes every stash entry.
+    StashClear,
 }
 
 /// The thread's settings that decide.
@@ -342,8 +346,8 @@ pub(crate) fn words(command: &str) -> Vec<String> {
     words
 }
 
-/// How `command` destroys work that git cannot bring back, if it does: a forced push, `reset --hard`, or `clean`
-/// with `-f`.
+/// How `command` destroys work that git cannot bring back, if it does: a forced push, `reset --hard`, `clean` with
+/// `-f`, or dropping or clearing the stash.
 pub fn destructive_git(command: &str) -> Option<Destructive> {
     segments(command).iter().find_map(|part| destructive_part(&words(part)))
 }
@@ -379,6 +383,11 @@ fn destructive_part(words: &[String]) -> Option<Destructive> {
         "clean" if (short('f') || args.contains(&"--force")) && !short('n') && !args.contains(&"--dry-run") => {
             Some(Destructive::Clean)
         }
+        "stash" => match args.iter().find(|a| !a.starts_with('-')).copied() {
+            Some("drop") => Some(Destructive::StashDrop),
+            Some("clear") => Some(Destructive::StashClear),
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -408,6 +417,11 @@ mod tests {
             "git clean -xdf",
             "/usr/bin/git clean --force",
             "echo ok; git push -uf origin x",
+            "git stash drop",
+            "git stash drop stash@{1}",
+            "git -C repo stash --quiet drop",
+            "git stash clear",
+            "make && git stash clear",
         ] {
             assert!(destructive_git(command).is_some(), "{command}");
         }
@@ -418,6 +432,11 @@ mod tests {
             "git clean -fn",
             "echo 'git push --force'",
             "git log --format=%f",
+            "git stash",
+            "git stash push -m drop",
+            "git stash list",
+            "git stash pop",
+            "git stash show clear",
         ] {
             assert!(destructive_git(command).is_none(), "{command}");
         }
@@ -436,6 +455,36 @@ mod tests {
         };
         assert_eq!((rule, risky), (None, true));
         assert_eq!(all.decide(&Action::Command("git push".into())), Verdict::Allow);
+    }
+
+    #[test]
+    fn dropping_or_clearing_the_stash_asks_every_time_and_can_never_be_stored() {
+        let stored = vec![
+            Rule::Command {
+                prefix: "git stash".into(),
+            },
+            Rule::Command { prefix: "git".into() },
+        ];
+        for approval in [Approval::Manual, Approval::Edits, Approval::All] {
+            let policy = policy(approval, stored.clone());
+            for (command, why) in [
+                ("git stash drop stash@{0}", Destructive::StashDrop),
+                ("git stash clear", Destructive::StashClear),
+            ] {
+                assert_eq!(
+                    policy.decide(&Action::Command(command.into())),
+                    Verdict::Ask {
+                        rule: None,
+                        reason: Some(Reason::Destructive(why)),
+                        blocked_path: None,
+                        risky: true,
+                    },
+                    "{command} under {approval:?}"
+                );
+            }
+        }
+        let all = policy(Approval::All, vec![]);
+        assert_eq!(all.decide(&Action::Command("git stash push".into())), Verdict::Allow);
     }
 
     #[test]

@@ -1,9 +1,9 @@
-//! What the Git panel lists: staged files, other changes, the worktrees of threads and recent commits, each row named
-//! by a key that survives a refresh.
+//! What the Git panel lists: staged files, other changes, the stash, the worktrees of threads and recent commits, each
+//! row named by a key that survives a refresh.
 
 use std::path::{Path, PathBuf};
 
-use ide_git::{Commit, EntryKind, FileState, Status, StatusEntry};
+use ide_git::{Commit, EntryKind, FileState, Stash, Status, StatusEntry};
 use splat_i18n::t;
 
 use super::graph::GraphRow;
@@ -18,6 +18,8 @@ pub enum Section {
     Staged,
     /// Changes not staged and untracked files.
     Changes,
+    /// The entries of the stash (E87).
+    Stashes,
     /// Threads that work in worktrees of their own (I1).
     Worktrees,
     /// The history of HEAD and its upstream as a graph.
@@ -25,10 +27,11 @@ pub enum Section {
 }
 
 impl Section {
-    pub const ALL: [Section; 5] = [
+    pub const ALL: [Section; 6] = [
         Section::Conflicts,
         Section::Staged,
         Section::Changes,
+        Section::Stashes,
         Section::Worktrees,
         Section::Commits,
     ];
@@ -38,6 +41,7 @@ impl Section {
             Section::Conflicts => t("Konflikte"),
             Section::Staged => t("Vorgemerkt"),
             Section::Changes => t("Änderungen"),
+            Section::Stashes => t("Stashes"),
             Section::Worktrees => t("Worktree-Threads"),
             Section::Commits => t("Graph"),
         }
@@ -48,6 +52,7 @@ impl Section {
             Section::Conflicts => "conflicts",
             Section::Staged => "staged",
             Section::Changes => "changes",
+            Section::Stashes => "stashes",
             Section::Worktrees => "worktrees",
             Section::Commits => "commits",
         }
@@ -144,6 +149,7 @@ pub struct Model {
     pub staged: Vec<FileRow>,
     pub changes: Vec<FileRow>,
     pub worktrees: Vec<TreeState>,
+    pub stashes: Vec<Stash>,
     pub commits: Vec<Commit>,
     /// The graph's row of each commit.
     pub graph: Vec<GraphRow>,
@@ -152,13 +158,20 @@ pub struct Model {
 }
 
 impl Model {
-    /// The rows of `status`, `worktrees` and `commits`, read up to `limit` of them.
-    pub fn new(status: &Status, commits: Vec<Commit>, worktrees: Vec<TreeState>, limit: usize) -> Model {
+    /// The rows of `status`, `stashes`, `worktrees` and `commits`, read up to `limit` of them.
+    pub fn new(
+        status: &Status,
+        commits: Vec<Commit>,
+        worktrees: Vec<TreeState>,
+        stashes: Vec<Stash>,
+        limit: usize,
+    ) -> Model {
         let mut model = Model {
             graph: super::graph::layout(&commits),
             more: commits.len() >= limit,
             commits,
             worktrees,
+            stashes,
             ..Model::default()
         };
         for entry in &status.entries {
@@ -194,7 +207,8 @@ impl Model {
         model
     }
 
-    /// The sections that show: conflicts and staged files only when there are some, commits only after the first.
+    /// The sections that show: conflicts, staged files and stashes only when there are some, commits only after the
+    /// first.
     pub fn sections(&self) -> Vec<Section> {
         Section::ALL
             .into_iter()
@@ -202,6 +216,7 @@ impl Model {
                 Section::Conflicts => !self.conflicts.is_empty(),
                 Section::Staged => !self.staged.is_empty(),
                 Section::Changes => true,
+                Section::Stashes => !self.stashes.is_empty(),
                 Section::Worktrees => !self.worktrees.is_empty(),
                 Section::Commits => !self.commits.is_empty(),
             })
@@ -213,7 +228,7 @@ impl Model {
             Section::Conflicts => &self.conflicts,
             Section::Staged => &self.staged,
             Section::Changes => &self.changes,
-            Section::Worktrees | Section::Commits => &[],
+            Section::Stashes | Section::Worktrees | Section::Commits => &[],
         }
     }
 
@@ -221,6 +236,7 @@ impl Model {
         match section {
             Section::Commits => self.commits.len(),
             Section::Worktrees => self.worktrees.len(),
+            Section::Stashes => self.stashes.len(),
             other => self.files(other).len(),
         }
     }
@@ -239,6 +255,7 @@ impl Model {
                 .iter()
                 .map(|w| RowKey::Worktree(w.tree.path.clone()))
                 .collect(),
+            Section::Stashes => self.stashes.iter().map(|s| RowKey::Stash(s.hash.clone())).collect(),
             other => self
                 .files(other)
                 .iter()
@@ -249,6 +266,11 @@ impl Model {
 
     pub fn file(&self, section: Section, path: &Path) -> Option<&FileRow> {
         self.files(section).iter().find(|f| f.path() == path)
+    }
+
+    /// The stash entry whose commit is `hash`.
+    pub fn stash(&self, hash: &str) -> Option<&Stash> {
+        self.stashes.iter().find(|s| s.hash == hash)
     }
 
     pub fn commit(&self, hash: &str) -> Option<&Commit> {
@@ -310,6 +332,10 @@ pub enum RowKey {
     CommitFile(String, PathBuf),
     /// The row that reads more of the history.
     More,
+    /// A stash entry, by its commit.
+    Stash(String),
+    /// A file a stash entry changed: the entry's commit, the file relative to the repository's root.
+    StashFile(String, PathBuf),
 }
 
 impl RowKey {
@@ -322,6 +348,8 @@ impl RowKey {
             RowKey::WorktreeFile(tree, file) => format!("treefile:{}\0{}", tree.display(), file.display()),
             RowKey::CommitFile(hash, file) => format!("commitfile:{hash}\0{}", file.display()),
             RowKey::More => "more:".to_string(),
+            RowKey::Stash(hash) => format!("stash:{hash}"),
+            RowKey::StashFile(hash, file) => format!("stashfile:{hash}\0{}", file.display()),
         }
     }
 
@@ -332,6 +360,11 @@ impl RowKey {
             "commit" => Some(RowKey::Commit(rest.to_string())),
             "tree" => Some(RowKey::Worktree(PathBuf::from(rest))),
             "more" => Some(RowKey::More),
+            "stash" => Some(RowKey::Stash(rest.to_string())),
+            "stashfile" => {
+                let (hash, file) = rest.split_once('\0')?;
+                Some(RowKey::StashFile(hash.to_string(), PathBuf::from(file)))
+            }
             "commitfile" => {
                 let (hash, file) = rest.split_once('\0')?;
                 Some(RowKey::CommitFile(hash.to_string(), PathBuf::from(file)))
@@ -395,6 +428,7 @@ mod tests {
             ]),
             vec![],
             vec![],
+            vec![],
             50,
         );
         let staged: Vec<_> = model.staged.iter().map(|f| (f.path().to_path_buf(), f.mark)).collect();
@@ -420,6 +454,8 @@ mod tests {
             RowKey::WorktreeFile(PathBuf::from("/data/w/fix"), PathBuf::from("src/a:b.rs")),
             RowKey::CommitFile("abc123".into(), PathBuf::from("src/a:b.rs")),
             RowKey::More,
+            RowKey::Stash("def456".into()),
+            RowKey::StashFile("def456".into(), PathBuf::from("a:b/c d.rs")),
         ] {
             assert_eq!(RowKey::decode(&key.encode()), Some(key));
         }

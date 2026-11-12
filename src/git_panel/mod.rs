@@ -1,17 +1,22 @@
 //! The Git panel of the sidebar and the diff tab. git runs only in folders the user trusts (E22), always off the main
-//! thread; the only destructive operation on offer is discarding, after a confirmation (E27).
+//! thread; destructive operations, such as discarding or deleting a stash entry, ask first (E27).
 
+mod commands;
 mod commit_field;
 mod diff;
 mod diff_view;
 mod graph;
 mod history;
+pub mod message;
 mod model;
 mod ops;
 mod panel;
+#[cfg(feature = "selftest")]
+pub mod probe;
 mod progress;
 mod rows;
 mod sheets;
+mod stashes;
 mod text;
 mod toolbar;
 mod trees;
@@ -21,6 +26,7 @@ mod work;
 use std::path::Path;
 
 use crate::window::WindowController;
+pub use commands::menu;
 pub use toolbar::{TOOLBAR_ID, toolbar_item};
 #[cfg(feature = "selftest")]
 pub use toolbar::{choose as toolbar_choose, seen as toolbar_seen};

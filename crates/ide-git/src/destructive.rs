@@ -7,6 +7,7 @@ use crate::path::{from_bytes, unquoted};
 use crate::remote::{Progress, PushOptions, PushOutcome, word};
 use crate::repo::Repository;
 use crate::run::Cancel;
+use crate::stash::Stash;
 
 /// The destructive operations on a repository; every call site needs the user's explicit approval (E27).
 #[derive(Debug, Clone, Copy)]
@@ -71,6 +72,28 @@ impl Destructive<'_> {
     /// Removes the working tree at `path` with its changes and untracked files.
     pub fn remove_worktree(&self, path: &Path) -> Result<()> {
         self.repository.remove_worktree_with(path, true)
+    }
+
+    /// Deletes the stash entry `stash`; `Error::StashMoved` when it is no longer at its place.
+    pub fn drop_stash(&self, stash: &Stash) -> Result<()> {
+        let repository = self.repository;
+        let name = repository.checked_name(stash)?;
+        repository
+            .git()
+            .ok(repository.call(["stash", "drop", "--quiet", name.as_str()]))
+            .map(drop)
+    }
+
+    /// Deletes every stash entry.
+    pub fn clear_stashes(&self) -> Result<()> {
+        let repository = self.repository;
+        repository.git().ok(repository.call(["stash", "clear"])).map(drop)
+    }
+
+    /// Abandons the stash apply that waits at its conflicts and puts back the index and working tree from before it,
+    /// dropping the conflict resolutions made so far; the entry stays in the stash.
+    pub fn abort_stash_apply(&self) -> Result<()> {
+        self.repository.abort_stash_apply_with()
     }
 
     fn clean_with(&self, mode: &str, prefix: &str) -> Result<Vec<PathBuf>> {

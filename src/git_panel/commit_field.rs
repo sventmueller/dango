@@ -3,14 +3,17 @@
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSTextView};
-use objc2_foundation::{NSObjectProtocol, NSRect, NSSize};
+use objc2_app_kit::{NSBezierPath, NSEvent, NSEventModifierFlags, NSTextView};
+use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use super::panel::GitPanel;
 use crate::util::guarded;
 
 /// Return and the Return of the number block.
 const RETURN_KEYS: [u16; 2] = [36, 76];
+
+/// The corner the button that asks a model for the message covers, which the text flows around.
+const BUTTON_CORNER: NSSize = NSSize::new(20.0, 18.0);
 
 define_class!(
     // SAFETY: NSTextView has no subclassing requirements and `CommitTextView` does not implement Drop.
@@ -38,6 +41,13 @@ define_class!(
                 // SAFETY: The superclass's implementation, with this method's signature.
                 let _: () = unsafe { msg_send![super(self), keyDown: event] };
             }
+        }
+
+        #[unsafe(method(setFrameSize:))]
+        fn set_frame_size(&self, size: NSSize) {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
+            guarded((), || self.keep_corner_free());
         }
 
         // Tab moves on to the list of changes, as in a text field; ⌥Tab still types a tab.
@@ -75,6 +85,23 @@ impl CommitTextView {
         view.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
         view.setAutoresizingMask(objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable);
         view
+    }
+
+    /// Keeps the text out of the top far corner, where the button that asks a model for the message sits.
+    fn keep_corner_free(&self) {
+        // SAFETY: A text view made by `new` always has its container; nothing here keeps it beyond this call.
+        let Some(container) = (unsafe { self.textContainer() }) else {
+            return;
+        };
+        let width = container.size().width;
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let x = if rtl {
+            0.0
+        } else {
+            (width - BUTTON_CORNER.width).max(0.0)
+        };
+        let corner = NSBezierPath::bezierPathWithRect(NSRect::new(NSPoint::new(x, 0.0), BUTTON_CORNER));
+        container.setExclusionPaths(&NSArray::from_retained_slice(&[corner]));
     }
 
     pub fn text(&self) -> String {

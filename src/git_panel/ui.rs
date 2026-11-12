@@ -23,6 +23,8 @@ use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, s
 pub(super) const MARGIN: f64 = 8.0;
 const MESSAGE_HEIGHT: f64 = 62.0;
 const SYMBOL_POINTS: f64 = 13.0;
+/// How far the button that asks a model for the message keeps from the message box's corner.
+const AI_INSET: f64 = 4.0;
 
 pub struct Ui {
     pub page: Retained<NSView>,
@@ -43,6 +45,9 @@ pub struct Ui {
     problem_output: Retained<NSButton>,
     pub message: Retained<CommitTextView>,
     pub placeholder: Retained<NSTextField>,
+    /// Asks a model for the commit message (E88).
+    pub ai: Retained<NSButton>,
+    pub ai_box: AiBox,
     pub amend: Retained<NSButton>,
     pub commit: Retained<NSButton>,
     pub outline: Retained<GitOutlineView>,
@@ -65,7 +70,8 @@ impl Ui {
         let (progress_row, progress, progress_label, cancel) = progress_row(mtm, panel);
         let banner = Banner::new(mtm, panel);
         let (problem_row, problem_label, problem_output) = problem_row(mtm, panel);
-        let (message_box, message, placeholder) = message_box(mtm, panel);
+        let (message_box, message, placeholder, ai) = message_box(mtm, panel);
+        let ai_box = AiBox::new(mtm, panel);
         let (commit_row, amend, commit) = commit_row(mtm, panel);
         let (list, outline) = outline(mtm, panel);
         for (view, inset) in [
@@ -74,6 +80,7 @@ impl Ui {
             (&banner.view, MARGIN),
             (&problem_row, MARGIN),
             (&message_box, MARGIN),
+            (&ai_box.view, MARGIN),
             (&commit_row, MARGIN),
             (&list, 0.0),
         ] {
@@ -90,6 +97,7 @@ impl Ui {
         progress_row.setHidden(true);
         banner.view.setHidden(true);
         problem_row.setHidden(true);
+        ai_box.view.setHidden(true);
         content.setHidden(true);
         Ui {
             page,
@@ -110,6 +118,8 @@ impl Ui {
             problem_output,
             message,
             placeholder,
+            ai,
+            ai_box,
             amend,
             commit,
             outline,
@@ -194,6 +204,67 @@ impl Ui {
             t("Details …")
         }));
         self.problem_row.setHidden(false);
+    }
+}
+
+/// What follows a message a model wrote (E101): the note that it needs checking, writing it again, taking it back, and
+/// the request that went out.
+pub struct AiBox {
+    pub view: Retained<NSStackView>,
+    /// The note and the buttons that stay until the user's first own change.
+    pub written: Retained<NSStackView>,
+    pub sent: Retained<NSButton>,
+}
+
+impl AiBox {
+    fn new(mtm: MainThreadMarker, panel: &GitPanel) -> AiBox {
+        let icon = NSImageView::new(mtm);
+        if let Some(image) = symbol("sparkles", "") {
+            icon.setImage(Some(&image));
+        }
+        icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+        crate::util::hide_from_voiceover(&icon);
+        let note = NSTextField::wrappingLabelWithString(&ns(t("Von AI erstellt, bitte prüfen")), mtm);
+        note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+        note.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        note.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
+        let line = NSStackView::new(mtm);
+        line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        line.setSpacing(4.0);
+        line.addArrangedSubview(&icon);
+        line.addArrangedSubview(&note);
+        let link = |title: &str, action: Sel| {
+            let button = borderless_button(mtm, title, Some(panel), action);
+            button.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+            button.setContentTintColor(Some(&NSColor::controlAccentColor()));
+            button.setContentCompressionResistancePriority_forOrientation(
+                100.0,
+                NSLayoutConstraintOrientation::Horizontal,
+            );
+            button
+        };
+        let again = link(t("Neu erzeugen"), sel!(ideGitMessage:));
+        let undo = link(t("Widerrufen"), sel!(ideGitUndoMessage:));
+        let sent = link(t("Gesendeten Inhalt zeigen"), sel!(ideGitShowSent:));
+        let buttons = NSStackView::new(mtm);
+        buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        buttons.setSpacing(10.0);
+        buttons.addArrangedSubview(&again);
+        buttons.addArrangedSubview(&undo);
+        let written = NSStackView::new(mtm);
+        written.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+        written.setAlignment(NSLayoutAttribute::Leading);
+        written.setSpacing(2.0);
+        written.addArrangedSubview(&line);
+        written.addArrangedSubview(&buttons);
+        let view = NSStackView::new(mtm);
+        view.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+        view.setAlignment(NSLayoutAttribute::Leading);
+        view.setSpacing(2.0);
+        view.addArrangedSubview(&written);
+        view.addArrangedSubview(&sent);
+        view.setAccessibilityLabel(Some(&ns(t("Commit-Nachricht von AI"))));
+        AiBox { view, written, sent }
     }
 }
 
@@ -400,7 +471,12 @@ fn problem_row(
 fn message_box(
     mtm: MainThreadMarker,
     panel: &GitPanel,
-) -> (Retained<NSView>, Retained<CommitTextView>, Retained<NSTextField>) {
+) -> (
+    Retained<NSView>,
+    Retained<CommitTextView>,
+    Retained<NSTextField>,
+    Retained<NSButton>,
+) {
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(220.0, MESSAGE_HEIGHT));
     let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
     scroll.setBorderType(NSBorderType::BezelBorder);
@@ -441,7 +517,26 @@ fn message_box(
     ] {
         constraint.setActive(true);
     }
-    (container, text, placeholder)
+    let ai = symbol_button(
+        mtm,
+        "sparkles",
+        t("Commit-Nachricht erzeugen"),
+        SYMBOL_POINTS,
+        Some(panel),
+        sel!(ideGitMessage:),
+    );
+    ai.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+    container.addSubview(&ai);
+    ai.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        ai.trailingAnchor()
+            .constraintEqualToAnchor_constant(&container.trailingAnchor(), -AI_INSET),
+        ai.topAnchor()
+            .constraintEqualToAnchor_constant(&container.topAnchor(), AI_INSET),
+    ] {
+        constraint.setActive(true);
+    }
+    (container, text, placeholder, ai)
 }
 
 fn commit_row(
@@ -474,9 +569,19 @@ fn commit_row(
     if let Some(menu) = more.menu() {
         menu.addItem(&crate::util::item(mtm, "", None, ""));
         for (title, action) in [
-            (t("Committen und pushen"), sel!(ideGitCommitPush:)),
-            (t("Committen und synchronisieren"), sel!(ideGitCommitSync:)),
+            (t("Committen und pushen"), Some(sel!(ideGitCommitPush:))),
+            (t("Committen und synchronisieren"), Some(sel!(ideGitCommitSync:))),
+            ("", None),
+            (t("Stash …"), Some(sel!(ideGitStash:))),
+            (t("Nur Vorgemerktes stashen"), Some(sel!(ideGitStashStaged:))),
+            ("", None),
+            (t("Commit-Nachricht erzeugen"), Some(sel!(ideGitMessage:))),
+            (t("Gesendeten Inhalt zeigen"), Some(sel!(ideGitShowSent:))),
         ] {
+            let Some(action) = action else {
+                menu.addItem(&crate::util::separator(mtm));
+                continue;
+            };
             let entry = crate::util::item(mtm, title, Some(action), "");
             crate::util::set_target(&entry, panel);
             menu.addItem(&entry);

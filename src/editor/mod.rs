@@ -693,6 +693,16 @@ pub fn files_changed(dirs: &[PathBuf]) {
     }
 }
 
+/// Looks at the files of every open editor below `root` and takes what changed on disk, after a git operation of the
+/// app's own: the watcher reports only folders the file tree has read.
+pub fn check_disk_below(root: &Path) {
+    for view in open_editors() {
+        if view.document().path().is_some_and(|path| path.starts_with(root)) {
+            take_disk(&view);
+        }
+    }
+}
+
 fn take_disk(view: &EditorTextView) {
     let Some(probe) = view.document().disk_probe() else {
         return;
@@ -858,6 +868,31 @@ pub fn discard_changes(controller: &WindowController) {
 /// How many open editors have unsaved changes, those of gone files aside, which get a question of their own.
 pub fn dirty_count() -> usize {
     unsaved().len()
+}
+
+/// The files below `root` whose open editors have unsaved changes, those of gone files aside.
+pub fn unsaved_below(root: &Path) -> Vec<PathBuf> {
+    let mut paths: Vec<PathBuf> = unsaved()
+        .iter()
+        .filter_map(|view| {
+            view.document()
+                .path()
+                .filter(|p| p.starts_with(root))
+                .map(Path::to_path_buf)
+        })
+        .collect();
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+/// Saves the editors of files below `root` with unsaved changes; whether none is left unsaved.
+pub fn save_below(root: &Path) -> bool {
+    let below = |view: &Retained<EditorTextView>| view.document().path().is_some_and(|p| p.starts_with(root));
+    for view in unsaved().iter().filter(|view| below(view)) {
+        save(view, false);
+    }
+    !unsaved().iter().any(below)
 }
 
 /// Saves every editor with unsaved changes, those of gone files aside; whether all of them were saved.

@@ -1,6 +1,6 @@
 //! The diff tab: one file's staged or unstaged changes, read only, with buttons that stage, unstage or discard a single
 //! hunk (E11); or, without buttons, what a thread's worktree changed in a file since its branch left the base (I1) or
-//! what a commit of the history changed in it.
+//! what a commit of the history or an entry of the stash changed in it.
 
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -31,6 +31,15 @@ pub enum HunkAction {
     Discard,
 }
 
+/// A change that is done and only shows, never staged or discarded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Fixed {
+    /// What a commit changed, by its hash.
+    Commit(String),
+    /// What a stash entry changed: its commit and its name, such as `stash@{0}`.
+    Stash(String, String),
+}
+
 #[derive(Default)]
 pub struct State {
     pub diff: Option<FileDiff>,
@@ -53,8 +62,8 @@ pub struct DiffIvars {
     /// The commit a worktree's changes are shown against, which moves as its branch and the base do, and the thread's
     /// title; `None` for the index's sides.
     since: Option<(RefCell<String>, String)>,
-    /// The commit whose change of the file shows.
-    commit: Option<String>,
+    /// The commit or stash entry whose change of the file shows.
+    commit: Option<Fixed>,
     ui: OnceCell<Ui>,
     state: RefCell<State>,
 }
@@ -318,13 +327,47 @@ pub fn show_commit(controller: &WindowController, repo_root: &Path, hash: &str, 
         path.to_path_buf(),
         false,
         None,
-        Some(hash.to_string()),
+        Some(Fixed::Commit(hash.to_string())),
     );
     let name = path
         .file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
     let short: String = hash.chars().take(7).collect();
     place(controller, tab, key, &tf("{} ({})", &[&name, &short]), preview);
+}
+
+/// The key of the tab that shows what the stash entry `hash` changed in `path`.
+pub fn stash_key(hash: &str, path: &Path) -> String {
+    format!("diff:stash:{hash}:{}", path.display())
+}
+
+/// Shows what the stash entry `hash`, called `name`, changed in `path`, relative to `repo_root`, like [`show`].
+pub fn show_stash(controller: &WindowController, repo_root: &Path, hash: &str, name: &str, path: &Path, preview: bool) {
+    let key = stash_key(hash, path);
+    if let Some(id) = controller.tab_with_key(&key) {
+        if !preview {
+            controller.keep_tab(id);
+        }
+        controller.select_tab(&key);
+        return;
+    }
+    let Some(window_root) = controller.project_root() else {
+        return;
+    };
+    let window_root = window_root.canonicalize().unwrap_or(window_root);
+    let tab = DiffTab::new(
+        controller,
+        window_root,
+        repo_root.to_path_buf(),
+        path.to_path_buf(),
+        false,
+        None,
+        Some(Fixed::Stash(hash.to_string(), name.to_string())),
+    );
+    let file = path
+        .file_name()
+        .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
+    place(controller, tab, key, &tf("{} ({})", &[&file, name]), preview);
 }
 
 fn place(controller: &WindowController, tab: Retained<DiffTab>, key: String, title: &str, preview: bool) {
@@ -345,7 +388,7 @@ impl DiffTab {
         path: PathBuf,
         staged: bool,
         since: Option<(RefCell<String>, String)>,
-        commit: Option<String>,
+        commit: Option<Fixed>,
     ) -> Retained<DiffTab> {
         static NEXT: AtomicU64 = AtomicU64::new(1);
         let mtm: MainThreadMarker = controller.mtm();
@@ -367,7 +410,8 @@ impl DiffTab {
             unsafe { msg_send![super(DiffTab::alloc(mtm).set_ivars(ivars)), initWithFrame: frame] };
         let ivars = tab.ivars();
         let side = match (&ivars.since, &ivars.commit) {
-            (_, Some(hash)) => tf("Commit {}", &[&hash.chars().take(7).collect::<String>()]),
+            (_, Some(Fixed::Commit(hash))) => tf("Commit {}", &[&hash.chars().take(7).collect::<String>()]),
+            (_, Some(Fixed::Stash(_, name))) => tf("Stash {}", &[name]),
             (Some((_, title)), None) => tf("Was der Thread „{}“ geändert hat", &[title]),
             (None, None) if ivars.staged => t("Vorgemerkte Änderungen").to_string(),
             (None, None) => t("Nicht vorgemerkte Änderungen").to_string(),
@@ -409,7 +453,8 @@ impl DiffTab {
         let commit = ivars.commit.clone();
         let queued = work::local(
             move || match (since, commit) {
-                (_, Some(hash)) => load_commit(&root, &path, &hash),
+                (_, Some(Fixed::Commit(hash))) => load_commit(&root, &path, &hash),
+                (_, Some(Fixed::Stash(hash, _))) => load_stash(&root, &path, &hash),
                 (Some(base), None) => load_since(&root, &path, &base),
                 (None, None) => load(&root, &path, staged),
             },
@@ -595,6 +640,15 @@ fn load_commit(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>,
     read().map_err(|error| problem(&error))
 }
 
+/// What the stash entry `hash` changed in `path`.
+fn load_stash(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>, Problem> {
+    let read = || -> ide_git::Result<Option<FileDiff>> {
+        let repo = work::git().ok_or(Error::GitMissing)?.discover(root)?;
+        repo.diff_stash(hash, path)
+    };
+    read().map_err(|error| problem(&error))
+}
+
 /// Whether the unstaged side of `diff` can drop a hunk: a new file goes to the Trash as a whole instead.
 pub fn can_discard(diff: &FileDiff) -> bool {
     diff.change != Change::Added
@@ -615,7 +669,8 @@ pub fn find(controller: &WindowController, key: &str) -> Option<Retained<DiffTab
     live_tabs().into_iter().find(|tab| {
         let ivars = tab.ivars();
         let own = match (&ivars.since, &ivars.commit) {
-            (_, Some(hash)) => commit_key(hash, &ivars.path),
+            (_, Some(Fixed::Commit(hash))) => commit_key(hash, &ivars.path),
+            (_, Some(Fixed::Stash(hash, _))) => stash_key(hash, &ivars.path),
             (Some(_), None) => since_key(&ivars.repo_root, &ivars.path),
             (None, None) => self::key(&ivars.path, ivars.staged),
         };

@@ -155,6 +155,9 @@ impl GitPanel {
         if let RowKey::CommitFile(hash, file) = key {
             return self.show_commit_diff(hash, file, preview);
         }
+        if let RowKey::StashFile(hash, file) = key {
+            return self.show_stash_diff(hash, file, preview);
+        }
         let (Some(controller), Some(repo), RowKey::File(section, path)) = (self.controller(), self.repo(), key) else {
             return;
         };

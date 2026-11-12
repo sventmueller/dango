@@ -22,7 +22,7 @@ pub(crate) fn time_limit(scenario: &str) -> Duration {
         "lsp" => Duration::from_secs(600),
         // Dozens of git commands, commits and pushes against local remotes; under the load of parallel builds they
         // take several minutes.
-        "git" | "worktree" | "ci" | "agent" => Duration::from_secs(360),
+        "git" | "git-stash" | "git-message" | "worktree" | "ci" | "agent" => Duration::from_secs(360),
         "a11y" | "a11y-rtl" => Duration::from_secs(300),
         _ => Duration::from_secs(120),
     }

@@ -3,6 +3,7 @@
 mod agent;
 mod agents;
 mod ci;
+mod commit_message;
 #[cfg(feature = "dictation")]
 mod dictation;
 mod list_bar;
@@ -361,6 +362,8 @@ pub fn agent_tab() -> Option<Retained<agent::AgentSettings>> {
 
 #[cfg(feature = "selftest")]
 pub use agent::{AgentSettings, List as AgentList, selftest as agent_selftest};
+#[cfg(feature = "selftest")]
+pub use commit_message::selftest as commit_message_selftest;
 
 fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsController>) {
     let controller = SettingsController::new(mtm);

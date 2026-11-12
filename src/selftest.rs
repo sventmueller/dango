@@ -132,6 +132,8 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "markdown" => markdown::run(),
         "panels" => panels::run(),
         "git" => git::run(),
+        "git-stash" => git::stash::run(),
+        "git-message" => git::message::run(),
         "ci" => ci::run(),
         "ci-live" => ci::live(),
         "ci-login" => ci::login(),

@@ -96,6 +96,9 @@ fn described(error: &Error) -> Problem {
             "„{}“ liegt außerhalb des Repositorys.",
             &[&path.display().to_string()],
         )),
+        Error::StashMoved => Problem::plain(t(
+            "Der Stash hat sich inzwischen geändert. Sieh die Liste noch einmal durch und versuch es erneut.",
+        )),
         Error::Cancelled => Problem::plain(t("Abgebrochen.")),
         Error::TimedOut => Problem::plain(t("Git hat zu lange gebraucht und wurde beendet.")),
         Error::OutputTooLarge => Problem::plain(t("Git hat mehr ausgegeben, als die App liest.")),

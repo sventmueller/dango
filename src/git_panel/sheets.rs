@@ -32,6 +32,103 @@ pub fn confirm(window: &NSWindow, message: &str, info: &str, action: &str, then:
     });
 }
 
+/// Asks before something is deleted for good; the destructive button is not the default, Return cancels (E101).
+pub fn confirm_delete(window: &NSWindow, message: &str, info: &str, action: &str, then: impl FnOnce() + 'static) {
+    let alert = NSAlert::new(window.mtm());
+    alert.setAlertStyle(NSAlertStyle::Warning);
+    alert.setMessageText(&ns(message));
+    alert.setInformativeText(&ns(info));
+    let delete = alert.addButtonWithTitle(&ns(action));
+    delete.setHasDestructiveAction(true);
+    let cancel = alert.addButtonWithTitle(&ns(t("Abbrechen")));
+    cancel.setKeyEquivalent(&ns("\r"));
+    delete.setKeyEquivalent(&ns(""));
+    begin(&alert, window, move |agreed| {
+        if agreed {
+            then();
+        }
+    });
+}
+
+/// Offers to save the open documents `names` before a stash action, which sees only the files on disk; `then` runs
+/// when the user chooses to save.
+pub fn save_first(window: &NSWindow, names: &[String], then: impl FnOnce() + 'static) {
+    let alert = NSAlert::new(window.mtm());
+    alert.setMessageText(&ns(&match names {
+        [one] => tf("„{}“ hat ungesicherte Änderungen.", &[one]),
+        many => tf("{} Dateien haben ungesicherte Änderungen.", &[&many.len().to_string()]),
+    }));
+    alert.setInformativeText(&ns(t(
+        "Der Stash sieht nur, was auf der Platte steht. Sichere zuerst, damit deine Änderungen dabei sind.",
+    )));
+    alert.addButtonWithTitle(&ns(t("Sichern")));
+    alert.addButtonWithTitle(&ns(t("Abbrechen")));
+    begin(&alert, window, move |agreed| {
+        if agreed {
+            then();
+        }
+    });
+}
+
+/// Asks for the message of a new stash entry and whether untracked files go along; `then` gets both.
+pub fn stash_options(window: &NSWindow, then: impl FnOnce(String, bool) + 'static) {
+    let mtm = window.mtm();
+    let alert = NSAlert::new(mtm);
+    alert.setMessageText(&ns(t("Änderungen stashen")));
+    alert.setInformativeText(&ns(t(
+        "Die Änderungen verlassen die Arbeitskopie und lassen sich später wieder anwenden.",
+    )));
+    alert.addButtonWithTitle(&ns(t("Stashen")));
+    alert.addButtonWithTitle(&ns(t("Abbrechen")));
+    let field = NSTextField::textFieldWithString(&ns(""), mtm);
+    field.setPlaceholderString(Some(&ns(t("Nachricht (freiwillig)"))));
+    crate::util::set_label(&field, Some(t("Nachricht (freiwillig)")));
+    // SAFETY: Without a target and an action the checkbox sends nothing; its state is read when the sheet ends.
+    let untracked = unsafe {
+        objc2_app_kit::NSButton::checkboxWithTitle_target_action(
+            &ns(t("Mit nicht versionierten Dateien")),
+            None,
+            None,
+            mtm,
+        )
+    };
+    let stack = objc2_app_kit::NSStackView::new(mtm);
+    stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
+    stack.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
+    stack.setSpacing(8.0);
+    stack.addArrangedSubview(&field);
+    stack.addArrangedSubview(&untracked);
+    field.widthAnchor().constraintEqualToConstant(260.0).setActive(true);
+    stack.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(260.0, 54.0)));
+    alert.setAccessoryView(Some(&stack));
+    alert.window().setInitialFirstResponder(Some(&field));
+    let typed = field.clone();
+    begin(&alert, window, move |agreed| {
+        if agreed {
+            let with = untracked.state() == objc2_app_kit::NSControlStateValueOn;
+            then(typed.stringValue().to_string().trim().to_string(), with);
+        }
+    });
+}
+
+/// Asks once whether `provider`, which is not on this Mac, may get the request for a commit message, and says what
+/// goes there (E101); `then` runs when the user allows it.
+pub fn consent(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
+    let alert = NSAlert::new(window.mtm());
+    alert.setMessageText(&ns(&tf("Änderungen an {} senden?", &[provider])));
+    alert.setInformativeText(&ns(&tf(
+        "Für die Commit-Nachricht gehen an {}: der vorgemerkte Diff, ohne Vorgemerktes alle Änderungen, der Name des Branches und die letzten zehn Betreffzeilen. Vorher prüft gitleaks diesen Text auf Secrets; bei einem Fund geht nichts hinaus. Die Erlaubnis lässt sich in den Einstellungen unter „Agent“ zurücknehmen.",
+        &[provider],
+    )));
+    alert.addButtonWithTitle(&ns(t("Erlauben")));
+    alert.addButtonWithTitle(&ns(t("Abbrechen")));
+    begin(&alert, window, move |agreed| {
+        if agreed {
+            then();
+        }
+    });
+}
+
 /// Shows what git or a hook printed.
 pub fn output(window: &NSWindow, message: &str, text: &str) {
     let alert = NSAlert::new(window.mtm());
