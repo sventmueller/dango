@@ -277,7 +277,7 @@ impl CiPanel {
             Some(Key::Job(run, job) | Key::Step(run, job, _)) => self.open_log(self.find_job(run, job)),
             Some(Key::Item(number)) => {
                 if let Some(item) = self.find_item(number) {
-                    super::ops::open_url(&item.url);
+                    self.open_url(&item.url);
                 }
             }
             Some(Key::Run(_) | Key::Stage(..)) => {

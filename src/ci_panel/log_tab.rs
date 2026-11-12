@@ -14,9 +14,9 @@ use objc2_app_kit::{
     NSAccessibility, NSBezelStyle, NSBox, NSBoxType, NSButton, NSColor, NSControlSize, NSFont,
     NSForegroundColorAttributeName, NSLayoutAttribute, NSLineBreakMode, NSScrollView, NSStackView, NSStackViewGravity,
     NSStandardKeyBindingResponding, NSTextField, NSTextView, NSUserInterfaceLayoutDirection,
-    NSUserInterfaceLayoutOrientation, NSView, NSWorkspace, NSWritingDirection,
+    NSUserInterfaceLayoutOrientation, NSView, NSWritingDirection,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSURL};
+use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::{text, work};
@@ -72,9 +72,7 @@ define_class!(
         fn web_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
                 let url = self.ivars().job.borrow().url.clone();
-                if let Some(url) = NSURL::URLWithString(&ns(&url)) {
-                    NSWorkspace::sharedWorkspace().openURL(&url);
-                }
+                super::ops::open_url(self.ivars().controller.load().as_deref(), &url);
             });
         }
     }

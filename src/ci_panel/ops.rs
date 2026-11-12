@@ -124,8 +124,8 @@ impl CiPanel {
             (state.tab, state.head.branch.clone())
         };
         match (tab, branch) {
-            (Tab::Changes, Some(branch)) => open_url(&client.new_change_page(&branch)),
-            (Tab::Issues, _) => open_url(&client.new_issue_page()),
+            (Tab::Changes, Some(branch)) => self.open_url(&client.new_change_page(&branch)),
+            (Tab::Issues, _) => self.open_url(&client.new_issue_page()),
             _ => {}
         }
     }
@@ -233,7 +233,7 @@ impl CiPanel {
     /// Opens the page of the row the action came from, else the repository's.
     pub fn open_web(&self, sender: Option<&AnyObject>) {
         if let Some(item) = self.item_for_action(sender) {
-            return open_url(&item.url);
+            return self.open_url(&item.url);
         }
         let url = match (self.job_for(sender), self.run_for(sender, ide_ci::State::Neutral)) {
             (Some(job), _) if !job.url.is_empty() => job.url,
@@ -245,7 +245,7 @@ impl CiPanel {
                 None => return,
             },
         };
-        open_url(&url);
+        self.open_url(&url);
     }
 
     /// Asks for a token of the host, checks it with the service and keeps it in the keychain.
@@ -318,6 +318,10 @@ impl CiPanel {
         );
     }
 
+    pub(super) fn open_url(&self, url: &str) {
+        open_url(self.controller().as_deref(), url);
+    }
+
     /// Forgets the app's own token of the host; those of `gh`, `glab` and the environment stay.
     pub fn sign_out(&self) {
         let Some(forge) = self.read().forge.clone() else { return };
@@ -329,8 +333,12 @@ impl CiPanel {
     }
 }
 
-/// Opens `url` in the browser.
-pub fn open_url(url: &str) {
+/// Opens a web page in a browser tab of `controller`'s window; other addresses, or no window, go to macOS.
+pub fn open_url(controller: Option<&crate::window::WindowController>, url: &str) {
+    let lower = url.to_ascii_lowercase();
+    if let Some(controller) = controller.filter(|_| lower.starts_with("https://") || lower.starts_with("http://")) {
+        return crate::browser::open_tab(controller, Some(url));
+    }
     if let Some(url) = NSURL::URLWithString(&ns(url)) {
         NSWorkspace::sharedWorkspace().openURL(&url);
     }
