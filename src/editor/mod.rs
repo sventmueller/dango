@@ -13,6 +13,8 @@ mod indent;
 pub mod insets;
 mod multi;
 mod overlay;
+#[cfg(feature = "selftest")]
+pub use overlay::LAID_OUT;
 pub mod recovery;
 mod ruler;
 mod style;

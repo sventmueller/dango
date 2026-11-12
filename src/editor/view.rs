@@ -241,6 +241,13 @@ define_class!(
             }
         }
 
+        #[unsafe(method(textViewportLayoutControllerDidLayout:))]
+        fn viewport_did_layout(&self, controller: &AnyObject) {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let _: () = unsafe { msg_send![super(self), textViewportLayoutControllerDidLayout: controller] };
+            guarded((), || super::overlay::laid_out(self));
+        }
+
         #[unsafe(method(mouseMoved:))]
         fn mouse_moved(&self, event: &NSEvent) {
             // SAFETY: The superclass's implementation, with this method's signature.

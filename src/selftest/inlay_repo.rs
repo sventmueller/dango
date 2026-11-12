@@ -54,7 +54,17 @@ fn wait(started: Instant) {
         return main_after(Duration::from_secs(2), move || wait(started));
     }
     let at = view.line_start(LINE).unwrap_or(0);
+    let before = editor::LAID_OUT.load(std::sync::atomic::Ordering::Relaxed);
     editor::scroll_to_byte(&view, view.document().text().utf16_to_byte(at).unwrap_or(0));
+    if let Some(window) = view.window() {
+        window.displayIfNeeded();
+    }
+    let after = editor::LAID_OUT.load(std::sync::atomic::Ordering::Relaxed);
+    check(
+        "after a scroll TextKit's layout of the lines on screen redraws the overlay",
+        after > before,
+        format!("{} layouts reported", after - before),
+    );
     main_after(Duration::from_secs(3), look);
 }
 

@@ -97,6 +97,20 @@ pub fn attach(editor: &EditorTextView) {
     *editor.ivars().overlay.borrow_mut() = Some(Weak::from(&*this));
 }
 
+/// How often TextKit told an editor it laid out the lines on screen, for the self-test.
+#[cfg(feature = "selftest")]
+pub static LAID_OUT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// TextKit laid out the lines on screen: draws the part of the overlay there again. Scrolling draws the overlay for
+/// lines that come into view before TextKit lays them out, and an inset whose line has no layout yet is left out.
+pub fn laid_out(editor: &EditorTextView) {
+    #[cfg(feature = "selftest")]
+    LAID_OUT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
+        overlay.setNeedsDisplayInRect(overlay.convertRect_fromView(editor.visibleRect(), Some(editor)));
+    }
+}
+
 /// Draws the overlay of `editor` again.
 pub fn redraw(editor: &EditorTextView) {
     if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
