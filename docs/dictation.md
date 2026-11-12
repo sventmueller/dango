@@ -171,7 +171,8 @@ Other changes in lowspeak:
   - otherwise, or on "Selbst eingeben …": a field for the key;
   - "Nicht jetzt": this dictation falls back to an installed local model if there is one (as Lowspeak does), else it
     fails with lowspeak's "no key" text. The question comes again on the next dictation only after a restart.
-- Settings ▸ Diktat shows whether a key is stored, removes it and takes a new one.
+- Settings ▸ Diktat shows per provider whether Dango keeps a key (remove it), only Lowspeak does (take it over, with
+  the same question as above) or neither (enter one).
 
 ### Settings and models
 - Mode, models, language, post-processing, microphone and vocabulary are Lowspeak's (suite `com.lowspeak.app`,

@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API-nycklar:";
 "{}: im Schlüsselbund" = "{}: i nyckelringen";
 "{}: kein Schlüssel" = "{}: ingen nyckel";
+"{}: in Lowspeak" = "{}: i Lowspeak";
+"Schlüssel übernehmen …" = "Använd nyckel…";
 "Eingeben …" = "Ange…";
 "fn-Taste:" = "fn-tangent:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Diktera med fn när Lowspeak inte körs";

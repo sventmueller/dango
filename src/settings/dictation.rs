@@ -1,4 +1,5 @@
-//! The dictation tab of the settings: Lowspeak's choices, which only Lowspeak changes, the app's own API keys, and fn.
+//! The dictation tab of the settings: Lowspeak's choices, which only Lowspeak changes, the app's own API keys or
+//! Lowspeak's to take over, and fn.
 
 use std::cell::OnceCell;
 
@@ -69,6 +70,8 @@ define_class!(
                     if let Err(error) = dictation::remove_key(provider) {
                         crate::diag::report("dictation", error);
                     }
+                } else if dictation::lowspeak_has_key(provider) {
+                    dictation::take_over_key(provider);
                 } else {
                     dictation::enter_key(provider);
                 }
@@ -178,13 +181,16 @@ impl DictationSettings {
         views.open.setHidden(!installed);
         show_choices(views, &dictation::choices());
         for (provider, (state, button)) in PROVIDERS.iter().zip(&views.keys) {
-            let kept = dictation::has_key(*provider);
-            state.setStringValue(&ns(&if kept {
-                tf("{}: im Schlüsselbund", &[provider.display_name()])
+            let name = provider.display_name();
+            let (line, action) = if dictation::has_key(*provider) {
+                (tf("{}: im Schlüsselbund", &[name]), t("Entfernen"))
+            } else if dictation::lowspeak_has_key(*provider) {
+                (tf("{}: in Lowspeak", &[name]), t("Schlüssel übernehmen …"))
             } else {
-                tf("{}: kein Schlüssel", &[provider.display_name()])
-            }));
-            button.setTitle(&ns(if kept { t("Entfernen") } else { t("Eingeben …") }));
+                (tf("{}: kein Schlüssel", &[name]), t("Eingeben …"))
+            };
+            state.setStringValue(&ns(&line));
+            button.setTitle(&ns(action));
         }
         show_fn(views);
     }

@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "APIキー:";
 "{}: im Schlüsselbund" = "{}: キーチェーン内";
 "{}: kein Schlüssel" = "{}: キーなし";
+"{}: in Lowspeak" = "{}: Lowspeak内";
+"Schlüssel übernehmen …" = "キーを使用…";
 "Eingeben …" = "入力…";
 "fn-Taste:" = "fnキー:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Lowspeakが実行されていないときはfnで音声入力";

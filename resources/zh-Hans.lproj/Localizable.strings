@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API 密钥：";
 "{}: im Schlüsselbund" = "{}：在钥匙串中";
 "{}: kein Schlüssel" = "{}：无密钥";
+"{}: in Lowspeak" = "{}：在 Lowspeak 中";
+"Schlüssel übernehmen …" = "使用此密钥…";
 "Eingeben …" = "输入…";
 "fn-Taste:" = "fn 键：";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Lowspeak 未运行时，用 fn 进行听写";

@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Kľúče API:";
 "{}: im Schlüsselbund" = "{}: v kľúčenke";
 "{}: kein Schlüssel" = "{}: bez kľúča";
+"{}: in Lowspeak" = "{}: v aplikácii Lowspeak";
+"Schlüssel übernehmen …" = "Použiť kľúč…";
 "Eingeben …" = "Zadať…";
 "fn-Taste:" = "Kláves fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Diktovať pomocou fn, keď Lowspeak nebeží";

@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API anahtarları:";
 "{}: im Schlüsselbund" = "{}: Anahtar Zinciri’nde";
 "{}: kein Schlüssel" = "{}: anahtar yok";
+"{}: in Lowspeak" = "{}: Lowspeak’te";
+"Schlüssel übernehmen …" = "Anahtarı Kullan…";
 "Eingeben …" = "Gir…";
 "fn-Taste:" = "fn tuşu:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Lowspeak çalışmıyorken fn ile dikte et";

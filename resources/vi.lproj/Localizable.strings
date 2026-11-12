@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Khóa API:";
 "{}: im Schlüsselbund" = "{}: trong Chuỗi khóa";
 "{}: kein Schlüssel" = "{}: không có khóa";
+"{}: in Lowspeak" = "{}: trong Lowspeak";
+"Schlüssel übernehmen …" = "Dùng khóa…";
 "Eingeben …" = "Nhập…";
 "fn-Taste:" = "Phím fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Đọc chính tả bằng fn khi Lowspeak không chạy";

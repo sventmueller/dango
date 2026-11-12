@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Claus d’API:";
 "{}: im Schlüsselbund" = "{}: al clauer";
 "{}: kein Schlüssel" = "{}: cap clau";
+"{}: in Lowspeak" = "{}: a Lowspeak";
+"Schlüssel übernehmen …" = "Utilitza la clau…";
 "Eingeben …" = "Introdueix…";
 "fn-Taste:" = "Tecla fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Dicta amb fn mentre Lowspeak no estigui obert";

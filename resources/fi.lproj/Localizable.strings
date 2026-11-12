@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API-avaimet:";
 "{}: im Schlüsselbund" = "{}: avainnipussa";
 "{}: kein Schlüssel" = "{}: ei avainta";
+"{}: in Lowspeak" = "{}: Lowspeak-sovelluksessa";
+"Schlüssel übernehmen …" = "Käytä avainta…";
 "Eingeben …" = "Syötä…";
 "fn-Taste:" = "fn-näppäin:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Sanele fn-näppäimellä, kun Lowspeak ei ole käynnissä";

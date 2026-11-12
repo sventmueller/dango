@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Chei API:";
 "{}: im Schlüsselbund" = "{}: în portchei";
 "{}: kein Schlüssel" = "{}: fără cheie";
+"{}: in Lowspeak" = "{}: în Lowspeak";
+"Schlüssel übernehmen …" = "Folosiți cheia…";
 "Eingeben …" = "Introduceți…";
 "fn-Taste:" = "Tasta fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Dictați cu fn cât timp Lowspeak nu rulează";

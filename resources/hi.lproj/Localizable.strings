@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API कुंजियाँ :";
 "{}: im Schlüsselbund" = "{} : कीचेन में";
 "{}: kein Schlüssel" = "{} : कोई कुंजी नहीं";
+"{}: in Lowspeak" = "{} : Lowspeak में";
+"Schlüssel übernehmen …" = "कुंजी उपयोग करें…";
 "Eingeben …" = "दर्ज करें…";
 "fn-Taste:" = "fn कुंजी :";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "जब तक Lowspeak नहीं चल रहा, fn से डिक्टेट करें";

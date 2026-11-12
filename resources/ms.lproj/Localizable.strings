@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Kunci API:";
 "{}: im Schlüsselbund" = "{}: dalam Rantai Kunci";
 "{}: kein Schlüssel" = "{}: tiada kunci";
+"{}: in Lowspeak" = "{}: dalam Lowspeak";
+"Schlüssel übernehmen …" = "Guna Kunci…";
 "Eingeben …" = "Masukkan…";
 "fn-Taste:" = "Kekunci fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Rencana dengan fn semasa Lowspeak tidak berjalan";

@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API 키:";
 "{}: im Schlüsselbund" = "{}: 키체인에 있음";
 "{}: kein Schlüssel" = "{}: 키 없음";
+"{}: in Lowspeak" = "{}: Lowspeak에 있음";
+"Schlüssel übernehmen …" = "키 사용…";
 "Eingeben …" = "입력…";
 "fn-Taste:" = "fn 키:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Lowspeak가 실행 중이 아닐 때 fn으로 받아쓰기";

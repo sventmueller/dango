@@ -663,6 +663,18 @@ pub fn enter_key(provider: ApiProvider) {
     }
 }
 
+/// Whether Lowspeak keeps a key for `provider`, found without reading it.
+pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
+    engine::lowspeak_has_key(provider)
+}
+
+/// Offers to take Lowspeak's key for `provider` over, or to enter one instead.
+pub fn take_over_key(provider: ApiProvider) {
+    if let Some(keys) = with_hub(|hub| Arc::clone(&hub.keys)) {
+        ask::ask(keys::Question::TakeOver(provider), &keys);
+    }
+}
+
 pub fn remove_key(provider: ApiProvider) -> Result<(), String> {
     with_hub(|hub| hub.keys.remove(provider)).unwrap_or_else(|| Err("busy".into()))
 }

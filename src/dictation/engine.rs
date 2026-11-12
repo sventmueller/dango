@@ -43,7 +43,7 @@ pub fn choices() -> Choices {
 pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        return provider == ApiProvider::OpenAi;
+        return true;
     }
     lowspeak::dictation::lowspeak_has_key(provider)
 }

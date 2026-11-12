@@ -1118,6 +1118,8 @@
 "API-Schlüssel:" = "API keys:";
 "{}: im Schlüsselbund" = "{}: in the keychain";
 "{}: kein Schlüssel" = "{}: no key";
+"{}: in Lowspeak" = "{}: in Lowspeak";
+"Schlüssel übernehmen …" = "Use Key…";
 "Eingeben …" = "Enter…";
 "fn-Taste:" = "fn key:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Dictate with fn while Lowspeak is not running";

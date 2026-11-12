@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Ključi API:";
 "{}: im Schlüsselbund" = "{}: v verigi ključev";
 "{}: kein Schlüssel" = "{}: brez ključa";
+"{}: in Lowspeak" = "{}: v aplikaciji Lowspeak";
+"Schlüssel übernehmen …" = "Uporabi ključ …";
 "Eingeben …" = "Vnesi …";
 "fn-Taste:" = "Tipka fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Narekuj s tipko fn, ko Lowspeak ne teče";

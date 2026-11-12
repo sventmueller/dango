@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Klucze API:";
 "{}: im Schlüsselbund" = "{}: w pęku kluczy";
 "{}: kein Schlüssel" = "{}: brak klucza";
+"{}: in Lowspeak" = "{}: w aplikacji Lowspeak";
+"Schlüssel übernehmen …" = "Użyj klucza…";
 "Eingeben …" = "Wpisz…";
 "fn-Taste:" = "Klawisz fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Dyktuj klawiszem fn, gdy Lowspeak nie działa";

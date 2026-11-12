@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API-kulcsok:";
 "{}: im Schlüsselbund" = "{}: a kulcskarikában";
 "{}: kein Schlüssel" = "{}: nincs kulcs";
+"{}: in Lowspeak" = "{}: a Lowspeak alkalmazásban";
+"Schlüssel übernehmen …" = "Kulcs használata…";
 "Eingeben …" = "Megadás…";
 "fn-Taste:" = "fn billentyű:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Diktálás az fn billentyűvel, amíg a Lowspeak nem fut";

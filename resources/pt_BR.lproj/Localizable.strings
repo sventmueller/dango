@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Chaves de API:";
 "{}: im Schlüsselbund" = "{}: nas Chaves";
 "{}: kein Schlüssel" = "{}: sem chave";
+"{}: in Lowspeak" = "{}: no Lowspeak";
+"Schlüssel übernehmen …" = "Usar Chave…";
 "Eingeben …" = "Digitar…";
 "fn-Taste:" = "Tecla fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Ditar com fn enquanto o Lowspeak não estiver em execução";

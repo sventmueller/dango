@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "คีย์ API:";
 "{}: im Schlüsselbund" = "{}: อยู่ในพวงกุญแจ";
 "{}: kein Schlüssel" = "{}: ไม่มีคีย์";
+"{}: in Lowspeak" = "{}: อยู่ใน Lowspeak";
+"Schlüssel übernehmen …" = "ใช้คีย์นี้…";
 "Eingeben …" = "ป้อน…";
 "fn-Taste:" = "ปุ่ม fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "ป้อนตามคำบอกด้วย fn ขณะที่ Lowspeak ไม่ได้ทำงาน";

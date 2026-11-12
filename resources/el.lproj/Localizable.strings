@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Κλειδιά API:";
 "{}: im Schlüsselbund" = "{}: στην κλειδοθήκη";
 "{}: kein Schlüssel" = "{}: χωρίς κλειδί";
+"{}: in Lowspeak" = "{}: στο Lowspeak";
+"Schlüssel übernehmen …" = "Χρήση κλειδιού…";
 "Eingeben …" = "Εισαγωγή…";
 "fn-Taste:" = "Πλήκτρο fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Υπαγόρευση με το fn όταν το Lowspeak δεν εκτελείται";

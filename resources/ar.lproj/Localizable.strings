@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "مفاتيح API:";
 "{}: im Schlüsselbund" = "‏{}: في سلسلة المفاتيح";
 "{}: kein Schlüssel" = "‏{}: لا يوجد مفتاح";
+"{}: in Lowspeak" = "‏{}: في Lowspeak";
+"Schlüssel übernehmen …" = "استخدام المفتاح…";
 "Eingeben …" = "إدخال…";
 "fn-Taste:" = "مفتاح fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "الإملاء باستخدام fn ما دام Lowspeak لا يعمل";

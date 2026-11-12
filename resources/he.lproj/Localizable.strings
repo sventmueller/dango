@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "מפתחות API:";
 "{}: im Schlüsselbund" = "‏{}: בצרור המפתחות";
 "{}: kein Schlüssel" = "‏{}: אין מפתח";
+"{}: in Lowspeak" = "‏{}: ב-Lowspeak";
+"Schlüssel übernehmen …" = "שימוש במפתח…";
 "Eingeben …" = "הזנה…";
 "fn-Taste:" = "מקש fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "הכתבה עם fn כל עוד Lowspeak אינו פועל";

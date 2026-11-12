@@ -374,8 +374,8 @@ fn settings() {
     crate::settings::show_dictation(mtm);
     let lines = crate::settings::dictation_keys();
     check(
-        "the settings tell which keys the app keeps",
-        lines.len() == 2 && lines[0].contains("OpenAI") && lines[1].contains("Groq"),
+        "the settings tell the key taken over from the one Lowspeak still keeps",
+        lines == ["OpenAI: im Schlüsselbund", "Groq: in Lowspeak"],
         lines.join(" | "),
     );
     main_after(Duration::from_millis(400), move || {

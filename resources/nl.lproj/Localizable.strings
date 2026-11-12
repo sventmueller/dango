@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "API-sleutels:";
 "{}: im Schlüsselbund" = "{}: in de sleutelhanger";
 "{}: kein Schlüssel" = "{}: geen sleutel";
+"{}: in Lowspeak" = "{}: in Lowspeak";
+"Schlüssel übernehmen …" = "Gebruik sleutel…";
 "Eingeben …" = "Voer in…";
 "fn-Taste:" = "Fn-toets:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Dicteer met fn zolang Lowspeak niet draait";

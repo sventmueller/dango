@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Ключи API:";
 "{}: im Schlüsselbund" = "{}: в связке ключей";
 "{}: kein Schlüssel" = "{}: нет ключа";
+"{}: in Lowspeak" = "{}: в Lowspeak";
+"Schlüssel übernehmen …" = "Использовать ключ…";
 "Eingeben …" = "Ввести…";
 "fn-Taste:" = "Клавиша fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Диктовать с помощью fn, когда Lowspeak не запущен";

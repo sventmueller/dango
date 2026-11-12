@@ -1082,6 +1082,8 @@
 "API-Schlüssel:" = "Chiavi API:";
 "{}: im Schlüsselbund" = "{}: nel Portachiavi";
 "{}: kein Schlüssel" = "{}: nessuna chiave";
+"{}: in Lowspeak" = "{}: in Lowspeak";
+"Schlüssel übernehmen …" = "Usa chiave…";
 "Eingeben …" = "Inserisci…";
 "fn-Taste:" = "Tasto fn:";
 "Mit fn diktieren, solange Lowspeak nicht läuft" = "Detta con fn quando Lowspeak non è in esecuzione";
