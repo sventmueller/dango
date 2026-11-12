@@ -78,6 +78,13 @@ pub(super) fn run() {
     let _ = std::fs::write(root.join("doc.md"), document());
     let _ = std::fs::write(root.join("bild.png"), PNG);
     let _ = std::fs::write(root.join("heft.pdf"), pdf());
+    let _ = image::save_buffer(
+        root.join("bildschirmfoto.png"),
+        &vec![200; 2880 * 1800 * 3],
+        2880,
+        1800,
+        image::ExtendedColorType::Rgb8,
+    );
     let _ = std::fs::write(
         root.join("logo.svg"),
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\"><circle cx=\"20\" cy=\"20\" r=\"16\" fill=\"teal\"/></svg>\n",
@@ -285,6 +292,30 @@ fn pdf_and_html(root: PathBuf) {
     main_after(Duration::from_millis(1500), move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, "preview-picture");
+        }
+        screenshot(root);
+    });
+}
+
+/// A picture wider than the window keeps the sidebar at its width, as a screenshot of a whole screen is.
+fn screenshot(root: PathBuf) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let before = controller.inspect().sidebar_width;
+    controller.open_file(&root.join("bildschirmfoto.png"));
+    main_after(Duration::from_millis(1500), move || {
+        let Some(controller) = window_of(&root) else {
+            return finish(SCENARIO);
+        };
+        let after = controller.inspect().sidebar_width;
+        check(
+            "a picture wider than the window keeps the sidebar's width",
+            (before - after).abs() < 1.0,
+            format!("{before} pt before, {after} pt after"),
+        );
+        if let Some(window) = controller.window() {
+            snapshot(&window, "preview-screenshot");
         }
         svg(root);
     });

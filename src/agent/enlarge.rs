@@ -26,6 +26,9 @@ const BLUR: f64 = 5.0;
 const ESCAPE: u16 = 53;
 /// Below the window's own resizing, so the picture never holds the window at its size.
 const LOOSE: f32 = 1.0;
+/// Below the holding priorities of the split views around the tab, so a picture wider than its tab never pushes the
+/// sidebar or a document beside it aside.
+const NATURAL_SIZE: f32 = 200.0;
 
 thread_local! {
     static OPENER: OnceCell<Retained<Opener>> = const { OnceCell::new() };
@@ -336,7 +339,7 @@ fn place(picture: &NSView, shade: &NSView, natural: NSSize) {
     picture.setTranslatesAutoresizingMaskIntoConstraints(false);
     let (width, height) = (natural.width.max(1.0), natural.height.max(1.0));
     let preferred = picture.widthAnchor().constraintEqualToConstant(width);
-    preferred.setPriority(490.0);
+    preferred.setPriority(NATURAL_SIZE);
     for constraint in [
         picture.centerXAnchor().constraintEqualToAnchor(&shade.centerXAnchor()),
         picture.centerYAnchor().constraintEqualToAnchor(&shade.centerYAnchor()),

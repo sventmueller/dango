@@ -129,6 +129,16 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
         format!("pasted {pasted}, tiles {tiles:?}"),
     );
+    let key = tab.key;
+    // The new tab holds its sidebar until it is laid out; the user enlarges a picture in a tab whose sidebar is free.
+    main_after(SETTLE, move || sent(root, key, shot, then));
+}
+
+/// The pasted picture opens large; then the picture goes to the agent.
+fn sent(root: PathBuf, key: u64, shot: Option<Vec<u8>>, then: fn(PathBuf)) {
+    let Some((controller, tab)) = controller_of(&root).zip(tab_of(key)) else {
+        return finish(NAME);
+    };
     enlarge(&controller, &tab);
     let idle = tab.tab_mark();
     if let Some(png) = &shot {
@@ -144,7 +154,6 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
         idle.is_none() && working.as_deref() == Some(&*objc2_app_kit::NSColor::systemGreenColor()),
         format!("idle {idle:?}, working {working:?}"),
     );
-    let key = tab.key;
     main_after(SETTLE, move || pictures(root, key, then));
 }
 
@@ -190,6 +199,7 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
 
 /// A click on the pasted picture's tile opens it large over the tab, and Escape closes it.
 fn enlarge(controller: &crate::window::WindowController, tab: &crate::agent::AgentTab) {
+    let sidebar = controller.inspect().sidebar_width;
     let enlarged = tab.enlarge_thumbnail();
     check(
         "a click on a pasted picture's tile opens the picture large, within the window",
@@ -200,6 +210,12 @@ fn enlarge(controller: &crate::window::WindowController, tab: &crate::agent::Age
         format!("{enlarged:?}"),
     );
     picture(controller, "agent-picture-large");
+    let after = controller.inspect().sidebar_width;
+    check(
+        "a picture wider than its tab opens large without narrowing the sidebar",
+        (sidebar - after).abs() < 1.0,
+        format!("{sidebar} pt before, {after} pt after"),
+    );
     let escaped = controller.window().is_some_and(|window| {
         let escape = objc2_app_kit::NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
             objc2_app_kit::NSEventType::KeyDown,
