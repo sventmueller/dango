@@ -1,4 +1,4 @@
-//! The views of the CI panel: the repository and account, the buttons, the tabs for runs, merge requests and issues,
+//! The views of the CI panel: the buttons in the panel's title row, the tabs for runs, merge requests and issues,
 //! problems, the list and the empty states.
 
 use std::cell::Cell;
@@ -7,9 +7,9 @@ use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSLineBreakMode, NSMenu, NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView,
-    NSStackViewDistribution, NSStackViewGravity, NSTableColumn, NSTableViewStyle, NSTextAlignment, NSTextField,
+    NSAccessibility, NSButton, NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
+    NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView, NSStackViewDistribution,
+    NSStackViewGravity, NSTableColumn, NSTableViewStyle, NSTextAlignment, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
@@ -17,19 +17,19 @@ use splat_i18n::{t, tf};
 
 use super::panel::{CiPanel, Phase, Tab};
 use super::text;
-use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};
+use crate::util::{borderless_button, item, ns, pin_edges, set_action, set_target, symbol, symbol_button};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
-const SYMBOL_POINTS: f64 = 13.0;
+/// As large as the symbols in the files panel's title row.
+const SYMBOL_POINTS: f64 = 12.0;
 
 pub struct Ui {
     pub page: Retained<NSView>,
     empty: Retained<NSView>,
     content: Retained<NSStackView>,
-    title: Retained<NSTextField>,
-    account: Retained<NSTextField>,
-    pub sign: Retained<NSButton>,
+    /// The buttons for the panel's title row.
+    pub header: Retained<NSStackView>,
     pub buttons: Buttons,
     pub tabs: Retained<NSSegmentedControl>,
     problem_row: Retained<NSStackView>,
@@ -40,7 +40,7 @@ pub struct Ui {
     browser: Cell<Option<bool>>,
 }
 
-/// The header's buttons that depend on the tab and the runs.
+/// The title row's buttons that depend on the tab and the runs.
 pub struct Buttons {
     pub start: Retained<NSButton>,
     pub rerun: Retained<NSButton>,
@@ -61,8 +61,7 @@ impl Ui {
             page.addSubview(view);
             pin_edges(view, &page);
         }
-        let (header, title, buttons) = header(mtm, panel);
-        let (account_row, account, sign) = account_row(mtm, panel);
+        let (header, buttons) = header(mtm, panel);
         let tabs = tabs(mtm, panel);
         let (problem_row, problem_label) = problem_row(mtm, panel);
         let (list, outline) = outline(mtm, panel);
@@ -70,9 +69,7 @@ impl Ui {
         no_runs.setTextColor(Some(&NSColor::secondaryLabelColor()));
         no_runs.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
         for (view, inset) in [
-            (&*header as &NSView, MARGIN),
-            (&account_row, MARGIN),
-            (&tabs, MARGIN),
+            (&*tabs as &NSView, MARGIN),
             (&problem_row, MARGIN),
             (&no_runs, MARGIN),
             (&list, 0.0),
@@ -87,16 +84,14 @@ impl Ui {
             view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
         }
         list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
-        for hidden in [&*problem_row as &NSView, &no_runs, &content] {
+        for hidden in [&*problem_row as &NSView, &no_runs, &content, &header] {
             hidden.setHidden(true);
         }
         Ui {
             page,
             empty,
             content,
-            title,
-            account,
-            sign,
+            header,
             buttons,
             tabs,
             problem_row,
@@ -117,6 +112,7 @@ impl Ui {
     pub fn show_phase(&self, panel: &CiPanel, phase: &Phase) {
         let mtm = panel.mtm();
         self.content.setHidden(*phase != Phase::Ready);
+        self.header.setHidden(*phase != Phase::Ready);
         self.empty.setHidden(*phase == Phase::Ready);
         for subview in self.empty.subviews().iter() {
             subview.removeFromSuperview();
@@ -294,13 +290,15 @@ impl Ui {
         }
     }
 
-    /// The repository, the account and which buttons apply.
+    /// Which buttons apply, once the service answered.
     pub fn show_ready(&self, panel: &CiPanel) {
+        self.show_tab(panel);
+    }
+
+    /// The menu of the account button: the repository and the account, and signing in or out.
+    pub fn account_menu(&self, panel: &CiPanel) -> Retained<NSMenu> {
+        let mtm = panel.mtm();
         let state = panel.read();
-        if let Some(forge) = &state.forge {
-            self.title.setStringValue(&ns(&forge.to_string()));
-            self.title.setToolTip(Some(&ns(&forge.page())));
-        }
         let keychain = state.source == Some(ide_ci::Source::Keychain);
         let account = match (&state.login, &state.account, &state.source) {
             (Some(_), _, _) => t("Warte auf die Anmeldung im Browser …").to_string(),
@@ -308,23 +306,35 @@ impl Ui {
             (None, None, Some(source)) => tf("Mit Token aus {}", &[&text::source(source)]),
             _ => t("Ohne Anmeldung, nur öffentliche Daten").to_string(),
         };
-        self.account.setStringValue(&ns(&account));
         let browser = state
             .forge
             .as_ref()
             .is_some_and(|forge| super::login::availability(forge).is_ok());
-        let (title, action) = match (&state.login, keychain) {
-            (Some(_), _) => (t("Abbrechen"), sel!(ideCiCancelLogin:)),
-            (None, true) => (t("Abmelden"), sel!(ideCiSignOut:)),
-            (None, false) if browser => (t("Anmelden …"), sel!(ideCiSignIn:)),
-            (None, false) => (t("Token eingeben …"), sel!(ideCiSignIn:)),
+        let action = match (&state.login, keychain) {
+            (Some(_), _) => Some((t("Abbrechen"), sel!(ideCiCancelLogin:))),
+            (None, true) => Some((t("Abmelden"), sel!(ideCiSignOut:))),
+            (None, false) if state.source.is_some() => None,
+            (None, false) if browser => Some((t("Anmelden …"), sel!(ideCiSignIn:))),
+            (None, false) => Some((t("Token eingeben …"), sel!(ideCiSignIn:))),
         };
-        self.sign.setTitle(&ns(title));
-        set_action(&self.sign, panel, action);
-        self.sign
-            .setHidden(state.login.is_none() && state.source.is_some() && !keychain);
-        drop(state);
-        self.show_tab(panel);
+        let menu = NSMenu::new(mtm);
+        menu.setAutoenablesItems(false);
+        let mut info = vec![account];
+        if let Some(forge) = &state.forge {
+            info.insert(0, forge.to_string());
+        }
+        for line in info {
+            let entry = item(mtm, &line, None, "");
+            entry.setEnabled(false);
+            menu.addItem(&entry);
+        }
+        if let Some((title, action)) = action {
+            menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(mtm));
+            let entry = item(mtm, title, Some(action), "");
+            set_target(&entry, panel);
+            menu.addItem(&entry);
+        }
+        menu
     }
 
     /// The tab's titles and the buttons that act on what it lists.
@@ -419,11 +429,7 @@ fn small_note(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     note
 }
 
-fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Retained<NSTextField>, Buttons) {
-    let title = label(mtm, "");
-    title.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize())));
-    title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-    title.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
+fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Buttons) {
     let button = |name: &str, description: &str, action: Sel| {
         let button = symbol_button(mtm, name, description, SYMBOL_POINTS, Some(panel), action);
         button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
@@ -439,12 +445,12 @@ fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Ret
     );
     let cancel = button("stop.circle", t("Lauf abbrechen …"), sel!(ideCiCancel:));
     let web = button("safari", t("Im Browser öffnen"), sel!(ideCiOpenWeb:));
+    let account = button("person.crop.circle", t("Anmeldung"), sel!(ideCiAccount:));
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(6.0);
-    row.addView_inGravity(&title, NSStackViewGravity::Leading);
-    for view in [&*refresh as &NSView, &start, &rerun, &cancel, &add, &web] {
-        row.addView_inGravity(view, NSStackViewGravity::Trailing);
+    row.setSpacing(2.0);
+    for view in [&*refresh as &NSView, &start, &rerun, &cancel, &add, &web, &account] {
+        row.addArrangedSubview(view);
     }
     let buttons = Buttons {
         start,
@@ -452,7 +458,7 @@ fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Ret
         cancel,
         add,
     };
-    (row, title, buttons)
+    (row, buttons)
 }
 
 /// Runs, merge requests or pull requests, and issues.
@@ -473,26 +479,6 @@ fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> 
     crate::util::set_label(&control, Some(t("Was die Liste zeigt")));
     set_action(&control, panel, sel!(ideCiTab:));
     control
-}
-
-fn account_row(
-    mtm: MainThreadMarker,
-    panel: &CiPanel,
-) -> (Retained<NSStackView>, Retained<NSTextField>, Retained<NSButton>) {
-    let account = label(mtm, "");
-    account.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    account.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    account.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    account.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
-    let sign = borderless_button(mtm, t("Token eingeben …"), Some(panel), sel!(ideCiSignIn:));
-    sign.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    sign.setContentTintColor(Some(&NSColor::controlAccentColor()));
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(6.0);
-    row.addView_inGravity(&account, NSStackViewGravity::Leading);
-    row.addView_inGravity(&sign, NSStackViewGravity::Trailing);
-    (row, account, sign)
 }
 
 fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Retained<NSTextField>) {

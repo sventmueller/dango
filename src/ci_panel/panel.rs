@@ -14,7 +14,7 @@ use objc2_app_kit::{
     NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSString};
 
 use super::load::{self, Head, Loaded, RunRow};
 use super::rows::Key;
@@ -257,6 +257,18 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideCiAccount:))]
+        fn account_action(&self, sender: Option<&NSView>) {
+            guarded((), || {
+                if let Some(view) = sender {
+                    let below = NSPoint::new(0.0, view.frame().size.height + 4.0);
+                    self.ui()
+                        .account_menu(self)
+                        .popUpMenuPositioningItem_atLocation_inView(None, below, Some(view));
+                }
+            });
+        }
+
         #[unsafe(method(ideCiSignIn:))]
         fn sign_in_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.sign_in());
@@ -352,6 +364,7 @@ impl CiPanel {
         });
         let panel = CiPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Ci, &panel.ui().page);
+        controller.set_panel_accessory(Panel::Ci, &panel.ui().header);
         PANELS.with(|panels| panels.borrow_mut().push(panel.clone()));
         panel.refresh(true);
     }
