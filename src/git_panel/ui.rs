@@ -235,6 +235,10 @@ impl Banner {
             button.setBezelStyle(NSBezelStyle::Push);
             button.setControlSize(NSControlSize::Small);
             button.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+            button.setContentCompressionResistancePriority_forOrientation(
+                100.0,
+                NSLayoutConstraintOrientation::Horizontal,
+            );
             button
         };
         let resume = button(t("Fortsetzen"), sel!(ideGitContinue:));
@@ -419,6 +423,8 @@ fn message_box(
     placeholder.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     placeholder.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
     placeholder.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    placeholder
+        .setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     crate::util::hide_from_voiceover(&placeholder);
     container.addSubview(&placeholder);
     placeholder.setTranslatesAutoresizingMaskIntoConstraints(false);

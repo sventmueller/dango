@@ -468,6 +468,8 @@ fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> 
     control.setControlSize(objc2_app_kit::NSControlSize::Small);
     control.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
     control.setSelectedSegment(0);
+    // Equal segments make the control three times its longest label wide, which would hold the sidebar wider.
+    control.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     crate::util::set_label(&control, Some(t("Was die Liste zeigt")));
     set_action(&control, panel, sel!(ideCiTab:));
     control
