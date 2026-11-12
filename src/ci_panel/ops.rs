@@ -15,7 +15,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::{t, tf};
 
-use super::panel::{CiPanel, Tab, with_panel};
+use super::model::Tab;
+use super::panel::{CiPanel, with_panel};
 use super::{log_tab, text, work};
 use crate::util::{constant, guarded, ns};
 

@@ -290,14 +290,14 @@ fn terminal(root: PathBuf, ok: bool) {
     walk("the terminal misses nothing");
     picture(&root, "terminal");
     let Some(controller) = window_of(&root) else { return };
-    match crate::selftest::serve_page() {
-        Ok(port) => crate::selftest::PAGE_PORT.store(port, std::sync::atomic::Ordering::SeqCst),
+    match crate::selftest::browser::serve_page() {
+        Ok(port) => crate::selftest::browser::PAGE_PORT.store(port, std::sync::atomic::Ordering::SeqCst),
         Err(error) => check("the page server starts", false, error.to_string()),
     }
-    crate::browser::open_tab(&controller, Some(&crate::selftest::page_url("/")));
+    crate::browser::open_tab(&controller, Some(&crate::selftest::browser::page_url("/")));
     when(
         root,
-        |c| c.tab_titles().iter().any(|t| t == crate::selftest::PAGE_TITLE),
+        |c| c.tab_titles().iter().any(|t| t == crate::selftest::browser::PAGE_TITLE),
         browser,
     );
 }

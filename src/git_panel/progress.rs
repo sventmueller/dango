@@ -7,7 +7,8 @@ use objc2::MainThreadOnly;
 use objc2_app_kit::{NSAccessibility, NSControlStateValueOn, NSMenuItem};
 use splat_i18n::{t, tf};
 
-use super::panel::{GitPanel, Task, with_panel};
+use super::model::Task;
+use super::panel::{GitPanel, with_panel};
 use crate::util::{item, main_soon, ns, separator, set_target};
 
 /// How often progress reaches the main thread at most, unless git moves to another phase.

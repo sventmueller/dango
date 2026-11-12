@@ -1,0 +1,164 @@
+//! What the self-test reads from and does with editors, through the code their commands run.
+
+use std::path::Path;
+
+use ide_document::recovery::RecoveryId;
+use objc2::DefinedClass;
+use objc2::rc::{Retained, Weak};
+use objc2_app_kit::{NSColor, NSFontAttributeName, NSForegroundColorAttributeName};
+use objc2_foundation::{NSPoint, NSRect, NSSize};
+
+use super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
+use crate::util::{constant, ns};
+use crate::window::WindowController;
+
+/// The editors of `controller` with their tab ids, for the self-test.
+pub fn editors_of(controller: &WindowController) -> Vec<(isize, Retained<EditorTextView>)> {
+    open_editors()
+        .into_iter()
+        .filter(|v| v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .map(|v| (v.ivars().tab.get(), v))
+        .collect()
+}
+
+/// What the bar above `view` says and offers while it shows, for the self-test.
+pub fn conflict_bar(view: &EditorTextView) -> Option<(String, Vec<String>)> {
+    conflict::inspect(view)
+}
+
+/// The message, informative text and buttons with their keys of the question before the text of a gone file's editor
+/// goes, for the self-test.
+pub fn discard_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
+    conflict::inspect_question(view)
+}
+
+/// Clicks the button titled `title` of the bar above `view`, for the self-test; whether there was one.
+pub fn press_conflict_button(view: &EditorTextView, title: &str) -> bool {
+    conflict::press(view, title)
+}
+
+/// The text of the tab with the differences for `path`, for the self-test.
+pub fn compared(path: &Path) -> Option<String> {
+    compare::shown(path)
+}
+
+/// The copy against a crash of `view`, for the self-test.
+pub fn recovery_of(view: &EditorTextView) -> RecoveryId {
+    view.ivars().recovery.clone()
+}
+
+/// The text view of the front editor of `controller`, for the self-test.
+pub fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
+    editor_for(controller, path)
+}
+
+/// What the self-test does with folds and carets, through the code the commands run.
+pub mod selftest {
+    pub use super::super::fold::{
+        click as click_fold, fold_all, fold_at_cursor, folded, from_server, gutter, laid_out_lines, placeholders,
+        unfold_all,
+    };
+    pub use super::super::multi::{
+        add_next_occurrence, add_vertical, carets, column, copied, paste_text, set as set_carets,
+    };
+}
+
+/// What the self-test does with blame, through the code the commands run.
+pub mod blame_probe {
+    pub use super::super::blame::{
+        copy_hash, dismiss, line, popover_texts, show_diff, show_for_cursor, show_in_graph, toggle_column,
+    };
+    pub use super::super::blame_column::of as column;
+}
+
+/// Types `text` as the keyboard would, through the view's input path.
+pub fn type_text(view: &EditorTextView, text: &str) {
+    use objc2_app_kit::NSTextInputClient;
+    // SAFETY: The inserted object is an NSString, one of the two types this method accepts.
+    unsafe {
+        view.insertText_replacementRange(
+            &ns(text),
+            objc2_foundation::NSRange::new(objc2_foundation::NSNotFound.cast_unsigned(), 0),
+        );
+    }
+}
+
+/// Presses Return in `view`.
+pub fn type_newline(view: &EditorTextView) {
+    editing::newline(view);
+}
+
+/// Saves `view` as ⌘S does.
+pub fn save_view(view: &EditorTextView) {
+    save(view, false);
+}
+
+pub use super::changes::{
+    Mark as ChangeMark, Seen as ChangesSeen, popover_parts as change_popover, seen as changes_seen,
+};
+pub use super::indent::shown as indent_shown;
+pub use super::whitespace::visible as whitespace_visible;
+
+/// Clicks the change mark of `line`, counted from 0, in `view`'s line number column, as the mouse would.
+pub fn click_change(view: &EditorTextView, line: usize) -> bool {
+    let Some(gutter) = view.ivars().gutter.borrow().as_ref().and_then(Weak::load) else {
+        return false;
+    };
+    let Some(start) = view.line_start(line) else {
+        return false;
+    };
+    let Some(row) = crate::lsp::rect_of(view, start..start + 1) else {
+        return false;
+    };
+    let row = gutter.convertRect_fromView(row, Some(view));
+    let width = gutter.bounds().size.width;
+    let at = NSRect::new(
+        NSPoint::new(width - 8.0, row.origin.y),
+        NSSize::new(8.0, row.size.height),
+    );
+    changes::clicked(view, line, &gutter, at)
+}
+
+/// Whether the first `fn` of `text` is shown in a keyword colour.
+pub fn keyword_coloured(view: &EditorTextView, text: &str) -> bool {
+    let Some(at) = text.find("fn ") else { return false };
+    let Some(storage) = view.storage() else { return false };
+    let at = text[..at].encode_utf16().count();
+    let key = constant!(NSForegroundColorAttributeName);
+    // SAFETY: The index lies inside the text; no effective range is asked for.
+    let color = unsafe { storage.attribute_atIndex_effectiveRange(key, at, std::ptr::null_mut()) };
+    let expected: Retained<objc2::runtime::AnyObject> =
+        style::token_color(splat_markdown::code::CodeToken::Keyword).into();
+    color.is_some_and(|c| std::ptr::eq(&*c, &*expected))
+}
+
+/// The colour at UTF-16 offset `at` in sRGB as the view's appearance shows it, and whether the font there is bold.
+pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
+    use objc2_app_kit::{NSAppearanceCustomization, NSColorSpace, NSFont, NSFontDescriptorSymbolicTraits};
+    let storage = view.storage()?;
+    let (color_key, font_key) = (
+        constant!(NSForegroundColorAttributeName),
+        constant!(NSFontAttributeName),
+    );
+    // SAFETY: The index lies inside the text; no effective range is asked for.
+    let color = unsafe { storage.attribute_atIndex_effectiveRange(color_key, at, std::ptr::null_mut()) }?;
+    // SAFETY: As above.
+    let font = unsafe { storage.attribute_atIndex_effectiveRange(font_key, at, std::ptr::null_mut()) }?;
+    let color = color.downcast::<NSColor>().ok()?;
+    let rgb = std::cell::Cell::new(None);
+    view.effectiveAppearance()
+        .performAsCurrentDrawingAppearance(&block2::RcBlock::new(|| {
+            rgb.set(
+                color
+                    .colorUsingColorSpace(&NSColorSpace::sRGBColorSpace())
+                    .map(|c| [c.redComponent(), c.greenComponent(), c.blueComponent()]),
+            );
+        }));
+    let bold = font
+        .downcast::<NSFont>()
+        .ok()?
+        .fontDescriptor()
+        .symbolicTraits()
+        .contains(NSFontDescriptorSymbolicTraits::TraitBold);
+    Some((rgb.get()?, bold))
+}

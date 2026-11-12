@@ -2,7 +2,6 @@
 //! file (E24); a closed file is read, changed and written through the document model as saving writes it, keeping its
 //! encoding, byte order mark and line endings, on a thread of its own.
 
-use std::ops::Range;
 use std::path::{Path, PathBuf};
 
 use ide_document::{Document, Edit};
@@ -10,16 +9,9 @@ use ide_project::{Replacement, SearchOptions, replacements};
 use objc2::rc::Retained;
 use splat_i18n::t;
 
+use super::model::Only;
 use crate::editor::EditorTextView;
 use crate::util::main_soon;
-
-/// Which matches of a file to replace.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) enum Only {
-    All,
-    /// The matches of one line that the results show, at these columns.
-    Line(u64, Vec<Range<usize>>),
-}
 
 /// What a replacement did.
 #[derive(Debug, Default)]

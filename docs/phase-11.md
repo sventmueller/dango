@@ -394,6 +394,31 @@ Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
     Workers ankommt.
 
 ### B21 Model und View trennen
+*Umgesetzt am 2026-11-12.* Je Panel und Tab ein Model ohne `objc2` mit eigenen Unit-Tests: Dateien
+(`window/files/`: `model.rs`, `view.rs`, `controller.rs`; Klick, Kontextmenü, Anlegen und Umbenennen als Effekte),
+Git-Panel (`git_panel/model/`: Phase, laufende Aufgabe, Refresh und offene Zeilen; `panel.rs` reicht nur noch die
+AppKit-Rückrufe weiter, `refresh.rs` liest git), Suche (`window/search/`: `model.rs`, `panel.rs`, `controller.rs`),
+AI-Tab (`agent/model.rs`: Warteschlange, Senden, Pillen, Titel), Terminal-View (`terminal/model.rs`: Frames, Glocke,
+VoiceOver, Hinweise, Kontextmenü) und CI-Panel (`ci_panel/model.rs`: Phase, Reiter, Lesen und Warten, Zeilen;
+`refresh.rs` als Controller). Die elf Dateien in `src/` über 1 000 Zeilen (gemessen am Start, die Crates waren schon
+zerlegt) sind an ihren Nähten zerlegt, `window/files.rs` und `git_panel/panel.rs` ebenso. `make lint` ruft `cargo xtask structure` auf: keine `.rs`-Datei im Workspace über 1 000
+Zeilen, kein `objc2` in einem Model. Abweichungen:
+- Model ist eine Datei `model.rs` oder ein Ordner `model/`; das Git-Panel hat den Ordner, weil sein bisheriges
+  Zeilen-Model (`model/rows.rs`) neben Zustand und Übergängen (`model/mod.rs`) bleibt. Die Prüfung nimmt jede Datei
+  darin.
+- „Ohne `objc2`" heißt ohne `objc2`-Import im Model. Ein paar Models rufen reine Funktionen aus Modulen mit AppKit
+  (`preview::is_svg`, `ci_panel::text::problem`, `git_panel::graph::layout`), statt sie zu verdoppeln.
+- Nur das Dateien-Panel gibt eine Effekt-Liste zurück, weil es mehrere Dinge nacheinander auslöst (fragen, anlegen,
+  öffnen, melden). Die übrigen Übergänge geben zurück, was der Controller tun soll (`Start`, `Read`, `Started`,
+  `Refresh`, `Bell`, `Frame`), oder den nächsten Wert (die nächste Nachricht der Warteschlange).
+- Das Terminal-Model behält `Cell`-Felder, weil die View es über geteilte Ivars hält; die Suche bricht beim Start den
+  laufenden Lauf über dessen `Cancel` ab (ein Flag, kein I/O).
+- Beim AI-Tab bleiben View und Controller entlang der vorhandenen Dateien: Aufbau in `tab.rs`, Sitzung in
+  `tab_session.rs`, Eingaben in `actions.rs`, Antworten in `requests.rs`, Zurückspulen in `rewind_actions.rs`.
+- Selftest-Zugänge (`#[cfg(feature = "selftest")]`) ziehen beim Zerlegen in eigene Dateien (`probe.rs`,
+  `tab_probe.rs`, `timeline_probe.rs`, `search/selftest.rs`); `editor/insets.rs` wird der Ordner `editor/insets/`
+  (`draw.rs`, `rotor.rs`).
+
 Auswirkung: Logik der Panels wird mit `cargo test` prüfbar statt nur im Fenster-Selftest; kleinere Dateien.
 
 - **E98 Model ohne AppKit, View ohne Logik.** Je Panel und Tab ein `model.rs` ohne `objc2`-Import (Zustand,

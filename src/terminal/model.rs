@@ -1,0 +1,276 @@
+//! What a terminal view decides without AppKit (E98): when a frame is due, how a bell rings, when VoiceOver hears of
+//! new output, how long a notice stays, which commands its menu offers and when they work.
+
+use std::cell::Cell;
+use std::time::{Duration, Instant};
+
+use ide_terminal::{Size, Snapshot};
+use splat_i18n::{t, tf};
+
+/// The shortest time between two snapshots, about a frame of a fast display.
+const FRAME: Duration = Duration::from_millis(8);
+pub const BELL_FLASH: Duration = Duration::from_millis(140);
+/// Bells closer than this ring once.
+const BELL_GAP: Duration = Duration::from_millis(250);
+/// VoiceOver hears of new output at most this often.
+const ANNOUNCE_GAP: Duration = Duration::from_millis(500);
+
+#[derive(Default)]
+pub struct State {
+    pub first_responder: Cell<bool>,
+    pub focused: Cell<bool>,
+    pub exited: Cell<bool>,
+    pub prompts: Cell<usize>,
+    /// Output arrived while the view was hidden.
+    pub stale: Cell<bool>,
+    pub frame_pending: Cell<bool>,
+    last_frame: Cell<Option<Instant>>,
+    pub cursor_off: Cell<bool>,
+    last_bell: Cell<Option<Instant>>,
+    flash_until: Cell<Option<Instant>>,
+    announced: Cell<Option<Instant>>,
+    pub size: Cell<Option<Size>>,
+    notices: Cell<u64>,
+    /// A GPU frame was skipped while the window was hidden behind others.
+    pub unpresented: Cell<bool>,
+    /// The view is drawing a picture of itself, which only Core Graphics can.
+    pub picturing: Cell<bool>,
+}
+
+/// What a bell does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Bell {
+    /// It came too soon after the last one.
+    Ignore,
+    /// The system sound, for a view out of sight or a user who wants less motion.
+    Beep,
+    /// The view flashes until then.
+    Flash(Instant),
+}
+
+/// When the snapshot for new output is taken.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Frame {
+    /// The view is hidden; it takes one once it shows again.
+    Stale,
+    /// One is due already.
+    Pending,
+    Now,
+    After(Duration),
+}
+
+/// A command of the terminal's context menu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Command {
+    Copy,
+    Paste,
+    SelectAll,
+    Clear,
+    NewTerminalHere,
+}
+
+impl State {
+    /// What a bell at `now` does in a view that is `visible` or not.
+    pub fn bell(&self, now: Instant, visible: bool, reduce_motion: bool) -> Bell {
+        if self.last_bell.get().is_some_and(|last| now - last < BELL_GAP) {
+            return Bell::Ignore;
+        }
+        self.last_bell.set(Some(now));
+        if !visible || reduce_motion {
+            return Bell::Beep;
+        }
+        let until = now + BELL_FLASH;
+        self.flash_until.set(Some(until));
+        Bell::Flash(until)
+    }
+
+    pub fn flashing(&self, now: Instant) -> bool {
+        self.flash_until.get().is_some_and(|until| now < until)
+    }
+
+    /// When the snapshot for output that arrived at `now` is taken, in a view that is `hidden` or not.
+    pub fn frame(&self, now: Instant, hidden: bool) -> Frame {
+        if hidden {
+            self.stale.set(true);
+            return Frame::Stale;
+        }
+        if self.frame_pending.get() {
+            return Frame::Pending;
+        }
+        let since = self.last_frame.get().map_or(FRAME, |last| now - last);
+        if since >= FRAME {
+            return Frame::Now;
+        }
+        self.frame_pending.set(true);
+        Frame::After(FRAME - since)
+    }
+
+    /// Notes that a snapshot was taken at `now`.
+    pub fn framed(&self, now: Instant) {
+        self.last_frame.set(Some(now));
+        self.stale.set(false);
+    }
+
+    /// Whether VoiceOver hears of the output at `now`: while the view has the focus, at most every half second.
+    pub fn announce(&self, now: Instant) -> bool {
+        if !self.focused.get() || self.announced.get().is_some_and(|last| now - last < ANNOUNCE_GAP) {
+            return false;
+        }
+        self.announced.set(Some(now));
+        true
+    }
+
+    /// The number of a notice that shows now.
+    pub fn next_notice(&self) -> u64 {
+        let shown = self.notices.get() + 1;
+        self.notices.set(shown);
+        shown
+    }
+
+    /// Whether notice `shown` is still the last one, so its time running out hides it.
+    pub fn is_last_notice(&self, shown: u64) -> bool {
+        self.notices.get() == shown
+    }
+
+    /// Whether the cursor blinks: one the program wants blinking and visible, in a view with the focus, before the
+    /// program ended.
+    pub fn blinking(&self, cursor_blinks: bool) -> bool {
+        self.focused.get() && !self.exited.get() && cursor_blinks
+    }
+
+    /// The lines of the grid when `fit` fit the view: after the program ended, one less, for the line that says so.
+    pub fn grid_lines(&self, fit: u16) -> u16 {
+        if self.exited.get() {
+            fit.saturating_sub(1).max(1)
+        } else {
+            fit
+        }
+    }
+}
+
+/// The line that says the program ended: where the cursor stands if that line is empty, else the next one, which may
+/// be the line kept free below the grid.
+pub fn final_line(screen: &Snapshot) -> usize {
+    let cursor = screen.cursor.point;
+    let blank = screen
+        .rows
+        .get(cursor.line)
+        .is_some_and(|row| row.iter().all(|cell| cell.ch == ' ' || cell.ch == '\0'));
+    if blank { cursor.line } else { cursor.line + 1 }
+}
+
+/// The title a program set, if it holds more than spaces.
+pub fn shown_title(title: Option<String>) -> Option<String> {
+    title.filter(|t| !t.trim().is_empty())
+}
+
+/// What VoiceOver calls the view.
+pub fn label(title: Option<&str>) -> String {
+    match title {
+        Some(title) => tf("Terminal: {}", &[title]),
+        None => t("Terminal").to_string(),
+    }
+}
+
+/// The context menu, `None` for a separator.
+pub fn menu() -> [Option<(&'static str, Command)>; 7] {
+    [
+        Some((t("Kopieren"), Command::Copy)),
+        Some((t("Einsetzen"), Command::Paste)),
+        Some((t("Alles auswählen"), Command::SelectAll)),
+        None,
+        Some((t("Terminal leeren"), Command::Clear)),
+        None,
+        Some((t("Neues Terminal hier"), Command::NewTerminalHere)),
+    ]
+}
+
+/// Whether `command` works: copying needs a selection, pasting something the shell takes, the rest a started shell.
+pub fn enabled(command: Command, started: bool, selection: bool, can_paste: impl FnOnce() -> bool) -> bool {
+    match command {
+        Command::Copy => selection,
+        Command::Paste => started && can_paste(),
+        Command::SelectAll | Command::Clear => started,
+        Command::NewTerminalHere => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bells_close_together_ring_once_and_out_of_sight_they_beep() {
+        let state = State::default();
+        let now = Instant::now();
+        assert_eq!(state.bell(now, true, false), Bell::Flash(now + BELL_FLASH));
+        assert!(state.flashing(now));
+        assert!(!state.flashing(now + BELL_FLASH));
+        assert_eq!(state.bell(now + Duration::from_millis(100), true, false), Bell::Ignore);
+        assert_eq!(state.bell(now + Duration::from_millis(300), false, false), Bell::Beep);
+        assert_eq!(state.bell(now + Duration::from_millis(600), true, true), Bell::Beep);
+    }
+
+    #[test]
+    fn output_draws_at_most_once_a_frame_and_not_while_hidden() {
+        let state = State::default();
+        let now = Instant::now();
+        assert_eq!(state.frame(now, true), Frame::Stale);
+        assert!(state.stale.get());
+        assert_eq!(state.frame(now, false), Frame::Now);
+        state.framed(now);
+        assert!(!state.stale.get());
+        let soon = now + Duration::from_millis(3);
+        assert_eq!(state.frame(soon, false), Frame::After(FRAME - Duration::from_millis(3)));
+        assert_eq!(state.frame(soon, false), Frame::Pending);
+    }
+
+    #[test]
+    fn voiceover_hears_of_output_only_with_the_focus_and_not_too_often() {
+        let state = State::default();
+        let now = Instant::now();
+        assert!(!state.announce(now));
+        state.focused.set(true);
+        assert!(state.announce(now));
+        assert!(!state.announce(now + Duration::from_millis(200)));
+        assert!(state.announce(now + Duration::from_millis(600)));
+    }
+
+    #[test]
+    fn only_the_last_notice_hides_when_its_time_runs_out() {
+        let state = State::default();
+        let first = state.next_notice();
+        let second = state.next_notice();
+        assert!(!state.is_last_notice(first));
+        assert!(state.is_last_notice(second));
+    }
+
+    #[test]
+    fn an_ended_program_keeps_a_line_free_and_stops_the_blinking() {
+        let state = State::default();
+        state.focused.set(true);
+        assert!(state.blinking(true));
+        assert_eq!(state.grid_lines(24), 24);
+        state.exited.set(true);
+        assert!(!state.blinking(true));
+        assert_eq!(state.grid_lines(24), 23);
+        assert_eq!(state.grid_lines(1), 1);
+    }
+
+    #[test]
+    fn the_menu_works_as_far_as_the_shell_does() {
+        assert!(!enabled(Command::Copy, true, false, || true));
+        assert!(!enabled(Command::Paste, false, false, || true));
+        assert!(enabled(Command::Paste, true, false, || true));
+        assert!(!enabled(Command::Clear, false, false, || true));
+        assert!(enabled(Command::NewTerminalHere, false, false, || false));
+        assert_eq!(menu().iter().filter(|e| e.is_none()).count(), 2);
+    }
+
+    #[test]
+    fn a_blank_title_is_no_title() {
+        assert_eq!(shown_title(Some("  ".into())), None);
+        assert_eq!(label(Some("vim")), tf("Terminal: {}", &["vim"]));
+        assert_eq!(label(None), t("Terminal"));
+    }
+}

@@ -10,8 +10,9 @@ use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 use objc2_foundation::NSFileManager;
 use splat_i18n::{t, tf};
 
+use super::model::{Busy, Phase, Task};
 use super::model::{FileRow, Mark, RowKey, Section};
-use super::panel::{Busy, GitPanel, Phase, Task, with_panel};
+use super::panel::{GitPanel, with_panel};
 use super::progress::NEW_BRANCH_TAG;
 use super::text::Problem;
 use super::{sheets, work};

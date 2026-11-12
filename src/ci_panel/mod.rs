@@ -6,8 +6,10 @@
 mod load;
 mod log_tab;
 mod login;
+mod model;
 mod ops;
 mod panel;
+mod refresh;
 mod rows;
 mod text;
 mod ui;
@@ -62,7 +64,7 @@ pub mod selftest {
     use ide_ci::State;
     use objc2::rc::Retained;
 
-    pub use super::panel::Tab;
+    pub use super::model::Tab;
     use super::panel::{self, CiPanel};
     use crate::window::WindowController;
 
@@ -168,7 +170,7 @@ pub mod selftest {
 
     /// The titles of the context menu of `key`'s row and whether each can be chosen.
     pub fn menu_of_job(controller: &WindowController, run: u64, job: u64) -> Vec<(String, bool)> {
-        panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::rows::Key::Job(run, job)))
+        panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::model::Key::Job(run, job)))
     }
 
     /// Re-runs the failed jobs of `run`, as its menu item does.
@@ -189,7 +191,7 @@ pub mod selftest {
     pub fn press_return_on(controller: &WindowController, run: u64, job: u64) {
         let Some(panel) = panel(controller) else { return };
         let outline = &panel.ui().outline;
-        let item = panel.item_for(&super::rows::Key::Job(run, job));
+        let item = panel.item_for(&super::model::Key::Job(run, job));
         // SAFETY: The panel hands this outline view the same item for that job's row.
         let Ok(row) = usize::try_from(unsafe { outline.rowForItem(Some(&item)) }) else {
             return;

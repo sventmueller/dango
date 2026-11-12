@@ -17,7 +17,8 @@ use objc2_foundation::NSArray;
 use splat_i18n::{t, tf};
 
 use super::model::RowKey;
-use super::panel::{GitPanel, Task, with_panel};
+use super::model::Task;
+use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label};
 use super::text::Problem;
 use super::{sheets, work};

@@ -6,7 +6,7 @@ use std::path::Path;
 use ide_ci::{Client, Error, Forge, Item, Job, Kind, Run, Source, Workflow};
 use ide_git::{StatusOptions, Untracked};
 
-use super::panel::Tab;
+use super::model::Tab;
 use super::work;
 
 /// How many runs get their jobs read.

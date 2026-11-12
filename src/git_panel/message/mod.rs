@@ -16,7 +16,8 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use self::source::{Failure, Source};
-use super::panel::{GitPanel, Phase, Task, with_panel};
+use super::model::{Phase, Task};
+use super::panel::{GitPanel, with_panel};
 use super::text::Problem;
 use super::{sheets, work};
 use crate::util::{main_soon, ns};

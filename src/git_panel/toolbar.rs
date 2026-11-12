@@ -8,7 +8,8 @@ use objc2_app_kit::{NSBezelStyle, NSMenuItem, NSPopUpButton, NSToolbarItem};
 use objc2_foundation::{NSCopying, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use super::panel::{GitPanel, Phase};
+use super::model::Phase;
+use super::panel::GitPanel;
 use crate::util::{ns, symbol};
 use crate::window::WindowController;
 

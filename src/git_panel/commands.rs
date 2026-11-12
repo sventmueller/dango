@@ -11,8 +11,9 @@ use objc2_app_kit::NSMenuItem;
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
+use super::model::Phase;
 use super::model::RowKey;
-use super::panel::{self, GitPanel, Phase};
+use super::panel::{self, GitPanel};
 use crate::util::{guarded, item, separator, set_target, submenu};
 use crate::window::Panel;
 

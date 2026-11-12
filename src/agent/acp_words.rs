@@ -4,7 +4,7 @@
 use ide_acp::{ConfigOption, OptionValue};
 use splat_i18n::t;
 
-use super::actions::effort_name;
+use super::model::effort_name;
 
 /// The name and description of the mode `mode` of the agent with the id `agent`, where the app has words for it.
 pub fn mode(agent: &str, mode: &str) -> Option<(&'static str, &'static str)> {

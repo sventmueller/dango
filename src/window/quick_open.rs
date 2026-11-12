@@ -284,7 +284,7 @@ impl QuickOpenPanel {
         }
         let Some(symbols) = symbols else {
             controller.query_files(&query, RESULTS, move |hits| {
-                main_soon(move || super::quick_open_answered(&root, asked, hits));
+                main_soon(move || super::registry::quick_open_answered(&root, asked, hits));
             });
             return;
         };

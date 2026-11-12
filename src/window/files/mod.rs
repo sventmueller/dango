@@ -1,0 +1,128 @@
+//! The folder tree of the files panel, read one folder at a time as the user opens it: the model decides, the view
+//! draws, the controller carries out (E98).
+
+mod controller;
+mod model;
+mod view;
+
+use std::path::PathBuf;
+use std::rc::Rc;
+
+use objc2::rc::Retained;
+use objc2::runtime::ProtocolObject;
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
+use objc2_app_kit::{NSAccessibility, NSMenu, NSOutlineView, NSScrollView, NSTableColumn, NSTableViewStyle, NSView};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
+use splat_i18n::t;
+
+use super::WindowController;
+use crate::project::Project;
+use crate::util::{ns, set_action};
+use view::FileTreeSource;
+
+/// The height of every row, a folder's as a file's.
+const ROW_HEIGHT: f64 = 22.0;
+
+/// The tree view with what feeds it.
+pub struct FileTree {
+    scroll: Retained<NSScrollView>,
+    view: Retained<NSOutlineView>,
+    source: Retained<FileTreeSource>,
+}
+
+impl FileTree {
+    pub fn new(mtm: MainThreadMarker, controller: &WindowController, project: Rc<Project>) -> FileTree {
+        let source = FileTreeSource::new(mtm, controller, project);
+        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 600.0));
+        let view: Retained<NSOutlineView> = Retained::into_super(super::file_outline::FileOutline::new(mtm, frame));
+        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("name"));
+        column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
+        column.setWidth(frame.size.width);
+        view.addTableColumn(&column);
+        // SAFETY: The column was just added to this outline view, which keeps it.
+        unsafe { view.setOutlineTableColumn(Some(&column)) };
+        view.setHeaderView(None);
+        view.setStyle(NSTableViewStyle::SourceList);
+        view.setIndentationPerLevel(12.0);
+        view.setUsesAutomaticRowHeights(false);
+        view.setRowHeight(ROW_HEIGHT);
+        view.setAutoresizesOutlineColumn(false);
+        view.setColumnAutoresizingStyle(
+            objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
+        );
+        view.setAccessibilityLabel(Some(&ns(t("Dateien"))));
+        // SAFETY: The outline view holds its data source and delegate weakly; `FileTree` keeps the source alive.
+        unsafe {
+            view.setDataSource(Some(ProtocolObject::from_ref(&*source)));
+            view.setDelegate(Some(ProtocolObject::from_ref(&*source)));
+        }
+        set_action(&view, &source, sel!(ideRowClicked:));
+        assert!(source.respondsToSelector(sel!(ideRowDoubleClicked:)));
+        // SAFETY: The source answers the double action with a method that takes the sender, checked above.
+        unsafe { view.setDoubleAction(Some(sel!(ideRowDoubleClicked:))) };
+        let menu = NSMenu::new(mtm);
+        menu.setDelegate(Some(ProtocolObject::from_ref(&*source)));
+        // SAFETY: The view keeps the menu; its delegate, the source, lives as long as the view through `FileTree`.
+        unsafe { view.setMenu(Some(&menu)) };
+        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+        scroll.setHasVerticalScroller(true);
+        scroll.setAutohidesScrollers(true);
+        scroll.setDrawsBackground(false);
+        scroll.setDocumentView(Some(&view));
+        FileTree { scroll, view, source }
+    }
+
+    /// The tree in its scroll view, the files page.
+    pub fn page(&self) -> Retained<NSView> {
+        Retained::into_super(self.scroll.clone())
+    }
+
+    /// The buttons for the files panel's title row.
+    pub fn header_buttons(&self, mtm: MainThreadMarker) -> Retained<NSView> {
+        Retained::into_super(super::files_header::buttons(mtm, &self.source))
+    }
+
+    pub fn outline(&self) -> Retained<NSOutlineView> {
+        self.view.clone()
+    }
+
+    /// Shows the new entries of `dirs`.
+    pub fn reload(&self, dirs: &[PathBuf]) {
+        let root = self.source.ivars().project.root().to_path_buf();
+        for dir in dirs {
+            if *dir == root {
+                // SAFETY: Nil stands for the root, whose children the data source answers for.
+                unsafe { self.view.reloadItem_reloadChildren(None, true) };
+                continue;
+            }
+            if let Some(item) = self.source.item_of(dir) {
+                // SAFETY: The item is one the data source handed to this view, kept alive by the source.
+                unsafe { self.view.reloadItem_reloadChildren(Some(&item), true) };
+            }
+        }
+    }
+
+    #[cfg(feature = "selftest")]
+    pub fn row_count(&self) -> isize {
+        self.view.numberOfRows()
+    }
+
+    /// Selects the row of `path`, as a click on it does.
+    #[cfg(feature = "selftest")]
+    pub fn select(&self, path: &std::path::Path) {
+        if let Ok(row) = usize::try_from(self.source.row_of(&self.view, path)) {
+            self.view
+                .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        }
+    }
+
+    /// Clicks the row of `path`, twice for a double click, as the mouse does.
+    #[cfg(feature = "selftest")]
+    pub fn click(&self, path: &std::path::Path, double: bool) {
+        let row = self.source.row_of(&self.view, path);
+        self.source.row_clicked(&self.view, row);
+        if double {
+            self.source.row_double_clicked(&self.view, row);
+        }
+    }
+}

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use ide_git::{Commit, EntryKind, FileState, Stash, Status, StatusEntry};
 use splat_i18n::t;
 
-use super::graph::GraphRow;
+use crate::git_panel::graph::GraphRow;
 use crate::worktrees::TreeState;
 
 /// A group of rows in the list.
@@ -167,7 +167,7 @@ impl Model {
         limit: usize,
     ) -> Model {
         let mut model = Model {
-            graph: super::graph::layout(&commits),
+            graph: crate::git_panel::graph::layout(&commits),
             more: commits.len() >= limit,
             commits,
             worktrees,

@@ -15,7 +15,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use super::panel::{CiPanel, Phase, Tab};
+use super::model::{Phase, Tab};
+use super::panel::CiPanel;
 use super::text;
 use crate::util::{borderless_button, item, ns, pin_edges, set_action, set_target, symbol, symbol_button};
 

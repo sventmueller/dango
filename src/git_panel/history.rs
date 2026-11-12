@@ -16,7 +16,8 @@ use splat_i18n::{t, tf};
 
 use super::graph::{GraphRow, GraphView};
 use super::model::RowKey;
-use super::panel::{GitPanel, HISTORY_PAGE, Task, with_panel};
+use super::model::{HISTORY_PAGE, Task};
+use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label, pill_with};
 use super::{sheets, work};
 use crate::util::{constant, label, ns};

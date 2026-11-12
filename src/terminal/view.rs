@@ -4,51 +4,37 @@ use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
 
 use block2::RcBlock;
 use ide_core::settings::{Settings, keys};
-use ide_process::Supervisor;
-use ide_terminal::{Clipboard, Damage, Event, Foreground, Options, Session, Size, Snapshot};
+use ide_terminal::{Session, Size, Snapshot};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibilityValueChangedNotification, NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
-    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSBeep,
-    NSBitmapImageRep, NSColor, NSDragOperation, NSDraggingInfo, NSEvent, NSGraphicsContext,
-    NSLayoutConstraintOrientation, NSMenu, NSMenuItem, NSMenuItemValidation, NSPasteboard, NSPasteboardTypeFileURL,
-    NSPasteboardTypeString, NSStackView, NSStackViewDistribution, NSTextInputClient, NSTrackingArea,
-    NSTrackingAreaOptions, NSUserInterfaceLayoutDirection, NSUserInterfaceLayoutOrientation, NSView,
-    NSViewLayerContentsRedrawPolicy, NSWindowDidBecomeKeyNotification, NSWindowDidChangeOcclusionStateNotification,
-    NSWindowDidResignKeyNotification, NSWindowOcclusionState, NSWorkspace,
+    NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
+    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
+    NSBitmapImageRep, NSColor, NSDragOperation, NSDraggingInfo, NSEvent, NSLayoutConstraintOrientation, NSMenu,
+    NSMenuItem, NSMenuItemValidation, NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypeString, NSStackView,
+    NSStackViewDistribution, NSTextInputClient, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutDirection,
+    NSUserInterfaceLayoutOrientation, NSView, NSViewLayerContentsRedrawPolicy, NSWindowDidBecomeKeyNotification,
+    NSWindowDidChangeOcclusionStateNotification, NSWindowDidResignKeyNotification,
 };
-use objc2_core_graphics::CGContext;
 use objc2_foundation::{
-    NSArray, NSAttributedString, NSDate, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRange,
+    NSArray, NSAttributedString, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRange,
     NSRangePointer, NSRect, NSSize, NSString, NSTimer, NSUInteger,
 };
-use splat_i18n::{t, tf};
+use splat_i18n::t;
 
 use super::banner::Banner;
 use super::gpu::Surface;
 use super::input::KeyState;
+use super::model::{self, Command, State};
 use super::mouse::MouseState;
 use super::palette::{self, Theme};
-use super::render::{self, Canvas, Fonts, Overlay};
-use super::sprites::QuadCanvas;
-use crate::util::{constant, guarded, item, main_after, ns, separator, set_target};
+use super::render::{self, Fonts};
+use crate::util::{constant, guarded, item, ns, separator, set_target};
 use crate::window::WindowController;
-
-/// The shortest time between two snapshots, about a frame of a fast display.
-const FRAME: Duration = Duration::from_millis(8);
-const BLINK: f64 = 0.53;
-const BELL_FLASH: Duration = Duration::from_millis(140);
-/// Bells closer than this ring once.
-const BELL_GAP: Duration = Duration::from_millis(250);
-/// VoiceOver hears of new output at most this often.
-const ANNOUNCE_GAP: Duration = Duration::from_millis(500);
-const NOTICE_TIME: Duration = Duration::from_secs(8);
 
 /// What a terminal view keeps.
 pub struct Ivars {
@@ -68,8 +54,8 @@ pub struct Ivars {
     pub(super) mouse: MouseState,
     banners: RefCell<Option<Banners>>,
     /// Drawing on the GPU; none where the view draws with Core Graphics.
-    gpu: Option<RefCell<Surface>>,
-    blink: RefCell<Option<Retained<NSTimer>>>,
+    pub(super) gpu: Option<RefCell<Surface>>,
+    pub(super) blink: RefCell<Option<Retained<NSTimer>>>,
     observers: RefCell<Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
 }
 
@@ -84,32 +70,10 @@ impl Drop for Ivars {
     }
 }
 
-#[derive(Default)]
-pub(super) struct State {
-    pub(super) first_responder: Cell<bool>,
-    pub(super) focused: Cell<bool>,
-    pub(super) exited: Cell<bool>,
-    pub(super) prompts: Cell<usize>,
-    /// Output arrived while the view was hidden.
-    stale: Cell<bool>,
-    frame_pending: Cell<bool>,
-    last_frame: Cell<Option<Instant>>,
-    cursor_off: Cell<bool>,
-    last_bell: Cell<Option<Instant>>,
-    flash_until: Cell<Option<Instant>>,
-    announced: Cell<Option<Instant>>,
-    pub(super) size: Cell<Option<Size>>,
-    notices: Cell<u64>,
-    /// A GPU frame was skipped while the window was hidden behind others.
-    unpresented: Cell<bool>,
-    /// The view is drawing a picture of itself, which only Core Graphics can.
-    picturing: Cell<bool>,
-}
-
 pub(super) struct Banners {
     pub(super) dev_server: Banner,
-    notice: Banner,
-    url: RefCell<Option<String>>,
+    pub(super) notice: Banner,
+    pub(super) url: RefCell<Option<String>>,
 }
 
 /// What a window notification the view observes calls.
@@ -646,204 +610,13 @@ impl TerminalView {
         }
     }
 
-    /// Starts the shell with the login shell's environment `env`.
-    pub(super) fn spawn(&self, env: &[(String, String)]) {
-        let mut options = Options::new(self.ivars().cwd.borrow().clone());
-        options.palette = self.ivars().theme.borrow().palette.clone();
-        if let Some(size) = self.grid_size() {
-            options.size = size;
-            self.ivars().state.size.set(Some(size));
-        }
-        match Session::spawn(Supervisor::global(), env, options, super::listener(self.id())) {
-            Ok(session) => {
-                session.focus(self.ivars().state.focused.get());
-                *self.ivars().session.borrow_mut() = Some(session);
-                self.layout_grid();
-                self.refresh(true);
-            }
-            Err(error) => {
-                crate::diag::report("starting a terminal", &error);
-                self.notify(&tf("Das Terminal konnte nicht starten: {}", &[&error.to_string()]));
-            }
-        }
-    }
-
-    /// Runs `f` with the session once it has started.
-    pub(super) fn with_session<R>(&self, f: impl FnOnce(&Session) -> R) -> Option<R> {
-        self.ivars().session.borrow().as_ref().map(f)
-    }
-
-    /// Reacts to what the session reports.
-    pub(super) fn handle(&self, event: Event) {
-        match event {
-            Event::Redraw => self.redraw_requested(),
-            Event::Title(title) => self.set_title(title),
-            Event::Bell => self.bell(),
-            Event::ClipboardStore {
-                clipboard: Clipboard::Clipboard,
-                text,
-            } => super::clip::store(&text),
-            // A Mac has no primary selection, and copying into it on every selection would overwrite the pasteboard.
-            Event::ClipboardStore { .. } => {}
-            Event::ClipboardLoad(_) => {
-                let text = super::clip::text(&NSPasteboard::generalPasteboard()).unwrap_or_default();
-                self.with_session(|session| session.answer_clipboard(&text));
-            }
-            Event::WorkingDirectory(dir) => {
-                if dir.is_local() {
-                    *self.ivars().cwd.borrow_mut() = dir.path;
-                }
-            }
-            Event::Prompt => {
-                let prompts = &self.ivars().state.prompts;
-                prompts.set(prompts.get() + 1);
-            }
-            Event::CommandStarted | Event::CommandFinished { .. } => {}
-            Event::DevServer(url) => self.show_dev_server(url),
-            Event::Exited(_) => self.exited(),
-        }
-    }
-
-    fn set_title(&self, title: Option<String>) {
-        let shown = title.clone().filter(|t| !t.trim().is_empty());
-        *self.ivars().title.borrow_mut() = shown.clone();
-        let (Some(controller), Some(tab)) = (self.ivars().controller.load(), self.ivars().tab.get()) else {
-            return;
-        };
-        controller.set_tab_title(tab, shown.as_deref().unwrap_or(t("Terminal")));
-    }
-
-    /// The tab's id, once the tab exists; a title that arrived before is shown now.
-    pub(super) fn set_tab(&self, id: isize) {
-        self.ivars().tab.set(Some(id));
-        let title = self.ivars().title.borrow().clone();
-        if title.is_some() {
-            self.set_title(title);
-        }
-    }
-
-    pub(super) fn label(&self) -> String {
-        match self.ivars().title.borrow().as_deref() {
-            Some(title) => tf("Terminal: {}", &[title]),
-            None => t("Terminal").to_string(),
-        }
-    }
-
-    fn bell(&self) {
-        let state = &self.ivars().state;
-        let now = Instant::now();
-        if state.last_bell.get().is_some_and(|last| now - last < BELL_GAP) {
-            return;
-        }
-        state.last_bell.set(Some(now));
-        let visible = !self.isHiddenOrHasHiddenAncestor() && self.window().is_some_and(|w| w.isKeyWindow());
-        if !visible || NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion() {
-            NSBeep();
-            return;
-        }
-        state.flash_until.set(Some(now + BELL_FLASH));
-        self.setNeedsDisplay(true);
-        let id = self.id();
-        main_after(BELL_FLASH, move || {
-            if let Some(view) = super::find(id) {
-                view.setNeedsDisplay(true);
-            }
-        });
-    }
-
-    fn show_dev_server(&self, url: String) {
-        self.with_banners(|banners| {
-            banners.dev_server.show(&tf("Dev-Server läuft: {}", &[&url]));
-            *banners.url.borrow_mut() = Some(url);
-        });
-    }
-
-    fn open_dev_server(&self) {
-        let mut url = None;
-        self.with_banners(|banners| {
-            url = banners.url.borrow().clone();
-            banners.dev_server.hide();
-        });
-        if let (Some(url), Some(controller)) = (url, self.ivars().controller.load()) {
-            crate::browser::open_tab(&controller, Some(url.as_str()));
-        }
-    }
-
-    /// Shows `text` above the terminal for a few seconds.
-    pub(super) fn notify(&self, text: &str) {
-        let notices = &self.ivars().state.notices;
-        let shown = notices.get() + 1;
-        notices.set(shown);
-        self.with_banners(|banners| banners.notice.show(text));
-        let id = self.id();
-        main_after(NOTICE_TIME, move || {
-            if let Some(view) = super::find(id)
-                && view.ivars().state.notices.get() == shown
-            {
-                view.with_banners(|banners| banners.notice.hide());
-            }
-        });
-    }
-
-    fn exited(&self) {
-        self.ivars().state.exited.set(true);
-        self.update_blink();
-        self.layout_grid();
-        self.setNeedsDisplay(true);
-    }
-
-    fn clear(&self) {
-        self.with_session(|session| {
-            let shell = matches!(session.foreground(), Foreground::Shell(_));
-            session.clear(shell && !session.input_modes().alternate_screen);
-        });
-        self.refresh(true);
-    }
-
-    fn select_all(&self) {
-        let Some(size) = self.ivars().state.size.get() else {
-            return;
-        };
-        self.with_session(|session| {
-            let corner = |line: u16, column: u16| ide_terminal::Point {
-                line: usize::from(line),
-                column: usize::from(column),
-            };
-            session.scroll(ide_terminal::Scroll::Top);
-            session.select(
-                ide_terminal::SelectionKind::Simple,
-                corner(0, 0),
-                ide_terminal::CellSide::Left,
-            );
-            session.scroll(ide_terminal::Scroll::Bottom);
-            let end = corner(size.lines.saturating_sub(1), size.columns.saturating_sub(1));
-            session.extend_selection(end, ide_terminal::CellSide::Right);
-        });
-        self.refresh(true);
-    }
-
-    pub(super) fn selected_text(&self) -> Option<String> {
-        self.with_session(Session::selected_text)
-            .flatten()
-            .filter(|text| !text.is_empty())
-    }
-
     fn context_menu(&self) -> Retained<NSMenu> {
         let mtm = self.mtm();
         let menu = NSMenu::new(mtm);
-        let entries: [Option<(&str, Sel)>; 7] = [
-            Some((t("Kopieren"), sel!(copy:))),
-            Some((t("Einsetzen"), sel!(paste:))),
-            Some((t("Alles auswählen"), sel!(selectAll:))),
-            None,
-            Some((t("Terminal leeren"), sel!(ideClearTerminal:))),
-            None,
-            Some((t("Neues Terminal hier"), sel!(ideNewTerminalHere:))),
-        ];
-        for entry in entries {
+        for entry in model::menu() {
             match entry {
-                Some((title, action)) => {
-                    let entry = item(mtm, title, Some(action), "");
+                Some((title, command)) => {
+                    let entry = item(mtm, title, Some(action(command)), "");
                     set_target(&entry, self);
                     menu.addItem(&entry);
                 }
@@ -854,21 +627,17 @@ impl TerminalView {
     }
 
     fn validate(&self, item: &NSMenuItem) -> bool {
-        let action = item.action();
+        let Some(command) = item.action().and_then(command) else {
+            return true;
+        };
         let started = self.ivars().session.borrow().is_some();
-        if action == Some(sel!(copy:)) {
-            return self.selected_text().is_some();
-        }
-        if action == Some(sel!(paste:)) {
-            return started && super::clip::accepts(&NSPasteboard::generalPasteboard());
-        }
-        if [sel!(selectAll:), sel!(ideClearTerminal:)].map(Some).contains(&action) {
-            return started;
-        }
-        true
+        let selection = command == Command::Copy && self.selected_text().is_some();
+        model::enabled(command, started, selection, || {
+            super::clip::accepts(&NSPasteboard::generalPasteboard())
+        })
     }
 
-    fn fonts(&self) -> Rc<Fonts> {
+    pub(super) fn fonts(&self) -> Rc<Fonts> {
         let scale = self.window().map_or(2.0, |window| window.backingScaleFactor());
         let mut fonts = self.ivars().fonts.borrow_mut();
         match fonts.as_ref() {
@@ -897,16 +666,14 @@ impl TerminalView {
     }
 
     /// The grid that fits the view; after the program ended, one line less, for the line that says so.
-    fn grid_size(&self) -> Option<Size> {
+    pub(super) fn grid_size(&self) -> Option<Size> {
         let bounds = self.bounds().size;
         if bounds.width < 1.0 || bounds.height < 1.0 {
             return None;
         }
         let m = self.metrics();
-        let (columns, mut lines) = m.fit(bounds.width, bounds.height);
-        if self.ivars().state.exited.get() {
-            lines = lines.saturating_sub(1).max(1);
-        }
+        let (columns, lines) = m.fit(bounds.width, bounds.height);
+        let lines = self.ivars().state.grid_lines(lines);
         Some(Size {
             columns,
             lines,
@@ -916,7 +683,7 @@ impl TerminalView {
     }
 
     /// Fits the grid to the view and tells the program of a new size.
-    fn layout_grid(&self) {
+    pub(super) fn layout_grid(&self) {
         let Some(size) = self.grid_size() else { return };
         let state = &self.ivars().state;
         if state.size.get() == Some(size) {
@@ -1013,219 +780,28 @@ impl TerminalView {
         self.with_session(|session| session.focus(focused));
         self.refresh(false);
     }
+}
 
-    /// Output arrived; a new snapshot follows within a frame unless the view is hidden.
-    fn redraw_requested(&self) {
-        let state = &self.ivars().state;
-        if self.isHiddenOrHasHiddenAncestor() {
-            state.stale.set(true);
-            return;
-        }
-        if state.frame_pending.get() {
-            return;
-        }
-        let since = state.last_frame.get().map_or(FRAME, |last| last.elapsed());
-        if since >= FRAME {
-            self.refresh(false);
-            return;
-        }
-        state.frame_pending.set(true);
-        let id = self.id();
-        main_after(FRAME - since, move || {
-            if let Some(view) = super::find(id) {
-                view.ivars().state.frame_pending.set(false);
-                view.refresh(false);
-            }
-        });
-    }
-
-    /// Takes a snapshot of the screen and marks the lines that changed for drawing; `all` marks every line.
-    pub(super) fn refresh(&self, all: bool) {
-        let Some(screen) = self.with_session(Session::snapshot) else {
-            self.setNeedsDisplay(true);
-            return;
-        };
-        let state = &self.ivars().state;
-        state.last_frame.set(Some(Instant::now()));
-        state.stale.set(false);
-        let m = self.metrics();
-        let width = self.bounds().size.width;
-        let previous = self.ivars().screen.borrow_mut().replace(screen);
-        {
-            let screen = self.ivars().screen.borrow();
-            let Some(now) = screen.as_ref() else { return };
-            let same_shape = previous
-                .as_ref()
-                .is_some_and(|before| before.lines == now.lines && before.columns == now.columns);
-            match &now.damage {
-                Damage::Lines(lines) if same_shape && !all => {
-                    let before = previous.as_ref().map_or(now.cursor.point.line, |b| b.cursor.point.line);
-                    let changed = lines.iter().map(|line| line.line);
-                    for line in changed.chain([before, now.cursor.point.line]) {
-                        self.setNeedsDisplayInRect(m.line_rect(line, width));
-                    }
-                }
-                _ => self.setNeedsDisplay(true),
-            }
-        }
-        self.update_blink();
-        self.announce();
-    }
-
-    /// Draws with Core Graphics, where there is no GPU and for pictures of the view.
-    fn draw(&self, dirty: NSRect) {
-        let Some(context) = NSGraphicsContext::currentContext() else {
-            return;
-        };
-        let ctx = context.CGContext();
-        // Drawing the window into a bitmap passes a rectangle beyond the view and does not clip to it.
-        let bounds = self.bounds();
-        CGContext::clip_to_rect(Some(&ctx), bounds);
-        let dirty = render::intersect(dirty, bounds);
-        let fonts = self.fonts();
-        self.with_frame(|theme, screen, overlay| match screen {
-            Some(screen) => render::draw(&ctx, &fonts, theme, screen, overlay, dirty),
-            None => render::fill(&ctx, theme.palette.background, dirty),
-        });
-    }
-
-    /// Draws a frame on the GPU into the view's layer, or once the window shows again if it is hidden behind others.
-    fn draw_gpu(&self) {
-        let Some(surface) = &self.ivars().gpu else { return };
-        let shown = self
-            .window()
-            .is_some_and(|window| window.occlusionState().contains(NSWindowOcclusionState::Visible));
-        // A hidden window takes no drawables back, so asking for one would stall until it times out.
-        self.ivars().state.unpresented.set(!shown);
-        if !shown {
-            return;
-        }
-        let bounds = self.bounds();
-        let fonts = self.fonts();
-        self.with_frame(|theme, screen, overlay| {
-            let paint = |canvas: &mut QuadCanvas| match screen {
-                Some(screen) => render::paint(canvas, &fonts, theme, screen, overlay, bounds),
-                None => canvas.fill(theme.palette.background, 1.0, bounds),
-            };
-            let clear = theme.palette.background;
-            surface.borrow_mut().present(&fonts, bounds, clear, &paint);
-        });
-    }
-
-    /// Runs `f` with what a frame shows: the colours, the screen once the session has started, and what lies over it.
-    fn with_frame(&self, f: impl FnOnce(&Theme, Option<&Snapshot>, &Overlay)) {
-        let theme = self.ivars().theme.borrow();
-        let screen = self.ivars().screen.borrow();
-        let state = &self.ivars().state;
-        let marked = self.ivars().keys.marked.borrow();
-        let final_line = screen.as_ref().and_then(|screen| {
-            (state.exited.get() && screen.display_offset == 0).then(|| (final_line(screen), t("[Prozess beendet]")))
-        });
-        let overlay = Overlay {
-            focused: state.focused.get(),
-            cursor_on: !state.cursor_off.get(),
-            marked: &marked,
-            final_line,
-            flash: state.flash_until.get().is_some_and(|until| Instant::now() < until),
-        };
-        f(&theme, screen.as_ref(), &overlay);
-    }
-
-    /// A GPU frame follows a change of size or scale, which Core Graphics drawing gets from AppKit on its own.
-    fn redraw_layer(&self) {
-        if self.ivars().gpu.is_some() {
-            self.setNeedsDisplay(true);
-        }
-    }
-
-    fn occlusion_changed(&self) {
-        if self.ivars().state.unpresented.get() {
-            self.setNeedsDisplay(true);
-        }
-    }
-
-    /// Starts or stops the cursor's blinking as the program asks while the view has the focus.
-    fn update_blink(&self) {
-        let state = &self.ivars().state;
-        let blinking = state.focused.get()
-            && !state.exited.get()
-            && self
-                .ivars()
-                .screen
-                .borrow()
-                .as_ref()
-                .is_some_and(|screen| screen.cursor.blinking && screen.cursor.visible);
-        let mut timer = self.ivars().blink.borrow_mut();
-        match (blinking, timer.is_some()) {
-            (true, false) => {
-                let view = Weak::from(self);
-                let block = RcBlock::new(move |_: NonNull<NSTimer>| {
-                    guarded((), || {
-                        if let Some(view) = view.load() {
-                            let off = &view.ivars().state.cursor_off;
-                            off.set(!off.get());
-                            view.invalidate_cursor();
-                        }
-                    });
-                });
-                // SAFETY: The block holds the view weakly; the main run loop fires the timer on the main thread.
-                *timer = Some(unsafe { NSTimer::scheduledTimerWithTimeInterval_repeats_block(BLINK, true, &block) });
-            }
-            (false, true) => {
-                if let Some(timer) = timer.take() {
-                    timer.invalidate();
-                }
-                state.cursor_off.set(false);
-            }
-            _ => {}
-        }
-    }
-
-    /// Shows the cursor at once after a key, and keeps it shown for a full blink.
-    pub(super) fn wake_cursor(&self) {
-        if self.ivars().state.cursor_off.replace(false) {
-            self.invalidate_cursor();
-        }
-        if let Some(timer) = self.ivars().blink.borrow().as_ref() {
-            timer.setFireDate(&NSDate::dateWithTimeIntervalSinceNow(BLINK));
-        }
-    }
-
-    pub(super) fn invalidate_cursor(&self) {
-        let line = self
-            .ivars()
-            .screen
-            .borrow()
-            .as_ref()
-            .map(|screen| screen.cursor.point.line);
-        if let Some(line) = line {
-            let width = self.bounds().size.width;
-            self.setNeedsDisplayInRect(self.metrics().line_rect(line, width));
-        }
-    }
-
-    /// Lets VoiceOver know the text changed, at most every half second.
-    fn announce(&self) {
-        let state = &self.ivars().state;
-        let now = Instant::now();
-        if !state.focused.get() || state.announced.get().is_some_and(|last| now - last < ANNOUNCE_GAP) {
-            return;
-        }
-        state.announced.set(Some(now));
-        let element: &AnyObject = self;
-        let changed = constant!(NSAccessibilityValueChangedNotification);
-        // SAFETY: The element is this view and the name AppKit's value-changed notification.
-        unsafe { objc2_app_kit::NSAccessibilityPostNotification(element, changed) };
+/// The action of the menu item for `command`.
+fn action(command: Command) -> Sel {
+    match command {
+        Command::Copy => sel!(copy:),
+        Command::Paste => sel!(paste:),
+        Command::SelectAll => sel!(selectAll:),
+        Command::Clear => sel!(ideClearTerminal:),
+        Command::NewTerminalHere => sel!(ideNewTerminalHere:),
     }
 }
 
-/// The line that says the program ended: where the cursor stands if that line is empty, else the next one, which may
-/// be the line kept free below the grid.
-fn final_line(screen: &Snapshot) -> usize {
-    let cursor = screen.cursor.point;
-    let blank = screen
-        .rows
-        .get(cursor.line)
-        .is_some_and(|row| row.iter().all(|cell| cell.ch == ' ' || cell.ch == '\0'));
-    if blank { cursor.line } else { cursor.line + 1 }
+/// The command a menu item's `action` stands for.
+fn command(action: Sel) -> Option<Command> {
+    [
+        Command::Copy,
+        Command::Paste,
+        Command::SelectAll,
+        Command::Clear,
+        Command::NewTerminalHere,
+    ]
+    .into_iter()
+    .find(|&command| self::action(command) == action)
 }

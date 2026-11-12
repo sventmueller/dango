@@ -14,9 +14,10 @@ run: ## Build the debug app into target/debug and open it
 icon: ## Compile the app icon after a change in Icon Composer (assets/AppIcon.icon); the only target that needs Xcode
 	cargo xtask icon
 
-lint: ## Formatting, clippy, also with the selftest feature, and the allowed thread-locals; warnings fail
+lint: ## Formatting, clippy, also with the selftest feature, the allowed thread-locals and the files' shape (E98); warnings fail
 	cargo fmt --all --check
 	cargo xtask thread-locals
+	cargo xtask structure
 	cargo clippy --workspace --all-targets -- -D warnings
 	cargo clippy --package ide-app --all-targets --features selftest -- -D warnings
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing -- -D warnings

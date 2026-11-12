@@ -10,6 +10,7 @@ mod integration;
 mod licenses;
 mod release;
 mod selftest;
+mod structure;
 mod thread_locals;
 mod universal;
 mod updates;
@@ -47,6 +48,7 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
+  structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
                                    Xcode";
 
@@ -109,6 +111,10 @@ fn task(args: &[String]) -> Result<(), String> {
         "thread-locals" => {
             flags(rest, [])?;
             thread_locals::check()
+        }
+        "structure" => {
+            flags(rest, [])?;
+            structure::check()
         }
         _ => Err(USAGE.into()),
     }

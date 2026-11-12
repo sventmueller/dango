@@ -20,22 +20,30 @@ mod header;
 mod inbox;
 mod markdown;
 mod mention;
+mod model;
 mod notify;
 mod outside;
 mod overlay;
 mod own;
 pub mod plan;
 mod refresh;
+mod requests;
 mod rewind;
+mod rewind_actions;
 mod row;
 mod source;
 mod status;
 pub mod style;
 mod suggest;
 mod tab;
+#[cfg(feature = "selftest")]
+mod tab_probe;
+mod tab_session;
 mod target;
 mod text;
 mod timeline;
+#[cfg(feature = "selftest")]
+mod timeline_probe;
 mod ui;
 mod usage;
 
@@ -48,8 +56,6 @@ pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_re
 pub use acp::{set_test_launch, set_test_register};
 pub use actions::ask_text;
 #[cfg(feature = "selftest")]
-pub use actions::{alerts_seen, answer_alerts};
-#[cfg(feature = "selftest")]
 pub use cards::window_name;
 #[cfg(feature = "selftest")]
 pub use context_view::{click as click_context, close as close_context, cost_text, seen as context_seen, token_text};
@@ -59,6 +65,8 @@ pub use figures::{asked_for as asked_for_figure, is_dark};
 pub use format::percent;
 pub use format::{age, elapsed, iso_time, short_age, time_of_day, tokens};
 pub use outside::ci_log;
+#[cfg(feature = "selftest")]
+pub use rewind_actions::{alerts_seen, answer_alerts};
 pub use source::Resume;
 pub use tab::AgentTab;
 #[cfg(feature = "selftest")]
@@ -84,7 +92,7 @@ pub struct AgentState {
     page_selections: context::PageSelections,
     usage: usage::Usage,
     #[cfg(feature = "selftest")]
-    rewind_alerts: actions::RewindAlerts,
+    rewind_alerts: rewind_actions::RewindAlerts,
 }
 
 fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentTab>>>) -> R) -> R {

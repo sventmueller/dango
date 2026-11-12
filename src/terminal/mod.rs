@@ -5,15 +5,18 @@ mod access;
 mod banner;
 mod boxdraw;
 mod clip;
+mod frame;
 mod gpu;
 mod input;
 #[cfg(feature = "selftest")]
 pub mod inspect;
 mod keys;
 mod links;
+mod model;
 mod mouse;
 mod palette;
 mod render;
+mod session;
 mod sprites;
 mod view;
 

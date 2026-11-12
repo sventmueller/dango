@@ -1,34 +1,31 @@
 //! One AI tab: its session, the views showing it, and how session events reach them.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
-use ide_claude::{Capabilities, Event, Launch, Session, SessionError};
-use ide_git::Checkpoint;
-use ide_process::Supervisor;
-use ide_thread::{Attachment, Change, Status, Thread, ThreadId, ThreadIndex, UserMessage};
+use ide_claude::{Event, Session};
+use ide_thread::{Change, Status, Thread, ThreadId, ThreadIndex};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
 use objc2_foundation::{NSObjectProtocol, NSRect};
-use splat_i18n::{t, tf};
+use splat_i18n::t;
 
 use super::acp::Agent;
 use super::checkpoint::Store;
 use super::composer::Composer;
 use super::header::Header;
-use super::rewind::Fork;
-use super::source::{self, Problem, Resume, Source};
+use super::model::State;
+use super::source::{Problem, Resume, Source};
 use super::status::StatusLine;
 use super::suggest::Suggestions;
 use super::target::AgentTarget;
 use super::timeline::Timeline;
-use super::{notify, overlay, ui};
+use super::{overlay, ui};
 use crate::util::{guarded, main_after, main_soon};
 use crate::window::{TabKind, WindowController};
 
@@ -54,8 +51,8 @@ pub enum Incoming {
 /// Session events waiting for the main thread.
 #[derive(Default)]
 pub struct Inbox {
-    events: Mutex<super::inbox::Pending>,
-    scheduled: AtomicBool,
+    pub(super) events: Mutex<super::inbox::Pending>,
+    pub(super) scheduled: AtomicBool,
 }
 
 pub struct RootIvars {
@@ -120,79 +117,31 @@ define_class!(
     }
 );
 
-/// What the composer's menus offered, so the picked item's tag can be read.
-#[derive(Default)]
-pub struct Offered {
-    pub commands: Vec<String>,
-    pub models: Vec<String>,
-    pub efforts: Vec<String>,
-    pub modes: Vec<String>,
-    pub past: Vec<Resume>,
-}
-
-pub struct State {
-    pub source: Source,
-    pub thread: Rc<Thread>,
-    pub caps: Capabilities,
-    /// What the ACP agent and its session offer.
-    pub acp: Option<ide_acp::Capabilities>,
-    /// The endpoint and model of the own agent's session.
-    pub own: Option<crate::own_agent::ModelChoice>,
-    pub problem: Option<Problem>,
-    pub custom_title: Option<String>,
-    pub queue: Vec<UserMessage>,
-    pub attachments: Vec<Attachment>,
-    pub sandbox: bool,
-    /// Whether the user connected the thread to Remote Control or ended it; `None` follows their Claude settings.
-    pub remote: Option<bool>,
-    pub mode: String,
-    pub model: Option<String>,
-    pub effort: Option<String>,
-    pub bookmarked: bool,
-    pub resume: Option<Resume>,
-    /// The checkpoint taken before each user message, by the CLI's id for the message.
-    pub checkpoints: HashMap<String, Checkpoint>,
-    /// The checkpoint of the turn that runs.
-    pub turn: Option<Checkpoint>,
-    pub status: Status,
-    /// A checkpoint is being taken before a prompt goes out.
-    pub sending: bool,
-    pub offered: Offered,
-    /// Where the keyboard focus was before ⌘Esc moved it into the composer.
-    pub previous_focus: Option<Weak<NSResponder>>,
-    /// The rewind the session started with, until the agent accepted it.
-    pub fork: Option<Fork>,
-    /// The prompt sent last, which goes out again when the agent refuses a rewind.
-    pub last_sent: Option<UserMessage>,
-    /// The editor's selection, offered as context while the composer has the focus.
-    pub offer: Option<Attachment>,
-    /// The session runs with the model and mode the user picked last for its agent, where it offers them.
-    pub choice_applied: bool,
-}
-
 pub struct AgentTab {
     pub key: u64,
     /// The agent the tab runs, for good.
     pub(super) agent: Agent,
     pub(super) mtm: MainThreadMarker,
-    controller: Weak<WindowController>,
-    tab_id: std::cell::Cell<isize>,
+    pub(super) controller: Weak<WindowController>,
+    pub(super) tab_id: std::cell::Cell<isize>,
     pub(super) cwd: PathBuf,
     pub(super) thread_id: ThreadId,
     pub(super) target: Retained<AgentTarget>,
-    root: Retained<AgentRoot>,
+    pub(super) root: Retained<AgentRoot>,
     pub(super) header: Header,
-    timeline: Timeline,
+    pub(super) timeline: Timeline,
     pub(super) composer: Composer,
     pub(super) status: StatusLine,
-    empty: Retained<NSStackView>,
-    problem_holder: Retained<NSView>,
+    pub(super) empty: Retained<NSStackView>,
+    pub(super) problem_holder: Retained<NSView>,
     pub(super) queue_view: Retained<NSStackView>,
     pub(super) suggestions: Suggestions,
     pub(super) state: RefCell<State>,
-    inbox: RefCell<Arc<Inbox>>,
+    pub(super) inbox: RefCell<Arc<Inbox>>,
     pub(super) store: Store,
-    ticking: std::cell::Cell<bool>,
+    pub(super) ticking: std::cell::Cell<bool>,
+    /// Where the keyboard focus was before ⌘Esc moved it into the composer.
+    pub(super) previous_focus: RefCell<Option<Weak<NSResponder>>>,
 }
 
 impl AgentTab {
@@ -222,7 +171,7 @@ impl AgentTab {
         Some(tab)
     }
 
-    fn build(
+    pub(super) fn build(
         controller: &WindowController,
         agent: Agent,
         cwd: PathBuf,
@@ -277,36 +226,10 @@ impl AgentTab {
             queue_view,
             suggestions,
             agent,
-            state: RefCell::new(State {
-                source,
-                thread,
-                caps: Capabilities::default(),
-                acp: None,
-                own: None,
-                problem: None,
-                custom_title: None,
-                queue: Vec::new(),
-                attachments: Vec::new(),
-                sandbox: false,
-                remote: None,
-                mode: choice.mode.unwrap_or_else(|| "default".into()),
-                model: choice.model,
-                effort: choice.effort,
-                bookmarked: false,
-                resume: None,
-                checkpoints: HashMap::new(),
-                turn: None,
-                status: Status::Idle,
-                sending: false,
-                offered: Offered::default(),
-                previous_focus: None,
-                fork: None,
-                last_sent: None,
-                offer: None,
-                choice_applied: false,
-            }),
+            state: RefCell::new(State::new(source, thread, choice)),
             inbox: RefCell::new(Arc::new(Inbox::default())),
             ticking: std::cell::Cell::new(false),
+            previous_focus: RefCell::new(None),
         };
         tab.lay_out();
         tab
@@ -400,7 +323,7 @@ impl AgentTab {
     }
 
     /// Adds the tab to the window's tab bar.
-    fn add_to_window(&self, controller: &WindowController) {
+    pub(super) fn add_to_window(&self, controller: &WindowController) {
         let view: Retained<NSView> = self.root();
         let id = controller.add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view);
         self.tab_id.set(id);
@@ -504,7 +427,7 @@ impl AgentTab {
 
     /// The title the tab and the session list show.
     pub fn title(&self) -> String {
-        self_title(&self.state.borrow(), &self.agent)
+        self.state.borrow().title(&untitled(&self.agent))
     }
 
     /// The thread as it is now.
@@ -552,116 +475,6 @@ impl AgentTab {
         self.start_ticking();
     }
 
-    /// Looks for `claude` and the login shell's environment on a worker thread, then starts the session.
-    pub fn start(&self) {
-        let Some(controller) = self.controller() else { return };
-        if !controller.is_trusted() {
-            self.set_problem(Some(Problem::Untrusted));
-            return;
-        }
-        if self.agent.is_own() {
-            {
-                let mut state = self.state.borrow_mut();
-                state.source = Source::Starting;
-                state.problem = None;
-            }
-            self.refresh();
-            self.start_own();
-            return;
-        }
-        if let Some(agent) = self.acp_agent() {
-            let thread = {
-                let mut state = self.state.borrow_mut();
-                state.source = Source::Starting;
-                state.problem = None;
-                state.choice_applied = false;
-                state.thread.as_ref().clone()
-            };
-            self.refresh();
-            self.start_acp(agent, thread);
-            return;
-        }
-        let transcript = {
-            let mut state = self.state.borrow_mut();
-            state.source = Source::Starting;
-            state.problem = None;
-            state.resume.as_ref().and_then(|r| r.transcript.clone())
-        };
-        self.refresh();
-        let key = self.key;
-        let thread = self.snapshot();
-        let _ = std::thread::Builder::new().name("claude-start".into()).spawn(move || {
-            let env = crate::environment::wait(Duration::from_secs(15))
-                .map(<[(String, String)]>::to_vec)
-                .unwrap_or_default();
-            let exe = source::find_claude(&env);
-            let thread = match transcript {
-                Some(path) if thread.entries(&ide_thread::Lane::Main).is_empty() => {
-                    ide_claude::history::rebuild(thread.clone(), &path).unwrap_or(thread)
-                }
-                _ => thread,
-            };
-            main_soon(move || {
-                if let Some(tab) = super::get(key) {
-                    tab.launch(exe, env, thread);
-                }
-            });
-        });
-    }
-
-    fn launch(&self, exe: Option<PathBuf>, env: Vec<(String, String)>, thread: Thread) {
-        let Some(exe) = exe else {
-            self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::NotFound));
-            return;
-        };
-        let mut launch = Launch::new(exe, env, &self.cwd);
-        {
-            let state = self.state.borrow();
-            launch.resume = thread
-                .session()
-                .map(str::to_string)
-                .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
-            launch.sandbox = state.sandbox;
-            launch.remote_control = state.remote;
-            launch.permission_mode = Some(state.mode.clone());
-            launch.allow_bypass = true;
-            launch.model.clone_from(&state.model);
-            launch.effort.clone_from(&state.effort);
-            launch.file_checkpoints = true;
-            match &state.fork {
-                Some(Fork {
-                    session,
-                    rewind: Some(rewind),
-                    ..
-                }) => launch.rewind(session, rewind),
-                Some(Fork { rewind: None, .. }) => launch.resume = None,
-                None => {}
-            }
-        }
-        let sink = self.sink(Incoming::Claude);
-        let started = Session::start(Supervisor::global(), &launch, thread.clone(), sink);
-        match started {
-            Ok(session) => {
-                {
-                    let mut state = self.state.borrow_mut();
-                    state.source = Source::Live(session);
-                    state.problem = None;
-                }
-                self.absorb(thread, &[Change::Cleared]);
-                self.send_queued();
-            }
-            Err(error) => {
-                self.state.borrow_mut().source = Source::Idle;
-                let problem = match error {
-                    ide_claude::SessionError::NotFound(_) => Problem::NotFound,
-                    other => Problem::Start(other.to_string()),
-                };
-                self.set_problem(Some(problem));
-            }
-        }
-    }
-
     /// Where a new session reports to: a fresh inbox, emptied on the main thread shortly after something arrives.
     pub(super) fn sink<E: Send + 'static>(&self, wrap: fn(E) -> Incoming) -> impl Fn(E) + Send + Sync + 'static {
         let inbox = Arc::new(Inbox::default());
@@ -679,82 +492,6 @@ impl AgentTab {
                         }
                     }
                 });
-            }
-        }
-    }
-
-    /// Takes in what the session reported since the last time.
-    fn flush(&self) {
-        let inbox = self.inbox.borrow().clone();
-        inbox.scheduled.store(false, Ordering::SeqCst);
-        let pending = std::mem::take(&mut *inbox.events.lock().unwrap_or_else(|e| e.into_inner()));
-        if pending.is_empty() {
-            return;
-        }
-        let changes: Vec<Change> = pending.changes.into_iter().collect();
-        let mut problem = None;
-        let mut learned = false;
-        let mut remote = false;
-        let mut refused = None;
-        for event in pending.events {
-            match &event {
-                Incoming::Claude(Event::Changed(c))
-                | Incoming::Acp(ide_acp::Event::Changed(c))
-                | Incoming::Own(ide_agent::Event::Changed(c)) => {
-                    debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
-                }
-                Incoming::Own(other) => self.own_event(other),
-                Incoming::Claude(Event::Capabilities) | Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
-                Incoming::Claude(Event::RemoteControl) => remote = true,
-                Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
-                Incoming::Claude(event @ Event::Failed(_)) => problem = source::problem_of(event),
-                Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
-                Incoming::Claude(Event::Ended { .. }) | Incoming::Acp(ide_acp::Event::Ended { .. }) => {}
-            }
-        }
-        if let Some(why) = refused {
-            self.rewind_refused(&why);
-            return;
-        }
-        let snapshot = {
-            let mut state = self.state.borrow_mut();
-            if learned && let Some(caps) = state.source.capabilities() {
-                state.caps = caps;
-            }
-            if learned && let Some(caps) = state.source.acp_capabilities() {
-                state.acp = Some(caps);
-            }
-            state.source.snapshot()
-        };
-        if learned && self.agent.is_acp() {
-            self.acp_apply_choice();
-        }
-        if problem.is_some() {
-            self.set_problem(problem);
-        }
-        if let Some(snapshot) = snapshot {
-            self.absorb(snapshot, &changes);
-        }
-        if learned {
-            self.refresh();
-        } else if remote {
-            self.refresh_remote();
-        }
-    }
-
-    /// What an ACP session's failure means for the tab; failures of a running session's requests are only logged.
-    fn acp_problem(&self, error: &ide_acp::SessionError) -> Option<Problem> {
-        let ready = self.state.borrow().source.is_live();
-        match error {
-            ide_acp::SessionError::SignIn => Some(Problem::AcpSignIn),
-            ide_acp::SessionError::Version(v) => Some(Problem::Start(tf(
-                "{} spricht die Protokollversion {}, diese App Version 1",
-                &[self.agent.name(), &v.to_string()],
-            ))),
-            other if !ready => Some(Problem::Start(other.to_string())),
-            other => {
-                crate::diag::report("a request to the agent", other);
-                None
             }
         }
     }
@@ -803,47 +540,6 @@ impl AgentTab {
         }
     }
 
-    fn status_moved(&self, before: Status, now: Status) {
-        let title = self.title();
-        let elsewhere = notify::user_looks_elsewhere(self.is_shown());
-        match now {
-            Status::Idle if before != Status::Idle => {
-                if let Some(controller) = self.controller() {
-                    crate::worktrees::turn_ended(&controller, &self.cwd);
-                }
-                let turn = self.state.borrow_mut().turn.take();
-                if let Some(checkpoint) = turn {
-                    let key = self.key;
-                    let started = checkpoint.commit.clone();
-                    self.store.finish(checkpoint, move |finished| {
-                        main_soon(move || {
-                            if let Some(tab) = super::get(key) {
-                                for kept in tab.state.borrow_mut().checkpoints.values_mut() {
-                                    if kept.commit == started {
-                                        *kept = finished.clone();
-                                    }
-                                }
-                            }
-                        });
-                    });
-                }
-                if elsewhere {
-                    notify::post(&self.tab_key(), &title, &tf("{} ist fertig.", &[self.agent.name()]));
-                }
-                self.send_queued();
-            }
-            Status::RequiresAction if elsewhere => {
-                notify::post(
-                    &self.tab_key(),
-                    &title,
-                    &tf("{} wartet auf deine Antwort.", &[self.agent.name()]),
-                );
-            }
-            _ => {}
-        }
-        self.refresh_tab_mark();
-    }
-
     /// Records the session in the index the AI panel lists.
     pub(super) fn persist(&self) {
         let state = self.state.borrow();
@@ -855,14 +551,6 @@ impl AgentTab {
         if let Some(title) = &state.custom_title {
             let _ = index.rename(&self.thread_id, title);
         }
-    }
-
-    /// Advances running times every second while anything runs.
-    fn start_ticking(&self) {
-        if self.ticking.replace(true) {
-            return;
-        }
-        tick(self.key);
     }
 
     pub fn set_problem(&self, problem: Option<Problem>) {
@@ -877,7 +565,7 @@ impl AgentTab {
             (
                 state.problem.clone(),
                 state.thread.clone(),
-                self_title(&state, &self.agent),
+                state.title(&untitled(&self.agent)),
             )
         };
         self.header.set_title(&title);
@@ -911,12 +599,12 @@ impl AgentTab {
         self.refresh_tab_mark();
     }
 
-    fn refresh_remote(&self) {
+    pub(super) fn refresh_remote(&self) {
         let remote = self.session().map(|s| s.remote_control()).unwrap_or_default();
         self.header.set_remote(&remote);
     }
 
-    fn refresh_tab_mark(&self) {
+    pub(super) fn refresh_tab_mark(&self) {
         let Some(controller) = self.controller() else { return };
         controller.set_tab_status(self.tab_id.get(), self.tab_mark().as_deref());
     }
@@ -961,13 +649,13 @@ impl AgentTab {
     pub fn focus_composer(&self) {
         let Some(window) = self.root.window() else { return };
         let previous = window.firstResponder().map(|r| Weak::from(&*r));
-        self.state.borrow_mut().previous_focus = previous;
+        *self.previous_focus.borrow_mut() = previous;
         window.makeFirstResponder(Some(&self.composer.text));
     }
 
     pub fn leave_focus(&self) {
         let Some(window) = self.root.window() else { return };
-        let previous = self.state.borrow_mut().previous_focus.take().and_then(|w| w.load());
+        let previous = self.previous_focus.borrow_mut().take().and_then(|w| w.load());
         window.makeFirstResponder(previous.as_deref());
     }
 
@@ -999,353 +687,10 @@ fn input_constraints(bottom: &NSView, column: &NSView) -> Vec<Retained<NSLayoutC
     ]
 }
 
-/// The session's title: the user's, else the agent's, else the first line of the first message.
-fn self_title(state: &State, agent: &Agent) -> String {
-    let first_message = || {
-        state
-            .thread
-            .entries(&ide_thread::Lane::Main)
-            .iter()
-            .find_map(|e| match &e.kind {
-                ide_thread::EntryKind::UserMessage(m) => {
-                    Some(ide_thread::title_from(&m.text)).filter(|t| !t.is_empty())
-                }
-                _ => None,
-            })
-    };
-    state
-        .custom_title
-        .clone()
-        .filter(|t| !t.is_empty())
-        .or_else(|| Some(state.thread.title().to_string()).filter(|t| !t.is_empty()))
-        .or_else(first_message)
-        .unwrap_or_else(|| match agent {
-            Agent::Acp(agent) => agent.name.clone(),
-            Agent::Claude | Agent::Own => t("Neue Sitzung").to_string(),
-        })
-}
-
-/// One second of running time for the tab `key`, again while anything runs.
-fn tick(key: u64) {
-    let Some(tab) = super::get(key) else { return };
-    let live = tab.timeline.tick(SystemTime::now());
-    let running = tab.status() != Status::Idle;
-    if running && let Some(session) = tab.session() {
-        super::usage::fetch(&session);
-    }
-    if live || running {
-        main_after(Duration::from_secs(1), move || tick(key));
-    } else {
-        tab.ticking.set(false);
-    }
-    if running && let Some(controller) = tab.controller() {
-        crate::activity::refresh(&controller);
-    }
-}
-
-/// What the self-test reads from a tab.
-#[cfg(feature = "selftest")]
-pub struct Inspection {
-    pub rows: usize,
-    pub built: usize,
-    pub visible: Vec<String>,
-    pub pills: Vec<String>,
-    pub composer: bool,
-    pub status: Vec<String>,
-    pub title: String,
-    pub subagents: Vec<String>,
-    pub background: Vec<String>,
-    /// The tooltip of the head's Remote Control button, while it shows.
-    pub remote: Option<String>,
-}
-
-#[cfg(feature = "selftest")]
-impl AgentTab {
-    /// A tab that plays recordings, with no process behind it.
-    pub fn open_replay(controller: &WindowController) -> Option<Rc<AgentTab>> {
-        let cwd = controller.project_root().or_else(|| controller.project())?;
-        Some(AgentTab::open_replay_in(controller, cwd))
-    }
-
-    /// A tab that plays recordings in `cwd`, for the self-test.
-    pub fn open_replay_in(controller: &WindowController, cwd: PathBuf) -> Rc<AgentTab> {
-        let thread_id = ThreadId::new();
-        let thread = Thread::new(thread_id.clone(), ide_claude::AGENT, &cwd);
-        let source = source::replay(thread.clone());
-        let tab = Rc::new(AgentTab::build(
-            controller,
-            Agent::Claude,
-            cwd,
-            thread_id,
-            thread,
-            source,
-        ));
-        tab.add_to_window(controller);
-        tab
-    }
-
-    /// Plays recorded lines.
-    pub fn feed(&self, lines: &str) {
-        let (changes, snapshot) = {
-            let mut state = self.state.borrow_mut();
-            let changes = state.source.feed(lines);
-            (changes, state.source.snapshot())
-        };
-        if let Some(snapshot) = snapshot {
-            self.absorb(snapshot, &changes);
-        }
-    }
-
-    /// The tooltip of the head's button for `part`, whether it can be clicked and whether it shows the accent colour.
-    pub fn work_button(&self, part: crate::activity::Part) -> (String, bool, bool) {
-        let button = self.header.work_button(part);
-        let tip = button.toolTip().map(|t| t.to_string()).unwrap_or_default();
-        let accent = button
-            .contentTintColor()
-            .is_some_and(|c| c == objc2_app_kit::NSColor::controlAccentColor());
-        (tip, button.isEnabled(), accent)
-    }
-
-    /// Shows `title` in the head for a moment and measures it as [`Header::title_widths`] does.
-    pub fn title_widths(&self, title: &str) -> (f64, f64, f64) {
-        self.header.set_title(title);
-        let widths = self.header.title_widths();
-        self.refresh();
-        widths
-    }
-
-    pub fn inspect(&self) -> Inspection {
-        let thread = self.snapshot();
-        Inspection {
-            rows: self.timeline.count(),
-            built: self.timeline.built(),
-            visible: self.timeline.visible_summaries(),
-            pills: [&self.composer.model, &self.composer.mode]
-                .iter()
-                .map(|b| b.title().to_string())
-                .collect(),
-            composer: self.composer.card.window().is_some() && !self.composer.card.isHidden(),
-            status: self.status.texts(),
-            title: self.title(),
-            subagents: thread.subagents().iter().map(|s| s.description.clone()).collect(),
-            background: thread.background().iter().map(|b| b.label.clone()).collect(),
-            remote: self.header.remote_tip(),
-        }
-    }
-
-    /// Keeps the thread off Remote Control whatever the user's Claude settings say, so a live self-test registers
-    /// nothing on claude.ai.
-    #[cfg(feature = "selftest")]
-    pub fn keep_remote_control_off(&self) {
-        self.state.borrow_mut().remote = Some(false);
-    }
-
-    /// Picks the model for the next start.
-    pub fn use_model(&self, model: &str) {
-        self.state.borrow_mut().model = Some(model.to_string());
-    }
-
-    /// Picks `model`, `effort` and `mode` as the pills' menus do, which remembers them for the agent's next sessions.
-    #[cfg(feature = "selftest")]
-    pub fn pick_all(&self, model: &str, effort: &str, mode: &str) {
-        {
-            let mut state = self.state.borrow_mut();
-            state.offered.models = vec![model.to_string()];
-            state.offered.efforts = vec![effort.to_string()];
-            state.offered.modes = vec![mode.to_string()];
-        }
-        self.pick_model(0);
-        self.pick_effort(0);
-        self.pick_mode(0);
-    }
-
-    /// Picks the mode `mode` as the mode pill's menu does, which remembers it for the agent's next sessions.
-    #[cfg(feature = "selftest")]
-    pub fn pick_mode_id(&self, mode: &str) {
-        self.state.borrow_mut().offered.modes = vec![mode.to_string()];
-        self.pick_mode(0);
-    }
-
-    /// The model, effort and mode the session runs with or starts with.
-    #[cfg(feature = "selftest")]
-    pub fn picks(&self) -> (Option<String>, Option<String>, String) {
-        let state = self.state.borrow();
-        (state.model.clone(), state.effort.clone(), state.mode.clone())
-    }
-
-    /// Switches to the permission mode `mode`, as the mode pill's menu does.
-    #[cfg(feature = "selftest")]
-    pub fn use_mode(&self, mode: &str) {
-        self.state.borrow().source.set_mode(mode, |_| ());
-        self.state.borrow_mut().mode = mode.to_string();
-        self.refresh_composer();
-    }
-
-    /// The views that show at the foot of the tab besides the composer and its status line, with their heights.
-    #[cfg(feature = "selftest")]
-    pub fn foot_extras(&self) -> Option<Vec<(String, f64)>> {
-        // SAFETY: Asking for the superview only reads; the foot holds the composer while the tab lives.
-        let foot = unsafe { self.composer.card.superview() }.and_then(|v| v.downcast::<NSStackView>().ok())?;
-        foot.layoutSubtreeIfNeeded();
-        let own: [&NSView; 2] = [&self.composer.card, &self.status.view];
-        Some(
-            foot.arrangedSubviews()
-                .iter()
-                .filter(|view| !view.isHidden() && !own.iter().any(|o| std::ptr::eq(*o, &**view)))
-                .map(|view| {
-                    (
-                        view.class().name().to_string_lossy().into_owned(),
-                        view.frame().size.height,
-                    )
-                })
-                .collect(),
-        )
-    }
-
-    /// Types `text` into the composer and sends it, as Return would.
-    pub fn type_and_send(&self, text: &str) {
-        self.composer.set_text(text);
-        self.submit();
-    }
-
-    /// Attaches the files at `paths` as the `+` button's panel would.
-    pub fn attach_files(&self, paths: &[PathBuf]) {
-        let picked: Vec<ide_thread::Attachment> = paths
-            .iter()
-            .map(|path| super::outside::classify(super::actions::file_attachment(path), &self.cwd))
-            .collect();
-        self.state.borrow_mut().attachments.extend(picked);
-        self.refresh_chips();
-    }
-
-    /// What the next message takes along.
-    pub fn pending_attachments(&self) -> Vec<ide_thread::Attachment> {
-        self.state.borrow().attachments.clone()
-    }
-
-    /// The text of the next message's attachments from outside.
-    pub fn outside_texts(&self) -> Vec<String> {
-        self.state
-            .borrow()
-            .attachments
-            .iter()
-            .filter_map(|a| match a {
-                ide_thread::Attachment::External { text, .. } => Some(text.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
-    /// What the composer holds.
-    pub fn composer_text(&self) -> String {
-        self.composer.text()
-    }
-
-    /// Types `text` into the composer, the caret at its end, as a user would.
-    pub fn type_in_composer(&self, text: &str) {
-        self.composer.set_text(text);
-        let end = text.encode_utf16().count();
-        self.composer
-            .text
-            .setSelectedRange(objc2_foundation::NSRange::new(end, 0));
-        self.composer_changed();
-    }
-
-    /// The completions the list shows.
-    pub fn suggestion_labels(&self) -> Vec<String> {
-        if self.suggestions.is_shown() {
-            self.suggestions.labels()
-        } else {
-            Vec::new()
-        }
-    }
-
-    /// Whether the editor's selection is offered as context.
-    pub fn has_offer(&self) -> bool {
-        self.state.borrow().offer.is_some()
-    }
-
-    /// The attachments of the next message.
-    pub fn attachment_names(&self) -> Vec<String> {
-        self.state
-            .borrow()
-            .attachments
-            .iter()
-            .map(|a| match a {
-                ide_thread::Attachment::Image { .. } => "image".to_string(),
-                ide_thread::Attachment::File { path, .. } | ide_thread::Attachment::Selection { path, .. } => {
-                    path.display().to_string()
-                }
-                ide_thread::Attachment::External { label, .. } => format!("{label} (external)"),
-            })
-            .collect()
-    }
-
-    /// The size of each picture tile above the composer's text, with the width of the picture it shows.
-    #[cfg(feature = "selftest")]
-    pub fn thumbnails(&self) -> Vec<(objc2_foundation::NSSize, f64)> {
-        fn picture(view: &objc2_app_kit::NSView) -> Option<f64> {
-            if let Some(image) = view
-                .downcast_ref::<objc2_app_kit::NSImageView>()
-                .and_then(|v| v.image())
-                .filter(|image| !image.isTemplate())
-            {
-                return Some(image.size().width);
-            }
-            view.subviews().iter().find_map(|child| picture(&child))
-        }
-        let chips = &self.composer.chips;
-        chips.layoutSubtreeIfNeeded();
-        chips
-            .arrangedSubviews()
-            .iter()
-            .filter_map(|chip| picture(&chip).map(|width| (chip.frame().size, width)))
-            .collect()
-    }
-
-    /// Clicks the first picture tile above the composer's text; the size the picture opens at over the tab.
-    #[cfg(feature = "selftest")]
-    pub fn enlarge_thumbnail(&self) -> Option<objc2_foundation::NSSize> {
-        fn clear_button(view: &objc2_app_kit::NSView) -> Option<Retained<objc2_app_kit::NSButton>> {
-            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>()
-                && button.isTransparent()
-            {
-                return Some(objc2::Message::retain(button));
-            }
-            view.subviews().iter().find_map(|child| clear_button(&child))
-        }
-        let button = clear_button(&self.composer.chips)?;
-        // SAFETY: The button's target is the opener, which lives as long as the app.
-        unsafe { button.performClick(None) };
-        super::enlarge::shown()
-    }
-
-    /// The size of the picture open large over the tab, if one is.
-    #[cfg(feature = "selftest")]
-    pub fn enlarged(&self) -> Option<objc2_foundation::NSSize> {
-        super::enlarge::shown()
-    }
-
-    /// Whether a rewind waits for the agent to accept it.
-    pub fn rewind_pending(&self) -> bool {
-        self.state.borrow().fork.is_some()
-    }
-
-    /// How many checkpoints were taken before prompts.
-    pub fn checkpoint_count(&self) -> usize {
-        self.state.borrow().checkpoints.len()
-    }
-
-    /// Opens every card part with `part`, as a user would click them.
-    pub fn open_all(&self, part: super::cards::Part) {
-        let ids: Vec<u64> = self
-            .snapshot()
-            .entries(&ide_thread::Lane::Main)
-            .iter()
-            .map(|e| e.id.get())
-            .collect();
-        for id in ids {
-            self.timeline.toggle(id, part);
-        }
+/// What a session is called before anything names it.
+fn untitled(agent: &Agent) -> String {
+    match agent {
+        Agent::Acp(agent) => agent.name.clone(),
+        Agent::Claude | Agent::Own => t("Neue Sitzung").to_string(),
     }
 }

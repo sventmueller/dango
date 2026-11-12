@@ -14,7 +14,8 @@ use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::commit_field::CommitTextView;
-use super::panel::{GitPanel, Phase};
+use super::model::Phase;
+use super::panel::GitPanel;
 use super::rows::GitOutlineView;
 use super::text::Problem;
 use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};

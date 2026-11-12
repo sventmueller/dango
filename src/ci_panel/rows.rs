@@ -13,7 +13,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
-use super::panel::{CiPanel, Tab};
+use super::model::{Key, Tab};
+use super::panel::CiPanel;
 use super::text;
 use crate::util::{item, label, ns, separator, set_target, symbol};
 
@@ -88,43 +89,7 @@ impl CiOutlineView {
     }
 }
 
-/// Names a row across reads.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Key {
-    Run(u64),
-    /// A run's stage by its place among the run's stages.
-    Stage(u64, u32),
-    Job(u64, u64),
-    Step(u64, u64, u32),
-    /// An open merge request or issue of the list's tab, by its number.
-    Item(u64),
-}
-
 impl Key {
-    pub fn encode(&self) -> String {
-        match self {
-            Key::Run(run) => format!("run:{run}"),
-            Key::Stage(run, stage) => format!("stage:{run}:{stage}"),
-            Key::Job(run, job) => format!("job:{run}:{job}"),
-            Key::Step(run, job, step) => format!("step:{run}:{job}:{step}"),
-            Key::Item(number) => format!("item:{number}"),
-        }
-    }
-
-    fn decode(text: &str) -> Option<Key> {
-        let mut parts = text.split(':');
-        let kind = parts.next()?;
-        let numbers: Vec<u64> = parts.map(|p| p.parse().ok()).collect::<Option<_>>()?;
-        match (kind, numbers.as_slice()) {
-            ("run", [run]) => Some(Key::Run(*run)),
-            ("stage", [run, stage]) => Some(Key::Stage(*run, u32::try_from(*stage).ok()?)),
-            ("job", [run, job]) => Some(Key::Job(*run, *job)),
-            ("step", [run, job, step]) => Some(Key::Step(*run, *job, u32::try_from(*step).ok()?)),
-            ("item", [number]) => Some(Key::Item(*number)),
-            _ => None,
-        }
-    }
-
     /// The key `item` of the outline view stands for.
     pub fn of(item: &AnyObject) -> Option<Key> {
         item.downcast_ref::<NSString>()

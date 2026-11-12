@@ -14,6 +14,7 @@ mod panel;
 #[cfg(feature = "selftest")]
 pub mod probe;
 mod progress;
+mod refresh;
 mod reveal;
 mod rows;
 mod sheets;
@@ -65,7 +66,7 @@ pub fn changed(root: &Path) {
 pub fn has_commit(controller: &WindowController) -> bool {
     panel::of(controller).is_some_and(|panel| {
         let state = panel.read();
-        state.phase == panel::Phase::Ready && state.branch.commit.is_some()
+        state.phase == model::Phase::Ready && state.branch.commit.is_some()
     })
 }
 

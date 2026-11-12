@@ -34,8 +34,8 @@ const LEADING: f64 = 30.0;
 /// The leading room of a user message, which stands apart from the line.
 const USER_LEADING: f64 = 8.0;
 const TRAILING: f64 = 12.0;
-const TOP: f64 = 3.0;
-const BOTTOM: f64 = 10.0;
+pub(super) const TOP: f64 = 3.0;
+pub(super) const BOTTOM: f64 = 10.0;
 
 pub struct TableIvars {
     key: u64,
@@ -127,7 +127,7 @@ impl TimelineTable {
 }
 
 #[derive(Clone, Copy)]
-struct Correction {
+pub(super) struct Correction {
     id: EntryId,
     width: f64,
     before: f64,
@@ -137,8 +137,8 @@ struct Correction {
 pub struct Timeline {
     mtm: MainThreadMarker,
     key: u64,
-    scroll: Retained<NSScrollView>,
-    table: Retained<TimelineTable>,
+    pub(super) scroll: Retained<NSScrollView>,
+    pub(super) table: Retained<TimelineTable>,
     target: Retained<AgentTarget>,
     cwd: PathBuf,
     thread: RefCell<Rc<Thread>>,
@@ -154,11 +154,11 @@ pub struct Timeline {
     /// The width the rows were last laid out at.
     width: Cell<f64>,
     expanded: RefCell<HashSet<(u64, Part)>>,
-    inputs: RefCell<Inputs>,
+    pub(super) inputs: RefCell<Inputs>,
     live: RefCell<Vec<Live>>,
     /// Rows whose card turned out another height than the table had, with that height.
-    corrections: RefCell<BTreeMap<usize, Correction>>,
-    built: Cell<usize>,
+    pub(super) corrections: RefCell<BTreeMap<usize, Correction>>,
+    pub(super) built: Cell<usize>,
     /// Only the conversation shows: no tools, thinking or status lines.
     focus: Cell<bool>,
     scrolled: Retained<ProtocolObject<dyn NSObjectProtocol>>,
@@ -388,7 +388,7 @@ impl Timeline {
         }
     }
 
-    fn flush_corrections(&self) {
+    pub(super) fn flush_corrections(&self) {
         let corrections = std::mem::take(&mut *self.corrections.borrow_mut());
         if corrections.is_empty() {
             return;
@@ -842,116 +842,6 @@ impl Timeline {
             )));
         }
         !live.is_empty()
-    }
-
-    /// How many cards were built so far.
-    #[cfg(feature = "selftest")]
-    pub fn built(&self) -> usize {
-        self.built.get()
-    }
-
-    /// Checks the geometry of visible rows against the heights published to AppKit.
-    #[cfg(feature = "selftest")]
-    pub fn height_discrepancy(&self) -> f64 {
-        let range = self.table.rowsInRect(self.table.visibleRect());
-        (range.location..range.location + range.length)
-            .filter(|row| *row < self.count())
-            .map(|row| {
-                (self.table.rectOfRow(isize::try_from(row).unwrap_or(0)).size.height - self.row_height(row)).abs()
-            })
-            .fold(0.0, f64::max)
-    }
-
-    /// Includes deferred height correction and drawing in the streaming timing budget.
-    #[cfg(feature = "selftest")]
-    pub fn settle(&self) {
-        if let Some(window) = self.scroll.window() {
-            window.layoutIfNeeded();
-        }
-        self.width_changed();
-        for _ in 0..32 {
-            self.flush_corrections();
-            if let Some(window) = self.scroll.window() {
-                window.displayIfNeeded();
-            }
-            if self.corrections.borrow().is_empty() {
-                break;
-            }
-        }
-    }
-
-    /// The current answer's text view, for checking reuse and selection during streaming.
-    #[cfg(feature = "selftest")]
-    pub fn streaming_text(&self) -> Option<Retained<objc2_app_kit::NSTextView>> {
-        let row = isize::try_from(self.count().checked_sub(1)?).ok()?;
-        let cell = self.table.viewAtColumn_row_makeIfNecessary(0, row, false)?;
-        let text = cell
-            .subviews()
-            .firstObject()?
-            .downcast::<super::text::CardText>()
-            .ok()?;
-        Some(text.into_super())
-    }
-
-    /// The rows in view whose height differs from what their card needs, as `row: table height / card height`.
-    #[cfg(feature = "selftest")]
-    pub fn misfits(&self) -> Vec<String> {
-        let range = self.table.rowsInRect(self.table.visibleRect());
-        (range.location..range.location + range.length)
-            .filter_map(|row| {
-                let rect = self.table.rectOfRow(isize::try_from(row).ok()?);
-                let view = self
-                    .table
-                    .viewAtColumn_row_makeIfNecessary(0, isize::try_from(row).ok()?, false)?;
-                let card = view.subviews().firstObject()?.fittingSize().height + TOP + BOTTOM;
-                ((rect.size.height - card).abs() > 1.5).then(|| format!("{row}: {} / {card}", rect.size.height))
-            })
-            .collect()
-    }
-
-    /// What the permission editors hold.
-    #[cfg(feature = "selftest")]
-    pub fn editor_texts(&self) -> Vec<String> {
-        let inputs = self.inputs.borrow();
-        inputs.editors.keys().filter_map(|id| inputs.editor_text(*id)).collect()
-    }
-
-    /// The titles of the buttons on the card of the last row.
-    #[cfg(feature = "selftest")]
-    pub fn last_card_buttons(&self) -> Vec<String> {
-        fn collect(view: &NSView, out: &mut Vec<String>) {
-            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
-                out.push(button.title().to_string());
-            }
-            for child in view.subviews().iter() {
-                collect(&child, out);
-            }
-        }
-        let last = self.table.numberOfRows() - 1;
-        let Some(view) = (last >= 0)
-            .then(|| self.table.viewAtColumn_row_makeIfNecessary(0, last, true))
-            .flatten()
-        else {
-            return Vec::new();
-        };
-        let mut out = Vec::new();
-        collect(&view, &mut out);
-        out
-    }
-
-    /// The cards in view, as their VoiceOver summaries.
-    #[cfg(feature = "selftest")]
-    pub fn visible_summaries(&self) -> Vec<String> {
-        let range = self.table.rowsInRect(self.table.visibleRect());
-        (range.location..range.location + range.length)
-            .filter_map(|row| {
-                let view = self
-                    .table
-                    .viewAtColumn_row_makeIfNecessary(0, isize::try_from(row).ok()?, false)?;
-                let card = view.subviews().firstObject()?;
-                card.accessibilityLabel().map(|l| l.to_string())
-            })
-            .collect()
     }
 }
 
