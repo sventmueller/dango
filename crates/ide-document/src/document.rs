@@ -429,6 +429,16 @@ impl Document {
     }
 
     /// Replaces a range of the text as `edit` says.
+    ///
+    /// ```
+    /// use ide_document::{Document, Edit};
+    ///
+    /// let mut document = Document::untitled("ä = 1");
+    /// let change = document.apply(Edit { range_utf16: 4..5, text: "42".into() }).unwrap();
+    /// assert_eq!(document.text().to_string(), "ä = 42");
+    /// assert_eq!((change.utf16, change.bytes), (4..5, 5..6));
+    /// assert_eq!(change.revision, document.revision());
+    /// ```
     pub fn apply(&mut self, edit: Edit) -> Result<Change, EditError> {
         if let Some(why) = self.read_only {
             return Err(EditError::ReadOnly(why));

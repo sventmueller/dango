@@ -233,6 +233,21 @@ impl Thread {
     }
 
     /// Applies `update` and returns what changed; an update that names an unknown entry changes nothing.
+    ///
+    /// ```
+    /// use std::time::SystemTime;
+    ///
+    /// use ide_thread::{AgentMessage, Change, EntryKind, Lane, Thread, ThreadId, Update};
+    ///
+    /// let mut thread = Thread::new(ThreadId::from("t1"), "claude", "/work");
+    /// let message = EntryKind::AgentMessage(AgentMessage { markdown: "Hel".into(), streaming: true });
+    /// let put = Update::Put { lane: Lane::Main, key: Some("m1".into()), at: SystemTime::now(), entry: message };
+    /// let [Change::Inserted { id, index: 0, .. }] = thread.apply(put)[..] else { panic!("not inserted") };
+    /// let appended = thread.apply(Update::Append { key: "m1".into(), text: "lo".into() });
+    /// assert_eq!(appended, [Change::Updated { lane: Lane::Main, id }]);
+    /// assert!(matches!(&thread.entry(id).unwrap().kind, EntryKind::AgentMessage(m) if m.markdown == "Hello"));
+    /// assert!(thread.apply(Update::Append { key: "unknown".into(), text: "!".into() }).is_empty());
+    /// ```
     pub fn apply(&mut self, update: Update) -> Vec<Change> {
         let mut changes = Vec::new();
         match update {

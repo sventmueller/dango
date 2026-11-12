@@ -38,6 +38,20 @@ impl Lane {
     }
 
     /// Runs `work` on the lane and hands its result, or `None` after a panic, to `answer` there; `Full` as `try_run`.
+    ///
+    /// ```
+    /// use std::sync::mpsc::channel;
+    ///
+    /// use ide_core::lane::Lane;
+    ///
+    /// static LANE: Lane = Lane::new("example", 1, 8);
+    /// let (tx, rx) = channel();
+    /// let failed = tx.clone();
+    /// LANE.ask(|| 6 * 7, move |answer| tx.send(answer).unwrap()).unwrap();
+    /// LANE.ask(|| -> i32 { panic!("lost") }, move |answer| failed.send(answer).unwrap()).unwrap();
+    /// assert_eq!(rx.recv().unwrap(), Some(42));
+    /// assert_eq!(rx.recv().unwrap(), None);
+    /// ```
     pub fn ask<T>(
         &self,
         work: impl FnOnce() -> T + Send + 'static,

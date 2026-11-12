@@ -111,6 +111,19 @@ impl Tree {
     }
 
     /// The entries of `dir`, the root or a folder below it, read now unless the tree already holds them.
+    ///
+    /// ```
+    /// use ide_project::{Kind, Tree, TreeOptions};
+    ///
+    /// let folder = std::env::temp_dir().join(format!("tree-expand-{}", std::process::id()));
+    /// std::fs::create_dir_all(folder.join("src")).unwrap();
+    /// std::fs::write(folder.join("README.md"), "").unwrap();
+    /// let mut tree = Tree::new(&folder, TreeOptions::default()).unwrap();
+    /// let root = tree.root().to_path_buf();
+    /// let listed: Vec<_> = tree.expand(&root).unwrap().iter().map(|e| (e.name.clone(), e.kind)).collect();
+    /// assert_eq!(listed, [("src".to_string(), Kind::Dir), ("README.md".to_string(), Kind::File)]);
+    /// std::fs::remove_dir_all(folder).unwrap();
+    /// ```
     pub fn expand(&mut self, dir: &Path) -> io::Result<&[Entry]> {
         if !self.loaded.contains_key(dir) {
             let entries = self.read(dir)?;

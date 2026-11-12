@@ -60,6 +60,16 @@ pub enum Message {
 pub struct NotJson(pub String);
 
 /// Reads one line of the CLI's output.
+///
+/// ```
+/// use ide_claude::protocol::{self, Block, Message};
+///
+/// let line = r#"{"type":"assistant","message":{"id":"msg_1","content":[{"type":"text","text":"Hi"}]}}"#;
+/// let Ok(Message::Assistant(frame)) = protocol::parse(line) else { panic!("not an assistant frame") };
+/// assert_eq!(frame.message.content, [Block::Text { text: "Hi".into() }]);
+/// assert!(matches!(protocol::parse(r#"{"type":"from_a_later_cli"}"#), Ok(Message::Unknown(_))));
+/// assert!(protocol::parse("[1, 2]").is_err());
+/// ```
 pub fn parse(line: &str) -> Result<Message, NotJson> {
     let value: Value = serde_json::from_str(line).map_err(|e| NotJson(e.to_string()))?;
     if !value.is_object() {

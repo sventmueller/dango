@@ -83,6 +83,26 @@ impl Provider {
 
     /// Sends `request` and reads the answer as it streams, telling `on` about each part; returns early, with the
     /// text so far, once `cancel` is cancelled.
+    ///
+    /// ```
+    /// use ide_agent::stub::{Answer, Stub};
+    /// use ide_agent::{Cancel, Delta, Endpoint, Http, Message, Provider, ProviderKind, Request, Stop};
+    ///
+    /// let stub = Stub::script(vec![Answer::events(concat!(
+    ///     r#"data: {"choices": [{"index": 0, "delta": {"content": "Hello."}, "finish_reason": "stop"}]}"#,
+    ///     "\n\ndata: [DONE]\n\n",
+    /// ))])
+    /// .unwrap();
+    /// let base = format!("{}/v1", stub.url());
+    /// let endpoint = Endpoint::new("local", ProviderKind::OpenAiCompatible, "Local", &base);
+    /// let provider = Provider::new(endpoint, None, Http::new());
+    /// let messages = [Message::user("Hi")];
+    /// let request = Request { model: "m", system: "", messages: &messages, tools: &[], max_tokens: None, effort: None };
+    /// let mut deltas = Vec::new();
+    /// let reply = provider.stream(&request, &Cancel::new(), &mut |delta| deltas.push(delta)).unwrap();
+    /// assert_eq!((reply.stop, reply.message.text()), (Stop::EndTurn, "Hello.".to_string()));
+    /// assert_eq!(deltas, [Delta::Text("Hello.".into())]);
+    /// ```
     pub fn stream(
         &self,
         request: &Request<'_>,

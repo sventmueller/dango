@@ -171,6 +171,23 @@ pub(crate) fn literal_args(paths: &[PathBuf]) -> Vec<OsString> {
 impl Repository {
     /// The diffs of `paths`, or of every changed file when `paths` is empty. A staged rename shows as one only when
     /// both its paths are given; [`Repository::diff_entry`] takes care of that.
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    ///
+    /// use ide_git::{DiffSource, Git, LineKind};
+    /// use ide_process::Supervisor;
+    ///
+    /// let git = Git::new(Supervisor::global(), std::env::vars().collect());
+    /// let repository = git.discover(Path::new("."))?;
+    /// for file in repository.diff(DiffSource::Unstaged, &["README.md"])? {
+    ///     assert_eq!(file.path(), Path::new("README.md"));
+    ///     for line in file.hunks.iter().flat_map(|h| &h.lines).filter(|l| l.kind == LineKind::Added) {
+    ///         assert!(line.old_number.is_none());
+    ///     }
+    /// }
+    /// # Ok::<(), ide_git::Error>(())
+    /// ```
     pub fn diff<P: AsRef<Path>>(&self, source: DiffSource, paths: &[P]) -> Result<Vec<FileDiff>> {
         let paths = all_relative(self.root(), paths)?;
         let mut args = diff_args();

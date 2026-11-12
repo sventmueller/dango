@@ -111,6 +111,22 @@ struct Register {
 }
 
 /// Keeps every process the app starts, each in a process group of its own so that ending it also ends what it started.
+///
+/// ```no_run
+/// use std::process::{Command, Stdio};
+/// use std::time::Duration;
+///
+/// use ide_process::{Ending, Kind, Supervisor};
+///
+/// let supervisor = Supervisor::new();
+/// let mut command = Command::new("/bin/sleep");
+/// command.arg("60").stdin(Stdio::null());
+/// let spawned = supervisor.spawn(command, Kind::Tool, "sleep")?;
+/// assert_eq!(supervisor.running()[0].label, "sleep");
+/// supervisor.stop(spawned.id, Duration::from_millis(200));
+/// assert_eq!(supervisor.wait(spawned.id, Duration::from_secs(5)), Some(Ending::Signal(libc::SIGTERM)));
+/// # Ok::<(), std::io::Error>(())
+/// ```
 #[derive(Clone, Default)]
 pub struct Supervisor {
     register: Arc<(Mutex<Register>, Condvar)>,

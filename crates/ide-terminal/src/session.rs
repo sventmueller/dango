@@ -272,6 +272,22 @@ pub struct Session {
 impl Session {
     /// Starts `options.program` in a new PTY with `env`, the user's login-shell environment, and registers it with
     /// `supervisor`. `listener` hears every `Event` on the session's reader thread and must not block it.
+    ///
+    /// ```no_run
+    /// use std::sync::mpsc::channel;
+    ///
+    /// use ide_process::Supervisor;
+    /// use ide_terminal::{Event, Options, Program, Session};
+    ///
+    /// let mut options = Options::new("/tmp");
+    /// options.program = Program::Command { program: "/bin/echo".into(), args: vec!["hello".into()] };
+    /// options.shell_integration = None;
+    /// let (tx, rx) = channel();
+    /// let session = Session::spawn(Supervisor::global(), &[], options, move |event| drop(tx.send(event)))?;
+    /// while !matches!(rx.recv()?, Event::Exited(_)) {}
+    /// assert_eq!(session.visible_text()[0].trim_end(), "hello");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn spawn(
         supervisor: &Supervisor,
         env: &[(String, String)],

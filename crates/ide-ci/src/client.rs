@@ -47,6 +47,25 @@ impl Client {
     }
 
     /// The runs of the commit `sha`, newest first; when it has none, the latest runs of `branch`.
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    ///
+    /// use ide_ci::{Client, Method, Recorded, State, candidates};
+    ///
+    /// let forge = candidates("git@github.com:acme/widget.git", &[]).remove(0);
+    /// let recorded = Recorded::new().answer(
+    ///     Method::Get,
+    ///     "https://api.github.com/repos/acme/widget/actions/runs?head_sha=abc123&per_page=30",
+    ///     200,
+    ///     r#"{"workflow_runs": [{"id": 1, "name": "CI", "run_number": 7, "status": "completed",
+    ///         "conclusion": "failure", "head_sha": "abc123", "html_url": "https://github.com/acme/widget"}]}"#,
+    ///     &[],
+    /// );
+    /// let client = Client::new(forge, None, Arc::new(recorded));
+    /// let runs = client.runs(Some("main"), "abc123").unwrap();
+    /// assert_eq!((runs[0].name.as_str(), runs[0].number, runs[0].state), ("CI", 7, State::Failed));
+    /// ```
     pub fn runs(&self, branch: Option<&str>, sha: &str) -> Result<Vec<Run>> {
         match self.forge.kind {
             Kind::GitHub => github::runs(self, branch, sha),

@@ -16,6 +16,12 @@ pub const URL_SCHEME: &str = "dango";
 pub const COMMAND: &str = "dango";
 
 /// The bundle identifier; also the defaults domain, the keychain service and the name of the data folders.
+///
+/// ```
+/// use ide_product::{BUNDLE_ID, NAME};
+///
+/// assert!(!BUNDLE_ID.to_lowercase().contains(&NAME.to_lowercase()));
+/// ```
 pub const BUNDLE_ID: &str = "local.agentide";
 
 /// The token of the Homebrew Cask, which users install with; the disk image is named after `NAME`.

@@ -262,6 +262,23 @@ fn ask<Req>(
 impl Session {
     /// Starts the agent as `launch` describes, filling `thread`; the connection opens a session once the agent
     /// answered `initialize`.
+    ///
+    /// ```no_run
+    /// use std::sync::mpsc::channel;
+    ///
+    /// use ide_acp::{Event, Launch, Session};
+    /// use ide_process::Supervisor;
+    /// use ide_thread::{Thread, ThreadId};
+    ///
+    /// let env: Vec<(String, String)> = std::env::vars().collect();
+    /// let launch = Launch::new("gemini", "Gemini CLI", "/opt/homebrew/bin/gemini", vec!["--acp".into()], env, "/work");
+    /// let thread = Thread::new(ThreadId::from("t1"), "gemini", "/work");
+    /// let (tx, rx) = channel();
+    /// let session = Session::start(Supervisor::global(), launch, thread, move |event| drop(tx.send(event)))?;
+    /// while !matches!(rx.recv()?, Event::Capabilities) {}
+    /// assert_eq!(session.snapshot().agent(), "gemini");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn start(
         supervisor: &Supervisor,
         launch: Launch,

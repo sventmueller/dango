@@ -394,6 +394,24 @@ impl Server {
     /// Starts the server; `events` hears what it reports, on a background thread, and must return quickly.
     ///
     /// The caller has decided that the project is trusted: a server runs code the project controls.
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    ///
+    /// use ide_lsp::lsp_types::Position;
+    /// use ide_lsp::{Server, ServerConfig, uri, wait};
+    /// use ide_process::Supervisor;
+    ///
+    /// let root = Path::new("/work/hello");
+    /// let env: Vec<(String, String)> = std::env::vars().collect();
+    /// let config = ServerConfig::new("gopls", Path::new("/opt/homebrew/bin/gopls"), root, env);
+    /// let server = Server::start(Supervisor::global(), config, |_event| {})?;
+    /// let file = uri::from_path(&root.join("main.go"));
+    /// server.open(&file, "go", 1, "package main\n\nfunc main() {}\n");
+    /// let hover = wait(|reply| server.hover(&file, Position::new(2, 6), reply))?;
+    /// assert!(hover.is_some_and(|hover| hover.markdown.contains("main")));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn start(
         supervisor: &Supervisor,
         config: ServerConfig,
