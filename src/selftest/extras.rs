@@ -10,7 +10,7 @@ use ide_git::CommitOptions;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, msg_send};
-use objc2_app_kit::{NSAlertSecondButtonReturn, NSApplication, NSEventModifierFlags, NSMenu, NSMenuItem};
+use objc2_app_kit::{NSAlertSecondButtonReturn, NSApplication, NSMenu, NSMenuItem};
 use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
@@ -273,25 +273,20 @@ fn find_item(menu: &NSMenu, action: objc2::runtime::Sel) -> Option<Retained<NSMe
     })
 }
 
-/// Whitespace shown through the View menu's action, with its check mark and shortcut.
+/// Whitespace shown through the View menu's action, with its check mark; ⌥⌘I belongs to the inspector (E94, E101).
 fn whitespace(view: &EditorTextView) {
     let mtm = view.mtm();
     let item = NSApplication::sharedApplication(mtm)
         .mainMenu()
         .and_then(|m| find_item(&m, objc2::sel!(ideToggleWhitespace:)));
-    let shortcut = item.as_ref().map(|i| {
-        let mask = i.keyEquivalentModifierMask();
-        (
-            i.title().to_string(),
-            i.keyEquivalent().to_string(),
-            mask.contains(NSEventModifierFlags::Command) && mask.contains(NSEventModifierFlags::Option),
-        )
-    });
+    let shortcut = item
+        .as_ref()
+        .map(|i| (i.title().to_string(), i.keyEquivalent().to_string()));
     check(
-        "the View menu shows whitespace on ⌥⌘I",
+        "the View menu shows whitespace, without the inspector's ⌥⌘I",
         shortcut
             .as_ref()
-            .is_some_and(|(title, key, mask)| title == t("Leerzeichen anzeigen") && key == "i" && *mask),
+            .is_some_and(|(title, key)| title == t("Leerzeichen anzeigen") && key.is_empty()),
         format!("{shortcut:?}"),
     );
     let was = editor::whitespace_visible(view);

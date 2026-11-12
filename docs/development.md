@@ -166,8 +166,8 @@ Uploading the image and the feed to the release and adding the Cask to a tap sta
 The app built with `--features selftest` runs scenarios without a person at the Mac. `cargo xtask selftest` and the
 app agree on this:
 
-1. The runner starts `<bundle>/Contents/MacOS/Dango` directly, once per scenario, with stdin from `/dev/null` and
-   stdout and stderr on the terminal, and with these variables:
+1. The runner starts `<bundle>/Contents/MacOS/Dango` directly, once per scenario, with stdin from `/dev/null`, stdout
+   on the terminal and stderr passed on to the terminal line by line, and with these variables:
    - `IDE_SELFTEST`: the scenario's name, made of letters, digits, `-` and `_`.
    - `IDE_SELFTEST_REPORT`: where the app writes its report, `target/selftest/<scenario>.json`; the runner deletes the
      file of an earlier run first.
@@ -186,8 +186,9 @@ app agree on this:
    ```
    It should write the file whole, to a temporary name and then renamed, since a cut-off report counts as unreadable.
 3. A scenario passes when the app ends by itself within its time limit with status 0 and its report is readable,
-   names the scenario, lists at least one check and every check is `ok`. The runner prints each check as
-   `✓ name — detail` or `✗ name — detail`. At the limit it kills the app: 120 seconds, 300 for `a11y` and `a11y-rtl`, and 600 for
+   names the scenario, lists at least one check and every check is `ok`, and its stderr holds no failed TextKit 2
+   assertion: UIFoundation logs one as `Make a symbolic breakpoint at NSText…` and carries on. The runner prints
+   each check as `✓ name — detail` or `✗ name — detail`. At the limit it kills the app: 120 seconds, 300 for `a11y` and `a11y-rtl`, and 600 for
    `lsp`, `lsp-actions`, `lsp-actions-go` and `lsp-navigation`, which wait for a real rust-analyzer or gopls to index and settle before
    each step (up to 180 s each, the wait in the check's detail) and end themselves after 540.
 4. The runner exits with an error if any scenario did not pass, and names it. A failed scenario's home folder stays

@@ -371,7 +371,8 @@ pub fn command(view: &EditorTextView, command: Sel) -> bool {
     }
 }
 
-/// Replaces UTF-16 `range` of `view` with `text` as one undoable step that flows into the document like typing.
+/// Replaces UTF-16 `range` of `view` with `text` as one undoable step that flows into the document like typing, and
+/// puts the caret after it in view, as typing does.
 fn replace(view: &EditorTextView, range: Range<usize>, text: &str) {
     let Some(storage) = view.storage() else { return };
     super::undo_step(view, || {
@@ -382,6 +383,11 @@ fn replace(view: &EditorTextView, range: Range<usize>, text: &str) {
             view.didChangeText();
         }
     });
+    let caret = NSRange::new(range.start + text.encode_utf16().count(), 0);
+    view.setSelectedRange(caret);
+    // Scrolling has TextKit 2 lay the edited line out again; without it, an undo in the same turn of the run loop that
+    // shortens the text trips UIFoundation's assertion "NSTextContainer range out of document range".
+    view.scrollRangeToVisible(caret);
 }
 
 /// The first Tab on a proposal elsewhere goes there and shows it; any other Tab takes it.
@@ -399,11 +405,7 @@ fn take(view: &EditorTextView, proposal: Proposal, provider: &Arc<dyn Provider>)
     }
     let range = utf16(view, proposal.range.start)..utf16(view, proposal.range.end);
     forget(view);
-    quietly(view, || {
-        replace(view, range.clone(), &proposal.text);
-        let end = range.start + proposal.text.encode_utf16().count();
-        view.setSelectedRange(NSRange::new(end, 0));
-    });
+    quietly(view, || replace(view, range, &proposal.text));
     provider.accepted(&proposal.prediction);
     crate::window::announce(view.mtm(), t("Vorschlag übernommen"));
     view.later(sel!(idePredict), PAUSE);
@@ -416,10 +418,7 @@ fn take_word(view: &EditorTextView, proposal: &Proposal, provider: &Arc<dyn Prov
     };
     let at = utf16(view, proposal.range.start);
     forget(view);
-    quietly(view, || {
-        replace(view, at..at, &word);
-        view.setSelectedRange(NSRange::new(at + word.encode_utf16().count(), 0));
-    });
+    quietly(view, || replace(view, at..at, &word));
     let (text, revision) = {
         let document = view.document();
         (document.text().to_string(), document.revision())

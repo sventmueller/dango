@@ -1,8 +1,10 @@
 //! Runs the scenarios the app carries with the `selftest` feature and judges each by the report the app writes.
 
+use std::io::{BufRead as _, BufReader};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, ChildStderr, Command, ExitStatus, Stdio};
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use ide_product::BUNDLE_ID;
@@ -48,6 +50,10 @@ pub(crate) const QUITTING: &[&str] = &["restore", "debug-restore"];
 
 /// The signal a crashing launch ends with, which neither runs any of the app's code nor asks macOS for a crash report.
 pub(crate) const SIGKILL: i32 = 9;
+
+/// How UIFoundation's line on a failed TextKit 2 assertion begins; the app carries on after it, so only its error
+/// output shows that the text system's state went wrong.
+const TEXTKIT_ASSERTION: &str = "Make a symbolic breakpoint at NSText";
 
 /// What the app writes to `IDE_SELFTEST_REPORT` at the end of a scenario.
 #[derive(Debug, Deserialize)]
@@ -173,7 +179,7 @@ fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(Stri
 }
 
 /// Starts the app on `scenario` in `home`, telling it which `launch` this is if it is one of several, and waits for it
-/// to end; with it, the problem if it took the keyboard.
+/// to end; with it, the problems if it took the keyboard or TextKit asserted.
 fn launch(
     program: &Path,
     scenario: &str,
@@ -181,7 +187,7 @@ fn launch(
     home: &Path,
     which: Option<&str>,
     env: &[(String, String)],
-) -> Result<(Ended, Option<String>), String> {
+) -> Result<(Ended, Vec<String>), String> {
     if report.exists() {
         files::remove_file(report)?;
     }
@@ -192,16 +198,42 @@ fn launch(
         .env("IDE_SELFTEST_REPORT", report)
         .env("IDE_SELFTEST_HOME", home)
         .envs(env.iter().map(|(key, value)| (key, value)))
-        .stdin(Stdio::null());
+        .stdin(Stdio::null())
+        .stderr(Stdio::piped());
     if let Some(which) = which {
         command.env("IDE_SELFTEST_LAUNCH", which);
     }
     let guard = focus::Guard::start()?;
     let mut child = command.spawn().map_err(|e| format!("{}: {e}", program.display()))?;
     guard.guard(child.id());
+    let asserted = child.stderr.take().map(watch_errors);
     let ended =
         wait_within_limit(&mut child, time_limit(scenario)).map_err(|e| format!("{}: {e}", program.display()))?;
-    Ok((ended, guard.finish()))
+    let mut problems: Vec<String> = guard.finish().into_iter().collect();
+    // A child process the app started may hold the pipe open after the app ended.
+    if let Some(Ok(line)) = asserted.map(|found| found.recv_timeout(Duration::from_secs(2))) {
+        problems.push(format!("TextKit asserted: {line}"));
+    }
+    Ok((ended, problems))
+}
+
+/// Passes the app's error output on as it comes; the receiver gets the first line with a TextKit assertion.
+fn watch_errors(stderr: ChildStderr) -> mpsc::Receiver<String> {
+    let (found, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut told = false;
+        for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+            eprintln!("{line}");
+            if !told && is_textkit_assertion(&line) {
+                told = found.send(line).is_ok();
+            }
+        }
+    });
+    receiver
+}
+
+fn is_textkit_assertion(line: &str) -> bool {
+    line.contains(TEXTKIT_ASSERTION)
 }
 
 /// Prints the checks of the report at `report` and says what failed, for a launch that should have ended as
@@ -412,6 +444,18 @@ mod tests {
         assert_eq!(Ended::of(ExitStatus::from_raw(0)), Ended::Exited(0));
         assert_eq!(Ended::of(ExitStatus::from_raw(1 << 8)), Ended::Exited(1));
         assert_eq!(Ended::of(ExitStatus::from_raw(11)), Ended::Signalled(11));
+    }
+
+    #[test]
+    fn only_a_textkit_assertion_in_the_error_output_counts() {
+        assert!(is_textkit_assertion(
+            "2026-11-12 23:04:52.326 Dango[33986:9957079] Make a symbolic breakpoint at \
+             NSTextLayoutManagerBreakOnNilContentManager to catch this in the debugger."
+        ));
+        assert!(!is_textkit_assertion(
+            "[SplitView] Gesture recognizer support has been disabled because NSSplitView subclass IDEDocumentArea \
+             overrides either mouseDown: or mouseDragged:"
+        ));
     }
 
     #[test]
