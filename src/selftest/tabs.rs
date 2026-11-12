@@ -109,7 +109,6 @@ fn replaced(root: PathBuf) {
         tabs_of(&controller),
     );
     keeping(&controller, &root);
-    new_tab_page(&controller, &root);
     turned_off(&controller, &root);
     main_after(PAUSE, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
@@ -151,37 +150,40 @@ fn variety(root: PathBuf) {
     main_after(PAUSE, move || plus(root));
 }
 
-/// The tab bar's "+": a click opens the page of a new tab; a held press opens the menu of what a tab can show, whose
-/// entry opens in a new tab straight away.
+/// The tab bar's "+" and ⌘T: a click opens the menu of what a tab can show below the "+", and no tab before the user
+/// picks; the entry chosen opens in a new tab straight away.
 fn plus(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
+    controller.record_new_tab_menu();
     let before = controller.tab_count();
     let clicked = controller.click_plus();
     main_after(PAUSE, move || {
         let Some(controller) = window_of(&root) else { return };
+        let shown = controller.new_tab_menu_recorded();
         check(
-            "a click on the tab bar's + opens the page of a new tab",
-            clicked && controller.tab_count() == before + 1 && controller.new_tab_page_entries().is_some(),
-            tabs_of(&controller),
+            "a click on the tab bar's + opens the menu of new tabs below it, without a tab",
+            clicked && shown == Some(true) && controller.tab_count() == before,
+            format!("menu {shown:?}, {}", tabs_of(&controller)),
         );
-        if let Some(page) = controller.selected_tab() {
-            controller.close_tab(page);
-        }
-        let held = !controller.plus_held_is_click();
+        controller.open_new_tab_menu();
+        let shown = controller.new_tab_menu_recorded();
+        check(
+            "⌘T opens the same menu below the +, without a tab",
+            shown == Some(true) && controller.tab_count() == before,
+            format!("menu {shown:?}, {}", tabs_of(&controller)),
+        );
         let titles = controller.plus_menu_titles();
-        let before = controller.tab_count();
         let chosen = controller.choose_from_plus_menu(&[t("Terminal")]);
         check(
-            "holding the + opens the menu of what a tab can show, whose entry opens a new tab straight away",
-            held && titles == controller.inspect().new_tab_items
+            "the menu offers what a tab can show, and its entry opens a new tab straight away",
+            titles == controller.inspect().new_tab_items
                 && chosen
                 && controller.tab_count() == before + 1
-                && controller.new_tab_page_entries().is_none()
                 && controller
                     .tab_titles()
                     .last()
                     .is_some_and(|title| title.starts_with(t("Terminal"))),
-            format!("held {held}, {titles:?}, {}", tabs_of(&controller)),
+            format!("{titles:?}, {}", tabs_of(&controller)),
         );
         every_plus_entry(&controller, &root);
         super::git::pictures(root, "tabs-icons", navigation);
@@ -324,35 +326,6 @@ fn keeping(controller: &WindowController, root: &Path) {
     );
 }
 
-/// ⌘T opens the page of a new tab, which offers what a tab can show and gives way to a file opened from it.
-fn new_tab_page(controller: &WindowController, root: &Path) {
-    let before = controller.tab_count();
-    controller.open_new_tab();
-    let entries = controller.new_tab_page_entries().unwrap_or_default();
-    let offered = controller.inspect().new_tab_items;
-    check(
-        "⌘T opens the page of a new tab with what a tab can show",
-        controller.tab_count() == before + 1 && !entries.is_empty() && entries == offered,
-        format!("{entries:?}"),
-    );
-    if let Some(window) = controller.window() {
-        snapshot(&window, "tabs-new-tab-page");
-    }
-    controller.open_file(&root.join("e.rs"));
-    check(
-        "a file opened from the page takes its place",
-        controller.tab_count() == before + 1
-            && has(controller, "e.rs", false)
-            && controller.new_tab_page_entries().is_none(),
-        tabs_of(controller),
-    );
-    controller.close_tab(
-        controller
-            .tab_with_key(&root.join("e.rs").to_string_lossy())
-            .unwrap_or(-1),
-    );
-}
-
 fn turned_off(controller: &WindowController, root: &Path) {
     if let Err(error) = Settings::load_user().set(&keys::PREVIEW_TABS, &false) {
         check("preview tabs can be turned off", false, error.to_string());
@@ -367,7 +340,7 @@ fn turned_off(controller: &WindowController, root: &Path) {
     );
 }
 
-/// Every entry of the held "+"'s menu opens what it names, chosen in an untrusted folder, where no agent starts; the
+/// Every entry of the "+"'s menu opens what it names, chosen in an untrusted folder, where no agent starts; the
 /// agents listed are the installed ones, directly in the menu, the own agent last, a thread in a worktree below them.
 fn every_plus_entry(controller: &WindowController, root: &Path) {
     crate::project::distrust(root);
@@ -393,7 +366,7 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
             }
             _ => (
                 format!("{tabs} → {} tabs", controller.tab_count()),
-                controller.tab_count() == tabs + 1 && controller.new_tab_page_entries().is_none(),
+                controller.tab_count() == tabs + 1,
             ),
         };
         results.push((path.join(" ▸ "), outcome, chosen && ok));
@@ -401,7 +374,7 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
     crate::project::trust(root);
     let failed: Vec<&(String, String, bool)> = results.iter().filter(|(_, _, ok)| !ok).collect();
     check(
-        "every entry of the held +'s menu opens what it names in a new tab, the welcome page or the settings",
+        "every entry of the +'s menu opens what it names in a new tab, the welcome page or the settings",
         !entries.is_empty() && failed.is_empty(),
         format!("{failed:?} of {results:?}"),
     );
@@ -424,7 +397,7 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
         .iter()
         .position(|(path, _, _)| path.first().map(String::as_str) == Some(t("In eigenem Worktree")));
     check(
-        "the agents stand directly in the held +'s menu, a thread in a worktree below them",
+        "the agents stand directly in the +'s menu, a thread in a worktree below them",
         entries
             .iter()
             .filter(|entry| is_agent(entry))

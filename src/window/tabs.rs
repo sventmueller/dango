@@ -51,8 +51,6 @@ pub enum TabKind {
     Plan,
     /// A document as it reads, beside its editor: Markdown rendered, or a PDF file.
     Preview,
-    /// The page of a new tab, which offers what it can show (E17) and gives way to it.
-    NewTab,
 }
 
 impl TabKind {
@@ -67,7 +65,6 @@ impl TabKind {
             TabKind::Log => "doc.plaintext",
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
-            TabKind::NewTab => "plus",
         }
     }
 }
@@ -876,8 +873,8 @@ fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
     Some(parent)
 }
 
-/// What a new tab can show (E17): the page of a new tab lists it, and ⌘T and the tab bar's "+" open that page. The
-/// installed agents stand in it directly, a thread in a worktree of its own below them.
+/// What a new tab can show (E17), the menu that ⌘T and the tab bar's "+" open (E79). The installed agents stand in it
+/// directly, a thread in a worktree of its own below them.
 pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);

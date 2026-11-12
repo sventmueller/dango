@@ -74,7 +74,7 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
                 .and_then(|tab| tab.session_id())
                 .map(|session| Tab::Agent { session })
         }
-        TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview | TabKind::NewTab => None,
+        TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview => None,
     }
 }
 

@@ -217,7 +217,7 @@ The `a11y` scenario is the VoiceOver check of each phase (E3). It opens the main
 stand-ins and walks what VoiceOver gets from every window: controls without a name, images without a description,
 names that say nothing (an SF Symbol's name, "Button") or repeat beside each other, roles that do not fit, controls
 Tab never reaches, and code and terminal views that turn with a right-to-left interface. Then it goes through the
-main tasks with key presses to the window alone: staging and commit, Open Quickly, ⌘T and the page of a new tab, the
+main tasks with key presses to the window alone: staging and commit, Open Quickly, ⌘T and the menu of new tabs, the
 document beside, a prompt, comments on a
 plan in its card and its document, the activity popover as its rows change, opening a folder. Each finding is
 reported once, in the first state that shows it, and is a line of `target/selftest/a11y-findings.txt`:

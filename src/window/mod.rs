@@ -2,7 +2,6 @@
 //! tab of its own (E60).
 
 mod activity_bar;
-mod chooser;
 mod document_area;
 pub(crate) mod file_outline;
 mod files;
@@ -252,12 +251,12 @@ define_class!(
 
         #[unsafe(method(ideNewTab:))]
         fn new_tab_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.open_new_tab_page());
+            guarded((), || new_tab_button::open(self));
         }
 
         #[unsafe(method(newWindowForTab:))]
         fn new_window_for_tab(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.open_new_tab_page());
+            guarded((), || new_tab_button::open(self));
         }
 
         #[unsafe(method(ideFocusNextPanel:))]
@@ -862,7 +861,7 @@ impl WindowController {
     }
 
     /// Shows `view` as a document of `kind` and brings it to the front: in a window tab of its own, or in the tab
-    /// in front if that one is empty or the page of a new tab, or beside a document for `open_beside`. `key` names
+    /// in front if that one is empty, or beside a document for `open_beside`. `key` names
     /// what it shows, so `select_tab` finds it again. The document's number.
     pub fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
         let document = self.new_document(kind, key, title, view);
@@ -1205,15 +1204,6 @@ impl WindowController {
         }
     }
 
-    /// Opens the page of a new tab (E17), which gives way to what the user picks there.
-    fn open_new_tab_page(&self) {
-        let page = chooser::view(self.mtm(), self);
-        let id = self.add_tab(TabKind::NewTab, None, t("Neuer Tab"), page.into_super());
-        if let Some(tab) = self.tab_of_document(id) {
-            tab.activate(id);
-        }
-    }
-
     fn bring_to_front(&self) {
         if let Some(window) = self.window() {
             window.makeKeyAndOrderFront(None);
@@ -1317,19 +1307,13 @@ impl WindowController {
             return;
         }
         let current = self.current_tab();
-        if let Some(tab) = &current {
-            let page = tab.focused().filter(|doc| doc.kind == TabKind::NewTab);
-            if tab.is_empty() || page.is_some() {
-                let index = page.map(|page| {
-                    let index = tab.documents().iter().position(|doc| doc.id == page.id);
-                    self.forget_document(tab, page.id);
-                    index
-                });
-                tab.insert(document, index.flatten());
-                self.select(tab);
-                crate::session::changed();
-                return;
-            }
+        if let Some(tab) = &current
+            && tab.is_empty()
+        {
+            tab.insert(document, None);
+            self.select(tab);
+            crate::session::changed();
+            return;
         }
         let tab = self.new_tab_window();
         tab.insert(document, None);
@@ -1854,9 +1838,9 @@ impl WindowController {
             .is_some_and(|group| group.isTabBarVisible())
     }
 
-    /// Opens the page of a new tab, as ⌘T does.
-    pub fn open_new_tab(&self) {
-        self.open_new_tab_page();
+    /// Opens the menu of new tabs, as ⌘T does; the self-test only records it.
+    pub fn open_new_tab_menu(&self) {
+        new_tab_button::open(self);
     }
 
     /// Brings the next tab to the front, as ⇧⌘] does.
@@ -1876,18 +1860,21 @@ impl WindowController {
         }
     }
 
-    /// The menu of new tabs, filled as when the page of a new tab opens it.
+    /// The menu of new tabs, filled as when the "+" opens it.
     pub fn new_tab_menu(&self) -> Retained<objc2_app_kit::NSMenu> {
         let menu = tabs::new_tab_menu(self.mtm());
         tabs::fill_new_tab_menu(self, &menu);
         menu
     }
 
-    /// The entries of the page of a new tab in front, if one is.
-    pub fn new_tab_page_entries(&self) -> Option<Vec<String>> {
-        let view = self.selected_view()?;
-        let page = view.downcast::<chooser::NewTabPage>().ok()?;
-        Some(page.titles())
+    /// Makes the menu of new tabs only recorded from now on, never shown, so the self-test can ask for it.
+    pub fn record_new_tab_menu(&self) {
+        new_tab_button::record_only();
+    }
+
+    /// Whether the menu of new tabs was asked for since the last call, and whether below the "+".
+    pub fn new_tab_menu_recorded(&self) -> Option<bool> {
+        new_tab_button::take_recorded()
     }
 
     /// Moves the keyboard focus to the other document of the tab in front, as the menu command does.
@@ -1984,17 +1971,12 @@ impl WindowController {
         true
     }
 
-    /// Whether a press on the "+" that nothing ends within its time counts as a click; it should not.
-    pub fn plus_held_is_click(&self) -> bool {
-        new_tab_button::released_within(self.mtm(), objc2_foundation::NSPoint::new(0.0, 0.0))
-    }
-
-    /// The entries of the held "+"'s menu.
+    /// The entries of the "+"'s menu.
     pub fn plus_menu_titles(&self) -> Vec<String> {
         menu_titles(&new_tab_button::menu_for(self), &[])
     }
 
-    /// The entries of the held "+"'s menu that do something, each as the titles that lead to it and its action, with
+    /// The entries of the "+"'s menu that do something, each as the titles that lead to it and its action, with
     /// whether it is enabled.
     pub fn plus_menu_entries(&self) -> Vec<(Vec<String>, String, bool)> {
         fn walk(menu: &objc2_app_kit::NSMenu, path: &mut Vec<String>, out: &mut Vec<(Vec<String>, String, bool)>) {
@@ -2030,7 +2012,7 @@ impl WindowController {
             .map(|doc| doc.title())
     }
 
-    /// Chooses the entry that `path` names, by its title and those of its submenus, from the held "+"'s menu.
+    /// Chooses the entry that `path` names, by its title and those of its submenus, from the "+"'s menu.
     pub fn choose_from_plus_menu(&self, path: &[&str]) -> bool {
         let mut menu = new_tab_button::menu_for(self);
         for (n, title) in path.iter().enumerate() {

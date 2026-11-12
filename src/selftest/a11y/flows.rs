@@ -22,7 +22,6 @@ use crate::git_panel::selftest as git;
 use crate::selftest::check;
 use crate::util::main_after;
 use crate::window::{Panel, WindowController};
-use splat_i18n::t;
 
 pub const CREDENTIALS: &str = "credentials.txt";
 /// An access key in the shape gitleaks' `aws-access-token` rule looks for; it opens nothing.
@@ -328,48 +327,22 @@ pub fn start(root: PathBuf) {
     );
 }
 
-/// ⌘T opens the page of a new tab with the focus on its first entry; Tab reaches the terminal, and Space opens it in
-/// the page's place with the focus in it.
+/// ⌘T from the keyboard opens the menu of new tabs below the tab bar's "+", which AppKit's menu then lets the arrow
+/// keys walk; no tab opens before an entry is chosen.
 fn new_tab(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let Some(window) = controller.window() else { return };
+    controller.record_new_tab_menu();
     let before = controller.tab_count();
     let went = keys::press(&window, "t", 17, COMMAND);
-    let entries = controller.new_tab_page_entries().unwrap_or_default();
-    let Some(page_window) = controller.window() else { return };
-    let first = class_of_focus(&page_window);
+    let shown = controller.new_tab_menu_recorded();
     check(
-        "⌘T opens the page of a new tab with the focus on its first entry",
-        controller.tab_count() == before + 1
-            && entries.first().is_some_and(|e| e == t("Neue Datei"))
-            && first == "NSButton",
-        format!("to {went}, {entries:?}, focus on {first}"),
-    );
-    let terminal = t("Terminal").to_string();
-    let mut reached = false;
-    for _ in 0..60 {
-        let title = keys::focused(&page_window)
-            .and_then(|v| v.downcast::<objc2_app_kit::NSButton>().ok())
-            .map(|b| b.title().to_string());
-        if title.as_deref() == Some(terminal.as_str()) {
-            reached = true;
-            break;
-        }
-        let _ = keys::press(&page_window, TAB.0, TAB.1, NONE);
-    }
-    if !reached && let Some(button) = button_titled(&page_window, &terminal) {
-        // AppKit lets Tab reach buttons only with the Mac's full keyboard access, which a selftest cannot switch on.
-        let loop_views = keys::key_view_loop(&page_window, &[]);
-        reached = keys::linked(&button, &loop_views) && page_window.makeFirstResponder(Some(&button));
-    }
-    if reached {
-        let _ = keys::press(&page_window, SPACE.0, SPACE.1, NONE);
-    }
-    let focus = controller.window().map(|w| class_of_focus(&w)).unwrap_or_default();
-    check(
-        "Tab reaches the terminal on the page, and Space opens it in the page's place with the focus",
-        reached && controller.tab_count() == before + 1 && focus == "IDETerminalView",
-        format!("{} then {} documents, focus on {focus}", before, controller.tab_count()),
+        "⌘T opens the menu of new tabs below the +, without a tab",
+        shown == Some(true) && controller.tab_count() == before,
+        format!(
+            "to {went}, menu {shown:?}, {before} then {} documents",
+            controller.tab_count()
+        ),
     );
     next_panel(root);
 }

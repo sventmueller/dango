@@ -497,6 +497,10 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Worktree ▸“ und „Agenten verwalten …“. Das Untermenü „AI-Thread“ entfällt. CLI-Threads (I5) entfallen ganz: kein
   Start mehr, keine Zeilen in AI-Panel und Aktivitätsübersicht, kein Statuspunkt. Ein CLI-Thread aus einem früher
   gesicherten Fensterlayout öffnet als Terminal im Projektordner.
+- **E79 Keine Neuer-Tab-Seite, „+“ und ⌘T öffnen das Menü** *(Entscheidung des Eigentümers, ändert E60, E65 und
+  E78)*: Die Neuer-Tab-Seite entfällt. Ein Druck auf das „+“, kurz oder gehalten, öffnet darunter das Menü aus E17
+  und E78; ein Klick lässt es offen, ein gehaltener Druck zieht hinein. ⌘T und „Ablage ▸ Neuer Tab …“ öffnen
+  dasselbe Menü am „+“. Ein Tab entsteht erst mit dem gewählten Eintrag; wer nichts wählt, öffnet nichts.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
