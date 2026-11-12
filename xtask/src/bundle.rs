@@ -380,11 +380,22 @@ pub(crate) fn bundle(build: Build) -> Result<PathBuf, String> {
     let version = version()?;
     let app = assemble(build, &version, None)?;
     sign(&app, &signing_identity()?, build, false)?;
+    register(&app)?;
     if build == Build::Release {
         next_build(&version)?;
     }
     Ok(app)
 }
+
+/// Registers the bundle with Launch Services anew. A bundle rebuilt at the same path otherwise keeps the record of an
+/// earlier build, and the About panel then shows the generic app icon instead of the app's own.
+fn register(app: &Path) -> Result<(), String> {
+    run(Command::new(LSREGISTER).arg("-f").arg(app))
+}
+
+/// Launch Services' registration tool, which is not on the PATH.
+const LSREGISTER: &str =
+    "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
 
 /// Builds the programs and lays out the bundle around them, unsigned. The distribution carries the universal programs,
 /// Sparkle reading `feed` and the license texts of everything in it; the other builds the programs for this Mac.
