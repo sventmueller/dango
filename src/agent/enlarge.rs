@@ -6,11 +6,12 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    CIImageNSAppKitAdditions, NSAccessibility, NSBezelStyle, NSButton, NSCIImageRep, NSColor, NSControlSize, NSEvent,
-    NSImage, NSImageScaling, NSImageView, NSLayoutConstraintOrientation, NSResponder, NSShadow, NSView,
+    CIImageNSAppKitAdditions, NSAccessibility, NSBezelStyle, NSBezierPath, NSBitmapImageRep, NSButton, NSColor,
+    NSControlSize, NSEvent, NSImage, NSImageScaling, NSImageView, NSLayoutConstraintOrientation, NSResponder, NSShadow,
+    NSView,
 };
 use objc2_core_image::CIImage;
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSPointInRect, NSSize};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSPointInRect, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::tab::AgentRoot;
@@ -21,7 +22,7 @@ const MARGIN: f64 = 56.0;
 const CLOSE_INSET: f64 = 14.0;
 const RADIUS: f64 = 10.0;
 /// The blur's sigma, in points.
-const BLUR: f64 = 14.0;
+const BLUR: f64 = 5.0;
 const ESCAPE: u16 = 53;
 /// Below the window's own resizing, so the picture never holds the window at its size.
 const LOOSE: f32 = 1.0;
@@ -74,6 +75,15 @@ define_class!(
     unsafe impl NSObjectProtocol for Shade {}
 
     impl Shade {
+        /// The tab's own background, so the tab never shows through sharp where the blur does not reach.
+        #[unsafe(method(drawRect:))]
+        fn draw_rect(&self, _dirty: NSRect) {
+            guarded((), || {
+                NSColor::textBackgroundColor().setFill();
+                NSBezierPath::fillRect(self.bounds());
+            });
+        }
+
         /// Everything but the close button answers as the shade, so the tab behind takes no clicks.
         #[unsafe(method(hitTest:))]
         fn hit_test(&self, point: NSPoint) -> *mut NSView {
@@ -221,8 +231,11 @@ fn blurred(view: &NSView) -> Option<Retained<NSImage>> {
             .imageByApplyingGaussianBlurWithSigma(BLUR * scale)
             .imageByCroppingToRect(source.extent())
     };
+    // Rendered here into pixels: an image view drawing through its layer shows a lazily rendered CIImage as nothing.
+    let rendered = NSBitmapImageRep::initWithCIImage(NSBitmapImageRep::alloc(), &blurred);
+    rendered.setSize(bounds.size);
     let image = NSImage::initWithSize(NSImage::alloc(), bounds.size);
-    image.addRepresentation(&NSCIImageRep::imageRepWithCIImage(&blurred));
+    image.addRepresentation(&rendered);
     Some(image)
 }
 
@@ -275,24 +288,29 @@ fn shade(
     shade
 }
 
-/// `image` with rounded corners on a shadow.
+/// `image` with rounded corners on a shadow, or as it is if it brings its own margin, as a window's screenshot does.
 fn framed_picture(
     mtm: MainThreadMarker,
     image: &NSImage,
     label: Option<&objc2_foundation::NSString>,
 ) -> Retained<NSView> {
     let frame = NSView::new(mtm);
+    let view = NSImageView::new(mtm);
+    view.setImage(Some(image));
+    view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
+    view.setAccessibilityLabel(label);
+    loosen(&view);
+    frame.addSubview(&view);
+    pin_edges(&view, &frame);
+    if clear_corner(image) {
+        return frame;
+    }
     frame.setWantsLayer(true);
     let shadow = NSShadow::new();
     shadow.setShadowColor(Some(&NSColor::colorWithWhite_alpha(0.0, 0.3)));
     shadow.setShadowBlurRadius(24.0);
     shadow.setShadowOffset(NSSize::new(0.0, -6.0));
     frame.setShadow(Some(&shadow));
-    let view = NSImageView::new(mtm);
-    view.setImage(Some(image));
-    view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
-    view.setAccessibilityLabel(label);
-    loosen(&view);
     view.setWantsLayer(true);
     if let Some(layer) = view.layer() {
         layer.setCornerRadius(RADIUS);
@@ -300,9 +318,17 @@ fn framed_picture(
         layer.setBorderWidth(1.0);
         layer.setBorderColor(Some(&NSColor::colorWithWhite_alpha(0.0, 0.12).CGColor()));
     }
-    frame.addSubview(&view);
-    pin_edges(&view, &frame);
     frame
+}
+
+/// Whether `image`'s top left pixel is see-through, the margin a window's screenshot keeps for its shadow.
+fn clear_corner(image: &NSImage) -> bool {
+    image.representations().iter().any(|rep| {
+        rep.downcast_ref::<NSBitmapImageRep>()
+            .filter(|bitmap| bitmap.hasAlpha())
+            .and_then(|bitmap| bitmap.colorAtX_y(0, 0))
+            .is_some_and(|color| color.alphaComponent() < 0.5)
+    })
 }
 
 /// Centres `picture` in `shade` at the size of `natural`, shrunk to fit inside the margins, keeping its shape.
