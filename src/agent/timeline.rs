@@ -377,6 +377,17 @@ impl Timeline {
         }
     }
 
+    /// Gives the rows rebuilt outside AppKit's own row building their height before the window draws again; the
+    /// deferred flush would leave one frame with each changed card in its old row.
+    fn correct_now(&self) {
+        for _ in 0..4 {
+            if self.corrections.borrow().is_empty() {
+                break;
+            }
+            self.flush_corrections();
+        }
+    }
+
     fn flush_corrections(&self) {
         let corrections = std::mem::take(&mut *self.corrections.borrow_mut());
         if corrections.is_empty() {
@@ -453,6 +464,7 @@ impl Timeline {
             }
             self.refresh_rows(reload.into_iter().filter(|i| *i < old_len));
         }
+        self.correct_now();
         self.refresh_marks();
         if following {
             self.scroll_to_end();
@@ -657,6 +669,7 @@ impl Timeline {
             .find_map(|(entry, row)| (entry.get() == id).then_some(*row))
         {
             self.reload_rows(std::iter::once(row));
+            self.correct_now();
         }
     }
 
@@ -787,6 +800,7 @@ impl Timeline {
         }
         let following = self.is_at_bottom();
         self.reload_rows(rows.into_iter());
+        self.correct_now();
         if following {
             self.scroll_to_end();
         }

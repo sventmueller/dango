@@ -345,6 +345,31 @@ fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce
             format!("{buttons:?}, misfits {misfits:?}"),
         );
         picture(&controller, "agent-subagent-asks");
+        let progress = |n: u64, summary: &str| {
+            json!({"type": "system", "subtype": "task_progress", "task_id": "task_sub", "tool_use_id": "toolu_sub",
+                   "description": "Wetter holen", "usage": {"total_tokens": 1000 * n, "tool_uses": n, "duration_ms": 900 * n},
+                   "last_tool_name": "WebFetch", "summary": summary, "session_id": session, "uuid": format!("progress-{n}")})
+            .to_string()
+        };
+        let started = json!({"type": "system", "subtype": "task_started", "task_id": "task_sub", "tool_use_id": "toolu_sub",
+                             "description": "Wetter holen", "subagent_type": "general-purpose", "task_type": "local_agent",
+                             "session_id": session, "uuid": "task-started"});
+        tab.feed(&[started.to_string(), progress(1, "Reading the forecast")].join("\n"));
+        tab.timeline().settle();
+        tab.feed(&progress(
+            2,
+            &"Comparing the forecasts of three weather services for the next days. ".repeat(6),
+        ));
+        let grown = tab.timeline().misfits();
+        tab.timeline().settle();
+        tab.feed(&progress(3, "Writing the report"));
+        let shrunk = tab.timeline().misfits();
+        check(
+            "a running subagent's card that grows or shrinks with its progress has its row's height before the window \
+             draws again",
+            grown.is_empty() && shrunk.is_empty(),
+            format!("grown {grown:?}, shrunk {shrunk:?}"),
+        );
         if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
             controller.close_tab(id);
         }
