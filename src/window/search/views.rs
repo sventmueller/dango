@@ -250,7 +250,7 @@ fn search_field(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSTextFi
 fn toggle(mtm: MainThreadMarker, panel: &SearchPanel, toggle: Toggle) -> Retained<NSButton> {
     let (name, description) = match toggle {
         Toggle::Case => ("textformat", t("Groß-/Kleinschreibung beachten")),
-        Toggle::Word => ("textformat.abc.dottedunderline", t("Ganzes Wort")),
+        Toggle::Word => ("character.textbox", t("Ganzes Wort")),
         Toggle::Regex => ("asterisk", t("Regulärer Ausdruck")),
     };
     let button = symbol_button(
