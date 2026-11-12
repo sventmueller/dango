@@ -129,6 +129,15 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
                 .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
         format!("pasted {pasted}, tiles {tiles:?}"),
     );
+    let enlarged = tab.enlarge_thumbnail();
+    check(
+        "a click on a pasted picture's tile opens the picture large, within the window",
+        enlarged.is_some_and(|size| {
+            let room = controller.window().map_or(0.0, |w| w.frame().size.width);
+            size.width > 76.0 && size.width <= room
+        }),
+        format!("{enlarged:?}"),
+    );
     let idle = tab.tab_mark();
     if let Some(png) = &shot {
         let frame = serde_json::json!({"type": "user", "uuid": "picture-sent", "message": {"role": "user", "content": [

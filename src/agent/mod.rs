@@ -13,6 +13,7 @@ mod compose;
 mod composer;
 mod context;
 mod context_view;
+mod enlarge;
 mod figures;
 mod format;
 mod header;

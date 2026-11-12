@@ -143,14 +143,14 @@ const TILE: f64 = 76.0;
 const TILE_PADDING: f64 = 6.0;
 const TILE_RADIUS: f64 = 10.0;
 
-/// A picture as a tile showing it, named `name`, with `remove` in its corner if it can be dropped.
+/// A picture as a tile showing it, named `name`, that opens it large on a click, with `remove` in its corner if it
+/// can be dropped.
 pub fn picture_tile(mtm: MainThreadMarker, data: &[u8], name: &str, remove: Option<&NSButton>) -> Retained<NSView> {
     let image = NSImage::initWithData(objc2::AnyThread::alloc(), &NSData::with_bytes(data));
     let view = NSImageView::new(mtm);
     view.setImage(image.as_deref());
     view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
-    view.setToolTip(Some(&ns(name)));
-    crate::util::set_label(&view, Some(name));
+    view.setAccessibilityElement(false);
     view.setTranslatesAutoresizingMaskIntoConstraints(false);
     let tile = framed(
         mtm,
@@ -162,7 +162,23 @@ pub fn picture_tile(mtm: MainThreadMarker, data: &[u8], name: &str, remove: Opti
     );
     tile.widthAnchor().constraintEqualToConstant(TILE).setActive(true);
     tile.heightAnchor().constraintEqualToConstant(TILE).setActive(true);
-    if let (Some(remove), Some(inner)) = (remove, tile.contentView()) {
+    let Some(inner) = tile.contentView() else {
+        return Retained::into_super(tile);
+    };
+    let enlarge = super::enlarge::button(mtm, name);
+    inner.addSubview(&enlarge);
+    enlarge.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        enlarge.leadingAnchor().constraintEqualToAnchor(&inner.leadingAnchor()),
+        enlarge
+            .trailingAnchor()
+            .constraintEqualToAnchor(&inner.trailingAnchor()),
+        enlarge.topAnchor().constraintEqualToAnchor(&inner.topAnchor()),
+        enlarge.bottomAnchor().constraintEqualToAnchor(&inner.bottomAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    if let Some(remove) = remove {
         inner.addSubview(remove);
         remove.setTranslatesAutoresizingMaskIntoConstraints(false);
         remove
