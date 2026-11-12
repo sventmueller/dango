@@ -266,6 +266,7 @@ fn probe_window(controller: &window::WindowController) {
         format!("{width} pt"),
     );
     check("the welcome tab is open", seen.tabs == 1, format!("{} tabs", seen.tabs));
+    probe_symbol_menu(controller);
     let expected = [
         t("Neue Datei"),
         t("Terminal"),
@@ -283,6 +284,72 @@ fn probe_window(controller: &window::WindowController) {
     if let Some(window) = controller.window() {
         snapshot(&window, "probe-window");
     }
+}
+
+/// The ticked items of the context menu of `panel`'s symbol, by title, and the titles of those that are enabled.
+fn symbol_menu_state(controller: &window::WindowController, panel: Panel) -> (Vec<String>, Vec<String>) {
+    let Some(menu) = controller.activity_menu(panel) else {
+        return (vec![], vec![]);
+    };
+    menu.update();
+    let items: Vec<_> = menu.itemArray().iter().collect();
+    let titles = |keep: &dyn Fn(&objc2_app_kit::NSMenuItem) -> bool| {
+        items
+            .iter()
+            .filter(|item| keep(item))
+            .map(|item| item.title().to_string())
+            .collect::<Vec<_>>()
+    };
+    (
+        titles(&|item| item.state() == objc2_app_kit::NSControlStateValueOn),
+        titles(&|item| item.isEnabled()),
+    )
+}
+
+/// The symbols' context menu hides a symbol for good and shows it again; the panel that showed gives way, and the
+/// last symbol stays.
+fn probe_symbol_menu(controller: &window::WindowController) {
+    let titles: Vec<String> = Panel::ALL.iter().map(|p| p.title().to_string()).collect();
+    let (ticked, _) = symbol_menu_state(controller, Panel::Git);
+    check(
+        "a right click on a symbol offers every panel, each ticked",
+        ticked == titles,
+        ticked.join(", "),
+    );
+    controller.activate_panel(Panel::Git);
+    window::toggle_activity_symbol(Panel::Git);
+    let stored = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::HIDDEN_PANELS);
+    let after = controller.inspect().panel;
+    check(
+        "hiding the shown panel's symbol hides it, remembers that and shows the first panel left",
+        !controller.shown_symbols().contains(&Panel::Git) && stored == ["git"] && after == Some(Panel::Files),
+        format!("{:?}, stored {stored:?}, showing {after:?}", controller.shown_symbols()),
+    );
+    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Ci] {
+        window::toggle_activity_symbol(panel);
+    }
+    let (ticked, enabled) = symbol_menu_state(controller, Panel::Ci);
+    check(
+        "the last symbol stays and its item cannot hide it",
+        controller.shown_symbols() == [Panel::Ci] && ticked == [Panel::Ci.title()] && !enabled.contains(&ticked[0]),
+        format!(
+            "{:?}, ticked {ticked:?}, enabled {enabled:?}",
+            controller.shown_symbols()
+        ),
+    );
+    if let Some(window) = controller.window() {
+        window.displayIfNeeded();
+        snapshot(&window, "probe-symbols-hidden");
+    }
+    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Git] {
+        window::toggle_activity_symbol(panel);
+    }
+    controller.activate_panel(Panel::Agents);
+    check(
+        "every symbol comes back",
+        controller.shown_symbols() == Panel::ALL,
+        format!("{:?}", controller.shown_symbols()),
+    );
 }
 
 /// Settings, texts, opening a folder and the login shell's environment, which ends the run.

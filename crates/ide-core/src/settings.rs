@@ -94,6 +94,9 @@ pub mod keys {
     /// Where the browser's address field sends words that are no address.
     pub const SEARCH_ENGINE: Key<SearchEngine> = Key::user("searchEngine", || SearchEngine::DuckDuckGo);
 
+    /// The panels whose symbol the activity bar leaves out, by the app's name for each panel.
+    pub const HIDDEN_PANELS: Key<Vec<String>> = Key::user("hiddenSidebarPanels", Vec::new);
+
     /// ⌥ in the terminal is Meta for every key, instead of typing the characters the keyboard layout puts on it.
     pub const OPTION_AS_META: Key<bool> = Key::user("optionAsMeta", || false);
 }

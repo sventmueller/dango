@@ -501,6 +501,11 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   E78)*: Die Neuer-Tab-Seite entfällt. Ein Druck auf das „+“, kurz oder gehalten, öffnet darunter das Menü aus E17
   und E78; ein Klick lässt es offen, ein gehaltener Druck zieht hinein. ⌘T und „Ablage ▸ Neuer Tab …“ öffnen
   dasselbe Menü am „+“. Ein Tab entsteht erst mit dem gewählten Eintrag; wer nichts wählt, öffnet nichts.
+- **E80 Symbole der Seitenleiste ein- und ausblenden** *(Entscheidung des Eigentümers, ergänzt E3)*: Ein Rechtsklick
+  in die Symbolspalte öffnet ein Menü mit jedem Panel, angehakt, solange sein Symbol zu sehen ist; ein Klick blendet
+  es aus oder wieder ein, in allen Fenstern und über den Neustart hinaus (Einstellung `hiddenSidebarPanels`). Das
+  letzte sichtbare Symbol bleibt. Zeigt die Seitenleiste gerade das ausgeblendete Panel, rückt das erste sichtbare
+  nach. Menüleiste und Tastenkürzel öffnen ein ausgeblendetes Panel weiterhin.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

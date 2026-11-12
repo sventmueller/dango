@@ -97,6 +97,17 @@ impl Panel {
         }
     }
 
+    /// Its name in the settings, which no language translates.
+    pub fn id(self) -> &'static str {
+        match self {
+            Panel::Files => "files",
+            Panel::Search => "search",
+            Panel::Agents => "agents",
+            Panel::Git => "git",
+            Panel::Ci => "ci",
+        }
+    }
+
     pub fn symbol(self) -> &'static str {
         match self {
             Panel::Files => "doc.on.doc",
@@ -245,6 +256,15 @@ define_class!(
                     if sender.is_some_and(|sender| sender.downcast_ref::<NSMenuItem>().is_some()) {
                         self.focus_panel();
                     }
+                }
+            });
+        }
+
+        #[unsafe(method(ideToggleActivitySymbol:))]
+        fn toggle_activity_symbol_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(panel) = Panel::from_tag(tag_of(sender)) {
+                    toggle_activity_symbol(panel);
                 }
             });
         }
@@ -469,6 +489,14 @@ impl WindowController {
     }
 }
 
+/// `panel` unless its symbol is among `hidden`, else the first panel whose symbol shows.
+fn first_shown(panel: Panel, hidden: &[Panel]) -> Panel {
+    if !hidden.contains(&panel) {
+        return panel;
+    }
+    Panel::ALL.into_iter().find(|p| !hidden.contains(p)).unwrap_or(panel)
+}
+
 /// The tag of the control or menu item that sent an action.
 fn tag_of(sender: Option<&AnyObject>) -> isize {
     let Some(sender) = sender else { return -1 };
@@ -501,6 +529,23 @@ pub fn tree_changed(root: &Path, dirs: &[PathBuf]) {
             }
         }
     });
+}
+
+/// Hides the symbol of `panel` in every window's activity bar, or shows it again, and remembers that; the last symbol
+/// that shows stays.
+pub fn toggle_activity_symbol(panel: Panel) {
+    let mut hidden = activity_bar::hidden();
+    if hidden.contains(&panel) {
+        hidden.retain(|p| *p != panel);
+    } else if hidden.len() + 1 < Panel::ALL.len() {
+        hidden.push(panel);
+    } else {
+        return;
+    }
+    activity_bar::store_hidden(&hidden);
+    for window in WINDOWS.with(|windows| windows.borrow().clone()) {
+        window.leave_out_symbols(&hidden);
+    }
 }
 
 /// Lets the tree of every window list what Git ignores and the system hides, or leave it out again.
@@ -654,7 +699,7 @@ impl WindowController {
         this.ivars().panel_open.set(true);
         this.restore_frame(&tab.window);
         this.make_current(&tab);
-        this.show_panel(sidebar.panel);
+        this.show_panel(first_shown(sidebar.panel, &activity_bar::hidden()));
         if !sidebar.open {
             this.set_panel_open(false);
         }
@@ -1564,6 +1609,22 @@ impl WindowController {
         }
     }
 
+    /// Hides the activity bar's symbols of `hidden`; a hidden panel that showed gives way to the first that still has
+    /// its symbol.
+    fn leave_out_symbols(&self, hidden: &[Panel]) {
+        let ivars = self.ivars();
+        if let Some(activity) = ivars.activity.borrow().as_ref() {
+            activity.leave_out(hidden);
+        }
+        if let Some(shown) = ivars.panel.get().filter(|panel| hidden.contains(panel)) {
+            let open = ivars.panel_open.get();
+            self.show_panel(first_shown(shown, hidden));
+            if !open && let Some(activity) = ivars.activity.borrow().as_ref() {
+                activity.select(None);
+            }
+        }
+    }
+
     /// Puts the keyboard focus into the panel beside the activity bar while it shows, else back into the active tab.
     fn focus_panel(&self) {
         let Some(window) = self.window() else { return };
@@ -1645,6 +1706,16 @@ impl WindowController {
             });
             return true;
         }
+        if action == Some(sel!(ideToggleActivitySymbol:)) {
+            let hidden = activity_bar::hidden();
+            let shown = Panel::from_tag(item.tag()).is_some_and(|panel| !hidden.contains(&panel));
+            item.setState(if shown {
+                NSControlStateValueOn
+            } else {
+                NSControlStateValueOff
+            });
+            return !shown || hidden.len() + 1 < Panel::ALL.len();
+        }
         if action == Some(sel!(ideQuickOpen:)) || action == Some(sel!(ideSearchProject:)) {
             return ivars.workspace.borrow().is_some();
         }
@@ -1677,6 +1748,23 @@ impl WindowController {
     #[cfg(feature = "selftest")]
     pub fn worktree_menu_titles(&self) -> Vec<String> {
         menu_titles(&self.new_tab_menu(), &[t("In eigenem Worktree")])
+    }
+
+    /// The context menu of `panel`'s symbol in the activity bar.
+    #[cfg(feature = "selftest")]
+    pub fn activity_menu(&self, panel: Panel) -> Option<Retained<objc2_app_kit::NSMenu>> {
+        self.ivars().activity.borrow().as_ref()?.menu_of(panel)
+    }
+
+    /// The panels whose symbol the activity bar shows.
+    #[cfg(feature = "selftest")]
+    pub fn shown_symbols(&self) -> Vec<Panel> {
+        self.ivars()
+            .activity
+            .borrow()
+            .as_ref()
+            .map(ActivityBar::shown)
+            .unwrap_or_default()
     }
 
     #[cfg(feature = "selftest")]
