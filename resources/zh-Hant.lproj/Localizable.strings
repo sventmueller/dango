@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "列表顯示的內容";
 "offen" = "開放";
-"Anmeldung ausfüllen" = "填入登入資訊";
-"Anmeldung für „{}“ ausfüllen" = "為「{}」填入登入資訊";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "在欄位中從「密碼」App 選擇登入資訊；App 會將其填入網頁的表單，且不會保留。";
-"Ausfüllen" = "填入";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "此網頁上沒有登入表單，或網頁在此期間已變更。";

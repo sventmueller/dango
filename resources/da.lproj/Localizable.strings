@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Hvad listen viser";
 "offen" = "åben";
-"Anmeldung ausfüllen" = "Udfyld login";
-"Anmeldung für „{}“ ausfüllen" = "Udfyld login til “{}”";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Vælg et login fra Adgangskoder i feltet; appen udfylder det i sidens formular og gemmer det ikke.";
-"Ausfüllen" = "Udfyld";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Denne side har ingen loginformular, eller den er skiftet i mellemtiden.";

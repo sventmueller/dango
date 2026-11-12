@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "목록에 표시되는 항목";
 "offen" = "열림";
-"Anmeldung ausfüllen" = "로그인 정보 채우기";
-"Anmeldung für „{}“ ausfüllen" = "‘{}’의 로그인 정보 채우기";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "필드에서 ‘암호’ 앱의 로그인 정보를 선택하십시오. 앱은 이 정보를 페이지의 양식에 채우며 보관하지 않습니다.";
-"Ausfüllen" = "채우기";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "이 페이지에 로그인 양식이 없거나 그 사이에 페이지가 바뀌었습니다.";

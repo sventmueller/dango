@@ -1286,8 +1286,3 @@
 "Pull Requests" = "Pull Requests";
 "Was die Liste zeigt" = "What the list shows";
 "offen" = "open";
-"Anmeldung ausfüllen" = "Fill In Sign-In";
-"Anmeldung für „{}“ ausfüllen" = "Fill In Sign-In for “{}”";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Choose a sign-in from Passwords in the field; the app fills it into the page’s form and doesn’t keep it.";
-"Ausfüllen" = "Fill In";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "This page has no sign-in form, or it changed in the meantime.";

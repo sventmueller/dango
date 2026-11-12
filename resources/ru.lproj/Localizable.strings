@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Что показывает список";
 "offen" = "открыто";
-"Anmeldung ausfüllen" = "Заполнить данные для входа";
-"Anmeldung für „{}“ ausfüllen" = "Заполнить данные для входа на «{}»";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Выберите в поле данные для входа из приложения «Пароли»; приложение вводит их в форму страницы и не хранит их.";
-"Ausfüllen" = "Заполнить";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "На этой странице нет формы входа, или она тем временем изменилась.";

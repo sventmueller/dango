@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "リストの表示内容";
 "offen" = "オープン";
-"Anmeldung ausfüllen" = "サインイン情報を入力";
-"Anmeldung für „{}“ ausfüllen" = "“{}”のサインイン情報を入力";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "フィールドで“パスワード”からサインイン情報を選択してください。アプリはその情報をページのフォームに入力し、保持しません。";
-"Ausfüllen" = "入力";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "このページにはサインインフォームがないか、その間にページが切り替わりました。";

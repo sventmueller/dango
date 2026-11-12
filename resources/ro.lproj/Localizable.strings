@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull requesturi";
 "Was die Liste zeigt" = "Ce afișează lista";
 "offen" = "deschis";
-"Anmeldung ausfüllen" = "Completați datele de autentificare";
-"Anmeldung für „{}“ ausfüllen" = "Completați datele de autentificare pentru „{}”";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Alegeți în câmp datele de autentificare din aplicația Parole; aplicația le completează în formularul paginii și nu le păstrează.";
-"Ausfüllen" = "Completați";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Această pagină nu are niciun formular de autentificare sau s-a schimbat între timp.";

@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Requests";
 "Was die Liste zeigt" = "O que a lista mostra";
 "offen" = "aberto";
-"Anmeldung ausfüllen" = "Preencher Dados de Início de Sessão";
-"Anmeldung für „{}“ ausfüllen" = "Preencher Dados de Início de Sessão para “{}”";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Escolha no campo os dados de início de sessão do app Senhas; o app os preenche no formulário da página e não os mantém.";
-"Ausfüllen" = "Preencher";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Esta página não tem um formulário de início de sessão, ou ela mudou nesse meio-tempo.";

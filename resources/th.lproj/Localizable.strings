@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Request";
 "Was die Liste zeigt" = "สิ่งที่รายการแสดง";
 "offen" = "เปิดอยู่";
-"Anmeldung ausfüllen" = "ป้อนข้อมูลการลงชื่อเข้า";
-"Anmeldung für „{}“ ausfüllen" = "ป้อนข้อมูลการลงชื่อเข้าสำหรับ “{}”";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "เลือกข้อมูลการลงชื่อเข้าจากแอป “รหัสผ่าน” ในช่อง แอปจะป้อนข้อมูลลงในฟอร์มของหน้าเว็บและไม่เก็บไว้";
-"Ausfüllen" = "ป้อน";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "หน้านี้ไม่มีฟอร์มลงชื่อเข้า หรือหน้าได้เปลี่ยนไปแล้วในระหว่างนี้";

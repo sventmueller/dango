@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull Requests";
 "Was die Liste zeigt" = "सूची क्या दिखाती है";
 "offen" = "खुला";
-"Anmeldung ausfüllen" = "साइन इन भरें";
-"Anmeldung für „{}“ ausfüllen" = "“{}” के लिए साइन इन भरें";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "फ़ील्ड में “पासवर्ड” से कोई साइन इन चुनें; ऐप उसे पेज के फ़ॉर्म में भरता है और अपने पास नहीं रखता।";
-"Ausfüllen" = "भरें";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "इस पेज पर कोई साइन इन फ़ॉर्म नहीं है, या पेज इस बीच बदल गया है।";

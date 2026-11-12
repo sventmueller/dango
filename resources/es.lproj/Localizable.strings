@@ -1249,8 +1249,3 @@
 "Pull Requests" = "Pull requests";
 "Was die Liste zeigt" = "Qué muestra la lista";
 "offen" = "abierto";
-"Anmeldung ausfüllen" = "Rellenar inicio de sesión";
-"Anmeldung für „{}“ ausfüllen" = "Rellenar inicio de sesión para «{}»";
-"Wähle im Feld eine Anmeldung aus Passwörter; die App trägt sie in das Formular der Seite ein und behält sie nicht." = "Elige en el campo un inicio de sesión de Contraseñas; la app lo rellena en el formulario de la página y no lo conserva.";
-"Ausfüllen" = "Rellenar";
-"Auf dieser Seite gibt es kein Anmeldeformular, oder sie hat inzwischen gewechselt." = "Esta página no tiene ningún formulario de inicio de sesión o ha cambiado entretanto.";
