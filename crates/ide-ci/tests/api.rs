@@ -306,3 +306,203 @@ fn a_self_managed_gitlab_under_a_path_is_found_by_asking_for_the_project() {
         })
     );
 }
+
+fn posted(recorded: &Recorded) -> Vec<(String, String)> {
+    recorded
+        .asked()
+        .into_iter()
+        .filter(|r| r.method == Method::Post)
+        .map(|r| (r.url, String::from_utf8_lossy(&r.body).into_owned()))
+        .collect()
+}
+
+fn job(id: u64, run: u64) -> ide_ci::Job {
+    ide_ci::Job {
+        id,
+        run,
+        name: "deploy".into(),
+        stage: None,
+        state: State::Manual,
+        url: String::new(),
+        started: None,
+        finished: None,
+        steps: Vec::new(),
+    }
+}
+
+#[test]
+fn github_reruns_a_job_or_a_whole_run_starts_a_workflow_and_approves_only_its_own_deployments() {
+    let pending = format!("{GITHUB}/actions/runs/9001/pending_deployments");
+    let (client, recorded) = github(
+        Recorded::new()
+            .answer(
+                Method::Get,
+                &format!("{GITHUB}/actions/runs?head_sha={SHA}&per_page=30"),
+                200,
+                &fixture("github/runs.json"),
+                &[],
+            )
+            .answer(Method::Post, &format!("{GITHUB}/actions/jobs/72/rerun"), 201, "", &[])
+            .answer(Method::Post, &format!("{GITHUB}/actions/runs/9001/rerun"), 201, "", &[])
+            .answer(
+                Method::Post,
+                &format!("{GITHUB}/actions/workflows/release.yml/dispatches"),
+                204,
+                "",
+                &[],
+            )
+            .answer(Method::Get, &pending, 200, &fixture("github/pending.json"), &[])
+            .answer(Method::Post, &pending, 200, "[]", &[]),
+        Some("t"),
+    );
+    let runs = client.runs(None, SHA).unwrap();
+    client.retry_job(&job(72, 9001)).unwrap();
+    client.rerun_all(&runs[0]).unwrap();
+    client.start_run("feature/x", Some("release.yml")).unwrap();
+    client.start_job(&job(80, 9001)).unwrap();
+    let posts = posted(&recorded);
+    assert_eq!(
+        posts
+            .iter()
+            .map(|(url, _)| url.trim_start_matches(GITHUB))
+            .collect::<Vec<_>>(),
+        [
+            "/actions/jobs/72/rerun",
+            "/actions/runs/9001/rerun",
+            "/actions/workflows/release.yml/dispatches",
+            "/actions/runs/9001/pending_deployments",
+        ]
+    );
+    let dispatch: serde_json::Value = serde_json::from_str(&posts[2].1).unwrap();
+    assert_eq!(dispatch, serde_json::json!({ "ref": "feature/x" }));
+    let review: serde_json::Value = serde_json::from_str(&posts[3].1).unwrap();
+    assert_eq!(review["environment_ids"], serde_json::json!([161_171_787]));
+    assert_eq!(review["state"], "approved");
+    assert!(
+        recorded
+            .asked()
+            .iter()
+            .filter(|r| !r.body.is_empty())
+            .all(|r| { r.headers.contains(&("Content-Type".into(), "application/json".into())) })
+    );
+    assert_eq!(
+        client.start_run("main", None),
+        Err(Error::NotFound {
+            what: "workflow".into()
+        })
+    );
+}
+
+#[test]
+fn github_lists_open_pull_requests_and_issues_without_the_pull_requests_among_them() {
+    let (client, _) = github(
+        Recorded::new()
+            .answer(
+                Method::Get,
+                &format!("{GITHUB}/pulls?state=open&sort=updated&direction=desc&per_page=50"),
+                200,
+                &fixture("github/pulls.json"),
+                &[],
+            )
+            .answer(
+                Method::Get,
+                &format!("{GITHUB}/issues?state=open&sort=updated&direction=desc&per_page=50"),
+                200,
+                &fixture("github/issues.json"),
+                &[],
+            ),
+        Some("t"),
+    );
+    let pulls = client.changes().unwrap();
+    let seen: Vec<_> = pulls
+        .iter()
+        .map(|p| (p.number, p.draft, p.branch.as_deref(), p.author.as_deref()))
+        .collect();
+    assert_eq!(
+        seen,
+        [
+            (31, false, Some("feature/tables"), Some("octo")),
+            (30, true, Some("lexer"), Some("cat"))
+        ]
+    );
+    assert_eq!(pulls[0].updated, ide_ci::seconds("2026-11-09T11:00:00Z"));
+    let issues = client.issues().unwrap();
+    assert_eq!(
+        issues
+            .iter()
+            .map(|i| (i.number, i.branch.is_none()))
+            .collect::<Vec<_>>(),
+        [(28, true)]
+    );
+    assert_eq!(client.new_issue_page(), "https://github.com/acme/widget/issues/new");
+    assert_eq!(
+        client.new_change_page("feature/x"),
+        "https://github.com/acme/widget/compare/feature%2Fx?expand=1"
+    );
+}
+
+#[test]
+fn gitlab_retries_and_plays_a_job_starts_a_pipeline_and_lists_merge_requests_and_issues() {
+    let (client, recorded) = gitlab(
+        Recorded::new()
+            .answer(Method::Post, &format!("{GITLAB}/jobs/3002/retry"), 201, "{}", &[])
+            .answer(Method::Post, &format!("{GITLAB}/jobs/3004/play"), 200, "{}", &[])
+            .answer(
+                Method::Post,
+                &format!("{GITLAB}/pipeline?ref=feature%2Fx"),
+                201,
+                "{}",
+                &[],
+            )
+            .answer(
+                Method::Get,
+                &format!("{GITLAB}/merge_requests?state=opened&order_by=updated_at&sort=desc&per_page=50"),
+                200,
+                &fixture("gitlab/merge_requests.json"),
+                &[],
+            )
+            .answer(
+                Method::Get,
+                &format!("{GITLAB}/issues?state=opened&order_by=updated_at&sort=desc&per_page=50"),
+                200,
+                &fixture("gitlab/issues.json"),
+                &[],
+            ),
+    );
+    client.retry_job(&job(3002, 501)).unwrap();
+    client.start_job(&job(3004, 501)).unwrap();
+    client.start_run("feature/x", None).unwrap();
+    assert_eq!(posted(&recorded).len(), 3);
+    let requests = client.changes().unwrap();
+    let seen: Vec<_> = requests
+        .iter()
+        .map(|r| (r.number, r.draft, r.branch.as_deref()))
+        .collect();
+    assert_eq!(seen, [(14, false, Some("export")), (13, true, Some("runner"))]);
+    let issues = client.issues().unwrap();
+    assert_eq!(
+        issues
+            .iter()
+            .map(|i| (i.number, i.author.as_deref()))
+            .collect::<Vec<_>>(),
+        [(7, Some("ops"))]
+    );
+    assert_eq!(
+        client.new_change_page("feature/x"),
+        "https://gitlab.example.com/gitlab/group/app/-/merge_requests/new?merge_request%5Bsource_branch%5D=feature%2Fx"
+    );
+    let run = ide_ci::Run {
+        id: 501,
+        name: "Pipeline".into(),
+        state: State::Failed,
+        url: String::new(),
+        branch: Some("main".into()),
+        sha: SHA.into(),
+        event: None,
+        number: 501,
+        created: None,
+        updated: None,
+    };
+    assert!(client.rerun_all(&run).is_err());
+    assert_eq!(posted(&recorded).len(), 3);
+}

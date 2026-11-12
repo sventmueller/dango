@@ -8,8 +8,10 @@
 //!   environment; [`Auth::save`] keeps one the user typed, [`Auth::save_grant`] one from signing in through the
 //!   browser ([`oauth`]: GitHub's device flow, GitLab's authorization code with PKCE), per host and account, and
 //!   [`Auth::fresh`] renews it before it expires.
-//! - [`Client`] reads runs of a commit or branch, their jobs, steps and logs, re-runs failed jobs and cancels, with
-//!   paging, rate limits and typed [`Error`]s; [`log`] makes logs readable and cuts out the failure for an agent.
+//! - [`Client`] reads runs of a commit or branch, their jobs, steps and logs, re-runs failed jobs, single jobs or whole
+//!   runs, starts manual jobs (GitHub: approves waiting deployments) and new runs, cancels, and lists open merge
+//!   requests and issues ([`Item`]), with paging, rate limits and typed [`Error`]s; [`log`] makes logs readable and
+//!   cuts out the failure for an agent. [`manual_workflows`] finds the GitHub workflows a checkout may start by hand.
 //!
 //! Every call blocks until the network answers and so belongs on a worker thread. Calls go through a [`Transport`]:
 //! [`Network`] in the app, [`Recorded`] answers in tests, which never touch the network or the keychain. The project's
@@ -36,4 +38,4 @@ pub use client::{Client, locate};
 pub use error::{Error, Result};
 pub use forge::{Forge, HostRule, Kind, RemoteUrl, candidates};
 pub use http::{Method, Network, Recorded, Request, Response, Transport, now};
-pub use model::{Job, Run, Stage, State, Step, seconds, stages};
+pub use model::{Item, Job, Run, Stage, State, Step, Workflow, manual_workflows, seconds, stages};

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use ide_ci::{Client, Forge, Source, State as RunState};
+use ide_ci::{Client, Forge, Item, Source, State as RunState, Workflow};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -50,6 +50,20 @@ pub enum Phase {
     Failed(String),
 }
 
+/// What the list shows.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum Tab {
+    #[default]
+    Runs,
+    /// Open merge requests, pull requests on GitHub.
+    Changes,
+    Issues,
+}
+
+impl Tab {
+    pub const ALL: [Tab; 3] = [Tab::Runs, Tab::Changes, Tab::Issues];
+}
+
 #[derive(Default)]
 pub struct State {
     pub phase: Phase,
@@ -59,10 +73,17 @@ pub struct State {
     pub source: Option<Source>,
     pub account: Option<String>,
     pub runs: Vec<RunRow>,
+    pub tab: Tab,
+    /// The open merge requests or issues, when the list shows them.
+    pub items: Vec<Item>,
+    /// Why they could not be read.
+    pub items_problem: Option<String>,
+    /// The GitHub workflows of the checkout that may be started by hand.
+    pub workflows: Vec<Workflow>,
     pub problem: Option<String>,
     /// The problem came from reading, so the next good read clears it.
     problem_from_read: bool,
-    /// A re-run or cancel is on its way.
+    /// A re-run, start or cancel is on its way.
     pub busy: bool,
     /// A login waits for the browser.
     pub login: Option<super::login::Login>,
@@ -165,6 +186,47 @@ define_class!(
         #[unsafe(method(ideCiRerun:))]
         fn rerun_action(&self, sender: Option<&AnyObject>) {
             guarded((), || self.rerun(self.run_for(sender, RunState::Failed)));
+        }
+
+        #[unsafe(method(ideCiRerunAll:))]
+        fn rerun_all_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.rerun_all(self.run_for(sender, RunState::Neutral)));
+        }
+
+        #[unsafe(method(ideCiRetryJob:))]
+        fn retry_job_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.retry_job(self.job_for(sender)));
+        }
+
+        #[unsafe(method(ideCiStartJob:))]
+        fn start_job_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.start_job(self.job_for(sender)));
+        }
+
+        #[unsafe(method(ideCiStartRun:))]
+        fn start_run_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.start_run());
+        }
+
+        #[unsafe(method(ideCiNewItem:))]
+        fn new_item_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.new_item());
+        }
+
+        #[unsafe(method(ideCiCopyLink:))]
+        fn copy_link_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.copy_link(sender));
+        }
+
+        #[unsafe(method(ideCiTab:))]
+        fn tab_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let segment = sender
+                    .and_then(|s| s.downcast_ref::<objc2_app_kit::NSSegmentedControl>())
+                    .map_or(0, objc2_app_kit::NSSegmentedControl::selectedSegment);
+                let tab = usize::try_from(segment).ok().and_then(|i| Tab::ALL.get(i).copied());
+                self.choose_tab(tab.unwrap_or_default());
+            });
         }
 
         #[unsafe(method(ideCiCancel:))]
@@ -341,7 +403,7 @@ impl CiPanel {
     /// Reads the service again now, or right after the read that runs; `fresh` starts the wait for running runs over.
     pub fn refresh(&self, fresh: bool) {
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
-        let known = {
+        let (known, tab) = {
             let mut state = self.state();
             state.planned += 1;
             if fresh {
@@ -357,7 +419,7 @@ impl CiPanel {
             } else {
                 state.loading = true;
             }
-            known(&state)
+            (known(&state), state.tab)
         };
         if !trusted {
             self.show();
@@ -366,7 +428,7 @@ impl CiPanel {
         let root = self.root().to_path_buf();
         let id = self.id();
         let queued = work::run(
-            move || load::load(&root, known),
+            move || load::load(&root, known, tab),
             move |loaded| with_panel(id, |p| p.loaded(loaded)),
         );
         if !queued {
@@ -400,6 +462,8 @@ impl CiPanel {
             state.forge = forge;
             state.client = None;
             state.runs.clear();
+            state.items.clear();
+            state.items_problem = None;
         };
         match loaded {
             Loaded::NoGit => keep(&mut state, Phase::NoGit, None),
@@ -445,6 +509,11 @@ impl CiPanel {
                 state.source = snapshot.source;
                 state.account = snapshot.account;
                 state.runs = snapshot.runs;
+                if snapshot.tab == state.tab {
+                    state.items = snapshot.items;
+                    state.items_problem = snapshot.items_problem;
+                }
+                state.workflows = snapshot.workflows;
                 let active = state
                     .runs
                     .iter()
@@ -541,10 +610,27 @@ impl CiPanel {
         self.ui().show_problem(self.read().problem.as_deref());
     }
 
-    /// The rows below `item`: runs at the top, then GitLab's stages, then jobs, then steps.
+    /// Shows `tab` and reads what it lists.
+    pub fn choose_tab(&self, tab: Tab) {
+        {
+            let mut state = self.state();
+            if state.tab == tab {
+                return;
+            }
+            state.tab = tab;
+            state.items.clear();
+            state.items_problem = None;
+        }
+        self.show();
+        self.refresh(true);
+    }
+
+    /// The rows below `item`: runs at the top, then GitLab's stages, then jobs, then steps; or the open merge requests
+    /// or issues.
     pub fn children(&self, item: Option<&AnyObject>) -> Vec<Key> {
         let state = self.read();
         match item.map(Key::of) {
+            None if state.tab != Tab::Runs => state.items.iter().map(|i| Key::Item(i.number)).collect(),
             None => state.runs.iter().map(|r| Key::Run(r.run.id)).collect(),
             Some(Some(Key::Run(run))) => state
                 .runs

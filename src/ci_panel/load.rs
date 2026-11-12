@@ -3,9 +3,10 @@
 
 use std::path::Path;
 
-use ide_ci::{Client, Error, Forge, Job, Run, Source};
+use ide_ci::{Client, Error, Forge, Item, Job, Kind, Run, Source, Workflow};
 use ide_git::{StatusOptions, Untracked};
 
+use super::panel::Tab;
 use super::work;
 
 /// How many runs get their jobs read.
@@ -51,6 +52,11 @@ pub struct Snapshot {
     pub source: Option<Source>,
     pub account: Option<String>,
     pub runs: Vec<RunRow>,
+    /// The tab the open merge requests or issues were read for.
+    pub tab: Tab,
+    pub items: Vec<Item>,
+    pub items_problem: Option<String>,
+    pub workflows: Vec<Workflow>,
 }
 
 /// HEAD's commit and branch, or why there is none.
@@ -71,8 +77,9 @@ pub fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
     Ok((repo, Head { sha, branch }))
 }
 
-/// Everything the panel shows for `root`; `account` is the account name known for the token found last time.
-pub fn load(root: &Path, known: Option<(String, Source, String)>) -> Loaded {
+/// Everything the panel shows for `root` with `tab` open; `known` is the account name known for the token found last
+/// time.
+pub fn load(root: &Path, known: Option<(String, Source, String)>, tab: Tab) -> Loaded {
     let (repo, head) = match head(root) {
         Ok(found) => found,
         Err(loaded) => return *loaded,
@@ -119,12 +126,29 @@ pub fn load(root: &Path, known: Option<(String, Source, String)>) -> Loaded {
         .enumerate()
         .map(|(i, run)| with_jobs(&client, run, i < RUNS_WITH_JOBS))
         .collect();
+    let listed = match tab {
+        Tab::Runs => Ok(Vec::new()),
+        Tab::Changes => client.changes(),
+        Tab::Issues => client.issues(),
+    };
+    let (items, items_problem) = match listed {
+        Ok(items) => (items, None),
+        Err(error) => (Vec::new(), Some(super::text::problem(&error))),
+    };
+    let workflows = match forge.kind {
+        Kind::GitHub => ide_ci::manual_workflows(repo.root()),
+        Kind::GitLab => Vec::new(),
+    };
     Loaded::Ready(Box::new(Snapshot {
         head,
         client,
         source,
         account,
         runs,
+        tab,
+        items,
+        items_problem,
+        workflows,
     }))
 }
 

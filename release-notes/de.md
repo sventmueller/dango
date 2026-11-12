@@ -43,8 +43,10 @@ Git-Worktree arbeiten; das Panel zeigt, was er geändert hat, und übernimmt die
 
 ## CI
 GitHub Actions und GitLab CI, auch GitHub Enterprise Server und selbst betriebenes GitLab: Läufe, Jobs und Logs des
-aktuellen Branches, erneut starten und abbrechen. Das Log eines fehlgeschlagenen Jobs lässt sich einem Agenten
-übergeben, gekennzeichnet als fremder Text. Das Token kommt aus dem Schlüsselbund, von `gh` oder `glab`, aus der
+aktuellen Branches; fehlgeschlagene Jobs, einen einzelnen Job oder (bei GitHub) einen ganzen Lauf neu starten,
+manuelle Jobs starten oder wartende Deployments freigeben, eine neue Pipeline oder einen von Hand startbaren Workflow
+starten und abbrechen. Die offenen Merge Requests bzw. Pull Requests und Issues stehen im selben Panel und öffnen im
+Browser. Das Log eines fehlgeschlagenen Jobs lässt sich einem Agenten übergeben, gekennzeichnet als fremder Text. Das Token kommt aus dem Schlüsselbund, von `gh` oder `glab`, aus der
 Umgebung der Login-Shell oder wird eingegeben.
 
 ## AI

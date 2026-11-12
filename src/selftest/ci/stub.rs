@@ -209,6 +209,16 @@ impl Stub {
             }
             ("GET", t) if t == format!("{base}/jobs/72/logs") => ok(fixture!("github/log-72.txt")),
             ("POST", t) if t == format!("{base}/runs/9001/rerun-failed-jobs") => (201, String::new(), Vec::new()),
+            ("POST", t) if t == format!("{base}/runs/9001/rerun") || t == format!("{base}/jobs/72/rerun") => {
+                (201, String::new(), Vec::new())
+            }
+            ("POST", t) if t == format!("{base}/workflows/release.yml/dispatches") => (204, String::new(), Vec::new()),
+            ("GET", "/api/v3/repos/acme/widget/pulls?state=open&sort=updated&direction=desc&per_page=50") => {
+                ok(fixture!("github/pulls.json"))
+            }
+            ("GET", "/api/v3/repos/acme/widget/issues?state=open&sort=updated&direction=desc&per_page=50") => {
+                ok(fixture!("github/issues.json"))
+            }
             ("POST", t) if t == format!("{base}/runs/9002/cancel") => (202, "{}".into(), Vec::new()),
             _ => (404, "{\"message\":\"Not Found\"}".into(), Vec::new()),
         }
@@ -252,6 +262,21 @@ impl Stub {
                 (200, fixture!("gitlab/trace-3002.txt").into(), Vec::new())
             }
             ("POST", t) if t == format!("{base}/pipelines/501/retry") => (201, "{}".into(), Vec::new()),
+            ("POST", t)
+                if t == format!("{base}/jobs/3002/retry")
+                    || t == format!("{base}/jobs/3004/play")
+                    || t.starts_with(&format!("{base}/pipeline?ref=")) =>
+            {
+                (201, "{}".into(), Vec::new())
+            }
+            ("GET", t)
+                if t == format!("{base}/merge_requests?state=opened&order_by=updated_at&sort=desc&per_page=50") =>
+            {
+                (200, fixture!("gitlab/merge_requests.json").into(), Vec::new())
+            }
+            ("GET", t) if t == format!("{base}/issues?state=opened&order_by=updated_at&sort=desc&per_page=50") => {
+                (200, fixture!("gitlab/issues.json").into(), Vec::new())
+            }
             ("POST", t) if t == format!("{base}/pipelines/501/cancel") => {
                 self.lock().cancelled = true;
                 (200, "{}".into(), Vec::new())

@@ -1,4 +1,5 @@
-//! The views of the CI panel: the repository and account, the buttons, problems, the list and the empty states.
+//! The views of the CI panel: the repository and account, the buttons, the tabs for runs, merge requests and issues,
+//! problems, the list and the empty states.
 
 use std::cell::Cell;
 
@@ -7,13 +8,14 @@ use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSAccessibility, NSButton, NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSLineBreakMode, NSMenu, NSScrollView, NSStackView, NSStackViewDistribution, NSStackViewGravity, NSTableColumn,
-    NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSLineBreakMode, NSMenu, NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView,
+    NSStackViewDistribution, NSStackViewGravity, NSTableColumn, NSTableViewStyle, NSTextAlignment, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use super::panel::{CiPanel, Phase};
+use super::panel::{CiPanel, Phase, Tab};
 use super::text;
 use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};
 
@@ -28,14 +30,22 @@ pub struct Ui {
     title: Retained<NSTextField>,
     account: Retained<NSTextField>,
     pub sign: Retained<NSButton>,
-    pub rerun: Retained<NSButton>,
-    pub cancel: Retained<NSButton>,
+    pub buttons: Buttons,
+    pub tabs: Retained<NSSegmentedControl>,
     problem_row: Retained<NSStackView>,
     problem_label: Retained<NSTextField>,
     pub outline: Retained<objc2_app_kit::NSOutlineView>,
     no_runs: Retained<NSTextField>,
     /// Whether the empty state offers the browser login, and whether it can be pressed.
     browser: Cell<Option<bool>>,
+}
+
+/// The header's buttons that depend on the tab and the runs.
+pub struct Buttons {
+    pub start: Retained<NSButton>,
+    pub rerun: Retained<NSButton>,
+    pub cancel: Retained<NSButton>,
+    pub add: Retained<NSButton>,
 }
 
 impl Ui {
@@ -51,8 +61,9 @@ impl Ui {
             page.addSubview(view);
             pin_edges(view, &page);
         }
-        let (header, title, [rerun, cancel]) = header(mtm, panel);
+        let (header, title, buttons) = header(mtm, panel);
         let (account_row, account, sign) = account_row(mtm, panel);
+        let tabs = tabs(mtm, panel);
         let (problem_row, problem_label) = problem_row(mtm, panel);
         let (list, outline) = outline(mtm, panel);
         let no_runs = NSTextField::wrappingLabelWithString(&ns(t("Für diesen Commit gibt es keine Läufe.")), mtm);
@@ -61,6 +72,7 @@ impl Ui {
         for (view, inset) in [
             (&*header as &NSView, MARGIN),
             (&account_row, MARGIN),
+            (&tabs, MARGIN),
             (&problem_row, MARGIN),
             (&no_runs, MARGIN),
             (&list, 0.0),
@@ -85,8 +97,8 @@ impl Ui {
             title,
             account,
             sign,
-            rerun,
-            cancel,
+            buttons,
+            tabs,
             problem_row,
             problem_label,
             outline,
@@ -311,14 +323,78 @@ impl Ui {
         set_action(&self.sign, panel, action);
         self.sign
             .setHidden(state.login.is_none() && state.source.is_some() && !keychain);
-        let failed = state.runs.iter().any(|r| r.run.state == ide_ci::State::Failed);
-        let active = state.runs.iter().any(|r| r.run.state.is_active());
-        self.rerun.setEnabled(failed && !state.busy && state.client.is_some());
-        self.cancel.setEnabled(active && !state.busy && state.client.is_some());
+        drop(state);
+        self.show_tab(panel);
     }
 
-    pub fn show_empty_list(&self, empty: bool) {
-        self.no_runs.setHidden(!empty);
+    /// The tab's titles and the buttons that act on what it lists.
+    fn show_tab(&self, panel: &CiPanel) {
+        let state = panel.read();
+        let github = panel.is_github();
+        let changes = if github {
+            t("Pull Requests")
+        } else {
+            t("Merge Requests")
+        };
+        self.tabs.setLabel_forSegment(&ns(changes), 1);
+        let index = Tab::ALL.iter().position(|t| *t == state.tab).unwrap_or(0);
+        self.tabs.setSelectedSegment(isize::try_from(index).unwrap_or(0));
+        let runs = state.tab == Tab::Runs;
+        let ready = !state.busy && state.client.is_some();
+        let failed = state.runs.iter().any(|r| r.run.state == ide_ci::State::Failed);
+        let active = state.runs.iter().any(|r| r.run.state.is_active());
+        let startable = state.head.branch.is_some() && (!github || !state.workflows.is_empty());
+        let Buttons {
+            start,
+            rerun,
+            cancel,
+            add,
+        } = &self.buttons;
+        for button in [start, rerun, cancel] {
+            button.setHidden(!runs);
+        }
+        add.setHidden(runs);
+        rerun.setEnabled(failed && ready);
+        cancel.setEnabled(active && ready);
+        start.setEnabled(startable && ready);
+        start.setToolTip(Some(&ns(match (github, startable) {
+            (true, false) if state.head.branch.is_some() => {
+                t("Kein Workflow dieses Stands lässt sich von Hand starten (workflow_dispatch).")
+            }
+            (_, false) => t("Ohne Branch lässt sich kein Lauf starten."),
+            _ => t("Lauf starten …"),
+        })));
+        let (add_tip, add_ok) = match state.tab {
+            Tab::Changes if github => (t("Neuer Pull Request im Browser"), state.head.branch.is_some()),
+            Tab::Changes => (t("Neuer Merge Request im Browser"), state.head.branch.is_some()),
+            _ => (t("Neues Issue im Browser"), true),
+        };
+        add.setToolTip(Some(&ns(add_tip)));
+        add.setAccessibilityLabel(Some(&ns(add_tip)));
+        add.setEnabled(add_ok && state.client.is_some());
+    }
+
+    /// The note below the list, when it shows.
+    #[cfg(feature = "selftest")]
+    pub fn note(&self) -> Option<String> {
+        (!self.no_runs.isHidden()).then(|| self.no_runs.stringValue().to_string())
+    }
+
+    /// Says why the list is empty, or hides the note when it is not.
+    pub fn show_empty_list(&self, panel: &CiPanel) {
+        let state = panel.read();
+        let github = panel.is_github();
+        let note = match state.tab {
+            Tab::Runs if state.runs.is_empty() => Some(t("Für diesen Commit gibt es keine Läufe.").to_string()),
+            Tab::Runs => None,
+            _ if state.items_problem.is_some() => state.items_problem.clone(),
+            _ if !state.items.is_empty() => None,
+            Tab::Changes if github => Some(t("Keine offenen Pull Requests.").to_string()),
+            Tab::Changes => Some(t("Keine offenen Merge Requests.").to_string()),
+            Tab::Issues => Some(t("Keine offenen Issues.").to_string()),
+        };
+        self.no_runs.setStringValue(&ns(note.as_deref().unwrap_or("")));
+        self.no_runs.setHidden(note.is_none());
     }
 
     pub fn show_problem(&self, problem: Option<&str>) {
@@ -343,10 +419,7 @@ fn small_note(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     note
 }
 
-fn header(
-    mtm: MainThreadMarker,
-    panel: &CiPanel,
-) -> (Retained<NSStackView>, Retained<NSTextField>, [Retained<NSButton>; 2]) {
+fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Retained<NSTextField>, Buttons) {
     let title = label(mtm, "");
     title.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize())));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
@@ -357,6 +430,8 @@ fn header(
         button
     };
     let refresh = button("arrow.clockwise", t("Neu laden"), sel!(ideCiRefresh:));
+    let start = button("play.circle", t("Lauf starten …"), sel!(ideCiStartRun:));
+    let add = button("plus", t("Neues Issue im Browser"), sel!(ideCiNewItem:));
     let rerun = button(
         "arrow.counterclockwise.circle",
         t("Fehlgeschlagene Jobs neu starten"),
@@ -368,10 +443,34 @@ fn header(
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setSpacing(6.0);
     row.addView_inGravity(&title, NSStackViewGravity::Leading);
-    for view in [&*refresh as &NSView, &rerun, &cancel, &web] {
+    for view in [&*refresh as &NSView, &start, &rerun, &cancel, &add, &web] {
         row.addView_inGravity(view, NSStackViewGravity::Trailing);
     }
-    (row, title, [rerun, cancel])
+    let buttons = Buttons {
+        start,
+        rerun,
+        cancel,
+        add,
+    };
+    (row, title, buttons)
+}
+
+/// Runs, merge requests or pull requests, and issues.
+fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> {
+    let control = NSSegmentedControl::new(mtm);
+    control.setSegmentCount(3);
+    for (index, title) in [t("Läufe"), t("Merge Requests"), t("Issues")].into_iter().enumerate() {
+        control.setLabel_forSegment(&ns(title), isize::try_from(index).unwrap_or(0));
+    }
+    control.setSegmentStyle(NSSegmentStyle::Automatic);
+    control.setTrackingMode(NSSegmentSwitchTracking::SelectOne);
+    control.setSegmentDistribution(objc2_app_kit::NSSegmentDistribution::FillEqually);
+    control.setControlSize(objc2_app_kit::NSControlSize::Small);
+    control.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    control.setSelectedSegment(0);
+    crate::util::set_label(&control, Some(t("Was die Liste zeigt")));
+    set_action(&control, panel, sel!(ideCiTab:));
+    control
 }
 
 fn account_row(

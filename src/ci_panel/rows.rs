@@ -1,7 +1,7 @@
 //! The rows of the CI list: runs with their number and age, GitLab's stages, jobs with how long they took, steps;
 //! which of them stand open, the context menu and what a row's action acts on.
 
-use ide_ci::{Job, Run, State};
+use ide_ci::{Item, Job, Kind, Run, State};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -13,7 +13,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
-use super::panel::CiPanel;
+use super::panel::{CiPanel, Tab};
 use super::text;
 use crate::util::{item, label, ns, separator, set_target, symbol};
 
@@ -96,6 +96,8 @@ pub enum Key {
     Stage(u64, u32),
     Job(u64, u64),
     Step(u64, u64, u32),
+    /// An open merge request or issue of the list's tab, by its number.
+    Item(u64),
 }
 
 impl Key {
@@ -105,6 +107,7 @@ impl Key {
             Key::Stage(run, stage) => format!("stage:{run}:{stage}"),
             Key::Job(run, job) => format!("job:{run}:{job}"),
             Key::Step(run, job, step) => format!("step:{run}:{job}:{step}"),
+            Key::Item(number) => format!("item:{number}"),
         }
     }
 
@@ -117,6 +120,7 @@ impl Key {
             ("stage", [run, stage]) => Some(Key::Stage(*run, u32::try_from(*stage).ok()?)),
             ("job", [run, job]) => Some(Key::Job(*run, *job)),
             ("step", [run, job, step]) => Some(Key::Step(*run, *job, u32::try_from(*step).ok()?)),
+            ("item", [number]) => Some(Key::Item(*number)),
             _ => None,
         }
     }
@@ -130,7 +134,7 @@ impl Key {
 
 pub fn height(key: Option<&Key>) -> f64 {
     match key {
-        Some(Key::Run(_)) => RUN_HEIGHT,
+        Some(Key::Run(_) | Key::Item(_)) => RUN_HEIGHT,
         Some(Key::Step(..)) => STEP_HEIGHT,
         _ => JOB_HEIGHT,
     }
@@ -145,6 +149,15 @@ impl CiPanel {
         let state = self.read();
         let row = state.runs.iter().find(|r| r.run.id == run)?;
         row.jobs.iter().find(|j| j.id == job).cloned()
+    }
+
+    pub fn find_item(&self, number: u64) -> Option<Item> {
+        self.read().items.iter().find(|i| i.number == number).cloned()
+    }
+
+    /// Whether the panel talks to GitHub.
+    pub fn is_github(&self) -> bool {
+        self.read().forge.as_ref().is_some_and(|f| f.kind == Kind::GitHub)
     }
 
     /// The name of the run's stage `index` and how far its jobs got.
@@ -177,6 +190,11 @@ impl CiPanel {
                 let job = self.find_job(run, id)?;
                 let took = job.seconds(ide_ci::now()).map(text::took);
                 Some(cell(mtm, job.state, &job.name, None, took.as_deref()))
+            }
+            Key::Item(number) => {
+                let item = self.find_item(number)?;
+                let changes = self.read().tab == Tab::Changes;
+                Some(item_cell(mtm, &item, changes, self.is_github()))
             }
             Key::Step(run, job, number) => {
                 let step = self
@@ -217,18 +235,17 @@ impl CiPanel {
     pub fn run_for(&self, sender: Option<&AnyObject>, state: State) -> Option<Run> {
         let picked = self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Run(run) | Key::Stage(run, _) | Key::Job(run, _) | Key::Step(run, _, _) => self.find_run(run),
+            Key::Item(_) => None,
         });
         picked.or_else(|| {
             self.read()
                 .runs
                 .iter()
                 .map(|r| &r.run)
-                .find(|r| {
-                    if state == State::Failed {
-                        r.state == State::Failed
-                    } else {
-                        r.state.is_active()
-                    }
+                .find(|r| match state {
+                    State::Failed => r.state == State::Failed,
+                    State::Running => r.state.is_active(),
+                    _ => !r.state.is_active(),
                 })
                 .cloned()
         })
@@ -238,7 +255,15 @@ impl CiPanel {
     pub fn job_for(&self, sender: Option<&AnyObject>) -> Option<Job> {
         self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Job(run, job) | Key::Step(run, job, _) => self.find_job(run, job),
-            Key::Run(_) | Key::Stage(..) => None,
+            Key::Run(_) | Key::Stage(..) | Key::Item(_) => None,
+        })
+    }
+
+    /// The merge request or issue an action means: the one of the row it came from.
+    pub fn item_for_action(&self, sender: Option<&AnyObject>) -> Option<Item> {
+        self.keys_for(sender).into_iter().find_map(|key| match key {
+            Key::Item(number) => self.find_item(number),
+            _ => None,
         })
     }
 
@@ -250,6 +275,11 @@ impl CiPanel {
         };
         match Key::of(&item) {
             Some(Key::Job(run, job) | Key::Step(run, job, _)) => self.open_log(self.find_job(run, job)),
+            Some(Key::Item(number)) => {
+                if let Some(item) = self.find_item(number) {
+                    super::ops::open_url(&item.url);
+                }
+            }
             Some(Key::Run(_) | Key::Stage(..)) => {
                 // SAFETY: The item came from this outline view, which knows it.
                 unsafe {
@@ -279,7 +309,7 @@ impl CiPanel {
             }
         }
         outline.selectRowIndexes_byExtendingSelection(&rows, false);
-        self.ui().show_empty_list(self.read().runs.is_empty());
+        self.ui().show_empty_list(self);
     }
 
     /// Opens and closes the rows below `parent` as the user left them, else as their state asks for.
@@ -323,7 +353,7 @@ impl CiPanel {
             Key::Stage(run, stage) => self
                 .find_stage(run, stage)
                 .is_some_and(|(_, state)| matches!(state, State::Failed | State::Running)),
-            Key::Job(..) | Key::Step(..) => false,
+            Key::Job(..) | Key::Step(..) | Key::Item(_) => false,
         }
     }
 
@@ -370,17 +400,34 @@ impl CiPanel {
         }
     }
 
+    /// The titles of `key`'s context menu and whether each can be chosen, separators left out.
+    #[cfg(feature = "selftest")]
+    pub fn menu_titles(&self, key: Key) -> Vec<(String, bool)> {
+        self.menu_entries(key)
+            .into_iter()
+            .filter(|(_, action, _)| action.is_some())
+            .map(|(title, _, enabled)| (title.to_string(), enabled))
+            .collect()
+    }
+
     fn menu_entries(&self, key: Key) -> Vec<(&'static str, Option<Sel>, bool)> {
         let busy = self.read().busy;
         match key {
             Key::Run(id) | Key::Stage(id, _) => {
                 let state = self.find_run(id).map_or(State::Neutral, |r| r.state);
-                vec![
-                    (
-                        t("Fehlgeschlagene Jobs neu starten"),
-                        Some(sel!(ideCiRerun:)),
-                        state == State::Failed && !busy,
-                    ),
+                let mut entries = vec![(
+                    t("Fehlgeschlagene Jobs neu starten"),
+                    Some(sel!(ideCiRerun:)),
+                    state == State::Failed && !busy,
+                )];
+                if self.is_github() {
+                    entries.push((
+                        t("Alle Jobs neu starten"),
+                        Some(sel!(ideCiRerunAll:)),
+                        !state.is_active() && !busy,
+                    ));
+                }
+                entries.extend([
                     (
                         t("Lauf abbrechen …"),
                         Some(sel!(ideCiCancel:)),
@@ -388,19 +435,72 @@ impl CiPanel {
                     ),
                     ("", None, false),
                     (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
-                ]
+                ]);
+                entries
             }
-            Key::Job(run, job) | Key::Step(run, job, _) => {
-                let failed = self.find_job(run, job).is_some_and(|j| j.state == State::Failed);
-                vec![
-                    (t("Log öffnen"), Some(sel!(ideCiOpenLog:)), true),
-                    (t("An Agent senden"), Some(sel!(ideCiSendToAgent:)), failed),
-                    ("", None, false),
-                    (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
-                ]
-            }
+            Key::Job(run, job) | Key::Step(run, job, _) => self.job_entries(run, job, busy),
+            Key::Item(_) => vec![
+                (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
+                (t("Link kopieren"), Some(sel!(ideCiCopyLink:)), true),
+            ],
         }
     }
+
+    fn job_entries(&self, run: u64, job: u64, busy: bool) -> Vec<(&'static str, Option<Sel>, bool)> {
+        let state = self.find_job(run, job).map_or(State::Neutral, |j| j.state);
+        let run_active = self.find_run(run).is_some_and(|r| r.state.is_active());
+        // GitHub re-runs a job only once its whole run has ended.
+        let finished =
+            matches!(state, State::Failed | State::Success | State::Cancelled) && !(self.is_github() && run_active);
+        let start = if self.is_github() {
+            t("Deployment freigeben")
+        } else {
+            t("Job starten")
+        };
+        vec![
+            (t("Log öffnen"), Some(sel!(ideCiOpenLog:)), true),
+            (
+                t("An Agent senden"),
+                Some(sel!(ideCiSendToAgent:)),
+                state == State::Failed,
+            ),
+            ("", None, false),
+            (t("Job neu starten"), Some(sel!(ideCiRetryJob:)), finished && !busy),
+            (start, Some(sel!(ideCiStartJob:)), state == State::Manual && !busy),
+            ("", None, false),
+            (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
+        ]
+    }
+}
+
+/// A merge request's or issue's row: its number and title, then who opened it, its branch and when it last changed.
+fn item_cell(mtm: MainThreadMarker, item: &Item, change: bool, github: bool) -> Retained<NSView> {
+    let sign = if change && !github { "!" } else { "#" };
+    let title = format!("{sign}{} {}", item.number, item.title);
+    let mut detail: Vec<String> = Vec::new();
+    if item.draft {
+        detail.push(t("Entwurf").to_string());
+    }
+    detail.extend(item.author.clone());
+    detail.extend(item.branch.clone());
+    detail.extend(item.updated.map(text::ago));
+    let (symbol_name, word) = if change {
+        ("arrow.triangle.pull", t("offen"))
+    } else {
+        ("smallcircle.filled.circle", t("offen"))
+    };
+    let color = if item.draft {
+        NSColor::secondaryLabelColor()
+    } else {
+        NSColor::systemGreenColor()
+    };
+    styled_cell(
+        mtm,
+        (symbol_name, word, &color),
+        &title,
+        Some(&detail.join(" · ")),
+        None,
+    )
 }
 
 /// A row: the state's symbol in its colour, the title, maybe a second line, and maybe a value at the end.
@@ -411,9 +511,27 @@ fn cell(
     detail: Option<&str>,
     value: Option<&str>,
 ) -> Retained<NSView> {
+    let color = text::color(state);
+    styled_cell(
+        mtm,
+        (text::symbol(state), text::word(state), &color),
+        title,
+        detail,
+        value,
+    )
+}
+
+/// A row whose symbol, the word it stands for and its colour are given.
+fn styled_cell(
+    mtm: MainThreadMarker,
+    (symbol_name, word, color): (&str, &str, &NSColor),
+    title: &str,
+    detail: Option<&str>,
+    value: Option<&str>,
+) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let icon = NSImageView::new(mtm);
-    if let Some(image) = symbol(text::symbol(state), text::word(state)) {
+    if let Some(image) = symbol(symbol_name, word) {
         icon.setImage(Some(&image));
     }
     icon.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
@@ -421,7 +539,7 @@ fn cell(
         // SAFETY: AppKit sets its font weight constants when it loads.
         unsafe { objc2_app_kit::NSFontWeightMedium },
     )));
-    icon.setContentTintColor(Some(&text::color(state)));
+    icon.setContentTintColor(Some(color));
     icon.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
     let name = label(mtm, title);
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
@@ -452,7 +570,7 @@ fn cell(
     row.centerYAnchor()
         .constraintEqualToAnchor(&cell.centerYAnchor())
         .setActive(true);
-    let mut spoken = tf("{}: {}", &[title, text::word(state)]);
+    let mut spoken = tf("{}: {}", &[title, word]);
     if let Some(value) = value {
         let end = label(mtm, value);
         end.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(

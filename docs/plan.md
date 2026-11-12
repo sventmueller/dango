@@ -483,6 +483,14 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Bild kostet das den Hauptthread rund 0,7 ms statt 2–17 ms (200 × 60 Zeichen, M3), unabhängig von der Zahl der
   Farbwechsel. Der Core-Graphics-Weg bleibt für Bilder der Ansicht (`cacheDisplayInRect`) und als Rückfall ohne Metal
   oder mit `IDE_TERMINAL_CPU`. Ein von anderen Fenstern verdecktes Fenster zeichnet erst, wenn es wieder sichtbar ist.
+- **E77 CI-Aktionen, Merge Requests und Issues** *(Entscheidung des Eigentümers, ergänzt E12)*: Das CI-Panel
+  startet außer fehlgeschlagenen Jobs einer Pipeline auch einen einzelnen beendeten Job neu, einen wartenden Job
+  (GitLab: manueller Job; GitHub: Freigabe der Deployments seines Laufs, die auf dieses Konto warten) und einen neuen
+  Lauf für den Branch (GitLab: neue Pipeline; GitHub: ein Workflow des Arbeitsstands mit `workflow_dispatch`, per
+  Auswahl). GitHub startet zusätzlich alle Jobs eines Laufs neu. Ein Umschalter im Panel zeigt statt der Läufe die
+  offenen Merge Requests (GitHub: Pull Requests) oder Issues, zuletzt geänderte zuerst, je höchstens 50; ein
+  Doppelklick öffnet sie im Browser, „+“ legt im Browser einen neuen für den Branch oder ein neues Issue an.
+  Bearbeiten, Kommentieren und Mergen bleiben im Browser. Schreibende Aufrufe brauchen bei GitLab den Bereich `api`.
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des

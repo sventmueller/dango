@@ -1,11 +1,11 @@
-//! GitLab CI: pipelines, their jobs, job traces, retrying failed jobs and cancelling.
+//! GitLab: pipelines, their jobs, job traces, retrying, playing and cancelling; open merge requests and issues.
 
 use serde::Deserialize;
 
 use crate::client::{Client, encode};
 use crate::error::Result;
 use crate::http::{self, Response};
-use crate::model::{Job, Run, State, seconds};
+use crate::model::{Item, Job, Run, State, seconds};
 
 #[derive(Deserialize)]
 struct RawPipeline {
@@ -31,6 +31,25 @@ struct RawJob {
     started_at: Option<String>,
     finished_at: Option<String>,
     pipeline: Option<RawPipelineRef>,
+}
+
+#[derive(Deserialize)]
+struct RawItem {
+    iid: u64,
+    title: String,
+    author: Option<RawUser>,
+    web_url: String,
+    updated_at: Option<String>,
+    #[serde(default)]
+    draft: bool,
+    #[serde(default)]
+    work_in_progress: bool,
+    source_branch: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RawUser {
+    username: String,
 }
 
 #[derive(Deserialize)]
@@ -117,6 +136,47 @@ pub(crate) fn log_url(client: &Client, job: &Job) -> String {
 
 pub(crate) fn retry_url(client: &Client, run: &Run) -> String {
     format!("{}/pipelines/{}/retry", project_url(client), run.id)
+}
+
+pub(crate) fn retry_job_url(client: &Client, job: &Job) -> String {
+    format!("{}/jobs/{}/retry", project_url(client), job.id)
+}
+
+pub(crate) fn play_url(client: &Client, job: &Job) -> String {
+    format!("{}/jobs/{}/play", project_url(client), job.id)
+}
+
+pub(crate) fn new_pipeline_url(client: &Client, branch: &str) -> String {
+    format!("{}/pipeline?ref={}", project_url(client), encode(branch))
+}
+
+pub(crate) fn merge_requests(client: &Client) -> Result<Vec<Item>> {
+    items(client, "merge_requests", "merge requests")
+}
+
+pub(crate) fn issues(client: &Client) -> Result<Vec<Item>> {
+    items(client, "issues", "issues")
+}
+
+fn items(client: &Client, path: &str, what: &str) -> Result<Vec<Item>> {
+    let url = format!(
+        "{}/{path}?state=opened&order_by=updated_at&sort=desc&per_page=50",
+        project_url(client)
+    );
+    let response = client.get(&url, what)?;
+    let raw: Vec<RawItem> = http::json(&response)?;
+    Ok(raw
+        .into_iter()
+        .map(|i| Item {
+            number: i.iid,
+            title: i.title,
+            author: i.author.map(|a| a.username),
+            url: i.web_url,
+            updated: i.updated_at.as_deref().and_then(seconds),
+            draft: i.draft || i.work_in_progress,
+            branch: i.source_branch,
+        })
+        .collect())
 }
 
 pub(crate) fn cancel_url(client: &Client, run: &Run) -> String {

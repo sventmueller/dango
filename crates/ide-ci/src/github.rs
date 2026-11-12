@@ -1,11 +1,13 @@
-//! GitHub Actions: workflow runs, their jobs and steps, job logs, re-running failed jobs and cancelling.
+//! GitHub: Actions' workflow runs, their jobs and steps, job logs, re-running, starting, approving deployments and
+//! cancelling; open pull requests and issues.
 
 use serde::Deserialize;
 
 use crate::client::{Client, encode};
+use crate::error::Error;
 use crate::error::Result;
 use crate::http;
-use crate::model::{Job, Run, State, Step, seconds};
+use crate::model::{Item, Job, Run, State, Step, seconds};
 
 #[derive(Deserialize)]
 struct Runs {
@@ -48,6 +50,42 @@ struct RawJob {
 }
 
 #[derive(Deserialize)]
+struct RawItem {
+    number: u64,
+    title: String,
+    user: Option<RawUser>,
+    html_url: String,
+    updated_at: Option<String>,
+    #[serde(default)]
+    draft: bool,
+    head: Option<RawHead>,
+    pull_request: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct RawUser {
+    login: String,
+}
+
+#[derive(Deserialize)]
+struct RawHead {
+    #[serde(rename = "ref")]
+    reference: String,
+}
+
+#[derive(Deserialize)]
+struct RawPending {
+    environment: RawEnvironment,
+    #[serde(default)]
+    current_user_can_approve: bool,
+}
+
+#[derive(Deserialize)]
+struct RawEnvironment {
+    id: u64,
+}
+
+#[derive(Deserialize)]
 struct RawStep {
     name: String,
     number: u32,
@@ -59,6 +97,7 @@ struct RawStep {
 fn state(status: Option<&str>, conclusion: Option<&str>) -> State {
     match (status, conclusion) {
         (Some("in_progress"), _) => State::Running,
+        (Some("waiting"), _) => State::Manual,
         (Some("completed"), Some("success")) => State::Success,
         (Some("completed"), Some("failure" | "timed_out" | "startup_failure")) => State::Failed,
         (Some("completed"), Some("cancelled")) => State::Cancelled,
@@ -150,4 +189,69 @@ pub(crate) fn rerun_url(client: &Client, run: &Run) -> String {
 
 pub(crate) fn cancel_url(client: &Client, run: &Run) -> String {
     format!("{}/actions/runs/{}/cancel", repo(client), run.id)
+}
+
+pub(crate) fn rerun_all_url(client: &Client, run: &Run) -> String {
+    format!("{}/actions/runs/{}/rerun", repo(client), run.id)
+}
+
+pub(crate) fn retry_job_url(client: &Client, job: &Job) -> String {
+    format!("{}/actions/jobs/{}/rerun", repo(client), job.id)
+}
+
+pub(crate) fn dispatch_url(client: &Client, workflow: &str) -> String {
+    format!("{}/actions/workflows/{}/dispatches", repo(client), encode(workflow))
+}
+
+/// Approves the deployments of `job`'s run that wait for this account.
+pub(crate) fn approve_deployments(client: &Client, job: &Job) -> Result<()> {
+    let url = format!("{}/actions/runs/{}/pending_deployments", repo(client), job.run);
+    let pending: Vec<RawPending> = http::json(&client.get(&url, "pending deployments")?)?;
+    let ids: Vec<u64> = pending
+        .iter()
+        .filter(|p| p.current_user_can_approve)
+        .map(|p| p.environment.id)
+        .collect();
+    if ids.is_empty() {
+        return Err(Error::Forbidden {
+            message: "no deployment of this run waits for your approval".into(),
+        });
+    }
+    let body = serde_json::json!({ "environment_ids": ids, "state": "approved", "comment": "" });
+    client.post_json(&url, "pending deployments", &body).map(drop)
+}
+
+pub(crate) fn pulls(client: &Client) -> Result<Vec<Item>> {
+    let url = format!(
+        "{}/pulls?state=open&sort=updated&direction=desc&per_page=50",
+        repo(client)
+    );
+    items(client, &url, "pull requests")
+}
+
+/// The open issues; GitHub lists pull requests among them, which are left out.
+pub(crate) fn issues(client: &Client) -> Result<Vec<Item>> {
+    let url = format!(
+        "{}/issues?state=open&sort=updated&direction=desc&per_page=50",
+        repo(client)
+    );
+    items(client, &url, "issues")
+}
+
+fn items(client: &Client, url: &str, what: &str) -> Result<Vec<Item>> {
+    let raw: Vec<RawItem> = http::json(&client.get(url, what)?)?;
+    let pulls = url.contains("/pulls?");
+    Ok(raw
+        .into_iter()
+        .filter(|i| pulls || i.pull_request.is_none())
+        .map(|i| Item {
+            number: i.number,
+            title: i.title,
+            author: i.user.map(|u| u.login),
+            url: i.html_url,
+            updated: i.updated_at.as_deref().and_then(seconds),
+            draft: i.draft,
+            branch: i.head.map(|h| h.reference),
+        })
+        .collect())
 }

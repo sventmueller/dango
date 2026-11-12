@@ -44,8 +44,11 @@ what it changed and takes the work over by merge or cherry-pick.
 
 ## CI
 GitHub Actions and GitLab CI, also GitHub Enterprise Server and self-managed GitLab: runs, jobs and logs of the current
-branch, re-running and cancelling. A failed job's log can go to an agent, marked as text from outside. The token comes
-from the keychain, `gh` or `glab`, the login shell's environment, or one you enter.
+branch; re-running failed jobs, a single job or (on GitHub) a whole run, starting manual jobs or approving waiting
+deployments, starting a new pipeline or a workflow that may be started by hand, and cancelling. The open merge requests
+or pull requests and issues list in the same panel and open in the browser. A failed job's log can go to an agent,
+marked as text from outside. The token comes from the keychain, `gh` or `glab`, the login shell's environment, or one
+you enter.
 
 ## AI
 Every agent works in an AI tab with the same timeline: answers, tool calls with their output, permission requests,

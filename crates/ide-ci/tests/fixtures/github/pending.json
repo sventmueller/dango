@@ -1,0 +1,12 @@
+[
+  {
+    "environment": { "id": 161171787, "name": "production" },
+    "wait_timer": 0,
+    "current_user_can_approve": true
+  },
+  {
+    "environment": { "id": 161171788, "name": "audit" },
+    "wait_timer": 0,
+    "current_user_can_approve": false
+  }
+]

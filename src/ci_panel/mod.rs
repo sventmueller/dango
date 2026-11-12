@@ -1,5 +1,6 @@
-//! The CI panel (E12, I8): the runs of HEAD on GitHub Actions or GitLab CI with their jobs and steps, logs in tabs,
-//! re-running and cancelling, and a failed job's log for an agent. It talks to the service only for folders the user
+//! The CI panel (E12, E77, I8): the runs of HEAD on GitHub Actions or GitLab CI with their jobs and steps, logs in
+//! tabs, re-running, starting and cancelling runs and jobs, a failed job's log for an agent, and the open merge
+//! requests or pull requests and issues. It talks to the service only for folders the user
 //! trusts (E22), since their remote decides where the app connects; tokens come from `ide_ci::Auth`, per host.
 
 mod load;
@@ -59,6 +60,7 @@ pub mod selftest {
     use ide_ci::State;
     use objc2::rc::Retained;
 
+    pub use super::panel::Tab;
     use super::panel::{self, CiPanel};
     use crate::window::WindowController;
 
@@ -74,6 +76,14 @@ pub mod selftest {
         pub problem: Option<String>,
         pub runs: Vec<(String, u64, State, Vec<JobSeen>)>,
         pub rows: isize,
+        pub tab: Tab,
+        /// The open merge requests or issues by number and title.
+        pub items: Vec<(u64, String)>,
+        /// The note below the list, when it shows.
+        pub note: Option<String>,
+        pub workflows: Vec<String>,
+        /// A re-run, start or cancel is on its way.
+        pub busy: bool,
     }
 
     fn panel(controller: &WindowController) -> Option<Retained<CiPanel>> {
@@ -106,7 +116,57 @@ pub mod selftest {
                 })
                 .collect(),
             rows: panel.ui().outline.numberOfRows(),
+            tab: state.tab,
+            items: state.items.iter().map(|i| (i.number, i.title.clone())).collect(),
+            note: panel.ui().note(),
+            workflows: state.workflows.iter().map(|w| w.file.clone()).collect(),
+            busy: state.busy,
         })
+    }
+
+    /// Shows `tab`, as its segment does.
+    pub fn choose_tab(controller: &WindowController, tab: Tab) {
+        if let Some(panel) = panel(controller) {
+            panel.choose_tab(tab);
+        }
+    }
+
+    /// Re-runs every job of `run`, as its menu item does.
+    pub fn rerun_all(controller: &WindowController, run: u64) {
+        if let Some(panel) = panel(controller) {
+            panel.rerun_all(panel.find_run(run));
+        }
+    }
+
+    /// Starts the finished `job` again, as its menu item does.
+    pub fn retry_job(controller: &WindowController, run: u64, job: u64) {
+        if let Some(panel) = panel(controller) {
+            panel.retry_job(panel.find_job(run, job));
+        }
+    }
+
+    /// Starts the waiting `job`, as its menu item does.
+    pub fn start_job(controller: &WindowController, run: u64, job: u64) {
+        if let Some(panel) = panel(controller) {
+            panel.start_job(panel.find_job(run, job));
+        }
+    }
+
+    /// Asks to start a run for the branch, as the header's button does.
+    pub fn start_run(controller: &WindowController) {
+        if let Some(panel) = panel(controller) {
+            panel.start_run();
+        }
+    }
+
+    /// Whether the header's start button can be pressed.
+    pub fn can_start_run(controller: &WindowController) -> bool {
+        panel(controller).is_some_and(|p| p.ui().buttons.start.isEnabled() && !p.ui().buttons.start.isHidden())
+    }
+
+    /// The titles of the context menu of `key`'s row and whether each can be chosen.
+    pub fn menu_of_job(controller: &WindowController, run: u64, job: u64) -> Vec<(String, bool)> {
+        panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::rows::Key::Job(run, job)))
     }
 
     /// Re-runs the failed jobs of `run`, as its menu item does.

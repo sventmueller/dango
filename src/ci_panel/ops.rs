@@ -1,5 +1,5 @@
-//! What the CI panel does: re-running and cancelling runs, opening logs and pages, handing a failure to an agent
-//! (I8), and taking or forgetting a token.
+//! What the CI panel does: re-running, starting and cancelling runs and jobs, opening logs and pages, handing a failure
+//! to an agent (I8), starting merge requests and issues in the browser, and taking or forgetting a token.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -9,15 +9,15 @@ use ide_ci::{Client, Job, Run};
 use objc2::MainThreadOnly;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertThirdButtonReturn, NSModalResponse, NSSecureTextField, NSStackView,
-    NSTextField, NSUserInterfaceLayoutOrientation, NSWorkspace,
+    NSAlert, NSAlertFirstButtonReturn, NSAlertThirdButtonReturn, NSModalResponse, NSPasteboard, NSPasteboardTypeString,
+    NSPopUpButton, NSSecureTextField, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSWorkspace,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::{t, tf};
 
-use super::panel::{CiPanel, with_panel};
+use super::panel::{CiPanel, Tab, with_panel};
 use super::{log_tab, text, work};
-use crate::util::{guarded, ns};
+use crate::util::{constant, guarded, ns};
 
 /// How many lines of a failed job's log an agent gets.
 const EXCERPT_LINES: usize = 120;
@@ -33,6 +33,111 @@ impl CiPanel {
             return;
         };
         self.act(move || client.rerun_failed(&run));
+    }
+
+    /// Starts every job of `run` again, on GitHub.
+    pub fn rerun_all(&self, run: Option<Run>) {
+        let (Some(run), Some(client)) = (run, self.client()) else {
+            return;
+        };
+        self.act(move || client.rerun_all(&run));
+    }
+
+    /// Starts the finished `job` again.
+    pub fn retry_job(&self, job: Option<Job>) {
+        let (Some(job), Some(client)) = (job, self.client()) else {
+            return;
+        };
+        self.act(move || client.retry_job(&job));
+    }
+
+    /// Starts `job`, which waits for someone: plays it on GitLab, approves its deployments on GitHub.
+    pub fn start_job(&self, job: Option<Job>) {
+        let (Some(job), Some(client)) = (job, self.client()) else {
+            return;
+        };
+        self.act(move || client.start_job(&job));
+    }
+
+    /// Asks which run to start for the current branch, then starts it: a new pipeline on GitLab, a workflow that may
+    /// be started by hand on GitHub.
+    pub fn start_run(&self) {
+        let (Some(client), Some(window)) = (self.client(), self.controller().and_then(|c| c.window())) else {
+            return;
+        };
+        let Some(branch) = self.read().head.branch.clone() else {
+            return;
+        };
+        let workflows = self.read().workflows.clone();
+        let github = self.is_github();
+        if github && workflows.is_empty() {
+            return;
+        }
+        let mtm = self.mtm();
+        let alert = NSAlert::new(mtm);
+        alert.setMessageText(&ns(&tf("Lauf für „{}“ starten", &[&branch])));
+        alert.setInformativeText(&ns(&if github {
+            tf(
+                "GitHub startet den gewählten Workflow mit dem Stand von {} auf {}; was nur lokal liegt, läuft nicht mit.",
+                &[&branch, &client.forge().host],
+            )
+        } else {
+            tf(
+                "GitLab legt eine neue Pipeline für den Stand von {} auf {} an; was nur lokal liegt, läuft nicht mit.",
+                &[&branch, &client.forge().host],
+            )
+        }));
+        alert.addButtonWithTitle(&ns(t("Starten")));
+        alert.addButtonWithTitle(&ns(t("Abbrechen")));
+        let popup = github.then(|| {
+            let popup = NSPopUpButton::initWithFrame_pullsDown(
+                NSPopUpButton::alloc(mtm),
+                NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 26.0)),
+                false,
+            );
+            for workflow in &workflows {
+                popup.addItemWithTitle(&ns(&workflow.name));
+            }
+            alert.setAccessoryView(Some(&popup));
+            popup
+        });
+        let id = self.id();
+        sheet(&alert, &window, move |response| {
+            if response != NSAlertFirstButtonReturn {
+                return;
+            }
+            let chosen = popup
+                .and_then(|p| usize::try_from(p.indexOfSelectedItem()).ok())
+                .and_then(|i| workflows.get(i))
+                .map(|w| w.file.clone());
+            with_panel(id, |panel| {
+                panel.act(move || client.start_run(&branch, chosen.as_deref()));
+            });
+        });
+    }
+
+    /// Opens the page for a new merge request of the current branch, or a new issue, by the list's tab.
+    pub fn new_item(&self) {
+        let Some(client) = self.client() else { return };
+        let (tab, branch) = {
+            let state = self.read();
+            (state.tab, state.head.branch.clone())
+        };
+        match (tab, branch) {
+            (Tab::Changes, Some(branch)) => open_url(&client.new_change_page(&branch)),
+            (Tab::Issues, _) => open_url(&client.new_issue_page()),
+            _ => {}
+        }
+    }
+
+    /// Puts the link of the merge request or issue the action came from on the clipboard.
+    pub fn copy_link(&self, sender: Option<&AnyObject>) {
+        let Some(item) = self.item_for_action(sender) else {
+            return;
+        };
+        let pasteboard = NSPasteboard::generalPasteboard();
+        pasteboard.clearContents();
+        pasteboard.setString_forType(&ns(&item.url), constant!(NSPasteboardTypeString));
     }
 
     /// Asks, then cancels `run`.
@@ -127,6 +232,9 @@ impl CiPanel {
 
     /// Opens the page of the row the action came from, else the repository's.
     pub fn open_web(&self, sender: Option<&AnyObject>) {
+        if let Some(item) = self.item_for_action(sender) {
+            return open_url(&item.url);
+        }
         let url = match (self.job_for(sender), self.run_for(sender, ide_ci::State::Neutral)) {
             (Some(job), _) if !job.url.is_empty() => job.url,
             (_, Some(run)) if sender.is_some_and(|s| s.downcast_ref::<objc2_app_kit::NSMenuItem>().is_some()) => {
@@ -137,9 +245,7 @@ impl CiPanel {
                 None => return,
             },
         };
-        if let Some(url) = NSURL::URLWithString(&ns(&url)) {
-            NSWorkspace::sharedWorkspace().openURL(&url);
-        }
+        open_url(&url);
     }
 
     /// Asks for a token of the host, checks it with the service and keeps it in the keychain.
@@ -220,6 +326,13 @@ impl CiPanel {
             move || work::auth().map(|auth| auth.forget(&forge)),
             move |_| with_panel(id, |panel| panel.refresh(true)),
         );
+    }
+}
+
+/// Opens `url` in the browser.
+pub fn open_url(url: &str) {
+    if let Some(url) = NSURL::URLWithString(&ns(url)) {
+        NSWorkspace::sharedWorkspace().openURL(&url);
     }
 }
 

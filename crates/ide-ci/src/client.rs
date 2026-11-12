@@ -1,11 +1,12 @@
-//! One client for both services: runs of a commit or branch, their jobs and logs, re-running and cancelling.
+//! One client for both services: runs of a commit or branch, their jobs and logs, re-running, starting and cancelling;
+//! open merge requests and issues.
 
 use std::sync::Arc;
 
 use crate::error::{Error, Result};
 use crate::forge::{Forge, Kind};
 use crate::http::{self, MAX_PAGES, Method, Request, Response, Transport};
-use crate::model::{Job, Run};
+use crate::model::{Item, Job, Run};
 use crate::{github, gitlab};
 
 /// The API of one repository, with the token of its host if there is one.
@@ -80,6 +81,85 @@ impl Client {
         self.post(&url, "run").map(drop)
     }
 
+    /// Starts every job of `run` again; GitHub only, GitLab starts a new pipeline instead ([`Client::start_run`]).
+    pub fn rerun_all(&self, run: &Run) -> Result<()> {
+        match self.forge.kind {
+            Kind::GitHub => self.post(&github::rerun_all_url(self, run), "run").map(drop),
+            Kind::GitLab => Err(Error::NotFound {
+                what: "re-running a whole pipeline".into(),
+            }),
+        }
+    }
+
+    /// Starts the finished `job` again; on GitHub the jobs that depend on it run again too.
+    pub fn retry_job(&self, job: &Job) -> Result<()> {
+        let url = match self.forge.kind {
+            Kind::GitHub => github::retry_job_url(self, job),
+            Kind::GitLab => gitlab::retry_job_url(self, job),
+        };
+        self.post(&url, "job").map(drop)
+    }
+
+    /// Starts `job`, which waits for someone: plays a manual job on GitLab; on GitHub approves the deployments of its
+    /// run that wait for this account.
+    pub fn start_job(&self, job: &Job) -> Result<()> {
+        match self.forge.kind {
+            Kind::GitHub => github::approve_deployments(self, job),
+            Kind::GitLab => self.post(&gitlab::play_url(self, job), "job").map(drop),
+        }
+    }
+
+    /// Starts a new run for the remote's `branch`: a pipeline on GitLab, the workflow file `workflow` on GitHub.
+    pub fn start_run(&self, branch: &str, workflow: Option<&str>) -> Result<()> {
+        match (self.forge.kind, workflow) {
+            (Kind::GitLab, _) => self.post(&gitlab::new_pipeline_url(self, branch), "pipeline").map(drop),
+            (Kind::GitHub, Some(workflow)) => {
+                let body = serde_json::json!({ "ref": branch });
+                self.post_json(&github::dispatch_url(self, workflow), "workflow", &body)
+                    .map(drop)
+            }
+            (Kind::GitHub, None) => Err(Error::NotFound {
+                what: "workflow".into(),
+            }),
+        }
+    }
+
+    /// The open merge requests, pull requests on GitHub, last changed first.
+    pub fn changes(&self) -> Result<Vec<Item>> {
+        match self.forge.kind {
+            Kind::GitHub => github::pulls(self),
+            Kind::GitLab => gitlab::merge_requests(self),
+        }
+    }
+
+    /// The open issues, last changed first.
+    pub fn issues(&self) -> Result<Vec<Item>> {
+        match self.forge.kind {
+            Kind::GitHub => github::issues(self),
+            Kind::GitLab => gitlab::issues(self),
+        }
+    }
+
+    /// The page where a merge request or pull request of `branch` starts.
+    pub fn new_change_page(&self, branch: &str) -> String {
+        match self.forge.kind {
+            Kind::GitHub => format!("{}/compare/{}?expand=1", self.forge.page(), encode(branch)),
+            Kind::GitLab => format!(
+                "{}/-/merge_requests/new?merge_request%5Bsource_branch%5D={}",
+                self.forge.page(),
+                encode(branch)
+            ),
+        }
+    }
+
+    /// The page where a new issue starts.
+    pub fn new_issue_page(&self) -> String {
+        match self.forge.kind {
+            Kind::GitHub => format!("{}/issues/new", self.forge.page()),
+            Kind::GitLab => format!("{}/-/issues/new", self.forge.page()),
+        }
+    }
+
     /// Cancels `run`.
     pub fn cancel(&self, run: &Run) -> Result<()> {
         let url = match self.forge.kind {
@@ -101,14 +181,18 @@ impl Client {
     }
 
     pub(crate) fn get(&self, url: &str, what: &str) -> Result<Response> {
-        self.call(Method::Get, url, what)
+        self.call(Method::Get, url, what, None)
     }
 
-    fn post(&self, url: &str, what: &str) -> Result<Response> {
-        self.call(Method::Post, url, what)
+    pub(crate) fn post(&self, url: &str, what: &str) -> Result<Response> {
+        self.call(Method::Post, url, what, None)
     }
 
-    fn call(&self, method: Method, url: &str, what: &str) -> Result<Response> {
+    pub(crate) fn post_json(&self, url: &str, what: &str, body: &serde_json::Value) -> Result<Response> {
+        self.call(Method::Post, url, what, Some(body))
+    }
+
+    fn call(&self, method: Method, url: &str, what: &str, body: Option<&serde_json::Value>) -> Result<Response> {
         let mut headers = match self.forge.kind {
             Kind::GitHub => vec![
                 ("Accept".to_string(), "application/vnd.github+json".to_string()),
@@ -119,11 +203,14 @@ impl Client {
         if let Some(token) = &self.token {
             headers.push(("Authorization".to_string(), format!("Bearer {token}")));
         }
+        if body.is_some() {
+            headers.push(("Content-Type".to_string(), "application/json".to_string()));
+        }
         let request = Request {
             method,
             url: url.to_string(),
             headers,
-            body: Vec::new(),
+            body: body.map(|b| b.to_string().into_bytes()).unwrap_or_default(),
         };
         http::checked(self.transport.send(&request)?, &self.forge.host, what)
     }

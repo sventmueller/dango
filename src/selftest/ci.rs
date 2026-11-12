@@ -1,10 +1,12 @@
 //! The `ci` scenario against two stub servers, one answering as GitHub, one as a self-managed GitLab under a path:
 //! runs, jobs over several pages and steps, the badge, a running run read again until it ends, a log with the find
-//! bar, re-running, a failure handed to an agent, a token asked for and sent only to its host, and cancelling.
+//! bar, re-running, a failure handed to an agent, a token asked for and sent only to its host, and cancelling;
+//! re-running and starting single jobs, starting runs and the open merge requests and issues of both (`actions`).
 //! `ci-login` signs in to both stubs through the browser (`login`); `ci-settings` changes the host rules and OAuth
 //! apps in the settings window (`hosts`).
 //! `ci-live` reads, and never changes, the runs of the owner's real repository when `gh` or `glab` are logged in.
 
+mod actions;
 mod hosts;
 pub(super) use hosts::native_bar;
 mod login;
@@ -87,6 +89,19 @@ fn prepare() -> Result<Stubs, String> {
         &format!("http://127.0.0.1:{}/gitlab/group/app.git", gitlab.port),
         &gitlab,
     )?;
+    write(
+        &github_root,
+        ".github/workflows/release.yml",
+        "name: Release\non:\n  workflow_dispatch:\njobs: {}\n",
+    )
+    .or_else(|_| {
+        std::fs::create_dir_all(github_root.join(".github/workflows")).map_err(|e| e.to_string())?;
+        write(
+            &github_root,
+            ".github/workflows/release.yml",
+            "name: Release\non:\n  workflow_dispatch:\njobs: {}\n",
+        )
+    })?;
     let rules = vec![
         format!("127.0.0.1:{}=github", github.port),
         format!("127.0.0.1:{}/gitlab=gitlab", gitlab.port),
@@ -237,11 +252,14 @@ fn log_shown(root: PathBuf, ok: bool) {
 }
 
 fn posted(path: &str) -> bool {
-    stubs()
-        .github
-        .seen()
+    posted_to(&stubs().github, path)
+}
+
+/// Whether `stub` got a POST whose target contains `path`.
+fn posted_to(stub: &Stub, path: &str) -> bool {
+    stub.seen()
         .iter()
-        .any(|s| s.method == "POST" && s.target.ends_with(path))
+        .any(|s| s.method == "POST" && s.target.contains(path))
 }
 
 fn rerun_sent(root: PathBuf, ok: bool) {
@@ -249,6 +267,15 @@ fn rerun_sent(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     check("re-running asks the service to start the failed jobs again", ok, "");
+    drop(controller);
+    actions::github(root);
+}
+
+/// Goes on after the GitHub actions with handing a failure to an agent.
+fn hand_to_agent(root: PathBuf) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
     panel::send_to_agent(&controller, 9001, 72);
     wait_for(
         root,
@@ -336,12 +363,15 @@ fn gitlab_listed(root: PathBuf, ok: bool) {
             .iter()
             .any(|s| s.authorization.as_deref() == Some(&bearer));
     check("the token goes to its own host only", only_there, "");
-    pictures(root, "ci-gitlab", |root| {
-        if let Some(controller) = window_of(&root) {
-            panel::cancel(&controller, 501);
-        }
-        wait_for(root, WindowController::has_sheet, cancel_sheet);
-    });
+    pictures(root, "ci-gitlab", actions::gitlab);
+}
+
+/// Goes on after the GitLab actions with cancelling the pipeline.
+fn ask_to_cancel(root: PathBuf) {
+    if let Some(controller) = window_of(&root) {
+        panel::cancel(&controller, 501);
+    }
+    wait_for(root, WindowController::has_sheet, cancel_sheet);
 }
 
 fn cancel_sheet(root: PathBuf, ok: bool) {

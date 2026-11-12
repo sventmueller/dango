@@ -136,6 +136,72 @@ pub fn stages(jobs: &[Job]) -> Vec<Stage<'_>> {
     stages
 }
 
+/// An open merge request (a pull request on GitHub) or issue.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Item {
+    /// The number the project shows, such as 12 in `!12` or `#12`.
+    pub number: u64,
+    /// Its title.
+    pub title: String,
+    /// Who opened it.
+    pub author: Option<String>,
+    /// Its page.
+    pub url: String,
+    /// When it last changed, in seconds since 1970.
+    pub updated: Option<i64>,
+    /// Whether it is marked as a draft; issues never are.
+    pub draft: bool,
+    /// The branch a merge request brings in; `None` for issues.
+    pub branch: Option<String>,
+}
+
+/// A GitHub workflow of the checkout that may be started by hand, since it names `workflow_dispatch`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Workflow {
+    /// Its file name below `.github/workflows`, which the API takes as its id.
+    pub file: String,
+    /// Its `name:`, else the file name.
+    pub name: String,
+}
+
+/// The workflows of the checkout at `root` that may be started by hand, by name.
+pub fn manual_workflows(root: &std::path::Path) -> Vec<Workflow> {
+    let Ok(entries) = std::fs::read_dir(root.join(".github/workflows")) else {
+        return Vec::new();
+    };
+    let mut workflows: Vec<Workflow> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let file = entry.file_name().to_string_lossy().into_owned();
+            if !(file.ends_with(".yml") || file.ends_with(".yaml")) {
+                return None;
+            }
+            let text = std::fs::read_to_string(entry.path()).ok()?;
+            workflow(&file, &text)
+        })
+        .collect();
+    workflows.sort_by_key(|w| w.name.to_lowercase());
+    workflows
+}
+
+fn workflow(file: &str, text: &str) -> Option<Workflow> {
+    let lines = text.lines().map(|line| line.split(" #").next().unwrap_or(line));
+    let mut dispatch = false;
+    let mut name = None;
+    for line in lines.filter(|l| !l.trim_start().starts_with('#')) {
+        dispatch |= line.contains("workflow_dispatch");
+        if name.is_none()
+            && let Some(value) = line.strip_prefix("name:")
+        {
+            name = Some(value.trim().trim_matches(['"', '\'']).to_string());
+        }
+    }
+    dispatch.then(|| Workflow {
+        file: file.to_string(),
+        name: name.filter(|n| !n.is_empty()).unwrap_or_else(|| file.to_string()),
+    })
+}
+
 /// One step of a job.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Step {
@@ -234,6 +300,22 @@ mod tests {
             ]
         );
         assert!(super::stages(&[job(1, None, State::Success), job(2, Some("x"), State::Success)]).is_empty());
+    }
+
+    #[test]
+    fn only_workflows_that_name_workflow_dispatch_may_be_started_by_hand() {
+        let manual = "name: \"Release\"\non:\n  push:\n  workflow_dispatch:\n    inputs: {}\njobs: {}\n";
+        assert_eq!(
+            workflow("release.yml", manual),
+            Some(Workflow {
+                file: "release.yml".into(),
+                name: "Release".into()
+            })
+        );
+        let commented = "on:\n  push: # not workflow_dispatch\n# workflow_dispatch:\njobs: {}\n";
+        assert_eq!(workflow("ci.yml", commented), None);
+        let unnamed = "on: [push, workflow_dispatch]\njobs:\n  build:\n    name: Build\n";
+        assert_eq!(workflow("ci.yml", unnamed).map(|w| w.name), Some("ci.yml".into()));
     }
 
     #[test]
