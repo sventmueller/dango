@@ -1,0 +1,31 @@
+[package]
+name = "ide-dap"
+version = "0.0.0"
+description = "Debugging through the Debug Adapter Protocol: sessions, the adapters, launch configurations and who owns which process"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
+[features]
+fuzzing = []
+
+# The fake adapter as a process, for the tests of process ownership; Cargo builds bins before integration tests.
+[[bin]]
+name = "ide-dap-fake-adapter"
+path = "tests/support/fake_adapter.rs"
+test = false
+doc = false
+
+[dependencies]
+ide-core = { path = "../ide-core" }
+ide-lsp = { path = "../ide-lsp" }
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
+libc.workspace = true
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"

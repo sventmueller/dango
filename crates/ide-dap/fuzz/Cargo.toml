@@ -1,0 +1,31 @@
+[package]
+name = "ide-dap-fuzz"
+version = "0.0.0"
+description = "Fuzz targets of ide-dap (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# A workspace of its own, so that the nightly-only build stays out of the app's.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-dap = { path = "..", features = ["fuzzing"] }
+
+[[bin]]
+name = "dap_messages"
+path = "fuzz_targets/dap_messages.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "launch_json"
+path = "fuzz_targets/launch_json.rs"
+test = false
+doc = false
+bench = false

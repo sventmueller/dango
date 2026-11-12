@@ -17,7 +17,6 @@ mod documents;
 mod encoding;
 mod error;
 mod features;
-mod framing;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzzing;

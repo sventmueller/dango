@@ -3,6 +3,7 @@
 
 #![warn(missing_docs, unreachable_pub)]
 
+pub mod framing;
 pub mod shell_env;
 pub mod supervisor;
 pub mod tail;

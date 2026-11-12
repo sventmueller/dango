@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Map, Value, json};
 
 use crate::error::Error;
-use crate::framing;
+use ide_process::framing;
 
 /// Messages that may wait for the writer; more means the server stopped reading.
 const QUEUE: usize = 4096;

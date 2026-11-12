@@ -20,6 +20,8 @@ pub enum Kind {
     DevServer,
     /// git.
     Git,
+    /// A debug adapter, such as lldb-dap.
+    DebugAdapter,
     /// Anything else, such as an installer.
     Tool,
 }

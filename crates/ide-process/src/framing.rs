@@ -1,4 +1,5 @@
-//! The base protocol's framing: each message is a header block with its byte length, a blank line, then the JSON.
+//! The framing the Language Server Protocol and the Debug Adapter Protocol share on a process's standard streams: each
+//! message is a header block with its byte length, a blank line, then the JSON.
 
 use std::io::{self, BufRead};
 
@@ -8,7 +9,7 @@ const MAX_MESSAGE: usize = 256 * 1024 * 1024;
 /// The next message body, or `None` when the stream ends between messages.
 ///
 /// Lines before a header that are not headers are skipped: some servers print stray lines to standard output.
-pub(crate) fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
+pub fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
     let mut length = None;
     let mut line = Vec::new();
     let mut in_header = false;
@@ -57,7 +58,7 @@ pub(crate) fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
 }
 
 /// `body` with its header, ready to write in one piece.
-pub(crate) fn frame(body: &[u8]) -> Vec<u8> {
+pub fn frame(body: &[u8]) -> Vec<u8> {
     let header = format!("Content-Length: {}\r\n\r\n", body.len());
     let mut bytes = Vec::with_capacity(header.len() + body.len());
     bytes.extend_from_slice(header.as_bytes());

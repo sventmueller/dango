@@ -15,7 +15,7 @@ const ENCODINGS: [Encoding; 3] = [Encoding::Utf8, Encoding::Utf16, Encoding::Utf
 pub fn messages(bytes: &[u8]) {
     let mut reader = bytes;
     let mut document: Option<Text> = None;
-    while let Ok(Some(body)) = crate::framing::read(&mut reader) {
+    while let Ok(Some(body)) = ide_process::framing::read(&mut reader) {
         let Some(text) = document.as_mut() else {
             document = Some(Text::new(&String::from_utf8_lossy(&body)));
             continue;
