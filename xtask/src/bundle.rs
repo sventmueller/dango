@@ -62,11 +62,10 @@ impl Build {
         }
     }
 
-    /// Whether the program has dictation, which builds whisper.cpp; only the release and some scenarios need it.
+    /// Whether the program has dictation, which builds whisper.cpp; every app build has it, only some scenarios do.
     pub(crate) fn dictation(self) -> bool {
         match self {
-            Build::Debug => false,
-            Build::Release | Build::Distribution => true,
+            Build::Debug | Build::Release | Build::Distribution => true,
             Build::Selftest { dictation, .. } => dictation,
         }
     }
@@ -756,8 +755,8 @@ mod tests {
     }
 
     #[test]
-    fn dictation_is_in_the_release_and_where_a_scenario_asks_for_it() {
-        assert_eq!(Build::Debug.features(), Vec::<&str>::new());
+    fn dictation_is_in_every_app_build_and_where_a_scenario_asks_for_it() {
+        assert_eq!(Build::Debug.features(), ["dictation"]);
         assert_eq!(Build::Release.features(), ["dictation"]);
         assert_eq!(BUILDS[3].features(), ["selftest"]);
         assert_eq!(DICTATING_SELFTEST.features(), ["selftest", "dictation"]);

@@ -85,7 +85,7 @@ Lowspeak (`../lowspeak`) and uses its choices:
   Accessibility permission, which is asked for after the first dictation, never at launch; **Settings › Dictation**
   asks again if it was refused.
 
-Debug builds (`make run`) are built without dictation.
+Debug builds (`make run`) dictate as well; their first build compiles whisper.cpp and needs cmake.
 
 ## Markdown
 - **Preview:** a Markdown file opens with its preview in a panel beside the editor; **View › Show/Hide Preview
@@ -169,8 +169,8 @@ You need:
   build of a release needs rustup with the targets `aarch64-apple-darwin` and `x86_64-apple-darwin`.
 - Checkouts of `splat` and `lowspeak` next to this one (`../splat`, `../lowspeak`); the workspace takes crates from
   them by path. A release takes `lowspeak` from its branch `vibeedit/dictation`.
-- cmake, for every build with dictation (`make build`, `make release`): dictation builds whisper.cpp. `make run` and
-  `make check` build without it.
+- cmake, for every build with dictation (`make run`, `make build`, `make release`): dictation builds whisper.cpp.
+  `make check` builds without it.
 
 | Command | What it does |
 |---|---|

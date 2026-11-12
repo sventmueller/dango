@@ -342,7 +342,7 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   (ersetzt E39).
 - **E44 Eigener Decoder-Dienst** (XPC, von launchd gestartet) für Bilder, Formeln und Diagramme; Abweichung von E23.
 - **E45 Keine Netzbilder** in der Vorschau nicht vertrauter Ordner; Platzhalter mit „Bilder aus dem Netz laden“.
-- **E46 Diktat als Build-Feature** `dictation`: im Release an, in `make check` aus, eigenes `make check-dictation`.
+- **E46 Diktat als Build-Feature** `dictation`: im Release und im Debug-Build (`cargo xtask run`) an, in `make check` aus, eigenes `make check-dictation`.
 - **E47 Diktat-Kürzel** ⌃⌥D.
 - **E48 fn-Taste** standardmäßig an (E13); die Bedienungshilfen-Freigabe wird erst beim ersten Diktat erfragt.
 - **E49 fn-Taste** wirkt nur, solange Dango die aktive App ist; sonst würde sie in jeder App abgefangen.

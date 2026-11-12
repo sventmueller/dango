@@ -119,9 +119,9 @@ Other changes in lowspeak:
 ## Dango
 
 ### Build (R6)
-- Cargo feature `dictation = ["dep:lowspeak"]`, off by default: `cargo xtask run`, `make lint`/`make check` and the
-  self-test do not build whisper.cpp, cmake or CoreML. The release bundle (`make build`, xtask's `bundle --release`)
-  turns it on.
+- Cargo feature `dictation = ["dep:lowspeak"]`, off by default: `make lint`/`make check` and the self-test do not
+  build whisper.cpp, cmake or CoreML. The debug app (`cargo xtask run`) and the release bundle (`make build`, xtask's
+  `bundle --release`) turn it on.
 - `make check-dictation`: clippy and tests with the feature, for changes that touch dictation.
 - Without the feature the mic buttons, menu items and the fn handling are not there; `src/dictation/` compiles to
   nothing.
@@ -198,8 +198,8 @@ Other changes in lowspeak:
   language, the key question. Pictures in light and dark.
 
 ## Decisions
-- **E46** The cargo feature `dictation` is on in release bundles and in the `dictation` self-test, off in `make lint`,
-  `make check`, `cargo xtask run` and the other scenarios; `make check-dictation` runs clippy and the app's tests with it.
+- **E46** The cargo feature `dictation` is on in the debug app (`cargo xtask run`), in release bundles and in the
+  `dictation` self-test, off in `make lint`, `make check` and the other scenarios; `make check-dictation` runs clippy and the app's tests with it.
 - **E47** The shortcut is ⌃⌥D, keymap command `dictation.toggle`.
 - **E48** fn is on by default; the Accessibility permission is asked for only after the first dictation, never at
   launch, and if refused fn stays off with a note in Settings ▸ Diktat, where it can be asked for again.
