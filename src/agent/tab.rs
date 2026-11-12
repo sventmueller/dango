@@ -408,7 +408,6 @@ impl AgentTab {
         if let Some(colors) = self.agent.four_colours() {
             controller.set_tab_four_colours(id, colors);
         }
-        self.header.set_agent(self.agent.name());
         self.composer.set_agent(self.agent.name());
         self.refresh();
     }

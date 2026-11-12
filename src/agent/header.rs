@@ -1,4 +1,4 @@
-//! The head of the AI tab: Claude's mark and the session's title, then Remote Control, bookmark, history and a new
+//! The head of the AI tab: the session's title, then Remote Control, bookmark, history and a new
 //! session.
 
 use ide_claude::RemoteControl;
@@ -13,10 +13,11 @@ use super::target::AgentTarget;
 use super::ui;
 use crate::util::{ns, symbol};
 
+/// Puts the title's text on the left edge of the window's tab bar, which AppKit insets 8 points from the content.
+const TITLE_INSET: f64 = 8.0;
+
 pub struct Header {
     pub view: Retained<NSStackView>,
-    /// The agent's mark; its colour is the tab bar's to show.
-    mark: Retained<objc2_app_kit::NSImageView>,
     title: Retained<NSTextField>,
     bookmark: Retained<NSButton>,
     focus: Retained<NSButton>,
@@ -27,7 +28,6 @@ pub struct Header {
 
 impl Header {
     pub fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Header {
-        let mark = ui::icon(mtm, "sparkle", "", 14.0, &NSColor::secondaryLabelColor());
         let title = ui::label(
             mtm,
             t("Neue Sitzung"),
@@ -105,20 +105,17 @@ impl Header {
         let view = ui::row(
             mtm,
             8.0,
-            &[
-                &mark, &title, &spacer, &remote, &focus, &tasks, &bookmark, &history, &new,
-            ],
+            &[&title, &spacer, &remote, &focus, &tasks, &bookmark, &history, &new],
         );
         view.setEdgeInsets(NSEdgeInsets {
             top: 0.0,
-            left: 14.0,
+            left: TITLE_INSET,
             bottom: 0.0,
             right: 12.0,
         });
         ui::fixed_height(&view, 36.0);
         Header {
             view,
-            mark,
             title,
             bookmark,
             focus,
@@ -166,12 +163,6 @@ impl Header {
         self.remote.setContentTintColor(Some(&color));
         self.remote.setToolTip(Some(&ns(tip)));
         self.remote.setHidden(false);
-    }
-
-    /// Describes the agent's mark as `agent`.
-    pub fn set_agent(&self, agent: &str) {
-        crate::util::set_label(&self.mark, Some(agent));
-        self.mark.setToolTip(Some(&ns(agent)));
     }
 
     pub fn set_title(&self, title: &str) {
