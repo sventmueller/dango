@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSMenu, NSMenuItem};
-use objc2_foundation::NSRange;
+use objc2_foundation::{NSPoint, NSRange};
 
 use super::{check, finish, snapshot};
 use crate::editor::insets::{self, Layer};
@@ -425,6 +425,49 @@ fn scroll_and_budget() {
                 format!("{shown} hints after {:.1} s", waited.as_secs_f64()),
             );
             picture(&root, "inlay-big");
+            scroll_away();
+        },
+    );
+}
+
+/// Scrolled on to line 7000, the hints of line 5000 stay, and the overlay draws them when AppKit asks it for their
+/// lines off screen, as it does ahead of the visible part while scrolling.
+fn scroll_away() {
+    let root = rust_root();
+    let Some(big) = view(&root, "src/big.rs") else {
+        return budget();
+    };
+    let at = big.line_start(7000).unwrap_or(0);
+    editor::scroll_to_byte(&big, big.document().text().utf16_to_byte(at).unwrap_or(0));
+    poll(
+        Duration::from_secs(60),
+        None,
+        || view_hints_near(7000),
+        |arrived, _| {
+            let root = rust_root();
+            let Some(big) = view(&root, "src/big.rs") else {
+                return budget();
+            };
+            check(
+                "hints of lines scrolled away from stay while the text is unchanged",
+                arrived && view_hints_near(5000),
+                format!("hints near 7000: {arrived}, near 5000: {}", view_hints_near(5000)),
+            );
+            let y = |line: usize| {
+                let at = big.line_start(line).unwrap_or(0);
+                editor::byte_y(&big, big.document().text().utf16_to_byte(at).unwrap_or(0)).unwrap_or(0.0)
+            };
+            let (top, bottom) = (y(5000), y(5030));
+            let off_screen = objc2_foundation::NSRect::new(
+                objc2_foundation::NSPoint::new(0.0, top),
+                objc2_foundation::NSSize::new(big.bounds().size.width, (bottom - top).max(1.0)),
+            );
+            let drawn = editor::insets::drawn_in(&big, off_screen);
+            check(
+                "asked to draw lines off screen that have hints, the overlay draws them",
+                drawn > 0,
+                format!("{drawn} hints in lines 5000 to 5030 while line 7000 is in view"),
+            );
             budget();
         },
     );
@@ -467,7 +510,39 @@ fn budget() {
             "{shown} hints; with them median {median:?}, slowest {slowest:?}; without median {plain_median:?}, slowest {plain_slowest:?}"
         ),
     );
+    let (with, slowest) = scroll_frames(&big);
+    let kept = insets::of(&big, Layer::Inlay);
+    insets::clear(&big, Layer::Inlay);
+    let (without, plain_slowest) = scroll_frames(&big);
+    insets::set(&big, Layer::Inlay, kept);
+    check(
+        "E25: scrolling through 10 000 lines with hints draws each step within a frame",
+        with < Duration::from_millis(16),
+        format!(
+            "with hints median {with:?}, slowest {slowest:?}; without median {without:?}, slowest {plain_slowest:?}"
+        ),
+    );
     go();
+}
+
+/// The median and the slowest time of sixty scroll steps of half a page, each drawn at once as AppKit would.
+fn scroll_frames(view: &EditorTextView) -> (Duration, Duration) {
+    let Some(window) = view.window() else {
+        return (Duration::ZERO, Duration::ZERO);
+    };
+    let start = view.visibleRect().origin;
+    let step = view.visibleRect().size.height / 2.0;
+    let mut times: Vec<Duration> = (1..=60)
+        .map(|i| {
+            let began = Instant::now();
+            view.scrollPoint(NSPoint::new(start.x, start.y + step * f64::from(i)));
+            window.displayIfNeeded();
+            began.elapsed()
+        })
+        .collect();
+    view.scrollPoint(start);
+    times.sort();
+    (times[times.len() / 2], times[times.len() - 1])
 }
 
 /// The same with gopls in a Go module.

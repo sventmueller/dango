@@ -542,20 +542,17 @@ pub fn strip_typing(view: &EditorTextView) {
     }
 }
 
-/// Draws the insets of `view` on screen, as the overlay asks.
-pub fn draw(view: &EditorTextView) {
-    let Some(storage) = view.storage() else { return };
-    let visible = super::visible_utf16(view);
-    let shown = {
-        let Ok(state) = view.ivars().insets.try_borrow() else {
-            return;
-        };
-        if state.layers.is_empty() {
-            Vec::new()
-        } else {
-            let placed = resolve(view, &state, &storage.string(), &visible);
-            lay_out(view, &storage, &state, placed, &visible)
-        }
+/// Draws the insets of `view` in `dirty`, as the overlay asks. While scrolling, AppKit draws ahead of the visible
+/// part, and what it drew there is shown later without drawing again, so `dirty` decides, not the visible part.
+pub fn draw(view: &EditorTextView, dirty: NSRect) {
+    let seen = view.visibleRect();
+    let top = dirty.origin.y.min(seen.origin.y);
+    let bottom = (dirty.origin.y + dirty.size.height).max(seen.origin.y + seen.size.height);
+    let Some(shown) = shown_in(
+        view,
+        NSRect::new(NSPoint::new(0.0, top), NSSize::new(1.0, bottom - top)),
+    ) else {
+        return;
     };
     let font_size = view.ivars().font_size.get();
     let attributes = attributes(font_size, &text_color(view));
@@ -569,6 +566,24 @@ pub fn draw(view: &EditorTextView) {
     if let Ok(mut state) = view.ivars().insets.try_borrow_mut() {
         state.shown = shown;
     }
+}
+
+/// Where the insets of the lines in `rect` go on screen.
+fn shown_in(view: &EditorTextView, rect: NSRect) -> Option<Vec<Shown>> {
+    let storage = view.storage()?;
+    let lines = super::utf16_in(view, rect);
+    let state = view.ivars().insets.try_borrow().ok()?;
+    if state.layers.is_empty() {
+        return Some(Vec::new());
+    }
+    let placed = resolve(view, &state, &storage.string(), &lines);
+    Some(lay_out(view, &storage, &state, placed, &lines))
+}
+
+/// How many insets the overlay draws when AppKit asks it for `rect`, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn drawn_in(view: &EditorTextView, rect: NSRect) -> usize {
+    shown_in(view, rect).map_or(0, |shown| shown.len())
 }
 
 fn layer_insets(state: &Insets, layer: Layer) -> Option<&Vec<Inset>> {

@@ -76,8 +76,8 @@ define_class!(
         }
 
         #[unsafe(method(drawRect:))]
-        fn draw_rect(&self, _dirty: NSRect) {
-            guarded((), || self.draw());
+        fn draw_rect(&self, dirty: NSRect) {
+            guarded((), || self.draw(dirty));
         }
     }
 );
@@ -105,12 +105,12 @@ pub fn redraw(editor: &EditorTextView) {
 }
 
 impl Overlay {
-    fn draw(&self) {
+    fn draw(&self, dirty: NSRect) {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
         self.draw_placeholders(&editor);
-        super::insets::draw(&editor);
+        super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);
         self.offer_tooltips(&editor);
     }

@@ -72,7 +72,12 @@ pub fn editor_for(controller: &WindowController, path: &Path) -> Option<Retained
 
 /// The UTF-16 range of the lines on screen, with a margin.
 pub fn visible_utf16(view: &EditorTextView) -> std::ops::Range<usize> {
-    let lines = highlight::visible_lines(view);
+    utf16_in(view, view.visibleRect())
+}
+
+/// The UTF-16 range of the lines laid out in `rect` of the view, with a margin of lines on both sides.
+pub fn utf16_in(view: &EditorTextView, rect: NSRect) -> std::ops::Range<usize> {
+    let lines = highlight::lines_in(view, rect);
     let length = view.document().text().len_utf16();
     let start = view.line_start(lines.start).unwrap_or(0);
     let end = view.line_start(lines.end).unwrap_or(length);

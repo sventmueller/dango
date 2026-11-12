@@ -28,6 +28,9 @@ thread_local! {
     /// The last question of each editor by serial, so that the answer to an older one is dropped.
     static ASKED: RefCell<HashMap<u64, u64>> = RefCell::new(HashMap::new());
     static NEXT: Cell<u64> = const { Cell::new(0) };
+    /// The document revision the hints of each editor by serial belong to. While it holds, an answer for the lines on
+    /// screen keeps the hints elsewhere, so scrolling back neither waits for them nor moves the text again.
+    static SHOWN: RefCell<HashMap<u64, u64>> = RefCell::new(HashMap::new());
 }
 
 fn chosen() -> (bool, Vec<String>) {
@@ -148,7 +151,7 @@ pub fn request(view: &EditorTextView) {
     });
     ASKED.with(|all| all.borrow_mut().insert(serial, asked));
     let sent = server.inlay_hints(&uri, range, move |answer| {
-        main_soon(move || arrived(serial, revision, asked, answer));
+        main_soon(move || arrived(serial, revision, asked, visible, answer));
     });
     if let Err(ide_lsp::Error::Unsupported(_)) = sent {
         insets::clear(view, Layer::Inlay);
@@ -162,7 +165,19 @@ pub fn scrolled(view: &EditorTextView) {
     }
 }
 
-fn arrived(serial: u64, revision: u64, asked: u64, answer: Result<Vec<InlayHint>, ide_lsp::Error>) {
+/// The server's hints of `view` may have changed everywhere: the next answer replaces them all.
+pub fn forget(view: &EditorTextView) {
+    let serial = view.ivars().lsp.borrow().serial;
+    SHOWN.with(|shown| shown.borrow_mut().remove(&serial));
+}
+
+fn arrived(
+    serial: u64,
+    revision: u64,
+    asked: u64,
+    lines: std::ops::Range<usize>,
+    answer: Result<Vec<InlayHint>, ide_lsp::Error>,
+) {
     if ASKED.with(|all| all.borrow().get(&serial).copied()) != Some(asked) {
         return;
     }
@@ -172,10 +187,17 @@ fn arrived(serial: u64, revision: u64, asked: u64, answer: Result<Vec<InlayHint>
     };
     match answer {
         Ok(hints) if view.document().revision() == revision && shows(&view) => {
-            let insets = {
+            let mut insets: Vec<Inset> = {
                 let document = view.document();
                 hints.into_iter().map(|hint| inset(document.text(), hint)).collect()
             };
+            let same = SHOWN.with(|shown| shown.borrow_mut().insert(serial, revision)) == Some(revision);
+            if same {
+                let elsewhere = insets::of(&view, Layer::Inlay)
+                    .into_iter()
+                    .filter(|kept| !lines.contains(&kept.at));
+                insets.extend(elsewhere);
+            }
             insets::set(&view, Layer::Inlay, insets);
         }
         Ok(_) => view.later(sel!(ideInlayHints), SCROLL_DELAY),

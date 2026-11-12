@@ -72,7 +72,11 @@ fn union(a: Option<Range<usize>>, b: Option<Range<usize>>) -> Option<Range<usize
 
 /// The lines on screen with a margin on both sides.
 pub(super) fn visible_lines(view: &EditorTextView) -> Range<usize> {
-    let rect = view.visibleRect();
+    lines_in(view, view.visibleRect())
+}
+
+/// The lines laid out in `rect` of the view, with a margin on both sides.
+pub(super) fn lines_in(view: &EditorTextView, rect: objc2_foundation::NSRect) -> Range<usize> {
     let top = line_at(view, NSPoint::new(0.0, rect.origin.y)).unwrap_or(0);
     let bottom = line_at(view, NSPoint::new(0.0, rect.origin.y + rect.size.height)).unwrap_or(top + 80);
     let count = view.document().text().line_count();

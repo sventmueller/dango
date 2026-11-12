@@ -753,6 +753,7 @@ fn event_arrived(folder: &Path, id: u64, event: Event) {
         }
         Event::Refresh(Refresh::InlayHints) => {
             for view in views_of(folder, id) {
+                inlay::forget(&view);
                 inlay::request(&view);
             }
         }
