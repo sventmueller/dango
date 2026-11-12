@@ -169,7 +169,7 @@ pub fn answer_alert(response: NSModalResponse) {
 }
 
 /// Puts an empty event in front of the app's event queue.
-fn post_event() {
+pub fn post_event() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let event = NSEvent::otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
         NSEventType::ApplicationDefined,

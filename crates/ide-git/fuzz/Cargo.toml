@@ -1,0 +1,24 @@
+[package]
+name = "ide-git-fuzz"
+version = "0.0.0"
+description = "Fuzz targets of ide-git (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# A workspace of its own, so that the nightly-only build stays out of the app's.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-git = { path = "..", features = ["fuzzing"] }
+
+[[bin]]
+name = "diff"
+path = "fuzz_targets/diff.rs"
+test = false
+doc = false
+bench = false

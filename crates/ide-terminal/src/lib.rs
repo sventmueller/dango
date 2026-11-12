@@ -11,6 +11,9 @@
 mod devserver;
 pub mod event;
 pub mod foreground;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
 pub mod input;
 pub mod integration;
 mod io;

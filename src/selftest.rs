@@ -39,6 +39,7 @@ mod conflict;
 #[cfg(feature = "dictation")]
 mod dictation;
 mod editor_multi;
+mod editor_undo;
 mod extras;
 mod file_icons;
 mod files_header;
@@ -139,6 +140,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "lsp" => lsp::run(),
         "language-servers" => servers::run(),
         "editor-multi" => editor_multi::run(),
+        "editor-undo" => editor_undo::run(),
         "search" => search::run(),
         "terminal" => terminal::run(),
         "paste-cli" => paste_cli::run(),

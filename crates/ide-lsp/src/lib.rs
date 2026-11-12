@@ -18,6 +18,9 @@ mod encoding;
 mod error;
 mod features;
 mod framing;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
 mod incoming;
 mod install;
 mod language;

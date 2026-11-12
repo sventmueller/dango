@@ -130,6 +130,18 @@ struct Call {
 }
 
 /// What the stream has said so far.
+/// Takes `chunks` as a stream would and builds the message, for the fuzz target.
+#[cfg(feature = "fuzzing")]
+pub(crate) fn read_all(chunks: &[Value]) {
+    let mut answer = Answer::default();
+    for chunk in chunks {
+        if answer.take(chunk, &mut |_| {}).is_err() {
+            break;
+        }
+    }
+    let _ = answer.message(true);
+}
+
 #[derive(Default)]
 struct Answer {
     text: String,

@@ -4,6 +4,7 @@
 mod bundle;
 mod cask;
 mod focus;
+mod fuzz;
 mod icon;
 mod integration;
 mod licenses;
@@ -42,6 +43,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    stapled, into dist/, then the build number goes up
   universal                        target/universal/ide with dictation for Apple Silicon and Intel; needs rustup
   acknowledgements                 target/Acknowledgements.txt, the license texts the distribution carries
+  fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
+                                   the pinned nightly; needs rustup and cargo-fuzz
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
                                    Xcode";
 
@@ -73,6 +76,7 @@ fn task(args: &[String]) -> Result<(), String> {
         }
         "selftest" => selftest(&scenarios(rest)?),
         "integration" => integration::integration(rest),
+        "fuzz" => fuzz::fuzz(rest),
         "release" => {
             let [notarize, layout] = flags(rest, ["--notarize", "--layout"])?;
             let out = release::release(release::Options {

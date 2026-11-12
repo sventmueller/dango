@@ -11,3 +11,6 @@
 # Local agent instructions and settings.
 CLAUDE.md
 .claude/
+
+# Crash inputs that `cargo xtask fuzz` found; each becomes a regression test before it is deleted.
+/crates/*/fuzz/artifacts/

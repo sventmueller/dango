@@ -19,6 +19,9 @@ mod commit;
 mod destructive;
 mod diff;
 mod error;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
 mod history;
 mod hooks;
 mod integrate;

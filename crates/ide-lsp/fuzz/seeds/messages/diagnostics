@@ -1,0 +1,8 @@
+Content-Length: 56
+
+fn main() {
+    let s = "ä😀x";
+	println!("{s}");}
+Content-Length: 431
+
+{"jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": {"uri": "file:///a/main.rs", "version": 3, "diagnostics": [{"range": {"start": {"line": 1, "character": 13}, "end": {"line": 1, "character": 17}}, "severity": 1, "message": "unused", "relatedInformation": [{"location": {"uri": "file:///a/main.rs", "range": {"start": {"line": 0, "character": 3}, "end": {"line": 0, "character": 7}}}, "message": "here"}]}]}}

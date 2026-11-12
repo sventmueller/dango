@@ -29,6 +29,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make check-dictation` | clippy and the app's tests with the feature `dictation`, for changes that touch it |
 | `make test` | `check`, then `cargo xtask selftest probe` |
 | `make perf` | the timing budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
+| `make fuzz` | `cargo xtask fuzz`: the crates' fuzz targets, see [Fuzzing](#fuzzing); outside `make check` |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
@@ -49,6 +50,20 @@ idle Mac. It also checks native view and selection reuse,
 background tabs catching up without building cards while hidden, and text, fonts and links against a complete
 Markdown render, including definitions that arrive after their references. Reports are in
 `target/selftest/agent-perf.json`; it uses replayed events and makes no model requests.
+
+## Fuzzing
+The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the
+terminal's scanner and `KERN_PROCARGS2` reader, the language servers' framing with the positions they send, ACP and
+Claude stream-json into the thread model, `git diff` output, and the providers' server-sent events. They reach
+crate-private parts through the feature `fuzzing`, which only the fuzz crates turn on. cargo-fuzz needs a nightly
+compiler; `xtask/src/fuzz.rs` pins its date (R18), and `rustup toolchain install nightly-<date> --profile minimal`
+plus `cargo install cargo-fuzz` set it up. `make fuzz` runs every target for `FUZZ_SECONDS` (60 by default),
+`make fuzz ARGS=diff` one; the corpus grows in `target/fuzz/corpus/`, the recorded sessions in `tests/fixtures` start
+it. A crash stops the run and leaves its input in the crate's `fuzz/artifacts/`; the fix comes with a unit test built
+from that input, then the file goes.
+
+Property tests (E96) run in `make check` with a fixed seed, `crates/ide-document/tests/properties.rs`; a failing case
+is kept in `crates/ide-document/proptest-regressions/`, which is checked in.
 
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.

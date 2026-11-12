@@ -173,6 +173,18 @@ enum Slot {
 }
 
 /// What the stream has said so far.
+/// Takes `events` as a stream would and builds the message, for the fuzz target.
+#[cfg(feature = "fuzzing")]
+pub(crate) fn read_all(events: &[Value]) {
+    let mut answer = Answer::default();
+    for event in events {
+        if !matches!(answer.take(event, &mut |_| {}), Ok(false)) {
+            break;
+        }
+    }
+    let _ = answer.message(true, true);
+}
+
 #[derive(Default)]
 struct Answer {
     slots: BTreeMap<u64, Slot>,

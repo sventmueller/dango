@@ -9,6 +9,10 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
+[features]
+fuzzing = []
+
 # A stand-in language server for the tests; Cargo builds bins before integration tests and names their path.
 [[bin]]
 name = "ide-lsp-fake-server"

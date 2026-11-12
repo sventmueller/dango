@@ -21,6 +21,9 @@ mod anthropic;
 pub mod chat;
 mod compact;
 pub mod conversation;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
 mod gemini;
 pub mod http;
 pub mod keys;

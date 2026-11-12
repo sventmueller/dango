@@ -1,0 +1,17 @@
+diff --git a/x.png b/y.png
+similarity index 90%
+rename from x.png
+rename to y.png
+index 1..2 100644
+Binary files a/x.png and b/y.png differ
+diff --git "a/sp ace\303\244" "b/sp ace\303\244"
+new file mode 100644
+--- /dev/null
++++ "b/sp ace\303\244"
+@@ -0,0 +1,2 @@
++one
++two
+\ No newline at end of file
+diff --cc conflicted.txt
+@@@ -1,1 -1,1 +1,5 @@@
+++<<<<<<< ours
