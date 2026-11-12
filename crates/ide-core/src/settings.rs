@@ -73,7 +73,7 @@ pub mod keys {
     pub const REOPEN_PROJECTS: Key<bool> = Key::user("reopenProjects", || true);
 
     /// The size of text in editors and terminals, in points.
-    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", || 13.0);
+    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", || 12.0);
 
     /// Formats a file with its language server when ⌘S saves it.
     pub const FORMAT_ON_SAVE: Key<bool> = Key::project("formatOnSave", || false);
