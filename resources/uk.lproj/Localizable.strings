@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Реєстр не вказує контрольної суми; завантаження не буде перевірено.";
 "Das Register wurde nicht geladen" = "Реєстр не завантажено";
 "Das Terminal konnte nicht starten: {}" = "Не вдалося запустити термінал: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Локальну модель не інстальовано. Завантажте її в параметрах, у розділі «Диктування».";
 "Dateien" = "Файли";
 "Dateien: {}" = "Файли: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "файли, веб-запити й команди залишаються в межах проєкту та дозволених папок, без мережі";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Вставити";
 "Einstellungen" = "Параметри";
 "Einstellungen öffnen" = "Відкрити параметри";
+"Einstellungen übernehmen" = "Перенести параметри";
 "Einstellungen …" = "Параметри…";
 "Endpunkt entfernen" = "Вилучити кінцеву точку";
 "Endpunkt hinzufügen" = "Додати кінцеву точку";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Фонові процеси: виконується {}, завершено {}";
 "Hinweise" = "Підказки";
 "Hooks: {} erfolgreich" = "Успішних хуків: {}";
+"Ignorieren" = "Ігнорувати";
 "Im Browser-Tab öffnen" = "Відкрити у вкладці браузера";
 "Im Dock ablegen" = "Згорнути";
 "Im Editor zeigen" = "Показувати в редакторі";
@@ -151,6 +154,7 @@
 "Kopieren" = "Скопіювати";
 "Lade die Modelle von {} …" = "Завантаження моделей {}…";
 "Liste löschen" = "Очистити меню";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak має власні параметри диктування. Перенести їх?";
 "Löschen" = "Видалити";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Виділіть уривок плану й виберіть «Коментувати».";
 "Minimal" = "Мінімальний";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} не має пісочниці, яку тут можна ввімкнути";
 "{} bietet ein Modell." = "{} пропонує одну модель.";
 "{} bietet {} Modelle." = "Моделей у {}: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} більше не надає {}. Виберіть іншу модель у параметрах, у розділі «Диктування».";
 "{} braucht zuerst einen Schlüssel." = "Спершу для {} потрібен ключ.";
 "{} gibt es nicht" = "{} не існує";
 "{} h" = "{} год";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: скидання: {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Змінити…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Змінює файли проєкту й питає перед записом поза ним або доступом до мережі.";
 "Änderung nicht angewandt" = "Зміну не застосовано";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Зміни у відкритих файлах можна скасувати для кожного файлу окремо.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Поле диктування вже закрито. Текст у буфері обміну.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} не має доступу до мікрофона. Надайте його в Системних параметрах: Приватність і безпека > Мікрофон.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Немає ключа API для {}. Введіть його в параметрах, у розділі «Диктування».";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Локальну модель не інстальовано. Завантажте її в Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} більше не надає {}. Виберіть іншу модель у Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "У Lowspeak є ключ для {}. Використати його і для {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "Для цього {} прочитає його один раз, і macOS попросить підтвердження. Виберіть «Дозволити», а не «Завжди дозволяти»: так запис Lowspeak залишиться без змін. {} зберігає ключ в окремому записі.";
 "Übernehmen" = "Використати ключ";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Це не ключ OpenAI (sk-…) і не ключ Groq (gsk_…).";
 "Diktat" = "Диктування";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Відкрити Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Інстальовано. Режим, модель, мову, постобробку, мікрофон і словник ви вибираєте в Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Не інстальовано. Діють типові значення Lowspeak: онлайн із GPT Transcribe, автовизначення мови.";
 "Transkription:" = "Розпізнавання:";
-"Online: {} ({})" = "Онлайн: {} ({})";
 "Sprache:" = "Мова:";
 "Nachbearbeitung:" = "Постобробка:";
 "Mikrofon:" = "Мікрофон:";
 "Vokabular:" = "Словник:";
-"Keine Begriffe" = "Немає термінів";
-"1 Begriff" = "1 термін";
-"{} Begriffe" = "Термінів: {}";
 "API-Schlüssel:" = "Ключі API:";
 "{}: im Schlüsselbund" = "{}: у вʼязці";
 "{}: kein Schlüssel" = "{}: немає ключа";

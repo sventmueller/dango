@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "レジストリにチェックサムがないため、ダウンロードは検証されません。";
 "Das Register wurde nicht geladen" = "レジストリが読み込まれていません";
 "Das Terminal konnte nicht starten: {}" = "ターミナルを起動できませんでした: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "ローカルモデルがインストールされていません。設定の“音声入力”でダウンロードしてください。";
 "Dateien" = "ファイル";
 "Dateien: {}" = "ファイル: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "ファイル、Webリクエスト、コマンドはプロジェクトと許可されたフォルダ内にとどまり、ネットワークは使用しません";
@@ -104,6 +105,7 @@
 "Einsetzen" = "ペースト";
 "Einstellungen" = "設定";
 "Einstellungen öffnen" = "設定を開く";
+"Einstellungen übernehmen" = "設定を使用";
 "Einstellungen …" = "設定…";
 "Endpunkt entfernen" = "エンドポイントを削除";
 "Endpunkt hinzufügen" = "エンドポイントを追加";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "バックグラウンドプロセス: 実行中 {}、終了 {}";
 "Hinweise" = "ヒント";
 "Hooks: {} erfolgreich" = "フック: {}件成功";
+"Ignorieren" = "無視";
 "Im Browser-Tab öffnen" = "ブラウザタブで開く";
 "Im Dock ablegen" = "しまう";
 "Im Editor zeigen" = "エディタに表示";
@@ -151,6 +154,7 @@
 "Kopieren" = "コピー";
 "Lade die Modelle von {} …" = "{}のモデルを読み込み中…";
 "Liste löschen" = "メニューを消去";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeakには独自の音声入力設定があります。これを使用しますか？";
 "Löschen" = "削除";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "プラン内の箇所を選択して、“コメント”を選択してください。";
 "Minimal" = "最小";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{}には、ここでオンにできるサンドボックスがありません";
 "{} bietet ein Modell." = "{}は1つのモデルを提供しています。";
 "{} bietet {} Modelle." = "{}は{}個のモデルを提供しています。";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{}は{}の提供を終了しました。設定の“音声入力”で別のモデルを選択してください。";
 "{} braucht zuerst einen Schlüssel." = "{}には最初にキーが必要です。";
 "{} gibt es nicht" = "{}は存在しません";
 "{} h" = "{}時間";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}、{} · {}";
 "{}: zurückgesetzt {}" = "{}: {}にリセット";
 "{}: {}" = "{}: {}";
+"Ändern …" = "変更…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "プロジェクト内のファイルを変更し、プロジェクト外への書き込みやネットワークアクセスの前に確認します。";
 "Änderung nicht angewandt" = "変更は適用されませんでした";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "開いているファイルの変更は、ファイルごとに取り消せます。";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "音声入力のフィールドはもう開いていません。テキストはクリップボードにあります。";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{}はマイクにアクセスできません。“システム設定” > “プライバシーとセキュリティ” > “マイク”で許可してください。";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "{}のAPIキーがありません。設定の“音声入力”で入力してください。";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "ローカルモデルがインストールされていません。Lowspeakでダウンロードしてください。";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{}は{}の提供を終了しました。Lowspeakで別のモデルを選択してください。";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeakには{}のキーがあります。{}にも使用しますか?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{}はそのためにキーを1回読み込み、その前にmacOSが確認します。そこで“常に許可”ではなく“許可”を選択してください。そうすればLowspeakの項目はそのまま残ります。{}は専用の項目にキーを保存します。";
 "Übernehmen" = "キーを使用";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "これはOpenAI（sk-…）またはGroq（gsk_…）のキーではありません。";
 "Diktat" = "音声入力";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Lowspeakを開く";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "インストール済み。モード、モデル、言語、後処理、マイク、語彙はLowspeakで選択します。";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "インストールされていません。Lowspeakのデフォルトが適用されます: GPT Transcribeでオンライン、言語は自動認識。";
 "Transkription:" = "文字起こし:";
-"Online: {} ({})" = "オンライン: {}（{}）";
 "Sprache:" = "言語:";
 "Nachbearbeitung:" = "後処理:";
 "Mikrofon:" = "マイク:";
 "Vokabular:" = "語彙:";
-"Keine Begriffe" = "用語なし";
-"1 Begriff" = "1個の用語";
-"{} Begriffe" = "{}個の用語";
 "API-Schlüssel:" = "APIキー:";
 "{}: im Schlüsselbund" = "{}: キーチェーン内";
 "{}: kein Schlüssel" = "{}: キーなし";

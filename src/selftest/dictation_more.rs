@@ -96,7 +96,7 @@ fn failure_texts() {
         ),
         (
             Failure::Transcription(TranscriptionError::ModelNotAvailable),
-            "Lowspeak".to_string(),
+            t("Diktat").to_string(),
         ),
         (
             Failure::Transcription(TranscriptionError::ModelRetired(model)),
@@ -775,7 +775,8 @@ pub fn settings_buttons() {
         let key_button = |tag| super::settings_pages::control(objc2::sel!(ideDictationKey:), Some(tag));
         let took = key_button(1).is_some_and(|b| super::settings_pages::act(&b));
         let taken = crate::settings::dictation_keys();
-        let removed = key_button(0).is_some_and(|b| super::settings_pages::act(&b));
+        let removed = super::settings_pages::control(objc2::sel!(ideDictationRemoveKey:), Some(0))
+            .is_some_and(|b| super::settings_pages::act(&b));
         let lines = crate::settings::dictation_keys();
         check(
             "the settings' buttons take Lowspeak's key over and remove the app's own, which leaves Lowspeak's",
@@ -810,5 +811,5 @@ fn fn_switch() {
         off && on,
         format!("{before:?} → {:?}", fn_state()),
     );
-    super::finish("dictation");
+    super::dictation_settings::run();
 }

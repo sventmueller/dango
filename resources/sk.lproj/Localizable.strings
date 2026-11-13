@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Register neuvádza kontrolný súčet; stiahnutý súbor sa nekontroluje.";
 "Das Register wurde nicht geladen" = "Register sa nenačítal";
 "Das Terminal konnte nicht starten: {}" = "Terminál sa nepodarilo spustiť: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Lokálny model nie je nainštalovaný. Stiahnite ho v Nastaveniach v časti Diktovanie.";
 "Dateien" = "Súbory";
 "Dateien: {}" = "Súbory: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "súbory, webové požiadavky a príkazy zostávajú v projekte a v povolených priečinkoch, bez siete";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Vložiť";
 "Einstellungen" = "Nastavenia";
 "Einstellungen öffnen" = "Otvoriť nastavenia";
+"Einstellungen übernehmen" = "Prevziať nastavenia";
 "Einstellungen …" = "Nastavenia…";
 "Endpunkt entfernen" = "Odstrániť koncový bod";
 "Endpunkt hinzufügen" = "Pridať koncový bod";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Procesy na pozadí: beží {}, dokončené {}";
 "Hinweise" = "Nápovedy";
 "Hooks: {} erfolgreich" = "Úspešné hooky: {}";
+"Ignorieren" = "Ignorovať";
 "Im Browser-Tab öffnen" = "Otvoriť v tabe prehliadača";
 "Im Dock ablegen" = "Minimalizovať";
 "Im Editor zeigen" = "Zobraziť v editore";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopírovať";
 "Lade die Modelle von {} …" = "Načítavajú sa modely z {}…";
 "Liste löschen" = "Vymazať menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak má vlastné nastavenia diktovania. Chcete ich prevziať?";
 "Löschen" = "Vymazať";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Označte miesto v pláne a vyberte „Komentovať“.";
 "Minimal" = "Minimálne";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} neponúka sandbox, ktorý sa tu dá zapnúť";
 "{} bietet ein Modell." = "{} ponúka jeden model.";
 "{} bietet {} Modelle." = "Počet modelov, ktoré ponúka {}: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "Služba {} už neponúka {}. Vyberte iný model v Nastaveniach v časti Diktovanie.";
 "{} braucht zuerst einen Schlüssel." = "{} najprv potrebuje kľúč.";
 "{} gibt es nicht" = "{} neexistuje";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: obnoví sa o {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Zmeniť…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mení súbory v projekte a pýta sa pred zápisom mimo neho alebo prístupom k sieti.";
 "Änderung nicht angewandt" = "Zmena nebola použitá";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Zmeny v otvorených súboroch možno odvolať po jednotlivých súboroch.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Pole diktovania už nie je otvorené. Text je v schránke.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} nemá prístup k mikrofónu. Povoľte ho v Systémových nastaveniach v časti Súkromie a bezpečnosť > Mikrofón.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Chýba kľúč API pre {}. Zadajte ho v Nastaveniach v časti Diktovanie.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Lokálny model nie je nainštalovaný. Stiahnite ho v aplikácii Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "Služba {} už neponúka {}. Vyberte iný model v aplikácii Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak má kľúč pre {}. Použiť ho aj pre {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} ho na to raz prečíta a macOS sa najprv opýta. Vyberte tam „Povoliť“, nie „Vždy povoliť“: položka aplikácie Lowspeak tak zostane bez zmeny. {} uloží kľúč do vlastnej položky.";
 "Übernehmen" = "Použiť kľúč";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Toto nie je kľúč od OpenAI (sk-…) ani Groq (gsk_…).";
 "Diktat" = "Diktovanie";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Otvoriť Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Nainštalované. Režim, model, jazyk, následné spracovanie, mikrofón a slovník vyberiete v aplikácii Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Nenainštalované. Platia predvoľby aplikácie Lowspeak: online s GPT Transcribe, jazyk sa rozpozná automaticky.";
 "Transkription:" = "Prepis:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Jazyk:";
 "Nachbearbeitung:" = "Následné spracovanie:";
 "Mikrofon:" = "Mikrofón:";
 "Vokabular:" = "Slovník:";
-"Keine Begriffe" = "Žiadne výrazy";
-"1 Begriff" = "1 výraz";
-"{} Begriffe" = "Výrazy: {}";
 "API-Schlüssel:" = "Kľúče API:";
 "{}: im Schlüsselbund" = "{}: v kľúčenke";
 "{}: kein Schlüssel" = "{}: bez kľúča";

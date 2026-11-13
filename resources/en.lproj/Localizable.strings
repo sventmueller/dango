@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "The registry gives no checksum; the download is not verified.";
 "Das Register wurde nicht geladen" = "The registry was not loaded";
 "Das Terminal konnte nicht starten: {}" = "The terminal could not start: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "The local model is not installed. Download it in Settings under Dictation.";
 "Dateien" = "Files";
 "Dateien: {}" = "Files: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "files, web requests and commands stay in the project and the allowed folders, without network";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Paste";
 "Einstellungen" = "Settings";
 "Einstellungen öffnen" = "Open Settings";
+"Einstellungen übernehmen" = "Use Settings";
 "Einstellungen …" = "Settings…";
 "Endpunkt entfernen" = "Remove Endpoint";
 "Endpunkt hinzufügen" = "Add Endpoint";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Background processes: {} running, {} finished";
 "Hinweise" = "Hints";
 "Hooks: {} erfolgreich" = "Hooks: {} succeeded";
+"Ignorieren" = "Ignore";
 "Im Browser-Tab öffnen" = "Open in Browser Tab";
 "Im Dock ablegen" = "Minimize";
 "Im Editor zeigen" = "Show in editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Copy";
 "Lade die Modelle von {} …" = "Loading the models of {} …";
 "Liste löschen" = "Clear Menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak has its own dictation settings. Do you want to use them?";
 "Löschen" = "Delete";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Select a passage of the plan and choose “Comment”.";
 "Minimal" = "Minimal";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} offers no sandbox that can be switched on here";
 "{} bietet ein Modell." = "{} offers one model.";
 "{} bietet {} Modelle." = "{} offers {} models.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} no longer offers {}. Choose another model in Settings under Dictation.";
 "{} braucht zuerst einen Schlüssel." = "{} needs a key first.";
 "{} gibt es nicht" = "{} does not exist";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: resets {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Change…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Changes files in the project and asks before writing outside it or accessing the network.";
 "Änderung nicht angewandt" = "Change Not Applied";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Changes to open files can be undone file by file.";
@@ -1136,8 +1142,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "The field of the dictation is no longer open. The text is on the clipboard.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} has no access to the microphone. Allow it in System Settings under Privacy & Security > Microphone.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "No API key for {}. Enter one in Settings under Dictation.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "The local model is not installed. Download it in Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} no longer offers {}. Choose another model in Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak has a key for {}. Use it for {} too?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} reads it once for that, and macOS asks first. Choose “Allow”, not “Always Allow”: that leaves Lowspeak’s item as it is. {} keeps the key in an item of its own.";
 "Übernehmen" = "Use Key";
@@ -1149,18 +1153,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "That is not a key from OpenAI (sk-…) or Groq (gsk_…).";
 "Diktat" = "Dictation";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Open Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Installed. You choose mode, model, language, post-processing, microphone and vocabulary in Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Not installed. Lowspeak’s defaults apply: online with GPT Transcribe, language detected.";
 "Transkription:" = "Transcription:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Language:";
 "Nachbearbeitung:" = "Post-processing:";
 "Mikrofon:" = "Microphone:";
 "Vokabular:" = "Vocabulary:";
-"Keine Begriffe" = "No terms";
-"1 Begriff" = "1 term";
-"{} Begriffe" = "{} terms";
 "API-Schlüssel:" = "API keys:";
 "{}: im Schlüsselbund" = "{}: in the keychain";
 "{}: kein Schlüssel" = "{}: no key";

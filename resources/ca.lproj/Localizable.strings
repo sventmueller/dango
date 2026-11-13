@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "El registre no indica cap suma de verificació; la descàrrega no es verificarà.";
 "Das Register wurde nicht geladen" = "No s’ha carregat el registre";
 "Das Terminal konnte nicht starten: {}" = "No s’ha pogut iniciar el terminal: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "El model local no està instal·lat. Descarrega’l a la configuració, a Dictat.";
 "Dateien" = "Fitxers";
 "Dateien: {}" = "Fitxers: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "els fitxers, les consultes web i les ordres es queden dins del projecte i de les carpetes permeses, sense xarxa";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Enganxa";
 "Einstellungen" = "Configuració";
 "Einstellungen öffnen" = "Obre la configuració";
+"Einstellungen übernehmen" = "Utilitza la configuració";
 "Einstellungen …" = "Configuració…";
 "Endpunkt entfernen" = "Elimina el punt de connexió";
 "Endpunkt hinzufügen" = "Afegeix un punt de connexió";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Processos en segon pla: {} en execució, {} acabats";
 "Hinweise" = "Indicacions";
 "Hooks: {} erfolgreich" = "Hooks correctes: {}";
+"Ignorieren" = "Ignora";
 "Im Browser-Tab öffnen" = "Obre a la pestanya del navegador";
 "Im Dock ablegen" = "Minimitza";
 "Im Editor zeigen" = "Mostra a l’editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Copia";
 "Lade die Modelle von {} …" = "{}: carregant els models…";
 "Liste löschen" = "Buida el menú";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak té la seva pròpia configuració de dictat. Vols fer-la servir?";
 "Löschen" = "Elimina";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selecciona un passatge del pla i tria “Comenta”.";
 "Minimal" = "Mínim";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} no ofereix cap sandbox que es pugui activar aquí";
 "{} bietet ein Modell." = "{} ofereix un model.";
 "{} bietet {} Modelle." = "{} ofereix {} models.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} ja no ofereix {}. Tria un altre model a la configuració, a Dictat.";
 "{} braucht zuerst einen Schlüssel." = "{} necessita primer una clau.";
 "{} gibt es nicht" = "{} no existeix";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: es restableix {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Canvia…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Canvia fitxers del projecte i pregunta abans d’escriure fora d’aquest o d’accedir a la xarxa.";
 "Änderung nicht angewandt" = "No s’ha aplicat el canvi";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Els canvis als fitxers oberts es poden desfer fitxer per fitxer.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "El camp del dictat ja no és obert. El text és al porta-retalls.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} no té accés al micròfon. Dona‑li accés a Configuració del Sistema, a Privacitat i seguretat > Micròfon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "No hi ha cap clau d’API per a {}. Introdueix‑la a la configuració, a Dictat.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "El model local no està instal·lat. Descarrega’l a Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} ja no ofereix {}. Tria un altre model a Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak té una clau per a {}. Vols utilitzar‑la també per a {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "Per fer‑ho, {} la llegeix una vegada i el macOS et demanarà permís. Tria “Permet”, no “Permet sempre”: així l’ítem de Lowspeak es queda tal com és. {} desa la clau en un ítem propi.";
 "Übernehmen" = "Utilitza la clau";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Això no és una clau d’OpenAI (sk-…) ni de Groq (gsk_…).";
 "Diktat" = "Dictat";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Obre Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Instal·lat. El mode, el model, l’idioma, el postprocessament, el micròfon i el vocabulari els tries a Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "No instal·lat. S’apliquen els valors per omissió de Lowspeak: en línia amb GPT Transcribe i detecció de l’idioma.";
 "Transkription:" = "Transcripció:";
-"Online: {} ({})" = "En línia: {} ({})";
 "Sprache:" = "Idioma:";
 "Nachbearbeitung:" = "Postprocessament:";
 "Mikrofon:" = "Micròfon:";
 "Vokabular:" = "Vocabulari:";
-"Keine Begriffe" = "Cap terme";
-"1 Begriff" = "1 terme";
-"{} Begriffe" = "{} termes";
 "API-Schlüssel:" = "Claus d’API:";
 "{}: im Schlüsselbund" = "{}: al clauer";
 "{}: kein Schlüssel" = "{}: cap clau";

@@ -15,6 +15,7 @@ ide-core.workspace = true
 ide-product.workspace = true
 ide-ui-common.workspace = true
 splat-i18n.workspace = true
+serde = { workspace = true, optional = true }
 lowspeak = { workspace = true, optional = true }
 block2.workspace = true
 libc.workspace = true
@@ -27,6 +28,6 @@ objc2-foundation.workspace = true
 
 [features]
 # lowspeak and the frameworks it needs; lowspeak builds whisper.cpp with cmake, so only the app's `dictation` turns it on.
-engine = ["dep:lowspeak", "dep:objc2-application-services", "dep:objc2-av-foundation"]
+engine = ["dep:lowspeak", "dep:serde", "dep:objc2-application-services", "dep:objc2-av-foundation"]
 # What the self-test reads of the fields, and a microphone and an engine that play what a scenario prepared.
 selftest = []

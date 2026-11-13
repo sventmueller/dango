@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Het register noemt geen checksum; de download wordt niet gecontroleerd.";
 "Das Register wurde nicht geladen" = "Het register is niet geladen";
 "Das Terminal konnte nicht starten: {}" = "De terminal kon niet starten: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Het lokale model is niet geïnstalleerd. Download het bij Instellingen onder Dicteerfunctie.";
 "Dateien" = "Bestanden";
 "Dateien: {}" = "Bestanden: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "bestanden, webverzoeken en commando's blijven in het project en de toegestane mappen, zonder netwerk";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Plak";
 "Einstellungen" = "Instellingen";
 "Einstellungen öffnen" = "Open Instellingen";
+"Einstellungen übernehmen" = "Neem instellingen over";
 "Einstellungen …" = "Instellingen…";
 "Endpunkt entfernen" = "Verwijder endpoint";
 "Endpunkt hinzufügen" = "Voeg endpoint toe";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Achtergrondprocessen: {} actief, {} beëindigd";
 "Hinweise" = "Hints";
 "Hooks: {} erfolgreich" = "Hooks: {} geslaagd";
+"Ignorieren" = "Negeer";
 "Im Browser-Tab öffnen" = "Open in browsertabblad";
 "Im Dock ablegen" = "Minimaliseer";
 "Im Editor zeigen" = "Toon in editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopieer";
 "Lade die Modelle von {} …" = "Modellen van {} laden…";
 "Liste löschen" = "Wis menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak heeft eigen dicteerinstellingen. Deze overnemen?";
 "Löschen" = "Verwijder";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selecteer een passage in het plan en kies 'Voeg opmerking toe'.";
 "Minimal" = "Minimaal";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} biedt geen sandbox die hier kan worden ingeschakeld";
 "{} bietet ein Modell." = "{} biedt één model.";
 "{} bietet {} Modelle." = "{} biedt {} modellen.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} biedt {} niet meer aan. Kies een ander model bij Instellingen onder Dicteerfunctie.";
 "{} braucht zuerst einen Schlüssel." = "{} heeft eerst een sleutel nodig.";
 "{} gibt es nicht" = "{} bestaat niet";
 "{} h" = "{} u";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: reset {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Wijzig…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Wijzigt bestanden in het project en vraagt vóór schrijven daarbuiten of netwerktoegang.";
 "Änderung nicht angewandt" = "Wijziging niet toegepast";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Wijzigingen in geopende bestanden kunnen per bestand worden hersteld.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Het veld van de dicteerfunctie is niet meer open. De tekst staat op het klembord.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} heeft geen toegang tot de microfoon. Sta het toe in Systeeminstellingen > Privacy en beveiliging > Microfoon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Geen API-sleutel voor {}. Voer er een in bij Instellingen onder Dicteerfunctie.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Het lokale model is niet geïnstalleerd. Download het in Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} biedt {} niet meer aan. Kies een ander model in Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak heeft een sleutel voor {}. Ook gebruiken voor {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} leest de sleutel daarvoor één keer, en macOS vraagt eerst om toestemming. Kies daar 'Sta toe', niet 'Sta altijd toe': zo blijft het onderdeel van Lowspeak zoals het is. {} bewaart de sleutel in een eigen onderdeel.";
 "Übernehmen" = "Gebruik sleutel";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Dit is geen sleutel van OpenAI (sk-…) of Groq (gsk_…).";
 "Diktat" = "Dicteerfunctie";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Open Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Geïnstalleerd. Modus, model, taal, nabewerking, microfoon en woordenlijst kies je in Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Niet geïnstalleerd. De standaarden van Lowspeak gelden: online met GPT Transcribe, taal wordt herkend.";
 "Transkription:" = "Transcriptie:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Taal:";
 "Nachbearbeitung:" = "Nabewerking:";
 "Mikrofon:" = "Microfoon:";
 "Vokabular:" = "Woordenlijst:";
-"Keine Begriffe" = "Geen termen";
-"1 Begriff" = "1 term";
-"{} Begriffe" = "{} termen";
 "API-Schlüssel:" = "API-sleutels:";
 "{}: im Schlüsselbund" = "{}: in de sleutelhanger";
 "{}: kein Schlüssel" = "{}: geen sleutel";

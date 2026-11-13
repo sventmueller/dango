@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Register ne navaja kontrolne vsote; prenos ne bo preverjen.";
 "Das Register wurde nicht geladen" = "Register ni bil naložen";
 "Das Terminal konnte nicht starten: {}" = "Terminala ni bilo mogoče zagnati: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Lokalni model ni nameščen. Prenesite ga v nastavitvah pod Narekovanje.";
 "Dateien" = "Datoteke";
 "Dateien: {}" = "Datoteke: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "datoteke, spletne zahteve in ukazi ostanejo v projektu in dovoljenih mapah, brez omrežja";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Prilepi";
 "Einstellungen" = "Nastavitve";
 "Einstellungen öffnen" = "Odpri nastavitve";
+"Einstellungen übernehmen" = "Prevzemi nastavitve";
 "Einstellungen …" = "Nastavitve …";
 "Endpunkt entfernen" = "Odstrani končno točko";
 "Endpunkt hinzufügen" = "Dodaj končno točko";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Procesi v ozadju: aktivnih {}, končanih {}";
 "Hinweise" = "Namigi";
 "Hooks: {} erfolgreich" = "Uspešni hooki: {}";
+"Ignorieren" = "Prezri";
 "Im Browser-Tab öffnen" = "Odpri v zavihku brskalnika";
 "Im Dock ablegen" = "Minimiraj";
 "Im Editor zeigen" = "Prikaži v urejevalniku";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopiraj";
 "Lade die Modelle von {} …" = "Nalaganje modelov ponudnika {} …";
 "Liste löschen" = "Počisti meni";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak ima lastne nastavitve narekovanja. Jih želite prevzeti?";
 "Löschen" = "Izbriši";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Označite mesto v načrtu in izberite »Komentiraj«.";
 "Minimal" = "Minimalno";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} ne ponuja peskovnika, ki bi ga bilo mogoče vklopiti tukaj";
 "{} bietet ein Modell." = "{} ponuja en model.";
 "{} bietet {} Modelle." = "Število modelov, ki jih ponuja {}: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "Storitev {} ne ponuja več modela {}. V nastavitvah pod Narekovanje izberite drug model.";
 "{} braucht zuerst einen Schlüssel." = "{} najprej potrebuje ključ.";
 "{} gibt es nicht" = "{} ne obstaja";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: ponastavitev: {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Spremeni …";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Spreminja datoteke v projektu in vpraša pred pisanjem zunaj njega ali dostopom do omrežja.";
 "Änderung nicht angewandt" = "Sprememba ni bila uveljavljena";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Spremembe v odprtih datotekah je mogoče razveljaviti za vsako datoteko posebej.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Polje narekovanja ni več odprto. Besedilo je v odložišču.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} nima dostopa do mikrofona. Dovolite ga v Nastavitvah sistema pod Zasebnost in varnost > Mikrofon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Ni ključa API za {}. Vnesite ga v nastavitvah pod Narekovanje.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Lokalni model ni nameščen. Prenesite ga v aplikaciji Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "Storitev {} ne ponuja več modela {}. V aplikaciji Lowspeak izberite drug model.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak ima ključ za {}. Ga želite uporabiti tudi za {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} ga v ta namen enkrat prebere, macOS pa prej vpraša za dovoljenje. Tam izberite »Dovoli«, ne »Vedno dovoli«: tako vnos aplikacije Lowspeak ostane nespremenjen. {} ključ shrani v lasten vnos.";
 "Übernehmen" = "Uporabi ključ";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "To ni ključ OpenAI (sk-…) ali Groq (gsk_…).";
 "Diktat" = "Narekovanje";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Odpri Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Nameščeno. Način, model, jezik, naknadno obdelavo, mikrofon in besedišče izberete v aplikaciji Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Ni nameščeno. Veljajo privzete nastavitve aplikacije Lowspeak: prek spleta z GPT Transcribe, samodejno zaznavanje jezika.";
 "Transkription:" = "Prepis:";
-"Online: {} ({})" = "Prek spleta: {} ({})";
 "Sprache:" = "Jezik:";
 "Nachbearbeitung:" = "Naknadna obdelava:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Besedišče:";
-"Keine Begriffe" = "Brez izrazov";
-"1 Begriff" = "1 izraz";
-"{} Begriffe" = "Izrazi: {}";
 "API-Schlüssel:" = "Ključi API:";
 "{}: im Schlüsselbund" = "{}: v verigi ključev";
 "{}: kein Schlüssel" = "{}: brez ključa";

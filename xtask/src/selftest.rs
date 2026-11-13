@@ -32,10 +32,12 @@ pub(crate) fn time_limit(scenario: &str) -> Duration {
 
 /// The arguments a scenario's launch gets, which go to the app's defaults before anything reads them: `a11y-rtl` runs
 /// in Arabic, right to left. macOS turns an app right to left only with `AppleTextDirection` on, which it sets with a
-/// right-to-left language of the Mac or of the app; the language alone keeps it left to right.
+/// right-to-left language of the Mac or of the app; the language alone keeps it left to right. `settings-toolbar-long`
+/// runs in Greek, whose tab labels are the longest.
 pub(crate) fn arguments(scenario: &str) -> &'static [&'static str] {
     match scenario {
         "a11y-rtl" => &["-AppleLanguages", "(ar)", "-AppleTextDirection", "YES"],
+        "settings-toolbar-long" => &["-AppleLanguages", "(el)"],
         _ => &[],
     }
 }

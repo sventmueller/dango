@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "A jegyzék nem ad meg ellenőrzőösszeget; a letöltés nincs ellenőrizve.";
 "Das Register wurde nicht geladen" = "A jegyzék nincs betöltve";
 "Das Terminal konnte nicht starten: {}" = "A terminál nem indult el: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "A helyi modell nincs telepítve. Töltse le a Beállítások Diktálás részében.";
 "Dateien" = "Fájlok";
 "Dateien: {}" = "Fájlok: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "a fájlok, a webes lekérések és a parancsok a projekten és az engedélyezett mappákon belül maradnak, hálózat nélkül";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Beillesztés";
 "Einstellungen" = "Beállítások";
 "Einstellungen öffnen" = "Beállítások megnyitása";
+"Einstellungen übernehmen" = "Beállítások átvétele";
 "Einstellungen …" = "Beállítások…";
 "Endpunkt entfernen" = "Végpont eltávolítása";
 "Endpunkt hinzufügen" = "Végpont hozzáadása";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Háttérfolyamatok: {} fut, {} befejeződött";
 "Hinweise" = "Tippek";
 "Hooks: {} erfolgreich" = "Hookok: {} sikeres";
+"Ignorieren" = "Mellőzés";
 "Im Browser-Tab öffnen" = "Megnyitás böngészőlapon";
 "Im Dock ablegen" = "Kis méret";
 "Im Editor zeigen" = "Megjelenítés a szerkesztőben";
@@ -151,6 +154,7 @@
 "Kopieren" = "Másolás";
 "Lade die Modelle von {} …" = "{} modelljeinek betöltése…";
 "Liste löschen" = "Menü törlése";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "A Lowspeak saját diktálási beállításokkal rendelkezik. Szeretné átvenni őket?";
 "Löschen" = "Törlés";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Jelöljön ki egy részt a tervben, és válassza a „Megjegyzés” lehetőséget.";
 "Minimal" = "Minimális";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "A(z) {} nem kínál itt bekapcsolható homokozót";
 "{} bietet ein Modell." = "A(z) {} egy modellt kínál.";
 "{} bietet {} Modelle." = "A(z) {} {} modellt kínál.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "A(z) {} már nem kínálja a következőt: {}. Válasszon másik modellt a Beállítások Diktálás részében.";
 "{} braucht zuerst einen Schlüssel." = "A(z) {} először kulcsot igényel.";
 "{} gibt es nicht" = "A(z) {} nem létezik";
 "{} h" = "{} ó";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: visszaállítás: {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Módosítás…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Módosítja a projekt fájljait, és rákérdez, mielőtt azon kívül írna vagy a hálózathoz férne.";
 "Änderung nicht angewandt" = "A módosítás nem lett alkalmazva";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "A megnyitott fájlok módosításai fájlonként visszavonhatók.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "A diktálás mezője már nincs nyitva. A szöveg a vágólapon van.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "A(z) {} nem fér hozzá a mikrofonhoz. Engedélyezze a Rendszerbeállítások Adatvédelem és biztonság > Mikrofon részében.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Nincs API-kulcs ehhez: {}. Adja meg a Beállítások Diktálás részében.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "A helyi modell nincs telepítve. Töltse le a Lowspeakben.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "A(z) {} már nem kínálja a következőt: {}. Válasszon másik modellt a Lowspeakben.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "A Lowspeaknek van kulcsa ehhez: {}. Átveszi a(z) {} számára?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "A(z) {} ehhez egyszer beolvassa, és a macOS előtte rákérdez. Ott az „Engedélyezés” lehetőséget válassza, ne az „Engedélyezés mindig” lehetőséget: így a Lowspeak bejegyzése változatlan marad. A(z) {} egy saját bejegyzésben tárolja a kulcsot.";
 "Übernehmen" = "Kulcs használata";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Ez nem OpenAI-kulcs (sk-…) és nem Groq-kulcs (gsk_…).";
 "Diktat" = "Diktálás";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Lowspeak megnyitása";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Telepítve. A módot, a modellt, a nyelvet, az utófeldolgozást, a mikrofont és a szókincset a Lowspeakben választja ki.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Nincs telepítve. A Lowspeak alapértékei érvényesek: online, GPT Transcribe-bal, a nyelv felismerésével.";
 "Transkription:" = "Átírás:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Nyelv:";
 "Nachbearbeitung:" = "Utófeldolgozás:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Szókincs:";
-"Keine Begriffe" = "Nincsenek kifejezések";
-"1 Begriff" = "1 kifejezés";
-"{} Begriffe" = "{} kifejezés";
 "API-Schlüssel:" = "API-kulcsok:";
 "{}: im Schlüsselbund" = "{}: a kulcskarikában";
 "{}: kein Schlüssel" = "{}: nincs kulcs";

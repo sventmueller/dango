@@ -55,6 +55,8 @@ mod debug_restore;
 mod dictation;
 #[cfg(feature = "dictation")]
 mod dictation_more;
+#[cfg(feature = "dictation")]
+mod dictation_settings;
 mod editor_commands;
 mod editor_multi;
 mod editor_scroll;
@@ -85,6 +87,7 @@ mod search_replace;
 mod servers;
 mod settings_general;
 mod settings_pages;
+mod settings_toolbar;
 mod split;
 mod stored_rules;
 mod window_commands;
@@ -155,6 +158,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "activity-actions" => activity_actions::run(),
         "settings-general" => settings_general::run(),
         "settings-pages" => settings_pages::run(),
+        "settings-toolbar" | "settings-toolbar-long" => settings_toolbar::run(),
         "window-commands" => window_commands::run(),
         "markdown-commands" => markdown_commands::run(),
         "a11y" | "a11y-rtl" => a11y::run(),

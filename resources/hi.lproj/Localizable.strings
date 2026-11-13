@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "रजिस्ट्री कोई चेकसम नहीं बताती; डाउनलोड की जाँच नहीं होगी।";
 "Das Register wurde nicht geladen" = "रजिस्ट्री लोड नहीं हुई";
 "Das Terminal konnte nicht starten: {}" = "टर्मिनल शुरू नहीं हो सका : {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "लोकल मॉडल इंस्टॉल नहीं है। इसे सेटिंग्ज़ में डिक्टेशन के अंतर्गत डाउनलोड करें।";
 "Dateien" = "फ़ाइलें";
 "Dateien: {}" = "फ़ाइलें : {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "फ़ाइलें, वेब अनुरोध और कमांड प्रोजेक्ट और अनुमत फ़ोल्डरों तक सीमित रहते हैं, नेटवर्क के बिना";
@@ -104,6 +105,7 @@
 "Einsetzen" = "पेस्ट";
 "Einstellungen" = "सेटिंग्ज़";
 "Einstellungen öffnen" = "सेटिंग्ज़ खोलें";
+"Einstellungen übernehmen" = "सेटिंग्ज़ उपयोग करें";
 "Einstellungen …" = "सेटिंग…";
 "Endpunkt entfernen" = "एंडपॉइंट हटाएँ";
 "Endpunkt hinzufügen" = "एंडपॉइंट जोड़ें";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "बैकग्राउंड प्रोसेस: {} चल रही हैं, {} पूरी हुईं";
 "Hinweise" = "संकेत";
 "Hooks: {} erfolgreich" = "हुक : {} सफल";
+"Ignorieren" = "अनदेखा करें";
 "Im Browser-Tab öffnen" = "ब्राउज़र टैब में खोलें";
 "Im Dock ablegen" = "मिनिमाइज़ करें";
 "Im Editor zeigen" = "एडिटर में दिखाएँ";
@@ -151,6 +154,7 @@
 "Kopieren" = "कॉपी";
 "Lade die Modelle von {} …" = "{} के मॉडल लोड हो रहे हैं…";
 "Liste löschen" = "मेनू साफ़ करें";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak की डिक्टेशन के लिए अपनी सेटिंग्ज़ हैं। क्या आप उनका उपयोग करना चाहते हैं?";
 "Löschen" = "डिलीट करें";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "योजना में कोई अंश चुनें, फिर “टिप्पणी करें” पर क्लिक करें।";
 "Minimal" = "न्यूनतम";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} ऐसा कोई सैंडबॉक्स नहीं देता जिसे यहाँ चालू किया जा सके";
 "{} bietet ein Modell." = "{} एक मॉडल देता है।";
 "{} bietet {} Modelle." = "{} {} मॉडल देता है।";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} अब {} उपलब्ध नहीं कराता। सेटिंग्ज़ में डिक्टेशन के अंतर्गत कोई दूसरा मॉडल चुनें।";
 "{} braucht zuerst einen Schlüssel." = "{} के लिए पहले एक कुंजी चाहिए।";
 "{} gibt es nicht" = "{} मौजूद नहीं है";
 "{} h" = "{} घं॰";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{} : रीसेट {}";
 "{}: {}" = "{} : {}";
+"Ändern …" = "बदलें…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "प्रोजेक्ट की फ़ाइलें बदलता है और उसके बाहर लिखने या नेटवर्क एक्सेस से पहले पूछता है।";
 "Änderung nicht angewandt" = "बदलाव लागू नहीं हुआ";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "खुली फ़ाइलों में किए गए बदलाव हर फ़ाइल में अलग से पहले जैसे किए जा सकते हैं।";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "डिक्टेशन वाला फ़ील्ड अब खुला नहीं है। टेक्स्ट क्लिपबोर्ड पर है।";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} के पास माइक्रोफ़ोन का ऐक्सेस नहीं है। सिस्टम सेटिंग्ज़ में गोपनीयता और सुरक्षा > माइक्रोफ़ोन के अंतर्गत इसकी अनुमति दें।";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "{} के लिए कोई API कुंजी नहीं है। इसे सेटिंग्ज़ में डिक्टेशन के अंतर्गत दर्ज करें।";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "लोकल मॉडल इंस्टॉल नहीं है। इसे Lowspeak में डाउनलोड करें।";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} अब {} उपलब्ध नहीं कराता। Lowspeak में कोई दूसरा मॉडल चुनें।";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak के पास {} की कुंजी है। क्या इसे {} के लिए भी उपयोग करें?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "इसके लिए {} इसे एक बार पढ़ता है, और macOS पहले अनुमति माँगता है। वहाँ “अनुमति दें” चुनें, “हमेशा अनुमति दें” नहीं, ताकि Lowspeak का आइटम जैसा है वैसा ही रहे। {} कुंजी को अपने अलग आइटम में रखता है।";
 "Übernehmen" = "कुंजी उपयोग करें";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "यह OpenAI (sk-…) या Groq (gsk_…) की कुंजी नहीं है।";
 "Diktat" = "डिक्टेशन";
 "Lowspeak:" = "Lowspeak :";
-"Lowspeak öffnen" = "Lowspeak खोलें";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "इंस्टॉल है। मोड, मॉडल, भाषा, पोस्ट-प्रोसेसिंग, माइक्रोफ़ोन और शब्दावली आप Lowspeak में चुनते हैं।";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "इंस्टॉल नहीं है। Lowspeak के डिफ़ॉल्ट लागू होते हैं : GPT Transcribe के साथ ऑनलाइन, भाषा अपने आप पहचानी जाती है।";
 "Transkription:" = "ट्रांसक्रिप्शन :";
-"Online: {} ({})" = "ऑनलाइन : {} ({})";
 "Sprache:" = "भाषा :";
 "Nachbearbeitung:" = "पोस्ट-प्रोसेसिंग :";
 "Mikrofon:" = "माइक्रोफ़ोन :";
 "Vokabular:" = "शब्दावली :";
-"Keine Begriffe" = "कोई शब्द नहीं";
-"1 Begriff" = "1 शब्द";
-"{} Begriffe" = "{} शब्द";
 "API-Schlüssel:" = "API कुंजियाँ :";
 "{}: im Schlüsselbund" = "{} : कीचेन में";
 "{}: kein Schlüssel" = "{} : कोई कुंजी नहीं";

@@ -152,3 +152,8 @@ pub fn answer_microphone_twice(granted: bool, answered: impl FnOnce(bool) + Send
         handler(objc2::runtime::Bool::new(!granted));
     });
 }
+
+/// The choices the engine starts its next dictation with.
+pub fn engine_choices() -> lowspeak::dictation::Choices {
+    with_hub(|hub| hub.engine().choices()).unwrap_or_else(super::choices::defaults)
+}

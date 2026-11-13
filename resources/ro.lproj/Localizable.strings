@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Registrul nu indică nicio sumă de control; descărcarea nu este verificată.";
 "Das Register wurde nicht geladen" = "Registrul nu a fost încărcat";
 "Das Terminal konnte nicht starten: {}" = "Terminalul nu a putut porni: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Modelul local nu este instalat. Descărcați-l în Configurări, la Dictare.";
 "Dateien" = "Fișiere";
 "Dateien: {}" = "Fișiere: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "fișierele, cererile web și comenzile rămân în proiect și în dosarele permise, fără rețea";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Lipiți";
 "Einstellungen" = "Configurări";
 "Einstellungen öffnen" = "Deschideți configurările";
+"Einstellungen übernehmen" = "Preluați configurările";
 "Einstellungen …" = "Configurări…";
 "Endpunkt entfernen" = "Eliminați endpointul";
 "Endpunkt hinzufügen" = "Adăugați un endpoint";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Procese în fundal: {} în execuție, {} încheiate";
 "Hinweise" = "Sugestii";
 "Hooks: {} erfolgreich" = "Hookuri reușite: {}";
+"Ignorieren" = "Ignorați";
 "Im Browser-Tab öffnen" = "Deschideți într-o filă de browser";
 "Im Dock ablegen" = "Minimizați";
 "Im Editor zeigen" = "Afișați în editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Copiați";
 "Lade die Modelle von {} …" = "Se încarcă modelele de la {}…";
 "Liste löschen" = "Goliți meniul";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak are propriile configurări de dictare. Doriți să le preluați?";
 "Löschen" = "Ștergeți";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Selectați un pasaj din plan și alegeți „Comentați”.";
 "Minimal" = "Minim";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} nu oferă un sandbox care să poată fi activat aici";
 "{} bietet ein Modell." = "{} oferă un model.";
 "{} bietet {} Modelle." = "Modele oferite de {}: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} nu mai oferă {}. Alegeți alt model în Configurări, la Dictare.";
 "{} braucht zuerst einen Schlüssel." = "{} are nevoie mai întâi de o cheie.";
 "{} gibt es nicht" = "{} nu există";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: resetare la {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Modificați…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifică fișierele proiectului și întreabă înainte de a scrie în afara lui sau de a accesa rețeaua.";
 "Änderung nicht angewandt" = "Modificarea nu a fost aplicată";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Modificările din fișierele deschise pot fi anulate pentru fiecare fișier.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Câmpul dictării nu mai este deschis. Textul se află în clipboard.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} nu are acces la microfon. Permiteți accesul în Configurări sistem > Intimitate și securitate > Microfon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Nicio cheie API pentru {}. Introduceți-o în Configurări, la Dictare.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Modelul local nu este instalat. Descărcați-l în Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} nu mai oferă {}. Alegeți alt model în Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak are o cheie pentru {}. O folosiți și pentru {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} o citește o dată în acest scop, iar macOS cere mai întâi confirmarea. Alegeți „Permiteți”, nu „Permiteți întotdeauna”: astfel, elementul Lowspeak rămâne neschimbat. {} păstrează cheia într-un element propriu.";
 "Übernehmen" = "Folosiți cheia";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Aceasta nu este o cheie OpenAI (sk-…) sau Groq (gsk_…).";
 "Diktat" = "Dictare";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Deschideți Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Instalat. Modul, modelul, limba, postprocesarea, microfonul și vocabularul le alegeți în Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Neinstalat. Se aplică valorile implicite Lowspeak: online cu GPT Transcribe, cu detectarea limbii.";
 "Transkription:" = "Transcriere:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Limbă:";
 "Nachbearbeitung:" = "Postprocesare:";
 "Mikrofon:" = "Microfon:";
 "Vokabular:" = "Vocabular:";
-"Keine Begriffe" = "Niciun termen";
-"1 Begriff" = "1 termen";
-"{} Begriffe" = "Termeni: {}";
 "API-Schlüssel:" = "Chei API:";
 "{}: im Schlüsselbund" = "{}: în portchei";
 "{}: kein Schlüssel" = "{}: fără cheie";

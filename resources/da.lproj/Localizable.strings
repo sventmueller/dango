@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Registeret angiver ingen kontrolsum; overførslen kontrolleres ikke.";
 "Das Register wurde nicht geladen" = "Registeret blev ikke indlæst";
 "Das Terminal konnte nicht starten: {}" = "Terminalen kunne ikke starte: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Den lokale model er ikke installeret. Hent den i Indstillinger under Diktering.";
 "Dateien" = "Arkiver";
 "Dateien: {}" = "Arkiver: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "arkiver, webhentninger og kommandoer bliver i projektet og de tilladte mapper, uden netværk";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Sæt ind";
 "Einstellungen" = "Indstillinger";
 "Einstellungen öffnen" = "Åbn Indstillinger";
+"Einstellungen übernehmen" = "Brug indstillinger";
 "Einstellungen …" = "Indstillinger…";
 "Endpunkt entfernen" = "Fjern slutpunkt";
 "Endpunkt hinzufügen" = "Tilføj slutpunkt";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Baggrundsprocesser: {} kører, {} afsluttet";
 "Hinweise" = "Tips";
 "Hooks: {} erfolgreich" = "Hooks: {} lykkedes";
+"Ignorieren" = "Ignorer";
 "Im Browser-Tab öffnen" = "Åbn i browserfane";
 "Im Dock ablegen" = "Minimer";
 "Im Editor zeigen" = "Vis i editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopier";
 "Lade die Modelle von {} …" = "Indlæser modellerne fra {}…";
 "Liste löschen" = "Ryd menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak har sine egne indstillinger til diktering. Vil du bruge dem?";
 "Löschen" = "Slet";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Marker en passage i planen, og vælg “Kommenter”.";
 "Minimal" = "Minimal";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} tilbyder ingen sandbox, der kan slås til her";
 "{} bietet ein Modell." = "{} tilbyder én model.";
 "{} bietet {} Modelle." = "{} tilbyder {} modeller.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} tilbyder ikke længere {}. Vælg en anden model i Indstillinger under Diktering.";
 "{} braucht zuerst einen Schlüssel." = "{} kræver først en nøgle.";
 "{} gibt es nicht" = "{} findes ikke";
 "{} h" = "{} t";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: nulstilles {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Skift…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Ændrer filer i projektet og spørger før skrivning uden for det eller netværksadgang.";
 "Änderung nicht angewandt" = "Ændringen blev ikke anvendt";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Ændringer i åbne arkiver kan fortrydes arkiv for arkiv.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Dikteringsfeltet er ikke længere åbent. Teksten ligger i udklipsholderen.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} har ikke adgang til mikrofonen. Tillad det i Systemindstillinger under Anonymitet & sikkerhed > Mikrofon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Ingen API-nøgle til {}. Angiv en i Indstillinger under Diktering.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Den lokale model er ikke installeret. Hent den i Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} tilbyder ikke længere {}. Vælg en anden model i Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak har en nøgle til {}. Vil du også bruge den til {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} læser den én gang til det, og macOS spørger først. Vælg “Tillad” dér, ikke “Tillad altid”: så forbliver Lowspeaks emne, som det er. {} gemmer nøglen i et separat emne.";
 "Übernehmen" = "Brug nøgle";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Det er ikke en nøgle fra OpenAI (sk-…) eller Groq (gsk_…).";
 "Diktat" = "Diktering";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Åbn Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Installeret. Tilstand, model, sprog, efterbehandling, mikrofon og ordforråd vælger du i Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Ikke installeret. Lowspeaks standarder gælder: online med GPT Transcribe, sproget registreres automatisk.";
 "Transkription:" = "Transskription:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Sprog:";
 "Nachbearbeitung:" = "Efterbehandling:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Ordforråd:";
-"Keine Begriffe" = "Ingen termer";
-"1 Begriff" = "1 term";
-"{} Begriffe" = "{} termer";
 "API-Schlüssel:" = "API-nøgler:";
 "{}: im Schlüsselbund" = "{}: i nøgleringen";
 "{}: kein Schlüssel" = "{}: ingen nøgle";

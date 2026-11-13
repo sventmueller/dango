@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Sổ đăng ký không nêu tổng kiểm tra; bản tải về sẽ không được kiểm tra.";
 "Das Register wurde nicht geladen" = "Sổ đăng ký chưa được tải";
 "Das Terminal konnte nicht starten: {}" = "Không thể khởi động terminal: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Mô hình cục bộ chưa được cài đặt. Hãy tải về trong Cài đặt, mục Đọc chính tả.";
 "Dateien" = "Tệp";
 "Dateien: {}" = "Tệp: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "tệp, yêu cầu web và lệnh chỉ ở trong dự án và các thư mục được phép, không có mạng";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Dán";
 "Einstellungen" = "Cài đặt";
 "Einstellungen öffnen" = "Mở Cài đặt";
+"Einstellungen übernehmen" = "Dùng cài đặt";
 "Einstellungen …" = "Cài đặt…";
 "Endpunkt entfernen" = "Xóa điểm cuối";
 "Endpunkt hinzufügen" = "Thêm điểm cuối";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Tiến trình nền: {} đang chạy, {} đã kết thúc";
 "Hinweise" = "Gợi ý";
 "Hooks: {} erfolgreich" = "Hook: {} thành công";
+"Ignorieren" = "Bỏ qua";
 "Im Browser-Tab öffnen" = "Mở trong tab trình duyệt";
 "Im Dock ablegen" = "Thu nhỏ";
 "Im Editor zeigen" = "Hiển thị trong trình soạn thảo";
@@ -151,6 +154,7 @@
 "Kopieren" = "Sao chép";
 "Lade die Modelle von {} …" = "Đang tải các mô hình của {}…";
 "Liste löschen" = "Xóa menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak có cài đặt đọc chính tả riêng. Bạn có muốn dùng các cài đặt đó không?";
 "Löschen" = "Xóa";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Hãy chọn một đoạn trong kế hoạch rồi chọn “Nhận xét”.";
 "Minimal" = "Tối thiểu";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} không cung cấp sandbox nào có thể bật ở đây";
 "{} bietet ein Modell." = "{} cung cấp một mô hình.";
 "{} bietet {} Modelle." = "{} cung cấp {} mô hình.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} không còn cung cấp {}. Hãy chọn mô hình khác trong Cài đặt, mục Đọc chính tả.";
 "{} braucht zuerst einen Schlüssel." = "{} cần khóa trước.";
 "{} gibt es nicht" = "{} không tồn tại";
 "{} h" = "{} giờ";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: đặt lại vào {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Thay đổi…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Thay đổi tệp trong dự án và hỏi trước khi ghi ra ngoài hoặc truy cập mạng.";
 "Änderung nicht angewandt" = "Chưa áp dụng thay đổi";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Có thể hoàn tác các thay đổi trong tệp đang mở theo từng tệp.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Trường đọc chính tả không còn mở. Văn bản đang ở trong bảng nhớ tạm.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} không có quyền truy cập micrô. Hãy cho phép trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Micrô.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Không có khóa API cho {}. Hãy nhập khóa trong Cài đặt, mục Đọc chính tả.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Mô hình cục bộ chưa được cài đặt. Hãy tải về trong Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} không còn cung cấp {}. Hãy chọn mô hình khác trong Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak có khóa cho {}. Dùng khóa này cho cả {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} chỉ đọc khóa này một lần cho việc đó, và macOS sẽ hỏi trước. Hãy chọn “Cho phép”, không chọn “Luôn cho phép”: như vậy mục của Lowspeak được giữ nguyên. {} lưu khóa trong một mục riêng.";
 "Übernehmen" = "Dùng khóa";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Đây không phải là khóa của OpenAI (sk-…) hoặc Groq (gsk_…).";
 "Diktat" = "Đọc chính tả";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Mở Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Đã cài đặt. Bạn chọn chế độ, mô hình, ngôn ngữ, hậu xử lý, micrô và từ vựng trong Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Chưa cài đặt. Áp dụng mặc định của Lowspeak: trực tuyến với GPT Transcribe, tự động phát hiện ngôn ngữ.";
 "Transkription:" = "Chép lại:";
-"Online: {} ({})" = "Trực tuyến: {} ({})";
 "Sprache:" = "Ngôn ngữ:";
 "Nachbearbeitung:" = "Hậu xử lý:";
 "Mikrofon:" = "Micrô:";
 "Vokabular:" = "Từ vựng:";
-"Keine Begriffe" = "Không có thuật ngữ";
-"1 Begriff" = "1 thuật ngữ";
-"{} Begriffe" = "{} thuật ngữ";
 "API-Schlüssel:" = "Khóa API:";
 "{}: im Schlüsselbund" = "{}: trong Chuỗi khóa";
 "{}: kein Schlüssel" = "{}: không có khóa";

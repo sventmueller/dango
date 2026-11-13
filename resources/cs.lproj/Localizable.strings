@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Registr neuvádí kontrolní součet; stažený soubor nebude ověřen.";
 "Das Register wurde nicht geladen" = "Registr nebyl načten";
 "Das Terminal konnte nicht starten: {}" = "Terminál se nepodařilo spustit: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Lokální model není nainstalován. Stáhněte ho v Nastavení v části Diktování.";
 "Dateien" = "Soubory";
 "Dateien: {}" = "Soubory: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "soubory, webové požadavky a příkazy zůstávají v projektu a povolených složkách, bez sítě";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Vložit";
 "Einstellungen" = "Nastavení";
 "Einstellungen öffnen" = "Otevřít Nastavení";
+"Einstellungen übernehmen" = "Převzít nastavení";
 "Einstellungen …" = "Nastavení…";
 "Endpunkt entfernen" = "Odstranit koncový bod";
 "Endpunkt hinzufügen" = "Přidat koncový bod";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Procesy na pozadí: běží {}, dokončeno {}";
 "Hinweise" = "Nápovědy";
 "Hooks: {} erfolgreich" = "Úspěšné hooky: {}";
+"Ignorieren" = "Ignorovat";
 "Im Browser-Tab öffnen" = "Otevřít v panelu prohlížeče";
 "Im Dock ablegen" = "Minimalizovat";
 "Im Editor zeigen" = "Zobrazit v editoru";
@@ -151,6 +154,7 @@
 "Kopieren" = "Zkopírovat";
 "Lade die Modelle von {} …" = "Načítání modelů z {}…";
 "Liste löschen" = "Vymazat nabídku";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak má vlastní nastavení diktování. Chcete ho převzít?";
 "Löschen" = "Smazat";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Vyberte místo v plánu a zvolte „Komentovat“.";
 "Minimal" = "Minimální";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} nenabízí sandbox, který by zde šel zapnout";
 "{} bietet ein Modell." = "{} nabízí jeden model.";
 "{} bietet {} Modelle." = "{} – dostupné modely: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} už nenabízí {}. Vyberte jiný model v Nastavení v části Diktování.";
 "{} braucht zuerst einen Schlüssel." = "{} nejprve potřebuje klíč.";
 "{} gibt es nicht" = "{} neexistuje";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: obnovení {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Změnit…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mění soubory v projektu a ptá se před zápisem mimo něj nebo přístupem k síti.";
 "Änderung nicht angewandt" = "Změna nebyla použita";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Změny v otevřených souborech lze odvolat po jednotlivých souborech.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Pole pro diktování už není otevřené. Text je ve schránce.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} nemá přístup k mikrofonu. Povolte ho v Nastavení systému v části Soukromí a zabezpečení > Mikrofon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Chybí klíč API pro {}. Zadejte ho v Nastavení v části Diktování.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Lokální model není nainstalován. Stáhněte ho v aplikaci Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} už nenabízí {}. Vyberte v aplikaci Lowspeak jiný model.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak má klíč pro {}. Použít ho i pro {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} ho k tomu jednou přečte a macOS se zeptá. Zvolte „Povolit“, ne „Vždy povolit“: položka aplikace Lowspeak tak zůstane beze změny. {} uloží klíč do vlastní položky.";
 "Übernehmen" = "Použít klíč";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Toto není klíč od OpenAI (sk-…) ani Groq (gsk_…).";
 "Diktat" = "Diktování";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Otevřít Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Nainstalováno. Režim, model, jazyk, následné úpravy, mikrofon a slovník vyberete v aplikaci Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Nenainstalováno. Platí výchozí nastavení aplikace Lowspeak: online pomocí GPT Transcribe, automatické rozpoznání jazyka.";
 "Transkription:" = "Přepis:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Jazyk:";
 "Nachbearbeitung:" = "Následné úpravy:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Slovník:";
-"Keine Begriffe" = "Žádné výrazy";
-"1 Begriff" = "1 výraz";
-"{} Begriffe" = "Výrazy: {}";
 "API-Schlüssel:" = "Klíče API:";
 "{}: im Schlüsselbund" = "{}: v klíčence";
 "{}: kein Schlüssel" = "{}: bez klíče";

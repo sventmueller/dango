@@ -2,12 +2,14 @@
 //! and the actions of the microphone buttons and the menu item.
 
 mod ask;
+pub mod choices;
 mod controls;
 mod desk;
 mod engine;
 mod fn_key;
 mod keys;
 mod microphone;
+mod models;
 #[cfg(feature = "selftest")]
 pub mod selftest;
 
@@ -38,6 +40,7 @@ use desk::{Act, Desk, Phase};
 pub use engine::LOWSPEAK_APP;
 pub use fn_key::{FnState, ask_permission as ask_fn_permission, fn_state, setting_changed as fn_setting_changed};
 pub use keys::PROVIDERS;
+pub use models::{cancel_download, download, download_failed, downloading, installed};
 
 use crate::{DictationField, written_shortcut};
 use ide_ui_common::constant;
@@ -100,6 +103,7 @@ thread_local! {
 pub struct State {
     hub: RefCell<Option<Hub>>,
     fn_key: RefCell<fn_key::FnKey>,
+    models: RefCell<models::Downloads>,
 }
 
 /// The app dictation runs in, as far as it needs it.
@@ -638,10 +642,10 @@ fn describe(failure: &Failure) -> String {
             &[provider.display_name()],
         ),
         Failure::Transcription(TranscriptionError::ModelNotAvailable) => {
-            t("Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter.").to_string()
+            t("Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat.").to_string()
         }
         Failure::Transcription(TranscriptionError::ModelRetired(model)) => tf(
-            "{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell.",
+            "{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell.",
             &[model.provider().display_name(), model.name()],
         ),
         other => other.describe(texts()),
@@ -676,9 +680,14 @@ pub fn remove_key(provider: ApiProvider) -> Result<(), String> {
     with_hub(|hub| hub.keys.remove(provider)).unwrap_or_else(|| Err("busy".into()))
 }
 
-/// Lowspeak's choices, for the settings.
-pub fn choices() -> lowspeak::dictation::Choices {
-    engine::choices()
+/// Lowspeak's choices as its menu left them, for the settings to offer taking them over.
+pub fn lowspeak_choices() -> lowspeak::dictation::Choices {
+    engine::lowspeak_choices()
+}
+
+/// The input devices connected now, for the settings.
+pub fn microphones() -> Vec<lowspeak::audio::recorder::Microphone> {
+    engine::microphones()
 }
 
 /// Lowspeak's texts in the interface language, for the settings' names of its choices.

@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "รีจิสทรีไม่ได้ระบุเช็คซัม การดาวน์โหลดจึงไม่ได้รับการตรวจสอบ";
 "Das Register wurde nicht geladen" = "ไม่ได้โหลดรีจิสทรี";
 "Das Terminal konnte nicht starten: {}" = "ไม่สามารถเริ่มเทอร์มินัลได้: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "ไม่ได้ติดตั้งโมเดลในเครื่อง ดาวน์โหลดได้ในการตั้งค่า ส่วนการป้อนตามคำบอก";
 "Dateien" = "ไฟล์";
 "Dateien: {}" = "ไฟล์: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "ไฟล์ การดึงข้อมูลจากเว็บ และคำสั่งจะอยู่ภายในโปรเจ็กต์และโฟลเดอร์ที่อนุญาต โดยไม่มีเครือข่าย";
@@ -104,6 +105,7 @@
 "Einsetzen" = "วาง";
 "Einstellungen" = "การตั้งค่า";
 "Einstellungen öffnen" = "เปิดการตั้งค่า";
+"Einstellungen übernehmen" = "ใช้การตั้งค่า";
 "Einstellungen …" = "การตั้งค่า…";
 "Endpunkt entfernen" = "เอาเอนด์พอยต์ออก";
 "Endpunkt hinzufügen" = "เพิ่มเอนด์พอยต์";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "กระบวนการเบื้องหลัง: กำลังทำงาน {}, เสร็จแล้ว {}";
 "Hinweise" = "คำแนะนำ";
 "Hooks: {} erfolgreich" = "Hook: สำเร็จ {} รายการ";
+"Ignorieren" = "ละเว้น";
 "Im Browser-Tab öffnen" = "เปิดในแถบเบราว์เซอร์";
 "Im Dock ablegen" = "ย่อ";
 "Im Editor zeigen" = "แสดงในตัวแก้ไข";
@@ -151,6 +154,7 @@
 "Kopieren" = "คัดลอก";
 "Lade die Modelle von {} …" = "กำลังโหลดโมเดลของ {}…";
 "Liste löschen" = "ล้างเมนู";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak มีการตั้งค่าการป้อนตามคำบอกของตัวเอง ต้องการใช้การตั้งค่าเหล่านั้นหรือไม่";
 "Löschen" = "ลบ";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "เลือกส่วนหนึ่งของแผนแล้วเลือก “แสดงความคิดเห็น”";
 "Minimal" = "ต่ำสุด";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} ไม่มีแซนด์บ็อกซ์ที่เปิดใช้ได้ที่นี่";
 "{} bietet ein Modell." = "{} มีโมเดล 1 รายการ";
 "{} bietet {} Modelle." = "{} มีโมเดล {} รายการ";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} เลิกให้บริการ {} แล้ว เลือกโมเดลอื่นในการตั้งค่า ส่วนการป้อนตามคำบอก";
 "{} braucht zuerst einen Schlüssel." = "{} ต้องมีคีย์ก่อน";
 "{} gibt es nicht" = "ไม่มี {}";
 "{} h" = "{} ชม.";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: รีเซ็ต {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "เปลี่ยน…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "แก้ไขไฟล์ในโปรเจกต์และถามก่อนเขียนนอกโปรเจกต์หรือเข้าถึงเครือข่าย";
 "Änderung nicht angewandt" = "ไม่ได้ใช้การเปลี่ยนแปลง";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "การเปลี่ยนแปลงในไฟล์ที่เปิดอยู่สามารถเลิกทำได้ทีละไฟล์";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "ช่องของการป้อนตามคำบอกไม่ได้เปิดอยู่แล้ว ข้อความอยู่ในคลิปบอร์ดแล้ว";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} ไม่มีสิทธิ์เข้าถึงไมโครโฟน ให้อนุญาตในการตั้งค่าระบบ > ความเป็นส่วนตัวและความปลอดภัย > ไมโครโฟน";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "ไม่มีคีย์ API สำหรับ {} ป้อนคีย์ได้ในการตั้งค่า ส่วนการป้อนตามคำบอก";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "ไม่ได้ติดตั้งโมเดลในเครื่อง ดาวน์โหลดได้ใน Lowspeak";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} เลิกให้บริการ {} แล้ว เลือกโมเดลอื่นใน Lowspeak";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak มีคีย์สำหรับ {} ใช้คีย์นี้กับ {} ด้วยหรือไม่";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} จะอ่านคีย์นี้หนึ่งครั้ง และ macOS จะถามก่อน ให้เลือก “อนุญาต” ไม่ใช่ “อนุญาตเสมอ”: รายการของ Lowspeak จะยังคงเหมือนเดิม {} จะเก็บคีย์ไว้ในรายการของตัวเอง";
 "Übernehmen" = "ใช้คีย์นี้";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "นี่ไม่ใช่คีย์ของ OpenAI (sk-…) หรือ Groq (gsk_…)";
 "Diktat" = "การป้อนตามคำบอก";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "เปิด Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "ติดตั้งแล้ว คุณเลือกโหมด โมเดล ภาษา การประมวลผลภายหลัง ไมโครโฟน และคำศัพท์ได้ใน Lowspeak";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "ไม่ได้ติดตั้ง ใช้ค่าเริ่มต้นของ Lowspeak: ออนไลน์ด้วย GPT Transcribe และตรวจหาภาษาอัตโนมัติ";
 "Transkription:" = "การถอดเสียง:";
-"Online: {} ({})" = "ออนไลน์: {} ({})";
 "Sprache:" = "ภาษา:";
 "Nachbearbeitung:" = "การประมวลผลภายหลัง:";
 "Mikrofon:" = "ไมโครโฟน:";
 "Vokabular:" = "คำศัพท์:";
-"Keine Begriffe" = "ไม่มีคำศัพท์";
-"1 Begriff" = "1 คำ";
-"{} Begriffe" = "{} คำ";
 "API-Schlüssel:" = "คีย์ API:";
 "{}: im Schlüsselbund" = "{}: อยู่ในพวงกุญแจ";
 "{}: kein Schlüssel" = "{}: ไม่มีคีย์";

@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "המרשם אינו מציין סכום ביקורת; ההורדה לא תיבדק.";
 "Das Register wurde nicht geladen" = "המרשם לא נטען";
 "Das Terminal konnte nicht starten: {}" = "לא ניתן היה להפעיל את המסוף: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "המודל המקומי אינו מותקן. יש להוריד אותו בהגדרות, תחת ״הכתבה״.";
 "Dateien" = "קבצים";
 "Dateien: {}" = "קבצים: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "קבצים, בקשות אינטרנט ופקודות נשארים בפרויקט ובתיקיות המורשות, ללא רשת";
@@ -104,6 +105,7 @@
 "Einsetzen" = "הדבקה";
 "Einstellungen" = "הגדרות";
 "Einstellungen öffnen" = "פתיחת ההגדרות";
+"Einstellungen übernehmen" = "שימוש בהגדרות";
 "Einstellungen …" = "הגדרות…";
 "Endpunkt entfernen" = "הסרת נקודת הקצה";
 "Endpunkt hinzufügen" = "הוספת נקודת קצה";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "תהליכים ברקע: {} פועלים, {} הסתיימו";
 "Hinweise" = "רמזים";
 "Hooks: {} erfolgreich" = "מספר ה-Hooks שהצליחו: {}";
+"Ignorieren" = "התעלמות";
 "Im Browser-Tab öffnen" = "פתיחה בכרטיסיית הדפדפן";
 "Im Dock ablegen" = "מזעור";
 "Im Editor zeigen" = "הצגה בעורך";
@@ -151,6 +154,7 @@
 "Kopieren" = "העתקה";
 "Lade die Modelle von {} …" = "טוען את המודלים של {}…";
 "Liste löschen" = "ניקוי התפריט";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "ל-Lowspeak יש הגדרות הכתבה משלו. להשתמש בהן?";
 "Löschen" = "מחיקה";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "יש לסמן קטע בתוכנית ולבחור ״הוספת הערה״.";
 "Minimal" = "מינימלי";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "‏{} אינו מציע ארגז חול שניתן להפעיל כאן";
 "{} bietet ein Modell." = "‏{} מציע מודל אחד.";
 "{} bietet {} Modelle." = "‏{} מציע {} מודלים.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "‏{} כבר אינו מציע את {}. יש לבחור מודל אחר בהגדרות, תחת ״הכתבה״.";
 "{} braucht zuerst einen Schlüssel." = "‏{} דורש מפתח תחילה.";
 "{} gibt es nicht" = "‏{} לא קיים";
 "{} h" = "{} שע׳";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "‏{}: איפוס ב-{}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "שינוי…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "משנה קבצים בפרויקט ושואל לפני כתיבה מחוצה לו או גישה לרשת.";
 "Änderung nicht angewandt" = "השינוי לא הוחל";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "ניתן לבטל שינויים בקבצים פתוחים בכל קובץ בנפרד.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "שדה ההכתבה כבר אינו פתוח. המלל נמצא בלוח העריכה.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "ל-{} אין גישה למיקרופון. ניתן לאשר אותה בהגדרות המערכת, תחת ״פרטיות ואבטחה״ > ״מיקרופון״.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "אין מפתח API עבור {}. יש להזין אותו בהגדרות, תחת ״הכתבה״.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "המודל המקומי אינו מותקן. יש להוריד אותו ב-Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "‏{} כבר אינו מציע את {}. יש לבחור מודל אחר ב-Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "ל-Lowspeak יש מפתח עבור {}. להשתמש בו גם עבור {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "לשם כך {} יקרא אותו פעם אחת, ו-macOS יבקש אישור. יש לבחור שם ״אישור״, לא ״הרשאה קבועה״: כך הפריט של Lowspeak יישאר כפי שהוא. {} שומר את המפתח בפריט משלו.";
 "Übernehmen" = "שימוש במפתח";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "זה אינו מפתח של OpenAI (sk-…)‎ או של Groq (gsk_…)‎.";
 "Diktat" = "הכתבה";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "פתיחת Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "מותקן. את המצב, המודל, השפה, העיבוד לאחר התמלול, המיקרופון ואוצר המילים בוחרים ב-Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "לא מותקן. חלות ברירות המחדל של Lowspeak: באופן מקוון עם GPT Transcribe, זיהוי שפה אוטומטי.";
 "Transkription:" = "תמלול:";
-"Online: {} ({})" = "מקוון: {} ({})";
 "Sprache:" = "שפה:";
 "Nachbearbeitung:" = "עיבוד לאחר התמלול:";
 "Mikrofon:" = "מיקרופון:";
 "Vokabular:" = "אוצר מילים:";
-"Keine Begriffe" = "אין מונחים";
-"1 Begriff" = "מונח אחד";
-"{} Begriffe" = "{} מונחים";
 "API-Schlüssel:" = "מפתחות API:";
 "{}: im Schlüsselbund" = "‏{}: בצרור המפתחות";
 "{}: kein Schlüssel" = "‏{}: אין מפתח";

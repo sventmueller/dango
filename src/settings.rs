@@ -5,7 +5,7 @@ mod agents;
 mod ci;
 mod commit_message;
 #[cfg(feature = "dictation")]
-mod dictation;
+pub(crate) mod dictation;
 mod editor;
 mod list_bar;
 mod predict;
@@ -19,11 +19,11 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSGridView, NSPopUpButton, NSStepper,
-    NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem, NSTextField, NSView, NSViewController, NSWindow,
-    NSWindowStyleMask,
+    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSFontAttributeName, NSGridView,
+    NSPopUpButton, NSStepper, NSStringDrawing, NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem,
+    NSTextField, NSView, NSViewController, NSWindow, NSWindowStyleMask,
 };
-use objc2_foundation::NSObjectProtocol;
+use objc2_foundation::{NSDictionary, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
 use crate::util::{guarded, label, ns, set_action, symbol};
@@ -413,51 +413,23 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
     let controller = SettingsController::new(mtm);
     let tabs = NSTabViewController::new(mtm);
     tabs.setTabStyle(NSTabViewControllerTabStyle::Toolbar);
-    let general = NSViewController::new(mtm);
-    let view = general_view(mtm, &controller);
-    general.setPreferredContentSize(view.fittingSize());
-    general.setView(&view);
-    general.setTitle(Some(&ns(t("Allgemein"))));
-    let item = NSTabViewItem::tabViewItemWithViewController(&general);
-    item.setLabel(&ns(t("Allgemein")));
-    item.setImage(symbol("gearshape", t("Allgemein")).as_deref());
-    tabs.addTabViewItem(&item);
-    let ci = NSViewController::new(mtm);
-    let view = controller.ivars().ci.view();
-    ci.setPreferredContentSize(view.fittingSize());
-    ci.setView(&view);
-    ci.setTitle(Some(&ns(t("CI"))));
-    let item = NSTabViewItem::tabViewItemWithViewController(&ci);
-    item.setLabel(&ns(t("CI")));
-    item.setImage(symbol("checkmark.seal", t("CI")).as_deref());
-    tabs.addTabViewItem(&item);
-    let agents = NSViewController::new(mtm);
-    let view = controller.ivars().agents.view();
-    agents.setPreferredContentSize(view.fittingSize());
-    agents.setView(&view);
-    agents.setTitle(Some(&ns(t("Agenten"))));
-    let item = NSTabViewItem::tabViewItemWithViewController(&agents);
-    item.setLabel(&ns(t("Agenten")));
-    item.setImage(symbol("person.2", t("Agenten")).as_deref());
-    tabs.addTabViewItem(&item);
-    let agent = NSViewController::new(mtm);
-    let view = controller.ivars().agent.view();
-    agent.setPreferredContentSize(view.frame().size);
-    agent.setView(&view);
-    agent.setTitle(Some(&ns(t("Eigener Agent"))));
-    let item = NSTabViewItem::tabViewItemWithViewController(&agent);
-    item.setLabel(&ns(t("Eigener Agent")));
-    item.setImage(symbol("sparkles", t("Eigener Agent")).as_deref());
-    tabs.addTabViewItem(&item);
-    add_tab(
-        &tabs,
-        &controller.ivars().servers.view(),
-        t("Sprachserver"),
-        "curlybraces",
-    );
+    let mut pages = vec![
+        Page::of(general_view(mtm, &controller), t("Allgemein"), "gearshape"),
+        Page::of(controller.ivars().ci.view(), t("CI"), "checkmark.seal"),
+        Page::of(controller.ivars().agents.view(), t("Agenten"), "person.2"),
+        Page {
+            sized: true,
+            ..Page::of(controller.ivars().agent.view(), t("Eigener Agent"), "sparkles")
+        },
+        Page::of(controller.ivars().servers.view(), t("Sprachserver"), "curlybraces"),
+    ];
     #[cfg(feature = "dictation")]
-    add_tab(&tabs, &controller.ivars().dictation.view(), t("Diktat"), "mic");
-    add_tab(&tabs, &predict::view(mtm), t("Vorhersage"), "text.cursor");
+    pages.push(Page::of(controller.ivars().dictation.view(), t("Diktat"), "mic"));
+    pages.push(Page::of(predict::view(mtm), t("Vorhersage"), "text.cursor"));
+    let width = toolbar_width(&pages.iter().map(|page| page.title).collect::<Vec<_>>());
+    for page in &pages {
+        add_tab(&tabs, page, width);
+    }
     let window = NSWindow::windowWithContentViewController(&tabs);
     window.setStyleMask(NSWindowStyleMask::Titled | NSWindowStyleMask::Closable);
     // SAFETY: Switching it off keeps AppKit from releasing the window behind Rust's back; the thread-local owns it.
@@ -466,15 +438,80 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
     (window, controller)
 }
 
-/// A tab of `view`, named `title` with the symbol `image`.
-fn add_tab(tabs: &NSTabViewController, view: &NSView, title: &str, image: &str) {
-    let page = NSViewController::new(tabs.mtm());
-    page.setPreferredContentSize(view.fittingSize());
-    page.setView(view);
-    page.setTitle(Some(&ns(title)));
-    let item = NSTabViewItem::tabViewItemWithViewController(&page);
-    item.setLabel(&ns(title));
-    item.setImage(symbol(image, title).as_deref());
+/// A tab of the settings window before it is added.
+struct Page {
+    view: Retained<NSView>,
+    title: &'static str,
+    image: &'static str,
+    /// Whether the view has the size of its frame rather than one its constraints give.
+    sized: bool,
+}
+
+impl Page {
+    fn of(view: Retained<NSView>, title: &'static str, image: &'static str) -> Page {
+        Page {
+            view,
+            title,
+            image,
+            sized: false,
+        }
+    }
+}
+
+/// How much wider than its label a toolbar item of the settings style is, and how narrow it gets at least; read from
+/// macOS 26's layout with a point to spare.
+const ITEM_PADDING: f64 = 14.0;
+const ITEM_MIN: f64 = 56.0;
+/// The toolbar's margin at each end, which macOS keeps at about 7 points, with room to spare.
+const TOOLBAR_MARGIN: f64 = 12.0;
+
+/// The content width at which the toolbar shows an item for each of `titles` without moving any into its overflow
+/// menu.
+fn toolbar_width(titles: &[&str]) -> f64 {
+    let font = NSFont::systemFontOfSize(NSFont::smallSystemFontSize());
+    let attributes = NSDictionary::<NSString, AnyObject>::from_retained_objects(
+        &[crate::util::constant!(NSFontAttributeName)],
+        &[font.into()],
+    );
+    let items: f64 = titles
+        .iter()
+        // SAFETY: The attributes hold a font, as the method expects.
+        .map(|title| unsafe { ns(title).sizeWithAttributes(Some(&attributes)) }.width)
+        .map(|width| (width + ITEM_PADDING).max(ITEM_MIN))
+        .sum();
+    items + 2.0 * TOOLBAR_MARGIN
+}
+
+/// Adds `page` as a tab whose content is at least `width` wide; a narrower view keeps its size, centred.
+fn add_tab(tabs: &NSTabViewController, page: &Page, width: f64) {
+    let mtm = tabs.mtm();
+    let view = &page.view;
+    let size = view.frame().size;
+    let content = NSView::new(mtm);
+    content.addSubview(view);
+    view.setTranslatesAutoresizingMaskIntoConstraints(false);
+    let mut constraints = vec![
+        view.topAnchor().constraintEqualToAnchor(&content.topAnchor()),
+        view.bottomAnchor().constraintEqualToAnchor(&content.bottomAnchor()),
+        view.centerXAnchor().constraintEqualToAnchor(&content.centerXAnchor()),
+        view.leadingAnchor()
+            .constraintGreaterThanOrEqualToAnchor(&content.leadingAnchor()),
+        content.widthAnchor().constraintGreaterThanOrEqualToConstant(width),
+    ];
+    if page.sized {
+        constraints.push(view.widthAnchor().constraintEqualToConstant(size.width));
+        constraints.push(view.heightAnchor().constraintEqualToConstant(size.height));
+    }
+    for constraint in constraints {
+        constraint.setActive(true);
+    }
+    let controller = NSViewController::new(mtm);
+    controller.setPreferredContentSize(content.fittingSize());
+    controller.setView(&content);
+    controller.setTitle(Some(&ns(page.title)));
+    let item = NSTabViewItem::tabViewItemWithViewController(&controller);
+    item.setLabel(&ns(page.title));
+    item.setImage(symbol(page.image, page.title).as_deref());
     tabs.addTabViewItem(&item);
 }
 
@@ -485,6 +522,17 @@ pub fn dictation_keys() -> Vec<String> {
         cell.borrow()
             .as_ref()
             .map(|(_, controller)| dictation::key_lines(&controller.ivars().dictation))
+            .unwrap_or_default()
+    })
+}
+
+/// Whether the open dictation tab offers Lowspeak's choices and shows a missing model's download, for the self-test.
+#[cfg(all(feature = "selftest", feature = "dictation"))]
+pub fn dictation_rows() -> (bool, bool) {
+    with_window(|cell| {
+        cell.borrow()
+            .as_ref()
+            .map(|(_, controller)| dictation::rows_shown(&controller.ivars().dictation))
             .unwrap_or_default()
     })
 }

@@ -11,8 +11,8 @@ its own (R3).
 |---|---|---|
 | Recording | `audio::recorder::Recorder` (cpal), driven by `app::capture::Capture` on a thread of its own, since opening a Bluetooth microphone takes up to two seconds; `Captured::into_16k` resamples after the stop | the same thread; `capture` is private to `app` today |
 | Pipeline | `transcription::service::run(Job, &Services)` on a worker thread: VAD, preprocessing, online (OpenAI, Groq) with local fallback, or local (Whisper, Parakeet), phantom removal, vocabulary spelling, optional LLM post-processing | used as it is |
-| Local models | `transcription::local::LocalTranscriber` owns the loaded model on one thread; `model_store` finds models by path in `~/Library/Application Support/{Lowspeak,FluidAudio}/Models` | the same paths, so models Lowspeak downloaded are used; Dango downloads nothing |
-| Settings | `config::settings::Settings::load` and `config::vocabulary::load` read `NSUserDefaults.standardUserDefaults` | in Dango that is Dango's own domain: read the suite `com.lowspeak.app` instead (`Settings::load_from` is public, `vocabulary::load_from` is not) |
+| Local models | `transcription::local::LocalTranscriber` owns the loaded model on one thread; `model_store` finds models by path in `~/Library/Application Support/{Lowspeak,FluidAudio}/Models` and downloads them from Hugging Face | the same paths, so either app uses what the other downloaded; Dango downloads with `model_store::download` (E103) |
+| Settings | `config::settings::Settings::load` and `config::vocabulary::load` read `NSUserDefaults.standardUserDefaults` | Dango keeps its own choices in its settings file (E103) and hands them to `Dictation::with_parts`; the suite `com.lowspeak.app` is read only to offer taking Lowspeak's choices over |
 | API keys | `Api::SYSTEM` reads the keychain items of service `com.lowspeak.app` | another app reading them makes macOS ask each time, and "Always Allow" would change Lowspeak's item (R4): Dango passes a key store of its own |
 | Texts | `i18n::texts(Language)`, 35 languages, picked by the dictation language or the macOS order; `StartError` and `TranscriptionError` have `user_facing_description(&Texts)` | errors in Dango's interface language: a lookup by language tag (the mapping `from_locale` is private) |
 | Logs | `util::paths::log_dir()`: `LOWSPEAK_LOG_DIR` or Lowspeak's folder | an own directory without setting an environment variable at run time (`set_var` is unsafe in edition 2024) |
@@ -94,7 +94,8 @@ pub fn lowspeak_has_key(provider: ApiProvider) -> bool;
 pub fn read_lowspeak_key(provider: ApiProvider) -> anyhow::Result<Option<String>>;
 ```
 
-Inside, `Dictation` reuses `app::capture::Capture` (made `pub(crate)`), `service::run` with `Services { local:
+`Dictation::new` reads Lowspeak's suite; Dango instead builds its `Dictation` with `with_parts` from lowspeak's
+`Microphone` and `Pipeline` and a `choices` function that reads Dango's settings (E103). Inside, `Dictation` reuses `app::capture::Capture` (made `pub(crate)`), `service::run` with `Services { local:
 LocalTranscriber, models: Disk, api: Api { keys: host.keys, http: UrlSession, cancel, retry_delay }, lexicon:
 SpellChecker }`, and reads `Settings::load_from` and `vocabulary::load_from` (made public) on the suite at each start,
 so a change in Lowspeak's menu counts from the next dictation. Results are handed out in recording order with their
@@ -173,20 +174,31 @@ Other changes in lowspeak:
   - otherwise, or on "Selbst eingeben …": a field for the key;
   - "Nicht jetzt": this dictation falls back to an installed local model if there is one (as Lowspeak does), else it
     fails with lowspeak's "no key" text. The question comes again on the next dictation only after a restart.
-- Settings ▸ Diktat shows per provider whether Dango keeps a key (remove it), only Lowspeak does (take it over, with
-  the same question as above) or neither (enter one).
+- Settings ▸ Diktat shows per provider whether Dango keeps a key (change or remove it), only Lowspeak does (take it
+  over, with the same question as above, or enter one there) or neither (enter one).
 
-### Settings and models
-- Mode, models, language, post-processing, microphone and vocabulary are Lowspeak's (suite `com.lowspeak.app`,
-  read-only). Settings ▸ Diktat shows them and opens Lowspeak to change them; without Lowspeak installed the defaults
-  apply (online, gpt-transcribe, auto language) and local models are offered only once Lowspeak downloaded one.
-- Dango downloads and deletes no models.
+### Settings and models (E103)
+- Mode and model, language, post-processing, microphone and vocabulary are Dango's own, set in Settings ▸ Diktat
+  without Lowspeak: one menu for transcription (OpenAI's and Groq's online models, then the local Whisper and Parakeet
+  models, marked when not on this Mac), menus for language, post-processing and the microphone (system default, the
+  input devices connected now, a chosen one that is not), and a token field for the vocabulary. Labels are lowspeak's
+  own texts in the interface language.
+- They live in the entry `dictation` of the versioned `settings.json` (E26), under lowspeak's stored names
+  (`crates/ide-ui-dictation/src/hub/choices.rs`); an unknown name falls back alone to Lowspeak's default, and an entry
+  nobody wrote gives Lowspeak's defaults (online with GPT Transcribe, language detected). The entry is additive, so
+  the file needs no migration. Each dictation reads it when it starts.
+- If Lowspeak's choices in the suite `com.lowspeak.app` differ from those defaults, the tab offers once to take them
+  over ("Einstellungen übernehmen" or "Ignorieren"); after either answer the suite is not read again.
+- A chosen local model that is not on this Mac shows a download button below the menu. It runs lowspeak's
+  `model_store::download` on a thread of its own, which fetches the files from Hugging Face into the folders Lowspeak
+  uses (Whisper in `Lowspeak/Models/whisper`, Parakeet in FluidAudio's cache), with progress and Abbrechen; a failure
+  shows lowspeak's text and goes to the log. Dango deletes no models.
 
 ### Errors, logs, quitting
 - Failures show in the field's status line in the interface language: `texts_for_locale` with the language of the
   `Localizable.strings` Dango loaded. No alerts during dictation, as in Lowspeak. Four of lowspeak's texts name
   Lowspeak or its menu where the user acts (no microphone access, no key, model not installed, model retired); for
-  those Dango has its own.
+  those Dango has its own, which point to Settings ▸ Diktat.
 - lowspeak's logs go to `<Dango's logs>/dictation/` (`use_log_dir`).
 - `applicationWillTerminate` calls `Dictation::shutdown(3 s)`.
 
@@ -197,7 +209,8 @@ Other changes in lowspeak:
   `lowspeak_has_key`).
 - Self-test scenario `dictation` (feature on): a fake engine behind the same seam delivers text; checks insertion at
   the cursor in the editor and the composer, cancel with Esc, the states of the buttons, an error text in the UI
-  language, the key question. Pictures in light and dark.
+  language, the key question, and the settings tab: Lowspeak's choices taken over, each control written to the
+  settings file and read by the engine, a missing model downloaded. Pictures in light and dark.
 
 ## Decisions
 - **E46** The cargo feature `dictation` is on in the debug app (`cargo xtask run`), in release bundles and in the
@@ -205,3 +218,5 @@ Other changes in lowspeak:
 - **E47** The shortcut is ⌃⌥D, keymap command `dictation.toggle`.
 - **E48** fn is on by default; the Accessibility permission is asked for only after the first dictation, never at
   launch, and if refused fn stays off with a note in Settings ▸ Diktat, where it can be asked for again.
+- **E103** The choices are Dango's own, set in Settings ▸ Diktat without Lowspeak; Lowspeak's are offered for taking
+  over once, and a missing local model is downloaded from the tab with lowspeak's model store.

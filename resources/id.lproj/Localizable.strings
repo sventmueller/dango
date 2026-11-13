@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Registri tidak menyebutkan checksum; unduhan tidak diverifikasi.";
 "Das Register wurde nicht geladen" = "Registri tidak dimuat";
 "Das Terminal konnte nicht starten: {}" = "Terminal tidak dapat dimulai: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Model lokal tidak terinstal. Unduh di Pengaturan bagian Dikte.";
 "Dateien" = "File";
 "Dateien: {}" = "File: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "file, permintaan web, dan perintah tetap berada di proyek dan folder yang diizinkan, tanpa jaringan";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Tempel";
 "Einstellungen" = "Pengaturan";
 "Einstellungen öffnen" = "Buka Pengaturan";
+"Einstellungen übernehmen" = "Gunakan Pengaturan";
 "Einstellungen …" = "Pengaturan…";
 "Endpunkt entfernen" = "Hapus Endpoint";
 "Endpunkt hinzufügen" = "Tambahkan Endpoint";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Proses latar belakang: {} berjalan, {} selesai";
 "Hinweise" = "Petunjuk";
 "Hooks: {} erfolgreich" = "Hook: {} berhasil";
+"Ignorieren" = "Abaikan";
 "Im Browser-Tab öffnen" = "Buka di Tab Browser";
 "Im Dock ablegen" = "Minikan";
 "Im Editor zeigen" = "Tampilkan di editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Salin";
 "Lade die Modelle von {} …" = "Memuat model {}…";
 "Liste löschen" = "Bersihkan Menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak memiliki pengaturan dikte sendiri. Gunakan pengaturan tersebut?";
 "Löschen" = "Hapus";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Pilih bagian dari rencana, lalu pilih “Komentari”.";
 "Minimal" = "Minimal";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} tidak menyediakan sandbox yang dapat diaktifkan di sini";
 "{} bietet ein Modell." = "{} menyediakan satu model.";
 "{} bietet {} Modelle." = "{} menyediakan {} model.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} tidak lagi menyediakan {}. Pilih model lain di Pengaturan bagian Dikte.";
 "{} braucht zuerst einen Schlüssel." = "{} memerlukan kunci terlebih dahulu.";
 "{} gibt es nicht" = "{} tidak ada";
 "{} h" = "{} jam";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: direset {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Ubah…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Mengubah file di proyek dan bertanya sebelum menulis di luarnya atau mengakses jaringan.";
 "Änderung nicht angewandt" = "Perubahan Tidak Diterapkan";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Perubahan pada file yang terbuka dapat diurungkan per file.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Kolom dikte sudah tidak terbuka. Teks ada di papan klip.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} tidak memiliki akses ke mikrofon. Izinkan di Pengaturan Sistem > Privasi & Keamanan > Mikrofon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Tidak ada kunci API untuk {}. Masukkan di Pengaturan bagian Dikte.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Model lokal tidak terinstal. Unduh di Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} tidak lagi menyediakan {}. Pilih model lain di Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak memiliki kunci untuk {}. Gunakan juga untuk {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} membacanya sekali untuk itu, dan macOS akan bertanya dahulu. Pilih “Izinkan”, bukan “Selalu Izinkan”: dengan begitu entri Lowspeak tetap seperti adanya. {} menyimpan kunci di entrinya sendiri.";
 "Übernehmen" = "Gunakan Kunci";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Ini bukan kunci dari OpenAI (sk-…) atau Groq (gsk_…).";
 "Diktat" = "Dikte";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Buka Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Terinstal. Mode, model, bahasa, pascapemrosesan, mikrofon, dan kosakata dipilih di Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Tidak terinstal. Berlaku bawaan Lowspeak: online dengan GPT Transcribe, bahasa dikenali otomatis.";
 "Transkription:" = "Transkripsi:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Bahasa:";
 "Nachbearbeitung:" = "Pascapemrosesan:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Kosakata:";
-"Keine Begriffe" = "Tidak ada istilah";
-"1 Begriff" = "1 istilah";
-"{} Begriffe" = "{} istilah";
 "API-Schlüssel:" = "Kunci API:";
 "{}: im Schlüsselbund" = "{}: di Rantai Kunci";
 "{}: kein Schlüssel" = "{}: tidak ada kunci";

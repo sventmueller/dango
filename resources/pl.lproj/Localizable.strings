@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Rejestr nie podaje sumy kontrolnej; pobrany plik nie jest sprawdzany.";
 "Das Register wurde nicht geladen" = "Rejestr nie został wczytany";
 "Das Terminal konnte nicht starten: {}" = "Nie można uruchomić terminala: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Model lokalny nie jest zainstalowany. Pobierz go w Ustawieniach w sekcji Dyktowanie.";
 "Dateien" = "Pliki";
 "Dateien: {}" = "Pliki: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "pliki, zapytania sieciowe i polecenia pozostają w projekcie i dozwolonych folderach, bez sieci";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Wklej";
 "Einstellungen" = "Ustawienia";
 "Einstellungen öffnen" = "Otwórz Ustawienia";
+"Einstellungen übernehmen" = "Użyj ustawień";
 "Einstellungen …" = "Ustawienia…";
 "Endpunkt entfernen" = "Usuń punkt końcowy";
 "Endpunkt hinzufügen" = "Dodaj punkt końcowy";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Procesy w tle: uruchomione {}, zakończone {}";
 "Hinweise" = "Wskazówki";
 "Hooks: {} erfolgreich" = "Hooki: {} zakończone powodzeniem";
+"Ignorieren" = "Ignoruj";
 "Im Browser-Tab öffnen" = "Otwórz w karcie przeglądarki";
 "Im Dock ablegen" = "Minimalizuj okno";
 "Im Editor zeigen" = "Pokaż w edytorze";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopiuj";
 "Lade die Modelle von {} …" = "Wczytywanie modeli z {}…";
 "Liste löschen" = "Wymaż menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak ma własne ustawienia dyktowania. Czy chcesz ich użyć?";
 "Löschen" = "Usuń";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Zaznacz fragment planu i wybierz „Skomentuj”.";
 "Minimal" = "Minimalny";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} nie oferuje piaskownicy, którą można tu włączyć";
 "{} bietet ein Modell." = "{} oferuje jeden model.";
 "{} bietet {} Modelle." = "{} – liczba modeli: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} nie oferuje już {}. Wybierz inny model w Ustawieniach w sekcji Dyktowanie.";
 "{} braucht zuerst einen Schlüssel." = "{} najpierw potrzebuje klucza.";
 "{} gibt es nicht" = "{} nie istnieje";
 "{} h" = "{} godz.";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: reset {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Zmień…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Zmienia pliki w projekcie i pyta przed zapisem poza nim lub dostępem do sieci.";
 "Änderung nicht angewandt" = "Zmiana nie została zastosowana";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Zmiany w otwartych plikach można cofnąć dla każdego pliku osobno.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Pole dyktowania nie jest już otwarte. Tekst jest w schowku.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} nie ma dostępu do mikrofonu. Pozwól na to w Ustawieniach systemowych > Prywatność i ochrona > Mikrofon.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Brak klucza API dla {}. Wpisz go w Ustawieniach w sekcji Dyktowanie.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Model lokalny nie jest zainstalowany. Pobierz go w Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} nie oferuje już {}. Wybierz inny model w Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak ma klucz dla {}. Użyć go też dla {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} odczyta go w tym celu jeden raz, a macOS najpierw zapyta. Wybierz tam „Pozwól”, nie „Zawsze pozwalaj”: wtedy wpis Lowspeak pozostanie bez zmian. {} przechowuje klucz we własnym wpisie.";
 "Übernehmen" = "Użyj klucza";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "To nie jest klucz OpenAI (sk-…) ani Groq (gsk_…).";
 "Diktat" = "Dyktowanie";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Otwórz Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Zainstalowano. Tryb, model, język, przetwarzanie końcowe, mikrofon i słownictwo wybierasz w Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Nie zainstalowano. Obowiązują ustawienia domyślne Lowspeak: online z GPT Transcribe, rozpoznawanie języka.";
 "Transkription:" = "Transkrypcja:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Język:";
 "Nachbearbeitung:" = "Przetwarzanie końcowe:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Słownictwo:";
-"Keine Begriffe" = "Brak terminów";
-"1 Begriff" = "1 termin";
-"{} Begriffe" = "Terminy: {}";
 "API-Schlüssel:" = "Klucze API:";
 "{}: im Schlüsselbund" = "{}: w pęku kluczy";
 "{}: kein Schlüssel" = "{}: brak klucza";

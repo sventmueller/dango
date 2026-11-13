@@ -1,12 +1,18 @@
-//! Lowspeak's side of dictation: its recorder, pipeline, models and choices with the app's own keys and log folder,
+//! Lowspeak's side of dictation: its recorder, pipeline and models with the app's own choices, keys and log folder,
 //! or in the self-test a microphone and an engine that play what the scenario prepared.
 
+use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
-use lowspeak::dictation::{Choices, Dictation, Event, Host, LOWSPEAK_SUITE};
-use lowspeak::models::ApiProvider;
+use lowspeak::app::policy::MAX_HANDS_FREE_RECORDING;
+use lowspeak::audio::recorder::Microphone as Device;
+use lowspeak::dictation::{Choices, Dictation, Event, LOWSPEAK_SUITE, Microphone, Parts, Pipeline};
+use lowspeak::models::{ApiProvider, LocalModel};
+use lowspeak::transcription::model_store;
 use lowspeak::transcription::postprocess::ActiveApp;
 
+use super::choices;
 use super::keys::{Keys, Shared};
 
 /// Lowspeak's bundle identifier, which also names the defaults suite its choices are in.
@@ -18,25 +24,56 @@ pub fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::dictation(keys, events);
     }
-    let host = Host {
-        keys: Box::new(Shared(keys)),
-        log_dir: Some(ide_core::paths::logs_dir().join("dictation")),
-        app: ActiveApp {
-            bundle_id: Some(ide_core::paths::identity().to_string()),
-            name: Some(ide_product::NAME.to_string()),
-            process_id: i32::try_from(std::process::id()).ok(),
-        },
+    lowspeak::util::paths::use_log_dir(ide_core::paths::logs_dir().join("dictation"));
+    let app = ActiveApp {
+        bundle_id: Some(ide_core::paths::identity().to_string()),
+        name: Some(ide_product::NAME.to_string()),
+        process_id: i32::try_from(std::process::id()).ok(),
     };
-    Dictation::new(host, events)
+    let parts = Parts {
+        recorder: Box::new(Microphone::new()),
+        transcriber: Box::new(Pipeline::new(Box::new(Shared(Arc::clone(&keys))), app)),
+        choices: Box::new(choices::current),
+        keys: Box::new(Shared(keys)),
+        limit: MAX_HANDS_FREE_RECORDING,
+    };
+    Dictation::with_parts(parts, events)
 }
 
-/// Lowspeak's choices as its menu left them.
-pub fn choices() -> Choices {
+/// Lowspeak's choices as its menu left them, to take over.
+pub fn lowspeak_choices() -> Choices {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        return fake::choices();
+        return fake::lowspeak_choices();
     }
     Choices::of_lowspeak()
+}
+
+/// The input devices connected now.
+pub fn microphones() -> Vec<Device> {
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        return fake::microphones();
+    }
+    lowspeak::audio::recorder::microphones()
+}
+
+/// The local models on this Mac.
+pub fn installed_models() -> HashSet<LocalModel> {
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        return fake::installed_models();
+    }
+    model_store::installed_models()
+}
+
+/// Downloads `model` into the folders Lowspeak uses, reporting the fraction done; ends early once `cancel` is set.
+pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), String> {
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        return fake::download(model, cancel, progress);
+    }
+    model_store::download(model, cancel, progress).map_err(|error| format!("{error:#}"))
 }
 
 /// Whether Lowspeak keeps a key for `provider`, found without reading it.
@@ -61,13 +98,13 @@ pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String
 /// queued a slow or refused opening, the engine waits and answers with what the scenario queued.
 #[cfg(feature = "selftest")]
 pub mod fake {
-    use std::collections::VecDeque;
+    use std::collections::{HashSet, VecDeque};
     use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::{Arc, Mutex, PoisonError};
     use std::time::Duration;
 
-    use lowspeak::audio::recorder::{OnLive, StartError};
-    use lowspeak::config::settings::Settings;
+    use lowspeak::audio::recorder::{Microphone as Device, OnLive, StartError};
+    use lowspeak::config::settings::{ChosenMicrophone, Settings};
     use lowspeak::dictation::{Choices, Dictation, Event, Parts, Recorder, Samples, Transcriber};
     use lowspeak::models::{ApiProvider, Language, LocalModel, OnlineModel, PostProcessingMode, TranscriptionMode};
     use lowspeak::transcription::error::TranscriptionError;
@@ -87,6 +124,7 @@ pub mod fake {
     static TOO_SHORT: AtomicBool = AtomicBool::new(false);
     static KEY_UNREADABLE: AtomicBool = AtomicBool::new(false);
     static LIMIT_SECONDS: AtomicU64 = AtomicU64::new(300);
+    static INSTALLED: Mutex<Option<HashSet<LocalModel>>> = Mutex::new(None);
 
     /// How the microphone opens for one recording.
     pub enum Opening {
@@ -130,27 +168,63 @@ pub mod fake {
         Ok(Some(format!("{prefix}selftest-{}", provider.raw_value())))
     }
 
-    pub fn choices() -> Choices {
+    /// What Lowspeak's menu left in the self-test.
+    pub fn lowspeak_choices() -> Choices {
         Choices {
             settings: Settings {
                 mode: TranscriptionMode::Online,
                 local_model: LocalModel::ParakeetUltra,
-                online_model: OnlineModel::GptTranscribe,
-                language: Language::Auto,
+                online_model: OnlineModel::GroqWhisperLargeV3Turbo,
+                language: Language::De,
                 post_processing: PostProcessingMode::Off,
                 preprocessing: true,
                 start_sound: false,
             },
-            microphone: None,
+            microphone: Some(ChosenMicrophone {
+                id: "selftest:headset".into(),
+                name: "Headset".into(),
+            }),
             vocabulary: vec![ide_product::NAME.into(), "lowspeak".into()],
         }
+    }
+
+    pub fn microphones() -> Vec<Device> {
+        vec![Device {
+            id: "selftest:usb".into(),
+            name: "USB Microphone".into(),
+        }]
+    }
+
+    pub fn installed_models() -> HashSet<LocalModel> {
+        INSTALLED
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get_or_insert_with(|| HashSet::from([LocalModel::ParakeetUltra]))
+            .clone()
+    }
+
+    /// Five steps a tenth of a second apart, then the model counts as installed.
+    pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), String> {
+        for step in 1..=5 {
+            std::thread::sleep(Duration::from_millis(100));
+            if cancel.load(Ordering::SeqCst) {
+                return Err("cancelled".into());
+            }
+            progress(f64::from(step) / 5.0);
+        }
+        INSTALLED
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get_or_insert_with(HashSet::new)
+            .insert(model);
+        Ok(())
     }
 
     pub fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static) -> Dictation {
         let parts = Parts {
             recorder: Box::new(Microphone),
             transcriber: Box::new(Engine),
-            choices: Box::new(choices),
+            choices: Box::new(super::choices::current),
             keys: Box::new(Shared(keys)),
             limit: Duration::from_secs(LIMIT_SECONDS.load(Ordering::SeqCst)),
         };

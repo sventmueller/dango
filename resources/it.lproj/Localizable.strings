@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Il registro non indica alcun checksum; il download non viene verificato.";
 "Das Register wurde nicht geladen" = "Il registro non è stato caricato";
 "Das Terminal konnte nicht starten: {}" = "Impossibile avviare il terminale: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Il modello locale non è installato. Scaricalo in Impostazioni, sotto Dettatura.";
 "Dateien" = "File";
 "Dateien: {}" = "File: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "file, richieste web e comandi restano nel progetto e nelle cartelle consentite, senza rete";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Incolla";
 "Einstellungen" = "Impostazioni";
 "Einstellungen öffnen" = "Apri Impostazioni";
+"Einstellungen übernehmen" = "Usa impostazioni";
 "Einstellungen …" = "Impostazioni…";
 "Endpunkt entfernen" = "Rimuovi endpoint";
 "Endpunkt hinzufügen" = "Aggiungi endpoint";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Processi in background: {} in esecuzione, {} terminati";
 "Hinweise" = "Suggerimenti";
 "Hooks: {} erfolgreich" = "Hook: {} riusciti";
+"Ignorieren" = "Ignora";
 "Im Browser-Tab öffnen" = "Apri in un pannello del browser";
 "Im Dock ablegen" = "Contrai";
 "Im Editor zeigen" = "Mostra nell’editor";
@@ -151,6 +154,7 @@
 "Kopieren" = "Copia";
 "Lade die Modelle von {} …" = "Caricamento dei modelli di {}…";
 "Liste löschen" = "Cancella menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak ha impostazioni di dettatura proprie. Vuoi usarle?";
 "Löschen" = "Elimina";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Seleziona un passaggio del piano e scegli “Commenta”.";
 "Minimal" = "Minimo";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} non offre una sandbox che si possa attivare qui";
 "{} bietet ein Modell." = "{} offre un modello.";
 "{} bietet {} Modelle." = "{} offre {} modelli.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} non offre più {}. Scegli un altro modello in Impostazioni, sotto Dettatura.";
 "{} braucht zuerst einen Schlüssel." = "{} richiede prima una chiave.";
 "{} gibt es nicht" = "{} non esiste";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: azzera {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Modifica…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifica i file del progetto e chiede prima di scrivere altrove o di accedere alla rete.";
 "Änderung nicht angewandt" = "Modifica non applicata";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Le modifiche ai file aperti possono essere annullate file per file.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Il campo della dettatura non è più aperto. Il testo è negli appunti.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} non ha accesso al microfono. Consentilo in Impostazioni di Sistema > Privacy e sicurezza > Microfono.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Nessuna chiave API per {}. Inseriscila in Impostazioni, sotto Dettatura.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Il modello locale non è installato. Scaricalo in Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} non offre più {}. Scegli un altro modello in Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak ha una chiave per {}. Usarla anche per {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} la legge una volta per questo, e macOS chiede prima conferma. Lì scegli “Consenti”, non “Consenti sempre”: così la voce di Lowspeak resta com’è. {} conserva la chiave in una voce propria.";
 "Übernehmen" = "Usa chiave";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Questa non è una chiave di OpenAI (sk-…) o di Groq (gsk_…).";
 "Diktat" = "Dettatura";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Apri Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Installato. Modalità, modello, lingua, post-elaborazione, microfono e vocabolario li scegli in Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Non installato. Valgono le impostazioni predefinite di Lowspeak: online con GPT Transcribe, lingua rilevata.";
 "Transkription:" = "Trascrizione:";
-"Online: {} ({})" = "Online: {} ({})";
 "Sprache:" = "Lingua:";
 "Nachbearbeitung:" = "Post-elaborazione:";
 "Mikrofon:" = "Microfono:";
 "Vokabular:" = "Vocabolario:";
-"Keine Begriffe" = "Nessun termine";
-"1 Begriff" = "1 termine";
-"{} Begriffe" = "{} termini";
 "API-Schlüssel:" = "Chiavi API:";
 "{}: im Schlüsselbund" = "{}: nel Portachiavi";
 "{}: kein Schlüssel" = "{}: nessuna chiave";

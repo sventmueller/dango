@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Kayıt defteri bir sağlama toplamı belirtmiyor; indirilen dosya doğrulanmıyor.";
 "Das Register wurde nicht geladen" = "Kayıt defteri yüklenmedi";
 "Das Terminal konnte nicht starten: {}" = "Terminal başlatılamadı: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Yerel model yüklü değil. Ayarlar’da “Dikte” altında indirin.";
 "Dateien" = "Dosyalar";
 "Dateien: {}" = "Dosyalar: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "Dosyalar, web istekleri ve komutlar projede ve izin verilen klasörlerde kalır, ağ olmadan";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Yapıştır";
 "Einstellungen" = "Ayarlar";
 "Einstellungen öffnen" = "Ayarları Aç";
+"Einstellungen übernehmen" = "Ayarları Kullan";
 "Einstellungen …" = "Ayarlar…";
 "Endpunkt entfernen" = "Uç Noktayı Kaldır";
 "Endpunkt hinzufügen" = "Uç Nokta Ekle";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Arka plan işlemleri: {} çalışıyor, {} bitti";
 "Hinweise" = "İpuçları";
 "Hooks: {} erfolgreich" = "Hook’lar: {} başarılı";
+"Ignorieren" = "Yok Say";
 "Im Browser-Tab öffnen" = "Tarayıcı Sekmesinde Aç";
 "Im Dock ablegen" = "Simge Durumuna Küçült";
 "Im Editor zeigen" = "Düzenleyicide göster";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopyala";
 "Lade die Modelle von {} …" = "{} modelleri yükleniyor…";
 "Liste löschen" = "Menüyü Temizle";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak’in kendi dikte ayarları var. Bunları kullanmak istiyor musunuz?";
 "Löschen" = "Sil";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Planda bir bölüm seçin ve “Yorum Yap” öğesini seçin.";
 "Minimal" = "En Az";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} burada açılabilecek bir korumalı alan sunmuyor";
 "{} bietet ein Modell." = "{} bir model sunuyor.";
 "{} bietet {} Modelle." = "{} {} model sunuyor.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} artık {} modelini sunmuyor. Ayarlar’da “Dikte” altında başka bir model seçin.";
 "{} braucht zuerst einen Schlüssel." = "{} için önce bir anahtar gerekiyor.";
 "{} gibt es nicht" = "{} yok";
 "{} h" = "{} sa";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: sıfırlanma: {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Değiştir…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Projedeki dosyaları değiştirir; proje dışına yazmadan veya ağa erişmeden önce sorar.";
 "Änderung nicht angewandt" = "Değişiklik Uygulanmadı";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Açık dosyalardaki değişiklikler dosya dosya geri alınabilir.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Dikte alanı artık açık değil. Metin panoda.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} mikrofona erişemiyor. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden izin verin.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "{} için API anahtarı yok. Ayarlar’da “Dikte” altında girin.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Yerel model yüklü değil. Lowspeak’te indirin.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} artık {} modelini sunmuyor. Lowspeak’te başka bir model seçin.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak’te {} için bir anahtar var. {} için de kullanılsın mı?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} bunun için anahtarı bir kez okur ve macOS önce sorar. Orada “Her Zaman İzin Ver” yerine “İzin Ver” düğmesini seçin: Böylece Lowspeak’in öğesi olduğu gibi kalır. {} anahtarı kendi öğesinde saklar.";
 "Übernehmen" = "Anahtarı Kullan";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Bu bir OpenAI (sk-…) veya Groq (gsk_…) anahtarı değil.";
 "Diktat" = "Dikte";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Lowspeak’i Aç";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Yüklü. Mod, model, dil, son işleme, mikrofon ve sözlüğü Lowspeak’te seçersiniz.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Yüklü değil. Lowspeak’in saptanmış ayarları geçerli: GPT Transcribe ile çevrimiçi, dil otomatik algılanır.";
 "Transkription:" = "Metne dönüştürme:";
-"Online: {} ({})" = "Çevrimiçi: {} ({})";
 "Sprache:" = "Dil:";
 "Nachbearbeitung:" = "Son işleme:";
 "Mikrofon:" = "Mikrofon:";
 "Vokabular:" = "Sözlük:";
-"Keine Begriffe" = "Terim yok";
-"1 Begriff" = "1 terim";
-"{} Begriffe" = "{} terim";
 "API-Schlüssel:" = "API anahtarları:";
 "{}: im Schlüsselbund" = "{}: Anahtar Zinciri’nde";
 "{}: kein Schlüssel" = "{}: anahtar yok";

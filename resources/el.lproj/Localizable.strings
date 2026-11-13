@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Το μητρώο δεν αναφέρει άθροισμα ελέγχου, οπότε η λήψη δεν θα ελεγχθεί.";
 "Das Register wurde nicht geladen" = "Το μητρώο δεν φορτώθηκε";
 "Das Terminal konnte nicht starten: {}" = "Δεν ήταν δυνατή η εκκίνηση του τερματικού: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Το τοπικό μοντέλο δεν είναι εγκατεστημένο. Κάντε λήψη του στις Ρυθμίσεις, στην ενότητα «Υπαγόρευση».";
 "Dateien" = "Αρχεία";
 "Dateien: {}" = "Αρχεία: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "αρχεία, αιτήματα web και εντολές μένουν στο έργο και στους επιτρεπόμενους φακέλους, χωρίς δίκτυο";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Επικόλληση";
 "Einstellungen" = "Ρυθμίσεις";
 "Einstellungen öffnen" = "Άνοιγμα ρυθμίσεων";
+"Einstellungen übernehmen" = "Χρήση ρυθμίσεων";
 "Einstellungen …" = "Ρυθμίσεις…";
 "Endpunkt entfernen" = "Αφαίρεση τελικού σημείου";
 "Endpunkt hinzufügen" = "Προσθήκη τελικού σημείου";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Διεργασίες παρασκηνίου: {} σε εκτέλεση, {} ολοκληρώθηκαν";
 "Hinweise" = "Υποδείξεις";
 "Hooks: {} erfolgreich" = "Επιτυχή hook: {}";
+"Ignorieren" = "Παράβλεψη";
 "Im Browser-Tab öffnen" = "Άνοιγμα σε καρτέλα περιήγησης";
 "Im Dock ablegen" = "Ελαχιστοποίηση";
 "Im Editor zeigen" = "Εμφάνιση στον επεξεργαστή";
@@ -151,6 +154,7 @@
 "Kopieren" = "Αντιγραφή";
 "Lade die Modelle von {} …" = "Φόρτωση των μοντέλων του {}…";
 "Liste löschen" = "Εκκαθάριση μενού";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Το Lowspeak έχει δικές του ρυθμίσεις υπαγόρευσης. Θέλετε να τις χρησιμοποιήσετε;";
 "Löschen" = "Διαγραφή";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Επισημάνετε ένα σημείο του σχεδίου και επιλέξτε «Σχολιασμός».";
 "Minimal" = "Ελάχιστο";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "Το {} δεν προσφέρει sandbox που να μπορεί να ενεργοποιηθεί εδώ";
 "{} bietet ein Modell." = "Το {} προσφέρει ένα μοντέλο.";
 "{} bietet {} Modelle." = "Το {} προσφέρει {} μοντέλα.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "Το {} δεν προσφέρει πλέον το {}. Επιλέξτε άλλο μοντέλο στις Ρυθμίσεις, στην ενότητα «Υπαγόρευση».";
 "{} braucht zuerst einen Schlüssel." = "Το {} χρειάζεται πρώτα ένα κλειδί.";
 "{} gibt es nicht" = "Το {} δεν υπάρχει";
 "{} h" = "{} ώ.";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: επαναφορά {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Αλλαγή…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Αλλάζει αρχεία στο έργο και ρωτά πριν γράψει εκτός αυτού ή αποκτήσει πρόσβαση στο δίκτυο.";
 "Änderung nicht angewandt" = "Η αλλαγή δεν εφαρμόστηκε";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Οι αλλαγές σε ανοιχτά αρχεία μπορούν να αναιρεθούν ανά αρχείο.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Το πεδίο της υπαγόρευσης δεν είναι πλέον ανοιχτό. Το κείμενο βρίσκεται στο πρόχειρο.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "Το {} δεν έχει πρόσβαση στο μικρόφωνο. Επιτρέψτε την στις Ρυθμίσεις συστήματος, στην ενότητα Απόρρητο και ασφάλεια > Μικρόφωνο.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Δεν υπάρχει κλειδί API για {}. Καταχωρίστε ένα στις Ρυθμίσεις, στην ενότητα «Υπαγόρευση».";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Το τοπικό μοντέλο δεν είναι εγκατεστημένο. Κάντε λήψη του στο Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "Το {} δεν προσφέρει πλέον το {}. Επιλέξτε άλλο μοντέλο στο Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Το Lowspeak έχει κλειδί για {}. Να χρησιμοποιηθεί και για το {};";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "Το {} θα το διαβάσει μία φορά και το macOS θα ζητήσει επιβεβαίωση. Επιλέξτε «Να επιτρέπεται» και όχι «Να επιτρέπεται πάντα», ώστε το στοιχείο του Lowspeak να μείνει ως έχει. Το {} αποθηκεύει το κλειδί σε δικό του στοιχείο.";
 "Übernehmen" = "Χρήση κλειδιού";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Αυτό δεν είναι κλειδί του OpenAI (sk-…) ή του Groq (gsk_…).";
 "Diktat" = "Υπαγόρευση";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Άνοιγμα Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Εγκατεστημένο. Τη λειτουργία, το μοντέλο, τη γλώσσα, τη μετεπεξεργασία, το μικρόφωνο και το λεξιλόγιο τα επιλέγετε στο Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Δεν είναι εγκατεστημένο. Ισχύουν οι προεπιλογές του Lowspeak: διαδικτυακά με το GPT Transcribe, αυτόματη αναγνώριση γλώσσας.";
 "Transkription:" = "Μεταγραφή:";
-"Online: {} ({})" = "Διαδικτυακά: {} ({})";
 "Sprache:" = "Γλώσσα:";
 "Nachbearbeitung:" = "Μετεπεξεργασία:";
 "Mikrofon:" = "Μικρόφωνο:";
 "Vokabular:" = "Λεξιλόγιο:";
-"Keine Begriffe" = "Κανένας όρος";
-"1 Begriff" = "1 όρος";
-"{} Begriffe" = "{} όροι";
 "API-Schlüssel:" = "Κλειδιά API:";
 "{}: im Schlüsselbund" = "{}: στην κλειδοθήκη";
 "{}: kein Schlüssel" = "{}: χωρίς κλειδί";

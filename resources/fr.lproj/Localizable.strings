@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Le registre n’indique aucune somme de contrôle ; le téléchargement ne sera pas vérifié.";
 "Das Register wurde nicht geladen" = "Le registre n’a pas été chargé";
 "Das Terminal konnte nicht starten: {}" = "Impossible de lancer le terminal : {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Le modèle local n’est pas installé. Téléchargez-le dans les réglages, sous Dictée.";
 "Dateien" = "Fichiers";
 "Dateien: {}" = "Fichiers : {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "fichiers, requêtes web et commandes restent dans le projet et les dossiers autorisés, sans réseau";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Coller";
 "Einstellungen" = "Réglages";
 "Einstellungen öffnen" = "Ouvrir les réglages";
+"Einstellungen übernehmen" = "Reprendre les réglages";
 "Einstellungen …" = "Réglages…";
 "Endpunkt entfernen" = "Supprimer le point de terminaison";
 "Endpunkt hinzufügen" = "Ajouter un point de terminaison";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Processus en arrière-plan : {} en cours, {} terminés";
 "Hinweise" = "Indications";
 "Hooks: {} erfolgreich" = "Hooks : {} réussis";
+"Ignorieren" = "Ignorer";
 "Im Browser-Tab öffnen" = "Ouvrir dans l’onglet navigateur";
 "Im Dock ablegen" = "Minimiser";
 "Im Editor zeigen" = "Afficher dans l’éditeur";
@@ -151,6 +154,7 @@
 "Kopieren" = "Copier";
 "Lade die Modelle von {} …" = "Chargement des modèles de {}…";
 "Liste löschen" = "Effacer le menu";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak a ses propres réglages de dictée. Voulez-vous les reprendre ?";
 "Löschen" = "Supprimer";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Sélectionnez un passage du plan et choisissez « Commenter ».";
 "Minimal" = "Minimal";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} ne propose aucune sandbox activable ici";
 "{} bietet ein Modell." = "{} propose un modèle.";
 "{} bietet {} Modelle." = "{} propose {} modèles.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} ne propose plus {}. Choisissez un autre modèle dans les réglages, sous Dictée.";
 "{} braucht zuerst einen Schlüssel." = "{} nécessite d’abord une clé.";
 "{} gibt es nicht" = "{} n’existe pas";
 "{} h" = "{} h";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{} : réinitialisation {}";
 "{}: {}" = "{} : {}";
+"Ändern …" = "Modifier…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Modifie les fichiers du projet et demande avant d’écrire ailleurs ou d’accéder au réseau.";
 "Änderung nicht angewandt" = "Modification non appliquée";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Les modifications des fichiers ouverts peuvent être annulées fichier par fichier.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Le champ de la dictée n’est plus ouvert. Le texte se trouve dans le presse-papiers.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} n’a pas accès au micro. Autorisez-le dans Réglages Système, sous Confidentialité et sécurité > Micro.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Aucune clé d’API pour {}. Saisissez-en une dans les réglages, sous Dictée.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Le modèle local n’est pas installé. Téléchargez-le dans Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} ne propose plus {}. Choisissez un autre modèle dans Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak possède une clé pour {}. L’utiliser aussi pour {} ?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} la lit une seule fois pour cela, et macOS vous demande d’abord l’autorisation. Choisissez « Autoriser », pas « Toujours autoriser » : l’élément de Lowspeak reste ainsi inchangé. {} conserve la clé dans son propre élément.";
 "Übernehmen" = "Utiliser la clé";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Ce n’est pas une clé d’OpenAI (sk-…) ni de Groq (gsk_…).";
 "Diktat" = "Dictée";
 "Lowspeak:" = "Lowspeak :";
-"Lowspeak öffnen" = "Ouvrir Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Installé. Vous choisissez le mode, le modèle, la langue, le post-traitement, le micro et le vocabulaire dans Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Non installé. Les réglages par défaut de Lowspeak s’appliquent : en ligne avec GPT Transcribe, détection de la langue.";
 "Transkription:" = "Transcription :";
-"Online: {} ({})" = "En ligne : {} ({})";
 "Sprache:" = "Langue :";
 "Nachbearbeitung:" = "Post-traitement :";
 "Mikrofon:" = "Micro :";
 "Vokabular:" = "Vocabulaire :";
-"Keine Begriffe" = "Aucun terme";
-"1 Begriff" = "1 terme";
-"{} Begriffe" = "{} termes";
 "API-Schlüssel:" = "Clés d’API :";
 "{}: im Schlüsselbund" = "{} : dans le trousseau";
 "{}: kein Schlüssel" = "{} : aucune clé";

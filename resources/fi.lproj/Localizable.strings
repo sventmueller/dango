@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "Rekisteri ei ilmoita tarkistussummaa; latausta ei tarkisteta.";
 "Das Register wurde nicht geladen" = "Rekisteriä ei ladattu";
 "Das Terminal konnte nicht starten: {}" = "Päätettä ei voitu käynnistää: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Paikallista mallia ei ole asennettu. Lataa se asetusten kohdassa Sanelu.";
 "Dateien" = "Tiedostot";
 "Dateien: {}" = "Tiedostot: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "tiedostot, verkkopyynnöt ja komennot pysyvät projektissa ja sallituissa kansioissa, ilman verkkoyhteyttä";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Sijoita";
 "Einstellungen" = "Asetukset";
 "Einstellungen öffnen" = "Avaa asetukset";
+"Einstellungen übernehmen" = "Käytä asetuksia";
 "Einstellungen …" = "Asetukset…";
 "Endpunkt entfernen" = "Poista päätepiste";
 "Endpunkt hinzufügen" = "Lisää päätepiste";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Taustaprosessit: {} käynnissä, {} päättynyt";
 "Hinweise" = "Vihjeet";
 "Hooks: {} erfolgreich" = "Onnistuneet hookit: {}";
+"Ignorieren" = "Ohita";
 "Im Browser-Tab öffnen" = "Avaa selainvälilehdessä";
 "Im Dock ablegen" = "Pienennä";
 "Im Editor zeigen" = "Näytä editorissa";
@@ -151,6 +154,7 @@
 "Kopieren" = "Kopioi";
 "Lade die Modelle von {} …" = "Ladataan palveluntarjoajan {} malleja…";
 "Liste löschen" = "Tyhjennä valikko";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeakilla on omat sanelun asetukset. Haluatko käyttää niitä?";
 "Löschen" = "Poista";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Merkitse kohta suunnitelmasta ja valitse ”Kommentoi”.";
 "Minimal" = "Minimaalinen";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} ei tarjoa hiekkalaatikkoa, jonka voisi ottaa käyttöön tässä";
 "{} bietet ein Modell." = "{} tarjoaa yhden mallin.";
 "{} bietet {} Modelle." = "{} tarjoaa {} mallia.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} ei enää tarjoa mallia {}. Valitse toinen malli asetusten kohdassa Sanelu.";
 "{} braucht zuerst einen Schlüssel." = "{} tarvitsee ensin avaimen.";
 "{} gibt es nicht" = "{} ei ole olemassa";
 "{} h" = "{} t";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: nollautuu {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Muuta…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Muuttaa projektin tiedostoja ja kysyy ennen kirjoittamista sen ulkopuolelle tai verkkoyhteyttä.";
 "Änderung nicht angewandt" = "Muutosta ei tehty";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Avoimien tiedostojen muutokset voi perua tiedosto kerrallaan.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Sanelun kenttä ei ole enää auki. Teksti on leikepöydällä.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} ei pääse käyttämään mikrofonia. Salli se kohdassa Järjestelmäasetukset > Tietosuoja ja turvallisuus > Mikrofoni.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Palvelulle {} ei ole API-avainta. Syötä se asetusten kohdassa Sanelu.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Paikallista mallia ei ole asennettu. Lataa se Lowspeakissa.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} ei enää tarjoa mallia {}. Valitse Lowspeakissa toinen malli.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeakilla on avain palvelulle {}. Käytetäänkö sitä myös apissa {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} lukee sen tätä varten kerran, ja macOS kysyy ensin luvan. Valitse siellä ”Salli”, älä ”Salli aina”: silloin Lowspeakin kohde pysyy ennallaan. {} tallentaa avaimen omaan kohteeseensa.";
 "Übernehmen" = "Käytä avainta";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Tämä ei ole OpenAI:n (sk-…) tai Groqin (gsk_…) avain.";
 "Diktat" = "Sanelu";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Avaa Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Asennettu. Tilan, mallin, kielen, jälkikäsittelyn, mikrofonin ja sanaston valitset Lowspeakissa.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Ei asennettu. Käytössä ovat Lowspeakin oletukset: verkossa GPT Transcribella, kieli tunnistetaan.";
 "Transkription:" = "Litterointi:";
-"Online: {} ({})" = "Verkossa: {} ({})";
 "Sprache:" = "Kieli:";
 "Nachbearbeitung:" = "Jälkikäsittely:";
 "Mikrofon:" = "Mikrofoni:";
 "Vokabular:" = "Sanasto:";
-"Keine Begriffe" = "Ei termejä";
-"1 Begriff" = "1 termi";
-"{} Begriffe" = "{} termiä";
 "API-Schlüssel:" = "API-avaimet:";
 "{}: im Schlüsselbund" = "{}: avainnipussa";
 "{}: kein Schlüssel" = "{}: ei avainta";

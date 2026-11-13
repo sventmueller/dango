@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "注册表未提供校验和；下载内容不会经过校验。";
 "Das Register wurde nicht geladen" = "注册表未载入";
 "Das Terminal konnte nicht starten: {}" = "终端无法启动：{}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "本地模型未安装。请在“设置”的“听写”中下载。";
 "Dateien" = "文件";
 "Dateien: {}" = "文件：{}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "文件、网页请求和命令都限于项目和允许的文件夹内，不联网";
@@ -104,6 +105,7 @@
 "Einsetzen" = "粘贴";
 "Einstellungen" = "设置";
 "Einstellungen öffnen" = "打开设置";
+"Einstellungen übernehmen" = "使用设置";
 "Einstellungen …" = "设置…";
 "Endpunkt entfernen" = "移除端点";
 "Endpunkt hinzufügen" = "添加端点";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "后台进程：{} 个运行中，{} 个已结束";
 "Hinweise" = "提示";
 "Hooks: {} erfolgreich" = "钩子：{} 个成功";
+"Ignorieren" = "忽略";
 "Im Browser-Tab öffnen" = "在浏览器标签页中打开";
 "Im Dock ablegen" = "最小化";
 "Im Editor zeigen" = "在编辑器中显示";
@@ -151,6 +154,7 @@
 "Kopieren" = "拷贝";
 "Lade die Modelle von {} …" = "正在载入 {} 的模型…";
 "Liste löschen" = "清除菜单";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak 有自己的听写设置。要使用这些设置吗？";
 "Löschen" = "删除";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "在计划中选择一段文字，然后选取“评论”。";
 "Minimal" = "最低";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} 没有可在此处开启的沙盒";
 "{} bietet ein Modell." = "{} 提供 1 个模型。";
 "{} bietet {} Modelle." = "{} 提供 {} 个模型。";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "{} 已不再提供 {}。请在“设置”的“听写”中选取其他模型。";
 "{} braucht zuerst einen Schlüssel." = "{} 需要先设置密钥。";
 "{} gibt es nicht" = "{} 不存在";
 "{} h" = "{} 小时";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}，{} · {}";
 "{}: zurückgesetzt {}" = "{}：{} 重置";
 "{}: {}" = "{}：{}";
+"Ändern …" = "更改…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "更改项目中的文件，在写入项目外部或访问网络前询问。";
 "Änderung nicht angewandt" = "未应用更改";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "对已打开文件的更改可以逐个文件撤销。";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "接收听写的输入栏已关闭。文本已在剪贴板中。";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "{} 无权访问麦克风。请在“系统设置”>“隐私与安全性”>“麦克风”中允许访问。";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "没有 {} 的 API 密钥。请在“设置”的“听写”中填入。";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "本地模型未安装。请在 Lowspeak 中下载。";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "{} 已不再提供 {}。请在 Lowspeak 中选取其他模型。";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "Lowspeak 有一个 {} 的密钥。要将它也用于 {} 吗？";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "为此，{} 会读取它一次，macOS 会先询问你。请在那里选择“允许”，而不是“始终允许”：这样 Lowspeak 的钥匙串项目会保持原样。{} 会将密钥存放在单独的钥匙串项目中。";
 "Übernehmen" = "使用此密钥";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "这不是 OpenAI（sk-…）或 Groq（gsk_…）的密钥。";
 "Diktat" = "听写";
 "Lowspeak:" = "Lowspeak：";
-"Lowspeak öffnen" = "打开 Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "已安装。你可以在 Lowspeak 中选择模式、模型、语言、后处理、麦克风和词汇表。";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "未安装。将使用 Lowspeak 的默认设置：使用 GPT Transcribe 在线转写，自动检测语言。";
 "Transkription:" = "转写：";
-"Online: {} ({})" = "在线：{}（{}）";
 "Sprache:" = "语言：";
 "Nachbearbeitung:" = "后处理：";
 "Mikrofon:" = "麦克风：";
 "Vokabular:" = "词汇表：";
-"Keine Begriffe" = "无词条";
-"1 Begriff" = "1 个词条";
-"{} Begriffe" = "{} 个词条";
 "API-Schlüssel:" = "API 密钥：";
 "{}: im Schlüsselbund" = "{}：在钥匙串中";
 "{}: kein Schlüssel" = "{}：无密钥";

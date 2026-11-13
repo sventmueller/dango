@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "لا يذكر الفهرس مجموعًا اختباريًا؛ لن يتم التحقق من التنزيل.";
 "Das Register wurde nicht geladen" = "لم يتم تحميل الفهرس";
 "Das Terminal konnte nicht starten: {}" = "تعذّر بدء الطرفية: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "النموذج المحلي غير مثبّت. قم بتنزيله في الإعدادات ضمن الإملاء.";
 "Dateien" = "الملفات";
 "Dateien: {}" = "الملفات: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "تبقى الملفات وطلبات الويب والأوامر داخل المشروع والمجلدات المسموح بها، بدون شبكة";
@@ -104,6 +105,7 @@
 "Einsetzen" = "لصق";
 "Einstellungen" = "الإعدادات";
 "Einstellungen öffnen" = "فتح الإعدادات";
+"Einstellungen übernehmen" = "استخدام الإعدادات";
 "Einstellungen …" = "الإعدادات…";
 "Endpunkt entfernen" = "إزالة نقطة النهاية";
 "Endpunkt hinzufügen" = "إضافة نقطة نهاية";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "العمليات في الخلفية: {} قيد التشغيل، {} منتهية";
 "Hinweise" = "التلميحات";
 "Hooks: {} erfolgreich" = "الخطافات الناجحة: {}";
+"Ignorieren" = "تجاهل";
 "Im Browser-Tab öffnen" = "فتح في علامة تبويب المتصفح";
 "Im Dock ablegen" = "تصغير";
 "Im Editor zeigen" = "إظهار في المحرر";
@@ -151,6 +154,7 @@
 "Kopieren" = "نسخ";
 "Lade die Modelle von {} …" = "جارٍ تحميل نماذج {}…";
 "Liste löschen" = "مسح القائمة";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "لدى Lowspeak إعدادات خاصة به للإملاء. هل تريد استخدامها؟";
 "Löschen" = "حذف";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "حدد موضعًا في الخطة واختر “تعليق”.";
 "Minimal" = "أدنى";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "لا يوفر {} بيئة معزولة يمكن تفعيلها هنا";
 "{} bietet ein Modell." = "يوفر {} نموذجًا واحدًا.";
 "{} bietet {} Modelle." = "عدد النماذج التي يوفرها {}: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "لم يعد {} يوفر {}. اختر نموذجًا آخر في الإعدادات ضمن الإملاء.";
 "{} braucht zuerst einen Schlüssel." = "يحتاج {} إلى مفتاح أولًا.";
 "{} gibt es nicht" = "لا يوجد {}";
 "{} h" = "{} س";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}، {} · {}";
 "{}: zurückgesetzt {}" = "‏{}: يُعاد التعيين في {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "تغيير…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "يغيّر ملفات المشروع ويسأل قبل الكتابة خارجه أو الوصول إلى الشبكة.";
 "Änderung nicht angewandt" = "لم يتم تطبيق التغيير";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "يمكن التراجع عن التغييرات في الملفات المفتوحة لكل ملف على حدة.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "حقل الإملاء لم يعد مفتوحًا. النص موجود في الحافظة.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "لا يملك {} حق الوصول إلى الميكروفون. اسمح به في إعدادات النظام ضمن الخصوصية والأمن > الميكروفون.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "لا يوجد مفتاح API لـ {}. أدخله في الإعدادات ضمن الإملاء.";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "النموذج المحلي غير مثبّت. قم بتنزيله في Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "لم يعد {} يوفر {}. اختر نموذجًا آخر في Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "لدى Lowspeak مفتاح لـ {}. هل تريد استخدامه لـ {} أيضًا؟";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "يقرؤه {} لهذا الغرض مرة واحدة، وسيطلب macOS الإذن أولًا. اختر هناك “سماح” وليس “السماح دائمًا”: بذلك يبقى عنصر Lowspeak كما هو. ويحفظ {} المفتاح في عنصر خاص به.";
 "Übernehmen" = "استخدام المفتاح";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "هذا ليس مفتاحًا من OpenAI (sk-…) أو Groq (gsk_…).";
 "Diktat" = "الإملاء";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "فتح Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "مثبّت. اختر الوضع والنموذج واللغة والمعالجة اللاحقة والميكروفون والمفردات في Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "غير مثبّت. تسري إعدادات Lowspeak الافتراضية: عبر الإنترنت باستخدام GPT Transcribe، مع اكتشاف اللغة تلقائيًا.";
 "Transkription:" = "التفريغ النصي:";
-"Online: {} ({})" = "عبر الإنترنت: {} ({})";
 "Sprache:" = "اللغة:";
 "Nachbearbeitung:" = "المعالجة اللاحقة:";
 "Mikrofon:" = "الميكروفون:";
 "Vokabular:" = "المفردات:";
-"Keine Begriffe" = "لا توجد مصطلحات";
-"1 Begriff" = "مصطلح واحد";
-"{} Begriffe" = "المصطلحات: {}";
 "API-Schlüssel:" = "مفاتيح API:";
 "{}: im Schlüsselbund" = "‏{}: في سلسلة المفاتيح";
 "{}: kein Schlüssel" = "‏{}: لا يوجد مفتاح";

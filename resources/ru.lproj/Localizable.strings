@@ -73,6 +73,7 @@
 "Das Register nennt keine Prüfsumme; der Download wird nicht geprüft." = "В реестре не указана контрольная сумма; загрузка не проверяется.";
 "Das Register wurde nicht geladen" = "Реестр не загружен";
 "Das Terminal konnte nicht starten: {}" = "Не удалось запустить терминал: {}";
+"Das lokale Modell ist nicht installiert. Lade es in den Einstellungen unter Diktat." = "Локальная модель не установлена. Загрузите ее в настройках в разделе «Диктовка».";
 "Dateien" = "Файлы";
 "Dateien: {}" = "Файлы: {}";
 "Dateien, Webabrufe und Befehle bleiben im Projekt und den erlaubten Ordnern, ohne Netzwerk" = "файлы, веб-запросы и команды не выходят за пределы проекта и разрешенных папок, без сети";
@@ -104,6 +105,7 @@
 "Einsetzen" = "Вставить";
 "Einstellungen" = "Настройки";
 "Einstellungen öffnen" = "Открыть настройки";
+"Einstellungen übernehmen" = "Перенести настройки";
 "Einstellungen …" = "Настройки…";
 "Endpunkt entfernen" = "Удалить конечную точку";
 "Endpunkt hinzufügen" = "Добавить конечную точку";
@@ -127,6 +129,7 @@
 "Hintergrundprozesse: {} laufend, {} beendet" = "Фоновые процессы: выполняется {}, завершено {}";
 "Hinweise" = "Подсказки";
 "Hooks: {} erfolgreich" = "Успешных хуков: {}";
+"Ignorieren" = "Игнорировать";
 "Im Browser-Tab öffnen" = "Открыть во вкладке браузера";
 "Im Dock ablegen" = "Убрать в Dock";
 "Im Editor zeigen" = "Показывать в редакторе";
@@ -151,6 +154,7 @@
 "Kopieren" = "Скопировать";
 "Lade die Modelle von {} …" = "Загрузка моделей {}…";
 "Liste löschen" = "Очистить меню";
+"Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "У Lowspeak есть собственные настройки диктовки. Перенести их?";
 "Löschen" = "Удалить";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Выделите место в плане и выберите «Комментировать».";
 "Minimal" = "Минимальный";
@@ -269,6 +273,7 @@
 "{} bietet keine Sandbox, die sich hier einschalten lässt" = "{} не предоставляет песочницу, которую можно включить здесь";
 "{} bietet ein Modell." = "{} предлагает одну модель.";
 "{} bietet {} Modelle." = "{} предлагает моделей: {}.";
+"{} bietet {} nicht mehr an. Wähle in den Einstellungen unter Diktat ein anderes Modell." = "Сервис {} больше не предоставляет {}. Выберите другую модель в настройках в разделе «Диктовка».";
 "{} braucht zuerst einen Schlüssel." = "Для {} сначала нужен ключ.";
 "{} gibt es nicht" = "{} не существует";
 "{} h" = "{} ч";
@@ -311,6 +316,7 @@
 "{}, {} · {}" = "{}, {} · {}";
 "{}: zurückgesetzt {}" = "{}: сброс в {}";
 "{}: {}" = "{}: {}";
+"Ändern …" = "Изменить…";
 "Ändert Dateien im Projekt und fragt vor Schreibzugriffen außerhalb und vor Netzzugriffen." = "Изменяет файлы проекта и спрашивает перед записью за его пределами или доступом к сети.";
 "Änderung nicht angewandt" = "Изменение не применено";
 "Änderungen an geöffneten Dateien lassen sich je Datei widerrufen." = "Изменения в открытых файлах можно отменить для каждого файла отдельно.";
@@ -1100,8 +1106,6 @@
 "Das Feld des Diktats ist nicht mehr offen. Der Text liegt in der Zwischenablage." = "Поле, в которое шла диктовка, больше не открыто. Текст находится в буфере обмена.";
 "{} hat keinen Zugriff auf das Mikrofon. Erlaube ihn in den Systemeinstellungen unter Datenschutz & Sicherheit > Mikrofon." = "У {} нет доступа к микрофону. Разрешите доступ: Системные настройки > Конфиденциальность и безопасность > Микрофон.";
 "Kein API-Schlüssel für {}. Trage ihn in den Einstellungen unter Diktat ein." = "Не задан ключ API для {}. Введите его в настройках в разделе «Диктовка».";
-"Das lokale Modell ist nicht installiert. Lade es in Lowspeak herunter." = "Локальная модель не установлена. Загрузите ее в Lowspeak.";
-"{} bietet {} nicht mehr an. Wähle in Lowspeak ein anderes Modell." = "Сервис {} больше не предоставляет {}. Выберите другую модель в Lowspeak.";
 "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?" = "У Lowspeak есть ключ для {}. Использовать его и для {}?";
 "{} liest ihn dafür einmal, und macOS fragt nach. Wähle dort „Erlauben“, nicht „Immer erlauben“: So bleibt Lowspeaks Eintrag, wie er ist. {} legt den Schlüssel in einem eigenen Eintrag ab." = "{} однократно прочитает его, и macOS запросит подтверждение. Выберите там «Разрешить», а не «Всегда разрешать»: тогда запись Lowspeak останется без изменений. {} сохранит ключ в отдельной записи.";
 "Übernehmen" = "Использовать ключ";
@@ -1113,18 +1117,11 @@
 "Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…)." = "Это не ключ OpenAI (sk-…) или Groq (gsk_…).";
 "Diktat" = "Диктовка";
 "Lowspeak:" = "Lowspeak:";
-"Lowspeak öffnen" = "Открыть Lowspeak";
-"Installiert. Modus, Modell, Sprache, Nachbearbeitung, Mikrofon und Vokabular wählst du in Lowspeak." = "Установлено. Режим, модель, язык, постобработку, микрофон и словарь Вы выбираете в Lowspeak.";
-"Nicht installiert. Es gelten Lowspeaks Vorgaben: online mit GPT Transcribe, Sprache erkennen." = "Не установлено. Действуют настройки Lowspeak по умолчанию: онлайн через GPT Transcribe, автоопределение языка.";
 "Transkription:" = "Распознавание:";
-"Online: {} ({})" = "Онлайн: {} ({})";
 "Sprache:" = "Язык:";
 "Nachbearbeitung:" = "Постобработка:";
 "Mikrofon:" = "Микрофон:";
 "Vokabular:" = "Словарь:";
-"Keine Begriffe" = "Нет терминов";
-"1 Begriff" = "1 термин";
-"{} Begriffe" = "Терминов: {}";
 "API-Schlüssel:" = "Ключи API:";
 "{}: im Schlüsselbund" = "{}: в связке ключей";
 "{}: kein Schlüssel" = "{}: нет ключа";
