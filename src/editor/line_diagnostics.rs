@@ -22,6 +22,13 @@ const LONGEST: usize = 160;
 #[derive(Default)]
 pub struct Shown(Cell<Option<bool>>);
 
+impl Shown {
+    /// Reads the setting again on next use.
+    pub fn forget(&self) {
+        self.0.set(None);
+    }
+}
+
 /// The lines of an editor edited lately, with when.
 #[derive(Default)]
 pub struct Edits(Vec<(usize, Instant)>);

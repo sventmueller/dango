@@ -33,6 +33,7 @@ pub struct AppContext {
     pub predictions: crate::editor::predict::Predictions,
     pub previews: crate::preview::Previews,
     pub site_previews: crate::site_preview::SitePreviews,
+    pub settings_sync: crate::settings_sync::SettingsSync,
     pub exports: Rc<ide_ui_export::State>,
     pub search_panels: crate::window::SearchPanels,
     pub hierarchy_panels: crate::window::HierarchyPanels,

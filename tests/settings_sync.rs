@@ -4,37 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// The settings that follow the user to their other Macs.
-const SHARED: &[&str] = &[
-    "agentEffort",
-    "agentModel",
-    "agentPrices",
-    "blameAtLineEnd",
-    "ciHosts",
-    "ciOAuthClients",
-    "commitMessageModel",
-    "diagnosticsAtLineEnd",
-    "dictation",
-    "dictationWithFn",
-    "editPrediction",
-    "editPredictionExclude",
-    "editPredictionOffFor",
-    "fontSize",
-    "formatOnSave",
-    "formatter",
-    "hiddenSidebarPanels",
-    "inlayHints",
-    "inlayHintsOffFor",
-    "markdownPreviewBeside",
-    "minimap",
-    "optionAsMeta",
-    "previewTabs",
-    "reopenProjects",
-    "searchEngine",
-    "showIgnoredFiles",
-    "showWhitespace",
-    "stickyScrollLines",
-];
+use ide_core::settings::SHARED;
 
 /// The settings that stay on each Mac: paths, local addresses, consents and reminders.
 const PER_MAC: &[&str] = &[
@@ -47,6 +17,8 @@ const PER_MAC: &[&str] = &[
     "editPredictionLmStudio",
     "editPredictionOllama",
     "languageServers",
+    "settingsSync",
+    "settingsSyncFolder",
 ];
 
 /// The entries of the state file, which are never synced.

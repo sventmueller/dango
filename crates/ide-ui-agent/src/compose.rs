@@ -42,11 +42,40 @@ fn utf16_range(text: &str, range: std::ops::Range<usize>) -> NSRange {
     NSRange::new(start, length)
 }
 
+/// The slash command typed at `caret`: the first word of the text when it starts with `/` and the caret is in it,
+/// with its range and what follows the slash.
+fn slash_typing(text: &str, caret: usize) -> Option<(std::ops::Range<usize>, String)> {
+    let rest = text.strip_prefix('/')?;
+    let end = rest.find(char::is_whitespace).map_or(text.len(), |n| n + 1);
+    if caret == 0 || caret > end {
+        return None;
+    }
+    Some((0..end, text[1..end].to_string()))
+}
+
+/// The commands whose name holds `query`, those that start with it first.
+fn matching_commands(commands: Vec<(String, String)>, query: &str) -> Vec<(String, String)> {
+    let query = query.to_lowercase();
+    let (mut first, rest): (Vec<_>, Vec<_>) = commands
+        .into_iter()
+        .map(|(name, detail)| (name.trim_start_matches('/').to_string(), detail))
+        .filter(|(name, _)| name.to_lowercase().contains(&query))
+        .partition(|(name, _)| name.to_lowercase().starts_with(&query));
+    first.extend(rest);
+    first
+}
+
 impl AgentTab {
     /// Return in the composer: takes a completion, opens the task overview for `/tasks`, else sends what was typed
     /// or queues it while a turn runs.
     pub fn submit(&self) {
-        if self.accept_suggestion() {
+        let typed_in_full = self
+            .suggestions
+            .chosen()
+            .is_some_and(|(item, range)| self.composer.text().get(range) == Some(item.insert.as_str()));
+        if typed_in_full {
+            self.suggestions.hide();
+        } else if self.accept_suggestion() {
             return;
         }
         let typed = self.composer.text().trim_end().to_string();
@@ -157,6 +186,20 @@ impl AgentTab {
     fn update_suggestions(&self) {
         let text = self.composer.text();
         let caret = byte_offset(&text, self.composer.text.selectedRange().location);
+        if let Some((range, query)) = slash_typing(&text, caret) {
+            let items = matching_commands(self.known_commands(), &query)
+                .into_iter()
+                .map(|(name, detail)| Item {
+                    label: format!("/{name}"),
+                    insert: format!("/{name}"),
+                    detail,
+                    symbol: "slash.circle",
+                })
+                .collect();
+            self.suggestions.ask();
+            self.suggestions.show(items, range);
+            return;
+        }
         let Some((range, query)) = mention::typing(&text, caret) else {
             self.suggestions.hide();
             return;
@@ -388,6 +431,33 @@ impl AgentTab {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn slash_typing_takes_only_the_first_word() {
+        assert_eq!(super::slash_typing("/com", 4), Some((0..4, "com".to_string())));
+        assert_eq!(super::slash_typing("/", 1), Some((0..1, String::new())));
+        assert_eq!(
+            super::slash_typing("/review src", 3),
+            Some((0..7, "review".to_string()))
+        );
+        assert_eq!(super::slash_typing("/review src", 9), None);
+        assert_eq!(super::slash_typing("see /src", 8), None);
+        assert_eq!(super::slash_typing("/x", 0), None);
+    }
+
+    #[test]
+    fn matching_commands_puts_prefixes_first() {
+        let commands = vec![
+            ("init".to_string(), String::new()),
+            ("/compact".to_string(), "c".to_string()),
+            ("recompile".to_string(), String::new()),
+        ];
+        let names: Vec<String> = super::matching_commands(commands, "Comp")
+            .into_iter()
+            .map(|c| c.0)
+            .collect();
+        assert_eq!(names, ["compact", "recompile"]);
+    }
+
     use super::*;
 
     #[test]

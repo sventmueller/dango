@@ -35,6 +35,14 @@ pub fn shown() -> bool {
     })
 }
 
+/// Reads the setting again on next use, after it changed elsewhere, and redraws every editor.
+pub fn forget() {
+    SHOWN.with(|shown| shown.set(None));
+    for view in super::open_editors() {
+        redraw(&view);
+    }
+}
+
 /// Shows whitespace in every editor, or hides it again, and remembers the choice.
 pub fn toggle() {
     let value = !shown();

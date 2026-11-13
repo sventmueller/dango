@@ -12,6 +12,7 @@ mod list_bar;
 mod predict;
 mod servers;
 mod stored_rules;
+mod sync;
 
 use std::cell::RefCell;
 
@@ -160,6 +161,8 @@ pub struct SettingsState {
     commit_message_settings: commit_message::CommitMessageShown,
     editor_settings: editor::EditorSettingsShown,
     prediction: predict::PredictionShown,
+    /// The object the sync's switch in the General tab sends its actions to.
+    sync_target: RefCell<Option<Retained<objc2::runtime::NSObject>>>,
 }
 
 /// The settings window while it exists, with its controller.
@@ -543,6 +546,10 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         Row::new(mtm, t("Suchmaschine:"), &engine),
     ];
     rows.extend(editor::rows(mtm));
+    rows.extend(sync::rows(
+        mtm,
+        &crate::context::AppContext::get(mtm).settings.sync_target,
+    ));
     for (path, locked) in settings.problems() {
         let reason = match locked {
             Locked::Damaged => t("Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst."),

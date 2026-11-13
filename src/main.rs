@@ -26,6 +26,7 @@ mod quit;
 mod selftest;
 mod session;
 mod settings;
+mod settings_sync;
 mod site_preview;
 mod terminal;
 mod updates;

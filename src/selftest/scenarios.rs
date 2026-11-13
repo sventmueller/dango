@@ -172,6 +172,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("editor-line-diagnostics", line_diagnostics::run),
     plain("page-preview", page_preview::run),
     plain("prettier-save", prettier::run),
+    plain("settings-sync", settings_sync::run),
     plain("search", search::run),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),

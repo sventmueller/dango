@@ -437,3 +437,13 @@ fn tab_stand_ins(mtm: MainThreadMarker) -> [Retained<NSMenuItem>; 2] {
         entry
     })
 }
+
+/// Builds the menu bar again, after the shortcuts changed, such as by the sync from another Mac.
+pub fn reinstall(mtm: MainThreadMarker) {
+    let app = NSApplication::sharedApplication(mtm);
+    let Some(delegate) = app.delegate() else { return };
+    let object: &objc2::runtime::AnyObject = delegate.as_ref();
+    if let Some(delegate) = object.downcast_ref::<crate::app::AppDelegate>() {
+        install(&app, delegate, mtm);
+    }
+}

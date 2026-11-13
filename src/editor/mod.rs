@@ -200,6 +200,30 @@ pub fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
         .collect()
 }
 
+/// Settings changed outside the editor's own switches, such as by the sync from another Mac: the editors read the
+/// changed ones again and show them.
+pub fn settings_changed(names: &[String]) {
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let cx = crate::context::AppContext::get(mtm);
+    for name in names {
+        match name.as_str() {
+            "minimap" => cx.editor.minimap.forget(),
+            "stickyScrollLines" => cx.editor.sticky.forget(),
+            "diagnosticsAtLineEnd" => cx.editor.line_diagnostics.forget(),
+            "showWhitespace" => whitespace::forget(),
+            "blameAtLineEnd" => blame::forget(),
+            _ => {}
+        }
+    }
+    for view in open_editors() {
+        if let Some(map) = view.ivars().minimap.borrow().as_ref().and_then(Weak::load) {
+            map.fit();
+        }
+        sticky::refresh(&view);
+        line_diagnostics::refresh(&view);
+    }
+}
+
 /// Puts the unsaved texts a restored checkpoint held into their editors, opening in `controller` the files not open,
 /// each as one undoable step that leaves the editor unsaved.
 pub fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, Vec<u8>)>) {

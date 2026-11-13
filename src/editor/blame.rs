@@ -88,6 +88,11 @@ pub fn at_line_end() -> bool {
     })
 }
 
+/// Reads the setting again on next use, after it changed elsewhere.
+pub fn forget() {
+    AT_LINE_END.with(|cell| cell.set(None));
+}
+
 /// Turns the blame at the end of the cursor's line on or off in every editor and remembers the choice.
 pub fn toggle_line_end() {
     set_line_end(!at_line_end());

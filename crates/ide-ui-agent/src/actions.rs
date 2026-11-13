@@ -284,11 +284,9 @@ impl AgentTab {
         pop_up(&self.slash_items(), view);
     }
 
-    /// The slash menu, without showing it.
-    pub(super) fn slash_items(&self) -> Retained<NSMenu> {
-        let menu = NSMenu::new(self.mtm);
-        menu.setAutoenablesItems(false);
-        let commands: Vec<(String, String)> = if self.agent.is_acp() {
+    /// The slash commands the agent offers, with their descriptions.
+    pub(super) fn known_commands(&self) -> Vec<(String, String)> {
+        if self.agent.is_acp() {
             self.acp_commands()
         } else if self.agent.is_own() {
             vec![(
@@ -312,7 +310,14 @@ impl AgentTab {
                     .map(|c| (c.name.clone(), c.description.clone()))
                     .collect()
             }
-        };
+        }
+    }
+
+    /// The slash menu, without showing it.
+    pub(super) fn slash_items(&self) -> Retained<NSMenu> {
+        let menu = NSMenu::new(self.mtm);
+        menu.setAutoenablesItems(false);
+        let commands = self.known_commands();
         if commands.is_empty() {
             let none = self.menu_item(&menu, t("Noch keine Befehle bekannt"), sel!(ideAgentPickCommand:), -1);
             none.setEnabled(false);

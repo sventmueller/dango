@@ -47,6 +47,16 @@ define_class!(
         fn did_finish_launching(&self, _notification: &NSNotification) {
             guarded((), || {
                 let mtm = self.mtm();
+                ide_core::settings::on_change(|_, names| {
+                    let names = names.to_vec();
+                    crate::util::main_soon(move || {
+                        crate::editor::settings_changed(&names);
+                        if let Some(mtm) = MainThreadMarker::new() {
+                            crate::settings_sync::request(mtm);
+                        }
+                    });
+                });
+                crate::settings_sync::launched(mtm);
                 open_initial_windows(mtm);
                 #[cfg(feature = "dictation")]
                 crate::dictation::launched();

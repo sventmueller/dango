@@ -1604,3 +1604,13 @@
 "Prettier hat nicht rechtzeitig geantwortet" = "Prettier did not answer in time";
 "Ohne Formatieren: der Text hat sich inzwischen geändert" = "Not formatted: the text changed meanwhile";
 "Prettier: {}" = "Prettier: {}";
+"Wähle einen Ordner in iCloud Drive, den deine Macs für den Abgleich teilen." = "Choose a folder in iCloud Drive that your Macs share for the sync.";
+"iCloud Drive ist auf diesem Mac aus. Schalte es in den Systemeinstellungen ein, oder wähle einen Ordner." = "iCloud Drive is off on this Mac. Turn it on in System Settings, or choose a folder.";
+"iCloud Drive ist auf diesem Mac aus." = "iCloud Drive is off on this Mac.";
+"Gleicht ab. Pfade, lokale Adressen und Zustimmungen bleiben auf diesem Mac." = "Syncing. Paths, local addresses and consents stay on this Mac.";
+"Abgleich pausiert: Ein anderer Mac nutzt eine neuere Version. Aktualisiere {} auf diesem Mac." = "Sync paused: another Mac uses a newer version. Update {} on this Mac.";
+"Abgleich fehlgeschlagen: {}. Erlaube den Zugriff auf iCloud Drive oder wähle den Ordner selbst." = "Sync failed: {}. Allow access to iCloud Drive or choose the folder yourself.";
+"Über iCloud Drive mit meinen anderen Macs abgleichen" = "Sync with my other Macs through iCloud Drive";
+"Ordner wählen …" = "Choose Folder…";
+"Abgleich:" = "Sync:";
+"iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive did not answer in time";

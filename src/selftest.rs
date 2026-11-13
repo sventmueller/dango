@@ -92,6 +92,7 @@ mod search_replace;
 mod servers;
 mod settings_general;
 mod settings_pages;
+mod settings_sync;
 mod settings_toolbar;
 mod split;
 mod sticky;

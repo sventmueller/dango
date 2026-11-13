@@ -30,6 +30,13 @@ const MARK: f64 = 3.0;
 #[derive(Default)]
 pub struct Shown(Cell<Option<bool>>);
 
+impl Shown {
+    /// Reads the setting again on next use.
+    pub fn forget(&self) {
+        self.0.set(None);
+    }
+}
+
 /// Whether editors show the minimap.
 pub fn shown() -> bool {
     let Some(mtm) = MainThreadMarker::new() else {

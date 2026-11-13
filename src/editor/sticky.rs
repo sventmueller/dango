@@ -29,6 +29,13 @@ const LINE_PADDING: f64 = 5.0;
 #[derive(Default)]
 pub struct Lines(Cell<Option<usize>>);
 
+impl Lines {
+    /// Reads the setting again on next use.
+    pub fn forget(&self) {
+        self.0.set(None);
+    }
+}
+
 fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
     MainThreadMarker::new().map(crate::context::AppContext::get)
 }

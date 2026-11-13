@@ -37,6 +37,39 @@ pub enum Sharing {
     PerMac,
 }
 
+/// The settings that follow the user to their other Macs (E113), by name; a test holds this list to the keys'
+/// declarations.
+pub const SHARED: &[&str] = &[
+    "agentEffort",
+    "agentModel",
+    "agentPrices",
+    "blameAtLineEnd",
+    "ciHosts",
+    "ciOAuthClients",
+    "commitMessageModel",
+    "diagnosticsAtLineEnd",
+    "dictation",
+    "dictationWithFn",
+    "editPrediction",
+    "editPredictionExclude",
+    "editPredictionOffFor",
+    "fontSize",
+    "formatOnSave",
+    "formatter",
+    "hiddenSidebarPanels",
+    "inlayHints",
+    "inlayHintsOffFor",
+    "markdownPreviewBeside",
+    "minimap",
+    "optionAsMeta",
+    "previewTabs",
+    "reopenProjects",
+    "searchEngine",
+    "showIgnoredFiles",
+    "showWhitespace",
+    "stickyScrollLines",
+];
+
 /// A named setting of type `T` with its default.
 pub struct Key<T> {
     /// The name in the JSON file.
