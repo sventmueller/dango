@@ -1493,8 +1493,8 @@
 "Haltepunkt setzen" = "ブレークポイントを追加";
 "Haltepunkt, ausgeschaltet" = "ブレークポイント、無効";
 "Haltepunkte" = "ブレークポイント";
-"Haltepunkte ausschalten" = "ブレークポイントを無効にする";
-"Haltepunkte einschalten" = "ブレークポイントを有効にする";
+"Haltepunkte ausschalten" = "ブレークポイントを非アクティブ化";
+"Haltepunkte einschalten" = "ブレークポイントをアクティブ化";
 "Heraus" = "ステップアウト";
 "Hier stehen die Variablen des angehaltenen Programms." = "一時停止中のプログラムの変数がここに表示されます。";
 "Hineinspringen" = "ステップイン";

@@ -1493,8 +1493,8 @@
 "Haltepunkt setzen" = "Tambah Titik Henti";
 "Haltepunkt, ausgeschaltet" = "Titik henti, dilumpuhkan";
 "Haltepunkte" = "Titik Henti";
-"Haltepunkte ausschalten" = "Lumpuhkan Titik Henti";
-"Haltepunkte einschalten" = "Dayakan Titik Henti";
+"Haltepunkte ausschalten" = "Lumpuhkan Semua Titik Henti";
+"Haltepunkte einschalten" = "Dayakan Semua Titik Henti";
 "Heraus" = "Langkah Keluar";
 "Hier stehen die Variablen des angehaltenen Programms." = "Pemboleh ubah program yang dijeda dipaparkan di sini.";
 "Hineinspringen" = "Langkah Masuk";

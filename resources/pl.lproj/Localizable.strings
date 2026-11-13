@@ -1470,7 +1470,7 @@
 "Debug-Konsole: {}" = "Konsola debugowania: {}";
 "Debug-Konsole: {}, beendet" = "Konsola debugowania: {}, zakończono";
 "Debug-Sitzungen und Haltepunkte" = "Sesje debugowania i punkty przerwania";
-"Debuggen" = "Debuguj";
+"Debuggen" = "Debugowanie";
 "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust." = "Debugowanie uruchamia programy z folderu i działa dopiero, gdy mu zaufasz.";
 "Der Build hat kein Programm erzeugt." = "Kompilacja nie utworzyła programu.";
 "Der Build ist fehlgeschlagen:\n{}" = "Kompilacja nie powiodła się:\n{}";
@@ -1497,7 +1497,7 @@
 "Haltepunkte einschalten" = "Aktywuj punkty przerwania";
 "Heraus" = "Wyjdź";
 "Hier stehen die Variablen des angehaltenen Programms." = "Tu pojawią się zmienne wstrzymanego programu.";
-"Hineinspringen" = "Wejdź";
+"Hineinspringen" = "Wkrocz";
 "Inspektor" = "Inspektor";
 "Inspektor ein-/ausblenden" = "Przełącz inspektor";
 "Keine Debug-Sitzung" = "Brak sesji debugowania";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Komunikat logu…";
 "Logpunkt" = "Punkt rejestrowania";
 "Neuer überwachter Ausdruck" = "Nowe obserwowane wyrażenie";
-"Pause" = "Wstrzymaj";
+"Pause" = "Wstrzymanie";
 "Programm hier angehalten" = "Program wstrzymany tutaj";
 "Programmstart" = "Start programu";
 "Prozess" = "Proces";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} w {}";
 "{} ist nicht installiert." = "Nie zainstalowano: {}.";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "Najpierw otwórz plik programu, który chcesz debugować.";
-"Überspringen" = "Przejdź nad";
+"Überspringen" = "Przekrocz";
 "Überwachte Ausdrücke" = "Obserwowane wyrażenia";
 "„{}“ startet …" = "Uruchamianie „{}”…";
 "Wartet auf Freigabe durch macOS …" = "Czekanie na zgodę systemu macOS…";

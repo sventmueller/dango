@@ -1470,7 +1470,7 @@
 "Debug-Konsole: {}" = "Consolă de depanare: {}";
 "Debug-Konsole: {}, beendet" = "Consolă de depanare: {}, încheiată";
 "Debug-Sitzungen und Haltepunkte" = "Sesiuni de depanare și puncte de întrerupere";
-"Debuggen" = "Depanați";
+"Debuggen" = "Depanare";
 "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust." = "Depanarea pornește programele din dosar și funcționează abia după ce acordați încredere dosarului.";
 "Der Build hat kein Programm erzeugt." = "Compilarea nu a produs niciun program.";
 "Der Build ist fehlgeschlagen:\n{}" = "Compilarea a eșuat:\n{}";

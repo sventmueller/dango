@@ -1442,7 +1442,7 @@
 "Wähle ein Modell, das Fill-in-the-Middle kann." = "Valitse malli, joka osaa fill-in-the-middlen.";
 "Dieses Modell gehört zu keiner bekannten Fill-in-the-Middle-Familie; Vorschläge können ausbleiben." = "Tämä malli ei kuulu mihinkään tunnettuun fill-in-the-middle-perheeseen; ehdotuksia ei välttämättä tule.";
 "Vorhersage" = "Ennustus";
-"Aktuelles Programm debuggen" = "Debuggaa nykyinen ohjelma";
+"Aktuelles Programm debuggen" = "Nykyisen ohjelman virheenjäljitys";
 "Alle Haltepunkte entfernen" = "Poista kaikki keskeytyskohdat";
 "An Prozess anhängen" = "Liitä prosessiin";
 "An Prozess anhängen …" = "Liitä prosessiin…";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Lokiviesti…";
 "Logpunkt" = "Lokipiste";
 "Neuer überwachter Ausdruck" = "Uusi tarkkailtava lauseke";
-"Pause" = "Keskeytä";
+"Pause" = "Tauko";
 "Programm hier angehalten" = "Ohjelma pysäytetty tässä";
 "Programmstart" = "Ohjelman käynnistys";
 "Prozess" = "Prosessi";

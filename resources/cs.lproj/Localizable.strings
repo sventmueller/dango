@@ -1495,9 +1495,9 @@
 "Haltepunkte" = "Zarážky";
 "Haltepunkte ausschalten" = "Vypnout zarážky";
 "Haltepunkte einschalten" = "Zapnout zarážky";
-"Heraus" = "Vystoupit";
+"Heraus" = "Krokovat s vystoupením";
 "Hier stehen die Variablen des angehaltenen Programms." = "Zde se zobrazí proměnné pozastaveného programu.";
-"Hineinspringen" = "Vstoupit";
+"Hineinspringen" = "Krokovat s vnořením";
 "Inspektor" = "Inspektor";
 "Inspektor ein-/ausblenden" = "Zobrazit/skrýt inspektor";
 "Keine Debug-Sitzung" = "Žádná relace ladění";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Zpráva do logu…";
 "Logpunkt" = "Logpoint";
 "Neuer überwachter Ausdruck" = "Nový sledovaný výraz";
-"Pause" = "Pozastavit";
+"Pause" = "Pozastavení";
 "Programm hier angehalten" = "Program zde pozastaven";
 "Programmstart" = "Spuštění programu";
 "Prozess" = "Proces";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} v {}";
 "{} ist nicht installiert." = "{} není nainstalován.";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "Nejdřív otevřete soubor programu, který chcete ladit.";
-"Überspringen" = "Překročit";
+"Überspringen" = "Krokovat s přeskočením";
 "Überwachte Ausdrücke" = "Sledované výrazy";
 "„{}“ startet …" = "Spouští se „{}“…";
 "Wartet auf Freigabe durch macOS …" = "Čeká na povolení přístupu v macOS…";

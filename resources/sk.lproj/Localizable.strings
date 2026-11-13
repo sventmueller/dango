@@ -1497,7 +1497,7 @@
 "Haltepunkte einschalten" = "Aktivovať body prerušenia";
 "Heraus" = "Vystúpiť";
 "Hier stehen die Variablen des angehaltenen Programms." = "Tu sa zobrazia premenné pozastaveného programu.";
-"Hineinspringen" = "Vstúpiť do";
+"Hineinspringen" = "Vstúpiť";
 "Inspektor" = "Inšpektor";
 "Inspektor ein-/ausblenden" = "Zobraziť/skryť inšpektor";
 "Keine Debug-Sitzung" = "Žiadna ladiaca relácia";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Správa záznamu…";
 "Logpunkt" = "Bod záznamu";
 "Neuer überwachter Ausdruck" = "Nový sledovaný výraz";
-"Pause" = "Pozastaviť";
+"Pause" = "Pozastavenie";
 "Programm hier angehalten" = "Program je tu pozastavený";
 "Programmstart" = "Spustenie programu";
 "Prozess" = "Proces";

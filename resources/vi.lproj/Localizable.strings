@@ -1477,7 +1477,7 @@
 "Der Build wurde abgebrochen." = "Bản dựng đã bị hủy.";
 "Der Debug-Adapter ist abgestürzt. {}" = "Bộ chuyển đổi gỡ lỗi đã bị lỗi. {}";
 "Der Debug-Adapter konnte nicht starten: {}" = "Không thể khởi động bộ chuyển đổi gỡ lỗi: {}";
-"Der Debugger hängt sich an das laufende Programm. Es gehört nicht der App: Trennen lässt es weiterlaufen." = "Trình gỡ lỗi đính kèm vào chương trình đang chạy. Ứng dụng không sở hữu chương trình này: khi tách ra, chương trình vẫn tiếp tục chạy.";
+"Der Debugger hängt sich an das laufende Programm. Es gehört nicht der App: Trennen lässt es weiterlaufen." = "Trình gỡ lỗi đính kèm vào chương trình đang chạy. Ứng dụng không sở hữu chương trình này: khi ngắt kết nối, chương trình vẫn tiếp tục chạy.";
 "Der Debugger konnte nicht starten." = "Không thể khởi động trình gỡ lỗi.";
 "Die Datei gehört zu keinem Cargo-Paket." = "Tệp không thuộc gói Cargo nào.";
 "Die Datei ist noch nicht gesichert." = "Tệp chưa được lưu.";
@@ -1521,14 +1521,14 @@
 "Treffer {}" = "Số lần chạm {}";
 "Trefferzahl" = "Số lần chạm";
 "Trefferzahl …" = "Số lần chạm…";
-"Trennen" = "Tách";
+"Trennen" = "Ngắt kết nối";
 "Variablen" = "Biến";
 "Variablen und überwachte Ausdrücke" = "Biến và biểu thức theo dõi";
 "Variablen zeigen sich, wenn das Programm anhält." = "Các biến xuất hiện khi chương trình tạm dừng.";
 "Wenn {}" = "Khi {}";
 "Werte in Zeile {}" = "Giá trị ở dòng {}";
 "Wähle einen Prozess, an den sich der Debugger anhängt." = "Chọn tiến trình để trình gỡ lỗi đính kèm vào.";
-"Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner." = "Để gỡ lỗi JavaScript và TypeScript, ứng dụng tải vscode-js-debug phiên bản cố định, kèm kiểm tra tổng kiểm, vào thư mục riêng của mình.";
+"Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner." = "Để gỡ lỗi JavaScript và TypeScript, ứng dụng tải vscode-js-debug phiên bản cố định, đã xác minh bằng tổng kiểm tra, vào thư mục riêng của mình.";
 "vscode-js-debug installieren?" = "Cài đặt vscode-js-debug?";
 "vscode-js-debug ist installiert. Starte das Debuggen noch einmal." = "Đã cài đặt vscode-js-debug. Hãy bắt đầu gỡ lỗi lại.";
 "vscode-js-debug ließ sich nicht installieren: {}" = "Không thể cài đặt vscode-js-debug: {}";

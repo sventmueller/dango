@@ -1497,7 +1497,7 @@
 "Haltepunkte einschalten" = "Ativar Pontos de Interrupção";
 "Heraus" = "Sair";
 "Hier stehen die Variablen des angehaltenen Programms." = "As variáveis do programa pausado aparecem aqui.";
-"Hineinspringen" = "Entrar";
+"Hineinspringen" = "Intervir";
 "Inspektor" = "Inspetor";
 "Inspektor ein-/ausblenden" = "Mostrar/Ocultar Inspetor";
 "Keine Debug-Sitzung" = "Nenhuma sessão de depuração";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Mensagem de Log…";
 "Logpunkt" = "Logpoint";
 "Neuer überwachter Ausdruck" = "Nova expressão monitorada";
-"Pause" = "Pausar";
+"Pause" = "Pausa";
 "Programm hier angehalten" = "Programa pausado aqui";
 "Programmstart" = "Início do programa";
 "Prozess" = "Processo";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} em {}";
 "{} ist nicht installiert." = "{} não está instalado.";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "Primeiro abra o arquivo do programa que você quer depurar.";
-"Überspringen" = "Passar por Cima";
+"Überspringen" = "Contornar";
 "Überwachte Ausdrücke" = "Expressões Monitoradas";
 "„{}“ startet …" = "Iniciando “{}”…";
 "Wartet auf Freigabe durch macOS …" = "Aguardando a permissão do macOS…";

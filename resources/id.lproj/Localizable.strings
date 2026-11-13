@@ -1493,8 +1493,8 @@
 "Haltepunkt setzen" = "Tambah Breakpoint";
 "Haltepunkt, ausgeschaltet" = "Breakpoint, nonaktif";
 "Haltepunkte" = "Breakpoint";
-"Haltepunkte ausschalten" = "Nonaktifkan Breakpoint";
-"Haltepunkte einschalten" = "Aktifkan Breakpoint";
+"Haltepunkte ausschalten" = "Nonaktifkan Semua Breakpoint";
+"Haltepunkte einschalten" = "Aktifkan Semua Breakpoint";
 "Heraus" = "Keluari";
 "Hier stehen die Variablen des angehaltenen Programms." = "Variabel program yang dijeda muncul di sini.";
 "Hineinspringen" = "Masuki";

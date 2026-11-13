@@ -1475,8 +1475,8 @@
 "Der Build hat kein Programm erzeugt." = "Bygget har ikke oprettet noget program.";
 "Der Build ist fehlgeschlagen:\n{}" = "Bygget mislykkedes:\n{}";
 "Der Build wurde abgebrochen." = "Bygget blev annulleret.";
-"Der Debug-Adapter ist abgestürzt. {}" = "Fejlfindingsadapteren holdt op med at fungere. {}";
-"Der Debug-Adapter konnte nicht starten: {}" = "Fejlfindingsadapteren kunne ikke starte: {}";
+"Der Debug-Adapter ist abgestürzt. {}" = "Debug-adapteren holdt op med at fungere. {}";
+"Der Debug-Adapter konnte nicht starten: {}" = "Debug-adapteren kunne ikke starte: {}";
 "Der Debugger hängt sich an das laufende Programm. Es gehört nicht der App: Trennen lässt es weiterlaufen." = "Fejlfinderen tilknyttes det kørende program. Det tilhører ikke appen: hvis du frakobler, kører det videre.";
 "Der Debugger konnte nicht starten." = "Fejlfinderen kunne ikke starte.";
 "Die Datei gehört zu keinem Cargo-Paket." = "Filen tilhører ingen Cargo-pakke.";
@@ -1541,7 +1541,7 @@
 "Überspringen" = "Træd over";
 "Überwachte Ausdrücke" = "Overvågede udtryk";
 "„{}“ startet …" = "Starter “{}”…";
-"Wartet auf Freigabe durch macOS …" = "Venter på, at macOS giver adgang …";
+"Wartet auf Freigabe durch macOS …" = "Venter på, at macOS giver adgang…";
 "Beenden, während Agenten noch arbeiten?" = "Slut, mens agenter stadig arbejder?";
 "Beenden stoppt ihre Züge und Hintergrundprozesse." = "Når du slutter, stoppes deres runder og baggrundsprocesser.";
 "Beenden" = "Slut";

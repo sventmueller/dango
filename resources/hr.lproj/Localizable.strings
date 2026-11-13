@@ -1470,7 +1470,7 @@
 "Debug-Konsole: {}" = "Konzola za otklanjanje pogrešaka: {}";
 "Debug-Konsole: {}, beendet" = "Konzola za otklanjanje pogrešaka: {}, završeno";
 "Debug-Sitzungen und Haltepunkte" = "Sesije otklanjanja pogrešaka i prekidne točke";
-"Debuggen" = "Otkloni pogreške";
+"Debuggen" = "Otklanjanje pogrešaka";
 "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust." = "Otklanjanje pogrešaka pokreće programe iz mape i radi tek kad vjerujete mapi.";
 "Der Build hat kein Programm erzeugt." = "Izgradnja nije proizvela program.";
 "Der Build ist fehlgeschlagen:\n{}" = "Izgradnja nije uspjela:\n{}";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Poruka zapisnika…";
 "Logpunkt" = "Točka zapisivanja";
 "Neuer überwachter Ausdruck" = "Novi praćeni izraz";
-"Pause" = "Pauziraj";
+"Pause" = "Pauza";
 "Programm hier angehalten" = "Program je ovdje zaustavljen";
 "Programmstart" = "Pokretanje programa";
 "Prozess" = "Proces";

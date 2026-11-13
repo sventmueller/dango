@@ -1442,7 +1442,7 @@
 "Wähle ein Modell, das Fill-in-the-Middle kann." = "Izberite model, ki zna fill-in-the-middle.";
 "Dieses Modell gehört zu keiner bekannten Fill-in-the-Middle-Familie; Vorschläge können ausbleiben." = "Ta model ne spada v nobeno znano družino fill-in-the-middle; predlogi morda ne bodo prišli.";
 "Vorhersage" = "Napovedovanje";
-"Aktuelles Programm debuggen" = "Odpravljaj napake trenutnega programa";
+"Aktuelles Programm debuggen" = "Odpravi napake v trenutnem programu";
 "Alle Haltepunkte entfernen" = "Odstrani vse prekinitvene točke";
 "An Prozess anhängen" = "Pripni na proces";
 "An Prozess anhängen …" = "Pripni na proces …";
@@ -1475,8 +1475,8 @@
 "Der Build hat kein Programm erzeugt." = "Gradnja ni ustvarila nobenega programa.";
 "Der Build ist fehlgeschlagen:\n{}" = "Gradnja ni uspela:\n{}";
 "Der Build wurde abgebrochen." = "Gradnja je bila preklicana.";
-"Der Debug-Adapter ist abgestürzt. {}" = "Vmesnik za odpravljanje napak se je zrušil. {}";
-"Der Debug-Adapter konnte nicht starten: {}" = "Vmesnika za odpravljanje napak ni bilo mogoče zagnati: {}";
+"Der Debug-Adapter ist abgestürzt. {}" = "Adapter za razhroščevanje se je zrušil. {}";
+"Der Debug-Adapter konnte nicht starten: {}" = "Adapterja za razhroščevanje ni bilo mogoče zagnati: {}";
 "Der Debugger hängt sich an das laufende Programm. Es gehört nicht der App: Trennen lässt es weiterlaufen." = "Razhroščevalnik se pripne na delujoči program. Aplikacija ga ne upravlja: po odklopu teče naprej.";
 "Der Debugger konnte nicht starten." = "Razhroščevalnika ni bilo mogoče zagnati.";
 "Die Datei gehört zu keinem Cargo-Paket." = "Datoteka ne spada v noben paket Cargo.";

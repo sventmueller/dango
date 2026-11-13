@@ -1442,7 +1442,7 @@
 "Wähle ein Modell, das Fill-in-the-Middle kann." = "Fill-in-the-middle yapabilen bir model seçin.";
 "Dieses Modell gehört zu keiner bekannten Fill-in-the-Middle-Familie; Vorschläge können ausbleiben." = "Bu model bilinen hiçbir fill-in-the-middle ailesine ait değil; öneriler gelmeyebilir.";
 "Vorhersage" = "Tahmin";
-"Aktuelles Programm debuggen" = "Geçerli Programı Hata Ayıkla";
+"Aktuelles Programm debuggen" = "Geçerli Programda Hata Ayıkla";
 "Alle Haltepunkte entfernen" = "Tüm Kesme Noktalarını Kaldır";
 "An Prozess anhängen" = "İşleme Bağlan";
 "An Prozess anhängen …" = "İşleme Bağlan…";
@@ -1495,9 +1495,9 @@
 "Haltepunkte" = "Kesme Noktaları";
 "Haltepunkte ausschalten" = "Kesme Noktalarını Devre Dışı Bırak";
 "Haltepunkte einschalten" = "Kesme Noktalarını Etkinleştir";
-"Heraus" = "Dışarı Adımla";
+"Heraus" = "Dışına Adımla";
 "Hier stehen die Variablen des angehaltenen Programms." = "Duraklatılan programın değişkenleri burada görünür.";
-"Hineinspringen" = "İçeri Adımla";
+"Hineinspringen" = "İçine Adımla";
 "Inspektor" = "Denetçi";
 "Inspektor ein-/ausblenden" = "Denetçiyi Göster/Gizle";
 "Keine Debug-Sitzung" = "Hata ayıklama oturumu yok";
@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "Günlük İletisi…";
 "Logpunkt" = "Günlük Noktası";
 "Neuer überwachter Ausdruck" = "Yeni izlenen ifade";
-"Pause" = "Duraklat";
+"Pause" = "Duraklatma";
 "Programm hier angehalten" = "Program burada duraklatıldı";
 "Programmstart" = "Program başlangıcı";
 "Prozess" = "İşlem";
@@ -1518,9 +1518,9 @@
 "Sprung" = "Atlama";
 "Startet …" = "Başlatılıyor…";
 "Startkonfiguration" = "Başlatma yapılandırması";
-"Treffer {}" = "Vuruş: {}";
-"Trefferzahl" = "Vuruş Sayısı";
-"Trefferzahl …" = "Vuruş Sayısı…";
+"Treffer {}" = "İsabet: {}";
+"Trefferzahl" = "İsabet Sayısı";
+"Trefferzahl …" = "İsabet Sayısı…";
 "Trennen" = "Bağlantıyı Kes";
 "Variablen" = "Değişkenler";
 "Variablen und überwachte Ausdrücke" = "Değişkenler ve izlenen ifadeler";

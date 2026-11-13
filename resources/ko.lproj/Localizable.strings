@@ -1485,7 +1485,7 @@
 "Ein Logpunkt hält nicht an, sondern schreibt die Meldung in die Debug-Konsole; {Ausdruck} setzt einen Wert ein." = "로그포인트는 멈추지 않고 메시지를 디버그 콘솔에 기록합니다. {식}은(는) 값을 삽입합니다.";
 "Für {}-Dateien gibt es keinen Debugger ohne Startkonfiguration." = "{} 파일은 실행 구성 없이 디버그할 수 없습니다.";
 "Haltepunkt" = "중단점";
-"Haltepunkt an der Cursorzeile" = "커서 줄에 중단점";
+"Haltepunkt an der Cursorzeile" = "현재 줄에 중단점";
 "Haltepunkt ausschalten" = "중단점 끄기";
 "Haltepunkt einschalten" = "중단점 켜기";
 "Haltepunkt entfernen" = "중단점 제거";
@@ -1526,7 +1526,7 @@
 "Variablen und überwachte Ausdrücke" = "변수 및 감시식";
 "Variablen zeigen sich, wenn das Programm anhält." = "프로그램이 멈추면 변수가 표시됩니다.";
 "Wenn {}" = "{}일 때";
-"Werte in Zeile {}" = "{}번째 줄의 값";
+"Werte in Zeile {}" = "{}행의 값";
 "Wähle einen Prozess, an den sich der Debugger anhängt." = "디버거를 연결할 프로세스를 선택하십시오.";
 "Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner." = "JavaScript 및 TypeScript를 디버그하기 위해 앱은 vscode-js-debug를 고정된 버전으로 체크섬을 확인하여 자체 폴더에 다운로드합니다.";
 "vscode-js-debug installieren?" = "vscode-js-debug를 설치하겠습니까?";

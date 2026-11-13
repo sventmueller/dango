@@ -1508,7 +1508,7 @@
 "Logmeldung …" = "ข้อความล็อก…";
 "Logpunkt" = "ล็อกพอยต์";
 "Neuer überwachter Ausdruck" = "นิพจน์ใหม่ที่เฝ้าดู";
-"Pause" = "หยุดชั่วคราว";
+"Pause" = "การหยุดชั่วคราว";
 "Programm hier angehalten" = "โปรแกรมหยุดชั่วคราวที่นี่";
 "Programmstart" = "การเริ่มโปรแกรม";
 "Prozess" = "กระบวนการ";
@@ -1528,7 +1528,7 @@
 "Wenn {}" = "เมื่อ {}";
 "Werte in Zeile {}" = "ค่าในบรรทัด {}";
 "Wähle einen Prozess, an den sich der Debugger anhängt." = "เลือกกระบวนการที่ดีบักเกอร์จะแนบด้วย";
-"Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner." = "หากต้องการดีบัก JavaScript และ TypeScript แอปจะดาวน์โหลด vscode-js-debug เวอร์ชันที่กำหนด พร้อมตรวจสอบด้วยค่าตรวจสอบความถูกต้อง ไปยังโฟลเดอร์ของแอปเอง";
+"Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner." = "หากต้องการดีบัก JavaScript และ TypeScript แอปจะดาวน์โหลด vscode-js-debug เวอร์ชันที่กำหนดซึ่งตรวจสอบเช็คซัมแล้ว ไปยังโฟลเดอร์ของแอปเอง";
 "vscode-js-debug installieren?" = "ติดตั้ง vscode-js-debug หรือไม่";
 "vscode-js-debug ist installiert. Starte das Debuggen noch einmal." = "ติดตั้ง vscode-js-debug แล้ว โปรดเริ่มการดีบักอีกครั้ง";
 "vscode-js-debug ließ sich nicht installieren: {}" = "ไม่สามารถติดตั้ง vscode-js-debug ได้: {}";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} ใน {}";
 "{} ist nicht installiert." = "ยังไม่ได้ติดตั้ง {}";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "โปรดเปิดไฟล์ของโปรแกรมที่ต้องการดีบักก่อน";
-"Überspringen" = "ข้ามไป";
+"Überspringen" = "ก้าวข้าม";
 "Überwachte Ausdrücke" = "นิพจน์ที่เฝ้าดู";
 "„{}“ startet …" = "กำลังเริ่ม “{}”…";
 "Wartet auf Freigabe durch macOS …" = "กำลังรอให้ macOS อนุญาตการเข้าถึง…";

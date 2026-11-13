@@ -1493,8 +1493,8 @@
 "Haltepunkt setzen" = "加入中斷點";
 "Haltepunkt, ausgeschaltet" = "中斷點，已停用";
 "Haltepunkte" = "中斷點";
-"Haltepunkte ausschalten" = "停用中斷點";
-"Haltepunkte einschalten" = "啟用中斷點";
+"Haltepunkte ausschalten" = "停用全部中斷點";
+"Haltepunkte einschalten" = "啟用全部中斷點";
 "Heraus" = "步出";
 "Hier stehen die Variablen des angehaltenen Programms." = "已暫停程式的變數顯示在這裡。";
 "Hineinspringen" = "步入";

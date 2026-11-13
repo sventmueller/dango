@@ -163,8 +163,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | call stack | the frames of a paused thread, innermost first |
 | Frame | frame | one level of the call stack, a function with its variables; kept as the developers' word |
 | Überwachter Ausdruck, Überwachte Ausdrücke | watch expression, watch expressions | an expression the inspector evaluates whenever the program pauses |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continue / Step Over / Step Into / Step Out | the debugger's commands, as Xcode names them in each language |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continue / Step Over / Step Into / Step Out | the debugger's commands, as Visual Studio, VS Code or JetBrains IDEs name them in the language where one of them is localized |
 | Anhängen / Trennen | attach / detach | joining a running program, and leaving it running when the session stops |
+| An Prozess anhängen | Attach to Process | the Debug menu item that joins a running program |
+| Neu starten / Stopp | Restart / Stop | the debugger's commands for the session; the same words restart a language server and stop an agent's turn |
+| Variablen | variables | the variables of the paused frame, listed in the inspector |
 | Angehalten | paused | a program the debugger stopped, as at a breakpoint |
 | Debug-Konsole | debug console | the tab with the program's output and the expressions evaluated in the paused frame |
 | Startkonfiguration | launch configuration | how a program is started for debugging, as `.vscode/launch.json` describes it |
@@ -316,6 +319,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | تعبير مراقَب، تعبيرات مراقَبة |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | متابعة / تخطٍّ / دخول / خروج |
 | Anhängen / Trennen | إرفاق / فصل |
+| An Prozess anhängen | إرفاق بعملية |
+| Neu starten / Stopp | إعادة التشغيل / إيقاف |
+| Variablen | المتغيرات |
 | Angehalten | متوقف مؤقتًا |
 | Debug-Konsole | وحدة تحكم التصحيح |
 | Startkonfiguration | إعداد التشغيل |
@@ -461,6 +467,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | expressió vigilada, expressions vigilades |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Continua / Passa per sobre / Entra / Surt |
 | Anhängen / Trennen | adjunta / separa |
+| An Prozess anhängen | Adjunta al procés |
+| Neu starten / Stopp | Reinicia / Atura |
+| Variablen | variables |
 | Angehalten | en pausa |
 | Debug-Konsole | consola de depuració |
 | Startkonfiguration | configuració d’inici |
@@ -603,8 +612,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | zásobník volání |
 | Frame | rámec |
 | Überwachter Ausdruck, Überwachte Ausdrücke | sledovaný výraz, sledované výrazy |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovat / Překročit / Vstoupit / Vystoupit |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovat / Krokovat s přeskočením / Krokovat s vnořením / Krokovat s vystoupením |
 | Anhängen / Trennen | připojit / odpojit |
+| An Prozess anhängen | Připojit k procesu |
+| Neu starten / Stopp | Restartovat / Zastavit |
+| Variablen | proměnné |
 | Angehalten | pozastaveno |
 | Debug-Konsole | konzole ladění |
 | Startkonfiguration | konfigurace spuštění |
@@ -747,6 +759,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | overvåget udtryk, overvågede udtryk |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsæt / Træd over / Træd ind / Træd ud |
 | Anhängen / Trennen | tilknyt / frakobl |
+| An Prozess anhängen | Tilknyt proces |
+| Neu starten / Stopp | Genstart / Stop |
+| Variablen | variabler |
 | Angehalten | standset |
 | Debug-Konsole | fejlfindingskonsol |
 | Startkonfiguration | startkonfiguration |
@@ -892,6 +907,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | παρακολουθούμενη έκφραση, παρακολουθούμενες εκφράσεις |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Συνέχεια / Βήμα πάνω από / Είσοδος / Έξοδος |
 | Anhängen / Trennen | σύνδεση / αποσύνδεση |
+| An Prozess anhängen | Σύνδεση σε διεργασία |
+| Neu starten / Stopp | Επανεκκίνηση / Διακοπή |
+| Variablen | μεταβλητές |
 | Angehalten | σε παύση |
 | Debug-Konsole | κονσόλα αποσφαλμάτωσης |
 | Startkonfiguration | διαμόρφωση εκκίνησης |
@@ -1035,8 +1053,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | pila de llamadas |
 | Frame | frame |
 | Überwachter Ausdruck, Überwachte Ausdrücke | expresión vigilada, expresiones vigiladas |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Pasar por encima / Entrar / Salir |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Paso a paso por procedimientos / Paso a paso por instrucciones / Paso a paso para salir |
 | Anhängen / Trennen | asociar / desasociar |
+| An Prozess anhängen | Asociar a proceso |
+| Neu starten / Stopp | Reiniciar / Detener |
+| Variablen | variables |
 | Angehalten | en pausa |
 | Debug-Konsole | consola de depuración |
 | Startkonfiguration | configuración de inicio |
@@ -1183,6 +1204,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | tarkkailtava lauseke, tarkkailtavat lausekkeet |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Jatka / Askella yli / Askella sisään / Askella ulos |
 | Anhängen / Trennen | liitä / irrota |
+| An Prozess anhängen | Liitä prosessiin |
+| Neu starten / Stopp | Käynnistä uudelleen / Pysäytä |
+| Variablen | muuttujat |
 | Angehalten | pysäytetty |
 | Debug-Konsole | virheenjäljityskonsoli |
 | Startkonfiguration | käynnistysmääritys |
@@ -1326,6 +1350,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | expression espionnée, expressions espionnées |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuer / Pas à pas principal / Pas à pas détaillé / Pas à pas sortant |
 | Anhängen / Trennen | attacher / détacher |
+| An Prozess anhängen | Attacher au processus |
+| Neu starten / Stopp | Redémarrer / Arrêter |
+| Variablen | variables |
 | Angehalten | en pause |
 | Debug-Konsole | console de débogage |
 | Startkonfiguration | configuration de lancement |
@@ -1473,6 +1500,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | ביטוי במעקב, ביטויים במעקב |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | המשך / דילוג מעל / כניסה / יציאה |
 | Anhängen / Trennen | הצמדה / ניתוק |
+| An Prozess anhängen | הצמדה לתהליך |
+| Neu starten / Stopp | הפעלה מחדש / עצירה |
+| Variablen | משתנים |
 | Angehalten | מושהה |
 | Debug-Konsole | מסוף ניפוי באגים |
 | Startkonfiguration | תצורת הפעלה |
@@ -1616,6 +1646,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | वॉच एक्सप्रेशन, वॉच एक्सप्रेशन |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | जारी रखें / स्टेप ओवर / स्टेप इन / स्टेप आउट |
 | Anhängen / Trennen | अटैच करें / डिटैच करें |
+| An Prozess anhängen | प्रोसेस से अटैच करें |
+| Neu starten / Stopp | रीस्टार्ट करें / रोकें |
+| Variablen | वैरिएबल |
 | Angehalten | रुका हुआ |
 | Debug-Konsole | डीबग कंसोल |
 | Startkonfiguration | लॉन्च कॉन्फ़िगरेशन |
@@ -1760,6 +1793,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | praćeni izraz, praćeni izrazi |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Nastavi / Preskoči / Uđi u funkciju / Iziđi iz funkcije |
 | Anhängen / Trennen | priključi / odvoji |
+| An Prozess anhängen | Priključi na proces |
+| Neu starten / Stopp | Ponovno pokreni / Zaustavi |
+| Variablen | varijable |
 | Angehalten | zaustavljeno |
 | Debug-Konsole | konzola za otklanjanje pogrešaka |
 | Startkonfiguration | konfiguracija pokretanja |
@@ -1906,6 +1942,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | figyelt kifejezés, figyelt kifejezések |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Folytatás / Átlépés / Belépés a függvénybe / Kilépés a függvényből |
 | Anhängen / Trennen | csatolás / leválasztás |
+| An Prozess anhängen | Csatolás folyamathoz |
+| Neu starten / Stopp | Újraindítás / Leállítás |
+| Variablen | változók |
 | Angehalten | szüneteltetve |
 | Debug-Konsole | hibakeresési konzol |
 | Startkonfiguration | indítási konfiguráció |
@@ -2050,6 +2089,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | ekspresi pantauan, ekspresi pantauan |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Lanjutkan / Langkahi / Masuki / Keluari |
 | Anhängen / Trennen | kaitkan / lepaskan |
+| An Prozess anhängen | Kaitkan ke Proses |
+| Neu starten / Stopp | Mulai Ulang / Hentikan |
+| Variablen | variabel |
 | Angehalten | dijeda |
 | Debug-Konsole | konsol debug |
 | Startkonfiguration | konfigurasi peluncuran |
@@ -2186,14 +2228,17 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Log | log |
 | **Debugger** | |
 | Debuggen | Debug |
-| Haltepunkt, Haltepunkte | breakpoint, breakpoint |
+| Haltepunkt, Haltepunkte | punto di interruzione, punti di interruzione |
 | Logpunkt | logpoint |
 | Bedingung / Trefferzahl | condizione / numero di passaggi |
 | Aufrufliste | stack di chiamate |
 | Frame | frame |
-| Überwachter Ausdruck, Überwachte Ausdrücke | espressione osservata, espressioni osservate |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continua / Salta / Entra / Esci |
+| Überwachter Ausdruck, Überwachte Ausdrücke | espressione di controllo, espressioni di controllo |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continua / Esegui istruzione/routine / Esegui istruzione / Esci da istruzione/routine |
 | Anhängen / Trennen | collega / scollega |
+| An Prozess anhängen | Collega al processo |
+| Neu starten / Stopp | Riavvia / Interrompi |
+| Variablen | variabili |
 | Angehalten | in pausa |
 | Debug-Konsole | console di debug |
 | Startkonfiguration | configurazione di avvio |
@@ -2339,6 +2384,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | ウォッチ式、ウォッチ式 |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | 続行 / ステップオーバー / ステップイン / ステップアウト |
 | Anhängen / Trennen | アタッチ / デタッチ |
+| An Prozess anhängen | プロセスにアタッチ |
+| Neu starten / Stopp | 再起動 / 停止 |
+| Variablen | 変数 |
 | Angehalten | 一時停止中 |
 | Debug-Konsole | デバッグコンソール |
 | Startkonfiguration | 起動構成 |
@@ -2483,6 +2531,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | 감시식, 감시식 |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | 계속 / 스텝 오버 / 스텝 인 / 스텝 아웃 |
 | Anhängen / Trennen | 연결 / 연결 해제 |
+| An Prozess anhängen | 프로세스에 연결 |
+| Neu starten / Stopp | 재시작 / 중단 |
+| Variablen | 변수 |
 | Angehalten | 일시 정지됨 |
 | Debug-Konsole | 디버그 콘솔 |
 | Startkonfiguration | 실행 구성 |
@@ -2626,6 +2677,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | ungkapan pantauan, ungkapan pantauan |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Teruskan / Langkah Lalu / Langkah Masuk / Langkah Keluar |
 | Anhängen / Trennen | lampirkan / tanggalkan |
+| An Prozess anhängen | Lampirkan pada Proses |
+| Neu starten / Stopp | Mula Semula / Henti |
+| Variablen | pemboleh ubah |
 | Angehalten | dijeda |
 | Debug-Konsole | konsol nyahpepijat |
 | Startkonfiguration | konfigurasi pelancaran |
@@ -2770,6 +2824,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | bewaakte expressie, bewaakte expressies |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Ga door / Stap over / Stap in / Stap uit |
 | Anhängen / Trennen | koppel / maak los |
+| An Prozess anhängen | Koppel aan proces |
+| Neu starten / Stopp | Herstart / Stop |
+| Variablen | variabelen |
 | Angehalten | onderbroken |
 | Debug-Konsole | debugconsole |
 | Startkonfiguration | startconfiguratie |
@@ -2914,6 +2971,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | overvåket uttrykk, overvåkede uttrykk |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsett / Gå over / Gå inn / Gå ut |
 | Anhängen / Trennen | koble til / koble fra |
+| An Prozess anhängen | Koble til prosess |
+| Neu starten / Stopp | Start på nytt / Stopp |
+| Variablen | variabler |
 | Angehalten | pauset |
 | Debug-Konsole | feilsøkingskonsoll |
 | Startkonfiguration | startkonfigurasjon |
@@ -3049,15 +3109,18 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Job | job |
 | Log | log |
 | **Debugger** | |
-| Debuggen | Debuguj |
+| Debuggen | Debugowanie |
 | Haltepunkt, Haltepunkte | punkt przerwania, punkty przerwania |
 | Logpunkt | punkt rejestrowania |
 | Bedingung / Trefferzahl | warunek / liczba trafień |
 | Aufrufliste | stos wywołań |
 | Frame | ramka |
 | Überwachter Ausdruck, Überwachte Ausdrücke | obserwowane wyrażenie, obserwowane wyrażenia |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Kontynuuj / Przejdź nad / Wejdź / Wyjdź |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Kontynuuj / Przekrocz / Wkrocz / Wyjdź |
 | Anhängen / Trennen | dołącz / odłącz |
+| An Prozess anhängen | Dołącz do procesu |
+| Neu starten / Stopp | Uruchom ponownie / Zatrzymaj |
+| Variablen | zmienne |
 | Angehalten | wstrzymano |
 | Debug-Konsole | konsola debugowania |
 | Startkonfiguration | konfiguracja uruchamiania |
@@ -3201,8 +3264,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | pilha de chamadas |
 | Frame | frame |
 | Überwachter Ausdruck, Überwachte Ausdrücke | expressão monitorada, expressões monitoradas |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Passar por Cima / Entrar / Sair |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Contornar / Intervir / Sair |
 | Anhängen / Trennen | anexar / desanexar |
+| An Prozess anhängen | Anexar ao Processo |
+| Neu starten / Stopp | Reiniciar / Parar |
+| Variablen | variáveis |
 | Angehalten | pausado |
 | Debug-Konsole | console de depuração |
 | Startkonfiguration | configuração de inicialização |
@@ -3348,6 +3414,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | expressão observada, expressões observadas |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuar / Passar por cima / Entrar / Sair |
 | Anhängen / Trennen | anexar / desanexar |
+| An Prozess anhängen | Anexar ao processo |
+| Neu starten / Stopp | Reiniciar / Parar |
+| Variablen | variáveis |
 | Angehalten | em pausa |
 | Debug-Konsole | consola de depuração |
 | Startkonfiguration | configuração de arranque |
@@ -3493,6 +3562,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | expresie urmărită, expresii urmărite |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Continuați / Treceți peste / Intrați / Ieșiți |
 | Anhängen / Trennen | atașare / detașare |
+| An Prozess anhängen | Atașați la proces |
+| Neu starten / Stopp | Reporniți / Opriți |
+| Variablen | variabile |
 | Angehalten | întrerupt |
 | Debug-Konsole | consolă de depanare |
 | Startkonfiguration | configurație de pornire |
@@ -3636,8 +3708,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | стек вызовов |
 | Frame | фрейм |
 | Überwachter Ausdruck, Überwachte Ausdrücke | отслеживаемое выражение, отслеживаемые выражения |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продолжить / Перешагнуть / Войти / Выйти |
-| Anhängen / Trennen | подключить / отключить |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продолжить / Шаг с обходом / Шаг с заходом / Шаг с выходом |
+| Anhängen / Trennen | присоединиться / отсоединиться |
+| An Prozess anhängen | Присоединиться к процессу |
+| Neu starten / Stopp | Перезапустить / Остановить |
+| Variablen | переменные |
 | Angehalten | приостановлено |
 | Debug-Konsole | консоль отладки |
 | Startkonfiguration | конфигурация запуска |
@@ -3781,8 +3856,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | zásobník volaní |
 | Frame | rámec (rámec zásobníka) |
 | Überwachter Ausdruck, Überwachte Ausdrücke | sledovaný výraz, sledované výrazy |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovať / Prejsť cez / Vstúpiť do / Vystúpiť |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Pokračovať / Prejsť cez / Vstúpiť / Vystúpiť |
 | Anhängen / Trennen | pripojiť / odpojiť |
+| An Prozess anhängen | Pripojiť k procesu |
+| Neu starten / Stopp | Reštartovať / Zastaviť |
+| Variablen | premenné |
 | Angehalten | pozastavené |
 | Debug-Konsole | ladiaca konzola |
 | Startkonfiguration | konfigurácia spustenia |
@@ -3929,6 +4007,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | opazovani izraz, opazovani izrazi |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Nadaljuj / Preskoči / Vstopi / Izstopi |
 | Anhängen / Trennen | pripni / odklopi |
+| An Prozess anhängen | Pripni na proces |
+| Neu starten / Stopp | Znova zaženi / Ustavi |
+| Variablen | spremenljivke |
 | Angehalten | ustavljeno |
 | Debug-Konsole | konzola za odpravljanje napak |
 | Startkonfiguration | konfiguracija zagona |
@@ -4073,6 +4154,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | bevakat uttryck, bevakade uttryck |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Fortsätt / Kliv över / Kliv in / Kliv ut |
 | Anhängen / Trennen | anslut / koppla från |
+| An Prozess anhängen | Anslut till process |
+| Neu starten / Stopp | Starta om / Stoppa |
+| Variablen | variabler |
 | Angehalten | pausad |
 | Debug-Konsole | felsökningskonsol |
 | Startkonfiguration | startkonfiguration |
@@ -4216,8 +4300,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | สแตกการเรียก |
 | Frame | เฟรม (เฟรมสแตก) |
 | Überwachter Ausdruck, Überwachte Ausdrücke | นิพจน์ที่เฝ้าดู |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | ดำเนินการต่อ / ข้ามไป / ก้าวเข้า / ก้าวออก |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | ดำเนินการต่อ / ก้าวข้าม / ก้าวเข้า / ก้าวออก |
 | Anhängen / Trennen | แนบ / ตัดการเชื่อมต่อ |
+| An Prozess anhängen | แนบกับกระบวนการ |
+| Neu starten / Stopp | เริ่มใหม่ / หยุด |
+| Variablen | ตัวแปร |
 | Angehalten | หยุดชั่วคราว |
 | Debug-Konsole | คอนโซลดีบัก |
 | Startkonfiguration | การกำหนดค่าการเริ่มต้น |
@@ -4358,12 +4445,15 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debuggen | Hata Ayıkla |
 | Haltepunkt, Haltepunkte | kesme noktası, kesme noktaları |
 | Logpunkt | günlük noktası |
-| Bedingung / Trefferzahl | koşul / vuruş sayısı |
+| Bedingung / Trefferzahl | koşul / isabet sayısı |
 | Aufrufliste | çağrı yığını |
 | Frame | çerçeve (yığın çerçevesi) |
 | Überwachter Ausdruck, Überwachte Ausdrücke | izlenen ifade, izlenen ifadeler |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Devam / Üzerinden Adımla / İçeri Adımla / Dışarı Adımla |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Devam Et / Üzerinden Adımla / İçine Adımla / Dışına Adımla |
 | Anhängen / Trennen | bağlan / bağlantıyı kes |
+| An Prozess anhängen | İşleme Bağlan |
+| Neu starten / Stopp | Yeniden Başlat / Durdur |
+| Variablen | değişkenler |
 | Angehalten | duraklatıldı |
 | Debug-Konsole | hata ayıklama konsolu |
 | Startkonfiguration | başlatma yapılandırması |
@@ -4506,8 +4596,11 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Aufrufliste | стек викликів |
 | Frame | кадр |
 | Überwachter Ausdruck, Überwachte Ausdrücke | контрольний вираз, контрольні вирази |
-| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продовжити / Перейти через / Увійти / Вийти |
-| Anhängen / Trennen | приєднати / відʼєднати |
+| Fortsetzen / Überspringen / Hineinspringen / Heraus | Продовжити / Крок з обходом / Крок із заходом / Крок із виходом |
+| Anhängen / Trennen | приєднатися / відʼєднатися |
+| An Prozess anhängen | Приєднатися до процесу |
+| Neu starten / Stopp | Перезапустити / Зупинити |
+| Variablen | змінні |
 | Angehalten | призупинено |
 | Debug-Konsole | консоль налагодження |
 | Startkonfiguration | конфігурація запуску |
@@ -4651,7 +4744,10 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Frame | khung |
 | Überwachter Ausdruck, Überwachte Ausdrücke | biểu thức theo dõi |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | Tiếp tục / Bước qua / Bước vào / Bước ra |
-| Anhängen / Trennen | đính kèm / tách |
+| Anhängen / Trennen | đính kèm / ngắt kết nối |
+| An Prozess anhängen | Đính kèm vào tiến trình |
+| Neu starten / Stopp | Khởi động lại / Dừng |
+| Variablen | biến |
 | Angehalten | đã tạm dừng |
 | Debug-Konsole | bảng điều khiển gỡ lỗi |
 | Startkonfiguration | cấu hình khởi chạy |
@@ -4795,6 +4891,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | 监视表达式 |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | 继续 / 单步跳过 / 单步进入 / 单步跳出 |
 | Anhängen / Trennen | 附加 / 分离 |
+| An Prozess anhängen | 附加到进程 |
+| Neu starten / Stopp | 重新启动 / 停止 |
+| Variablen | 变量 |
 | Angehalten | 已暂停 |
 | Debug-Konsole | 调试控制台 |
 | Startkonfiguration | 启动配置 |
@@ -4939,6 +5038,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Überwachter Ausdruck, Überwachte Ausdrücke | 監看運算式 |
 | Fortsetzen / Überspringen / Hineinspringen / Heraus | 繼續 / 步過 / 步入 / 步出 |
 | Anhängen / Trennen | 附加 / 分離 |
+| An Prozess anhängen | 附加到行程 |
+| Neu starten / Stopp | 重新啟動 / 停止 |
+| Variablen | 變數 |
 | Angehalten | 已暫停 |
 | Debug-Konsole | 除錯主控台 |
 | Startkonfiguration | 啟動設定 |

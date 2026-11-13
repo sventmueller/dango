@@ -1449,7 +1449,7 @@
 "Angehalten" = "Призупинено";
 "Angehalten: {}" = "Призупинено: {}";
 "Angehängt" = "Приєднано";
-"Anhängen" = "Приєднати";
+"Anhängen" = "Приєднатися";
 "Ausdruck auswerten" = "Обчислити вираз";
 "Ausdruck entfernen" = "Вилучити вираз";
 "Ausdruck im angehaltenen Frame auswerten" = "Обчислити вираз у призупиненому кадрі";
@@ -1470,7 +1470,7 @@
 "Debug-Konsole: {}" = "Консоль налагодження: {}";
 "Debug-Konsole: {}, beendet" = "Консоль налагодження: {}, завершено";
 "Debug-Sitzungen und Haltepunkte" = "Сеанси налагодження та точки зупину";
-"Debuggen" = "Налагодити";
+"Debuggen" = "Налагодження";
 "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust." = "Налагодження запускає програми папки й працює, лише коли ви довіряєте папці.";
 "Der Build hat kein Programm erzeugt." = "Збірка не створила програму.";
 "Der Build ist fehlgeschlagen:\n{}" = "Збірка не вдалася:\n{}";
@@ -1495,9 +1495,9 @@
 "Haltepunkte" = "Точки зупину";
 "Haltepunkte ausschalten" = "Деактивувати точки зупину";
 "Haltepunkte einschalten" = "Активувати точки зупину";
-"Heraus" = "Вийти";
+"Heraus" = "Крок із виходом";
 "Hier stehen die Variablen des angehaltenen Programms." = "Тут відображаються змінні призупиненої програми.";
-"Hineinspringen" = "Увійти";
+"Hineinspringen" = "Крок із заходом";
 "Inspektor" = "Інспектор";
 "Inspektor ein-/ausblenden" = "Показати/сховати інспектор";
 "Keine Debug-Sitzung" = "Немає сеансу налагодження";
@@ -1521,7 +1521,7 @@
 "Treffer {}" = "Влучань {}";
 "Trefferzahl" = "Кількість влучань";
 "Trefferzahl …" = "Кількість влучань…";
-"Trennen" = "Відʼєднати";
+"Trennen" = "Відʼєднатися";
 "Variablen" = "Змінні";
 "Variablen und überwachte Ausdrücke" = "Змінні та контрольні вирази";
 "Variablen zeigen sich, wenn das Programm anhält." = "Змінні зʼявляються, коли програма призупиняється.";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} у {}";
 "{} ist nicht installiert." = "{} не інстальовано.";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "Спершу відкрийте файл програми, яку хочете налагодити.";
-"Überspringen" = "Перейти через";
+"Überspringen" = "Крок з обходом";
 "Überwachte Ausdrücke" = "Контрольні вирази";
 "„{}“ startet …" = "Запуск «{}»…";
 "Wartet auf Freigabe durch macOS …" = "Очікування дозволу macOS…";

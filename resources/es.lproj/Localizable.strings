@@ -1495,9 +1495,9 @@
 "Haltepunkte" = "Puntos de interrupción";
 "Haltepunkte ausschalten" = "Desactivar puntos de interrupción";
 "Haltepunkte einschalten" = "Activar puntos de interrupción";
-"Heraus" = "Salir";
+"Heraus" = "Paso a paso para salir";
 "Hier stehen die Variablen des angehaltenen Programms." = "Aquí aparecen las variables del programa en pausa.";
-"Hineinspringen" = "Entrar";
+"Hineinspringen" = "Paso a paso por instrucciones";
 "Inspektor" = "Inspector";
 "Inspektor ein-/ausblenden" = "Mostrar/ocultar inspector";
 "Keine Debug-Sitzung" = "Sin sesión de depuración";
@@ -1538,7 +1538,7 @@
 "{} in {}" = "{} en {}";
 "{} ist nicht installiert." = "{} no está instalado.";
 "Öffne zuerst die Datei des Programms, das du debuggen willst." = "Abre primero el archivo del programa que quieras depurar.";
-"Überspringen" = "Pasar por encima";
+"Überspringen" = "Paso a paso por procedimientos";
 "Überwachte Ausdrücke" = "Expresiones vigiladas";
 "„{}“ startet …" = "Iniciando «{}»…";
 "Wartet auf Freigabe durch macOS …" = "Esperando a que macOS permita el acceso…";
