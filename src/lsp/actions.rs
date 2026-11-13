@@ -16,7 +16,7 @@ use objc2_app_kit::{NSButton, NSColor, NSMenu, NSMenuItem, NSView};
 use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
-use super::{server_of, text};
+use super::{server_by_id, server_of, servers_of, text};
 use crate::editor::{self, EditorTextView};
 use crate::util::{guarded, main_after, main_on_run_loop, main_soon, ns};
 
@@ -61,6 +61,8 @@ struct Found {
     line: usize,
     range: Range<usize>,
     actions: Vec<CodeActionOrCommand>,
+    /// The slot of the server each action came from.
+    origins: Vec<u64>,
 }
 
 /// What the code actions of one editor are doing.
@@ -78,6 +80,7 @@ struct Shown {
     serial: u64,
     revision: u64,
     actions: Vec<CodeActionOrCommand>,
+    origins: Vec<u64>,
     menu: Retained<NSMenu>,
 }
 
@@ -193,14 +196,15 @@ pub fn moved(view: &EditorTextView) {
     });
 }
 
-/// The diagnostics that touch `range`, with their ranges where their text is now.
-fn diagnostics(view: &EditorTextView, range: &Range<usize>) -> Vec<Diagnostic> {
+/// The diagnostics of the server of slot `source` that touch `range`, with their ranges where their text is now.
+fn diagnostics(view: &EditorTextView, range: &Range<usize>, source: u64) -> Vec<Diagnostic> {
     let state = view.ivars().lsp.borrow();
     let document = view.document();
     let text = document.text();
     state
         .marks
         .iter()
+        .filter(|mark| mark.source == source)
         .filter(|mark| mark.range.start <= range.end && range.start <= mark.range.end)
         .filter_map(|mark| {
             let mut diagnostic = mark.diagnostic.clone();
@@ -213,9 +217,20 @@ fn diagnostics(view: &EditorTextView, range: &Range<usize>) -> Vec<Diagnostic> {
         .collect()
 }
 
-/// Asks for the actions of `kind` at the cursor; `show` lists them in a menu when they arrive.
+/// The actions every server of an editor offered for one question, with the slot each came from (E140), and how many
+/// servers have yet to answer.
+struct Gathered {
+    actions: Vec<CodeActionOrCommand>,
+    origins: Vec<u64>,
+    waiting: usize,
+}
+
+/// Asks every server of `view` for the actions of `kind` at the cursor; `show` lists them in a menu once all answered.
 fn request(view: &EditorTextView, kind: Kind, show: bool) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let servers = servers_of(view);
+    if servers.is_empty() {
+        return;
+    }
     let (range, line) = place(view);
     let revision = view.document().revision();
     let span = {
@@ -223,59 +238,105 @@ fn request(view: &EditorTextView, kind: Kind, show: bool) {
         text::position(document.text(), range.start).zip(text::position(document.text(), range.end))
     };
     let Some((start, end)) = span else { return };
-    let diagnostics = diagnostics(view, &range);
     let (serial, asked) = {
         let state = view.ivars().lsp.borrow();
         (state.serial, state.actions.asked)
     };
-    let found_range = range.clone();
-    let started = server.code_actions(
-        &uri,
-        LspRange::new(start, end),
-        diagnostics,
-        kind.only(),
-        move |answer| {
-            main_soon(move || {
-                let Some(view) = editor::find_editor(serial) else {
-                    return;
-                };
-                let current = view.ivars().lsp.borrow().actions.asked == asked;
-                if !current || view.document().revision() != revision {
-                    return;
-                }
-                let actions = match answer {
-                    Ok(actions) => actions,
-                    Err(error) => {
-                        if show {
-                            crate::diag::report("code actions", error);
-                            objc2_app_kit::NSBeep();
-                        }
-                        return;
-                    }
-                };
-                if kind == Kind::Fixes {
-                    let found = Found {
+    let gathered = std::sync::Arc::new(std::sync::Mutex::new(Gathered {
+        actions: Vec::new(),
+        origins: Vec::new(),
+        waiting: servers.len(),
+    }));
+    for (origin, server, uri) in servers {
+        let diagnostics = diagnostics(view, &range, origin);
+        let shared = gathered.clone();
+        let found_range = range.clone();
+        let started = server.code_actions(
+            &uri,
+            LspRange::new(start, end),
+            diagnostics,
+            kind.only(),
+            move |answer| {
+                main_soon(move || {
+                    let answer = answer.map_err(|e| e.to_string());
+                    arrived(
+                        serial,
+                        asked,
                         revision,
-                        line,
-                        range: found_range,
-                        actions: actions.clone(),
-                    };
-                    view.ivars().lsp.borrow_mut().actions.found = Some(found);
-                    editor::redraw_gutter(&view);
-                }
+                        (kind, show, line, found_range),
+                        origin,
+                        answer,
+                        &shared,
+                    );
+                });
+            },
+        );
+        match started {
+            Ok(ticket) => view.ivars().lsp.borrow_mut().actions.tickets.push(ticket),
+            Err(error) => {
                 if show {
-                    present(&view, kind, actions);
+                    crate::diag::report("code actions", error);
                 }
-            });
-        },
-    );
-    match started {
-        Ok(ticket) => view.ivars().lsp.borrow_mut().actions.tickets.push(ticket),
-        Err(error) if show => {
-            crate::diag::report("code actions", error);
-            objc2_app_kit::NSBeep();
+                {
+                    use ide_core::LockIgnoringPoison;
+                    gathered.lock_ignoring_poison().waiting -= 1;
+                }
+            }
         }
-        Err(_) => {}
+    }
+}
+
+/// One server's answer to a question of `request`; the last one shows them all.
+fn arrived(
+    serial: u64,
+    asked: u64,
+    revision: u64,
+    (kind, show, line, range): (Kind, bool, usize, Range<usize>),
+    origin: u64,
+    answer: Result<Vec<CodeActionOrCommand>, String>,
+    gathered: &std::sync::Arc<std::sync::Mutex<Gathered>>,
+) {
+    use ide_core::LockIgnoringPoison;
+    let done = {
+        let mut gathered = gathered.lock_ignoring_poison();
+        gathered.waiting = gathered.waiting.saturating_sub(1);
+        match answer {
+            Ok(actions) => {
+                gathered.origins.extend(std::iter::repeat_n(origin, actions.len()));
+                gathered.actions.extend(actions);
+            }
+            Err(error) if show => crate::diag::report("code actions", error),
+            Err(_) => {}
+        }
+        gathered.waiting == 0
+    };
+    if !done {
+        return;
+    }
+    let Some(view) = editor::find_editor(serial) else {
+        return;
+    };
+    let current = view.ivars().lsp.borrow().actions.asked == asked;
+    if !current || view.document().revision() != revision {
+        return;
+    }
+    let (actions, origins) = {
+        let gathered = gathered.lock_ignoring_poison();
+        (gathered.actions.clone(), gathered.origins.clone())
+    };
+    if kind == Kind::Fixes {
+        let found = Found {
+            revision,
+            line,
+            range,
+            actions: actions.clone(),
+            origins: origins.clone(),
+        };
+        view.ivars().lsp.borrow_mut().actions.found = Some(found);
+        editor::redraw_gutter(&view);
+    }
+    if show {
+        present(&view, kind, actions, origins);
     }
 }
 
@@ -290,17 +351,17 @@ pub fn open(view: &EditorTextView, kind: Kind) {
             .found
             .as_ref()
             .filter(|found| kind == Kind::Fixes && found.revision == revision && found.range == range)
-            .map(|found| found.actions.clone())
+            .map(|found| (found.actions.clone(), found.origins.clone()))
     };
     match known {
-        Some(actions) => present(view, kind, actions),
+        Some((actions, origins)) => present(view, kind, actions, origins),
         None => request(view, kind, true),
     }
 }
 
-/// The actions of `kind` among `actions`, the preferred first.
-fn ordered(kind: Kind, actions: Vec<CodeActionOrCommand>) -> Vec<CodeActionOrCommand> {
-    let preferred = |action: &CodeActionOrCommand| {
+/// The actions of `kind` among `actions`, the preferred first, each with its origin.
+fn ordered(kind: Kind, actions: Vec<(u64, CodeActionOrCommand)>) -> Vec<(u64, CodeActionOrCommand)> {
+    let preferred = |(_, action): &(u64, CodeActionOrCommand)| {
         matches!(
             action,
             CodeActionOrCommand::CodeAction(CodeAction {
@@ -311,7 +372,7 @@ fn ordered(kind: Kind, actions: Vec<CodeActionOrCommand>) -> Vec<CodeActionOrCom
     };
     let (mut first, rest): (Vec<_>, Vec<_>) = actions
         .into_iter()
-        .filter(|action| kind.admits(action))
+        .filter(|(_, action)| kind.admits(action))
         .partition(preferred);
     first.extend(rest);
     first
@@ -325,9 +386,12 @@ fn title(action: &CodeActionOrCommand) -> &str {
 }
 
 /// Shows `actions` as a menu at the cursor of `view`; a menu with nothing to choose says so, greyed out.
-fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>) {
+fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>, origins: Vec<u64>) {
     let mtm = view.mtm();
-    let actions = ordered(kind, actions);
+    let (origins, actions): (Vec<u64>, Vec<CodeActionOrCommand>) =
+        ordered(kind, origins.into_iter().zip(actions).collect())
+            .into_iter()
+            .unzip();
     let menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     menu.setAutoenablesItems(false);
     let target = chooser(mtm);
@@ -363,6 +427,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>)
         serial: view.ivars().lsp.borrow().serial,
         revision: view.document().revision(),
         actions,
+        origins,
         menu: menu.clone(),
     };
     let serial = shown.serial;
@@ -388,10 +453,11 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>)
 
 /// The user chose item `index` of the menu shown.
 fn choose(index: usize) {
-    let Some((serial, revision, action)) = with_shown(|cell| {
+    let Some((serial, revision, action, origin)) = with_shown(|cell| {
         let shown = cell.borrow();
         let shown = shown.as_ref()?;
-        Some((shown.serial, shown.revision, shown.actions.get(index)?.clone()))
+        let origin = shown.origins.get(index).copied().unwrap_or(0);
+        Some((shown.serial, shown.revision, shown.actions.get(index)?.clone(), origin))
     }) else {
         return;
     };
@@ -399,17 +465,19 @@ fn choose(index: usize) {
         return;
     };
     match action {
-        CodeActionOrCommand::Command(command) => execute(&view, &command),
+        CodeActionOrCommand::Command(command) => execute(&view, origin, &command),
         CodeActionOrCommand::CodeAction(action) if action.edit.is_none() && action.data.is_some() => {
-            resolve(&view, revision, action);
+            resolve(&view, origin, revision, action);
         }
-        CodeActionOrCommand::CodeAction(action) => perform(&view, revision, &action),
+        CodeActionOrCommand::CodeAction(action) => perform(&view, origin, revision, &action),
     }
 }
 
 /// Asks the server for the edit of `action`, which it computes only once chosen, and performs it.
-fn resolve(view: &EditorTextView, revision: u64, action: CodeAction) {
-    let Some((server, uri)) = server_of(view) else { return };
+fn resolve(view: &EditorTextView, origin: u64, revision: u64, action: CodeAction) {
+    let Some((server, uri)) = server_by_id(view, origin).or_else(|| server_of(view)) else {
+        return;
+    };
     let serial = view.ivars().lsp.borrow().serial;
     let unresolved = action.clone();
     let started = server.resolve_code_action(&uri, action, move |answer| {
@@ -418,27 +486,27 @@ fn resolve(view: &EditorTextView, revision: u64, action: CodeAction) {
                 return;
             };
             match answer {
-                Ok(action) => perform(&view, revision, &action),
+                Ok(action) => perform(&view, origin, revision, &action),
                 Err(error) => failed(error.to_string()),
             }
         });
     });
     match started {
         Ok(_) => {}
-        Err(ide_lsp::Error::Unsupported(_)) => perform(view, revision, &unresolved),
+        Err(ide_lsp::Error::Unsupported(_)) => perform(view, origin, revision, &unresolved),
         Err(error) => failed(error.to_string()),
     }
 }
 
 /// Applies the edit of `action`, made for `revision` of `view`'s text, then runs its command.
-fn perform(view: &EditorTextView, revision: u64, action: &CodeAction) {
+fn perform(view: &EditorTextView, origin: u64, revision: u64, action: &CodeAction) {
     if view.document().revision() != revision {
         failed(t("Die Datei hat sich inzwischen geändert").to_string());
         return;
     }
     let Some(edit) = &action.edit else {
         if let Some(command) = &action.command {
-            execute(view, command);
+            execute(view, origin, command);
         }
         return;
     };
@@ -451,15 +519,17 @@ fn perform(view: &EditorTextView, revision: u64, action: &CodeAction) {
         Err(failure) => failed(failure.message),
         Ok(()) => {
             if let (Some(command), Some(view)) = (command, editor::find_editor(serial)) {
-                execute(&view, &command);
+                execute(&view, origin, &command);
             }
         }
     });
 }
 
 /// Runs `command` on the server; edits it makes come back as `workspace/applyEdit`.
-fn execute(view: &EditorTextView, command: &Command) {
-    let Some((server, _)) = server_of(view) else { return };
+fn execute(view: &EditorTextView, origin: u64, command: &Command) {
+    let Some((server, _)) = server_by_id(view, origin).or_else(|| server_of(view)) else {
+        return;
+    };
     let arguments = command.arguments.clone().unwrap_or_default();
     let started = server.execute_command(&command.command, arguments, |answer| {
         if let Err(error) = answer {

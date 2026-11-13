@@ -41,6 +41,10 @@ pub enum Language {
     Lua,
     /// A server the user set up in the settings.
     Custom(Arc<CustomServer>),
+    /// ESLint, a second server beside the language's for JavaScript and TypeScript (E132).
+    Eslint,
+    /// Emmet's abbreviations, a second server beside the language's for HTML, CSS and JSX (E109).
+    Emmet,
 }
 
 /// The built-in languages, in the order lists show them.
@@ -73,6 +77,76 @@ pub(crate) struct Common {
     pub(crate) hint: Option<&'static str>,
     /// Files that mark a project root; the nearest wins, and without one the trusted folder is the root.
     pub(crate) markers: &'static [&'static str],
+}
+
+/// The files whose presence says that a folder configures ESLint.
+const ESLINT_CONFIGS: &[&str] = &[
+    "eslint.config.js",
+    "eslint.config.mjs",
+    "eslint.config.cjs",
+    "eslint.config.ts",
+    "eslint.config.mts",
+    "eslint.config.cts",
+    ".eslintrc",
+    ".eslintrc.js",
+    ".eslintrc.cjs",
+    ".eslintrc.json",
+    ".eslintrc.yaml",
+    ".eslintrc.yml",
+];
+
+/// Whether ESLint in `root` reads the flat configuration of ESLint 9: a file `eslint.config.*`, or an installed ESLint
+/// of version 9 or later without an `.eslintrc*` (as Zed decides).
+pub fn flat_config(root: &Path) -> bool {
+    if ESLINT_CONFIGS.iter().take(6).any(|name| root.join(name).is_file()) {
+        return true;
+    }
+    if ESLINT_CONFIGS.iter().skip(6).any(|name| root.join(name).is_file()) {
+        return false;
+    }
+    fs::read_to_string(root.join("node_modules/eslint/package.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|package| package.get("version")?.as_str()?.split('.').next()?.parse::<u32>().ok())
+        .is_some_and(|major| major >= 9)
+}
+
+/// Whether the project of `path` within `root` uses ESLint: a configuration file in a folder up to `root`, or
+/// `eslint` among a `package.json`'s dependencies.
+pub fn uses_eslint(path: &Path, root: &Path) -> bool {
+    path.ancestors()
+        .skip(1)
+        .take_while(|dir| dir.starts_with(root))
+        .any(|dir| {
+            if ESLINT_CONFIGS.iter().any(|name| dir.join(name).is_file()) {
+                return true;
+            }
+            fs::read_to_string(dir.join("package.json"))
+                .ok()
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+                .is_some_and(|package| {
+                    ["dependencies", "devDependencies"]
+                        .iter()
+                        .any(|field| package.get(field).and_then(|d| d.get("eslint")).is_some())
+                        || package.get("eslintConfig").is_some()
+                })
+        })
+}
+
+/// The second servers for `path` in the trusted folder `root` (E140): ESLint for JavaScript and TypeScript where the
+/// project uses it, Emmet for HTML, CSS and JSX while `emmet` is on.
+pub fn companions(path: &Path, root: &Path, emmet: bool) -> Vec<Language> {
+    let extension = path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase);
+    let extension = extension.as_deref().unwrap_or_default();
+    let mut out = Vec::new();
+    let script = matches!(extension, "js" | "jsx" | "mjs" | "cjs" | "ts" | "tsx" | "mts" | "cts");
+    if script && uses_eslint(path, root) {
+        out.push(Language::Eslint);
+    }
+    if emmet && matches!(extension, "html" | "htm" | "css" | "scss" | "less" | "jsx" | "tsx") {
+        out.push(Language::Emmet);
+    }
+    out
 }
 
 impl Language {
@@ -140,7 +214,14 @@ impl Language {
             Language::Markdown => "Markdown",
             Language::Lua => "Lua",
             Language::Custom(server) => &server.name,
+            Language::Eslint => "ESLint",
+            Language::Emmet => "Emmet",
         }
+    }
+
+    /// Whether it is a second server beside a document's own (E140).
+    pub fn is_companion(&self) -> bool {
+        matches!(self, Language::Eslint | Language::Emmet)
     }
 
     /// Whether its servers search the project's symbols; the servers of data and style formats do not, so a project
@@ -148,7 +229,13 @@ impl Language {
     pub fn searches_project(&self) -> bool {
         !matches!(
             self,
-            Language::Json | Language::Yaml | Language::Toml | Language::Css | Language::Html
+            Language::Json
+                | Language::Yaml
+                | Language::Toml
+                | Language::Css
+                | Language::Html
+                | Language::Eslint
+                | Language::Emmet
         )
     }
 
@@ -226,7 +313,14 @@ impl Language {
                 "brew install lua-language-server",
                 &[".luarc.json", ".luarc.jsonc"],
             ),
-            Language::Go | Language::Rust | Language::TypeScript | Language::Custom(_) => return None,
+            Language::Emmet => common(
+                &[("emmet-language-server", &["--stdio"])],
+                Some("@olrtg/emmet-language-server"),
+                &[],
+            ),
+            Language::Go | Language::Rust | Language::TypeScript | Language::Custom(_) | Language::Eslint => {
+                return None;
+            }
         })
     }
 }
@@ -523,5 +617,58 @@ mod tests {
             fs::write(&manifest, text).unwrap();
             assert_eq!(is_workspace(&manifest), expected, "{text:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod companion_tests {
+    use super::*;
+
+    fn project(files: &[(&str, &str)]) -> PathBuf {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let root = std::env::temp_dir().join(format!("ide-companions-{}-{stamp}", std::process::id()));
+        for (path, text) in files {
+            let file = root.join(path);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, text).unwrap();
+        }
+        root
+    }
+
+    #[test]
+    fn eslint_joins_scripts_of_projects_that_use_it_and_emmet_markup_and_styles() {
+        let root = project(&[
+            ("web/package.json", r#"{"devDependencies":{"eslint":"^9"}}"#),
+            ("web/a.tsx", ""),
+            ("plain/b.ts", ""),
+            ("page.html", ""),
+        ]);
+        assert_eq!(
+            companions(&root.join("web/a.tsx"), &root, true),
+            [Language::Eslint, Language::Emmet]
+        );
+        assert_eq!(companions(&root.join("web/a.tsx"), &root, false), [Language::Eslint]);
+        assert_eq!(
+            companions(&root.join("plain/b.ts"), &root, true),
+            Vec::<Language>::new()
+        );
+        assert_eq!(companions(&root.join("page.html"), &root, true), [Language::Emmet]);
+        assert!(Language::Eslint.is_companion() && !Language::Rust.is_companion());
+    }
+
+    #[test]
+    fn the_flat_configuration_follows_the_file_and_else_the_installed_version() {
+        assert!(flat_config(&project(&[("eslint.config.ts", "")])));
+        assert!(!flat_config(&project(&[(".eslintrc.json", "{}")])));
+        assert!(flat_config(&project(&[(
+            "node_modules/eslint/package.json",
+            r#"{"version":"9.12.0"}"#
+        )])));
+        assert!(!flat_config(&project(&[(
+            "node_modules/eslint/package.json",
+            r#"{"version":"8.57.0"}"#
+        )])));
     }
 }

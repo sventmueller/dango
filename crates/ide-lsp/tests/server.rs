@@ -27,6 +27,7 @@ enum Seen {
     ApplyEdit(WorkspaceEdit),
     Capabilities,
     Refresh(Refresh),
+    Notice(String),
     Other,
 }
 
@@ -80,6 +81,7 @@ fn start(name: &str, env: &[(&str, &str)], tweak: impl FnOnce(&mut ServerConfig)
             }
             Event::CapabilitiesChanged => Seen::Capabilities,
             Event::Refresh(kind) => Seen::Refresh(kind),
+            Event::Notice { method, .. } => Seen::Notice(method),
             _ => Seen::Other,
         };
         let _ = tx.lock().unwrap().send(seen);
@@ -820,4 +822,32 @@ fn formatting_inlay_hints_and_the_plain_shapes_of_answers_come_back_alike() {
         wait(|r| f.server.format(&f.uri("closed.rs"), Default::default(), r)),
         Err(Error::NotOpen)
     );
+}
+
+#[test]
+fn eslint_asks_for_its_whole_settings_and_its_own_requests_are_answered_and_reported() {
+    let root = root("eslint-settings");
+    let settings = ide_lsp::eslint_settings(&root, Some("/usr/bin:/bin"));
+    let expected = settings.clone();
+    let f = start("eslint", &[], move |config| config.settings = settings);
+    let config = f
+        .ask(
+            "fake/ask",
+            json!({"method": "workspace/configuration", "params": {"items": [{"section": ""}]}}),
+        )
+        .unwrap();
+    assert_eq!(config["answer"][0], expected, "an empty section is the whole object");
+    assert_eq!(config["answer"][0]["validate"], "on");
+    assert_eq!(config["answer"][0]["workingDirectory"]["mode"], "auto");
+    for method in [
+        "eslint/noLibrary",
+        "eslint/noConfig",
+        "eslint/probeFailed",
+        "eslint/openDoc",
+    ] {
+        let answer = f.ask("fake/ask", json!({"method": method, "params": {}})).unwrap();
+        assert_eq!(answer["answer"], json!({}), "{method} is answered");
+        let wanted = method.to_string();
+        f.expect(move |s| matches!(s, Seen::Notice(m) if *m == wanted));
+    }
 }

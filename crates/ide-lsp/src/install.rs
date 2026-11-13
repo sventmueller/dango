@@ -53,6 +53,7 @@ impl Installer {
             Install::Gopls => self.gopls(cancel, progress)?,
             Install::RustAnalyzer => self.rust_analyzer(cancel, progress)?,
             Install::Npm { package, program } => self.npm(package, program, cancel, progress)?,
+            Install::Eslint => self.eslint(cancel, progress)?,
         };
         progress(Progress::Step(Step::Done));
         Ok(path)
@@ -93,8 +94,76 @@ impl Installer {
         installed(node_bin(&self.tools, program), "npm install")
     }
 
+    /// Downloads the archive of `ESLINT_TAG`, checks its digest, unpacks it and builds the server with npm.
+    fn eslint(&self, cancel: &Cancel, progress: &mut dyn FnMut(Progress)) -> Result<PathBuf, InstallError> {
+        use crate::registry::{ESLINT_DIGEST, ESLINT_TAG, eslint_server};
+        let path = tool::var(&self.env, "PATH");
+        tool::which("node", path).ok_or(InstallError::Missing("node"))?;
+        let npm = tool::which("npm", path).ok_or(InstallError::Missing("npm"))?;
+        let folder = self.tools.join("vscode-eslint");
+        fs::create_dir_all(&folder)?;
+        let packed = Scratch(folder.join(format!(".eslint-{}.tar.gz", std::process::id())));
+        progress(Progress::Step(Step::Downloading));
+        let url = format!("https://github.com/microsoft/vscode-eslint/archive/refs/tags/{ESLINT_TAG}.tar.gz");
+        let actual = self.download(&url, &packed.0, cancel, progress)?;
+        progress(Progress::Step(Step::Verifying));
+        if actual != ESLINT_DIGEST {
+            return Err(InstallError::Checksum {
+                expected: ESLINT_DIGEST.into(),
+                actual,
+            });
+        }
+        progress(Progress::Step(Step::Unpacking));
+        let unpacked = folder.join(ESLINT_TAG.replace('/', "-"));
+        let _ = fs::remove_dir_all(&unpacked);
+        fs::create_dir_all(&unpacked)?;
+        let archive = packed.0.display().to_string();
+        let target = unpacked.display().to_string();
+        let tar = PathBuf::from("/usr/bin/tar");
+        self.command(
+            &self.env,
+            &tar,
+            &["-xzf", &archive, "-C", &target, "--strip-components", "1"],
+            cancel,
+            progress,
+        )?;
+        progress(Progress::Step(Step::Running));
+        self.command_in(
+            &unpacked,
+            &npm,
+            &["install", "--no-fund", "--no-audit"],
+            cancel,
+            progress,
+        )?;
+        self.command_in(&unpacked, &npm, &["run", "compile:server"], cancel, progress)?;
+        installed(eslint_server(&self.tools), "npm run compile:server")
+    }
+
+    fn command_in(
+        &self,
+        dir: &Path,
+        program: &Path,
+        args: &[&str],
+        cancel: &Cancel,
+        progress: &mut dyn FnMut(Progress),
+    ) -> Result<(), InstallError> {
+        self.run_in(dir, &self.env, program, args, cancel, progress)
+    }
+
     fn command(
         &self,
+        env: &[(String, String)],
+        program: &Path,
+        args: &[&str],
+        cancel: &Cancel,
+        progress: &mut dyn FnMut(Progress),
+    ) -> Result<(), InstallError> {
+        self.run_in(&self.tools, env, program, args, cancel, progress)
+    }
+
+    fn run_in(
+        &self,
+        dir: &Path,
         env: &[(String, String)],
         program: &Path,
         args: &[&str],
@@ -110,7 +179,7 @@ impl Installer {
         };
         let name = program.display().to_string();
         let output = job
-            .run(program, args, &self.tools, &mut |line| {
+            .run(program, args, dir, &mut |line| {
                 progress(Progress::Output(line.to_string()))
             })
             .map_err(|error| match error {

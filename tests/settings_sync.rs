@@ -12,6 +12,7 @@ const PER_MAC: &[&str] = &[
     "agentEndpoints",
     "agentRules",
     "commitMessageConsent",
+    "companionsDeclined",
     "dictationLowspeakOffered",
     "editPredictionConsent",
     "editPredictionLmStudio",

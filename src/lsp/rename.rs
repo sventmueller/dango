@@ -247,11 +247,111 @@ pub fn save(view: &EditorTextView) {
             .capabilities()
             .is_some_and(|c| c.document_formatting_provider.is_some())
     });
-    if wanted && (can || super::prettier::formats(view)) {
-        format(view, Some(Box::new(|view| editor::save(view, false))));
-    } else {
-        editor::save(view, false);
+    let format_then_save = move |view: &EditorTextView| {
+        if wanted && (can || super::prettier::formats(view)) {
+            format(view, Some(Box::new(|view| editor::save(view, false))));
+        } else {
+            editor::save(view, false);
+        }
+    };
+    let fixes = ide_core::settings::Settings::load_user().get(&keys::ESLINT_FIX_ON_SAVE);
+    match eslint_of(view).filter(|_| fixes) {
+        Some((server, uri)) => fix_all(view, &server, &uri, Box::new(format_then_save)),
+        None => format_then_save(view),
     }
+}
+
+/// Runs what waited for the fixes of request `id` of the editor `serial`, unless a later request took its place.
+fn resume(serial: u64, id: u64) {
+    let pending = with_formatting(|all| {
+        let mut all = all.borrow_mut();
+        if all.get(&serial).is_some_and(|p| p.id == id) {
+            all.remove(&serial)
+        } else {
+            None
+        }
+    });
+    if let (Some(pending), Some(view)) = (pending, editor::find_editor(serial))
+        && let Some(then) = pending.then
+    {
+        then(&view);
+    }
+}
+
+/// The running ESLint server of `view`, if one serves its file.
+fn eslint_of(view: &EditorTextView) -> Option<(ide_lsp::Server, ide_lsp::lsp_types::Uri)> {
+    let root = view.controller()?.project_root()?;
+    let ids: Vec<u64> = view.ivars().lsp.borrow().companions.iter().map(|(id, _)| *id).collect();
+    ids.into_iter()
+        .find(|id| super::slot(&root, *id).is_some_and(|slot| slot.language == ide_lsp::Language::Eslint))
+        .and_then(|id| super::server_by_id(view, id))
+}
+
+/// Runs ESLint's `source.fixAll.eslint` on the whole document, applied only to the revision it was asked for, then
+/// `then`; also when it fails or takes longer than `FORMAT_WAIT` (E132).
+fn fix_all(view: &EditorTextView, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types::Uri, then: Then) {
+    use ide_lsp::lsp_types::{CodeActionKind, CodeActionOrCommand, Position, Range};
+    let serial = view.ivars().lsp.borrow().serial;
+    let revision = view.document().revision();
+    let id = super::new_serial();
+    let lines = u32::try_from(view.document().text().line_count()).unwrap_or(u32::MAX);
+    let whole = Range::new(Position::new(0, 0), Position::new(lines, 0));
+    with_formatting(|all| {
+        all.borrow_mut().insert(
+            serial,
+            Pending {
+                id,
+                revision,
+                then: Some(then),
+            },
+        )
+    });
+    let only = Some(vec![CodeActionKind::new("source.fixAll.eslint")]);
+    let started = server.code_actions(uri, whole, Vec::new(), only, move |answer| {
+        main_soon(move || {
+            let pending = with_formatting(|all| {
+                let mut all = all.borrow_mut();
+                if all.get(&serial).is_some_and(|p| p.id == id) {
+                    all.remove(&serial)
+                } else {
+                    None
+                }
+            });
+            let (Some(pending), Some(view)) = (pending, editor::find_editor(serial)) else {
+                return;
+            };
+            let edit = answer.ok().and_then(|actions| {
+                actions.into_iter().find_map(|action| match action {
+                    CodeActionOrCommand::CodeAction(action) => action.edit,
+                    CodeActionOrCommand::Command(_) => None,
+                })
+            });
+            let folder = view.controller().and_then(|c| c.project_root());
+            match (edit, folder) {
+                (Some(edit), Some(folder)) if view.document().revision() == pending.revision => {
+                    // What waits stays here on the main thread until the edit is applied.
+                    with_formatting(|all| all.borrow_mut().insert(serial, pending));
+                    super::edits::apply_workspace_edit(&folder, &edit, move |_| {
+                        main_soon(move || resume(serial, id));
+                    });
+                }
+                _ => {
+                    if let Some(then) = pending.then {
+                        then(&view);
+                    }
+                }
+            }
+        });
+    });
+    if started.is_err() {
+        if let Some(pending) = with_formatting(|all| all.borrow_mut().remove(&serial))
+            && let Some(then) = pending.then
+        {
+            then(view);
+        }
+        return;
+    }
+    main_after(FORMAT_WAIT, move || finished(serial, id, None));
 }
 
 #[cfg(test)]

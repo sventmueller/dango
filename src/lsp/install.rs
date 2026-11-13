@@ -22,11 +22,7 @@ pub(crate) fn server_status(view: &EditorTextView) -> (String, status::Action) {
         return (String::new(), status::Action::None);
     }
     let root = view.controller().and_then(|c| c.project_root());
-    let found = root
-        .clone()
-        .zip(view.ivars().lsp.borrow().slot)
-        .and_then(|(root, id)| slot(&root, id));
-    if let Some(slot) = found {
+    if let Some(slot) = root.as_deref().and_then(|root| shown_slot(view, root)) {
         return slot_status(&slot);
     }
     let text = match root {
@@ -35,6 +31,36 @@ pub(crate) fn server_status(view: &EditorTextView) -> (String, status::Action) {
         Some(_) => "",
     };
     (text.to_string(), status::Action::None)
+}
+
+/// The second servers the user declined to install, by name, which the status bar no longer offers.
+pub const DECLINED: ide_core::settings::Key<Vec<String>> =
+    ide_core::settings::Key::user("companionsDeclined", ide_core::settings::Sharing::PerMac, Vec::new);
+
+/// The slot whose state the status bar of `view` shows: a second server that wants attention, such as one missing,
+/// installing, failed or with a notice, else the main one (E140).
+fn shown_slot(view: &EditorTextView, root: &Path) -> Option<std::rc::Rc<Slot>> {
+    let (main, companions) = {
+        let state = view.ivars().lsp.borrow();
+        (
+            state.slot,
+            state.companions.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+        )
+    };
+    let declined = ide_core::settings::Settings::load_user().get(&DECLINED);
+    let wanting = companions
+        .into_iter()
+        .filter_map(|id| slot(root, id))
+        .find(|companion| {
+            let notice = companion.message.borrow().is_some();
+            match &*companion.state.borrow() {
+                State::Missing(_) => !declined.iter().any(|name| name == companion.language.name()),
+                State::Installing(..) | State::Failed(_) => true,
+                State::Running(_) => notice,
+                State::Finding => false,
+            }
+        });
+    wanting.or_else(|| main.and_then(|id| slot(root, id)))
 }
 
 fn slot_status(slot: &Slot) -> (String, status::Action) {
@@ -92,12 +118,15 @@ pub(super) fn missing_text(missing: &NotFound) -> (String, status::Action) {
 /// The button in the status bar of `view` was pressed: install, cancel, or start the server again.
 pub fn status_action(view: &EditorTextView) {
     let Some(root) = trusted_root(view) else { return };
-    let Some(id) = view.ivars().lsp.borrow().slot else {
-        return;
-    };
-    let Some(slot) = slot(&root, id) else { return };
+    let Some(slot) = shown_slot(view, &root) else { return };
+    let id = slot.id;
     let action = slot_status(&slot).1;
     match action {
+        status::Action::Install if slot.language.is_companion() => {
+            if ask_companion(view, &slot.language) {
+                install(&root, &slot);
+            }
+        }
         status::Action::Install => install(&root, &slot),
         status::Action::Cancel => {
             if let State::Installing(cancel, _) = &*slot.state.borrow() {
@@ -116,6 +145,30 @@ pub fn status_action(view: &EditorTextView) {
         status::Action::None => {}
     }
     refresh_slot(&root, id);
+}
+
+/// Asks once for the app whether to install the second server `language`: install, never ask again, or not now.
+fn ask_companion(view: &EditorTextView, language: &ide_lsp::Language) -> bool {
+    use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
+    let alert = NSAlert::new(objc2::MainThreadOnly::mtm(view));
+    alert.setMessageText(&crate::util::ns(&tf("{} installieren?", &[language.name()])));
+    alert.setInformativeText(&crate::util::ns(&tf(
+        "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte.",
+        &[language.name()],
+    )));
+    alert.addButtonWithTitle(&crate::util::ns(t("Installieren")));
+    alert.addButtonWithTitle(&crate::util::ns(t("Nicht mehr fragen")));
+    alert.addButtonWithTitle(&crate::util::ns(t("Abbrechen")));
+    let answer = alert.runModal();
+    if answer == NSAlertSecondButtonReturn {
+        let mut settings = ide_core::settings::Settings::load_user();
+        let mut declined = settings.get(&DECLINED);
+        declined.push(language.name().to_string());
+        if let Err(error) = settings.set(&DECLINED, &declined) {
+            crate::diag::report("remembering a declined server", error);
+        }
+    }
+    answer == NSAlertFirstButtonReturn
 }
 
 /// Installs the slot's missing server into the app's tools folder, after the user asked for it in the status bar.

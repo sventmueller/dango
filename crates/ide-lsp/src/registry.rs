@@ -69,6 +69,9 @@ pub enum Install {
     Gopls,
     /// rust-analyzer, from its GitHub releases.
     RustAnalyzer,
+    /// The ESLint server, built with npm from a fixed tag of `microsoft/vscode-eslint` whose archive has a known
+    /// digest (E132, R38).
+    Eslint,
     /// A package from npm, with `npm install` into the tools folder.
     Npm {
         /// The package, such as `@vtsls/language-server`.
@@ -76,6 +79,19 @@ pub enum Install {
         /// The program it brings, such as `vtsls`.
         program: &'static str,
     },
+}
+
+/// The tag of `microsoft/vscode-eslint` the ESLint server is built from; an update is a new tag with a new digest.
+pub const ESLINT_TAG: &str = "release/3.0.34";
+/// The SHA-256 of GitHub's archive of `ESLINT_TAG`.
+pub const ESLINT_DIGEST: &str = "f82fb2aab96eede6273af2d9aafeb9a29c5723c5af5a9819e37c61d7f51cc052";
+
+/// Where the built ESLint server lies in the tools folder `tools`.
+pub(crate) fn eslint_server(tools: &Path) -> PathBuf {
+    tools
+        .join("vscode-eslint")
+        .join(ESLINT_TAG.replace('/', "-"))
+        .join("server/out/eslintServer.js")
 }
 
 /// vtsls, the TypeScript server for projects whose compiler does not speak the protocol.
@@ -151,6 +167,7 @@ impl Registry {
             Language::Rust => self.rust_analyzer(root),
             Language::TypeScript => self.typescript(root, trusted),
             Language::Custom(server) => self.custom(language, server),
+            Language::Eslint => self.eslint(),
             other => match other.common() {
                 Some(common) => self.common(other, &common),
                 None => Err(NotFound::new(other, other.name(), None)),
@@ -203,9 +220,30 @@ impl Registry {
                 // Otherwise the server fetches the schema catalog from schemastore.org whenever it starts.
                 config.settings = json!({"yaml": {"schemaStore": {"enable": false}}});
             }
+            Language::Eslint => config.settings = eslint_settings(root, self.path()),
             _ => {}
         }
         config
+    }
+
+    /// The ESLint server the app built into its tools folder, run with the login shell's node.
+    fn eslint(&self) -> Result<Launch, NotFound> {
+        let node = tool::which("node", self.path());
+        let script = eslint_server(&self.tools);
+        match node {
+            Some(node) if script.is_file() => Ok(Launch {
+                language: Language::Eslint,
+                program: node,
+                args: vec![script.display().to_string(), "--stdio".into()],
+                label: "eslint".into(),
+                source: Source::Tools,
+            }),
+            Some(_) => Err(NotFound::new(&Language::Eslint, "ESLint", Some(Install::Eslint))),
+            None => Err(NotFound {
+                missing: Some("node"),
+                ..NotFound::new(&Language::Eslint, "ESLint", Some(Install::Eslint))
+            }),
+        }
     }
 
     fn path(&self) -> Option<&str> {
@@ -531,6 +569,39 @@ fn ask(connection: &Connection, method: &str, params: Value, timeout: Duration) 
         )
         .ok()?;
     rx.recv().ok()?.ok()
+}
+
+/// What the ESLint server asks for with an empty section (E132): it checks nothing without a complete object.
+pub fn eslint_settings(root: &Path, path: Option<&str>) -> serde_json::Value {
+    let node_path = tool::which("node", path)
+        .and_then(|node| node.parent().map(|bin| bin.join("../lib/node_modules")))
+        .map(|p| p.display().to_string());
+    let name = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    json!({
+        "validate": "on",
+        "run": "onType",
+        "packageManager": "npm",
+        "useESLintClass": false,
+        "experimental": {"useFlatConfig": crate::language::flat_config(root)},
+        "useFlatConfig": crate::language::flat_config(root),
+        "workingDirectory": {"mode": "auto"},
+        "workspaceFolder": {"uri": crate::uri::from_path(root).as_str(), "name": name},
+        "nodePath": node_path,
+        "format": false,
+        "quiet": false,
+        "onIgnoredFiles": "off",
+        "options": {},
+        "rulesCustomizations": [],
+        "problems": {"shortenToSingleLine": false},
+        "codeAction": {
+            "disableRuleComment": {"enable": true, "location": "separateLine", "commentStyle": "line"},
+            "showDocumentation": {"enable": true}
+        },
+        "codeActionOnSave": {"enable": false, "mode": "all"}
+    })
 }
 
 #[cfg(test)]

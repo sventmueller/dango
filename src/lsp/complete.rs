@@ -19,7 +19,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
-use super::{ViewState, server_of, text};
+use super::{ViewState, server_by_id, server_of, servers_of, text};
 use crate::editor::{self, EditorTextView};
 use crate::util::{label, main_soon, ns};
 
@@ -38,6 +38,10 @@ pub struct ListIvars {
     table: RefCell<Option<Retained<NSTableView>>>,
     view: RefCell<Weak<EditorTextView>>,
     items: RefCell<Vec<CompletionItem>>,
+    /// The slot of the server each item came from, which resolves it (E140).
+    origins: RefCell<Vec<u64>>,
+    /// The request whose items the list holds; later answers to it are added, not put in place.
+    filled: Cell<u64>,
     /// The items shown, as indices into `items`, best first.
     shown: RefCell<Vec<usize>>,
     /// Where the word being completed starts, in UTF-16 code units.
@@ -110,6 +114,8 @@ fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
                     table: RefCell::new(None),
                     view: RefCell::new(Weak::default()),
                     items: RefCell::new(vec![]),
+                    origins: RefCell::new(vec![]),
+                    filled: Cell::new(0),
                     shown: RefCell::new(vec![]),
                     start: Cell::new(0),
                     incomplete: Cell::new(false),
@@ -160,8 +166,34 @@ pub fn complete(view: &EditorTextView) {
     request(view, None);
 }
 
+/// The servers, by slot, that a request with `trigger` goes to: all for an invoked completion, else those that
+/// registered the character (E140).
+fn addressed(trigger: Option<&str>, servers: &[(u64, Vec<String>)]) -> Vec<u64> {
+    servers
+        .iter()
+        .filter(|(_, triggers)| trigger.is_none_or(|t| triggers.iter().any(|x| x == t)))
+        .map(|(id, _)| *id)
+        .collect()
+}
+
 fn request(view: &EditorTextView, trigger: Option<String>) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let all = servers_of(view);
+    let registered: Vec<(u64, Vec<String>)> = all
+        .iter()
+        .map(|(id, server, _)| {
+            let triggers = server
+                .capabilities()
+                .and_then(|c| c.completion_provider)
+                .and_then(|p| p.trigger_characters)
+                .unwrap_or_default();
+            (*id, triggers)
+        })
+        .collect();
+    let wanted = addressed(trigger.as_deref(), &registered);
+    let servers: Vec<_> = all.into_iter().filter(|(id, _, _)| wanted.contains(id)).collect();
+    if servers.is_empty() {
+        return;
+    }
     let cursor = view.selectedRange().location;
     let Some(position) = text::position(view.document().text(), cursor) else {
         return;
@@ -178,18 +210,20 @@ fn request(view: &EditorTextView, trigger: Option<String>) {
         },
         trigger_character: trigger,
     };
-    let _ = server.completion(&uri, position, Some(context), move |answer| {
-        let Ok(completions) = answer else { return };
-        main_soon(move || {
-            let Some(view) = editor::find_editor(serial) else {
-                return;
-            };
-            let list = list(view.mtm());
-            if list.ivars().asked.get() == asked {
-                list.show(&view, completions);
-            }
+    for (origin, server, uri) in servers {
+        let _ = server.completion(&uri, position, Some(context.clone()), move |answer| {
+            let Ok(completions) = answer else { return };
+            main_soon(move || {
+                let Some(view) = editor::find_editor(serial) else {
+                    return;
+                };
+                let list = list(view.mtm());
+                if list.ivars().asked.get() == asked {
+                    list.show_from(&view, origin, asked, completions);
+                }
+            });
         });
-    });
+    }
 }
 
 /// The user typed `typed` into `view`: the list filters or closes, a trigger character asks anew.
@@ -205,12 +239,16 @@ pub fn typed(view: &EditorTextView, typed: &str) {
         }
         list.close();
     }
-    let Some((server, _)) = server_of(view) else { return };
-    let triggers = server
-        .capabilities()
-        .and_then(|c| c.completion_provider)
-        .and_then(|p| p.trigger_characters)
-        .unwrap_or_default();
+    let triggers: Vec<String> = servers_of(view)
+        .iter()
+        .flat_map(|(_, server, _)| {
+            server
+                .capabilities()
+                .and_then(|c| c.completion_provider)
+                .and_then(|p| p.trigger_characters)
+                .unwrap_or_default()
+        })
+        .collect();
     let cursor = view.selectedRange().location;
     let from = cursor.saturating_sub(2);
     let before = view
@@ -305,6 +343,28 @@ impl CompletionList {
         self.ivars().view.borrow().load()
     }
 
+    /// Takes the answer of the server of slot `origin` to request `asked`: the first answer of a request puts its
+    /// items in place, later ones join them.
+    fn show_from(&self, view: &EditorTextView, origin: u64, asked: u64, completions: Completions) {
+        if self.ivars().filled.get() == asked && self.view().is_some() {
+            let count = completions.items.len();
+            self.ivars().items.borrow_mut().extend(completions.items);
+            self.ivars()
+                .origins
+                .borrow_mut()
+                .extend(std::iter::repeat_n(origin, count));
+            if completions.incomplete {
+                self.ivars().incomplete.set(true);
+            }
+            self.refilter();
+            return;
+        }
+        self.ivars().filled.set(asked);
+        let count = completions.items.len();
+        self.show(view, completions);
+        *self.ivars().origins.borrow_mut() = vec![origin; count];
+    }
+
     fn show(&self, view: &EditorTextView, completions: Completions) {
         let cursor = view.selectedRange().location;
         let start = completions
@@ -316,6 +376,7 @@ impl CompletionList {
             .unwrap_or_else(|| word_start(view, cursor));
         *self.ivars().view.borrow_mut() = Weak::from(view);
         *self.ivars().items.borrow_mut() = completions.items;
+        self.ivars().origins.borrow_mut().clear();
         self.ivars().resolved.borrow_mut().clear();
         self.ivars().start.set(start);
         self.ivars().incomplete.set(completions.incomplete);
@@ -465,7 +526,12 @@ impl CompletionList {
         if self.ivars().resolved.borrow().contains_key(&index) {
             return;
         }
-        let Some((server, uri)) = server_of(&view) else { return };
+        let origin = self.ivars().origins.borrow().get(index).copied();
+        let found = match origin {
+            Some(origin) => server_by_id(&view, origin),
+            None => server_of(&view),
+        };
+        let Some((server, uri)) = found else { return };
         let Some(item) = self.ivars().items.borrow().get(index).cloned() else {
             return;
         };
@@ -676,5 +742,23 @@ pub mod selftest {
     /// The completion panel, for a picture.
     pub fn panel() -> Option<objc2::rc::Retained<objc2_app_kit::NSPanel>> {
         super::with_list(|cell| cell.borrow().as_ref().and_then(|l| l.ivars().panel.borrow().clone()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::addressed;
+
+    #[test]
+    fn a_trigger_character_reaches_only_the_servers_that_registered_it() {
+        let servers = [
+            (1, vec![".".to_string(), ":".to_string()]),
+            (2, vec!["!".to_string(), ">".to_string()]),
+            (3, Vec::new()),
+        ];
+        assert_eq!(addressed(Some("."), &servers), [1]);
+        assert_eq!(addressed(Some(">"), &servers), [2]);
+        assert_eq!(addressed(Some("#"), &servers), Vec::<u64>::new());
+        assert_eq!(addressed(None, &servers), [1, 2, 3]);
     }
 }

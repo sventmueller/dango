@@ -40,6 +40,8 @@ pub enum Sharing {
 /// The settings that follow the user to their other Macs (E113), by name; a test holds this list to the keys'
 /// declarations.
 pub const SHARED: &[&str] = &[
+    "emmet",
+    "eslintFixOnSave",
     "agentEffort",
     "agentModel",
     "agentPrices",
@@ -132,6 +134,10 @@ pub mod keys {
     /// configuration (E133).
     pub const FORMATTER: Key<std::collections::BTreeMap<String, String>> =
         Key::project("formatter", Sharing::Shared, std::collections::BTreeMap::new);
+    /// Whether Emmet's abbreviations show in completion for HTML, CSS and JSX (E109).
+    pub const EMMET: Key<bool> = Key::user("emmet", Sharing::Shared, || true);
+    /// Whether ⌘S runs ESLint's fixes before formatting (E132).
+    pub const ESLINT_FIX_ON_SAVE: Key<bool> = Key::user("eslintFixOnSave", Sharing::Shared, || false);
     /// Whether a line's most serious diagnostic shows at its end (E130).
     pub const DIAGNOSTICS_AT_LINE_END: Key<bool> = Key::user("diagnosticsAtLineEnd", Sharing::Shared, || false);
     /// How many header lines Sticky Scroll holds at the top of an editor, 0 for none (E108).

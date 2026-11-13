@@ -78,6 +78,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | language server | LSP |
 | Hinweis (Schweregrad) | hint | the language server's lowest severity, after Fehler, Warnung and Info |
 | Inlay-Hinweis | inlay hint | what the language server shows inside a line without it being in the file, such as an inferred type (E83) |
+| Minimap | minimap | the column at the editor's trailing edge that shows the whole file small, with the visible part marked |
+| Sticky Scroll | sticky scroll | the headers of the blocks enclosing the top line, pinned at the editor's top |
+| Diagnosen am Zeilenende | diagnostics at line end | a line's most serious diagnostic shown after its end (E130) |
 | Vorschlag | suggestion | what edit prediction proposes to write next, in grey until Tab takes it (E92) |
 | Vorhersage | Prediction | edit prediction: making suggestions while typing, and its settings tab |
 | Ausschlussliste | exclusion list | patterns of file names that never go to a provider |
@@ -234,6 +237,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | خادم اللغة |
 | Hinweis (Schweregrad) | تلميح |
 | Inlay-Hinweis | تلميح مضمّن |
+| Minimap | الخريطة المصغرة |
+| Sticky Scroll | التمرير المثبّت |
+| Diagnosen am Zeilenende | التشخيصات في نهاية السطر |
 | Vorschlag | اقتراح |
 | Vorhersage | التنبؤ |
 | Ausschlussliste | قائمة الاستبعاد |
@@ -382,6 +388,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de llenguatge |
 | Hinweis (Schweregrad) | Suggeriment |
 | Inlay-Hinweis | indicació inline |
+| Minimap | Minimapa |
+| Sticky Scroll | Desplaçament fix |
+| Diagnosen am Zeilenende | Diagnòstics al final de la línia |
 | Vorschlag | suggeriment |
 | Vorhersage | Predicció |
 | Ausschlussliste | llista d’exclusió |
@@ -529,6 +538,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápověda |
 | Inlay-Hinweis | vložená nápověda |
+| Minimap | Minimapa |
+| Sticky Scroll | Pevné posouvání |
+| Diagnosen am Zeilenende | Diagnostika na konci řádku |
 | Vorschlag | návrh |
 | Vorhersage | Předpověď |
 | Ausschlussliste | seznam vyloučení |
@@ -674,6 +686,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | sprogserver |
 | Hinweis (Schweregrad) | Tip |
 | Inlay-Hinweis | inlay-tip |
+| Minimap | Minikort |
+| Sticky Scroll | Fastgjort rulning |
+| Diagnosen am Zeilenende | Diagnoser ved linjeslut |
 | Vorschlag | forslag |
 | Vorhersage | Forudsigelse |
 | Ausschlussliste | udelukkelsesliste |
@@ -822,6 +837,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | διακομιστής γλώσσας |
 | Hinweis (Schweregrad) | Υπόδειξη |
 | Inlay-Hinweis | ενσωματωμένη υπόδειξη |
+| Minimap | Μικροχάρτης |
+| Sticky Scroll | Σταθερή κύλιση |
+| Diagnosen am Zeilenende | Διαγνωστικά στο τέλος γραμμής |
 | Vorschlag | πρόταση |
 | Vorhersage | Πρόβλεψη |
 | Ausschlussliste | λίστα εξαιρέσεων |
@@ -970,6 +988,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de lenguaje |
 | Hinweis (Schweregrad) | Sugerencia |
 | Inlay-Hinweis | sugerencia insertada |
+| Minimap | Minimapa |
+| Sticky Scroll | Desplazamiento fijo |
+| Diagnosen am Zeilenende | Diagnósticos al final de la línea |
 | Vorschlag | propuesta |
 | Vorhersage | Predicción |
 | Ausschlussliste | lista de exclusión |
@@ -1119,6 +1140,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | kielipalvelin |
 | Hinweis (Schweregrad) | Vihje |
 | Inlay-Hinweis | upotettu vihje |
+| Minimap | Minikartta |
+| Sticky Scroll | Kiinnitetty vieritys |
+| Diagnosen am Zeilenende | Diagnostiikka rivin lopussa |
 | Vorschlag | ehdotus |
 | Vorhersage | Ennustus |
 | Ausschlussliste | poissulkemisluettelo |
@@ -1265,6 +1289,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | serveur de langage |
 | Hinweis (Schweregrad) | Suggestion |
 | Inlay-Hinweis | indication intégrée |
+| Minimap | Minicarte |
+| Sticky Scroll | Défilement épinglé |
+| Diagnosen am Zeilenende | Diagnostics en fin de ligne |
 | Vorschlag | suggestion |
 | Vorhersage | Prédiction |
 | Ausschlussliste | liste d’exclusion |
@@ -1415,6 +1442,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | שרת שפה |
 | Hinweis (Schweregrad) | רמז |
 | Inlay-Hinweis | רמז מוטבע |
+| Minimap | מפה מוקטנת |
+| Sticky Scroll | גלילה נעוצה |
+| Diagnosen am Zeilenende | אבחונים בסוף השורה |
 | Vorschlag | הצעה |
 | Vorhersage | חיזוי |
 | Ausschlussliste | רשימת החרגה |
@@ -1561,6 +1591,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | लैंग्वेज सर्वर |
 | Hinweis (Schweregrad) | संकेत |
 | Inlay-Hinweis | इनलाइन संकेत |
+| Minimap | मिनीमैप |
+| Sticky Scroll | स्टिकी स्क्रॉल |
+| Diagnosen am Zeilenende | पंक्ति के अंत में डायग्नॉस्टिक्स |
 | Vorschlag | सुझाव |
 | Vorhersage | पूर्वानुमान |
 | Ausschlussliste | बहिष्करण सूची |
@@ -1708,6 +1741,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jezični poslužitelj |
 | Hinweis (Schweregrad) | Savjet |
 | Inlay-Hinweis | umetnuti savjet |
+| Minimap | Minikarta |
+| Sticky Scroll | Fiksno pomicanje |
+| Diagnosen am Zeilenende | Dijagnostika na kraju retka |
 | Vorschlag | prijedlog |
 | Vorhersage | Predviđanje |
 | Ausschlussliste | popis izuzeća |
@@ -1857,6 +1893,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | nyelvi szerver |
 | Hinweis (Schweregrad) | Tipp |
 | Inlay-Hinweis | beágyazott tipp |
+| Minimap | Minitérkép |
+| Sticky Scroll | Rögzített görgetés |
+| Diagnosen am Zeilenende | Diagnosztika a sor végén |
 | Vorschlag | javaslat |
 | Vorhersage | Előrejelzés |
 | Ausschlussliste | kizárási lista |
@@ -2004,6 +2043,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Inlay-Hinweis | petunjuk sisipan |
+| Minimap | Minimap |
+| Sticky Scroll | Sticky Scroll |
+| Diagnosen am Zeilenende | Diagnostik di Akhir Baris |
 | Vorschlag | saran |
 | Vorhersage | Prediksi |
 | Ausschlussliste | daftar pengecualian |
@@ -2151,6 +2193,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server di linguaggio |
 | Hinweis (Schweregrad) | Suggerimento |
 | Inlay-Hinweis | suggerimento inline |
+| Minimap | Minimappa |
+| Sticky Scroll | Scorrimento fisso |
+| Diagnosen am Zeilenende | Diagnostica a fine riga |
 | Vorschlag | proposta |
 | Vorhersage | Previsione |
 | Ausschlussliste | elenco di esclusione |
@@ -2299,6 +2344,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 言語サーバ |
 | Hinweis (Schweregrad) | ヒント |
 | Inlay-Hinweis | インレイヒント |
+| Minimap | ミニマップ |
+| Sticky Scroll | 固定スクロール |
+| Diagnosen am Zeilenende | 行末に診断を表示 |
 | Vorschlag | 提案 |
 | Vorhersage | 予測 |
 | Ausschlussliste | 除外リスト |
@@ -2446,6 +2494,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 언어 서버 |
 | Hinweis (Schweregrad) | 힌트 |
 | Inlay-Hinweis | 인레이 힌트 |
+| Minimap | 미니맵 |
+| Sticky Scroll | 고정 스크롤 |
+| Diagnosen am Zeilenende | 줄 끝에 진단 표시 |
 | Vorschlag | 제안 |
 | Vorhersage | 예측 |
 | Ausschlussliste | 제외 목록 |
@@ -2592,6 +2643,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | pelayan bahasa |
 | Hinweis (Schweregrad) | Petunjuk |
 | Inlay-Hinweis | petunjuk sebaris |
+| Minimap | Minimap |
+| Sticky Scroll | Sticky Scroll |
+| Diagnosen am Zeilenende | Diagnostik di Hujung Baris |
 | Vorschlag | cadangan |
 | Vorhersage | Ramalan |
 | Ausschlussliste | senarai pengecualian |
@@ -2739,6 +2793,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | taalserver |
 | Hinweis (Schweregrad) | Hint |
 | Inlay-Hinweis | inlay-hint |
+| Minimap | Minimap |
+| Sticky Scroll | Vastgezet scrollen |
+| Diagnosen am Zeilenende | Diagnoses aan regeleinde |
 | Vorschlag | voorstel |
 | Vorhersage | Voorspelling |
 | Ausschlussliste | uitsluitingslijst |
@@ -2886,6 +2943,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | språktjener (macOS says tjener for server) |
 | Hinweis (Schweregrad) | Tips |
 | Inlay-Hinweis | innebygd tips |
+| Minimap | Minikart |
+| Sticky Scroll | Festet rulling |
+| Diagnosen am Zeilenende | Diagnostikk på linjeslutt |
 | Vorschlag | forslag |
 | Vorhersage | Forutsigelse |
 | Ausschlussliste | utelatelsesliste |
@@ -3033,6 +3093,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | serwer języka |
 | Hinweis (Schweregrad) | Wskazówka |
 | Inlay-Hinweis | wskazówka w tekście |
+| Minimap | Minimapa |
+| Sticky Scroll | Przyklejone przewijanie |
+| Diagnosen am Zeilenende | Diagnostyka na końcu wiersza |
 | Vorschlag | propozycja |
 | Vorhersage | Przewidywanie |
 | Ausschlussliste | lista wykluczeń |
@@ -3181,6 +3244,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Dica |
 | Inlay-Hinweis | dica embutida |
+| Minimap | Minimapa |
+| Sticky Scroll | Rolagem Fixa |
+| Diagnosen am Zeilenende | Diagnósticos no Fim da Linha |
 | Vorschlag | sugestão |
 | Vorhersage | Previsão |
 | Ausschlussliste | lista de exclusão |
@@ -3329,6 +3395,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | servidor de linguagem |
 | Hinweis (Schweregrad) | Sugestão |
 | Inlay-Hinweis | sugestão incorporada |
+| Minimap | Minimapa |
+| Sticky Scroll | Deslocamento fixo |
+| Diagnosen am Zeilenende | Diagnósticos no fim da linha |
 | Vorschlag | proposta |
 | Vorhersage | Previsão |
 | Ausschlussliste | lista de exclusão |
@@ -3477,6 +3546,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | server de limbaj |
 | Hinweis (Schweregrad) | Sugestie |
 | Inlay-Hinweis | sugestie inline |
+| Minimap | Minihartă |
+| Sticky Scroll | Derulare fixată |
+| Diagnosen am Zeilenende | Diagnostice la sfârșitul rândului |
 | Vorschlag | propunere |
 | Vorhersage | Predicție |
 | Ausschlussliste | listă de excludere |
@@ -3625,6 +3697,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | языковой сервер |
 | Hinweis (Schweregrad) | Подсказка |
 | Inlay-Hinweis | встроенная подсказка |
+| Minimap | Миникарта |
+| Sticky Scroll | Закрепленная прокрутка |
+| Diagnosen am Zeilenende | Диагностика в конце строки |
 | Vorschlag | предложение |
 | Vorhersage | Предсказание |
 | Ausschlussliste | список исключений |
@@ -3773,6 +3848,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jazykový server |
 | Hinweis (Schweregrad) | Nápoveda |
 | Inlay-Hinweis | vložená nápoveda |
+| Minimap | Minimapa |
+| Sticky Scroll | Pevné posúvanie |
+| Diagnosen am Zeilenende | Diagnostika na konci riadka |
 | Vorschlag | návrh |
 | Vorhersage | Predpoveď |
 | Ausschlussliste | zoznam vylúčení |
@@ -3922,6 +4000,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | jezikovni strežnik |
 | Hinweis (Schweregrad) | Namig |
 | Inlay-Hinweis | vdelan namig |
+| Minimap | Mini zemljevid |
+| Sticky Scroll | Pripeto drsenje |
+| Diagnosen am Zeilenende | Diagnostika na koncu vrstice |
 | Vorschlag | predlog |
 | Vorhersage | Napovedovanje |
 | Ausschlussliste | seznam izključitev |
@@ -4069,6 +4150,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | språkserver |
 | Hinweis (Schweregrad) | Tips |
 | Inlay-Hinweis | infällt tips |
+| Minimap | Minikarta |
+| Sticky Scroll | Fäst rullning |
+| Diagnosen am Zeilenende | Diagnostik vid radslut |
 | Vorschlag | förslag |
 | Vorhersage | Förutsägelse |
 | Ausschlussliste | undantagslista |
@@ -4217,6 +4301,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | เซิร์ฟเวอร์ภาษา |
 | Hinweis (Schweregrad) | คำแนะนำ |
 | Inlay-Hinweis | คำแนะนำแบบอินไลน์ |
+| Minimap | มินิแมป |
+| Sticky Scroll | การเลื่อนแบบตรึง |
+| Diagnosen am Zeilenende | การวินิจฉัยที่ท้ายบรรทัด |
 | Vorschlag | ข้อเสนอ |
 | Vorhersage | การคาดการณ์ |
 | Ausschlussliste | รายการยกเว้น |
@@ -4366,6 +4453,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | dil sunucusu |
 | Hinweis (Schweregrad) | İpucu |
 | Inlay-Hinweis | satır içi ipucu |
+| Minimap | Mini Harita |
+| Sticky Scroll | Yapışkan Kaydırma |
+| Diagnosen am Zeilenende | Satır Sonunda Tanılamalar |
 | Vorschlag | öneri |
 | Vorhersage | Tahmin |
 | Ausschlussliste | hariç tutma listesi |
@@ -4513,6 +4603,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | мовний сервер |
 | Hinweis (Schweregrad) | Підказка |
 | Inlay-Hinweis | вбудована підказка |
+| Minimap | Мінікарта |
+| Sticky Scroll | Закріплене прокручування |
+| Diagnosen am Zeilenende | Діагностика в кінці рядка |
 | Vorschlag | пропозиція |
 | Vorhersage | Передбачення |
 | Ausschlussliste | список винятків |
@@ -4660,6 +4753,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | máy chủ ngôn ngữ |
 | Hinweis (Schweregrad) | Gợi ý |
 | Inlay-Hinweis | gợi ý nội tuyến |
+| Minimap | Bản đồ thu nhỏ |
+| Sticky Scroll | Cuộn cố định |
+| Diagnosen am Zeilenende | Chẩn đoán ở cuối dòng |
 | Vorschlag | đề xuất |
 | Vorhersage | Dự đoán |
 | Ausschlussliste | danh sách loại trừ |
@@ -4806,6 +4902,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 语言服务器 |
 | Hinweis (Schweregrad) | 提示 |
 | Inlay-Hinweis | 内嵌提示 |
+| Minimap | 缩略图 |
+| Sticky Scroll | 粘性滚动 |
+| Diagnosen am Zeilenende | 在行尾显示诊断 |
 | Vorschlag | 建议 |
 | Vorhersage | 预测 |
 | Ausschlussliste | 排除列表 |
@@ -4953,6 +5052,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Sprachserver | 語言伺服器 |
 | Hinweis (Schweregrad) | 提示 |
 | Inlay-Hinweis | 內嵌提示 |
+| Minimap | 縮圖 |
+| Sticky Scroll | 固定捲動 |
+| Diagnosen am Zeilenende | 在行尾顯示診斷 |
 | Vorschlag | 建議 |
 | Vorhersage | 預測 |
 | Ausschlussliste | 排除列表 |

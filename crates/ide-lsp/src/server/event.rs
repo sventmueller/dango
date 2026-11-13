@@ -115,6 +115,14 @@ pub enum Event {
     CapabilitiesChanged,
     /// Results of this kind are out of date and should be asked for again.
     Refresh(Refresh),
+    /// A request of the server's own beyond the protocol, such as ESLint's `eslint/noLibrary`, already answered;
+    /// the app shows what it says.
+    Notice {
+        /// The request's method.
+        method: String,
+        /// Its parameters.
+        params: serde_json::Value,
+    },
 }
 
 /// A kind of result the server declared out of date.

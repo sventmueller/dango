@@ -84,6 +84,8 @@ pub struct Mark {
     pub message: String,
     /// As the server sent it, for the code actions of its place.
     pub diagnostic: Diagnostic,
+    /// The slot of the server that sent it, which replaces only its own (E140).
+    pub source: u64,
 }
 
 /// A stretch the server gave a colour of its own.
@@ -134,7 +136,15 @@ pub fn shift(state: &mut ViewState, change: &Change) {
     state.tokens.retain_mut(|painted| follow(&mut painted.range, change));
 }
 
+#[cfg(feature = "selftest")]
 pub fn set_diagnostics(view: &EditorTextView, diagnostics: &[Diagnostic]) {
+    let source = super::main_slot(view);
+    set_diagnostics_from(view, source, diagnostics);
+}
+
+/// Shows `diagnostics` of the server of slot `source` in `view`, in place of what that server sent before; the other
+/// servers' stay.
+pub fn set_diagnostics_from(view: &EditorTextView, source: u64, diagnostics: &[Diagnostic]) {
     let mut marks: Vec<Mark> = {
         let document = view.document();
         diagnostics
@@ -150,10 +160,13 @@ pub fn set_diagnostics(view: &EditorTextView, diagnostics: &[Diagnostic]) {
                     severity: Severity::of(d),
                     message: format!("{}{code}", d.message),
                     diagnostic: d.clone(),
+                    source,
                 }
             })
             .collect()
     };
+    let old = view.ivars().lsp.borrow().marks.clone();
+    marks = replaced(old, source, marks);
     marks.sort_by_key(|m| (m.range.start, std::cmp::Reverse(m.severity)));
     view.ivars().lsp.borrow_mut().marks = marks;
     paint(view);
@@ -189,6 +202,12 @@ pub fn set_tokens(view: &EditorTextView, tokens: &SemanticTokens) {
     view.ivars().lsp.borrow_mut().tokens = painted;
     paint(view);
     crate::editor::redraw_minimap(view);
+}
+
+/// The marks of `old` from other servers than `source` with `new`, the marks `source` sends now (E140).
+fn replaced(old: Vec<Mark>, source: u64, mut new: Vec<Mark>) -> Vec<Mark> {
+    new.extend(old.into_iter().filter(|m| m.source != source));
+    new
 }
 
 /// The diagnostics of at least `Info` by the line they start on: the start of the line's most serious one and every
@@ -416,6 +435,27 @@ mod tests {
                 text: new.into(),
             })
             .unwrap()
+    }
+
+    fn mark(source: u64, message: &str) -> Mark {
+        Mark {
+            range: 0..1,
+            severity: Severity::Error,
+            message: message.into(),
+            diagnostic: Diagnostic::default(),
+            source,
+        }
+    }
+
+    #[test]
+    fn each_server_replaces_only_its_own_diagnostics() {
+        let both = replaced(vec![mark(1, "main old")], 2, vec![mark(2, "eslint")]);
+        let after = replaced(both, 1, vec![mark(1, "main new")]);
+        let mut messages: Vec<_> = after.iter().map(|m| m.message.as_str()).collect();
+        messages.sort_unstable();
+        assert_eq!(messages, ["eslint", "main new"]);
+        let cleared = replaced(after, 2, Vec::new());
+        assert_eq!(cleared.len(), 1);
     }
 
     #[test]

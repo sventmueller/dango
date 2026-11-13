@@ -47,9 +47,11 @@ pub use error::Error;
 pub use features::{Completions, Hover, Insertion, insertion};
 pub use ide_net::{Cancel, Download, Http, Net};
 pub use install::{InstallError, Installer, Progress, Step};
-pub use language::{BUILT_IN, CustomServer, Language, root};
+pub use language::{BUILT_IN, CustomServer, Language, companions, flat_config, root, uses_eslint};
 pub use lsp_types;
 pub use navigation::{Calls, HierarchyItem, Neighbour, ProjectSymbol, Types};
-pub use registry::{Install, Launch, NotFound, Registry, Source, VTSLS, default_tools};
+pub use registry::{
+    ESLINT_DIGEST, ESLINT_TAG, Install, Launch, NotFound, Registry, Source, VTSLS, default_tools, eslint_settings,
+};
 pub use semantic::{Legend, SemanticTokens, Token};
 pub use server::{Event, Refresh, Reply, RestartPolicy, Server, ServerConfig, Status, Ticket, wait};

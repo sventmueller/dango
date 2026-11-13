@@ -8,6 +8,7 @@ use ide_lsp::workspace_edit as apply;
 mod complete;
 mod decorate;
 mod edits;
+mod events;
 mod hierarchy;
 mod hover;
 pub mod inlay;
@@ -81,6 +82,8 @@ pub struct ViewState {
     /// Tells editors apart in callbacks from other threads, which cannot hold a view.
     pub serial: u64,
     slot: Option<u64>,
+    /// The second servers beside the main one (E140): their slots and the document's language id for them.
+    companions: Vec<(u64, String)>,
     uri: Option<Uri>,
     marks: Vec<decorate::Mark>,
     tokens: Vec<decorate::Painted>,
@@ -425,6 +428,47 @@ fn server_of(view: &EditorTextView) -> Option<(Server, Uri)> {
     }
 }
 
+/// The running servers of `view`, the main one first, each with its slot's id (E140).
+fn servers_of(view: &EditorTextView) -> Vec<(u64, Server, Uri)> {
+    let Some(root) = view.controller().and_then(|c| c.project_root()) else {
+        return Vec::new();
+    };
+    let (ids, uri) = {
+        let state = view.ivars().lsp.borrow();
+        let ids: Vec<u64> = state
+            .slot
+            .into_iter()
+            .chain(state.companions.iter().map(|(id, _)| *id))
+            .collect();
+        (ids, state.uri.clone())
+    };
+    let Some(uri) = uri else { return Vec::new() };
+    ids.into_iter()
+        .filter_map(|id| {
+            let slot = slot(&root, id)?;
+            let state = slot.state.borrow();
+            match &*state {
+                State::Running(server) => Some((id, server.clone(), uri.clone())),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+/// The running server of slot `id` for `view`, main or second.
+fn server_by_id(view: &EditorTextView, id: u64) -> Option<(Server, Uri)> {
+    servers_of(view)
+        .into_iter()
+        .find(|(slot, _, _)| *slot == id)
+        .map(|(_, server, uri)| (server, uri))
+}
+
+/// The id of the main slot of `view`, the source of its own diagnostics.
+#[cfg(feature = "selftest")]
+fn main_slot(view: &EditorTextView) -> u64 {
+    view.ivars().lsp.borrow().slot.unwrap_or(0)
+}
+
 fn version(view: &EditorTextView) -> i32 {
     i32::try_from(view.document().revision()).unwrap_or(i32::MAX)
 }
@@ -432,12 +476,16 @@ fn version(view: &EditorTextView) -> i32 {
 /// An editor opened, or its file got a new name: it is opened on the server of its language.
 pub fn opened(view: &EditorTextView) {
     let path = view.document().path().map(Path::to_path_buf);
+    let servers = servers_of(view);
     let previous = view.ivars().lsp.borrow_mut().uri.take();
-    if let (Some(previous), Some((server, _))) = (previous, server_of(view)) {
-        server.close(&previous);
+    if let Some(previous) = previous {
+        for (_, server, _) in &servers {
+            server.close(&previous);
+        }
     }
     release(view);
     view.ivars().lsp.borrow_mut().slot = None;
+    view.ivars().lsp.borrow_mut().companions.clear();
     let Some((path, (language, language_id))) = path.and_then(|p| language_of(&p).map(|l| (p, l))) else {
         status::refresh(view);
         return;
@@ -460,8 +508,34 @@ pub fn opened(view: &EditorTextView) {
         let text = view.document().text().to_string();
         server.open(&uri::from_path(&path), &language_id, version(view), &text);
     }
+    open_companions(view, &workspace, &path, &language_id);
     status::refresh(view);
     view.later(sel!(ideLspRefresh), REFRESH_DELAY);
+}
+
+/// Opens `view` on the second servers its file has beside the main one (E140), started if new.
+fn open_companions(view: &EditorTextView, workspace: &Rc<Workspace>, path: &Path, language_id: &str) {
+    if !path.starts_with(&workspace.root) {
+        return;
+    }
+    for companion in ide_lsp::companions(path, &workspace.root, emmet_on()) {
+        let root = ide_lsp::root(&companion, path, &workspace.root);
+        let (slot, _) = slot_at(workspace, &companion, root);
+        view.ivars()
+            .lsp
+            .borrow_mut()
+            .companions
+            .push((slot.id, language_id.to_string()));
+        if let State::Running(server) = &*slot.state.borrow() {
+            let text = view.document().text().to_string();
+            server.open(&uri::from_path(path), language_id, version(view), &text);
+        }
+    }
+}
+
+/// Whether Emmet's abbreviations show in completion (E109).
+fn emmet_on() -> bool {
+    Settings::load_user().get(&ide_core::settings::keys::EMMET)
 }
 
 /// The slot that serves `path`: within the folder the one of its project root, started if new; outside, as for a
@@ -530,7 +604,7 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
             let root = folder.to_path_buf();
             let sink = move |event: Event| {
                 let root = root.clone();
-                main_soon(move || event_arrived(&root, id, event));
+                main_soon(move || events::event_arrived(&root, id, event));
             };
             match Server::start(Supervisor::global(), config, sink) {
                 Ok(server) => State::Running(server),
@@ -545,7 +619,17 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
             let Some(uri) = view.ivars().lsp.borrow().uri.clone() else {
                 continue;
             };
-            let Some((_, language_id)) = view.document().path().and_then(language_of) else {
+            let companion = view
+                .ivars()
+                .lsp
+                .borrow()
+                .companions
+                .iter()
+                .find(|(slot, _)| *slot == id)
+                .map(|(_, language_id)| language_id.clone());
+            let Some(language_id) =
+                companion.or_else(|| view.document().path().and_then(language_of).map(|(_, id)| id))
+            else {
                 continue;
             };
             let text = view.document().text().to_string();
@@ -559,7 +643,10 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
 fn views_of(folder: &Path, id: u64) -> Vec<Retained<EditorTextView>> {
     editor::all_editors()
         .into_iter()
-        .filter(|v| v.ivars().lsp.borrow().slot == Some(id))
+        .filter(|v| {
+            let state = v.ivars().lsp.borrow();
+            state.slot == Some(id) || state.companions.iter().any(|(slot, _)| *slot == id)
+        })
         .filter(|v| v.controller().and_then(|c| c.project_root()).as_deref() == Some(folder))
         .collect()
 }
@@ -579,15 +666,18 @@ pub fn changed(view: &EditorTextView, change: &Change) {
         complete::shift(&mut state, change);
         outline::shift(&mut state, change);
     }
-    if let Some((server, uri)) = server_of(view) {
+    let servers = servers_of(view);
+    for (_, server, uri) in &servers {
         let event = TextDocumentContentChangeEvent {
             range: Some(text::change_range(change)),
             range_length: None,
             text: change.text.clone(),
         };
-        if let Err(error) = server.change(&uri, version(view), &[event]) {
+        if let Err(error) = server.change(uri, version(view), &[event]) {
             crate::diag::report("telling the language server about an edit", error);
         }
+    }
+    if !servers.is_empty() {
         view.later(sel!(ideLspRefresh), REFRESH_DELAY);
     }
     actions::moved(view);
@@ -615,14 +705,14 @@ pub fn files_changed(folder: &Path, files: &std::collections::BTreeMap<PathBuf, 
 
 /// The document was saved.
 pub fn saved(view: &EditorTextView) {
-    if let Some((server, uri)) = server_of(view) {
+    for (_, server, uri) in servers_of(view) {
         server.save(&uri);
     }
 }
 
 /// The editor closes.
 pub fn closed(view: &EditorTextView) {
-    if let Some((server, uri)) = server_of(view) {
+    for (_, server, uri) in servers_of(view) {
         server.close(&uri);
     }
     release(view);
@@ -667,14 +757,21 @@ fn release(view: &EditorTextView) {
     let Some(root) = view.controller().and_then(|c| c.project_root()) else {
         return;
     };
-    let Some(id) = view.ivars().lsp.borrow().slot else {
-        return;
+    let ids: Vec<u64> = {
+        let state = view.ivars().lsp.borrow();
+        state
+            .slot
+            .into_iter()
+            .chain(state.companions.iter().map(|(id, _)| *id))
+            .collect()
     };
-    let Some(slot) = slot(&root, id) else { return };
-    let mut hold = slot.hold.get();
-    hold.release(std::time::Instant::now());
-    slot.hold.set(hold);
-    end_later(&root, &slot);
+    for id in ids {
+        let Some(slot) = slot(&root, id) else { continue };
+        let mut hold = slot.hold.get();
+        hold.release(std::time::Instant::now());
+        slot.hold.set(hold);
+        end_later(&root, &slot);
+    }
 }
 
 /// Looks, once the lease and the grace after the last editor run out, whether the slot should end.
@@ -730,102 +827,20 @@ pub fn refresh(view: &EditorTextView) {
             }
         });
     });
-    let pulls = server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some());
-    if pulls {
+    for (source, server, uri) in servers_of(view) {
+        if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
+            continue;
+        }
         let _ = server.pull_diagnostics(&uri, move |answer| {
             if let Ok(diagnostics) = answer {
                 main_soon(move || {
                     if let Some(view) = editor::find_editor(serial) {
-                        decorate::set_diagnostics(&view, &diagnostics);
+                        decorate::set_diagnostics_from(&view, source, &diagnostics);
                     }
                 });
             }
         });
     }
-}
-
-fn event_arrived(folder: &Path, id: u64, event: Event) {
-    let Some(slot) = slot(folder, id) else { return };
-    match event {
-        Event::Diagnostics { uri, diagnostics, .. } => diagnostics_arrived(folder, &uri, &diagnostics),
-        Event::Status(Status::Running) => {
-            for view in views_of(folder, id) {
-                refresh(&view);
-            }
-        }
-        Event::Progress { token, progress } => {
-            let token = match token {
-                ide_lsp::lsp_types::NumberOrString::Number(n) => n.to_string(),
-                ide_lsp::lsp_types::NumberOrString::String(s) => s,
-            };
-            #[cfg(feature = "selftest")]
-            slot.progress_at.set(Some(std::time::Instant::now()));
-            let mut all = slot.progress.borrow_mut();
-            match progress {
-                WorkDoneProgress::Begin(begin) => {
-                    let text = progress_text(&begin.title, begin.message.as_deref(), begin.percentage);
-                    all.insert(token, (begin.title, text));
-                }
-                WorkDoneProgress::Report(report) => {
-                    let title = all.get(&token).map(|(title, _)| title.clone()).unwrap_or_default();
-                    let text = progress_text(&title, report.message.as_deref(), report.percentage);
-                    all.insert(token, (title, text));
-                }
-                WorkDoneProgress::End(_) => {
-                    all.remove(&token);
-                }
-            }
-        }
-        Event::Message { level, message } => {
-            if level == MessageType::ERROR || level == MessageType::WARNING {
-                *slot.message.borrow_mut() = Some(message.clone());
-            }
-            crate::diag::report("language server", message);
-        }
-        Event::Crashed { stderr, restarting, .. } => {
-            let tail: String = stderr.lines().rev().take(5).collect::<Vec<_>>().join(" | ");
-            crate::diag::report("language server crashed", format!("restarting: {restarting}; {tail}"));
-        }
-        Event::Refresh(Refresh::SemanticTokens | Refresh::Diagnostics) => {
-            for view in views_of(folder, id) {
-                refresh(&view);
-            }
-        }
-        Event::Refresh(Refresh::InlayHints) => {
-            for view in views_of(folder, id) {
-                inlay::forget(&view);
-                inlay::request(&view);
-            }
-        }
-        Event::ApplyEdit { edit, reply, .. } => edits::apply_workspace_edit(folder, &edit, move |applied| {
-            reply.send(ide_lsp::lsp_types::ApplyWorkspaceEditResponse {
-                applied: applied.is_ok(),
-                failed_change: applied
-                    .as_ref()
-                    .err()
-                    .and_then(|f| f.index)
-                    .and_then(|i| u32::try_from(i).ok()),
-                failure_reason: applied.as_ref().err().map(|f| f.message.clone()),
-            });
-            if let Err(failure) = applied {
-                actions::failed(failure.message);
-            }
-        }),
-        Event::MessageRequest {
-            message,
-            actions,
-            reply,
-            ..
-        } => edits::ask(folder, &message, actions, reply),
-        Event::ShowDocument {
-            uri, selection, reply, ..
-        } => {
-            let shown = uri::to_path(&uri).is_some_and(|path| navigate::show(folder, &path, selection));
-            reply.send(ide_lsp::lsp_types::ShowDocumentResult { success: shown });
-        }
-        Event::Status(_) | Event::Log { .. } | Event::CapabilitiesChanged | Event::Refresh(_) => {}
-    }
-    refresh_slot(folder, id);
 }
 
 /// A server's progress as the status bar shows it; the share only once, also when the server already wrote it.
@@ -844,18 +859,6 @@ fn progress_text(title: &str, message: Option<&str>, percentage: Option<u32>) ->
         }
     }
     text
-}
-
-fn diagnostics_arrived(folder: &Path, uri: &Uri, diagnostics: &[Diagnostic]) {
-    let Some(path) = uri::to_path(uri) else { return };
-    agent::publish(&path, diagnostics);
-    for view in editor::all_editors() {
-        if view.document().path() == Some(&path)
-            && view.controller().and_then(|c| c.project_root()).as_deref() == Some(folder)
-        {
-            decorate::set_diagnostics(&view, diagnostics);
-        }
-    }
 }
 
 /// Counts of the problems `view` shows, errors first, or `None` when no server watches its document.

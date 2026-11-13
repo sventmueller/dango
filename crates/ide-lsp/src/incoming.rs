@@ -104,6 +104,13 @@ pub(crate) fn request(inner: &Arc<Inner>, method: &str, params: Value, responder
                 reply: Reply::new(responder, ShowDocumentResult { success: false }),
             });
         }
+        "eslint/noLibrary" | "eslint/noConfig" | "eslint/probeFailed" | "eslint/openDoc" => {
+            responder.ok(json!({}));
+            inner.emit(Event::Notice {
+                method: method.to_string(),
+                params,
+            });
+        }
         _ => match refresh(method) {
             Some(kind) => {
                 responder.ok(Value::Null);
