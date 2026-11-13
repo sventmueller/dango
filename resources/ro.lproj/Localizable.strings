@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Expresii urmărite";
 "„{}“ startet …" = "Se pornește „{}”…";
 "Wartet auf Freigabe durch macOS …" = "Se așteaptă permisiunea macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Închideți în timp ce agenții încă lucrează?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Închiderea oprește rundele și procesele lor în fundal.";
+"Beenden" = "Închideți";
+"Gespeicherte Regeln von Claude" = "Regulile salvate ale lui Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ce ați permis lui Claude cu „Permiteți întotdeauna” pentru un proiect. Comenzile Git distructive cer totuși permisiunea de fiecare dată.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenții ACP își salvează singuri regulile, acolo unde aplicația nu le poate vedea și nici șterge.";
+"Gilt für" = "Se aplică pentru";
+"Die Regel ließ sich nicht entfernen." = "Regula nu a putut fi eliminată.";

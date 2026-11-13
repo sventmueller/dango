@@ -8,6 +8,7 @@
 
 pub mod index;
 pub mod model;
+pub mod shell;
 pub mod thread;
 pub mod update;
 

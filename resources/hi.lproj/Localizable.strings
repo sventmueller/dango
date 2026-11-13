@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "वॉच एक्सप्रेशन";
 "„{}“ startet …" = "“{}” शुरू हो रहा है…";
 "Wartet auf Freigabe durch macOS …" = "macOS से अनुमति की प्रतीक्षा…";
+"Beenden, während Agenten noch arbeiten?" = "क्या एजेंट के काम करते रहते हुए बंद करें?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "बंद करने से उनके टर्न और बैकग्राउंड प्रोसेस रुक जाते हैं।";
+"Beenden" = "बंद करें";
+"Gespeicherte Regeln von Claude" = "Claude के सहेजे गए नियम";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "किसी प्रोजेक्ट के लिए “हमेशा अनुमति दें” से Claude को दी गई अनुमतियाँ। विनाशकारी Git कमांड फिर भी हर बार पूछती हैं।";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP एजेंट अपने नियम ख़ुद सहेजते हैं, जहाँ ऐप उन्हें न देख सकती है, न हटा सकती है।";
+"Gilt für" = "लागू";
+"Die Regel ließ sich nicht entfernen." = "नियम हटाया नहीं जा सका।";

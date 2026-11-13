@@ -21,6 +21,7 @@ mod navigation;
 mod own_agent;
 mod preview;
 mod project;
+mod quit;
 #[cfg(feature = "selftest")]
 mod selftest;
 mod session;

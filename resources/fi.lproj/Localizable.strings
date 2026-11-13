@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Tarkkailtavat lausekkeet";
 "„{}“ startet …" = "Käynnistetään ”{}”…";
 "Wartet auf Freigabe durch macOS …" = "Odotetaan macOS:n käyttölupaa…";
+"Beenden, während Agenten noch arbeiten?" = "Lopetetaanko, vaikka agentit vielä työskentelevät?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Lopettaminen pysäyttää niiden vuorot ja taustaprosessit.";
+"Beenden" = "Lopeta";
+"Gespeicherte Regeln von Claude" = "Clauden tallennetut säännöt";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Mitä olet sallinut Claudelle valinnalla ”Salli aina” projektissa. Tuhoavat Git-komennot kysyvät silti joka kerta.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP-agentit tallentavat sääntönsä itse paikkaan, jossa appi ei näe eikä voi poistaa niitä.";
+"Gilt für" = "Koskee";
+"Die Regel ließ sich nicht entfernen." = "Sääntöä ei voitu poistaa.";

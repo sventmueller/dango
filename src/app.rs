@@ -58,7 +58,7 @@ define_class!(
         #[unsafe(method(applicationShouldTerminate:))]
         fn should_terminate(&self, _app: &NSApplication) -> NSApplicationTerminateReply {
             guarded(NSApplicationTerminateReply::TerminateNow, || {
-                if !crate::editor::confirm_quit(self.mtm()) {
+                if !crate::quit::agents_may_stop(self.mtm()) || !crate::editor::confirm_quit(self.mtm()) {
                     return NSApplicationTerminateReply::TerminateCancel;
                 }
                 remember_open_projects();

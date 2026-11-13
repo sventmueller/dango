@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "ביטויים במעקב";
 "„{}“ startet …" = "בהפעלה של ״{}״…";
 "Wartet auf Freigabe durch macOS …" = "ממתין לאישור גישה מ‑macOS…";
+"Beenden, während Agenten noch arbeiten?" = "לסיים בזמן שסוכנים עדיין עובדים?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "הסיום עוצר את הסבבים שלהם ואת התהליכים שלהם ברקע.";
+"Beenden" = "סיום";
+"Gespeicherte Regeln von Claude" = "הכללים השמורים של Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "מה שאישרת ל-Claude באמצעות ״הרשאה קבועה״ עבור פרויקט. פקודות Git הרסניות מחייבות אישור בכל פעם בכל זאת.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "סוכני ACP שומרים את הכללים שלהם בעצמם, במקום שבו היישום לא יכול לראות או למחוק אותם.";
+"Gilt für" = "חל על";
+"Die Regel ließ sich nicht entfernen." = "לא ניתן היה להסיר את הכלל.";

@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "นิพจน์ที่เฝ้าดู";
 "„{}“ startet …" = "กำลังเริ่ม “{}”…";
 "Wartet auf Freigabe durch macOS …" = "กำลังรอให้ macOS อนุญาตการเข้าถึง…";
+"Beenden, während Agenten noch arbeiten?" = "ออกในขณะที่เอเจนต์ยังทำงานอยู่ใช่หรือไม่";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "การออกจะหยุดรอบและกระบวนการเบื้องหลังของเอเจนต์";
+"Beenden" = "ออก";
+"Gespeicherte Regeln von Claude" = "กฎที่จัดเก็บไว้ของ Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "สิ่งที่คุณอนุญาตให้ Claude ด้วย “อนุญาตเสมอ” สำหรับโปรเจ็กต์ คำสั่ง Git ที่ทำลายข้อมูลยังคงถามทุกครั้ง";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "เอเจนต์ ACP จัดเก็บกฎของตัวเอง ในที่ที่แอปมองไม่เห็นและลบไม่ได้";
+"Gilt für" = "มีผลกับ";
+"Die Regel ließ sich nicht entfernen." = "ไม่สามารถเอากฎออกได้";

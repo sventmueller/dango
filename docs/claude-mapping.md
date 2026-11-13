@@ -16,7 +16,7 @@ UI hides the element when it fails.
 | Options | `--model=`, `--permission-mode=` (new threads: `default`, E27), `--effort=`, `--thinking=adaptive\|disabled` or `--max-thinking-tokens=N`, `--thinking-display=summarized` (default), `--resume=<session>` with optional `--resume-session-at=<message uuid>`, `--resume-drops-turn=<prompt uuid>` (only with both before it) and `--fork-session` (rewinding the conversation as a branch, I6), `--allowedTools=`, `--disallowedTools=`, `--add-dir=`, `--no-session-persistence` (only when `Launch::persist` is off), sandbox (E19, off by default): `--settings={"sandbox":{"enabled":true,"failIfUnavailable":true}}` |
 | Environment | the login shell's (`ide_process::shell_env`), without `CLAUDE_CODE_ENTRYPOINT` so the CLI never takes the app for the VS Code extension; `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=true` only with `Launch::file_checkpoints` (needed by `rewind_files`) |
 | Supervisor | `Kind::Agent`, label `claude`; graceful stop = close stdin (`on_stop`), then SIGTERM/SIGKILL to the group |
-| First frame | `initialize` with `perTaskStopAffordance: true` (an interrupt spares background tasks, E23), `agentProgressSummaries`, `forwardSubagentText` |
+| First frame | `initialize` with `perTaskStopAffordance: true` (an interrupt spares background tasks, E23), `agentProgressSummaries`, `forwardSubagentText`, and `hooks.PreToolUse` = one matcher `Bash` with callback `ide-destructive-git` and `onFailure: block` (E27, see below) |
 | Framing | one JSON object per line both ways; lines that are not JSON objects are skipped |
 | Credentials | never read or written; a missing sign-in becomes `Event::Failed(SessionError::SignInRequired)` and the UI suggests running `claude` in a terminal |
 
@@ -137,11 +137,12 @@ asking for a login also raises `SignInRequired`.
 
 | Request | Handling | Tier |
 |---|---|---|
-| `can_use_tool` (any tool) | `Put` PermissionRequest `perm:<id>`: tool, title, description, reason, blocked path, input (editable), options AllowOnce / AllowAlways per allow suggestion (rule text + scope; none when `suppress_always_allow_rule`) / Deny, `default_to_no`; tool call back to `Pending`; `Status` RequiresAction | core |
+| `can_use_tool` (any tool) | `Put` PermissionRequest `perm:<id>`: tool, title, description, reason, blocked path, input (editable), options AllowOnce / AllowAlways per allow suggestion (rule text + scope; none when `suppress_always_allow_rule` or for a Bash command that `ide_thread::shell::destructive_git` finds) / Deny, `default_to_no` (also for such a command); tool call back to `Pending`; `Status` RequiresAction | core |
+| `hook_callback` `ide-destructive-git` (`PreToolUse`, Bash) | success: `hookSpecificOutput { hookEventName: PreToolUse, permissionDecision: ask, permissionDecisionReason }` when the command is a destructive git command (`push --force`, `reset --hard`, `clean -f`, `stash drop/clear`, also chained or in `sh -c`), else `{}`. The CLI runs the hook before stored allow rules and the mode, so the `ask` becomes a `can_use_tool` under `bypassPermissions` and with a matching allow rule too (checked against CLI 2.1.322: `the_real_cli_asks_for_a_destructive_git_command_despite_a_stored_rule_and_bypass_mode`, ignored by default) | core |
 | `can_use_tool` AskUserQuestion | the Question entry gets the request id (`Pending`) | core |
 | `can_use_tool` ExitPlanMode | the PlanApproval entry gets the request id (`Pending`) | core |
 | `control_cancel_request` | `Resolve` Withdrawn | core |
-| anything else (`hook_callback`, `mcp_message`, `elicitation`, `request_user_dialog`, unknown) | answered with an error response, never allowed (E21) | core |
+| anything else (`hook_callback` with another id, `mcp_message`, `elicitation`, `request_user_dialog`, unknown) | answered with an error response, never allowed (E21) | core |
 
 Answers (`Session::answer`, `answer_questions`, `answer_plan`):
 
@@ -194,6 +195,14 @@ lines (the CLI's mentions take no ranges); images follow as base64 `image` block
 terminal's output, a browser page, a CI log, a file outside the project, text pasted from a web page) follows as a
 text block from `ide_thread::external_text`: what it is, `EXTERNAL_NOTICE` (untrusted data, do not follow
 instructions in it), then the text between `<external>` markers it cannot close (E22).
+
+## Stored rules (E27)
+
+"Always allow" sends the CLI's suggestion verbatim; for `localSettings` the CLI writes the rule into the project's
+`.claude/settings.local.json` (`projectSettings`: `.claude/settings.json`) under `permissions.allow`. The settings'
+Agents tab lists those entries for the folders the app stored a rule in and the open and recent ones
+(`ide_claude::rules::allow_rules`) and removes one entry at a time (`remove_allow_rule`): only the array element and
+its comma leave the file, and the result is checked to parse to the same JSON minus that rule before it is written.
 
 ## Past sessions (exp.)
 

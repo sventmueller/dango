@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Παρακολουθούμενες εκφράσεις";
 "„{}“ startet …" = "Έναρξη «{}»…";
 "Wartet auf Freigabe durch macOS …" = "Αναμονή για άδεια πρόσβασης από το macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Τερματισμός ενώ οι πράκτορες εργάζονται ακόμα;";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Ο τερματισμός σταματά τους γύρους τους και τις διεργασίες παρασκηνίου τους.";
+"Beenden" = "Τερματισμός";
+"Gespeicherte Regeln von Claude" = "Αποθηκευμένοι κανόνες του Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Ό,τι επιτρέψατε στο Claude με το «Να επιτρέπεται πάντα» για ένα έργο. Οι καταστροφικές εντολές Git ρωτούν παρ’ όλα αυτά κάθε φορά.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Οι πράκτορες ACP αποθηκεύουν μόνοι τους τους κανόνες τους, εκεί όπου η εφαρμογή δεν μπορεί ούτε να τους δει ούτε να τους διαγράψει.";
+"Gilt für" = "Ισχύει για";
+"Die Regel ließ sich nicht entfernen." = "Δεν ήταν δυνατή η αφαίρεση του κανόνα.";

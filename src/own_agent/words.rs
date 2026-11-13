@@ -31,16 +31,9 @@ impl Wording for Words {
 
     fn reason(&self, reason: &Reason) -> String {
         match reason {
-            Reason::Outside => t("Der Pfad liegt außerhalb des Projekts"),
-            Reason::Destructive(Destructive::ForcePush) => {
-                t("git push --force überschreibt den Verlauf auf dem Server")
-            }
-            Reason::Destructive(Destructive::ResetHard) => t("git reset --hard verwirft nicht gesicherte Änderungen"),
-            Reason::Destructive(Destructive::Clean) => t("git clean -f löscht Dateien, die git nicht verfolgt"),
-            Reason::Destructive(Destructive::StashDrop) => t("git stash drop löscht einen Stash endgültig"),
-            Reason::Destructive(Destructive::StashClear) => t("git stash clear löscht alle Stashes endgültig"),
+            Reason::Outside => t("Der Pfad liegt außerhalb des Projekts").to_string(),
+            Reason::Destructive(why) => destructive_text(*why),
         }
-        .to_string()
     }
 
     fn rule(&self, rule: &Rule) -> String {
@@ -50,6 +43,18 @@ impl Wording for Words {
     fn retry(&self, error: &ProviderError) -> String {
         failure(error.kind).to_string()
     }
+}
+
+/// What a destructive git command throws away, for every agent's permission card (E27).
+pub fn destructive_text(why: Destructive) -> String {
+    match why {
+        Destructive::ForcePush => t("git push --force überschreibt den Verlauf auf dem Server"),
+        Destructive::ResetHard => t("git reset --hard verwirft nicht gesicherte Änderungen"),
+        Destructive::Clean => t("git clean -f löscht Dateien, die git nicht verfolgt"),
+        Destructive::StashDrop => t("git stash drop löscht einen Stash endgültig"),
+        Destructive::StashClear => t("git stash clear löscht alle Stashes endgültig"),
+    }
+    .to_string()
 }
 
 /// What a stored rule allows.

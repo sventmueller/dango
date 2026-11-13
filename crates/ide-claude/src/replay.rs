@@ -149,7 +149,7 @@ impl Replay {
                     self.asks.insert(request_id, *ask);
                     updates
                 }
-                Incoming::Other { .. } => Vec::new(),
+                Incoming::HookCallback { .. } | Incoming::Other { .. } => Vec::new(),
             },
             Message::ControlResponse(response) => {
                 let Some(request) = self.sent.remove(&response.request_id) else {

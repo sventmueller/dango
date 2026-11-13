@@ -123,7 +123,7 @@ pub fn picture_alert_after(delay: Duration, name: &'static str) {
 }
 
 /// Runs `then` once, `delay` from now, also while an alert runs modal.
-fn in_any_mode_after(delay: Duration, then: impl FnOnce() + 'static) {
+pub(super) fn in_any_mode_after(delay: Duration, then: impl FnOnce() + 'static) {
     let then = Cell::new(Some(then));
     let block = RcBlock::new(move |_timer: NonNull<NSTimer>| {
         if let Some(then) = then.take() {

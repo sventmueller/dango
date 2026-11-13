@@ -99,6 +99,20 @@ pub fn running_in(controller: &WindowController) -> Vec<String> {
         .collect()
 }
 
+/// The coding agents that run in a terminal of any window, by name, for the question before quitting (E23).
+pub fn agents_running() -> Vec<String> {
+    all_views()
+        .into_iter()
+        .filter_map(|view| {
+            view.with_session(|session| match session.foreground() {
+                ide_terminal::Foreground::Agent(agent) => Some(format!("{agent:?}")),
+                _ => None,
+            })
+            .flatten()
+        })
+        .collect()
+}
+
 /// Starts the shell now if the login shell's environment is known, else once it is.
 fn start(view: &TerminalView) {
     if let Some(env) = crate::environment::get() {

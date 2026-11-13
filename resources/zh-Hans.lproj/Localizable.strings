@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "监视表达式";
 "„{}“ startet …" = "正在启动“{}”…";
 "Wartet auf Freigabe durch macOS …" = "正在等待 macOS 允许访问…";
+"Beenden, während Agenten noch arbeiten?" = "要在智能体仍在工作时退出吗？";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "退出会停止它们的轮次和后台进程。";
+"Beenden" = "退出";
+"Gespeicherte Regeln von Claude" = "Claude 已保存的规则";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "你通过“始终允许”为某个项目授予 Claude 的权限。破坏性的 Git 命令仍会每次询问。";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP 智能体自行保存其规则，App 既无法查看也无法删除。";
+"Gilt für" = "适用于";
+"Die Regel ließ sich nicht entfernen." = "无法移除规则。";

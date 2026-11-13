@@ -97,6 +97,7 @@ impl Request {
                 "perTaskStopAffordance": per_task_stop,
                 "agentProgressSummaries": progress_summaries,
                 "forwardSubagentText": forward_subagent_text,
+                "hooks": crate::hooks::registered(),
             }),
             Request::Interrupt | Request::BackgroundTasks(None) => json!({}),
             // The app reads no `behaviors`, whose scan reads every transcript of the last seven days.
@@ -543,6 +544,13 @@ answer_by_serde!(
 pub enum Incoming {
     /// The CLI asks whether a tool may run.
     CanUseTool(Box<PermissionAsk>),
+    /// The CLI runs one of the hooks the app registered.
+    HookCallback {
+        /// The hook's id from `initialize`.
+        callback_id: String,
+        /// What the hook is about, such as the tool call for `PreToolUse`.
+        input: Value,
+    },
     /// Any other request, which the app refuses.
     Other {
         /// Its subtype.
@@ -561,6 +569,14 @@ impl Incoming {
                 },
                 Incoming::CanUseTool,
             ),
+            "hook_callback" => Incoming::HookCallback {
+                callback_id: body
+                    .get("callback_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                input: body.get("input").cloned().unwrap_or(Value::Null),
+            },
             _ => Incoming::Other {
                 subtype: subtype.to_string(),
             },

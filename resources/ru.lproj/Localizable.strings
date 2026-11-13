@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Отслеживаемые выражения";
 "„{}“ startet …" = "Запуск «{}»…";
 "Wartet auf Freigabe durch macOS …" = "Ожидание разрешения macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Завершить, пока агенты еще работают?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Завершение останавливает их запросы и фоновые процессы.";
+"Beenden" = "Завершить";
+"Gespeicherte Regeln von Claude" = "Сохраненные правила Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "То, что Вы разрешили Claude для проекта с помощью «Разрешать всегда». Для разрушительных команд Git подтверждение все равно запрашивается каждый раз.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Агенты ACP сохраняют свои правила сами, там, где приложение не может ни увидеть, ни удалить их.";
+"Gilt für" = "Область действия";
+"Die Regel ließ sich nicht entfernen." = "Не удалось удалить правило.";

@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::main_soon;
 
-pub use words::{load_error, provider_error, rule_text};
+pub use words::{destructive_text, load_error, provider_error, rule_text};
 
 /// The endpoints the user added, and the addresses they gave the services, by endpoint id.
 pub const ENDPOINTS: Key<Vec<Endpoint>> = Key::user("agentEndpoints", Vec::new);

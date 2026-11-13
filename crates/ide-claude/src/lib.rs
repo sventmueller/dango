@@ -8,11 +8,13 @@
 pub mod capabilities;
 pub mod control;
 pub mod history;
+pub mod hooks;
 pub mod input;
 pub mod launch;
 pub mod mapping;
 pub mod protocol;
 pub mod replay;
+pub mod rules;
 pub mod session;
 mod tools;
 

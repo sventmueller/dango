@@ -59,6 +59,7 @@ mod lsp_actions;
 mod lsp_navigation;
 mod own_agent;
 mod predict;
+mod quit;
 mod recovery;
 mod replace;
 mod restore;
@@ -66,6 +67,7 @@ mod search;
 mod search_replace;
 mod servers;
 mod split;
+mod stored_rules;
 mod worktree;
 
 struct Check {
@@ -141,6 +143,8 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "editor-extras" => extras::run(),
         "tabs" => tabs::run(),
         "replace-folder" => replace::run(),
+        "quit" => quit::run(),
+        "stored-rules" => stored_rules::run(),
         "preview" => preview::run(),
         "markdown" => markdown::run(),
         "panels" => panels::run(),

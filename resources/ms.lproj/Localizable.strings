@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Ungkapan Pantauan";
 "„{}“ startet …" = "Memulakan “{}”…";
 "Wartet auf Freigabe durch macOS …" = "Menunggu kebenaran daripada macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Keluar semasa ejen masih bekerja?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Keluar akan menghentikan giliran dan proses latar belakang mereka.";
+"Beenden" = "Keluar";
+"Gespeicherte Regeln von Claude" = "Peraturan Tersimpan Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Perkara yang anda benarkan untuk Claude dengan “Sentiasa Benarkan” bagi sesuatu projek. Perintah Git yang memusnahkan tetap bertanya setiap kali.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Ejen ACP menyimpan peraturan mereka sendiri, di tempat yang app tidak dapat lihat atau padam.";
+"Gilt für" = "Terpakai Untuk";
+"Die Regel ließ sich nicht entfernen." = "Peraturan tidak dapat dibuang.";

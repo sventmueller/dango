@@ -2,6 +2,8 @@
 //! and approval mode, the rules the user stored for the project, and the sandbox. Destructive git commands always
 //! ask, whatever the mode or the rules.
 
+pub use ide_thread::shell::{Destructive, destructive_git};
+use ide_thread::shell::{segments, words};
 use serde::{Deserialize, Serialize};
 
 /// Which tools the model is offered.
@@ -126,21 +128,6 @@ pub enum Reason {
     Destructive(Destructive),
 }
 
-/// A git command that destroys work git cannot bring back.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Destructive {
-    /// `git push --force` rewrites the remote's history.
-    ForcePush,
-    /// `git reset --hard` discards uncommitted changes.
-    ResetHard,
-    /// `git clean -f` deletes untracked files.
-    Clean,
-    /// `git stash drop` deletes a stash entry.
-    StashDrop,
-    /// `git stash clear` deletes every stash entry.
-    StashClear,
-}
-
 /// The thread's settings that decide.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Policy {
@@ -263,135 +250,6 @@ fn starts_with_words(words: &[String], prefix: &str) -> bool {
     !prefix.is_empty() && words.len() >= prefix.len() && words.iter().zip(&prefix).all(|(w, p)| w == p)
 }
 
-/// The commands of a command line, split at `&&`, `||`, `;`, `|`, `&` and line breaks outside quotes; a command
-/// substitution counts as a command of its own.
-pub(crate) fn segments(command: &str) -> Vec<String> {
-    let mut parts = Vec::new();
-    let mut current = String::new();
-    let mut quote: Option<char> = None;
-    let mut chars = command.chars().peekable();
-    while let Some(c) = chars.next() {
-        match (quote, c) {
-            (Some(q), c) if c == q => {
-                quote = None;
-                current.push(c);
-            }
-            (Some('"'), '$') if chars.peek() == Some(&'(') => {
-                parts.push(std::mem::take(&mut current));
-                chars.next();
-            }
-            (Some(_), c) => current.push(c),
-            (None, '\'' | '"') => {
-                quote = Some(c);
-                current.push(c);
-            }
-            (None, '\\') => {
-                current.push(c);
-                if let Some(next) = chars.next() {
-                    current.push(next);
-                }
-            }
-            (None, ';' | '|' | '&' | '\n' | '(' | ')' | '`') => parts.push(std::mem::take(&mut current)),
-            (None, '$') if chars.peek() == Some(&'(') => {
-                parts.push(std::mem::take(&mut current));
-                chars.next();
-            }
-            (None, c) => current.push(c),
-        }
-    }
-    parts.push(current);
-    parts
-        .into_iter()
-        .map(|p| p.trim().to_string())
-        .filter(|p| !p.is_empty())
-        .collect()
-}
-
-/// The words of one command, with quotes removed.
-pub(crate) fn words(command: &str) -> Vec<String> {
-    let mut words = Vec::new();
-    let mut current = String::new();
-    let mut quote: Option<char> = None;
-    let mut started = false;
-    let mut chars = command.chars();
-    while let Some(c) = chars.next() {
-        match (quote, c) {
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), c) => current.push(c),
-            (None, '\'' | '"') => {
-                quote = Some(c);
-                started = true;
-            }
-            (None, '\\') => {
-                if let Some(next) = chars.next() {
-                    current.push(next);
-                }
-                started = true;
-            }
-            (None, c) if c.is_whitespace() => {
-                if started || !current.is_empty() {
-                    words.push(std::mem::take(&mut current));
-                }
-                started = false;
-            }
-            (None, c) => {
-                current.push(c);
-                started = true;
-            }
-        }
-    }
-    if started || !current.is_empty() {
-        words.push(current);
-    }
-    words
-}
-
-/// How `command` destroys work that git cannot bring back, if it does: a forced push, `reset --hard`, `clean` with
-/// `-f`, or dropping or clearing the stash.
-pub fn destructive_git(command: &str) -> Option<Destructive> {
-    segments(command).iter().find_map(|part| destructive_part(&words(part)))
-}
-
-fn destructive_part(words: &[String]) -> Option<Destructive> {
-    let git = words.iter().position(|w| w == "git" || w.ends_with("/git"))?;
-    let mut rest = words[git + 1..].iter();
-    let sub = loop {
-        let word = rest.next()?;
-        match word.as_str() {
-            "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" => {
-                rest.next();
-            }
-            w if w.starts_with('-') => {}
-            w => break w,
-        }
-    };
-    let args: Vec<&str> = rest.map(String::as_str).collect();
-    let short = |flag: char| {
-        args.iter()
-            .any(|a| a.starts_with('-') && !a.starts_with("--") && a[1..].contains(flag))
-    };
-    match sub {
-        "push"
-            if args
-                .iter()
-                .any(|a| a.starts_with("--force") || (a.starts_with('+') && a.len() > 1) || *a == "--mirror")
-                || short('f') =>
-        {
-            Some(Destructive::ForcePush)
-        }
-        "reset" if args.contains(&"--hard") => Some(Destructive::ResetHard),
-        "clean" if (short('f') || args.contains(&"--force")) && !short('n') && !args.contains(&"--dry-run") => {
-            Some(Destructive::Clean)
-        }
-        "stash" => match args.iter().find(|a| !a.starts_with('-')).copied() {
-            Some("drop") => Some(Destructive::StashDrop),
-            Some("clear") => Some(Destructive::StashClear),
-            _ => None,
-        },
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,43 +260,6 @@ mod tests {
             approval,
             sandbox: false,
             rules,
-        }
-    }
-
-    #[test]
-    fn destructive_git_commands_are_found_in_any_spelling() {
-        for command in [
-            "git push --force",
-            "git push -f origin main",
-            "git -C repo push origin +main",
-            "git push --force-with-lease",
-            "cd x && git reset --hard HEAD~1",
-            "git clean -fd",
-            "git clean -xdf",
-            "/usr/bin/git clean --force",
-            "echo ok; git push -uf origin x",
-            "git stash drop",
-            "git stash drop stash@{1}",
-            "git -C repo stash --quiet drop",
-            "git stash clear",
-            "make && git stash clear",
-        ] {
-            assert!(destructive_git(command).is_some(), "{command}");
-        }
-        for command in [
-            "git push origin main",
-            "git reset --soft HEAD~1",
-            "git clean -n",
-            "git clean -fn",
-            "echo 'git push --force'",
-            "git log --format=%f",
-            "git stash",
-            "git stash push -m drop",
-            "git stash list",
-            "git stash pop",
-            "git stash show clear",
-        ] {
-            assert!(destructive_git(command).is_none(), "{command}");
         }
     }
 
@@ -455,6 +276,31 @@ mod tests {
         };
         assert_eq!((rule, risky), (None, true));
         assert_eq!(all.decide(&Action::Command("git push".into())), Verdict::Allow);
+    }
+
+    #[test]
+    fn a_stored_rule_for_the_shell_does_not_let_a_destructive_command_in_it_through() {
+        let stored = vec![
+            Rule::Command { prefix: "sh".into() },
+            Rule::Command { prefix: "git".into() },
+        ];
+        for approval in [Approval::Manual, Approval::Edits, Approval::All] {
+            let policy = policy(approval, stored.clone());
+            for command in ["sh -c 'git push -f'", "git -C x reset --hard", "cd a && git clean -fdx"] {
+                assert!(
+                    matches!(
+                        policy.decide(&Action::Command(command.into())),
+                        Verdict::Ask {
+                            rule: None,
+                            reason: Some(Reason::Destructive(_)),
+                            risky: true,
+                            ..
+                        }
+                    ),
+                    "{command} under {approval:?}"
+                );
+            }
+        }
     }
 
     #[test]

@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "İzlenen İfadeler";
 "„{}“ startet …" = "“{}” başlatılıyor…";
 "Wartet auf Freigabe durch macOS …" = "macOS’in izin vermesi bekleniyor…";
+"Beenden, während Agenten noch arbeiten?" = "Ajanlar hâlâ çalışırken çıkılsın mı?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Çıkmak, ajanların turlarını ve arka plan işlemlerini durdurur.";
+"Beenden" = "Çık";
+"Gespeicherte Regeln von Claude" = "Claude’un Kayıtlı Kuralları";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Bir proje için “Her Zaman İzin Ver” ile Claude’a izin verdikleriniz. Yıkıcı Git komutları yine de her seferinde sorar.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP ajanları kurallarını kendileri kaydeder; uygulama bunları ne görebilir ne de silebilir.";
+"Gilt für" = "Kapsam";
+"Die Regel ließ sich nicht entfernen." = "Kural kaldırılamadı.";

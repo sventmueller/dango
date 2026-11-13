@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Biểu thức theo dõi";
 "„{}“ startet …" = "Đang bắt đầu “{}”…";
 "Wartet auf Freigabe durch macOS …" = "Đang chờ macOS cho phép truy cập…";
+"Beenden, während Agenten noch arbeiten?" = "Thoát khi các tác nhân vẫn đang làm việc?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Thoát sẽ dừng các lượt và tiến trình nền của chúng.";
+"Beenden" = "Thoát";
+"Gespeicherte Regeln von Claude" = "Quy tắc đã lưu của Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Những gì bạn đã cho phép Claude bằng “Luôn cho phép” cho một dự án. Các lệnh git mang tính phá hủy vẫn hỏi mỗi lần.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Các tác nhân ACP tự lưu quy tắc của mình, ở nơi ứng dụng không thể xem cũng không thể xóa.";
+"Gilt für" = "Áp dụng cho";
+"Die Regel ließ sich nicht entfernen." = "Không thể xóa quy tắc.";

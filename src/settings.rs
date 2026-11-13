@@ -10,6 +10,7 @@ mod editor;
 mod list_bar;
 mod predict;
 mod servers;
+mod stored_rules;
 
 use std::cell::RefCell;
 
@@ -26,6 +27,8 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use crate::util::{guarded, label, ns, set_action, symbol};
+
+pub use stored_rules::remember as remember_claude_rules;
 
 /// Where the CI tab sits in the toolbar.
 const CI_TAB: isize = 1;
@@ -314,6 +317,12 @@ fn agents_tab_now() -> Option<Retained<agents::AgentsSettings>> {
             .as_ref()
             .map(|(_, controller)| controller.ivars().agents.clone())
     })
+}
+
+/// The list of Claude's stored rules in the Agents tab, once the settings window was built, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn stored_rules() -> Option<Retained<stored_rules::StoredRules>> {
+    agents_tab_now().map(|agents| agents.stored_rules())
 }
 
 /// What the Agents tab shows, line by line, for the self-test.

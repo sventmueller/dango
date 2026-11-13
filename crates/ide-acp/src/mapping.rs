@@ -234,7 +234,28 @@ pub(crate) fn permission_options(options: &[acp::PermissionOption]) -> Vec<Permi
         .collect()
 }
 
+/// Whether a tool call titled `title` with `input` runs a git command that destroys work (E27); agents name the
+/// command in the input or, without one, in the title.
+pub(crate) fn destructive(title: &str, input: &Value) -> bool {
+    ide_thread::shell::destructive_input(input).is_some()
+        || (ide_thread::shell::command_of(input).is_none() && ide_thread::shell::destructive_git(title).is_some())
+}
+
 impl Mapper {
+    /// Whether the tool call `call` asks about runs a git command that destroys work, as far as the mapper knows it.
+    pub(crate) fn is_destructive(&self, call: &acp::ToolCallUpdate) -> bool {
+        let id = call.tool_call_id.0.to_string();
+        let known = self.tools.get(&id);
+        let title = call
+            .fields
+            .title
+            .as_deref()
+            .or(known.map(|k| k.1.as_str()))
+            .unwrap_or_default();
+        let input = call.fields.raw_input.as_ref().or(known.map(|k| &k.2));
+        destructive(title, input.unwrap_or(&Value::Null))
+    }
+
     /// A mapper for a thread, new or one an earlier session filled.
     pub fn new() -> Mapper {
         Mapper {
@@ -443,6 +464,7 @@ impl Mapper {
         let fields = &call.fields;
         let id = call.tool_call_id.0.to_string();
         let (name, title, input) = self.tools.get(&id).cloned().unwrap_or_default();
+        let destructive = destructive(&title, &input);
         let entry = PermissionRequest {
             request_id: request.to_string(),
             tool_call: Some(id),
@@ -457,7 +479,7 @@ impl Mapper {
                 .map(|l| l.path.to_string_lossy().into_owned()),
             input,
             options: permission_options(options),
-            default_to_no: false,
+            default_to_no: destructive,
             state: RequestState::Pending,
         };
         out.push(put(
@@ -534,5 +556,48 @@ impl Mapper {
             Ok(notification) => self.update(&notification.update, caps, at),
             Err(_) => (Vec::new(), false),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn a_destructive_git_command_is_found_in_the_input_or_else_the_title() {
+        assert!(destructive("Run command", &json!({"command": "git push --force"})));
+        assert!(destructive(
+            "Run command",
+            &json!({"command": ["git", "clean", "-fdx"]})
+        ));
+        assert!(destructive("`git -C x reset --hard`", &Value::Null));
+        assert!(!destructive("git reset --hard", &json!({"command": "git status"})));
+        assert!(!destructive("Read notes.md", &json!({"path": "notes.md"})));
+    }
+
+    #[test]
+    fn a_request_about_a_destructive_git_command_preselects_no_allowing() {
+        let mut mapper = Mapper::new();
+        let call: acp::ToolCallUpdate = serde_json::from_value(json!({
+            "toolCallId": "c1", "title": "git reset --hard", "kind": "execute", "status": "pending",
+            "rawInput": {"command": "git reset --hard HEAD~1"}
+        }))
+        .unwrap();
+        let options: Vec<acp::PermissionOption> = serde_json::from_value(json!([
+            {"optionId": "allow", "name": "Allow", "kind": "allow_once"}
+        ]))
+        .unwrap();
+        let updates = mapper.permission("p1", &call, &options, SystemTime::UNIX_EPOCH);
+        let request = updates.iter().find_map(|u| match u {
+            Update::Put {
+                entry: EntryKind::PermissionRequest(r),
+                ..
+            } => Some(r.clone()),
+            _ => None,
+        });
+        assert!(request.expect("a permission request").default_to_no);
+        assert!(mapper.is_destructive(&call));
     }
 }

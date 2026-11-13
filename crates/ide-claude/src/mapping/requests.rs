@@ -173,8 +173,9 @@ pub(super) fn plan(call: &str, input: &Value, request: Option<&str>) -> EntryKin
 }
 
 fn permission_request(request_id: &str, ask: &PermissionAsk) -> EntryKind {
+    let destructive = ask.tool_name == "Bash" && ide_thread::shell::destructive_input(&ask.input).is_some();
     let mut options = vec![PermissionOption::AllowOnce];
-    if !ask.suppress_always_allow_rule {
+    if !ask.suppress_always_allow_rule && !destructive {
         options.extend(ask.permission_suggestions.iter().enumerate().filter_map(|(n, raw)| {
             let suggestion = Suggestion::read(raw)?;
             Some(PermissionOption::AllowAlways {
@@ -195,7 +196,7 @@ fn permission_request(request_id: &str, ask: &PermissionAsk) -> EntryKind {
         blocked_path: ask.blocked_path.clone(),
         input: ask.input.clone(),
         options,
-        default_to_no: ask.default_to_no,
+        default_to_no: ask.default_to_no || destructive,
         state: RequestState::Pending,
     })
 }

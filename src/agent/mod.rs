@@ -55,6 +55,7 @@ pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_re
 #[cfg(feature = "selftest")]
 pub use acp::{set_test_launch, set_test_register};
 pub use actions::ask_text;
+pub use cards::request::scope_name;
 #[cfg(feature = "selftest")]
 pub use cards::window_name;
 #[cfg(feature = "selftest")]
@@ -270,14 +271,25 @@ fn remove(key: u64) {
 pub fn running_in(controller: &WindowController) -> Vec<String> {
     of_window(controller)
         .into_iter()
-        .filter(|tab| {
-            let thread = tab.view_snapshot();
-            thread.status() != ide_thread::Status::Idle
-                || thread.subagents().iter().any(|s| !s.status.is_final())
-                || thread.background().iter().any(|b| !b.status.is_final() && !b.ambient)
-        })
+        .filter(|tab| works(tab))
         .map(|tab| tab.title())
         .collect()
+}
+
+/// The AI tabs of every window that work now, by title.
+pub fn running() -> Vec<String> {
+    all()
+        .into_iter()
+        .filter(|tab| works(tab))
+        .map(|tab| tab.title())
+        .collect()
+}
+
+fn works(tab: &AgentTab) -> bool {
+    let thread = tab.view_snapshot();
+    thread.status() != ide_thread::Status::Idle
+        || thread.subagents().iter().any(|s| !s.status.is_final())
+        || thread.background().iter().any(|b| !b.status.is_final() && !b.ambient)
 }
 
 /// Ends the sessions of a window that closes.

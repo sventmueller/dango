@@ -113,6 +113,7 @@ impl AgentTab {
             updated_input: Some(input).filter(|i| *i != request.input),
             always: vec![suggestion],
         };
+        crate::settings::remember_claude_rules(self.cwd());
         self.settle(id, &request.request_id, answer);
     }
 

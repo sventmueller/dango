@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Sledované výrazy";
 "„{}“ startet …" = "Spúšťa sa „{}“…";
 "Wartet auf Freigabe durch macOS …" = "Čaká sa na povolenie systému macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Ukončiť, aj keď agenti ešte pracujú?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Ukončenie zastaví ich kolá aj procesy na pozadí.";
+"Beenden" = "Ukončiť";
+"Gespeicherte Regeln von Claude" = "Uložené pravidlá Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Čo ste Claude pre projekt povolili pomocou „Vždy povoliť“. Deštruktívne príkazy Gitu sa aj tak pýtajú zakaždým.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenti ACP si pravidlá ukladajú sami, kde ich aplikácia nevidí ani ich nemôže vymazať.";
+"Gilt für" = "Platí pre";
+"Die Regel ließ sich nicht entfernen." = "Pravidlo sa nepodarilo odstrániť.";

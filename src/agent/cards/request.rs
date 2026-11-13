@@ -78,29 +78,13 @@ pub fn edited_input(tool: &str, original: &Value, text: &str) -> Option<Value> {
     }
 }
 
-/// Whether `input` is a git command that throws work away, which needs a question every time (E27).
-pub fn destructive(tool: &str, input: &Value) -> bool {
-    let Some(command) = input.get("command").and_then(Value::as_str).filter(|_| tool == "Bash") else {
-        return false;
-    };
-    command.split(['&', ';', '|', '\n']).any(|part| {
-        let words: Vec<&str> = part.split_whitespace().collect();
-        let Some(git) = words.iter().position(|w| *w == "git") else {
-            return false;
-        };
-        let rest = &words[git + 1..];
-        let short = |c: char| {
-            rest.iter()
-                .any(|w| w.starts_with('-') && !w.starts_with("--") && w.contains(c))
-        };
-        let long = |name: &str| rest.iter().any(|w| w.starts_with(name));
-        match rest.first().copied() {
-            Some("push") => long("--force") || short('f'),
-            Some("reset") => long("--hard"),
-            Some("clean") => long("--force") || short('f'),
-            _ => false,
-        }
-    })
+/// How the request's command throws work away, if it runs a destructive git command, which needs a question every
+/// time (E27): the command of the input, or for an agent that names it only there, of the title.
+pub fn destructive(request: &PermissionRequest) -> Option<ide_thread::shell::Destructive> {
+    match ide_thread::shell::command_of(&request.input) {
+        Some(command) => ide_thread::shell::destructive_git(&command),
+        None => ide_thread::shell::destructive_git(request.title.as_deref()?),
+    }
 }
 
 /// Where a stored rule applies, as the user reads it.
@@ -184,7 +168,8 @@ fn pending_permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
     if let Some(description) = &request.description {
         note(description.clone(), NSColor::secondaryLabelColor());
     }
-    if let Some(reason) = &request.reason {
+    let reason = destructive(request).map(crate::own_agent::destructive_text);
+    if let Some(reason) = reason.as_ref().or(request.reason.as_ref()) {
         note(tf("Grund: {}", &[reason]), NSColor::secondaryLabelColor());
     }
     if let Some(path) = &request.blocked_path {
@@ -238,7 +223,7 @@ fn permission_buttons(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
         .iter()
         .filter(|o| matches!(o, PermissionOption::AllowAlways { .. }))
         .collect();
-    if !rules.is_empty() && !destructive(&request.tool_name, &request.input) {
+    if !rules.is_empty() && destructive(request).is_none() {
         let title = if let [PermissionOption::AllowAlways { rule, .. }] = rules.as_slice() {
             tf("Immer erlauben: {}", &[rule])
         } else {
@@ -676,12 +661,33 @@ mod tests {
 
     #[test]
     fn destructive_git_commands_never_get_a_stored_rule() {
-        let bash = |c: &str| json!({ "command": c });
-        assert!(destructive("Bash", &bash("git push --force origin main")));
-        assert!(destructive("Bash", &bash("cd x && git reset --hard HEAD~1")));
-        assert!(destructive("Bash", &bash("git clean -fd")));
-        assert!(!destructive("Bash", &bash("git status")));
-        assert!(!destructive("Bash", &bash("git push origin main")));
-        assert!(!destructive("Write", &bash("git clean -fd")));
+        let request = |tool: &str, title: Option<&str>, input: Value| PermissionRequest {
+            request_id: "r".into(),
+            tool_call: None,
+            tool_name: tool.into(),
+            title: title.map(str::to_string),
+            description: None,
+            reason: None,
+            blocked_path: None,
+            input,
+            options: Vec::new(),
+            default_to_no: false,
+            state: RequestState::Pending,
+        };
+        let bash = |c: &str| request("Bash", None, json!({ "command": c }));
+        assert!(destructive(&bash("git push --force origin main")).is_some());
+        assert!(destructive(&bash("cd x && git reset --hard HEAD~1")).is_some());
+        assert!(destructive(&bash("git clean -fd")).is_some());
+        assert!(destructive(&bash("sh -c 'git push -f'")).is_some());
+        assert!(destructive(&bash("git status")).is_none());
+        assert!(destructive(&bash("git push origin main")).is_none());
+        let acp = request("execute", Some("git -C repo reset --hard"), Value::Null);
+        assert!(destructive(&acp).is_some());
+        let write = request(
+            "Write",
+            Some("Write notes.md"),
+            json!({"file_path": "notes.md", "content": "git clean -fd"}),
+        );
+        assert!(destructive(&write).is_none());
     }
 }

@@ -89,6 +89,7 @@ pub struct AgentsIvars {
     register: OnceCell<Retained<NSStackView>>,
     /// Whether a thread waits for the login shell's environment, which the states need.
     waiting: Cell<bool>,
+    rules: Retained<super::stored_rules::StoredRules>,
 }
 
 define_class!(
@@ -386,6 +387,7 @@ impl AgentsSettings {
             agents: OnceCell::new(),
             register: OnceCell::new(),
             waiting: Cell::new(false),
+            rules: super::stored_rules::StoredRules::new(mtm),
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
@@ -426,11 +428,20 @@ impl AgentsSettings {
             content.addArrangedSubview(&group);
             group.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
         }
+        let rules = self.ivars().rules.views();
+        for view in &rules {
+            content.addArrangedSubview(view);
+        }
+        if let Some(heading) = rules.first() {
+            content.setCustomSpacing_afterView(6.0, heading);
+        }
+        super::list_bar::attach(&content);
         scrolling(mtm, &content)
     }
 
     /// Shows every agent's state again, as it is now.
     pub fn reload(&self) {
+        self.ivars().rules.reload();
         let (Some(agents), Some(register)) = (self.ivars().agents.get(), self.ivars().register.get()) else {
             return;
         };
@@ -535,6 +546,12 @@ impl AgentsSettings {
         Retained::into_super(line)
     }
 
+    /// The list of Claude's stored rules, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn stored_rules(&self) -> Retained<super::stored_rules::StoredRules> {
+        self.ivars().rules.clone()
+    }
+
     /// What the tab shows, line by line, for the self-test.
     #[cfg(feature = "selftest")]
     pub fn lines(&self) -> Vec<String> {
@@ -594,7 +611,8 @@ fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
     root.addSubview(&scroll);
     scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
     let fit = scroll.heightAnchor().constraintEqualToAnchor(&document.heightAnchor());
-    fit.setPriority(750.0);
+    // Below the labels' compression resistance (750), so a tab taller than `MAX_HEIGHT` scrolls instead of squeezing.
+    fit.setPriority(700.0);
     let mut pins = vec![
         scroll.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
         scroll.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),

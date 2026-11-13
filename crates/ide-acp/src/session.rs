@@ -87,6 +87,22 @@ pub enum Choice {
 struct Ask {
     responder: Responder<acp::RequestPermissionResponse>,
     options: Vec<acp::PermissionOption>,
+    /// Whether it is about a git command that destroys work, for which no rule may be stored (E27).
+    destructive: bool,
+}
+
+/// The option `choice` stands for; for a destructive git command, allowing always counts as allowing once, so that
+/// the agent stores no rule for it.
+fn picked(options: &[acp::PermissionOption], choice: Choice, destructive: bool) -> Option<&acp::PermissionOption> {
+    let Choice::Option(n) = choice else {
+        return None;
+    };
+    match options.get(n) {
+        Some(option) if destructive && option.kind == acp::PermissionOptionKind::AllowAlways => {
+            options.iter().find(|o| o.kind == acp::PermissionOptionKind::AllowOnce)
+        }
+        other => other,
+    }
 }
 
 struct State {
@@ -180,11 +196,13 @@ impl Shared {
             let updates = state
                 .mapper
                 .permission(&id, &request.tool_call, &request.options, now());
+            let destructive = state.mapper.is_destructive(&request.tool_call);
             state.asks.insert(
                 id,
                 Ask {
                     responder,
                     options: request.options,
+                    destructive,
                 },
             );
             updates
@@ -414,10 +432,7 @@ impl Session {
     /// Answers the permission request `request` with `choice`.
     pub fn answer(&self, request: &str, choice: Choice) -> Result<(), SessionError> {
         let ask = self.shared.state().asks.remove(request).ok_or(SessionError::Closed)?;
-        let picked = match choice {
-            Choice::Option(n) => ask.options.get(n),
-            Choice::Dismiss => None,
-        };
+        let picked = picked(&ask.options, choice, ask.destructive);
         let (outcome, decision) = match picked {
             Some(option) => {
                 let decision = match option.kind {
@@ -654,4 +669,32 @@ async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), S
     shared.apply(updates);
     (shared.sink)(Event::Capabilities);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn options() -> Vec<acp::PermissionOption> {
+        serde_json::from_value(json!([
+            {"optionId": "allow", "name": "Allow", "kind": "allow_once"},
+            {"optionId": "always", "name": "Always allow git", "kind": "allow_always"},
+            {"optionId": "reject", "name": "Reject", "kind": "reject_once"}
+        ]))
+        .unwrap()
+    }
+
+    #[test]
+    fn allowing_a_destructive_git_command_always_stores_no_rule() {
+        let options = options();
+        let id = |o: Option<&acp::PermissionOption>| o.map(|o| o.option_id.0.to_string());
+        assert_eq!(id(picked(&options, Choice::Option(1), true)), Some("allow".into()));
+        assert_eq!(id(picked(&options, Choice::Option(1), false)), Some("always".into()));
+        assert_eq!(id(picked(&options, Choice::Option(2), true)), Some("reject".into()));
+        assert_eq!(id(picked(&options, Choice::Dismiss, true)), None);
+        let only_always: Vec<acp::PermissionOption> = options.into_iter().skip(1).collect();
+        assert_eq!(id(picked(&only_always, Choice::Option(0), true)), None);
+    }
 }

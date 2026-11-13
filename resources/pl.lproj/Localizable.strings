@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Obserwowane wyrażenia";
 "„{}“ startet …" = "Uruchamianie „{}”…";
 "Wartet auf Freigabe durch macOS …" = "Czekanie na zgodę systemu macOS…";
+"Beenden, während Agenten noch arbeiten?" = "Zakończyć, gdy agenty jeszcze pracują?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Zakończenie zatrzymuje ich tury i procesy w tle.";
+"Beenden" = "Zakończ";
+"Gespeicherte Regeln von Claude" = "Zachowane reguły Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "To, na co pozwolono Claude w projekcie przyciskiem „Zawsze pozwalaj”. Niszczące polecenia Git i tak pytają za każdym razem.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenty ACP same zachowują swoje reguły, tam gdzie aplikacja nie może ich ani zobaczyć, ani usunąć.";
+"Gilt für" = "Dotyczy";
+"Die Regel ließ sich nicht entfernen." = "Nie można usunąć reguły.";

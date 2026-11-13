@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use ide_claude::{ControlError, Event, Launch, PermissionAnswer, RemoteControl, Session, SessionError};
 use ide_process::Supervisor;
-use ide_thread::{Decision, EntryKind, Lane, RequestState, Status, Thread, ThreadId, UserMessage};
+use ide_thread::{Decision, EntryKind, ErrorKind, Lane, Notice, RequestState, Status, Thread, ThreadId, UserMessage};
 use serde_json::{Value, json};
 
 const WAIT: Duration = Duration::from_secs(10);
@@ -183,6 +183,140 @@ fn a_session_answers_permissions_refuses_unknown_requests_and_ends_cleanly() {
 }
 
 #[test]
+fn a_destructive_git_command_asks_before_a_stored_rule_or_the_mode_could_allow_it() {
+    let dir = scratch("destructive");
+    let hook = |id: &str, command: &str| json!({"type": "control_request", "request_id": id, "request": {"subtype": "hook_callback", "callback_id": "ide-destructive-git", "tool_use_id": "toolu_r", "input": {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}, "tool_use_id": "toolu_r", "permission_mode": "bypassPermissions"}}});
+    // The CLI's order: the hook first; with its `ask`, the question, although `Bash(git reset:*)` is stored.
+    let launch = stand_in(
+        &dir,
+        json!({"subscriptionType": "pro"}),
+        &[
+            json!({"type": "system", "subtype": "init", "session_id": "s-d", "cwd": "/w", "model": "claude-haiku-5-5", "permissionMode": "bypassPermissions", "tools": ["Bash"], "claude_code_version": "2.1.322"}),
+            hook("cli-1", "git status"),
+            hook("cli-2", "cd repo && git reset --hard HEAD~1"),
+            json!({"type": "control_request", "request_id": "cli-3", "request": {"subtype": "can_use_tool", "tool_name": "Bash", "input": {"command": "cd repo && git reset --hard HEAD~1"}, "tool_use_id": "toolu_r", "decision_reason": "Destructive git command: it needs the user's approval every time.", "permission_suggestions": [{"type": "addRules", "rules": [{"toolName": "Bash", "ruleContent": "git reset:*"}], "behavior": "allow", "destination": "localSettings"}]}}),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    wait_for(&rx, |_| session.with_thread(|t| !t.pending_requests().is_empty()));
+    let request = session.with_thread(|t| match t.entry_by_key("perm:cli-3").map(|e| &e.kind) {
+        Some(EntryKind::PermissionRequest(request)) => request.clone(),
+        other => panic!("{other:?}"),
+    });
+    assert_eq!(
+        request.options,
+        vec![
+            ide_thread::PermissionOption::AllowOnce,
+            ide_thread::PermissionOption::Deny
+        ],
+        "no rule can be stored for it"
+    );
+    assert!(request.default_to_no);
+    session
+        .answer(
+            "cli-3",
+            PermissionAnswer::Deny {
+                message: "no".into(),
+                interrupt: false,
+            },
+        )
+        .unwrap();
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+
+    let frames = written(&dir);
+    let answer = |id: &str| {
+        frames
+            .iter()
+            .find(|f| f["response"]["request_id"] == id)
+            .cloned()
+            .unwrap_or_else(|| panic!("no answer to {id}"))
+    };
+    assert_eq!(
+        frames[0]["request"]["hooks"]["PreToolUse"][0]["hookCallbackIds"][0],
+        "ide-destructive-git"
+    );
+    assert_eq!(answer("cli-1")["response"]["response"], json!({}));
+    let asked = answer("cli-2");
+    assert_eq!(asked["response"]["subtype"], "success");
+    assert_eq!(
+        asked["response"]["response"]["hookSpecificOutput"]["permissionDecision"],
+        "ask"
+    );
+    assert_eq!(answer("cli-3")["response"]["response"]["behavior"], "deny");
+}
+
+#[test]
+#[ignore = "runs the installed claude CLI: needs a sign-in and the network, and costs a few tokens"]
+fn the_real_cli_asks_for_a_destructive_git_command_despite_a_stored_rule_and_bypass_mode() {
+    let executable =
+        std::env::var_os("CLAUDE_BIN").map_or_else(|| ide_core::paths::home().join(".local/bin/claude"), PathBuf::from);
+    let dir = scratch("real-destructive");
+    let git = |args: &[&str]| {
+        let status = std::process::Command::new("git")
+            .args(args)
+            .current_dir(&dir)
+            .status()
+            .unwrap();
+        assert!(status.success(), "git {args:?}");
+    };
+    git(&["init", "-q"]);
+    std::fs::write(dir.join("kept.txt"), "committed\n").unwrap();
+    git(&["add", "kept.txt"]);
+    git(&["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"]);
+    std::fs::write(dir.join("kept.txt"), "uncommitted work\n").unwrap();
+    std::fs::create_dir_all(dir.join(".claude")).unwrap();
+    std::fs::write(
+        dir.join(".claude/settings.local.json"),
+        r#"{"permissions": {"allow": ["Bash(git reset:*)", "Bash(git:*)"]}}"#,
+    )
+    .unwrap();
+    let env: Vec<(String, String)> = std::env::vars().collect();
+    let mut launch = Launch::new(executable, env, &dir);
+    launch.model = Some("haiku".into());
+    launch.effort = Some("low".into());
+    launch.persist = false;
+    launch.allow_bypass = true;
+    launch.permission_mode = Some("bypassPermissions".into());
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    session
+        .send(UserMessage {
+            text: "Use the Bash tool to run exactly this command and nothing else: git reset --hard".into(),
+            ..UserMessage::default()
+        })
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(120);
+    let mut asked = None;
+    while Instant::now() < deadline && asked.is_none() {
+        let _ = rx.recv_timeout(Duration::from_millis(500));
+        asked = session.with_thread(|t| {
+            t.pending_requests().into_iter().find_map(|e| match &e.kind {
+                EntryKind::PermissionRequest(r) => Some(r.request_id.clone()),
+                _ => None,
+            })
+        });
+    }
+    let request = asked.expect("the CLI asked before running git reset --hard");
+    session
+        .answer(
+            &request,
+            PermissionAnswer::Deny {
+                message: "Not now.".into(),
+                interrupt: true,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(dir.join("kept.txt")).unwrap(),
+        "uncommitted work\n"
+    );
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+}
+
+#[test]
 fn a_cli_without_sign_in_is_reported_so_the_user_can_log_in_in_a_terminal() {
     let dir = scratch("signed-out");
     let launch = stand_in(&dir, json!({"tokenSource": "none", "apiProvider": "firstParty"}), &[]);
@@ -316,6 +450,83 @@ fn the_real_cli_answers_a_prompt() {
     assert!(caps.version.is_some());
     assert!(!caps.models.is_empty(), "initialize was answered");
     assert!(session.context_usage(false).wait().is_ok());
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+}
+
+/// The CLI named by `CLAUDE_BIN` against the contract the `recorded_signed_out` fixture holds, in a home of its own
+/// where it finds no sign-in, so it costs nothing and needs no account: it takes the app's whole command line, answers
+/// `initialize` with its version, models and the missing account, starts the session and refuses the prompt as an
+/// authentication error. `cargo xtask claude-latest` runs it against the newest CLI (R7).
+#[test]
+#[ignore = "runs the claude CLI named by CLAUDE_BIN without a sign-in"]
+fn the_cli_without_a_sign_in_keeps_the_recorded_contract() {
+    let executable = PathBuf::from(std::env::var_os("CLAUDE_BIN").expect("CLAUDE_BIN names the CLI to check"));
+    let dir = scratch("contract");
+    let (home, project) = (dir.join("home"), dir.join("project"));
+    std::fs::create_dir_all(home.join(".claude")).unwrap();
+    std::fs::create_dir_all(&project).unwrap();
+    // Nothing of the caller's environment but PATH, so no API key or token there signs the CLI in; with its own
+    // config folder the CLI also looks for a keychain item of another name than the user's.
+    let env = vec![
+        ("PATH".to_string(), std::env::var("PATH").unwrap_or_default()),
+        ("HOME".to_string(), home.to_string_lossy().into_owned()),
+        (
+            "CLAUDE_CONFIG_DIR".to_string(),
+            home.join(".claude").to_string_lossy().into_owned(),
+        ),
+        (
+            "TMPDIR".to_string(),
+            std::env::temp_dir().to_string_lossy().into_owned(),
+        ),
+    ];
+    let mut launch = Launch::new(executable, env, &project);
+    launch.model = Some("haiku".into());
+    launch.effort = Some("low".into());
+    launch.persist = false;
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    let deadline = Instant::now() + Duration::from_secs(60);
+    let mut signed_out = false;
+    while !signed_out && Instant::now() < deadline {
+        if let Ok(event) = rx.recv_timeout(Duration::from_millis(500)) {
+            signed_out = matches!(event, Event::Failed(SessionError::SignInRequired(_)));
+        }
+    }
+    assert!(signed_out, "the missing sign-in was reported");
+    let caps = session.capabilities();
+    let version = caps.version.clone().expect("initialize named the CLI's version");
+    println!("claude {version} answered initialize with {} models", caps.models.len());
+    assert!(
+        caps.models.iter().any(|m| !m.value.is_empty()),
+        "initialize listed models"
+    );
+    let account = caps.account.expect("initialize described the account");
+    assert_eq!(account.token_source.as_deref(), Some("none"));
+    session
+        .send(UserMessage {
+            text: "Reply OK.".into(),
+            ..UserMessage::default()
+        })
+        .unwrap();
+    let refused = |t: &Thread| {
+        t.status() == Status::Idle
+            && t.entries(&Lane::Main).iter().any(|e| {
+                matches!(
+                    &e.kind,
+                    EntryKind::Notice(Notice::Error {
+                        kind: ErrorKind::Auth,
+                        ..
+                    })
+                )
+            })
+    };
+    while !session.with_thread(refused) && Instant::now() < deadline {
+        let _ = rx.recv_timeout(Duration::from_millis(500));
+    }
+    let thread = session.snapshot();
+    assert!(refused(&thread), "{:?}", thread.entries(&Lane::Main));
+    assert!(thread.session().is_some(), "system/init named the session");
     session.close_input();
     wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
 }

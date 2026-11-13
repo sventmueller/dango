@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "التعبيرات المراقَبة";
 "„{}“ startet …" = "جارٍ بدء “{}”…";
 "Wartet auf Freigabe durch macOS …" = "في انتظار سماح macOS بالوصول…";
+"Beenden, während Agenten noch arbeiten?" = "هل تريد الإنهاء بينما لا يزال الوكلاء يعملون؟";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "يؤدي الإنهاء إلى إيقاف أدوارهم وعملياتهم في الخلفية.";
+"Beenden" = "إنهاء";
+"Gespeicherte Regeln von Claude" = "قواعد Claude المحفوظة";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "ما سمحت به لـ Claude عبر “السماح دائمًا” لمشروع ما. ومع ذلك تسأل أوامر Git المدمِّرة في كل مرة.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "يحفظ وكلاء ACP قواعدهم بأنفسهم، في مكان لا يستطيع التطبيق رؤيتها فيه ولا حذفها.";
+"Gilt für" = "ينطبق على";
+"Die Regel ließ sich nicht entfernen." = "تعذّر حذف القاعدة.";

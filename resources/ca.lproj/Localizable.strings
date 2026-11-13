@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Expressions vigilades";
 "„{}“ startet …" = "S’està iniciant “{}”…";
 "Wartet auf Freigabe durch macOS …" = "Esperant que el macOS permeti l’accés…";
+"Beenden, während Agenten noch arbeiten?" = "Vols sortir mentre els agents encara treballen?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "En sortir, s’aturen els seus torns i els seus processos en segon pla.";
+"Beenden" = "Surt";
+"Gespeicherte Regeln von Claude" = "Regles desades de Claude";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "El que has permès a Claude amb “Permet sempre” per a un projecte. Les ordres destructives de Git pregunten igualment cada vegada.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Els agents ACP desen les seves regles ells mateixos, on l’app no les pot veure ni eliminar.";
+"Gilt für" = "S’aplica a";
+"Die Regel ließ sich nicht entfernen." = "No s’ha pogut eliminar la regla.";

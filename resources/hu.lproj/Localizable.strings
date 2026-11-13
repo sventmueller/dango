@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Figyelt kifejezések";
 "„{}“ startet …" = "„{}” indítása…";
 "Wartet auf Freigabe durch macOS …" = "Várakozás a macOS engedélyére…";
+"Beenden, während Agenten noch arbeiten?" = "Kilép, miközben az ügynökök még dolgoznak?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "A kilépés leállítja a köreiket és a háttérfolyamataikat.";
+"Beenden" = "Kilépés";
+"Gespeicherte Regeln von Claude" = "Claude mentett szabályai";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Amit egy projektben az „Engedélyezés mindig” gombbal engedélyezett Claude-nak. A romboló Git-parancsok ennek ellenére minden alkalommal kérdeznek.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Az ACP-ügynökök maguk mentik a szabályaikat, ahol az app nem látja és nem is törölheti őket.";
+"Gilt für" = "Vonatkozik";
+"Die Regel ließ sich nicht entfernen." = "A szabályt nem sikerült eltávolítani.";

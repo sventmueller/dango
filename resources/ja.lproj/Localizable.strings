@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "ウォッチ式";
 "„{}“ startet …" = "“{}”を開始中…";
 "Wartet auf Freigabe durch macOS …" = "macOSのアクセス許可を待っています…";
+"Beenden, während Agenten noch arbeiten?" = "エージェントが作業中ですが終了しますか?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "終了すると、エージェントのターンとバックグラウンドプロセスが停止します。";
+"Beenden" = "終了";
+"Gespeicherte Regeln von Claude" = "Claudeの保存済みのルール";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "プロジェクトで“常に許可”によりClaudeに許可したもの。破壊的なGitコマンドはそれでも毎回確認します。";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACPエージェントはルールを自身で保存するため、アプリからは表示も削除もできません。";
+"Gilt für" = "適用範囲";
+"Die Regel ließ sich nicht entfernen." = "ルールを削除できませんでした。";

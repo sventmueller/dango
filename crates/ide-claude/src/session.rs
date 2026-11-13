@@ -859,7 +859,14 @@ impl Shared {
                 };
                 self.emit_changes(changes);
             }
-            // Requests the app does not serve, such as hook callbacks or dialogs, are refused rather than allowed.
+            Incoming::HookCallback { callback_id, input } => {
+                let frame = match crate::hooks::hook_answer(&callback_id, &input) {
+                    Some(answer) => control::success_frame(request_id, answer),
+                    None => control::error_frame(request_id, &format!("unknown hook: {callback_id}")),
+                };
+                let _ = self.write(&frame);
+            }
+            // Requests the app does not serve, such as dialogs, are refused rather than allowed.
             Incoming::Other { subtype } => {
                 let _ = self.write(&control::error_frame(
                     request_id,

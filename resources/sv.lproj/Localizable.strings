@@ -1542,3 +1542,11 @@
 "Überwachte Ausdrücke" = "Bevakade uttryck";
 "„{}“ startet …" = "Startar ”{}”…";
 "Wartet auf Freigabe durch macOS …" = "Väntar på att macOS ger åtkomst …";
+"Beenden, während Agenten noch arbeiten?" = "Avsluta medan agenter fortfarande arbetar?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Om du avslutar stoppas deras omgångar och bakgrundsprocesser.";
+"Beenden" = "Avsluta";
+"Gespeicherte Regeln von Claude" = "Claudes sparade regler";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "Det du har tillåtit Claude med ”Tillåt alltid” för ett projekt. Destruktiva Git-kommandon frågar ändå varje gång.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP-agenter sparar sina regler själva, där appen varken kan se eller radera dem.";
+"Gilt für" = "Gäller för";
+"Die Regel ließ sich nicht entfernen." = "Det gick inte att ta bort regeln.";

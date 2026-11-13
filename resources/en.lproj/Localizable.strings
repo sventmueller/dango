@@ -1579,3 +1579,11 @@
 "Überwachte Ausdrücke" = "Watch Expressions";
 "„{}“ startet …" = "Starting “{}”…";
 "Wartet auf Freigabe durch macOS …" = "Waiting for macOS to allow access…";
+"Beenden, während Agenten noch arbeiten?" = "Quit while agents are still working?";
+"Beenden stoppt ihre Züge und Hintergrundprozesse." = "Quitting stops their turns and background processes.";
+"Beenden" = "Quit";
+"Gespeicherte Regeln von Claude" = "Claude’s Stored Rules";
+"Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal." = "What you allowed Claude with “Always allow” for a project. Destructive git commands still ask every time.";
+"ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP agents store their rules themselves, where the app can neither see nor delete them.";
+"Gilt für" = "Applies To";
+"Die Regel ließ sich nicht entfernen." = "The rule could not be removed.";
