@@ -726,6 +726,13 @@ fn appearances(view: &EditorTextView) {
 }
 
 /// The CPU time of the main thread, so other work on this Mac does not count against a budget.
+/// The median CPU time a keystroke in 10 000 lines may take in the self-tests: E25's 16 ms is the frame, this the
+/// budget, well below it so that a step back shows before the user feels it.
+pub const KEYSTROKE: Duration = Duration::from_millis(5);
+
+/// What drawing insets, diagnostics or proposals may add to a keystroke's median.
+pub const ADDED: Duration = Duration::from_millis(2);
+
 pub fn thread_time() -> Duration {
     let mut now = libc::timespec { tv_sec: 0, tv_nsec: 0 };
     // SAFETY: `now` is a valid timespec to fill.
@@ -774,8 +781,8 @@ pub fn keystrokes(view: &EditorTextView, count: usize) -> (Duration, Duration) {
     (times[times.len() / 2], times[times.len() - 1])
 }
 
-/// E25 with insets on: a keystroke in a file of 10 000 lines with an inset on every line stays under 16 ms, edit,
-/// layout and drawing together.
+/// E25 with insets on: after a jump, a keystroke in a file of 10 000 lines with an inset on every line stays within
+/// `KEYSTROKE`, edit, layout and drawing together.
 fn budget() {
     let big: String = (0..10_000)
         .map(|n| format!("    let value_{n} = compute({n}, other_{n});\n"))
@@ -818,8 +825,9 @@ fn budget() {
             || insets::clear(&view, Layer::Inlay),
         );
         check(
-            "E25 with insets: an inset on each of 10 000 lines adds under 3 ms to a keystroke's median",
-            median.saturating_sub(plain_median) < Duration::from_millis(3),
+            "E25 with insets: after a jump to line 5000 of 10 000 a keystroke stays under 5 ms, and an inset on each line \
+             adds under 2 ms",
+            plain_median < KEYSTROKE && median.saturating_sub(plain_median) < ADDED,
             format!(
                 "with them median {median:?}, slowest {slowest:?}; without median {plain_median:?}, slowest {plain_slowest:?}"
             ),

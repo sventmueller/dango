@@ -213,8 +213,8 @@ fn narrow(editor: &EditorTextView) {
     );
 }
 
-/// E25 with the minimap on: a keystroke in a file of 10 000 lines stays under 16 ms, edit, layout and drawing of the
-/// minimap together.
+/// E25 with the minimap on: a keystroke in a file of 10 000 lines stays within `insets::KEYSTROKE`, edit, layout and
+/// drawing of the minimap together.
 fn budget() {
     let big: String = (0..10_000)
         .map(|n| format!("    let value_{n} = compute({n}, other_{n});\n"))
@@ -245,8 +245,8 @@ fn budget() {
             let width = editor::minimap(&view).map_or(0.0, |m| m.0);
             let (median, slowest) = super::insets::keystrokes(&view, 40);
             check(
-                "E25 with the minimap: a keystroke in a file of 10 000 lines stays under 16 ms",
-                width > 0.0 && median < std::time::Duration::from_millis(16),
+                "E25 with the minimap: a keystroke in a file of 10 000 lines stays under 5 ms",
+                width > 0.0 && median < super::insets::KEYSTROKE,
                 format!("minimap {width} wide, median {median:?}, slowest {slowest:?}"),
             );
             toggle(&view);

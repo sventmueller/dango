@@ -75,6 +75,10 @@ eingearbeitet (markiert mit *Review*).
   ignorierte) < 1 s, `cat` von 100 MB im Terminal ohne eingefrorene Oberfläche, AI-Zeitleiste mit 1 000 Karten
   flüssig (nur sichtbare Karten werden gebaut), feste Obergrenzen für Scrollback und Verlauf. Hintergrund-Warteschlangen
   mit Rückstaugrenze (splats `Lane` ist unbegrenzt).
+  - *Performance-Review 2026-11:* 16 ms ist der Frame, nicht das Budget. Die Selbsttests prüfen den Tastendruck bei
+    10 000 Zeilen mit 5 ms Median-CPU-Zeit (auch nach einem Sprung), Zuschläge durch Einblendungen und Diagnosen mit
+    2 ms, eine fertige Antwortkarte bis ~100 KB mit 200 ms. Grund: ein 10-facher Rückschritt lag unbemerkt knapp
+    unter 16 ms.
 - **E26 Tastatur und Einstellungen** *(Review, neu)*. Eine zentrale Kürzeltabelle mit Nutzer-Überschreibungen;
   feste Regeln, welche Tasten das Terminal bekommt (⌃C, Esc, ⌘K) und welche die App. Fokuswechsel Editor/Terminal/
   Browser/AI per Tastatur. Einstellungen in zwei Ebenen (Nutzer, Projekt) mit Versionsnummer und Migration.

@@ -2,7 +2,7 @@
 //! serious message at its end with a symbol for its severity and a count of the others, VoiceOver's rotor says the
 //! severity, an edited line waits a second before it shows its message again, a line with a debug value and blame
 //! keeps the value, cuts the message short and drops the blame, and 500 diagnostics in 10 000 lines keep a keystroke
-//! under 16 ms (E25).
+//! under 5 ms (E25).
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -217,7 +217,7 @@ fn resting(editor_view: &EditorTextView) {
     );
 }
 
-/// E25: 500 diagnostics at line ends in a file of 10 000 lines keep a keystroke under 16 ms.
+/// E25: 500 diagnostics at line ends in a file of 10 000 lines keep a keystroke within `insets::KEYSTROKE`.
 fn budget() {
     let big: String = (0..10_000)
         .map(|n| format!("    let value_{n} = compute({n}, other_{n});\n"))
@@ -255,11 +255,11 @@ fn budget() {
                 || crate::lsp::show_diagnostics(&view, &[]),
             );
             check(
-                "E25 with diagnostics at line ends: 500 of them in 10 000 lines keep a keystroke under 16 ms and add \
-                 under 3 ms",
+                "E25 with diagnostics at line ends: 500 of them in 10 000 lines keep a keystroke under 5 ms and add \
+                 under 2 ms",
                 count == 500
-                    && median < Duration::from_millis(16)
-                    && median.saturating_sub(plain) < Duration::from_millis(3),
+                    && median < super::insets::KEYSTROKE
+                    && median.saturating_sub(plain) < super::insets::ADDED,
                 format!("{count} shown, median {median:?}, slowest {slowest:?}; without {plain:?}, {plain_slowest:?}"),
             );
             let _ = editor::save_all();

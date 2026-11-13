@@ -180,6 +180,9 @@ type Bench = Rc<RefCell<Benchmark>>;
 /// A turn of the event loop between the steps of the benchmark, so that each update is timed on its own and drawing
 /// in between is not counted; there is no state to wait for.
 const TURN: Duration = Duration::from_millis(50);
+/// How long rendering and laying out a finished answer's card of up to about 100 KB may take; 106 KB took 106 ms when
+/// measured, and about 400 ms while its text was laid out twice.
+const CARD: Duration = Duration::from_millis(200);
 /// The pause between two timed updates, about two frames, as a stream delivers them.
 const SAMPLE_GAP: Duration = Duration::from_millis(30);
 
@@ -327,7 +330,14 @@ fn finish_samples(bench: Bench) {
         ..
     }) = thread.entries(&ide_thread::Lane::Main).last().map(|entry| &**entry)
     {
+        let started = super::insets::thread_time();
         let expected = crate::agent::answer_height(view.mtm(), &message.markdown, view.frame().size.width);
+        let built = super::insets::thread_time().saturating_sub(started);
+        check(
+            "E25: a finished answer's card is rendered and laid out in under 200 ms",
+            built < CARD,
+            format!("{built:?} for {} KB", message.markdown.len() / 1024),
+        );
         let height = view.intrinsicContentSize().height;
         check(
             "streaming keeps the full render's height",
