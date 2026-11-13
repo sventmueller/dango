@@ -135,7 +135,7 @@ define_class!(
 
         #[unsafe(method(updateTrackingAreas))]
         fn update_tracking_areas(&self) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), updateTrackingAreas] };
             guarded((), || self.track_hover());
         }

@@ -190,7 +190,7 @@ define_class!(
         fn cache_display(&self, rect: NSRect, bitmap: &NSBitmapImageRep) {
             let picturing = &self.ivars().state.picturing;
             picturing.set(true);
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let () = unsafe { msg_send![super(self), cacheDisplayInRect: rect, toBitmapImageRep: bitmap] };
             picturing.set(false);
         }
@@ -202,7 +202,7 @@ define_class!(
 
         #[unsafe(method(setFrameSize:))]
         fn set_frame_size(&self, size: NSSize) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let () = unsafe { msg_send![super(self), setFrameSize: size] };
             guarded((), || {
                 self.layout_grid();
@@ -240,7 +240,7 @@ define_class!(
 
         #[unsafe(method(becomeFirstResponder))]
         fn become_first_responder(&self) -> bool {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let accepted: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
             if accepted {
                 guarded((), || {
@@ -253,7 +253,7 @@ define_class!(
 
         #[unsafe(method(resignFirstResponder))]
         fn resign_first_responder(&self) -> bool {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let resigned: bool = unsafe { msg_send![super(self), resignFirstResponder] };
             if resigned {
                 guarded((), || {
@@ -268,7 +268,7 @@ define_class!(
         #[unsafe(method(keyDown:))]
         fn key_down_event(&self, event: &NSEvent) {
             if !guarded(true, || self.key_down(event)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }

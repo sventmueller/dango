@@ -31,7 +31,7 @@ define_class!(
     impl InsetFragment {
         #[unsafe(method(drawAtPoint:inContext:))]
         fn draw_at(&self, point: objc2_foundation::NSPoint, context: &CGContext) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), drawAtPoint: point, inContext: context] };
             if MainThreadMarker::new().is_some() {
                 guarded((), || {
@@ -44,7 +44,7 @@ define_class!(
 
         #[unsafe(method(renderingSurfaceBounds))]
         fn rendering_surface_bounds(&self) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let bounds: NSRect = unsafe { msg_send![super(self), renderingSurfaceBounds] };
             if MainThreadMarker::new().is_none() {
                 return bounds;

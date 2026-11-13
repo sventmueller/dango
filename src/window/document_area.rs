@@ -27,7 +27,7 @@ define_class!(
         /// A press that reaches the split view itself is on its divider, which it tracks until the button comes up.
         #[unsafe(method(mouseDown:))]
         fn mouse_down(&self, event: &NSEvent) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let () = unsafe { msg_send![super(self), mouseDown: event] };
             guarded((), || {
                 if let Some(dragged) = self.ivars().dragged.borrow().as_ref() {

@@ -131,7 +131,7 @@ define_class!(
             }
             let handled = guarded(false, || super::editing::typed(self, text, range));
             if !handled {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), insertText: text, replacementRange: range] };
             }
             if !super::multi::replaying(self) {
@@ -141,7 +141,7 @@ define_class!(
 
         #[unsafe(method(setSelectedRanges:affinity:stillSelecting:))]
         fn set_selected_ranges(&self, ranges: &NSArray<NSValue>, affinity: NSSelectionAffinity, still: bool) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setSelectedRanges: ranges, affinity: affinity, stillSelecting: still] };
             if !still {
                 guarded((), || {
@@ -159,7 +159,7 @@ define_class!(
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             if !guarded(false, || super::vim::control_key(self, event)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }
@@ -169,7 +169,7 @@ define_class!(
             if guarded(false, || super::vim::control_key(self, event)) {
                 true
             } else {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 unsafe { msg_send![super(self), performKeyEquivalent: event] }
             }
         }
@@ -177,13 +177,13 @@ define_class!(
         #[unsafe(method(resignFirstResponder))]
         fn resign_first_responder(&self) -> bool {
             guarded((), || super::vim::focus_lost(self));
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             unsafe { msg_send![super(self), resignFirstResponder] }
         }
 
         #[unsafe(method(becomeFirstResponder))]
         fn become_first_responder(&self) -> bool {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let took: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
             if took {
                 guarded((), || crate::navigation::moved(self, true));
@@ -194,7 +194,7 @@ define_class!(
         #[unsafe(method(paste:))]
         fn paste(&self, sender: Option<&AnyObject>) {
             if !guarded(false, || super::multi::paste(self) || crate::markdown::paste(self)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), paste: sender] };
             }
         }
@@ -202,7 +202,7 @@ define_class!(
         #[unsafe(method(copy:))]
         fn copy(&self, sender: Option<&AnyObject>) {
             if !guarded(false, || super::multi::copy(self)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), copy: sender] };
             }
         }
@@ -210,7 +210,7 @@ define_class!(
         #[unsafe(method(cut:))]
         fn cut(&self, sender: Option<&AnyObject>) {
             if !guarded(false, || super::multi::cut(self)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), cut: sender] };
             }
         }
@@ -277,7 +277,7 @@ define_class!(
                 return;
             }
             guarded((), || super::predict::before_command(self, command));
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), doCommandBySelector: command] };
             guarded((), || crate::lsp::after_command(self, command));
         }
@@ -285,21 +285,21 @@ define_class!(
         #[unsafe(method(complete:))]
         fn complete(&self, sender: Option<&AnyObject>) {
             if !guarded(false, || crate::lsp::complete(self)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), complete: sender] };
             }
         }
 
         #[unsafe(method(textViewportLayoutControllerDidLayout:))]
         fn viewport_did_layout(&self, controller: &AnyObject) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), textViewportLayoutControllerDidLayout: controller] };
             guarded((), || super::overlay::laid_out(self));
         }
 
         #[unsafe(method(mouseMoved:))]
         fn mouse_moved(&self, event: &NSEvent) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), mouseMoved: event] };
             guarded((), || {
                 crate::lsp::mouse_moved(self, event);
@@ -319,7 +319,7 @@ define_class!(
 
         #[unsafe(method_id(menuForEvent:))]
         fn menu_for_event(&self, event: &NSEvent) -> Option<Retained<objc2_app_kit::NSMenu>> {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let menu: Option<Retained<objc2_app_kit::NSMenu>> = unsafe { msg_send![super(self), menuForEvent: event] };
             if let Some(menu) = &menu {
                 guarded((), || super::context_menu::extend(self, menu));
@@ -341,7 +341,7 @@ define_class!(
             }
             let moved = guarded(None, || super::insets::retarget(self, event));
             let event = moved.as_deref().unwrap_or(event);
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), mouseDown: event] };
         }
 
@@ -349,7 +349,7 @@ define_class!(
         fn set_typing_attributes(&self, attributes: &objc2_foundation::NSDictionary<objc2_foundation::NSString, AnyObject>) {
             let clean = guarded(None, || super::insets::without_kern(attributes));
             let attributes = clean.as_deref().unwrap_or(attributes);
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setTypingAttributes: attributes] };
         }
 
@@ -424,7 +424,7 @@ define_class!(
 
         #[unsafe(method(updateTrackingAreas))]
         fn update_tracking_areas(&self) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), updateTrackingAreas] };
             guarded((), || self.track_mouse());
         }
@@ -451,7 +451,7 @@ define_class!(
             });
             match answer {
                 Some(enabled) => enabled,
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 None => unsafe { msg_send![super(self), validateMenuItem: item] },
             }
         }
@@ -743,7 +743,7 @@ define_class!(
 
         #[unsafe(method(scrollRangeToVisible:))]
         fn scroll_range_to_visible(&self, range: NSRange) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let () = unsafe { msg_send![super(self), scrollRangeToVisible: range] };
             guarded((), || super::sticky::keep_clear(self, range));
         }

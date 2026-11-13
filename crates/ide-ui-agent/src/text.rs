@@ -74,7 +74,7 @@ define_class!(
         fn set_frame_size(&self, size: NSSize) {
             // NSTextView scrolls its selection into view as it resizes, which would pull the timeline away from its end.
             let outer = self.ivars().resizing.replace(true);
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
             self.ivars().resizing.set(outer);
             guarded((), || {
@@ -91,7 +91,7 @@ define_class!(
             if self.ivars().resizing.get() {
                 return Bool::NO;
             }
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             unsafe { msg_send![super(self), scrollRectToVisible: rect] }
         }
     }

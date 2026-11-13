@@ -220,7 +220,7 @@ define_class!(
         /// A file's disclosure triangle below the chevrons of the fields, not in the source list's margin.
         #[unsafe(method(frameOfOutlineCellAtRow:))]
         fn outline_cell_frame(&self, row: isize) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
             crate::window::file_outline::outdent(self, frame, OUTDENT, false)
         }
@@ -228,7 +228,7 @@ define_class!(
         /// The rows moved along with the triangle; a match begins where its file's icon does.
         #[unsafe(method(frameOfCellAtColumn:row:))]
         fn cell_frame(&self, column: isize, row: isize) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
             if column != 0 {
                 return frame;
@@ -240,7 +240,7 @@ define_class!(
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             if !guarded(false, || self.key(event)) {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }
