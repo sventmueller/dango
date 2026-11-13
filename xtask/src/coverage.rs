@@ -130,14 +130,15 @@ impl Instrumented {
     }
 }
 
-/// Measures, writes the report and, with `--check`, fails below the goals.
+/// Measures, writes the report and, with `--check`, fails below the goals; with `--strict` also when a test or a
+/// selftest scenario failed.
 pub(crate) fn coverage(args: &[String]) -> Result<(), String> {
     coverage_in(&mut System, args, &root(), &target_dir())
 }
 
 /// `coverage` of the workspace at `root` with the target folder `target`.
 fn coverage_in(sh: &mut dyn Shell, args: &[String], root: &Path, target: &Path) -> Result<(), String> {
-    let [check] = flags(args, ["--check"])?;
+    let [check, strict] = flags(args, ["--check", "--strict"])?;
     let started = Instant::now();
     let out = target.join("coverage");
     files::create_dir_all(&out)?;
@@ -196,7 +197,18 @@ fn coverage_in(sh: &mut dyn Shell, args: &[String], root: &Path, target: &Path) 
     files::write(out.join("coverage.txt"), &table)?;
     print!("{}", summary(&counted, &run));
     println!("{}", out.join("coverage.txt").display());
-    if check { verdict(&counted) } else { Ok(()) }
+    let mut problems = Vec::new();
+    if strict && !run.failed.is_empty() {
+        problems.push(format!("failed: {}", run.failed.join(", ")));
+    }
+    if check && let Err(below) = verdict(&counted) {
+        problems.push(below);
+    }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(problems.join("\n"))
+    }
 }
 
 /// What a run did besides measuring.
@@ -521,7 +533,7 @@ fn summary(files: &[FileCoverage], run: &Run) -> String {
     text
 }
 
-fn minutes(took: Duration) -> String {
+pub(crate) fn minutes(took: Duration) -> String {
     let seconds = took.as_secs();
     format!("{}:{:02} min", seconds / 60, seconds % 60)
 }

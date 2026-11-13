@@ -31,6 +31,9 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make perf` | the timing budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
 | `make fuzz` | `cargo xtask fuzz`: the crates' fuzz targets, see [Fuzzing](#fuzzing); outside `make check` |
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
+| `make ci` | `cargo xtask ci`: formatter, `check`, coverage with every test and self-test, `perf`; seals the content, see [CI and deploy](#ci-and-deploy) |
+| `make seal-explain` | `cargo xtask seal explain`: the seal of HEAD's content here and on GitHub |
+| `make deploy` | `cargo xtask deploy`: pushes `main` with its green seal to GitHub |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
@@ -90,7 +93,36 @@ decoding service in a sandbox that cannot write coverage data; `preview` exercis
 to run (only `mod` lines or types) counts with no lines; a file no instrumented program contains counts with its code
 lines as uncovered. The results are in `target/coverage/`: `coverage.txt` (the summary,
 then folders and files, lowest first), `files.json` (the same per file) and `llvm-cov.json` (llvm-cov's export).
-`make coverage ARGS=--check` fails below 90 % in total or 50 % in any file, naming them.
+`make coverage ARGS=--check` fails below 90 % in total or 50 % in any file, naming them; `--strict` also fails the run
+when a test or a selftest scenario failed.
+
+## CI and deploy
+`make ci` (`cargo xtask ci`, `xtask/src/ci.rs`) is the whole pipeline. It refuses while the screen is locked (the
+self-tests cannot capture windows then), runs `cargo fmt --all`, takes the fingerprint of the working tree and then,
+stopping at the first failure, `make check`, `cargo xtask coverage --check --strict` and `make perf`, printing each
+stage's duration. The stages run under `caffeinate -di`, so the display does not sleep and lock the screen; a stage
+that fails while the screen is locked seals nothing. A complete run seals the content in a local ref: `refs/ci-seals/green/<fingerprint>` when every stage
+passed, `refs/ci-seals/red/<fingerprint>` when one failed. A red seal outweighs a green one for the same fingerprint.
+Content that changed during the run seals nothing.
+
+The fingerprint (`xtask/src/seal.rs`) is the git tree of the content without `VERSION`, which `make build` raises: for
+the working tree through a temporary index (`read-tree HEAD`, `add --all`), so untracked files count unless they are
+ignored; for a CI checkout `HEAD`'s tree. Committing the whole sealed working tree with `git add -A` therefore gives
+`HEAD` the sealed fingerprint. `cargo xtask seal fingerprint [--head]` prints it, `make seal-explain` says which seals
+HEAD's content has here and on origin and which paths separate it from the nearest green seal, and `cargo xtask seal
+check` gives origin's verdict for HEAD as `fingerprint=` and `verdict=` lines (also into `$GITHUB_OUTPUT`), failing
+for red. A seal ref points at a commit of the sealed tree without parents.
+
+`make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out, everything is committed, HEAD's content
+has a green seal here and no red one here or on origin; then it pushes `main` and the seal ref in one atomic push, so
+the workflow the push starts finds the seal. `.github/workflows/ci.yml` runs on every push to `main` and by hand: its
+`seal` job (Linux) runs `cargo xtask seal check`; for content sealed green the `check` job is skipped, for content
+sealed red the workflow fails, and unsealed content gets `make check` on a macOS runner, with `splat` and `lowspeak`
+checked out beside it as in [Newest Claude CLI](#newest-claude-cli). The window self-tests, the coverage gate that
+includes them and the timing budgets run only in the local `make ci`: they need a logged-in GUI session with screen
+recording and accessibility permissions, which GitHub's runners lack. The skills `/ci` and `/deploy` in
+`.claude/skills/` drive these targets: `/ci` runs `make ci` until it is green and commits the sealed tree, `/deploy`
+pushes with `make deploy` and watches the GitHub run.
 
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.

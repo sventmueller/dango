@@ -3,6 +3,7 @@
 
 mod bundle;
 mod cask;
+mod ci;
 mod claude_latest;
 mod coverage;
 mod focus;
@@ -11,6 +12,7 @@ mod icon;
 mod integration;
 mod licenses;
 mod release;
+mod seal;
 mod selftest;
 mod shell;
 mod structure;
@@ -53,9 +55,19 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    app relies on without a sign-in; --signed-in adds a short turn with haiku (R7)
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
-  coverage [--check]               line coverage of cargo test and the offline selftest scenarios, instrumented with
+  coverage [--check] [--strict]    line coverage of cargo test and the offline selftest scenarios, instrumented with
                                    rustup's toolchain and cargo-llvm-cov, into target/coverage/; --check fails below
-                                   90 % in total or 50 % in any file
+                                   90 % in total or 50 % in any file, --strict when a test or scenario failed
+  ci                               cargo fmt, then check, coverage --check --strict and perf, fail-fast; a complete run
+                                   seals the working tree's content in the local ref refs/ci-seals/<green|red>/<fp>;
+                                   refuses while the screen is locked
+  seal fingerprint [--head]        the fingerprint of the working tree's content (or HEAD's): its git tree without VERSION
+  seal check                       origin's seal for HEAD's content, as fingerprint= and verdict= lines, also into
+                                   $GITHUB_OUTPUT; fails for a red seal
+  seal explain                     the seals of HEAD's content here and on origin, and the paths that separate it from
+                                   the nearest green seal
+  deploy                           on main with everything committed and HEAD's content sealed green: push main and the
+                                   seal to origin
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
@@ -92,6 +104,9 @@ fn task(args: &[String]) -> Result<(), String> {
         "claude-latest" => claude_latest::claude_latest(rest),
         "fuzz" => fuzz::fuzz(rest),
         "coverage" => coverage::coverage(rest),
+        "ci" => ci::ci(rest),
+        "seal" => seal::seal(rest),
+        "deploy" => seal::deploy(rest),
         "release" => {
             let [notarize, layout] = flags(rest, ["--notarize", "--layout"])?;
             let out = release::release(release::Options {
@@ -305,12 +320,19 @@ mod tests {
     #[test]
     fn a_task_with_an_option_it_does_not_know_does_nothing_but_explain() {
         assert_eq!(task(&[]).unwrap_err(), USAGE);
-        assert_eq!(task(&strings(&["deploy"])).unwrap_err(), USAGE);
+        assert_eq!(task(&strings(&["no-such-task"])).unwrap_err(), USAGE);
+        assert_eq!(task(&strings(&["seal"])).unwrap_err(), USAGE);
+        assert_eq!(task(&strings(&["seal", "mint"])).unwrap_err(), USAGE);
         for args in [
             &["bundle", "--fast"][..],
             &["run", "--selftest"],
             &["claude-latest", "--paid"],
             &["coverage", "--html"],
+            &["ci", "--fast"],
+            &["deploy", "--force"],
+            &["seal", "fingerprint", "--tree"],
+            &["seal", "check", "x"],
+            &["seal", "explain", "x"],
             &["release", "--upload"],
             &["universal", "--release"],
             &["acknowledgements", "x"],

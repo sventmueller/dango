@@ -80,6 +80,17 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
     let failed = coverage_in(&mut sh, &["--check".to_string()], &root, &target).unwrap_err();
     assert!(failed.starts_with("the total is 61.5 %, below 90 %"), "{failed}");
     assert!(failed.contains("\n    0.0 %  crates/ide-x/src/lib.rs"), "{failed}");
+    let strict = coverage_in(&mut sh, &["--strict".to_string()], &root, &target).unwrap_err();
+    assert_eq!(
+        strict, "failed: cargo test",
+        "a failed test fails the run, whatever the coverage"
+    );
+    let both = ["--check".to_string(), "--strict".to_string()];
+    let failed = coverage_in(&mut sh, &both, &root, &target).unwrap_err();
+    assert!(
+        failed.starts_with("failed: cargo test\nthe total is 61.5 %"),
+        "{failed}"
+    );
 
     let lines: Vec<&str> = sh.commands.iter().map(String::as_str).collect();
     assert_eq!(lines[0], "rustup which --toolchain 1.99.1 cargo");

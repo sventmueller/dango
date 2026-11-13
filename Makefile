@@ -1,6 +1,6 @@
 # Entry points only; the build logic lives in xtask/src.
 .DEFAULT_GOAL := help
-.PHONY: help build run icon lint check check-dictation perf fuzz coverage test test-integration test-claude-latest release release-notarized
+.PHONY: help build run icon lint check check-dictation perf fuzz coverage ci seal-explain deploy test test-integration test-claude-latest release release-notarized
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -40,6 +40,15 @@ fuzz: ## The crates' fuzz targets with the pinned nightly, FUZZ_SECONDS each (60
 
 coverage: ## Line coverage of the tests and the offline selftest scenarios into target/coverage/; ARGS=--check fails below the goals
 	cargo xtask coverage $(ARGS)
+
+ci: ## The whole pipeline: cargo fmt, check, coverage with every test and offline self-test, perf; seals the content green or red in a local ref
+	cargo xtask ci
+
+seal-explain: ## The seal of HEAD's content here and on GitHub, and what separates it from the nearest green seal
+	cargo xtask seal explain
+
+deploy: ## Push main and its green seal to GitHub; refuses on another branch, with uncommitted changes or without a green seal
+	cargo xtask deploy
 
 test: check ## check, then the selftest probe and the accessibility audit, left to right and right to left
 	cargo xtask selftest probe a11y a11y-rtl

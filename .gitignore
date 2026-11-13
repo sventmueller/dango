@@ -8,9 +8,10 @@
 *.key
 *.pem
 
-# Local agent instructions and settings.
+# Local agent instructions and settings; the project's skills are shared.
 CLAUDE.md
-.claude/
+.claude/*
+!.claude/skills/
 
 # Crash inputs that `cargo xtask fuzz` found; each becomes a regression test before it is deleted.
 /crates/*/fuzz/artifacts/
