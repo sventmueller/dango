@@ -7,7 +7,7 @@ use std::ptr::NonNull;
 use std::time::Instant;
 
 use block2::RcBlock;
-use ide_core::settings::{Key, Settings, State};
+use ide_core::settings::{Settings, State};
 use lowspeak::app::gesture::{Command, FnGesture, SECOND_TAP_WINDOW};
 use lowspeak::dictation::Target;
 use lowspeak::hotkey::{Hotkey, Key as Pressed};
@@ -27,7 +27,8 @@ use ide_ui_common::constant;
 use ide_ui_common::util::{main_after, main_soon, ns};
 
 /// The app asked macOS for the Accessibility permission once; asking again is the user's choice in the settings.
-const ASKED: Key<bool> = Key::user("dictationAccessibilityAsked", || false);
+const ASKED: ide_core::settings::StateKey<bool> =
+    ide_core::settings::StateKey::new("dictationAccessibilityAsked", || false);
 
 /// Where fn stands, for the settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

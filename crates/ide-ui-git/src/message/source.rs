@@ -11,9 +11,10 @@ use splat_i18n::t;
 use ide_agent::ModelChoice;
 
 /// The model the user chose for commit messages; `claude -p` when none is chosen.
-pub const MODEL: Key<Option<ModelChoice>> = Key::user("commitMessageModel", || None);
+pub const MODEL: Key<Option<ModelChoice>> =
+    Key::user("commitMessageModel", ide_core::settings::Sharing::Shared, || None);
 /// The providers the user allowed to get the request, by endpoint id or [`CLAUDE`].
-pub const CONSENT: Key<Vec<String>> = Key::user("commitMessageConsent", Vec::new);
+pub const CONSENT: Key<Vec<String>> = Key::user("commitMessageConsent", ide_core::settings::Sharing::PerMac, Vec::new);
 /// The consent's name for `claude -p`.
 pub const CLAUDE: &str = "claude";
 

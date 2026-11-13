@@ -69,7 +69,8 @@ pub use {
 const REFRESH_DELAY: f64 = 0.4;
 
 /// The language servers the user set up, which take their files from the built-in ones.
-pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> = Key::user("languageServers", Vec::new);
+pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> =
+    Key::user("languageServers", ide_core::settings::Sharing::PerMac, Vec::new);
 
 /// The protocol's error for an answer the server dropped because the document changed meanwhile; asking again helps.
 const CONTENT_MODIFIED: i64 = -32801;

@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use ide_core::settings::{Key, Settings, State, keys, remembered};
+use ide_core::settings::{Settings, State, keys, remembered};
 use ide_document::recovery::{Pending, Recovery, RecoveryId};
 use objc2::MainThreadMarker;
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,8 @@ use crate::window::layout::Document;
 const SETTLE: Duration = Duration::from_secs(1);
 
 /// The windows open now, in the order they opened.
-const OPEN_WINDOWS: Key<Vec<WindowRecord>> = Key::user("openWindows", Vec::new);
+const OPEN_WINDOWS: ide_core::settings::StateKey<Vec<WindowRecord>> =
+    ide_core::settings::StateKey::new("openWindows", Vec::new);
 
 /// What a window shows, as the next launch puts it back.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

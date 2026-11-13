@@ -25,17 +25,18 @@ use ide_ui_common::util::main_soon;
 pub use words::{destructive_text, load_error, provider_error, rule_text};
 
 /// The endpoints the user added, and the addresses they gave the services, by endpoint id.
-pub const ENDPOINTS: Key<Vec<Endpoint>> = Key::user("agentEndpoints", Vec::new);
+pub const ENDPOINTS: Key<Vec<Endpoint>> = Key::user("agentEndpoints", ide_core::settings::Sharing::PerMac, Vec::new);
 /// The model new threads start with.
-pub const MODEL: Key<Option<ModelChoice>> = Key::user("agentModel", || None);
+pub const MODEL: Key<Option<ModelChoice>> = Key::user("agentModel", ide_core::settings::Sharing::Shared, || None);
 /// How hard the model thinks in new threads; the provider's default when not set.
-pub const EFFORT: Key<Option<String>> = Key::user("agentEffort", || None);
+pub const EFFORT: Key<Option<String>> = Key::user("agentEffort", ide_core::settings::Sharing::Shared, || None);
 /// The prices the user entered.
-pub const PRICES: Key<PriceTable> = Key::user("agentPrices", PriceTable::default);
+pub const PRICES: Key<PriceTable> = Key::user("agentPrices", ide_core::settings::Sharing::Shared, PriceTable::default);
 /// The rules the user stored, by project folder.
-pub const RULES: Key<BTreeMap<String, Vec<Rule>>> = Key::user("agentRules", BTreeMap::new);
+pub const RULES: Key<BTreeMap<String, Vec<Rule>>> =
+    Key::user("agentRules", ide_core::settings::Sharing::PerMac, BTreeMap::new);
 /// Folders besides the project that the sandbox lets the agent reach.
-pub const ALLOWED: Key<Vec<PathBuf>> = Key::user("agentAllowedFolders", Vec::new);
+pub const ALLOWED: Key<Vec<PathBuf>> = Key::user("agentAllowedFolders", ide_core::settings::Sharing::PerMac, Vec::new);
 
 /// The effort levels offered, besides the provider's default.
 pub const EFFORTS: [&str; 5] = ["low", "medium", "high", "xhigh", "max"];

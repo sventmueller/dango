@@ -5,7 +5,13 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
 
+use crate::sync::LockIgnoringPoison;
+use std::sync::Mutex;
+
 const VERSION_FIELD: &str = "version";
+
+/// Held while a store reads, changes and writes its file, so two writers of one file never interleave.
+static WRITING: Mutex<()> = Mutex::new(());
 
 /// Turns an object of one version into the next.
 pub(crate) type Migration = fn(&mut Map<String, Value>);
@@ -64,19 +70,41 @@ impl Store {
         &self.path
     }
 
+    pub(crate) fn values(&self) -> &Map<String, Value> {
+        &self.values
+    }
+
     pub(crate) fn get(&self, name: &str) -> Option<&Value> {
         self.values.get(name)
     }
 
     /// Sets `name` and writes the file.
     pub(crate) fn set(&mut self, name: &str, value: Value, migrations: &[Migration]) -> io::Result<()> {
-        if let Some(locked) = self.locked {
+        self.update(migrations, |values| {
+            values.insert(name.to_string(), value);
+        })
+    }
+
+    /// Takes `name` out and writes the file, so that it falls back to its default.
+    pub(crate) fn remove(&mut self, name: &str, migrations: &[Migration]) -> io::Result<()> {
+        self.update(migrations, |values| {
+            values.remove(name);
+        })
+    }
+
+    /// Reads the file again, makes `change` to what it holds now and writes it, all under one lock, so that a write
+    /// from another place of the app between this store's load and now is kept.
+    fn update(&mut self, migrations: &[Migration], change: impl FnOnce(&mut Map<String, Value>)) -> io::Result<()> {
+        let _writing = WRITING.lock_ignoring_poison();
+        let fresh = Store::load(self.path.clone(), migrations);
+        if let Some(locked) = fresh.locked.or(self.locked) {
             return Err(io::Error::other(format!(
                 "{} stays as it is: {locked:?}",
                 self.path.display()
             )));
         }
-        self.values.insert(name.to_string(), value);
+        self.values = fresh.values;
+        change(&mut self.values);
         self.values
             .insert(VERSION_FIELD.to_string(), Value::from(current_version(migrations)));
         write_atomically(&self.path, &Value::Object(self.values.clone()))
@@ -85,6 +113,11 @@ impl Store {
 
 fn current_version(migrations: &[Migration]) -> u64 {
     1 + migrations.len() as u64
+}
+
+/// Brings `values` of version `found` to the version `migrations` lead to.
+pub(crate) fn migrate_from(values: &mut Map<String, Value>, found: u64, migrations: &[Migration]) {
+    migrate(values, found, migrations);
 }
 
 /// Applies the migrations from `found` on; `migrations[n]` turns version `n + 1` into `n + 2`.
@@ -115,6 +148,21 @@ pub(crate) fn write_atomically(path: &Path, value: &Value) -> io::Result<()> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn a_write_keeps_what_another_store_of_the_file_wrote_since_its_load() {
+        let dir = scratch("read-modify-write");
+        let path = dir.join("settings.json");
+        let mut first = Store::load(path.clone(), &[]);
+        let mut second = Store::load(path.clone(), &[]);
+        first.set("a", Value::from(1), &[]).unwrap();
+        second.set("b", Value::from(2), &[]).unwrap();
+        let after = Store::load(path.clone(), &[]);
+        assert_eq!(after.get("a"), Some(&Value::from(1)));
+        assert_eq!(after.get("b"), Some(&Value::from(2)));
+        second.remove("a", &[]).unwrap();
+        assert_eq!(Store::load(path, &[]).get("a"), None);
+    }
 
     pub(crate) use crate::testing::scratch;
 

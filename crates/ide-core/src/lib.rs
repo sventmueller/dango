@@ -13,6 +13,7 @@ pub mod lane;
 pub mod layout;
 pub mod paths;
 pub mod settings;
+pub mod settings_sync;
 mod store;
 pub mod sync;
 #[cfg(any(test, feature = "testing"))]

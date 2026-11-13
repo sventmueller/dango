@@ -25,7 +25,8 @@ use crate::util::{constant, ns};
 
 /// OAuth apps the user registered on hosts other than github.com and gitlab.com, as `host=id`. Only the user sets
 /// them, like the host rules.
-pub const CI_OAUTH_CLIENTS: Key<Vec<String>> = Key::user("ciOAuthClients", Vec::new);
+pub const CI_OAUTH_CLIENTS: Key<Vec<String>> =
+    Key::user("ciOAuthClients", ide_core::settings::Sharing::Shared, Vec::new);
 
 /// A login that waits for the browser.
 pub struct Login {

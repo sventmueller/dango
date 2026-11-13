@@ -6,7 +6,7 @@ use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 
 use ide_claude::rules::{self, Scope};
-use ide_core::settings::{Key, State, remembered};
+use ide_core::settings::{State, remembered};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -23,7 +23,8 @@ use crate::util::{guarded, ns};
 mod selftest_probe;
 
 /// The folders in which the user let Claude store a rule from the app, besides the recent and open ones.
-const FOLDERS: Key<Vec<PathBuf>> = Key::user("claudeRuleFolders", Vec::new);
+const FOLDERS: ide_core::settings::StateKey<Vec<PathBuf>> =
+    ide_core::settings::StateKey::new("claudeRuleFolders", Vec::new);
 
 const HEIGHT: f64 = 110.0;
 

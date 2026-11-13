@@ -28,32 +28,45 @@ pub enum Scope {
     Project,
 }
 
+/// Whether a setting of the user follows them to their other Macs (E113).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sharing {
+    /// The same on every Mac of the user.
+    Shared,
+    /// Kept on this Mac: paths, local addresses, consents and reminders.
+    PerMac,
+}
+
 /// A named setting of type `T` with its default.
 pub struct Key<T> {
     /// The name in the JSON file.
     pub name: &'static str,
     /// Where it may be set.
     pub scope: Scope,
+    /// Whether it follows the user to their other Macs.
+    pub sync: Sharing,
     default: fn() -> T,
     kind: PhantomData<fn() -> T>,
 }
 
 impl<T> Key<T> {
     /// A setting only the user sets.
-    pub const fn user(name: &'static str, default: fn() -> T) -> Key<T> {
+    pub const fn user(name: &'static str, sync: Sharing, default: fn() -> T) -> Key<T> {
         Key {
             name,
             scope: Scope::User,
+            sync,
             default,
             kind: PhantomData,
         }
     }
 
     /// A setting a project may set for itself.
-    pub const fn project(name: &'static str, default: fn() -> T) -> Key<T> {
+    pub const fn project(name: &'static str, sync: Sharing, default: fn() -> T) -> Key<T> {
         Key {
             name,
             scope: Scope::Project,
+            sync,
             default,
             kind: PhantomData,
         }
@@ -67,57 +80,58 @@ impl<T> Key<T> {
 
 /// The settings of the app.
 pub mod keys {
-    use super::{Key, SearchEngine};
+    use super::{Key, SearchEngine, Sharing};
 
     /// Opens the folders that were open when the app quit.
-    pub const REOPEN_PROJECTS: Key<bool> = Key::user("reopenProjects", || true);
+    pub const REOPEN_PROJECTS: Key<bool> = Key::user("reopenProjects", Sharing::Shared, || true);
 
     /// The size of text in editors and terminals, in points.
-    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", || 12.0);
+    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", Sharing::Shared, || 12.0);
 
     /// Formats a file with its language server when ⌘S saves it.
-    pub const FORMAT_ON_SAVE: Key<bool> = Key::project("formatOnSave", || false);
+    pub const FORMAT_ON_SAVE: Key<bool> = Key::project("formatOnSave", Sharing::Shared, || false);
 
     /// Shows spaces, tabs and whitespace at the end of lines in editors.
-    pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", || false);
+    pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", Sharing::Shared, || false);
     /// Whether editors show the minimap beside the text (E107).
-    pub const MINIMAP: Key<bool> = Key::user("minimap", || false);
+    pub const MINIMAP: Key<bool> = Key::user("minimap", Sharing::Shared, || false);
     /// Who formats each language, `server` or `prettier`; a language not listed follows the project's Prettier
     /// configuration (E133).
     pub const FORMATTER: Key<std::collections::BTreeMap<String, String>> =
-        Key::project("formatter", std::collections::BTreeMap::new);
+        Key::project("formatter", Sharing::Shared, std::collections::BTreeMap::new);
     /// Whether a line's most serious diagnostic shows at its end (E130).
-    pub const DIAGNOSTICS_AT_LINE_END: Key<bool> = Key::user("diagnosticsAtLineEnd", || false);
+    pub const DIAGNOSTICS_AT_LINE_END: Key<bool> = Key::user("diagnosticsAtLineEnd", Sharing::Shared, || false);
     /// How many header lines Sticky Scroll holds at the top of an editor, 0 for none (E108).
-    pub const STICKY_SCROLL_LINES: Key<usize> = Key::user("stickyScrollLines", || 5);
+    pub const STICKY_SCROLL_LINES: Key<usize> = Key::user("stickyScrollLines", Sharing::Shared, || 5);
 
     /// Shows the language server's inlay hints, such as inferred types and parameter names, in editors (E83).
-    pub const INLAY_HINTS: Key<bool> = Key::user("inlayHints", || true);
+    pub const INLAY_HINTS: Key<bool> = Key::user("inlayHints", Sharing::Shared, || true);
 
     /// The languages, by name, whose editors leave inlay hints out although they are on.
-    pub const INLAY_HINTS_OFF: Key<Vec<String>> = Key::user("inlayHintsOffFor", Vec::new);
+    pub const INLAY_HINTS_OFF: Key<Vec<String>> = Key::user("inlayHintsOffFor", Sharing::Shared, Vec::new);
 
     /// Shows who changed the cursor's line last at its end, after the cursor rests there (E86).
-    pub const BLAME_AT_LINE_END: Key<bool> = Key::user("blameAtLineEnd", || false);
+    pub const BLAME_AT_LINE_END: Key<bool> = Key::user("blameAtLineEnd", Sharing::Shared, || false);
 
     /// Whether a single click opens a file in the window's preview tab, which the next one replaces; off, every file
     /// gets a tab of its own (E62).
-    pub const PREVIEW_TABS: Key<bool> = Key::user("previewTabs", || false);
+    pub const PREVIEW_TABS: Key<bool> = Key::user("previewTabs", Sharing::Shared, || false);
 
     /// Whether a Markdown file opens with its preview beside it, which closes with its editor.
-    pub const MARKDOWN_PREVIEW: Key<bool> = Key::user("markdownPreviewBeside", || true);
+    pub const MARKDOWN_PREVIEW: Key<bool> = Key::user("markdownPreviewBeside", Sharing::Shared, || true);
 
     /// Whether the file tree also lists what Git ignores and what the system hides, marked as such.
-    pub const SHOW_IGNORED_FILES: Key<bool> = Key::user("showIgnoredFiles", || false);
+    pub const SHOW_IGNORED_FILES: Key<bool> = Key::user("showIgnoredFiles", Sharing::Shared, || false);
 
     /// Where the browser's address field sends words that are no address.
-    pub const SEARCH_ENGINE: Key<SearchEngine> = Key::user("searchEngine", || SearchEngine::DuckDuckGo);
+    pub const SEARCH_ENGINE: Key<SearchEngine> =
+        Key::user("searchEngine", Sharing::Shared, || SearchEngine::DuckDuckGo);
 
     /// The panels whose symbol the activity bar leaves out, by the app's name for each panel.
-    pub const HIDDEN_PANELS: Key<Vec<String>> = Key::user("hiddenSidebarPanels", Vec::new);
+    pub const HIDDEN_PANELS: Key<Vec<String>> = Key::user("hiddenSidebarPanels", Sharing::Shared, Vec::new);
 
     /// ⌥ in the terminal is Meta for every key, instead of typing the characters the keyboard layout puts on it.
-    pub const OPTION_AS_META: Key<bool> = Key::user("optionAsMeta", || false);
+    pub const OPTION_AS_META: Key<bool> = Key::user("optionAsMeta", Sharing::Shared, || false);
 }
 
 /// A search engine the browser can send words to.
@@ -159,16 +173,16 @@ pub mod remembered {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use super::{AgentChoice, Key};
+    use super::{AgentChoice, StateKey};
 
     /// The folders that were open when the app last quit.
-    pub const OPEN_PROJECTS: Key<Vec<PathBuf>> = Key::user("openProjects", Vec::new);
+    pub const OPEN_PROJECTS: StateKey<Vec<PathBuf>> = StateKey::new("openProjects", Vec::new);
 
     /// Recently opened folders, the latest first.
-    pub const RECENT_PROJECTS: Key<Vec<PathBuf>> = Key::user("recentProjects", Vec::new);
+    pub const RECENT_PROJECTS: StateKey<Vec<PathBuf>> = StateKey::new("recentProjects", Vec::new);
 
     /// What the user picked last for each agent, by the agent's id, which its next sessions start with.
-    pub const AGENT_CHOICES: Key<BTreeMap<String, AgentChoice>> = Key::user("agentChoices", BTreeMap::new);
+    pub const AGENT_CHOICES: StateKey<BTreeMap<String, AgentChoice>> = StateKey::new("agentChoices", BTreeMap::new);
 }
 
 /// The model, reasoning effort and permission mode the user picked for an agent, each as the agent names it; unset
@@ -185,6 +199,25 @@ pub struct AgentChoice {
     /// What runs without asking.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<String>,
+}
+
+type Listener = std::sync::Arc<dyn Fn(&Path, &[String]) + Send + Sync>;
+
+static LISTENERS: std::sync::Mutex<Vec<Listener>> = std::sync::Mutex::new(Vec::new());
+
+/// Calls `listener` with the settings file and the names of the settings after every write of a setting, on the
+/// thread that wrote it.
+pub fn on_change(listener: impl Fn(&Path, &[String]) + Send + Sync + 'static) {
+    use crate::sync::LockIgnoringPoison;
+    LISTENERS.lock_ignoring_poison().push(std::sync::Arc::new(listener));
+}
+
+fn changed(path: &Path, names: &[String]) {
+    use crate::sync::LockIgnoringPoison;
+    let listeners: Vec<Listener> = LISTENERS.lock_ignoring_poison().clone();
+    for listener in listeners {
+        listener(path, names);
+    }
 }
 
 /// How many folders the recent list keeps.
@@ -241,7 +274,38 @@ impl Settings {
     /// Sets `key` in the user's settings and writes them.
     pub fn set<T: Serialize>(&mut self, key: &Key<T>, value: &T) -> io::Result<()> {
         let value = serde_json::to_value(value).map_err(io::Error::other)?;
-        self.user.set(key.name, value, SETTINGS_MIGRATIONS)
+        self.set_value(key.name, value)
+    }
+
+    /// Sets the user's setting `name` to `value` as it is stored, and writes them.
+    pub fn set_value(&mut self, name: &str, value: serde_json::Value) -> io::Result<()> {
+        self.user.set(name, value, SETTINGS_MIGRATIONS)?;
+        changed(self.user.path(), &[name.to_string()]);
+        Ok(())
+    }
+
+    /// Takes the user's setting `name` out, so that it falls back to its default, and writes them.
+    pub fn remove(&mut self, name: &str) -> io::Result<()> {
+        self.user.remove(name, SETTINGS_MIGRATIONS)?;
+        changed(self.user.path(), &[name.to_string()]);
+        Ok(())
+    }
+
+    /// The user's settings as they are stored, by name, without the file's version.
+    pub fn user_values(&self) -> serde_json::Map<String, serde_json::Value> {
+        let mut values = self.user.values().clone();
+        values.remove("version");
+        values
+    }
+
+    /// The version the settings file has after its migrations, which a synced copy carries (E114).
+    pub fn schema_version() -> u64 {
+        1 + SETTINGS_MIGRATIONS.len() as u64
+    }
+
+    /// Brings `values` of an older schema `version` to the current one with the settings' migrations.
+    pub fn migrate_values(values: &mut serde_json::Map<String, serde_json::Value>, version: u64) {
+        crate::store::migrate_from(values, version, SETTINGS_MIGRATIONS);
     }
 
     /// Sets `key` in the project's settings and writes them.
@@ -267,6 +331,25 @@ impl Settings {
     }
 }
 
+/// A named entry of the app's state file with its default; never synced to other Macs.
+pub struct StateKey<T> {
+    /// The name in the JSON file.
+    pub name: &'static str,
+    default: fn() -> T,
+    kind: PhantomData<fn() -> T>,
+}
+
+impl<T> StateKey<T> {
+    /// An entry of the state file.
+    pub const fn new(name: &'static str, default: fn() -> T) -> StateKey<T> {
+        StateKey {
+            name,
+            default,
+            kind: PhantomData,
+        }
+    }
+}
+
 /// What the app remembers between runs that the user does not set: open and recent folders.
 #[derive(Debug, Clone)]
 pub struct State {
@@ -287,15 +370,15 @@ impl State {
     }
 
     /// The value of `key`, or its default.
-    pub fn get<T: DeserializeOwned>(&self, key: &Key<T>) -> T {
+    pub fn get<T: DeserializeOwned>(&self, key: &StateKey<T>) -> T {
         self.store
             .get(key.name)
             .and_then(|v| serde_json::from_value(v.clone()).ok())
-            .unwrap_or_else(|| key.default_value())
+            .unwrap_or_else(|| (key.default)())
     }
 
     /// Sets `key` and writes the state.
-    pub fn set<T: Serialize>(&mut self, key: &Key<T>, value: &T) -> io::Result<()> {
+    pub fn set<T: Serialize>(&mut self, key: &StateKey<T>, value: &T) -> io::Result<()> {
         let value = serde_json::to_value(value).map_err(io::Error::other)?;
         self.store.set(key.name, value, STATE_MIGRATIONS)
     }

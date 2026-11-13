@@ -48,7 +48,7 @@ use ide_ui_common::util::{guarded, main_after, main_soon, ns};
 
 /// Dictating with fn while Lowspeak does not run (E13); macOS's Accessibility permission is asked for only after the
 /// first dictation.
-pub const DICTATE_WITH_FN: Key<bool> = Key::user("dictationWithFn", || true);
+pub const DICTATE_WITH_FN: Key<bool> = Key::user("dictationWithFn", ide_core::settings::Sharing::Shared, || true);
 
 /// How long a note under a field stays, such as why a dictation failed.
 const NOTE: Duration = Duration::from_secs(8);

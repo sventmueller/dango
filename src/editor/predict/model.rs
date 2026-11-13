@@ -33,23 +33,29 @@ pub struct Local {
 }
 
 /// The provider the user chose.
-pub const PROVIDER: Key<Choice> = Key::user("editPrediction", Choice::default);
+pub const PROVIDER: Key<Choice> = Key::user("editPrediction", ide_core::settings::Sharing::Shared, Choice::default);
 /// The languages, by language id, that get no proposals.
-pub const OFF_FOR: Key<Vec<String>> = Key::user("editPredictionOffFor", Vec::new);
+pub const OFF_FOR: Key<Vec<String>> = Key::user("editPredictionOffFor", ide_core::settings::Sharing::Shared, Vec::new);
 /// Patterns of file names that never go to a provider.
-pub const EXCLUDE: Key<Vec<String>> = Key::user("editPredictionExclude", default_exclusions);
+pub const EXCLUDE: Key<Vec<String>> = Key::user(
+    "editPredictionExclude",
+    ide_core::settings::Sharing::Shared,
+    default_exclusions,
+);
 /// Ollama's address and model.
-pub const OLLAMA: Key<Local> = Key::user("editPredictionOllama", || Local {
+pub const OLLAMA: Key<Local> = Key::user("editPredictionOllama", ide_core::settings::Sharing::PerMac, || Local {
     url: ide_predict::fim::OLLAMA_BASE.to_string(),
     model: String::new(),
 });
 /// LM Studio's address and model.
-pub const LM_STUDIO: Key<Local> = Key::user("editPredictionLmStudio", || Local {
-    url: ide_predict::fim::LMSTUDIO_BASE.to_string(),
-    model: String::new(),
+pub const LM_STUDIO: Key<Local> = Key::user("editPredictionLmStudio", ide_core::settings::Sharing::PerMac, || {
+    Local {
+        url: ide_predict::fim::LMSTUDIO_BASE.to_string(),
+        model: String::new(),
+    }
 });
 /// The providers outside the Mac the user allowed to get the text, by [`consent_id`].
-pub const CONSENT: Key<Vec<String>> = Key::user("editPredictionConsent", Vec::new);
+pub const CONSENT: Key<Vec<String>> = Key::user("editPredictionConsent", ide_core::settings::Sharing::PerMac, Vec::new);
 
 /// The patterns no file matching goes to a provider by, unless the user changes them: secrets and keys.
 pub fn default_exclusions() -> Vec<String> {

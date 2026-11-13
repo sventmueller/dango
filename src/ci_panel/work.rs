@@ -13,7 +13,7 @@ use crate::util::main_soon;
 
 /// Hosts whose name does not say which service runs there, as `host[:port][/prefix]=github|gitlab`. Only the user
 /// sets them: a project could otherwise send a token elsewhere.
-pub const CI_HOSTS: Key<Vec<String>> = Key::user("ciHosts", Vec::new);
+pub const CI_HOSTS: Key<Vec<String>> = Key::user("ciHosts", ide_core::settings::Sharing::Shared, Vec::new);
 
 /// How long `gh` or `glab` may take to say their token.
 const TOOL_TIMEOUT: Duration = Duration::from_secs(8);

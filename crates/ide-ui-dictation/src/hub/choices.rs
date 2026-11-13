@@ -38,10 +38,13 @@ impl Default for Stored {
 }
 
 /// The app's dictation choices.
-pub const DICTATION: Key<Stored> = Key::user("dictation", Stored::default);
+pub const DICTATION: Key<Stored> = Key::user("dictation", ide_core::settings::Sharing::Shared, Stored::default);
 
 /// Lowspeak's choices were offered for taking over and the user answered; the offer does not come again.
-pub const LOWSPEAK_OFFERED: Key<bool> = Key::user("dictationLowspeakOffered", || false);
+pub const LOWSPEAK_OFFERED: Key<bool> =
+    Key::user("dictationLowspeakOffered", ide_core::settings::Sharing::PerMac, || {
+        false
+    });
 
 /// Lowspeak's defaults, which are the app's until the user chooses.
 pub fn defaults() -> Choices {
