@@ -322,7 +322,7 @@ fn counted(
             .map_err(|e| e.to_string())?
             .to_string_lossy()
             .into_owned();
-        if is_test_only(&file) {
+        if is_test_only(&file) || UNMEASURABLE.contains(&file.as_str()) {
             continue;
         }
         counted.push(match measured.get(&source) {
@@ -369,6 +369,10 @@ fn rust_files(folder: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
 fn is_not_counted(name: &str) -> bool {
     matches!(name, "build.rs" | "tests.rs" | "fuzzing.rs") || name.ends_with("_tests.rs") || name.ends_with("-tests.rs")
 }
+
+/// Entry points no instrumented run can record: launchd starts the decoding service in an App Sandbox that cannot
+/// write profile data. The `preview` scenario exercises it through the app.
+const UNMEASURABLE: &[&str] = &["src/decoder_main.rs"];
 
 /// Code that exists only to test the rest, at `file` from the workspace root: the window self-test scenarios and their
 /// hooks, and the ACP test agent with its recorder. xtask's self-test runner is tooling and counts.

@@ -85,7 +85,8 @@ Counted is every Rust file in `src/`, `crates/*/src` and `xtask/src`, except `te
 `fuzz/` folders, build scripts, the unit test files cargo-llvm-cov leaves out (`tests.rs`, `*_tests.rs`), the fuzz
 targets' entry points `fuzzing.rs`, and code that only exists to test the rest: the selftest scenarios and hooks
 (`src/selftest*`, `*/selftest.rs`, `selftest/` folders, the terminal's `inspect.rs`) and the ACP test agent with its
-recorder. xtask's selftest runner is tooling and counts. A file the build compiled without code
+recorder. xtask's selftest runner is tooling and counts. `src/decoder_main.rs` is left out too: launchd starts the
+decoding service in a sandbox that cannot write coverage data; `preview` exercises it through the app. A file the build compiled without code
 to run (only `mod` lines or types) counts with no lines; a file no instrumented program contains counts with its code
 lines as uncovered. The results are in `target/coverage/`: `coverage.txt` (the summary,
 then folders and files, lowest first), `files.json` (the same per file) and `llvm-cov.json` (llvm-cov's export).
