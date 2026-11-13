@@ -10,7 +10,7 @@ use objc2_app_kit::{NSBezierPath, NSColor, NSEvent, NSKernAttributeName, NSStrin
 use objc2_foundation::{NSDictionary, NSPoint, NSRange, NSRect, NSSize, NSString};
 
 use super::{
-    END_GAP, Inset, Insets, MARGIN, PADDING, Placed, Shown, Spot, attributes, find_kern, ghost_attributes,
+    END_GAP, Inset, Insets, Layer, MARGIN, PADDING, Placed, Shown, Spot, attributes, find_kern, ghost_attributes,
     layer_insets, resolve, text_color, text_size,
 };
 use crate::editor::EditorTextView;
@@ -167,6 +167,8 @@ fn lay_out(
         .into_iter()
         .map(|(rect, _)| rect)
         .collect();
+    let visible_rect = view.visibleRect();
+    let limit = visible_rect.origin.x + visible_rect.size.width - END_GAP / 2.0;
     let mut gap_used: Vec<(Range<usize>, f64)> = Vec::new();
     let mut end_used: Vec<(usize, f64)> = Vec::new();
     let mut shown = Vec::new();
@@ -209,13 +211,16 @@ fn lay_out(
                     x = x.max(folded.origin.x + folded.size.width + END_GAP);
                 }
                 let before = end_used.iter().find(|(l, _)| l == line_end).map_or(0.0, |(_, w)| *w);
+                let Some(width) = fitted_width(place.layer, place.width, limit - (x + before)) else {
+                    continue;
+                };
                 match end_used.iter_mut().find(|(l, _)| l == line_end) {
-                    Some(used) => used.1 += place.width + END_GAP / 2.0,
-                    None => end_used.push((*line_end, place.width + END_GAP / 2.0)),
+                    Some(used) => used.1 += width + END_GAP / 2.0,
+                    None => end_used.push((*line_end, width + END_GAP / 2.0)),
                 }
                 NSRect::new(
                     NSPoint::new(x + before, caret.origin.y),
-                    NSSize::new(place.width, caret.size.height),
+                    NSSize::new(width, caret.size.height),
                 )
             }
         };
@@ -231,6 +236,20 @@ fn lay_out(
         });
     }
     shown
+}
+
+/// The width an inset of `layer` takes at a line's end with `room` left before the editor's edge: the layers before
+/// the diagnostics always show, a diagnostic is cut short down to `SHORTEST`, and blame gives way.
+fn fitted_width(layer: Layer, width: f64, room: f64) -> Option<f64> {
+    const SHORTEST: f64 = 60.0;
+    if width <= room {
+        return Some(width);
+    }
+    match layer {
+        Layer::Prediction | Layer::Inlay | Layer::Debug => Some(width),
+        Layer::Diagnostics => (room >= SHORTEST).then_some(room),
+        Layer::Blame => None,
+    }
 }
 
 /// The caret before UTF-16 offset `at`, as TextKit 2 lays out the line fragment that holds it: its left edge, the
@@ -292,12 +311,46 @@ fn draw_box(rect: NSRect, inset: &Inset, attributes: &NSDictionary<NSString, Any
     let frame = NSRect::new(NSPoint::new(left, top), NSSize::new((right - left).max(0.0), height));
     fill().setFill();
     NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(frame, 3.0, 3.0).fill();
-    let text = ns(&inset.text);
+    let room = (right - left - 2.0 * MARGIN).max(0.0);
+    let mut x = left + MARGIN;
+    if let Some(severity) = inset.severity {
+        let symbol = ns(&format!("{} ", severity.symbol()));
+        let tinted = super::attributes(font_size, &severity.color());
+        // SAFETY: The attributes hold a font and a colour, as the method expects.
+        let size = unsafe { symbol.sizeWithAttributes(Some(&tinted)) };
+        // SAFETY: As above.
+        unsafe {
+            symbol.drawAtPoint_withAttributes(NSPoint::new(x, top + (height - size.height) / 2.0), Some(&tinted))
+        };
+        x += size.width;
+    }
+    let text = ns(&fit(&inset.text, attributes, room - (x - left - MARGIN)));
     // SAFETY: The attributes hold a font and a colour, as the method expects.
     let size = unsafe { text.sizeWithAttributes(Some(attributes)) };
-    let at = NSPoint::new(left + MARGIN, top + (height - size.height) / 2.0);
+    let at = NSPoint::new(x, top + (height - size.height) / 2.0);
     // SAFETY: These attributes too hold only a font and a colour under AppKit's keys.
     unsafe { text.drawAtPoint_withAttributes(at, Some(attributes)) };
+}
+
+/// `text` as far as it fits in `room`, cut short with "…" where it does not.
+fn fit(text: &str, attributes: &NSDictionary<NSString, AnyObject>, room: f64) -> String {
+    // SAFETY: The attributes hold a font and a colour, as the method expects.
+    let width = |s: &str| unsafe { ns(s).sizeWithAttributes(Some(attributes)) }.width;
+    if width(text) <= room + 0.5 {
+        return text.to_string();
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let (mut low, mut high) = (0, chars.len());
+    while low < high {
+        let mid = (low + high).div_ceil(2);
+        let candidate: String = chars[..mid].iter().collect::<String>() + "…";
+        if width(&candidate) <= room {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    chars[..low].iter().collect::<String>() + "…"
 }
 
 /// Where the insets of `view` were drawn last.

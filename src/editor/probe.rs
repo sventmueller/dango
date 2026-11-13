@@ -12,6 +12,7 @@ use super::{EditorTextView, changes, compare, conflict, editing, editor_for, ope
 use crate::util::{constant, ns};
 use crate::window::WindowController;
 
+pub use super::line_diagnostics::busy_lines;
 pub use super::minimap::{click as click_minimap, probe as minimap};
 pub use super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
 

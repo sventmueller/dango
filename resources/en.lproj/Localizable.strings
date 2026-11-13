@@ -1596,3 +1596,6 @@
 "Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "The debugger could not set a breakpoint here: {}";
 "Minimap" = "Minimap";
 "Sticky Scroll" = "Sticky Scroll";
+"Diagnosen am Zeilenende" = "Diagnostics at Line End";
+"{} (+{})" = "{} (+{})";
+"Information" = "Information";

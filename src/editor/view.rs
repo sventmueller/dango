@@ -49,6 +49,8 @@ pub struct ViewIvars {
     pub(super) minimap: RefCell<Option<Weak<super::minimap::Minimap>>>,
     /// The header lines held at its top (E108).
     pub(super) sticky: RefCell<Option<Weak<super::sticky::Sticky>>>,
+    /// The lines edited lately, which wait before showing a diagnostic at their end (E130).
+    pub(super) line_edits: RefCell<super::line_diagnostics::Edits>,
     /// The ranges that fold and those folded.
     pub(super) folds: RefCell<super::fold::Folds>,
     /// The carets beyond the first.
@@ -401,6 +403,7 @@ define_class!(
                 super::whitespace::validate(item)
                     .or_else(|| super::minimap::validate(item))
                     .or_else(|| super::sticky::validate(item))
+                    .or_else(|| super::line_diagnostics::validate(item))
                     .or_else(|| super::predict::validate(self, item))
                     .or_else(|| crate::lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
@@ -645,6 +648,16 @@ define_class!(
             guarded((), || super::changes::revert(self));
         }
 
+        #[unsafe(method(ideToggleDiagnosticsAtLineEnd:))]
+        fn toggle_line_diagnostics(&self, _sender: Option<&AnyObject>) {
+            guarded((), super::line_diagnostics::toggle);
+        }
+
+        #[unsafe(method(ideDiagnosticsRested))]
+        fn diagnostics_rested(&self) {
+            guarded((), || super::line_diagnostics::refresh(self));
+        }
+
         #[unsafe(method(ideToggleStickyScroll:))]
         fn toggle_sticky(&self, _sender: Option<&AnyObject>) {
             guarded((), super::sticky::toggle);
@@ -722,6 +735,7 @@ impl EditorTextView {
             whitespace: RefCell::new(None),
             minimap: RefCell::new(None),
             sticky: RefCell::new(None),
+            line_edits: RefCell::new(Default::default()),
             folds: RefCell::new(super::fold::Folds::default()),
             carets: RefCell::new(super::multi::Carets::default()),
             overlay: RefCell::new(None),
@@ -794,6 +808,7 @@ impl EditorTextView {
         super::whitespace::redraw(self);
         super::minimap::redraw(self);
         super::sticky::refresh(self);
+        super::line_diagnostics::edited(self, change);
         if (change.start.line != change.new_end.line || change.start.line != change.old_end.line)
             && let Some(gutter) = self.ivars().gutter.borrow().as_ref().and_then(Weak::load)
         {

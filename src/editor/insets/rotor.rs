@@ -53,11 +53,17 @@ pub fn rotor_items(view: &EditorTextView) -> Vec<RotorItem> {
     let Ok(state) = view.ivars().insets.try_borrow() else {
         return Vec::new();
     };
-    let mut all: Vec<(usize, &str)> = state
+    let spoken: Vec<(usize, String)> = state
         .layers
         .iter()
-        .flat_map(|(_, insets)| insets.iter().map(|i| (i.at, i.text.as_str())))
+        .flat_map(|(_, insets)| {
+            insets.iter().map(|i| match i.severity {
+                Some(severity) => (i.at, format!("{}: {}", severity.name(), i.text)),
+                None => (i.at, i.text.clone()),
+            })
+        })
         .collect();
+    let mut all: Vec<(usize, &str)> = spoken.iter().map(|(at, text)| (*at, text.as_str())).collect();
     all.sort_by_key(|(at, _)| *at);
     let document = view.document();
     let text = document.text();

@@ -13,6 +13,7 @@ mod highlight;
 mod indent;
 mod inset_fragment;
 pub mod insets;
+mod line_diagnostics;
 mod minimap;
 mod multi;
 mod overlay;
@@ -50,6 +51,7 @@ pub use view::EditorTextView;
 pub struct EditorState {
     minimap: minimap::Shown,
     sticky: sticky::Lines,
+    line_diagnostics: line_diagnostics::Shown,
     comparisons: compare::Comparisons,
     recovery_copies: recovery::RecoveryCopies,
     #[cfg(feature = "selftest")]
@@ -158,6 +160,7 @@ pub fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
 pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
 pub use fold::hidden_by_fold;
 pub use ide_ui_common::util::undo_step;
+pub use line_diagnostics::refresh as diagnostics_changed;
 pub use minimap::redraw as redraw_minimap;
 pub use style::{code_font, palette_color};
 #[cfg(feature = "selftest")]

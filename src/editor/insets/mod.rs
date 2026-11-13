@@ -41,10 +41,12 @@ pub enum Layer {
     Prediction,
     /// The language server's inlay hints (E83).
     Inlay,
-    /// Who changed the cursor's line last (E86).
-    Blame,
     /// The values of the paused frame's variables at the ends of the lines that use them (E94).
     Debug,
+    /// The most serious diagnostic of a line (E130).
+    Diagnostics,
+    /// Who changed the cursor's line last (E86); at a line's end the first to give way when room runs out.
+    Blame,
 }
 
 /// Where an inset wants to show.
@@ -75,6 +77,8 @@ pub struct Inset {
     /// Ghost text: drawn as code would be, italic in the secondary colour and without a box, with the caret before it;
     /// at a line's end it follows the text without a space.
     pub ghost: bool,
+    /// How serious it is, shown with a symbol before the text in the severity's colour.
+    pub severity: Option<crate::lsp::Severity>,
     /// Its width on screen, with its margins, measured when it is set.
     width: f64,
 }
@@ -90,6 +94,7 @@ impl Inset {
             pad_left: false,
             pad_right: false,
             ghost: false,
+            severity: None,
             width: 0.0,
         }
     }
@@ -206,9 +211,17 @@ fn measure(inset: &Inset, attributes: &NSDictionary<NSString, AnyObject>, font_s
             .ceil();
     }
     // SAFETY: The attributes hold a font and a colour, as the method expects.
-    let text = unsafe { ns(&inset.text).sizeWithAttributes(Some(attributes)) }.width;
+    let text = unsafe { ns(&shown_text(inset)).sizeWithAttributes(Some(attributes)) }.width;
     let pads = f64::from(u8::from(inset.pad_left) + u8::from(inset.pad_right)) * PADDING;
     (text + 2.0 * MARGIN + pads).ceil()
+}
+
+/// The text an inset shows, its severity's symbol first.
+fn shown_text(inset: &Inset) -> String {
+    match inset.severity {
+        Some(severity) => format!("{} {}", severity.symbol(), inset.text),
+        None => inset.text.clone(),
+    }
 }
 
 /// Shows `insets` for `layer` in `view`, in place of the ones it had.

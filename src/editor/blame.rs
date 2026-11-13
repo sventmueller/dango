@@ -453,6 +453,12 @@ pub fn with_view_items(mtm: MainThreadMarker, view_menu: Retained<NSMenuItem>) -
             Some(sel!(ideToggleInlayHintsLanguage:)),
             "",
         ),
+        item(
+            mtm,
+            t("Diagnosen am Zeilenende"),
+            Some(sel!(ideToggleDiagnosticsAtLineEnd:)),
+            "",
+        ),
         item(mtm, t("Blame am Zeilenende"), Some(sel!(ideToggleBlameAtLineEnd:)), ""),
         item(mtm, t("Blame zeigen"), Some(sel!(ideToggleBlameColumn:)), ""),
         item(mtm, t("Blame der Zeile zeigen"), Some(sel!(ideShowLineBlame:)), ""),

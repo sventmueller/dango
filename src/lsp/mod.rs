@@ -46,7 +46,7 @@ use crate::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
-pub use decorate::{Painted, Severity, follow, line_marks, paint, text_range};
+pub use decorate::{Painted, Severity, follow, line_marks, line_messages, paint, text_range};
 
 /// The semantic tokens of an editor's language server state, by position.
 pub fn painted(state: &ViewState) -> &[Painted] {
@@ -869,6 +869,12 @@ pub use install::status_action;
 mod selftest_probe;
 #[cfg(feature = "selftest")]
 pub use selftest_probe::*;
+
+/// Shows `diagnostics` in `view` as if its server had sent them, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn show_diagnostics(view: &EditorTextView, diagnostics: &[ide_lsp::lsp_types::Diagnostic]) {
+    decorate::set_diagnostics(view, diagnostics);
+}
 
 #[cfg(test)]
 mod tests {

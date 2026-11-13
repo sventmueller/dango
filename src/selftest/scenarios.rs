@@ -169,6 +169,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("editor-blame", blame::run),
     plain("editor-minimap", minimap::run),
     plain("editor-sticky", sticky::run),
+    plain("editor-line-diagnostics", line_diagnostics::run),
     plain("search", search::run),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),

@@ -70,6 +70,7 @@ mod helpers;
 mod inlay;
 mod inlay_repo;
 mod insets;
+mod line_diagnostics;
 mod lsp;
 mod lsp_actions;
 mod lsp_more;

@@ -46,6 +46,26 @@ impl Severity {
         }
     }
 
+    /// The symbol that tells the severity apart without its colour (E101).
+    pub fn symbol(self) -> &'static str {
+        match self {
+            Severity::Error => "✕",
+            Severity::Warning => "⚠",
+            Severity::Info => "ℹ",
+            Severity::Hint => "·",
+        }
+    }
+
+    /// The severity as VoiceOver says it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Severity::Error => splat_i18n::t("Fehler"),
+            Severity::Warning => splat_i18n::t("Warnung"),
+            Severity::Info => splat_i18n::t("Information"),
+            Severity::Hint => splat_i18n::t("Hinweis"),
+        }
+    }
+
     pub fn color(self) -> Retained<NSColor> {
         match self {
             Severity::Error => NSColor::systemRedColor(),
@@ -138,6 +158,7 @@ pub fn set_diagnostics(view: &EditorTextView, diagnostics: &[Diagnostic]) {
     view.ivars().lsp.borrow_mut().marks = marks;
     paint(view);
     crate::editor::redraw_gutter(view);
+    crate::editor::diagnostics_changed(view);
     super::status::refresh(view);
 }
 
@@ -168,6 +189,31 @@ pub fn set_tokens(view: &EditorTextView, tokens: &SemanticTokens) {
     view.ivars().lsp.borrow_mut().tokens = painted;
     paint(view);
     crate::editor::redraw_minimap(view);
+}
+
+/// The diagnostics of at least `Info` by the line they start on: the start of the line's most serious one and every
+/// message of the line with its severity, the most serious first.
+pub fn line_messages(view: &EditorTextView) -> BTreeMap<usize, (usize, Vec<(Severity, String)>)> {
+    let state = view.ivars().lsp.borrow();
+    let document = view.document();
+    let text = document.text();
+    let mut lines: BTreeMap<usize, (usize, Vec<(Severity, String)>)> = BTreeMap::new();
+    for mark in state.marks.iter().filter(|m| m.severity >= Severity::Info) {
+        let Ok(byte) = text.utf16_to_byte(mark.range.start.min(text.len_utf16())) else {
+            continue;
+        };
+        let entry = lines
+            .entry(text.line_of(byte))
+            .or_insert_with(|| (mark.range.start, Vec::new()));
+        if entry.1.first().is_none_or(|(top, _)| mark.severity > *top) {
+            entry.0 = mark.range.start;
+        }
+        entry.1.push((mark.severity, mark.message.clone()));
+    }
+    for (_, messages) in lines.values_mut() {
+        messages.sort_by_key(|(severity, _)| std::cmp::Reverse(*severity));
+    }
+    lines
 }
 
 /// The diagnostics by the line they start on, the most serious first, for the line number column.
