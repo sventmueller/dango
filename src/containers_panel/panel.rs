@@ -177,6 +177,7 @@ impl ContainersPanel {
         picker.setControlSize(objc2_app_kit::NSControlSize::Small);
         set_action(&picker, me, sel!(ideContainersContext:));
         picker.setToolTip(Some(&ns(t("Docker-Kontext dieses Fensters"))));
+        ide_ui_common::util::set_label(&picker, Some(t("Docker-Kontext dieses Fensters")));
         let refresh = ide_ui_common::panel::header_button(
             mtm,
             "arrow.clockwise",
@@ -593,10 +594,14 @@ fn look_symbol(row: &Row) -> (&'static str, String, Retained<NSColor>) {
         (Node::Section(_), _) => ("", String::new(), NSColor::secondaryLabelColor()),
         (Node::Image(_), _) => (
             "square.stack.3d.up",
-            t("Image").to_string(),
+            t("Docker-Image").to_string(),
             NSColor::secondaryLabelColor(),
         ),
-        (Node::Volume(_), _) => ("externaldrive", t("Volume").to_string(), NSColor::secondaryLabelColor()),
+        (Node::Volume(_), _) => (
+            "externaldrive",
+            t("Docker-Volume").to_string(),
+            NSColor::secondaryLabelColor(),
+        ),
         (_, Look::Running) => ("play.circle.fill", t("Läuft").to_string(), NSColor::systemGreenColor()),
         (_, Look::Partly) => (
             "circle.lefthalf.filled",
@@ -658,6 +663,7 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     stack.addView_inGravity(&text, NSStackViewGravity::Leading);
     stack.addView_inGravity(&detail, NSStackViewGravity::Trailing);
     stack.setAccessibilityElement(true);
+    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
     let spoken = if description.is_empty() {
         format!("{}, {}", row.label, row.detail)
     } else {

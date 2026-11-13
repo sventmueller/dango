@@ -216,6 +216,16 @@ fn tree() {
             );
             if let Some(window) = controller().and_then(|c| c.window()) {
                 snapshot(&window, "containers-panel");
+                let findings = super::a11y::audit::findings(&super::a11y::audit::elements(&window));
+                check(
+                    "the accessibility audit finds nothing in the window with the Containers panel",
+                    findings.is_empty(),
+                    findings
+                        .iter()
+                        .map(|f| format!("{}: {} ({})", f.problem, f.what, f.path))
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                );
             }
             container_commands();
         },

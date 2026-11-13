@@ -510,6 +510,7 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     stack.addView_inGravity(&icon, NSStackViewGravity::Leading);
     stack.addView_inGravity(&text, NSStackViewGravity::Leading);
     stack.setAccessibilityElement(true);
+    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
     stack.setAccessibilityLabel(Some(&ns(&format!("{}, {description}", row.label))));
     stack.into_super()
 }

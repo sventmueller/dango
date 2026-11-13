@@ -1668,7 +1668,7 @@
 "Docker-Befehl fehlgeschlagen" = "Docker Command Failed";
 "Docker-Kontext dieses Fensters" = "Docker context of this window";
 "Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Stopped containers, unused networks, untagged images and the build cache are deleted. Volumes stay.";
-"Image" = "Image";
+"Docker-Image" = "Docker image";
 "Images" = "Images";
 "Logs anzeigen" = "Show Logs";
 "Logs: {}" = "Logs: {}";
@@ -1678,6 +1678,6 @@
 "Teilweise" = "Partly running";
 "Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Clean up unused Docker data in “{}”?";
 "Ungenutztes aufräumen …" = "Clean Up Unused …";
-"Volume" = "Volume";
+"Docker-Volume" = "Docker volume";
 "Volumes" = "Volumes";
 "„{}“ löschen?" = "Delete “{}”?";
