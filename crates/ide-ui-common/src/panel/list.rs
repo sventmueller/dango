@@ -4,17 +4,21 @@
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSAccessibility, NSOutlineView, NSScrollView, NSStackView, NSTableColumn, NSTableColumnResizingOptions,
-    NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewStyle, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSColor, NSImageView, NSLineBreakMode, NSOutlineView, NSScrollView, NSStackView,
+    NSStackViewGravity, NSTableColumn, NSTableColumnResizingOptions, NSTableView, NSTableViewColumnAutoresizingStyle,
+    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 
-use crate::util::ns;
+use crate::style::space;
+use crate::util::{label, ns, symbol};
 
 /// The frame a panel's list starts with, before the sidebar lays it out.
 pub const LIST_FRAME: NSRect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
 /// How much further in a row sits than its parent, in every panel's list.
 pub const INDENT: f64 = 12.0;
+/// How far a top-level row built as a stack keeps from the list's edges.
+pub const ROW_INSET: f64 = 4.0;
 /// The margins of a panel's page around its list.
 pub const PAGE_INSETS: NSEdgeInsets = NSEdgeInsets {
     top: 4.0,
@@ -80,4 +84,42 @@ pub fn panel_page(mtm: MainThreadMarker) -> Retained<NSStackView> {
     page.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     page.setEdgeInsets(PAGE_INSETS);
     page
+}
+
+/// A row of a panel's list, `level` deep: the symbol `name`, described as `description` and tinted `tint`, then
+/// `text` cut at its end; VoiceOver reads the row as one element named `spoken`. Views added in the trailing gravity
+/// go after the text.
+pub fn icon_row(
+    mtm: MainThreadMarker,
+    (name, description, tint): (&str, &str, &NSColor),
+    text: &str,
+    level: usize,
+    spoken: &str,
+) -> (Retained<NSStackView>, Retained<NSTextField>) {
+    let icon = NSImageView::new(mtm);
+    icon.setImage(symbol(name, description).as_deref());
+    icon.setContentTintColor(Some(tint));
+    let text = label(mtm, text);
+    text.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(space::S);
+    row.setEdgeInsets(NSEdgeInsets {
+        top: 0.0,
+        left: row_indent(level),
+        bottom: 0.0,
+        right: ROW_INSET,
+    });
+    row.addView_inGravity(&icon, NSStackViewGravity::Leading);
+    row.addView_inGravity(&text, NSStackViewGravity::Leading);
+    row.setAccessibilityElement(true);
+    row.setAccessibilityRole(Some(crate::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
+    row.setAccessibilityLabel(Some(&ns(spoken)));
+    (row, text)
+}
+
+/// Where a row `level` deep begins.
+#[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
+fn row_indent(level: usize) -> f64 {
+    ROW_INSET + level as f64 * INDENT
 }

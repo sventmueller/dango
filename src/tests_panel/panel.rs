@@ -12,15 +12,14 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSImageView, NSMenu,
-    NSMenuDelegate, NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSStackView,
+    NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol};
+use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
-use crate::util::{guarded, label, main_after, ns, set_action, symbol};
+use crate::util::{guarded, label, main_after, ns, set_action};
 
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
@@ -470,26 +469,7 @@ pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSCol
 
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     let (name, description, color) = state_symbol(row.state);
-    let icon = NSImageView::new(mtm);
-    icon.setImage(symbol(name, description).as_deref());
-    icon.setContentTintColor(Some(&color));
-    let text = label(mtm, &row.label);
-    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(ide_ui_common::style::space::S);
-    #[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
-    let indent = 4.0 + row.level as f64 * 14.0;
-    stack.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: indent,
-        bottom: 0.0,
-        right: 4.0,
-    });
-    stack.addView_inGravity(&icon, NSStackViewGravity::Leading);
-    stack.addView_inGravity(&text, NSStackViewGravity::Leading);
-    stack.setAccessibilityElement(true);
-    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-    stack.setAccessibilityLabel(Some(&ns(&format!("{}, {description}", row.label))));
-    stack.into_super()
+    let spoken = format!("{}, {description}", row.label);
+    let (view, _) = ide_ui_common::panel::icon_row(mtm, (name, description, &color), &row.label, row.level, &spoken);
+    view.into_super()
 }

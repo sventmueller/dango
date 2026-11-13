@@ -13,15 +13,15 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSColor, NSControlTextEditingDelegate, NSImageView, NSMenu, NSMenuDelegate, NSPopUpButton,
-    NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
-    NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSColor, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSPopUpButton, NSStackView, NSStackViewGravity,
+    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol};
+use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::docker;
-use crate::util::{guarded, label, main_after, main_soon, ns, set_action, symbol};
+use crate::util::{guarded, label, main_after, main_soon, ns, set_action};
 
 /// How long a read waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
@@ -641,21 +641,23 @@ fn section_title(section: Section) -> &'static str {
 }
 
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(ide_ui_common::style::space::S);
     if let Node::Section(section) = &row.node {
+        let stack = NSStackView::new(mtm);
+        stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        stack.setSpacing(ide_ui_common::style::space::S);
         let title = label(mtm, section_title(*section));
         title.setTextColor(Some(&NSColor::secondaryLabelColor()));
         stack.addView_inGravity(&title, NSStackViewGravity::Leading);
         return stack.into_super();
     }
     let (name, description, color) = look_symbol(row);
-    let icon = NSImageView::new(mtm);
-    icon.setImage(symbol(name, &description).as_deref());
-    icon.setContentTintColor(Some(&color));
-    let text = label(mtm, &row.label);
-    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    let spoken = if description.is_empty() {
+        format!("{}, {}", row.label, row.detail)
+    } else {
+        format!("{}, {description}, {}", row.label, row.detail)
+    };
+    let (stack, text) =
+        ide_ui_common::panel::icon_row(mtm, (name, &description, &color), &row.label, row.level, &spoken);
     text.setContentCompressionResistancePriority_forOrientation(
         objc2_app_kit::NSLayoutPriorityDefaultLow,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
@@ -670,24 +672,6 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     detail.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
         ide_ui_common::style::SMALL,
     )));
-    #[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
-    let indent = 2.0 + row.level as f64 * 12.0;
-    stack.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: indent,
-        bottom: 0.0,
-        right: 4.0,
-    });
-    stack.addView_inGravity(&icon, NSStackViewGravity::Leading);
-    stack.addView_inGravity(&text, NSStackViewGravity::Leading);
     stack.addView_inGravity(&detail, NSStackViewGravity::Trailing);
-    stack.setAccessibilityElement(true);
-    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-    let spoken = if description.is_empty() {
-        format!("{}, {}", row.label, row.detail)
-    } else {
-        format!("{}, {description}, {}", row.label, row.detail)
-    };
-    stack.setAccessibilityLabel(Some(&ns(&spoken)));
     stack.into_super()
 }
