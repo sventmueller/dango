@@ -21,7 +21,7 @@ jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní
 - Každý soubor, terminál, stránka prohlížeče, vlákno AI, zobrazení rozdílů a náhled je panelem macOS v okně složky.
   Tlačítko „+“ na konci pruhu panelů a ⌘T nabízejí nový soubor, terminál, prohlížeč a každého nainstalovaného agenta,
   také ve vlastním worktree Gitu.
-- Boční panel přepíná mezi podokny Soubory, Hledání, Agenti, Git, CI a Ladit (⌘1–⌘6); ta, která nepoužíváte, skryjete
+- Boční panel přepíná mezi podokny Soubory, Hledání, Agenti, Git, Ladit a CI (⌘1–⌘6); ta, která nepoužíváte, skryjete
   kliknutím pravým tlačítkem. Na nástrojovém panelu jsou zpět a vpřed po místech, která jste upravovali (⌃- a ⌃⇧-),
   větev, Rychle otevřít a přehled Aktivita.
 - „Otevřít vedle“ zobrazí druhý dokument vedle prvního. Po restartu nebo pádu se každé okno vrátí se svými panely a

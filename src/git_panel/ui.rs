@@ -19,6 +19,7 @@ use super::panel::GitPanel;
 use super::rows::GitOutlineView;
 use super::text::Problem;
 use crate::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};
+use crate::window::panels::{header_button, header_row};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 pub(super) const MARGIN: f64 = 8.0;
@@ -29,6 +30,8 @@ const AI_INSET: f64 = 4.0;
 
 pub struct Ui {
     pub page: Retained<NSView>,
+    /// Ahead and behind with the remote buttons, which the panel's title row shows.
+    pub header: Retained<NSStackView>,
     empty: Retained<NSView>,
     content: Retained<NSStackView>,
     pub branch: Retained<NSPopUpButton>,
@@ -67,7 +70,8 @@ impl Ui {
             page.addSubview(view);
             pin_edges(view, &page);
         }
-        let (branch_row, branch, distance, [fetch, pull, push]) = branch_row(mtm, panel);
+        let (branch_row, branch) = branch_row(mtm);
+        let (header, distance, [fetch, pull, push]) = header(mtm, panel);
         let (progress_row, progress, progress_label, cancel) = progress_row(mtm, panel);
         let banner = Banner::new(mtm, panel);
         let (problem_row, problem_label, problem_output) = problem_row(mtm, panel);
@@ -100,8 +104,10 @@ impl Ui {
         problem_row.setHidden(true);
         ai_box.view.setHidden(true);
         content.setHidden(true);
+        header.setHidden(true);
         Ui {
             page,
+            header,
             empty,
             content,
             branch,
@@ -131,6 +137,7 @@ impl Ui {
     pub fn show_phase(&self, panel: &GitPanel, phase: &Phase) {
         let mtm = panel.mtm();
         self.content.setHidden(*phase != Phase::Ready);
+        self.header.setHidden(*phase != Phase::Ready);
         self.empty.setHidden(*phase == Phase::Ready);
         for subview in self.empty.subviews().iter() {
             subview.removeFromSuperview();
@@ -341,14 +348,9 @@ impl Banner {
     }
 }
 
-type BranchRow = (
-    Retained<NSStackView>,
-    Retained<NSPopUpButton>,
-    Retained<NSTextField>,
-    [Retained<NSButton>; 3],
-);
+type Header = (Retained<NSStackView>, Retained<NSTextField>, [Retained<NSButton>; 3]);
 
-fn branch_row(mtm: MainThreadMarker, panel: &GitPanel) -> BranchRow {
+fn branch_row(mtm: MainThreadMarker) -> (Retained<NSStackView>, Retained<NSPopUpButton>) {
     let popup = NSPopUpButton::initWithFrame_pullsDown(
         NSPopUpButton::alloc(mtm),
         NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(120.0, 24.0)),
@@ -360,6 +362,13 @@ fn branch_row(mtm: MainThreadMarker, panel: &GitPanel) -> BranchRow {
     popup.setToolTip(Some(&ns(t("Branch wechseln oder anlegen"))));
     popup.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
     popup.setContentHuggingPriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.addView_inGravity(&popup, NSStackViewGravity::Leading);
+    (row, popup)
+}
+
+fn header(mtm: MainThreadMarker, panel: &GitPanel) -> Header {
     let distance = label(mtm, "");
     distance.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
         NSFont::smallSystemFontSize(),
@@ -367,22 +376,16 @@ fn branch_row(mtm: MainThreadMarker, panel: &GitPanel) -> BranchRow {
         unsafe { objc2_app_kit::NSFontWeightRegular },
     )));
     distance.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    let button = |name: &str, title: &str, action: Sel| {
-        let button = symbol_button(mtm, name, title, SYMBOL_POINTS, Some(panel), action);
-        button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        button
-    };
+    let button = |name: &str, title: &str, action: Sel| header_button(mtm, name, title, Some(panel), action);
     let fetch = button("arrow.triangle.2.circlepath", t("Fetch"), sel!(ideGitFetch:));
     let pull = button("arrow.down.circle", t("Pull"), sel!(ideGitPull:));
     let push = button("arrow.up.circle", t("Push"), sel!(ideGitPush:));
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(6.0);
-    row.addView_inGravity(&popup, NSStackViewGravity::Leading);
+    let row = header_row(mtm);
     for view in [&*distance as &NSView, &fetch, &pull, &push] {
-        row.addView_inGravity(view, NSStackViewGravity::Trailing);
+        row.addArrangedSubview(view);
     }
-    (row, popup, distance, [fetch, pull, push])
+    row.setCustomSpacing_afterView(6.0, &distance);
+    (row, distance, [fetch, pull, push])
 }
 
 fn progress_row(

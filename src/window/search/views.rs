@@ -26,8 +26,6 @@ const CHEVRON_POINTS: f64 = 10.0;
 const FIELD_INDENT: f64 = CHEVRON_WIDTH + 2.0;
 /// The width of "Alle ersetzen"; the fields without it end where the replace field does.
 const ALL_WIDTH: f64 = 18.0;
-/// As large as the symbols in the other panels' title rows.
-const HEADER_POINTS: f64 = 12.0;
 
 pub(super) struct Views {
     pub(super) page: Retained<NSView>,
@@ -56,9 +54,7 @@ impl Views {
         let field = search_field(mtm, panel);
         let toggles: Vec<(Toggle, Retained<NSButton>)> =
             Toggle::ALL.iter().map(|t| (*t, toggle(mtm, panel, *t))).collect();
-        let header = NSStackView::new(mtm);
-        header.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        header.setSpacing(2.0);
+        let header = crate::window::panels::header_row(mtm);
         for (_, button) in &toggles {
             header.addArrangedSubview(button);
         }
@@ -265,16 +261,9 @@ fn toggle(mtm: MainThreadMarker, panel: &SearchPanel, toggle: Toggle) -> Retaine
         Toggle::Word => ("character.textbox", t("Ganzes Wort")),
         Toggle::Regex => ("asterisk", t("Regulärer Ausdruck")),
     };
-    let button = symbol_button(
-        mtm,
-        name,
-        description,
-        HEADER_POINTS,
-        Some(panel),
-        sel!(ideSearchOptionChanged:),
-    );
+    let button =
+        crate::window::panels::header_button(mtm, name, description, Some(panel), sel!(ideSearchOptionChanged:));
     button.setButtonType(NSButtonType::PushOnPushOff);
-    crate::util::set_label(&button, Some(description));
     button.setState(NSControlStateValueOff);
     button.setContentTintColor(Some(&toggle_color(false)));
     button

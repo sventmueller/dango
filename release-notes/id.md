@@ -21,7 +21,7 @@ muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
 - Setiap file, terminal, halaman browser, thread AI, tampilan perbedaan, dan pratinjau adalah tab macOS di jendela
   folder tersebut. Tombol “+” di ujung bar tab dan ⌘T menawarkan file baru, terminal, browser, dan setiap agen yang
   terinstal, juga di worktree Git tersendiri.
-- Bar samping beralih antara File, Pencarian, Agen, Git, CI, dan Debug (⌘1–⌘6); klik kanan menyembunyikan yang tidak
+- Bar samping beralih antara File, Pencarian, Agen, Git, Debug, dan CI (⌘1–⌘6); klik kanan menyembunyikan yang tidak
   Anda gunakan. Bar alat berisi kembali dan maju melalui tempat yang Anda edit (⌃- dan ⌃⇧-), branch, Buka Cepat, dan
   ikhtisar Aktivitas.
 - “Buka di Samping” menampilkan dokumen kedua di samping yang pertama. Setelah mulai ulang atau crash, setiap jendela

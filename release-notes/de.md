@@ -21,7 +21,7 @@ auf AppKit geschrieben; WebKit steckt nur im Browser-Tab. Die Oberfläche gibt e
 - Jede Datei, jedes Terminal, jede Browserseite, jeder AI-Thread, Diff und jede Vorschau ist ein macOS-Tab im Fenster
   des Ordners. Das „+“ am Ende der Tableiste und ⌘T bieten eine neue Datei, ein Terminal, den Browser und jeden
   installierten Agenten an, auch in einem eigenen Git-Worktree.
-- Die Seitenleiste wechselt zwischen Dateien, Suche, Agenten, Git, CI und Debuggen (⌘1–⌘6); ein Rechtsklick blendet
+- Die Seitenleiste wechselt zwischen Dateien, Suche, Agenten, Git, Debuggen und CI (⌘1–⌘6); ein Rechtsklick blendet
   aus, was du nicht brauchst. In der Symbolleiste stehen Zurück und Vorwärts durch die Stellen, an denen du gearbeitet
   hast (⌃- und ⌃⇧-), der Branch, Schnell öffnen und die Aktivitätsübersicht.
 - „Daneben öffnen“ zeigt ein zweites Dokument neben dem ersten. Nach einem Neustart oder Absturz kommt jedes Fenster

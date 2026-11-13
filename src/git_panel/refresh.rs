@@ -33,6 +33,7 @@ impl GitPanel {
             .retain(|p| p.controller().is_some_and(|c| !std::ptr::eq(&*c, controller)));
         let panel = GitPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Git, &panel.ui().page);
+        controller.set_panel_accessory(Panel::Git, &panel.ui().header);
         panel.update_placeholder();
         controller.context().git.panels.borrow_mut().push(panel.clone());
         panel.start_refresh();

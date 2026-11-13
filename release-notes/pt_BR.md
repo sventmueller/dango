@@ -21,7 +21,7 @@ Rust sobre o AppKit; o WebKit aparece apenas na aba do navegador. A interface es
 - Cada arquivo, terminal, página do navegador, thread de IA, diff e pré-visualização é uma aba do macOS na janela da
   pasta. O “+” no fim da barra de abas e ⌘T oferecem um novo arquivo, um terminal, o navegador e cada agente instalado,
   também em um worktree Git próprio.
-- A barra lateral alterna entre Arquivos, Busca, Agentes, Git, CI e Depurar (⌘1–⌘6); um clique com o botão direito
+- A barra lateral alterna entre Arquivos, Busca, Agentes, Git, Depurar e CI (⌘1–⌘6); um clique com o botão direito
   oculta os que você não usa. A barra de ferramentas tem voltar e avançar pelos lugares que você editou (⌃- e ⌃⇧-), a
   branch, Abrir Rapidamente e a visão geral de Atividade.
 - “Abrir ao Lado” mostra um segundo documento ao lado do primeiro. Depois de reiniciar, ou de uma falha, cada janela

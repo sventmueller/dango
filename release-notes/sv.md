@@ -21,7 +21,7 @@ används bara i webbläsarfliken. Gränssnittet finns på 35 språk.
 - Varje fil, terminal, webbsida, AI-tråd, diff och förhandsvisning är en macOS-flik i mappens fönster. ”+” i slutet av
   flikfältet och ⌘T erbjuder en ny fil, en terminal, webbläsaren och varje installerad agent, även i en egen
   Git-worktree.
-- Sidofältet växlar mellan Filer, Sök, Agenter, Git, CI och Felsök (⌘1–⌘6); högerklicka för att gömma dem du inte
+- Sidofältet växlar mellan Filer, Sök, Agenter, Git, Felsök och CI (⌘1–⌘6); högerklicka för att gömma dem du inte
   använder. I verktygsfältet finns bakåt och framåt genom ställena du har redigerat (⌃- och ⌃⇧-), grenen, Öppna snabbt
   och översikten Aktivitet.
 - ”Öppna bredvid” visar ett andra dokument bredvid det första. Efter en omstart eller en krasch kommer varje fönster

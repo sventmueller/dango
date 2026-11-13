@@ -22,7 +22,7 @@ limbi.
 - Fiecare fișier, terminal, pagină de browser, conversație IA, diff și previzualizare este o filă macOS în fereastra
   dosarului. „+” de la capătul barei de file și ⌘T oferă un fișier nou, un terminal, browserul și fiecare agent
   instalat, inclusiv într-un worktree Git propriu.
-- Bara laterală comută între Fișiere, Căutare, Agenți, Git, CI și Depanați (⌘1–⌘6); un clic dreapta le ascunde pe cele
+- Bara laterală comută între Fișiere, Căutare, Agenți, Git, Depanați și CI (⌘1–⌘6); un clic dreapta le ascunde pe cele
   pe care nu le folosiți. Bara de instrumente conține înapoi și înainte prin locurile pe care le-ați editat (⌃- și ⌃⇧-),
   ramura, Deschidere rapidă și prezentarea Activitate.
 - „Deschideți alături” afișează un al doilea document lângă primul. După o repornire sau o închidere neașteptată,

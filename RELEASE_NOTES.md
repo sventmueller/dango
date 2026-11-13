@@ -21,7 +21,7 @@ WebKit appears only in the browser tab. The interface is in 35 languages.
 - Every file, terminal, browser page, AI thread, diff and preview is a macOS tab of the folder's window. The "+" at
   the end of the tab bar and ⌘T offer a new file, a terminal, the browser and each installed agent, also in a git
   worktree of its own.
-- The sidebar switches between Files, Search, Agents, Git, CI and Debug (⌘1–⌘6); a right-click hides the ones you do
+- The sidebar switches between Files, Search, Agents, Git, Debug and CI (⌘1–⌘6); a right-click hides the ones you do
   not use. The toolbar holds back and forward through the places you edited (⌃- and ⌃⇧-), the branch, Open Quickly and
   the Activity overview.
 - "Open to the Side" shows a second document beside the first. After a restart, or a crash, every window comes back

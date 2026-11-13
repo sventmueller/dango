@@ -172,7 +172,7 @@ eingearbeitet (markiert mit *Review*).
   Zielfeld. API-Keys: Dango liest Lowspeaks Schlüsselbund-Einträge nicht stillschweigend (jeder Zugriff löst einen
   Systemdialog aus, „Immer erlauben“ würde Lowspeaks Eintrag ändern), sondern bietet beim ersten Diktat an, den Key
   einmalig zu übernehmen und als eigenen Eintrag zu speichern. Modelle und Einstellungen (Suite `com.lowspeak.app`)
-  werden mitgenutzt; eigenes Log-Verzeichnis.
+  werden mitgenutzt; eigenes Log-Verzeichnis. *Geändert durch E103:* Die Einstellungen sind Dangos eigene.
 
 ## Aufbau
 ```
@@ -542,7 +542,8 @@ verbindlich. E89 und E90 sind mit dem gestrichenen MCP-Server (B11) entfallen.
 - **E91 Edit Prediction mit Copilot und lokal** (Ollama, LM Studio) hinter einer Schnittstelle.
 - **E92 Verhalten der Vorhersage:** nach Tipp-Pause, an die Revision gebunden, verworfen statt geraten.
 - **E93 Crate `ide-dap`:** Debug Adapter Protocol über den Supervisor, nur in vertrauten Ordnern.
-- **E94 Debugger:** sechstes Panel „Debuggen“ (⌘6, Abweichung von E55), Inspektor, Menü „Debuggen“.
+- **E94 Debugger:** Panel „Debuggen“ über CI, das als letztes steht (⌘5, CI ⌘6; Abweichung von E55), Inspektor, Menü
+  „Debuggen“.
 - **E95 Fuzzing mit cargo-fuzz** (`make fuzz`, nightly, außerhalb von `make check`), Funde werden Regressionstests.
 - **E96 proptest in `make check`** mit fester Fallzahl und festem Seed.
 - **E97 Ein App-Kontext statt Registern:** `thread_local!` nach Zustand und Lebensdauer aufgeteilt.
@@ -554,6 +555,16 @@ verbindlich. E89 und E90 sind mit dem gestrichenen MCP-Server (B11) entfallen.
 - **E102 Subagenten und Hintergrundprozesse im Sitzungskopf** *(umgesetzt)*: zwei Knöpfe (`person.2`,
   `terminal`) statt „Aufgaben dieser Sitzung“, Akzentfarbe solange etwas läuft, Zahlen im Tooltip; beendete
   Hintergrundprozesse bleiben in der Liste.
+- **E103 Diktat-Einstellungen in Dango** *(Entscheidung des Eigentümers, ändert E13)*: Modus und Modell (online
+  OpenAI und Groq, lokal Whisper und Parakeet), Sprache, Nachbearbeitung, Mikrofon (Liste der Eingabegeräte) und
+  Vokabular stellt der Nutzer in Einstellungen ▸ Diktat ein, ohne dass Lowspeak installiert sein muss. Sie stehen im
+  Eintrag `dictation` der versionierten `settings.json` (E26) mit lowspeaks gespeicherten Namen; ein unbekannter Name
+  fällt einzeln auf Lowspeaks Vorgabe zurück, und weil der Eintrag nur hinzukommt, braucht die Datei keine Migration.
+  Jedes Diktat liest sie beim Start. Weichen Lowspeaks Einstellungen (Suite `com.lowspeak.app`) von den Vorgaben ab,
+  bietet der Tab einmal an, sie zu übernehmen; danach liest Dango die Suite nicht mehr. Fehlt das gewählte lokale
+  Modell, lädt der Tab es mit lowspeaks `model_store::download` von Hugging Face in die Ordner, die auch Lowspeak
+  nutzt, mit Fortschritt und Abbrechen. API-Schlüssel lassen sich eingeben, ändern, entfernen und aus Lowspeak
+  übernehmen (R4 wie in E13).
 
 Risiken aus Phase 11: **R14** Einblendungen über das Kern-Attribut, **R15** Code verlässt den Mac (Copilot,
 Commit-Messages), **R16** Lieferkette der Debug-Adapter, **R17** Umbau ohne neue Funktion, **R18** nightly für

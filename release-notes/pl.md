@@ -21,7 +21,7 @@ WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 
 - Każdy plik, terminal, strona przeglądarki, wątek AI, widok różnic i podgląd to karta macOS w oknie folderu. „+” na
   końcu paska kart i ⌘T oferują nowy plik, terminal, przeglądarkę i każdego zainstalowanego agenta, również we własnym
   worktree Git.
-- Pasek boczny przełącza między widokami Pliki, Wyszukiwanie, Agenty, Git, CI i Debuguj (⌘1–⌘6); kliknięcie prawym
+- Pasek boczny przełącza między widokami Pliki, Wyszukiwanie, Agenty, Git, Debuguj i CI (⌘1–⌘6); kliknięcie prawym
   przyciskiem ukrywa te, których nie używasz. Na pasku narzędzi są Wstecz i Dalej przez edytowane miejsca (⌃- i ⌃⇧-),
   gałąź, Szybko otwórz i przegląd Aktywność.
 - „Otwórz obok” pokazuje drugi dokument obok pierwszego. Po ponownym uruchomieniu lub awarii każde okno wraca ze swoimi

@@ -22,8 +22,6 @@ use crate::util::{borderless_button, item, ns, pin_edges, set_action, set_target
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
-/// As large as the symbols in the files panel's title row.
-const SYMBOL_POINTS: f64 = 12.0;
 
 pub struct Ui {
     pub page: Retained<NSView>,
@@ -432,9 +430,7 @@ fn small_note(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
 
 fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Buttons) {
     let button = |name: &str, description: &str, action: Sel| {
-        let button = symbol_button(mtm, name, description, SYMBOL_POINTS, Some(panel), action);
-        button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        button
+        crate::window::panels::header_button(mtm, name, description, Some(panel), action)
     };
     let refresh = button("arrow.clockwise", t("Neu laden"), sel!(ideCiRefresh:));
     let start = button("play.circle", t("Lauf starten …"), sel!(ideCiStartRun:));
@@ -447,9 +443,7 @@ fn header(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, But
     let cancel = button("stop.circle", t("Lauf abbrechen …"), sel!(ideCiCancel:));
     let web = button("safari", t("Im Browser öffnen"), sel!(ideCiOpenWeb:));
     let account = button("person.crop.circle", t("Anmeldung"), sel!(ideCiAccount:));
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(2.0);
+    let row = crate::window::panels::header_row(mtm);
     for view in [&*refresh as &NSView, &start, &rerun, &cancel, &add, &web, &account] {
         row.addArrangedSubview(view);
     }

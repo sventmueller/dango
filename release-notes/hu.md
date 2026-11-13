@@ -21,7 +21,7 @@ AppKitre épül; WebKit csak a böngészőlapon jelenik meg. A felület 35 nyelv
 - Minden fájl, terminál, böngészőoldal, AI-szál, különbségnézet és előnézet a mappa ablakának egy-egy macOS-lapja. A
   lapsor végén lévő „+” és a ⌘T új fájlt, terminált, a böngészőt és minden telepített ügynököt felkínál, saját
   Git-worktree-ben is.
-- Az oldalsáv a Fájlok, Keresés, Ügynökök, Git, CI és Hibakeresés nézetek között vált (⌘1–⌘6); jobb kattintással
+- Az oldalsáv a Fájlok, Keresés, Ügynökök, Git, Hibakeresés és CI nézetek között vált (⌘1–⌘6); jobb kattintással
   elrejthetők a nem használt nézetek. Az eszközsoron található a vissza és előre lépés a szerkesztett helyek között (⌃-
   és ⌃⇧-), az ág, a Gyors megnyitás és a Tevékenység áttekintése.
 - A „Megnyitás mellette” egy második dokumentumot jelenít meg az első mellett. Újraindítás vagy összeomlás után minden

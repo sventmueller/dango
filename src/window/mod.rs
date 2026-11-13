@@ -92,11 +92,11 @@ impl Panel {
         Panel::Search,
         Panel::Agents,
         Panel::Git,
-        Panel::Ci,
         Panel::Debug,
+        Panel::Ci,
     ];
 
-    /// The tag of the menu items and buttons that show it.
+    /// The tag of the menu items and buttons that show it; windows save it, so it stays when the order changes.
     pub fn tag(self) -> isize {
         match self {
             Panel::Files => 1,

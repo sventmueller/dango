@@ -22,7 +22,7 @@ idiomes.
 - Cada fitxer, terminal, pàgina del navegador, fil d’IA, vista de diferències i previsualització és una pestanya de
   macOS a la finestra de la carpeta. El “+” al final de la barra de pestanyes i ⌘T ofereixen un fitxer nou, un terminal,
   el navegador i cada agent instal·lat, també en un worktree de Git propi.
-- La barra lateral canvia entre Fitxers, Cerca, Agents, Git, CI i Depura (⌘1–⌘6); amb un clic secundari amagues els que
+- La barra lateral canvia entre Fitxers, Cerca, Agents, Git, Depura i CI (⌘1–⌘6); amb un clic secundari amagues els que
   no fas servir. La barra d’eines conté enrere i endavant pels llocs que has editat (⌃- i ⌃⇧-), la branca, Obertura
   ràpida i la visió general d’Activitat.
 - “Obre al costat” mostra un segon document al costat del primer. Després d’un reinici, o d’un error inesperat, cada

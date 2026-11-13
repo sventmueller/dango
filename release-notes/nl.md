@@ -21,7 +21,7 @@ komt alleen voor in het browsertabblad. De interface is beschikbaar in 35 talen.
 - Elk bestand, elke terminal, browserpagina, AI-thread, verschillenweergave en voorvertoning is een macOS-tabblad in het
   venster van de map. De '+' aan het eind van de tabbladbalk en ⌘T bieden een nieuw bestand, een terminal, de browser en
   elke geïnstalleerde agent aan, ook in een eigen Git-worktree.
-- De navigatiekolom wisselt tussen Bestanden, Zoeken, Agents, Git, CI en Debug (⌘1–⌘6); met een klik met de
+- De navigatiekolom wisselt tussen Bestanden, Zoeken, Agents, Git, Debug en CI (⌘1–⌘6); met een klik met de
   rechtermuisknop verberg je wat je niet gebruikt. In de knoppenbalk staan terug en vooruit langs de plekken die je hebt
   bewerkt (⌃- en ⌃⇧-), de branch, 'Open snel' en het overzicht 'Activiteit'.
 - 'Open ernaast' toont een tweede document naast het eerste. Na een herstart of een crash komt elk venster terug met

@@ -20,7 +20,7 @@ brukes bare i nettleserfanen. Grensesnittet finnes på 35 språk.
 ## Vindu
 - Hver fil, terminal, nettleserside, KI-tråd, diff og forhåndsvisning er en macOS-fane i mappens vindu. «+» på slutten
   av fanelinjen og ⌘T tilbyr en ny fil, en terminal, nettleseren og hver installerte agent, også i en egen Git-worktree.
-- Sidepanelet bytter mellom Filer, Søk, Agenter, Git, CI og Feilsøk (⌘1–⌘6); et høyreklikk skjuler dem du ikke bruker.
+- Sidepanelet bytter mellom Filer, Søk, Agenter, Git, Feilsøk og CI (⌘1–⌘6); et høyreklikk skjuler dem du ikke bruker.
   Verktøylinjen har tilbake og fremover gjennom stedene du har redigert (⌃- og ⌃⇧-), branchen, Åpne raskt og oversikten
   Aktivitet.
 - «Åpne ved siden av» viser et annet dokument ved siden av det første. Etter en omstart, eller et krasj, kommer hvert

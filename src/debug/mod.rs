@@ -1,4 +1,4 @@
-//! The debugger (B1, E94): the sixth panel with sessions, threads, call stacks and breakpoints, the inspector with the
+//! The debugger (B1, E94): the panel with sessions, threads, call stacks and breakpoints, the inspector with the
 //! selected frame's variables and watch expressions, the Debug menu, the debug console as a tab, breakpoints in the
 //! gutter and the paused line with its values in the editor. The protocol and the adapters are `ide_dap`'s.
 

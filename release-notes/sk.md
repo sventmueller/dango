@@ -20,7 +20,7 @@ nad AppKitom; WebKit sa objavuje iba v tabe prehliadača. Rozhranie je k dispoz�
 ## Okno
 - Každý súbor, terminál, stránka prehliadača, AI vlákno, diff a náhľad je tab macOS v okne priečinka. „+“ na konci lišty
   tabov a ⌘T ponúkajú nový súbor, terminál, prehliadač a každého nainštalovaného agenta, aj vo vlastnom git worktree.
-- Postranný panel prepína medzi časťami Súbory, Vyhľadávanie, Agenti, Git, CI a Ladenie (⌘1–⌘6); kliknutím pravým
+- Postranný panel prepína medzi časťami Súbory, Vyhľadávanie, Agenti, Git, Ladenie a CI (⌘1–⌘6); kliknutím pravým
   tlačidlom skryjete tie, ktoré nepoužívate. Na paneli s nástrojmi je späť a dopredu cez miesta, ktoré ste upravovali
   (⌃- a ⌃⇧-), vetva, Rýchlo otvoriť a prehľad Aktivita.
 - „Otvoriť vedľa“ zobrazí druhý dokument vedľa prvého. Po reštarte alebo páde sa každé okno vráti so svojimi tabmi a

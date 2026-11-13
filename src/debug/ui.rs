@@ -15,14 +15,12 @@ use splat_i18n::t;
 
 use super::model::Command;
 use super::panel::DebugPanel;
-use crate::util::{label, ns, pin_edges, set_action, symbol_button};
+use crate::util::{label, ns, pin_edges, set_action};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
-/// The size of the controls' symbols, a little larger than the other panels' title buttons, as they are used often.
-const SYMBOL_POINTS: f64 = 14.0;
-/// The room each control takes, so the six can be told apart and hit.
-const CONTROL_SIZE: f64 = 24.0;
+/// How far AppKit's source list sets its disclosure triangles in past the panel's title.
+const OUTDENT: f64 = 5.5;
 
 /// Return and the keypad's Enter.
 const RETURN_KEYS: [u16; 2] = [36, 76];
@@ -40,6 +38,39 @@ define_class!(
     unsafe impl NSObjectProtocol for DebugOutlineView {}
 
     impl DebugOutlineView {
+        /// The disclosure triangle where the panel's title begins, not in the source list's margin; a row below a
+        /// section has its triangle where the section has its own.
+        #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn outline_cell_frame(&self, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
+            let frame = crate::window::file_outline::outdent(self, frame, OUTDENT, false);
+            if self.levelForRow(row) > 0 {
+                self.toward_leading(frame, false)
+            } else {
+                frame
+            }
+        }
+
+        /// The rows moved along with the triangles: a section's rows begin where its title does, and a note or a
+        /// switch, which has no triangle, where the section's triangle does.
+        #[unsafe(method(frameOfCellAtColumn:row:))]
+        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
+            if column != 0 {
+                return frame;
+            }
+            let frame = crate::window::file_outline::outdent(self, frame, OUTDENT, true);
+            if self.levelForRow(row) <= 0 {
+                frame
+            } else if self.is_flush(row) {
+                self.flush_with_section(frame, row)
+            } else {
+                self.toward_leading(frame, true)
+            }
+        }
+
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             let handled = crate::util::guarded(false, || {
@@ -73,6 +104,54 @@ impl DebugOutlineView {
         let source = unsafe { self.dataSource() }?;
         let object: Retained<AnyObject> = source.into();
         object.downcast::<DebugPanel>().ok()
+    }
+
+    /// Whether the row at `row` is a note or a switch right below a section.
+    fn is_flush(&self, row: isize) -> bool {
+        use super::model::rows::Key;
+        use super::model::variables::Row;
+        let Some(item) = self.itemAtRow(row) else {
+            return false;
+        };
+        matches!(
+            super::panel::key_of(&item),
+            Some(Key::Empty(_) | Key::Filter(_) | Key::Breakpoint(..))
+        ) || matches!(super::panel::row_of(&item), Some(Row::Empty(_)))
+    }
+
+    /// `frame` moved one level toward the leading edge; a cell keeps its far edge.
+    fn toward_leading(&self, frame: NSRect, cell: bool) -> NSRect {
+        crate::window::file_outline::outdent(self, frame, self.indentationPerLevel(), cell)
+    }
+
+    /// The cell at `row` beginning at the leading edge of its section's triangle.
+    fn flush_with_section(&self, frame: NSRect, row: isize) -> NSRect {
+        let Some(item) = self.itemAtRow(row) else {
+            return frame;
+        };
+        // SAFETY: The item comes from this outline view, which knows it and its parent.
+        let section = unsafe {
+            self.parentForItem(Some(&item))
+                .map(|parent| self.rowForItem(Some(&parent)))
+        };
+        let Some(section) = section.filter(|row| *row >= 0) else {
+            return self.toward_leading(frame, true);
+        };
+        // SAFETY: This class's own method, with its signature.
+        let chevron: NSRect = unsafe { msg_send![self, frameOfOutlineCellAtRow: section] };
+        if chevron.size.width <= 0.0 {
+            return self.toward_leading(frame, true);
+        }
+        let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
+        let (left, right) = if rtl {
+            (frame.origin.x, chevron.origin.x + chevron.size.width)
+        } else {
+            (chevron.origin.x, frame.origin.x + frame.size.width)
+        };
+        NSRect::new(
+            NSPoint::new(left, frame.origin.y),
+            NSSize::new((right - left).max(0.0), frame.size.height),
+        )
     }
 }
 
@@ -163,7 +242,7 @@ impl Ui {
         content.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 0.0,
             left: 0.0,
-            bottom: MARGIN,
+            bottom: 0.0,
             right: 0.0,
         });
         page.addSubview(&content);
@@ -176,9 +255,11 @@ impl Ui {
             t("Debug-Sitzungen und Haltepunkte"),
             Some(sel!(ideDebugDoubleClicked:)),
         );
-        // The list comes first, so ⌘6 puts the focus there (E54).
+        // The list is the first subview though it shows below the start row, so ⌘5 puts the focus there (E54).
+        content.addArrangedSubview(&list);
+        content.insertArrangedSubview_atIndex(&start_row, 0);
+        content.insertArrangedSubview_atIndex(&untrusted, 1);
         for (view, inset) in [(&*list as &NSView, 0.0), (&untrusted, MARGIN), (&start_row, MARGIN)] {
-            content.addArrangedSubview(view);
             view.leadingAnchor()
                 .constraintEqualToAnchor_constant(&content.leadingAnchor(), inset)
                 .setActive(true);
@@ -263,28 +344,19 @@ impl InspectorUi {
 
 /// The six controls of the title row (E94), SF Symbols named for VoiceOver.
 fn header(mtm: MainThreadMarker, panel: &DebugPanel) -> (Retained<NSStackView>, Vec<Retained<NSButton>>) {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(2.0);
+    let stack = crate::window::panels::header_row(mtm);
     let keymap = ide_core::keymap::Keymap::load(&ide_core::keymap::Keymap::user_path()).0;
     let controls: Vec<Retained<NSButton>> = Command::CONTROLS
         .into_iter()
         .enumerate()
         .map(|(index, command)| {
             let (symbol, name) = control_look(command);
-            let button = symbol_button(mtm, symbol, name, SYMBOL_POINTS, Some(panel), sel!(ideDebugControl:));
+            let button = crate::window::panels::header_button(mtm, symbol, name, Some(panel), sel!(ideDebugControl:));
             button.setTag(isize::try_from(index).unwrap_or(-1));
-            crate::util::set_label(&button, Some(name));
             if let Some(keys) = shortcut_of(command).and_then(|c| keymap.key(c)) {
                 button.setToolTip(Some(&ns(&format!("{name} ({})", key_symbols(keys)))));
             }
             button.setEnabled(false);
-            for constraint in [
-                button.widthAnchor().constraintEqualToConstant(CONTROL_SIZE),
-                button.heightAnchor().constraintEqualToConstant(CONTROL_SIZE),
-            ] {
-                constraint.setActive(true);
-            }
             stack.addArrangedSubview(&button);
             button
         })
@@ -362,8 +434,6 @@ fn outline(
     unsafe { view.setOutlineTableColumn(Some(&column)) };
     view.setHeaderView(None);
     view.setStyle(NSTableViewStyle::SourceList);
-    // A floating group row is drawn faded over the rows scrolling under it, so the first section looked disabled.
-    view.setFloatsGroupRows(false);
     view.setIndentationPerLevel(12.0);
     view.setAutoresizesOutlineColumn(false);
     view.setColumnAutoresizingStyle(
@@ -539,12 +609,27 @@ pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     cell.into_super()
 }
 
-/// The title of a section row.
+/// The title of a section row, level with the row's disclosure triangle.
 pub fn section(mtm: MainThreadMarker, title: &str) -> Retained<NSView> {
+    let cell = objc2_app_kit::NSTableCellView::new(mtm);
     let text = label(mtm, title);
     text.setFont(Some(&NSFont::boldSystemFontOfSize(11.0)));
     text.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    text.into_super().into_super()
+    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    text.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
+    cell.addSubview(&text);
+    text.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        text.leadingAnchor()
+            .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
+        text.trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        text.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    // Not the cell's text field: the source list would draw it dimmer than the panel's title.
+    cell.into_super()
 }
 
 #[cfg(test)]

@@ -21,7 +21,7 @@ scritta in Rust su AppKit; WebKit compare solo nel pannello del browser. L’int
 - Ogni file, terminale, pagina del browser, thread AI, vista delle differenze e anteprima è un pannello macOS nella
   finestra della cartella. Il “+” alla fine della barra dei pannelli e ⌘T offrono un nuovo file, un terminale, il
   browser e ogni agente installato, anche in un worktree Git dedicato.
-- La barra laterale passa tra File, Ricerca, Agenti, Git, CI e Debug (⌘1–⌘6); con un clic destro nascondi quelli che non
+- La barra laterale passa tra File, Ricerca, Agenti, Git, Debug e CI (⌘1–⌘6); con un clic destro nascondi quelli che non
   usi. La barra strumenti contiene indietro e avanti tra i punti che hai modificato (⌃- e ⌃⇧-), il branch, Apertura
   rapida e la panoramica Attività.
 - “Apri a lato” mostra un secondo documento accanto al primo. Dopo un riavvio, o un arresto anomalo, ogni finestra torna

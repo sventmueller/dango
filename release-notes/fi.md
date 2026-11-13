@@ -22,7 +22,7 @@ saatavilla 35 kielellä.
 - Jokainen tiedosto, pääte, selainsivu, AI-ketju, eronäkymä ja esikatselu on macOS-välilehti kansion ikkunassa.
   Välilehtipalkin lopussa oleva ”+” ja ⌘T tarjoavat uuden tiedoston, päätteen, selaimen ja jokaisen asennetun agentin,
   myös omassa Git-worktreessaan.
-- Sivupalkki vaihtaa näkymien Tiedostot, Haku, Agentit, Git, CI ja Virheenjäljitys välillä (⌘1–⌘6); oikean painikkeen
+- Sivupalkki vaihtaa näkymien Tiedostot, Haku, Agentit, Git, Virheenjäljitys ja CI välillä (⌘1–⌘6); oikean painikkeen
   osoituksella piilotat ne, joita et käytä. Työkalupalkissa ovat siirtyminen taakse- ja eteenpäin muokkaamiesi kohtien
   läpi (⌃- ja ⌃⇧-), haara, Avaa nopeasti ja Toiminta-yleiskatsaus.
 - ”Avaa viereen” näyttää toisen dokumentin ensimmäisen vieressä. Uudelleenkäynnistyksen tai kaatumisen jälkeen jokainen

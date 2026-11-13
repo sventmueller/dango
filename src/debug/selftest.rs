@@ -191,6 +191,57 @@ pub fn outline(controller: &WindowController) -> Option<Retained<NSOutlineView>>
     Some(of(controller)?.ui().outline.clone())
 }
 
+/// Where the parts of the panel sit, in the page's coordinates, x from its leading edge and y from its top.
+#[derive(Debug, Default)]
+pub struct Layout {
+    /// The first section's disclosure triangle: where it begins and ends.
+    pub chevron: (f64, f64),
+    /// Where the first section's title begins.
+    pub section_title: f64,
+    /// Where the text of the note below the first section begins.
+    pub note: f64,
+    /// The top of the configurations' popup and of the list.
+    pub start_top: f64,
+    pub list_top: f64,
+}
+
+/// The layout of the panel while its first section is open with nothing in it.
+pub fn layout(controller: &WindowController) -> Option<Layout> {
+    let panel = of(controller)?;
+    let ui = panel.ui();
+    let page = &ui.page;
+    page.layoutSubtreeIfNeeded();
+    let outline = &ui.outline;
+    let in_page = |view: &NSView| -> objc2_foundation::NSRect {
+        let rect = view.convertRect_toView(view.bounds(), Some(page));
+        if page.isFlipped() {
+            rect
+        } else {
+            let top = page.bounds().size.height - (rect.origin.y + rect.size.height);
+            objc2_foundation::NSRect::new(objc2_foundation::NSPoint::new(rect.origin.x, top), rect.size)
+        }
+    };
+    let text_start = |row: isize| -> Option<f64> {
+        let view = outline.viewAtColumn_row_makeIfNecessary(0, row, true)?;
+        let field = view
+            .subviews()
+            .iter()
+            .find(|sub| sub.downcast_ref::<objc2_app_kit::NSTextField>().is_some())?;
+        Some(in_page(&field).origin.x)
+    };
+    // SAFETY: The superclass's method, with its signature; the row exists.
+    let chevron: objc2_foundation::NSRect = unsafe { objc2::msg_send![&**outline, frameOfOutlineCellAtRow: 0isize] };
+    let chevron = outline.convertRect_toView(chevron, Some(page));
+    let list = outline.enclosingScrollView()?;
+    Some(Layout {
+        chevron: (chevron.origin.x, chevron.origin.x + chevron.size.width),
+        section_title: text_start(0)?,
+        note: text_start(1)?,
+        start_top: in_page(&ui.configurations).origin.y,
+        list_top: in_page(&list).origin.y,
+    })
+}
+
 pub fn inspector_page(controller: &WindowController) -> Option<Retained<NSView>> {
     Some(of(controller)?.ui().inspector.page.clone())
 }

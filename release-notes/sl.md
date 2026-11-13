@@ -20,7 +20,7 @@ Rust na ogrodju AppKit; WebKit se pojavi le v zavihku brskalnika. Vmesnik je na 
 - Vsaka datoteka, terminal, stran brskalnika, nit AI, diff in predogled je zavihek macOS v oknu mape. »+« na koncu
   vrstice zavihkov in ⌘T ponujata novo datoteko, terminal, brskalnik in vsakega nameščenega agenta, tudi v lastnem
   worktreeju Git.
-- Stranska vrstica preklaplja med razdelki Datoteke, Iskanje, Agenti, Git, CI in Odpravljanje napak (⌘1–⌘6); z desnim
+- Stranska vrstica preklaplja med razdelki Datoteke, Iskanje, Agenti, Git, Odpravljanje napak in CI (⌘1–⌘6); z desnim
   klikom skrijete tiste, ki jih ne uporabljate. V orodni vrstici so nazaj in naprej po mestih, ki ste jih urejali (⌃- in
   ⌃⇧-), veja, Hitro odpri in pregled Aktivnost.
 - »Odpri ob strani« prikaže drugi dokument ob prvem. Po ponovnem zagonu ali sesutju se vsako okno vrne s svojimi

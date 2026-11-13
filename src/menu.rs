@@ -212,8 +212,8 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             panel(Panel::Search, "panel.search"),
             panel(Panel::Agents, "panel.agents"),
             panel(Panel::Git, "panel.git"),
-            panel(Panel::Ci, "panel.ci"),
             panel(Panel::Debug, "panel.debug"),
+            panel(Panel::Ci, "panel.ci"),
             separator(mtm),
             item(
                 mtm,

@@ -504,7 +504,8 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
     App-Ordner (wie vtsls); braucht Node.
   - Python: debugpy aus der Umgebung des Projekts; fehlt es, Installationsbefehl in der Statusleiste.
 - **E94 Debugger in Seitenleiste, Inspektor und Menü** *(Abweichung von E55, fünf Panels; Aufteilung nach E101)*:
-  - Panel „Debuggen“ als sechstes Panel, ⌘6, für die Navigation: Sitzungen, Threads mit Aufrufliste, Haltepunkte.
+  - Panel „Debuggen“ über CI, das als letztes steht, ⌘5 (CI ⌘6), für die Navigation: Sitzungen, Threads mit
+    Aufrufliste, Haltepunkte.
     In seiner Titelzeile die Steuerknöpfe Fortsetzen, Überspringen, Hineinspringen, Heraus, Neu starten, Stopp als
     SF Symbols mit Beschriftung; was der Adapter nicht kann oder gerade nicht geht, ist ausgegraut.
   - Inspektor am hinteren Fensterrand (`NSSplitViewItem` als Inspektor, macOS 14+) für die Details des gewählten
@@ -543,7 +544,7 @@ Auswirkung: Haltepunkte, Schrittbetrieb und Variablen in Dango statt in einem zw
   aktuelle Datei. Starten und Anhängen an einen laufenden Prozess.
 
 Abnahme: Selftest mit Mitschnitt eines DAP-Adapters (wie die Claude-Mitschnitte) für das Protokoll; dazu
-Fenster-Selftests für Fokus mit ⌘6, Wiederherstellen von Panel und Konsole, Mitwandern der Haltepunkte bei Änderungen
+Fenster-Selftests für Fokus mit ⌘5, Wiederherstellen von Panel und Konsole, Mitwandern der Haltepunkte bei Änderungen
 Knöpfe und Menüpunkte, die ausgegraut sind, wenn der Adapter sie nicht kann, Inspektor mit ⌥⌘I und beim Tabwechsel; `make test-integration` mit lldb-dap an einem
 Rust-Testprogramm, dlv an einem Go-Programm, js-debug an Node, jeweils Starten und Anhängen.
 

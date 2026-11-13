@@ -20,7 +20,7 @@ Rustu na AppKitu; WebKit se pojavljuje samo u kartici preglednika. Sučelje je d
 - Svaka datoteka, terminal, stranica preglednika, AI nit, prikaz razlika i pregled zasebna je macOS kartica u prozoru
   mape. Znak “+” na kraju trake kartica i ⌘T nude novu datoteku, terminal, preglednik i svaki instalirani agent, i to u
   vlastitom Git worktreeju.
-- Rubni stupac prebacuje između prikaza Datoteke, Pretraga, Agenti, Git, CI i Otkloni pogreške (⌘1–⌘6); desnim klikom
+- Rubni stupac prebacuje između prikaza Datoteke, Pretraga, Agenti, Git, Otkloni pogreške i CI (⌘1–⌘6); desnim klikom
   skrivate one koje ne koristite. Alatna traka sadrži Natrag i Naprijed kroz mjesta koja ste uređivali (⌃- i ⌃⇧-),
   granu, Brzo otvaranje i pregled Aktivnost.
 - “Otvori sa strane” prikazuje drugi dokument pokraj prvog. Nakon ponovnog pokretanja ili rušenja svaki se prozor vraća

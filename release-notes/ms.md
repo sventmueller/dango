@@ -21,7 +21,7 @@ AppKit; WebKit hanya digunakan dalam tab pelayar. Antara muka tersedia dalam 35 
 - Setiap fail, terminal, halaman pelayar, thread AI, paparan perbezaan dan pratonton ialah tab macOS dalam tetingkap
   folder. “+” di hujung bar tab dan ⌘T menawarkan fail baharu, terminal, pelayar dan setiap ejen yang dipasang, juga
   dalam worktree Git tersendiri.
-- Bar sisi bertukar antara Fail, Carian, Ejen, Git, CI dan Nyahpepijat (⌘1–⌘6); klik kanan menyembunyikan yang tidak
+- Bar sisi bertukar antara Fail, Carian, Ejen, Git, Nyahpepijat dan CI (⌘1–⌘6); klik kanan menyembunyikan yang tidak
   anda gunakan. Bar alat memuatkan undur dan maju melalui tempat yang anda sunting (⌃- dan ⌃⇧-), branch, Buka Dengan
   Pantas dan gambaran keseluruhan Aktiviti.
 - “Buka di Sebelah” menunjukkan dokumen kedua di sebelah dokumen pertama. Selepas mula semula, atau ranap, setiap

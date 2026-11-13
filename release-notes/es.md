@@ -21,7 +21,7 @@ Rust sobre AppKit; WebKit solo aparece en la pestaña del navegador. La interfaz
 - Cada archivo, terminal, página del navegador, hilo de IA, diff y vista previa es una pestaña de macOS en la ventana de
   la carpeta. El «+» al final de la barra de pestañas y ⌘T ofrecen un archivo nuevo, un terminal, el navegador y cada
   agente instalado, también en un worktree de Git propio.
-- La barra lateral cambia entre Archivos, Búsqueda, Agentes, Git, CI y Depurar (⌘1–⌘6); con un clic secundario ocultas
+- La barra lateral cambia entre Archivos, Búsqueda, Agentes, Git, Depurar y CI (⌘1–⌘6); con un clic secundario ocultas
   los que no uses. La barra de herramientas reúne atrás y adelante por los lugares que has editado (⌃- y ⌃⇧-), la rama,
   Abrir rápidamente y el resumen de Actividad.
 - «Abrir al lado» muestra un segundo documento junto al primero. Tras un reinicio, o un fallo, cada ventana vuelve con

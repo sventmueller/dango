@@ -113,11 +113,6 @@ define_class!(
             })
         }
 
-        #[unsafe(method(outlineView:isGroupItem:))]
-        fn is_group(&self, view: &NSOutlineView, item: &AnyObject) -> bool {
-            guarded(false, || self.is_section(view, item))
-        }
-
         #[unsafe(method(outlineView:shouldSelectItem:))]
         fn should_select(&self, view: &NSOutlineView, item: &AnyObject) -> bool {
             guarded(false, || !self.is_section(view, item))

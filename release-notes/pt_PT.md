@@ -21,7 +21,7 @@ em Rust sobre o AppKit; o WebKit surge apenas no separador do navegador. A inter
 - Cada ficheiro, terminal, página do navegador, thread de IA, diff e pré-visualização é um separador do macOS na janela
   da pasta. O “+” no fim da barra de separadores e ⌘T oferecem um novo ficheiro, um terminal, o navegador e cada agente
   instalado, também num worktree Git próprio.
-- A barra lateral alterna entre Ficheiros, Pesquisa, Agentes, Git, CI e Depurar (⌘1–⌘6); um clique com o botão direito
+- A barra lateral alterna entre Ficheiros, Pesquisa, Agentes, Git, Depurar e CI (⌘1–⌘6); um clique com o botão direito
   oculta os que não utiliza. A barra de ferramentas contém recuar e avançar pelos locais editados (⌃- e ⌃⇧-), o branch,
   Abrir rapidamente e a vista geral de Atividade.
 - “Abrir ao lado” mostra um segundo documento ao lado do primeiro. Após um reinício, ou uma falha, cada janela regressa

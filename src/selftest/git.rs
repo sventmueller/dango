@@ -304,6 +304,25 @@ fn lists_changes(controller: &WindowController) -> bool {
     panel::seen(controller).is_some_and(|seen| [README, LIBRARY, NOTES].iter().all(|name| has(&seen.changes, name)))
 }
 
+/// The remote buttons share the line of the panel's title, at its right end, with the branch below that line.
+fn title_row(controller: &WindowController) {
+    let row = controller.panel_title_row();
+    let Some((title, row)) = row else {
+        return check("the Git panel's remote buttons sit in its title row", false, "no panel");
+    };
+    check(
+        "the Git panel's remote buttons sit in its title row",
+        title == Panel::Git.title()
+            && (row.title_middle - row.buttons_middle).abs() < 3.0
+            && row.width - row.buttons_end < 10.0
+            && row.buttons_start - row.text_end > 20.0,
+        format!(
+            "{title:?} at {:.1}, buttons at {:.1} from {:.1} to {:.1} of {:.1}",
+            row.title_middle, row.buttons_middle, row.buttons_start, row.buttons_end, row.width
+        ),
+    );
+}
+
 fn listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
@@ -331,6 +350,7 @@ fn listed(root: PathBuf, ok: bool) {
         tip == (Some(splat_i18n::tf("{}, {} Änderungen", &[Panel::Git.title(), "3"])), 0),
         format!("{tip:?}"),
     );
+    title_row(&controller);
     panel::select_file(&controller, Path::new(README));
     if let Some(window) = controller.window() {
         snapshot(&window, "git-changes");

@@ -27,6 +27,10 @@ const TREE_OUTDENT: f64 = 4.0;
 const ACCESSORY_DROP: f64 = 2.0;
 /// How far a title's buttons keep from the sidebar's trailing edge.
 pub const ACCESSORY_INSET: f64 = 6.0;
+/// The size of the symbols of every panel's title buttons.
+pub const HEADER_POINTS: f64 = 14.0;
+/// The room between a panel's title buttons.
+pub const HEADER_SPACING: f64 = 2.0;
 
 /// Where the parts of a panel's title row sit, in the panel's coordinates.
 #[cfg(feature = "selftest")]
@@ -39,6 +43,9 @@ pub struct TitleRow {
     pub buttons_end: f64,
     pub text_end: f64,
     pub width: f64,
+    /// The symbol configuration of each button in a title row's stack of buttons, and the stack's spacing.
+    pub button_symbols: Vec<Option<Retained<objc2_app_kit::NSImageSymbolConfiguration>>>,
+    pub button_spacing: f64,
 }
 
 pub struct Panels {
@@ -258,7 +265,25 @@ impl Panels {
                 rect.origin.y + rect.size.height
             }
         });
+        let inner = buttons
+            .firstObject()
+            .and_then(|view| view.downcast::<NSStackView>().ok());
         TitleRow {
+            button_symbols: inner
+                .as_ref()
+                .map(|stack| {
+                    stack
+                        .arrangedSubviews()
+                        .iter()
+                        .map(|view| {
+                            view.downcast::<objc2_app_kit::NSButton>()
+                                .ok()
+                                .and_then(|button| button.symbolConfiguration())
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            button_spacing: inner.map_or(f64::NAN, |stack| stack.spacing()),
             title_start: title.origin.x,
             title_middle: middle(title),
             buttons_middle: first.map_or(f64::NAN, middle),
@@ -311,6 +336,29 @@ impl Panels {
         }
         page
     }
+}
+
+/// A row for a panel's title buttons, as close together as every panel has them.
+pub fn header_row(mtm: MainThreadMarker) -> Retained<NSStackView> {
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setSpacing(HEADER_SPACING);
+    row
+}
+
+/// A title button of a panel: the SF Symbol `name` at the size every panel's has, named `title` for VoiceOver and
+/// its tooltip, sending `action` to `target`.
+pub fn header_button(
+    mtm: MainThreadMarker,
+    name: &str,
+    title: &str,
+    target: Option<&objc2::runtime::AnyObject>,
+    action: Sel,
+) -> Retained<objc2_app_kit::NSButton> {
+    let button = crate::util::symbol_button(mtm, name, title, HEADER_POINTS, target, action);
+    button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+    crate::util::set_label(&button, Some(title));
+    button
 }
 
 /// A symbol, a title, a line of explanation and maybe a button, centred, as macOS shows a place without content.

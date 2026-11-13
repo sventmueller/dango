@@ -1,4 +1,4 @@
-//! The `debug` scenario (B1, E94, E101): the sixth panel takes the focus with ⌘6, breakpoints set by a click and ⌘\
+//! The `debug` scenario (B1, E94, E101): the fifth panel takes the focus with ⌘5, breakpoints set by a click and ⌘\
 //! move with edits and draw outlined when switched off, the inspector follows ⌥⌘I and the tab in front, and a session
 //! on the scripted adapter stops at a breakpoint: controls and menu items greyed out where the adapter or the moment
 //! cannot, the call stack, variables with children, a watch, the console's evaluation, the values at the line ends,
@@ -101,7 +101,7 @@ fn enabled(menu: &[(String, bool)], title: &str) -> Option<bool> {
     menu.iter().find(|(t, _)| t == title).map(|(_, on)| *on)
 }
 
-/// ⌘6 shows the debug panel and puts the focus into its list; with no session, every control and menu item that acts
+/// ⌘5 shows the debug panel and puts the focus into its list; with no session, every control and menu item that acts
 /// on one is greyed out.
 fn focus(root: PathBuf) {
     let Some(controller) = front(&root) else {
@@ -119,7 +119,7 @@ fn focus(root: PathBuf) {
     let mut frame = window.frame();
     frame.size.width = 1700.0;
     window.setFrame_display(frame, true);
-    let went = press(&window, "6", 22, NSEventModifierFlags::Command);
+    let went = press(&window, "5", 23, NSEventModifierFlags::Command);
     let outline = debug::outline(&controller);
     let focused = window
         .firstResponder()
@@ -127,7 +127,7 @@ fn focus(root: PathBuf) {
         .zip(outline)
         .is_some_and(|(focus, outline)| focus.isDescendantOf(&outline));
     check(
-        "⌘6 shows the debug panel and puts the focus into its list",
+        "⌘5 shows the debug panel and puts the focus into its list",
         matches!(went, Went::Menu(_)) && controller.inspect().panel == Some(Panel::Debug) && focused,
         format!("{went}, {:?}, focus in the list: {focused}", controller.inspect().panel),
     );
@@ -157,8 +157,66 @@ fn focus(root: PathBuf) {
             && seen.configurations.iter().any(|c| c == t("An Prozess anhängen …")),
         format!("{:?}", seen.configurations),
     );
+    layout(&controller);
     controller.open_file(&root.join("src/main.rs"));
     main_after(PAUSE, move || breakpoints(root));
+}
+
+/// The panel in the sidebar's layout: Debug above CI, which comes last; the controls as large and as far apart as
+/// the search panel's, the triangle before a section's title, the note flush with the panel's title, and the start
+/// row above the list.
+fn layout(controller: &WindowController) {
+    let order = controller.shown_symbols();
+    check(
+        "the activity bar lists Debug above CI, which comes last",
+        order.ends_with(&[Panel::Debug, Panel::Ci]),
+        format!("{order:?}"),
+    );
+    let debug = controller.panel_title_row().map(|(_, row)| row);
+    controller.activate_panel(Panel::Search);
+    let search = controller.panel_title_row().map(|(_, row)| row);
+    controller.activate_panel(Panel::Debug);
+    let (Some(debug), Some(search)) = (debug, search) else {
+        return check("the debug and search panels have title rows", false, "");
+    };
+    let same_size = |row: &crate::window::panels::TitleRow, other: &crate::window::panels::TitleRow| {
+        let first = other.button_symbols.first().cloned().flatten();
+        !row.button_symbols.is_empty()
+            && row
+                .button_symbols
+                .iter()
+                .all(|symbols| symbols.is_some() && symbols.as_deref() == first.as_deref())
+    };
+    check(
+        "the controls are as large and as close together as the search panel's buttons, on the title's line",
+        same_size(&debug, &search)
+            && same_size(&search, &debug)
+            && debug.button_spacing == search.button_spacing
+            && (debug.title_middle - debug.buttons_middle).abs() < 3.0,
+        format!(
+            "{} and {} buttons, {:.1} and {:.1} pt apart",
+            debug.button_symbols.len(),
+            search.button_symbols.len(),
+            debug.button_spacing,
+            search.button_spacing
+        ),
+    );
+    let seen = debug::layout(controller);
+    let Some(seen) = seen else {
+        return check("the debug panel lays out", false, "");
+    };
+    check(
+        "a section's triangle comes before its title, and the note below starts where the panel's title does",
+        seen.chevron.1 <= seen.section_title
+            && (seen.chevron.0 - debug.title_start).abs() < 3.0
+            && (seen.note - debug.title_start).abs() < 3.0,
+        format!("{seen:?}, panel title at {:.1}", debug.title_start),
+    );
+    check(
+        "the start row sits above the list",
+        seen.start_top < seen.list_top && seen.start_top < 12.0,
+        format!("{seen:?}"),
+    );
 }
 
 /// A click in the gutter and ⌘\ set breakpoints, a switched-off one draws outlined, and typed and removed lines move

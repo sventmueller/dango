@@ -22,7 +22,7 @@ est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du na
 - Chaque fichier, terminal, page web, fil IA, diff et aperçu est un onglet macOS dans la fenêtre du dossier. Le « + » au
   bout de la barre d’onglets et ⌘T proposent un nouveau fichier, un terminal, le navigateur et chaque agent installé, y
   compris dans son propre worktree Git.
-- La barre latérale bascule entre Fichiers, Recherche, Agents, Git, CI et Déboguer (⌘1–⌘6) ; un clic droit masque ceux
+- La barre latérale bascule entre Fichiers, Recherche, Agents, Git, Déboguer et CI (⌘1–⌘6) ; un clic droit masque ceux
   dont vous ne vous servez pas. La barre d’outils contient Précédent et Suivant à travers les endroits que vous avez
   modifiés (⌃- et ⌃⇧-), la branche, Ouverture rapide et la vue d’ensemble Activité.
 - « Ouvrir à côté » affiche un second document à côté du premier. Après un redémarrage, ou un plantage, chaque fenêtre

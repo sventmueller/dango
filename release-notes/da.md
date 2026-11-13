@@ -21,7 +21,7 @@ findes kun i browserfanen. Brugerfladen findes på 35 sprog.
 - Hvert arkiv, hver terminal, hver browserside, hver AI-tråd, hver diff og hvert eksempel er en macOS-fane i mappens
   vindue. “+” i slutningen af fanelinjen og ⌘T tilbyder et nyt arkiv, en terminal, browseren og hver installeret agent,
   også i sin egen Git-worktree.
-- Indholdsoversigten skifter mellem Arkiver, Søgning, Agenter, Git, CI og Fejlfind (⌘1–⌘6); med et højreklik skjuler du
+- Indholdsoversigten skifter mellem Arkiver, Søgning, Agenter, Git, Fejlfind og CI (⌘1–⌘6); med et højreklik skjuler du
   dem, du ikke bruger. Værktøjslinjen rummer tilbage og frem gennem de steder, du har redigeret (⌃- og ⌃⇧-), branchen,
   Åbn hurtigt og oversigten Aktivitet.
 - “Åbn ved siden af” viser et andet dokument ved siden af det første. Efter en genstart eller et nedbrud vender hvert

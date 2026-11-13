@@ -21,7 +21,7 @@ Uygulama AppKit üzerinde Rust ile yazılmıştır; WebKit yalnızca tarayıcı 
 - Her dosya, terminal, tarayıcı sayfası, AI sohbeti, diff ve önizleme, klasörün penceresinde bir macOS sekmesidir. Sekme
   çubuğunun sonundaki “+” ve ⌘T yeni bir dosya, bir terminal, tarayıcı ve kurulu her ajanı sunar; bunlar kendi Git
   worktree’sinde de açılabilir.
-- Kenar çubuğu Dosyalar, Arama, Ajanlar, Git, CI ve Hata Ayıkla arasında geçiş yapar (⌘1–⌘6); kullanmadıklarınızı sağ
+- Kenar çubuğu Dosyalar, Arama, Ajanlar, Git, Hata Ayıkla ve CI arasında geçiş yapar (⌘1–⌘6); kullanmadıklarınızı sağ
   tıklayarak gizleyebilirsiniz. Araç çubuğunda düzenlediğiniz yerler arasında geri ve ileri gitme (⌃- ve ⌃⇧-), dal,
   Hızlı Aç ve Etkinlik genel görünümü bulunur.
 - “Yanda Aç” ikinci bir belgeyi ilkinin yanında gösterir. Yeniden başlatma ya da çökme sonrasında her pencere

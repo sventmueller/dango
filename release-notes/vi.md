@@ -20,7 +20,7 @@ soạn thảo, terminal, trình duyệt, Git, CI, trình gỡ lỗi và các lu�
 - Mỗi tệp, terminal, trang web, luồng AI, diff và bản xem trước là một tab macOS trong cửa sổ của thư mục. Nút “+” ở
   cuối thanh tab và ⌘T cung cấp tệp mới, terminal, trình duyệt và từng tác nhân đã cài, kể cả trong một Git worktree
   riêng.
-- Thanh bên chuyển giữa Tệp, Tìm kiếm, Tác nhân, Git, CI và Gỡ lỗi (⌘1–⌘6); bấm chuột phải để ẩn những mục bạn không
+- Thanh bên chuyển giữa Tệp, Tìm kiếm, Tác nhân, Git, Gỡ lỗi và CI (⌘1–⌘6); bấm chuột phải để ẩn những mục bạn không
   dùng. Thanh công cụ chứa nút lùi và tiến qua những chỗ bạn đã sửa (⌃- và ⌃⇧-), nhánh, Mở nhanh và tổng quan Hoạt động.
 - “Mở ở Bên cạnh” hiển thị tài liệu thứ hai bên cạnh tài liệu đầu tiên. Sau khi khởi động lại hoặc gặp sự cố, mọi cửa sổ
   trở lại cùng các tab của nó, và các trình soạn thảo có văn bản chưa lưu sẽ trở lại cùng văn bản đó.
