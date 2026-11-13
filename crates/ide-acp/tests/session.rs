@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use ide_acp::test_agent::{COMMAND_OUTPUT, SESSION};
+use ide_acp::test_agent::{COMMAND_OUTPUT, CRASH, SESSION};
 use ide_acp::{Choice, Event, Launch, Session, SessionError};
 use ide_process::Supervisor;
 use ide_thread::{
@@ -20,6 +20,15 @@ struct Events(Mutex<Vec<Event>>);
 impl Events {
     fn has(&self, wanted: impl Fn(&Event) -> bool) -> bool {
         self.0.lock().unwrap().iter().any(wanted)
+    }
+
+    fn ends(&self) -> usize {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|e| matches!(e, Event::Ended { .. }))
+            .count()
     }
 }
 
@@ -462,4 +471,85 @@ fn a_missing_program_is_reported_before_anything_starts_and_errors_read_plainly(
             "the session has ended"
         ]
     );
+}
+
+/// Waits until the session ended on its own, then checks that it stays ended once, also after `stop`.
+fn ended_once(session: &Session, events: &Events, supervisor: &Supervisor) {
+    wait("the end", || session.is_ended() && events.ends() == 1);
+    wait("no agent process left", || supervisor.running().is_empty());
+    assert_eq!(session.send(message("hello")), Err(SessionError::Closed));
+    session.stop(Duration::from_millis(100));
+    std::thread::sleep(Duration::from_millis(300));
+    assert_eq!(events.ends(), 1, "stop after the end ends nothing more");
+}
+
+#[test]
+fn an_agent_that_exits_mid_turn_ends_the_session_with_its_reason() {
+    let (session, events, supervisor) = ready("basic");
+    session.send(message("crash now")).unwrap();
+    ended_once(&session, &events, &supervisor);
+    assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == CRASH)));
+    let thread = session.snapshot();
+    assert_eq!(thread.status(), Status::Idle);
+    let errors: Vec<&Notice> = thread
+        .entries(&Lane::Main)
+        .iter()
+        .filter_map(|e| match &e.kind {
+            EntryKind::Notice(notice @ Notice::Error { .. }) => Some(notice),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(
+        matches!(errors[0], Notice::Error { message, .. } if message == CRASH),
+        "{errors:?}"
+    );
+}
+
+#[test]
+fn an_agent_whose_output_outlives_it_still_ends_the_session() {
+    let mut launch = launch("basic");
+    let script = format!("sleep 10 & exec '{}' basic", launch.program.display());
+    launch.program = "/bin/sh".into();
+    launch.args = vec!["-c".into(), script];
+    let (session, events, supervisor) = start(launch);
+    wait("a session", || session.is_ready());
+    let crashed = Instant::now();
+    session.send(message("crash now")).unwrap();
+    wait("the end", || session.is_ended());
+    assert!(
+        crashed.elapsed() < Duration::from_secs(5),
+        "the end waited for the open output"
+    );
+    ended_once(&session, &events, &supervisor);
+    assert_eq!(session.snapshot().status(), Status::Idle);
+    assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == CRASH)));
+}
+
+#[test]
+fn an_agent_that_exits_while_idle_ends_the_session() {
+    let (session, events, supervisor) = ready("basic");
+    session.send(message("quit")).unwrap();
+    ended_once(&session, &events, &supervisor);
+    let thread = session.snapshot();
+    assert_eq!(thread.status(), Status::Idle);
+    assert!(
+        !thread
+            .entries(&Lane::Main)
+            .iter()
+            .any(|e| matches!(&e.kind, EntryKind::Notice(Notice::Error { .. }))),
+        "a clean exit after the turn is no error"
+    );
+}
+
+#[test]
+fn stopping_a_live_agent_ends_it_once() {
+    let (session, events, supervisor) = ready("basic");
+    session.stop(Duration::from_millis(500));
+    session.stop(Duration::from_millis(500));
+    wait("the end", || session.is_ended() && events.ends() == 1);
+    wait("no agent process left", || supervisor.running().is_empty());
+    std::thread::sleep(Duration::from_millis(300));
+    assert_eq!(events.ends(), 1);
+    assert!(!events.has(|e| matches!(e, Event::Failed(_))), "a stop is no failure");
 }

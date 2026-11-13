@@ -2,8 +2,9 @@
 //! checks what the client puts on the wire, and plays a fixed turn with every kind of update the app shows.
 //!
 //! Scenarios: `basic`; `auth`, which wants a sign-in before a session; `v2`, which only speaks protocol version 2.
-//! A prompt containing `slow` streams one chunk and waits to be cancelled. Every prompt comes back as a user message
-//! chunk first, as Antigravity sends it.
+//! A prompt containing `slow` streams one chunk and waits to be cancelled; one containing `crash` streams a chunk, says
+//! [`CRASH`] on stderr and exits mid-turn; one containing `quit` ends its turn and then exits. Every prompt comes back as
+//! a user message chunk first, as Antigravity sends it.
 
 use std::collections::VecDeque;
 use std::io::{BufRead, Write};
@@ -15,6 +16,9 @@ pub const SESSION: &str = "test-session-1";
 
 /// What the agent's turn reports after the user allowed the command.
 pub const COMMAND_OUTPUT: &str = "a.txt\nb.txt";
+
+/// What the agent writes on stderr before it exits mid-turn.
+pub const CRASH: &str = "the model crashed";
 
 /// The request id of the permission request.
 const PERMISSION_ID: u64 = 900;
@@ -38,6 +42,7 @@ struct Agent<W: Write> {
     prompt: Option<Value>,
     waiting: Option<u64>,
     steps: VecDeque<Step>,
+    exit: bool,
 }
 
 fn update(update: Value) -> Step {
@@ -223,6 +228,20 @@ impl<W: Write> Agent<W> {
             self.usage_reply();
             return;
         }
+        if text.contains("crash") {
+            self.notify(json!({"sessionUpdate": "agent_message_chunk",
+                               "content": {"type": "text", "text": "Working on it"}}));
+            eprintln!("{CRASH}");
+            self.exit = true;
+            return;
+        }
+        if text.contains("quit") {
+            if let Some(id) = self.prompt.take() {
+                self.reply(&id, json!({"stopReason": "end_turn"}));
+            }
+            self.exit = true;
+            return;
+        }
         if text.contains("slow") {
             self.notify(json!({"sessionUpdate": "agent_message_chunk",
                                "content": {"type": "text", "text": "Working on it"}}));
@@ -332,7 +351,7 @@ impl<W: Write> Agent<W> {
     }
 }
 
-/// Plays `scenario` against the client on `input` and `output` until the input ends.
+/// Plays `scenario` against the client on `input` and `output` until the input ends or a prompt asks it to exit.
 pub fn run(input: impl BufRead, output: impl Write, scenario: &str) {
     let mut agent = Agent {
         out: output,
@@ -341,10 +360,14 @@ pub fn run(input: impl BufRead, output: impl Write, scenario: &str) {
         prompt: None,
         waiting: None,
         steps: VecDeque::new(),
+        exit: false,
     };
     for line in input.lines().map_while(Result::ok) {
         if let Ok(message) = serde_json::from_str::<Value>(&line) {
             agent.handle(&message);
+        }
+        if agent.exit {
+            return;
         }
     }
 }

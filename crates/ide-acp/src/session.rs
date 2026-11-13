@@ -8,8 +8,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::{Duration, SystemTime};
+use std::sync::{Arc, Mutex, MutexGuard, Weak};
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant, SystemTime};
 
 use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::v1::schema as acp;
@@ -26,6 +27,12 @@ use crate::prompt;
 
 /// What the stderr tail keeps.
 const STDERR_LIMIT: usize = 64 * 1024;
+
+/// How long the end of a session waits for the stderr of an agent that exited on its own.
+const LAST_WORDS: Duration = Duration::from_millis(500);
+
+/// How long the agent's output may stay open after its process is gone; what it wrote last is still read meanwhile.
+const EXIT_GRACE: Duration = Duration::from_secs(1);
 
 /// What a session tells the UI, on one of the session's threads.
 #[derive(Debug, Clone, PartialEq)]
@@ -124,12 +131,13 @@ struct Shared {
     connection: Mutex<Option<ConnectionTo<Agent>>>,
     shutdown: Mutex<Option<oneshot::Sender<()>>>,
     stderr: Arc<Mutex<Tail>>,
+    stderr_reader: Mutex<Option<JoinHandle<()>>>,
     ended: AtomicBool,
     stopping: AtomicBool,
     next_ask: AtomicU64,
 }
 
-/// A running ACP session; clones share it. It runs until `stop` or the supervisor ends it.
+/// A running ACP session; clones share it. It runs until `stop`, the supervisor ends it or the agent exits.
 #[derive(Clone)]
 pub struct Session {
     shared: Arc<Shared>,
@@ -230,6 +238,17 @@ impl Shared {
         (self.sink)(Event::Failed(error));
     }
 
+    /// Gives the stderr reader a moment to take in what the agent wrote just before it exited.
+    fn await_stderr(&self) {
+        let Some(reader) = self.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()).take() else {
+            return;
+        };
+        let deadline = Instant::now() + LAST_WORDS;
+        while !reader.is_finished() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
     /// The connection ended: the process is gone or was stopped.
     fn finish(&self, result: Result<(), agent_client_protocol::Error>) {
         if self.ended.swap(true, Ordering::SeqCst) {
@@ -237,9 +256,18 @@ impl Shared {
         }
         *self.connection.lock().unwrap_or_else(|e| e.into_inner()) = None;
         self.withdraw_asks();
+        let stopping = self.stopping.load(Ordering::SeqCst);
+        if !stopping {
+            self.await_stderr();
+        }
         let stderr = self.stderr.lock().unwrap_or_else(|e| e.into_inner()).text();
         let running = self.state().thread.status() != Status::Idle;
-        if !self.stopping.load(Ordering::SeqCst) && (running || result.is_err()) {
+        if stopping && running {
+            let mut updates = self.state().mapper.settle(now());
+            updates.push(Update::Status(Status::Idle));
+            self.apply(updates);
+        }
+        if !stopping && (running || result.is_err()) {
             let message = match &result {
                 Err(e) if stderr.trim().is_empty() => e.message.clone(),
                 _ => stderr
@@ -260,6 +288,11 @@ impl Shared {
         self.supervisor.stop(self.process, Duration::from_millis(500));
         (self.sink)(Event::Ended { stderr });
     }
+}
+
+/// Whether `error` only says that the connection is gone, which `finish` reports with the agent's last words.
+fn closed(error: &agent_client_protocol::Error) -> bool {
+    agent_client_protocol::is_incoming_transport_closed(error) || agent_client_protocol::is_connection_terminated(error)
 }
 
 /// Sends `request` and waits for the answer on a thread of its own, then hands it to `then` there.
@@ -314,7 +347,7 @@ impl Session {
             return Err(SessionError::Start("the pipes are missing".into()));
         };
         let stderr_tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
-        let _ = tail::collect(stderr, stderr_tail.clone());
+        let stderr_reader = tail::collect(stderr, stderr_tail.clone()).ok();
         let (shutdown, closed) = oneshot::channel();
         let shared = Arc::new(Shared {
             supervisor: supervisor.clone(),
@@ -331,6 +364,7 @@ impl Session {
             connection: Mutex::new(None),
             shutdown: Mutex::new(Some(shutdown)),
             stderr: stderr_tail,
+            stderr_reader: Mutex::new(stderr_reader),
             ended: AtomicBool::new(false),
             stopping: AtomicBool::new(false),
             next_ask: AtomicU64::new(0),
@@ -344,6 +378,10 @@ impl Session {
                 }
             }
         });
+        let (watcher, watched) = (supervisor.clone(), Arc::downgrade(&shared));
+        let _ = std::thread::Builder::new()
+            .name("acp-exit".into())
+            .spawn(move || watch(&watcher, spawned.id, &watched));
         let runner = shared.clone();
         std::thread::Builder::new()
             .name(format!("acp-{}", runner.launch.agent))
@@ -399,6 +437,9 @@ impl Session {
         self.shared.apply(updates);
         let shared = self.shared.clone();
         ask(connection, acp::PromptRequest::new(session, blocks), move |result| {
+            if result.as_ref().is_err_and(closed) {
+                return;
+            }
             let updates = {
                 let mut state = shared.state();
                 match &result {
@@ -555,6 +596,29 @@ impl Session {
     }
 }
 
+/// Ends the session once its process is gone, should the agent's output stay open after it, such as through a child
+/// the agent started.
+fn watch(supervisor: &Supervisor, process: ProcessId, shared: &Weak<Shared>) {
+    while supervisor.wait(process, Duration::from_secs(60)).is_none() {
+        if shared.strong_count() == 0 {
+            return;
+        }
+    }
+    let deadline = Instant::now() + EXIT_GRACE;
+    while Instant::now() < deadline {
+        match shared.upgrade() {
+            Some(shared) if !shared.ended.load(Ordering::SeqCst) => {}
+            _ => return,
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    if let Some(shared) = shared.upgrade()
+        && let Some(shutdown) = shared.shutdown.lock().unwrap_or_else(|e| e.into_inner()).take()
+    {
+        let _ = shutdown.send(());
+    }
+}
+
 /// Runs the connection over the agent's pipes until it closes or `closed` fires.
 fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: oneshot::Receiver<()>) {
     let transport = ByteStreams::new(blocking::Unblock::new(stdin), blocking::Unblock::new(stdout));
@@ -582,14 +646,18 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
             )
             .connect_with(transport, async move |connection: ConnectionTo<Agent>| {
                 *main.connection.lock().unwrap_or_else(|e| e.into_inner()) = Some(connection.clone());
-                match initialize(&main, &connection).await {
-                    Ok(()) => match open(&main, &connection).await {
-                        Ok(()) | Err(SessionError::SignIn) => {}
+                let serve = async {
+                    match initialize(&main, &connection).await {
+                        Ok(()) => match open(&main, &connection).await {
+                            Ok(()) | Err(SessionError::SignIn) => {}
+                            Err(error) => main.fail(error),
+                        },
                         Err(error) => main.fail(error),
-                    },
-                    Err(error) => main.fail(error),
-                }
-                let _ = closed.await;
+                    }
+                    // A clean end of the agent's output does not end this future by itself (agent-client-protocol 5.2).
+                    connection.incoming_closed().await;
+                };
+                futures::future::select(std::pin::pin!(serve), closed).await;
                 Ok(())
             }),
     );
