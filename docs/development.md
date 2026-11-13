@@ -219,8 +219,8 @@ needs:
   `target/sparkle-2.10.1/bin/generate_keys --account local.agentide` (keep a backup with `-x <file>`), and the public
   half it prints in `UPDATE_PUBLIC_KEY` in `crates/ide-product/src/lib.rs` (E51). Without them the run stops and
   names these steps; a dry run puts a placeholder into `SUPublicEDKey`.
-- `RELEASE_NOTES.md` and `release-notes/<language>.md` for every other language in `resources/`, new for the release
-  and reviewed: notes that still begin with the comment `<!-- DRAFT` are refused, and the run names every language
+- `RELEASE_NOTES.md` and `assets/readme/<language>/RELEASE_NOTES.md` for every other language in `resources/`, new
+  for the release and reviewed: notes that still begin with the comment `<!-- DRAFT` are refused, and the run names every language
   whose notes are missing. A dry run leaves the draft comment out of the feed and lists what is missing.
 
 Uploading the image and the feed to the release and adding the Cask to a tap stay manual.

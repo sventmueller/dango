@@ -270,10 +270,7 @@ fn workspace(test: &str) -> PathBuf {
         std::fs::create_dir_all(root.join(format!("resources/{language}.lproj"))).unwrap();
     }
     write(&root.join(NOTES), "- New.\n");
-    write(
-        &root.join(format!("{TRANSLATED_NOTES}/de.md")),
-        "<!-- DRAFT -->\n- Neu.\n",
-    );
+    write(&root.join(translated_notes("de")), "<!-- DRAFT -->\n- Neu.\n");
     root
 }
 
@@ -288,15 +285,21 @@ fn a_dry_run_takes_the_notes_there_are_and_a_release_wants_all_of_them_reviewed(
         ]
     );
     let draft = notes(&root, false, None).unwrap_err();
-    assert!(draft.starts_with("release-notes/de.md is still a draft"), "{draft}");
+    assert!(
+        draft.starts_with("assets/readme/de/RELEASE_NOTES.md is still a draft"),
+        "{draft}"
+    );
 
-    write(&root.join(format!("{TRANSLATED_NOTES}/de.md")), "- Neu.\n");
+    write(&root.join(translated_notes("de")), "- Neu.\n");
     let missing = notes(&root, false, None).unwrap_err();
     assert!(missing.starts_with("release notes missing for fr;"), "{missing}");
-    write(&root.join(format!("{TRANSLATED_NOTES}/fr.md")), "- Nouveau.\n");
+    write(&root.join(translated_notes("fr")), "- Nouveau.\n");
     assert_eq!(notes(&root, false, None).unwrap().len(), 3);
     let stale = notes(&root, false, Some("<![CDATA[- Nouveau.]]>")).unwrap_err();
-    assert!(stale.contains("release-notes/fr.md still holds"), "{stale}");
+    assert!(
+        stale.contains("assets/readme/fr/RELEASE_NOTES.md still holds"),
+        "{stale}"
+    );
 
     std::fs::remove_file(root.join(NOTES)).unwrap();
     let without_english = notes(&root, true, None).unwrap();

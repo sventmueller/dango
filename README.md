@@ -1,201 +1,491 @@
+<p><img src="assets/readme-icon.png" alt="Dango app icon" width="168" height="168"></p>
+
 # Dango
 
-A native macOS editor for working with coding agents. One window holds the editor, terminals, a browser, git, CI and
-AI threads; agents such as Claude, Codex or Antigravity run beside the code they change. Dictation turns speech into
-text in the AI message field and the editor. It is written in Rust on AppKit
-(no Electron, no Swift); WebKit is used only in the browser tab.
+**The native macOS editor for working with coding agents.**
 
-Status: version 0.1.0, in development. No release has been published yet; until then, build it from source (see the
-end of this file). The interface is in 35 languages; translations follow [docs/glossary.md](docs/glossary.md).
+Dango puts the code, the agents that change it and everything around them into one window per folder: an editor with
+language servers and edit predictions, terminals, a browser, git, CI, a debugger and AI threads with Claude, Codex,
+Antigravity, OpenCode or an agent built into the app. Every agent works in the same timeline, asks before it changes
+files or runs commands, and leaves a checkpoint before each prompt, so you can review and rewind what it did message by
+message. Nothing a folder configures runs before you trust it, and text from outside reaches an agent marked as
+untrusted. Dictate into the editor and the message field, and the speech recognition can stay on your Mac. Dango is
+written in Rust on genuine AppKit controls, without Electron, speaks 35 languages, and has no telemetry.
+
+**Not released yet.** The first release will be a disk image signed with a Developer ID and notarized by Apple, for
+macOS 14 or later on Apple Silicon and Intel. Until then, [build Dango from source](#building-from-source).
+
+**Found a bug?** [Open an issue](https://github.com/sventmueller/dango/issues/new) and say which agent and which kind
+of project it happened with.
+
+[![Rust 2024 edition](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![macOS 14 or later](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
+![Universal: Apple Silicon and Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white)
+[![AppKit via objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2)
+[![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com)
+[![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/)
+[![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/)
+[![Terminal: alacritty_terminal](https://img.shields.io/badge/terminal-alacritty__terminal_0.26-F46D01)](https://github.com/alacritty/alacritty)
+![35 interface languages](https://img.shields.io/badge/languages-35-4C9A2A)
+![No telemetry](https://img.shields.io/badge/telemetry-none-4C9A2A)
+![Signed with Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#license)
+
+[Bahasa Indonesia](assets/readme/id/README.md) ·
+[Bahasa Melayu](assets/readme/ms/README.md) ·
+[Català](assets/readme/ca/README.md) ·
+[Čeština](assets/readme/cs/README.md) ·
+[Dansk](assets/readme/da/README.md) ·
+[Deutsch](assets/readme/de/README.md) ·
+**English** ·
+[Español](assets/readme/es/README.md) ·
+[Français](assets/readme/fr/README.md) ·
+[Hrvatski](assets/readme/hr/README.md) ·
+[Italiano](assets/readme/it/README.md) ·
+[Magyar](assets/readme/hu/README.md) ·
+[Nederlands](assets/readme/nl/README.md) ·
+[Norsk](assets/readme/no/README.md) ·
+[Polski](assets/readme/pl/README.md) ·
+[Português (Brasil)](assets/readme/pt_BR/README.md) ·
+[Português (Portugal)](assets/readme/pt_PT/README.md) ·
+[Română](assets/readme/ro/README.md) ·
+[Slovenčina](assets/readme/sk/README.md) ·
+[Slovenščina](assets/readme/sl/README.md) ·
+[Suomi](assets/readme/fi/README.md) ·
+[Svenska](assets/readme/sv/README.md) ·
+[Tiếng Việt](assets/readme/vi/README.md) ·
+[Türkçe](assets/readme/tr/README.md) ·
+[Ελληνικά](assets/readme/el/README.md) ·
+[Русский](assets/readme/ru/README.md) ·
+[Українська](assets/readme/uk/README.md) ·
+[עברית](assets/readme/he/README.md)‎ ·
+[العربية](assets/readme/ar/README.md)‎ ·
+[हिन्दी](assets/readme/hi/README.md) ·
+[ไทย](assets/readme/th/README.md) ·
+[한국어](assets/readme/ko/README.md) ·
+[日本語](assets/readme/ja/README.md) ·
+[简体中文](assets/readme/zh-Hans/README.md) ·
+[繁體中文](assets/readme/zh-Hant/README.md)
+
+## Contents
+
+- [Features at a glance](#features-at-a-glance)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Getting started](#getting-started)
+- [AI agents](#ai-agents)
+  - [The timeline](#the-timeline)
+  - [Permissions and modes](#permissions-and-modes)
+  - [Checkpoints and worktrees](#checkpoints-and-worktrees)
+- [Editor](#editor)
+- [Language servers](#language-servers)
+- [Debugger](#debugger)
+- [Terminal](#terminal)
+- [Browser](#browser)
+- [Git](#git)
+- [CI](#ci)
+- [Markdown](#markdown)
+- [Dictation](#dictation)
+- [Trust](#trust)
+- [Sandbox](#sandbox)
+- [Appearance and accessibility](#appearance-and-accessibility)
+- [Languages](#languages)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Privacy and security](#privacy-and-security)
+- [Where data lives](#where-data-lives)
+- [Known limitations](#known-limitations)
+- [Building from source](#building-from-source)
+- [License](#license)
+
+## Features at a glance
+
+- **Every agent in one timeline.** Claude through its own `claude` command, Codex, Antigravity and OpenCode through the
+  Agent Client Protocol, more from the ACP registry, and an agent built into the app for Anthropic, OpenAI, Google
+  Gemini, OpenRouter, Ollama and LM Studio. Answers, tool calls, permission requests, plans, to-dos, subagents and
+  background tasks look the same whichever agent runs.
+- **Review and rewind.** Before each prompt Dango keeps a checkpoint. What an agent changed can be reviewed and rewound
+  per message, and a thread can work in a git worktree of its own and hand its work over by merge or cherry-pick.
+- **One window per folder.** Files, terminals, browser pages, AI threads, diffs and previews are macOS tabs of that
+  window. The sidebar holds Files, Search, Agents, Git, Debug and CI.
+- **A real code editor.** Syntax colours, several carets, folding, `.editorconfig`, language servers for 17 languages
+  with completion, go to definition, references, rename, quick fixes and hierarchies, and edit predictions from GitHub
+  Copilot or a local model.
+- **Debugger, git and CI built in.** Breakpoints and stepping for Rust, C, C++, Swift, Go, JavaScript, TypeScript and
+  Python; staging single hunks, branches, stashes, conflicts and a commit graph; runs, jobs and logs from GitHub Actions
+  and GitLab CI.
+- **Careful with your folders.** A folder you have not trusted starts nothing: no git processes, language servers,
+  hooks or agents. Destructive git commands are never allowed for good, and commits are checked for secrets.
+- **Dictation.** Speak into the editor and the message field, online through OpenAI or Groq or locally with Whisper
+  and Parakeet.
+- **Native to the bone.** AppKit windows, tabs, menus and toolbars, TextKit 2 for the editor, Metal for the terminal,
+  WebKit only in the browser tab. Dark mode, Increase Contrast and VoiceOver work as in every Mac app.
+- **In your language.** The interface comes in 35 languages: Arabic, Catalan, Chinese (Simplified), Chinese
+  (Traditional), Croatian, Czech, Danish, Dutch, English, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian,
+  Indonesian, Italian, Japanese, Korean, Malay, Norwegian, Polish, Portuguese (Brazil), Portuguese (Portugal),
+  Romanian, Russian, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian and Vietnamese.
 
 ## Requirements
-- macOS 14 or later.
-- For the AI threads, the agent you want to use (see [AI agents](#ai-agents)).
-- For language features (Go, Rust, TypeScript): the app installs the language server on request into its tools
-  folder. gopls needs Go, the TypeScript server Node.js; rust-analyzer is downloaded from its GitHub releases and
-  checked against its digest. A TypeScript project's own `tsc` is used when it can serve as a language server.
 
-## Install
-A release is a disk image, `Dango-<version>.dmg`, with a universal app for Apple silicon and Intel, signed with a
-Developer ID and notarized by Apple; a Homebrew Cask installs the same image. Open the image and drag the app into
-`/Applications`. Until the first release is published, build the app as described in
-[Building from source](#building-from-source) and move `target/release/Dango.app` into `/Applications`.
+- macOS 14 Sonoma or later, on Apple Silicon or Intel. Dango is developed and tested on macOS 27.
+- For the AI threads, the agent you want to use; see [AI agents](#ai-agents).
+- For language servers and debug adapters, which Dango installs when you ask: Go for gopls and `dlv`; Node.js for the
+  TypeScript, Python, JSON, YAML, CSS, HTML and shell servers and the JavaScript debugger; the Xcode Command Line Tools
+  for clangd, sourcekit-lsp and `lldb-dap`. rust-analyzer is downloaded from its GitHub releases.
+- For edit predictions, a GitHub Copilot plan (the free one will do), or a fill-in-the-middle model in Ollama or
+  LM Studio.
 
-To open folders from a terminal, choose **Dango › Install "dango" Command…**. It writes a small script to
-`~/.local/bin/dango` (no administrator rights needed; `~/.local/bin` must be on your `PATH`). Then `dango .`
-opens the current folder, `dango file.rs` a file. The app never replaces a file there that it did not write itself.
+## Installation
 
-## Updates
-The app from the disk image updates itself through Sparkle. On its second launch Sparkle asks whether it may check for
-updates on its own; until you agree, it makes no request. **Dango › Check for Updates…** checks at once. Updates
-are signed with the app's own key, which Sparkle checks before it installs anything. Apps built with `make build` or
-`make run` carry no Sparkle, never check and have no such menu item.
+**From the disk image.** Each release is a disk image, `Dango-<version>.dmg`, with one universal app for Apple Silicon
+and Intel, signed with a Developer ID and notarized by Apple. Open it and drag Dango onto the Applications folder. A
+Homebrew Cask installs the same image. No release is published yet.
 
-## First steps
-1. **Open a folder** with ⌘O or `dango <folder>`. The first time, the app asks whether you trust the folder (see
+**Updates.** Dango from the disk image keeps itself up to date with [Sparkle](https://sparkle-project.org). On the
+second launch it asks whether it may look for updates on its own; until you agree, it makes no request. **Dango ›
+Check for Updates…** looks right away. Updates are signed with the app's own key, which Sparkle checks before it
+installs anything. A build of your own has no updater.
+
+**From source.** See [Building from source](#building-from-source), then move `target/release/Dango.app` into
+`/Applications`.
+
+**The terminal command.** **Dango › Install “dango” Command…** writes a small script to `~/.local/bin/dango`, without
+administrator rights; `~/.local/bin` must be on your `PATH`. Then `dango .` opens the current folder and
+`dango file.rs` a file. Dango never replaces a file there that it did not write itself.
+
+## Getting started
+
+1. **Open a folder** with ⌘O or `dango <folder>`. The first time, Dango asks whether you trust it (see
    [Trust](#trust)).
-2. **The sidebar** on the left switches between Files (⌘1), Search (⌘2), AI (⌘3), Git (⌘4), Debug (⌘5) and CI (⌘6); clicking the
-   sidebar button in the toolbar or ⌃⌘S folds it away.
-3. **Every document is a tab** of the window, macOS's own tabs. A click on the "+" at the end of the tab bar or ⌘T opens
-   a new tab that offers a new file, a terminal, a browser, an AI thread with each installed agent, or one in a worktree
-   of its own; holding the "+" shows the same as a menu, whose entry opens at once.
-   "Open to the Side" in the file list's context menu shows a second
-   document beside the one in front.
-4. **Quick open** with ⌘P, search and replace in the project with ⇧⌘F.
-5. **Talk to an agent** in an AI tab; ⌘Esc moves the keyboard focus into its message field and back.
-6. **Settings** with ⌘,; shortcuts can be changed in `keybindings.json` (see [Where data lives](#where-data-lives)).
+2. **The sidebar** switches between Files (⌘1), Search (⌘2), Agents (⌘3), Git (⌘4), Debug (⌘5) and CI (⌘6); a
+   right-click hides the ones you do not use, and ⌃⌘S folds the sidebar away.
+3. **Every document is a tab** of the folder's window, macOS's own tabs. The “+” at the end of the tab bar and ⌘T offer
+   a new file, a terminal, the browser and each installed agent, also in a git worktree of its own; holding the “+”
+   shows the same as a menu.
+4. **Open Quickly** with ⌘P finds files, and with `#` the project's symbols; ⇧⌘F searches and replaces in the project.
+5. **Talk to an agent** in an AI tab. ⌘Esc moves the keyboard focus into its message field and back.
+6. **Settings** with ⌘, hold the tabs General, CI, Agents, Own Agent, Language server, Dictation and Prediction.
+
+The toolbar holds back and forward through the places you edited (⌃- and ⌃⇧-), the branch, Open Quickly and the
+Activity overview, which lists everything that runs. **Open to the Side** in the context menu of a file shows a second
+document beside the first. After a restart, or a crash, every window comes back with its tabs, and editors with unsaved
+text come back with it. Images, audio, video, fonts and Office documents open in a tab through Quick Look, PDFs through
+PDFKit.
 
 ## AI agents
-Every agent works in an AI tab with the same timeline: answers, tool calls with their output, permission requests,
-questions, plans to approve and comment on, to-dos, subagents and background tasks. Changes an agent makes are
-checkpointed before each prompt and can be reviewed and rewound per message.
 
 | Agent | How it runs | What it needs |
 |---|---|---|
-| Claude | the `claude` CLI, spoken to directly over its stream-json protocol | `claude` installed and signed in; the app looks on the login shell's `PATH`, in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and `/usr/local/bin`. Sign-in happens only in `claude` itself |
-| Codex | `codex-acp` over the Agent Client Protocol (ACP) | Node.js and npm; the app installs the pinned package on request |
-| Antigravity | `agy acp` | your own `agy` on the `PATH`, or the pinned download, installed on request |
-| OpenCode | `opencode acp` | your own `opencode` on the `PATH`, or the pinned download, installed on request |
+| Claude | the `claude` command, spoken to directly over its stream-json protocol | `claude` installed and signed in; Dango looks on the login shell's `PATH`, in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and `/usr/local/bin`. Signing in happens only in `claude` itself |
+| Codex | `codex-acp` over the Agent Client Protocol (ACP) | Node.js and npm; Dango installs the pinned package when you ask |
+| Antigravity | `agy acp` | your own `agy` on the `PATH`, or the pinned download, installed when you ask |
+| OpenCode | `opencode acp` | your own `opencode` on the `PATH`, or the pinned download, installed when you ask |
 | Other ACP agents | from the ACP registry, fetched only when you ask for it | whatever the registry entry names; entries without a checksum install only after you confirm |
-| Own agent | built into the app | an API key for Anthropic, OpenAI, Google Gemini or OpenRouter, kept in the keychain; Ollama or LM Studio run locally without a key; any server that speaks OpenAI's or Anthropic's API |
+| Own agent | built into the app, with tools for files, search, commands, diagnostics and web requests | an API key for Anthropic, OpenAI, Google Gemini or OpenRouter, kept in the keychain; Ollama or LM Studio on this Mac without a key; any server that speaks OpenAI's or Anthropic's API |
 
 **Settings › Agents** shows which agents this Mac has, installs the others and their updates, and opens the ACP
-registry; "+ New Session" in the AI panel offers the agents that are ready. Agents the app installs are pinned to
-tested versions and checked against their published checksums (npm integrity or SHA-256); the app does not run
-unversioned `npx` packages.
+registry. Agents Dango installs are pinned to tested versions and checked against their published checksums (npm
+integrity or SHA-256); Dango runs no unversioned `npx` packages.
 
-New threads start in the mode "Manual": the agent asks before it changes files or runs commands. For destructive git
-commands (`push --force`, `reset --hard`, `clean -fd`) the app offers no "always allow". The own agent keeps its
-"always allow" rules per project, lists them in **Settings › Own Agent** and asks for destructive git commands every time,
-whatever is stored; Claude and the ACP agents keep such rules in their own configuration. With "allow everything" and
+### The timeline
+
+Every agent works in an AI tab with the same timeline: answers, tool calls with their output, permission requests,
+questions, plans to approve and comment on (⌥⌘K), to-dos, subagents and background tasks. Two buttons in the tab's
+header list the running subagents and background processes. Mention a file, `@terminal` or `@browser` to hand the
+agent its content. A green dot on the tab shows a session at work, a red one a session waiting for you, and a
+notification says when it finishes or waits while you look elsewhere. For Claude, the status line shows the context
+and the usage.
+
+### Permissions and modes
+
+New threads start in the mode “Manual”: the agent asks before it changes files or runs commands. For destructive git
+commands (`push --force`, `reset --hard`, `clean -fd`) Dango offers no “always allow”. The own agent keeps its “always
+allow” rules per project, lists them in **Settings › Own Agent** and asks for destructive git commands every time,
+whatever is stored; Claude and the ACP agents keep such rules in their own configuration. With “allow everything” and
 no sandbox, the thread shows a permanent warning.
 
-## Dictation
-Release builds can dictate into an AI tab's message field or an editor: the microphone button there, **Edit › Start
-Dictation** (⌃⌥D), or the fn key (hold to record, double tap to keep recording). The speech-to-text comes from
-Lowspeak (`../lowspeak`) and uses its choices:
+### Checkpoints and worktrees
 
-- **Mode, models, language and vocabulary** are the ones set in Lowspeak; Dango reads them and downloads no models.
-  Without Lowspeak installed, dictation uses online transcription; local models are offered once Lowspeak has
-  downloaded one.
-- **Online transcription** needs an OpenAI or Groq key. Dango keeps it in its own keychain item; if Lowspeak has a
-  key, the first dictation offers to copy it once (macOS asks; choose "Allow", not "Always Allow").
-- **Microphone:** macOS asks for access on the first dictation.
-- **fn key:** on by default, only while Lowspeak itself is not running and Dango is the active app. It needs the
-  Accessibility permission, which is asked for after the first dictation, never at launch; **Settings › Dictation**
-  asks again if it was refused.
+Before each prompt Dango keeps a checkpoint, as a commit under `refs/ide-checkpoints/` in the project's repository, or
+in its own folder for a project without git; a normal push or fetch never carries them. What an agent changed can be
+reviewed and rewound per message. A thread can work in a git worktree of its own: the Git panel shows what it changed
+and takes the work over by merge or cherry-pick.
 
-Debug builds (`make run`) dictate as well; their first build compiles whisper.cpp and needs cmake.
+## Editor
+
+- **Syntax colours, line numbers and change marks** against the last commit, find and replace, Open Quickly (⌘P) and
+  project search (⇧⌘F).
+- **Indentation** follows the file and `.editorconfig`: tabs or spaces, automatic indentation, bracket pairs.
+- **Several carets:** ⌥-click, ⌥-drag for a column, ⌃⇧↑ and ⌃⇧↓, ⌘D for the next occurrence.
+- **Folding** (⌥⌘← and ⌥⌘→, with ⇧ for everything), toggling comments (⌘/), go to line (⌃G), visible whitespace and
+  line wrapping (⌥Z).
+- **Files keep their encoding**, byte order mark and line endings. A file changed on disk reloads when the editor holds
+  no unsaved text; otherwise a bar offers the differences and a merge.
+- **Edit predictions.** While you type, a suggestion appears in grey, and Tab takes it. It comes from GitHub Copilot or
+  from a local model in Ollama or LM Studio, as chosen in **Settings › Prediction**; a local model keeps your code on
+  this Mac.
+
+## Language servers
+
+Go, Rust, TypeScript and JavaScript, Python, C, C++ and Objective-C, Swift, shell scripts, JSON, YAML, CSS, HTML, TOML,
+Markdown and Lua, and servers of your own from **Settings › Language server**. Dango installs a server when you ask,
+into its own tools folder, and uses a TypeScript project's own `tsc` when it can serve as a language server.
+
+What they bring: diagnostics (⌘' and ⇧⌘' move between them), hover (⌃⌘I), completion (⌥Esc), signature help, go to
+definition (⌃⌘J), type definition and implementation, references (⌃⇧⌘F), call and type hierarchies (⌃⇧⌘H), rename
+(⌃⌘E), formatting (⌥⇧F), semantic colours, folding and the outline (⇧⌘O); types and parameter names inside the line;
+quick fixes and refactorings behind a light bulb (⌥⌘A); the project's symbols with ⌥⌘O.
+
+## Debugger
+
+Breakpoints, also with conditions and as logpoints, stepping, threads with their call stacks, variables and watched
+expressions in the inspector (⌥⌘I), values beside the code while the program is paused, and a debug console that
+evaluates in the paused frame.
+
+| Language | Debug adapter |
+|---|---|
+| Rust, C, C++, Swift | `lldb-dap` from the Xcode Command Line Tools |
+| Go | `dlv` |
+| JavaScript, TypeScript | the JavaScript debugger, on Node.js |
+| Python | debugpy |
+
+A project's `.vscode/launch.json` is read. The Debug menu uses Xcode's shortcuts: ⌘\\ sets a breakpoint, ⌘Y turns
+all of them on or off, ⌃⌘Y continues, F6, F7 and F8 step over, into and out, ⌘. stops.
+
+## Terminal
+
+Terminals in tabs (⌃\`) with the login shell's environment, drawn with Metal. ⌘K clears the screen. Pasting or dropping
+an image hands it to a coding agent running in the terminal, or pastes the path of a saved copy. ⌘-click opens links
+and file names. A development server the terminal starts can be opened in the browser tab.
+
+## Browser
+
+A browser tab with address field (⌘L), back and forward (⌘[ and ⌘]), reload (⌘R), search, downloads that ask first,
+and the Web Inspector. `@browser` hands the page to an agent, marked as text from outside.
+
+## Git
+
+The Git panel stages and discards files or single hunks, commits, commits and pushes or syncs, switches and creates
+branches, keeps stashes, resolves merge conflicts and draws a graph of the recent commits. Blame shows who last changed
+the line under the cursor, or a column for the whole file. A button writes the commit message with AI; the diff goes
+out only after gitleaks found no secret in it, and every commit is checked for secrets as well.
+
+## CI
+
+GitHub Actions and GitLab CI, also GitHub Enterprise Server and self-managed GitLab:
+
+- runs, jobs and logs of the current branch;
+- re-running failed jobs, a single job or, on GitHub, a whole run; starting manual jobs or approving waiting
+  deployments; starting a new pipeline or a workflow that may be started by hand; cancelling;
+- the open pull requests or merge requests and the issues, which open in the browser tab;
+- a failed job's log handed to an agent, marked as text from outside.
+
+The token comes from the keychain, `gh` or `glab`, the login shell's environment, or one you enter in
+**Settings › CI**.
 
 ## Markdown
-- **Preview:** a Markdown file opens with its preview in a panel beside the editor; **View › Show/Hide Preview
-  Beside** (⇧⌘V) closes and opens it, **Settings › General** switches the automatic preview off. The preview draws
-  formulas, Mermaid, Graphviz and PlantUML diagrams and the pictures of the folder; pictures from the web load only in
-  a trusted folder or after you ask for them in the preview.
+
+- **Preview.** A Markdown file opens with its preview beside it; **View › Show/Hide Preview Beside** (⇧⌘V) closes and
+  opens it, and **Settings › General** switches the automatic preview off. The preview draws formulas, Mermaid,
+  Graphviz and PlantUML diagrams and the folder's pictures; pictures from the web load only in a trusted folder or
+  after you ask for them in the preview.
 - **Format menu:** bold (⌘B), italic (⌘I), strikethrough (⇧⌘X), code (⌥⇧⌘C), link (⇧⌘K), headings 1–3 (⌥⌘1–⌥⌘3),
-  bulleted and numbered lists, tasks, quotes and code blocks. Each command toggles, on the selection or the lines,
-  and is one undo step.
-- **Paste:** text from Word or a web page goes in as Markdown, its pictures as files beside the document; ⌥⇧⌘V pastes
+  bulleted and numbered lists, tasks, quotes and code blocks. Each command toggles, on the selection or the lines, and
+  is one undo step.
+- **Paste.** Text from Word or a web page arrives as Markdown, its pictures as files beside the document; ⌥⇧⌘V pastes
   plain text.
-- **Export:** **File › Export** writes PDF, a single HTML file with its pictures inside it, or a Word document.
-  Pictures from the web go along only from a trusted folder.
-- **Open in Splat:** where Splat is installed, **File › Open in Splat** and
-  the context menus of the file tree and tabs open the document there, after saving it.
+- **Export.** **File › Export** writes PDF, a single HTML file with its pictures inside, or a Word document. Pictures
+  from the web go along only from a trusted folder.
+- **Open in Splat.** Where [Splat](https://github.com/sventmueller/splat) is installed, **File › Open in Splat** and the
+  context menus of the file tree and the tabs open the document there, after saving it.
+
+## Dictation
+
+Dictate into an AI tab's message field or the editor: the microphone button there, **Edit › Start Dictation** (⌃⌥D),
+or the fn key (hold to record, double-tap to keep recording). The speech recognition is the one of
+[Lowspeak](https://github.com/sventmueller/lowspeak); Lowspeak itself does not need to be installed.
+
+- **Settings › Dictation** sets the mode and model (online with OpenAI or Groq, locally with Whisper or Parakeet), the
+  language, the post-processing, the microphone and your own vocabulary.
+- **Local models** are downloaded from Hugging Face when you choose one, with progress and a way to cancel. They land in
+  the folders Lowspeak uses, so either app uses what the other downloaded. A local model keeps the recording on this
+  Mac.
+- **Online transcription** needs an OpenAI or Groq key, which Dango keeps in its own keychain item.
+- **From Lowspeak.** If Lowspeak is set up differently from the defaults, the Dictation tab offers once to take its
+  settings over, and its keys on request; macOS asks before Dango reads one (choose “Allow”, not “Always Allow”).
+- **Permissions.** macOS asks for the microphone on the first dictation. The fn key works while Dango is the active app
+  and Lowspeak is not running; it needs the Accessibility permission, which Dango asks for after the first dictation,
+  never at launch.
 
 ## Trust
+
 A folder can make programs run as soon as something is started in it: git hooks and repository settings such as
 `core.fsmonitor`, language servers from `node_modules`, agent hooks, `.mcp.json`. The first time you open a folder,
-the app asks whether you trust it.
+Dango asks whether you trust it.
 
-- **Trusted:** git, language servers, agents and CI run for this folder and everything below it.
-- **Restricted:** you can read and edit; the change marks in the editor come from reading `.git` directly. Nothing
-  the folder configures is started: no git processes, no language servers, no agents. The Git, CI and AI panels say
-  so and offer to trust the folder.
+- **Trusted:** git, language servers, debuggers, agents and CI run for this folder and everything below it.
+- **Restricted:** you can read and edit; the change marks in the editor come from reading `.git` directly. Nothing the
+  folder configures is started. The Git, CI and AI panels say so and offer to trust the folder.
 
 Text that does not come from you can carry instructions meant to steer an agent (prompt injection). The output of a
-terminal (`@terminal`), a browser page (`@browser`), a CI log handed to an agent, a file outside the project and
-longer text pasted from a web page therefore go along marked: the chip says "Fremder Inhalt" ("External Content"), and
-the agent gets the text with the notice that it is untrusted data whose instructions it must not follow. The own
-agent's web pages come with the same notice. Pasted text counts as coming from a web page when the browser says so on
-the pasteboard, as Safari and other WebKit browsers, Chrome and other Chromium browsers, and Firefox do; text pasted
-from elsewhere, and a short phrase of a few words, stays your own text.
+terminal (`@terminal`), a browser page (`@browser`), a CI log handed to an agent, a file outside the project and longer
+text pasted from a web page therefore go along marked: the chip says “External Content”, and the agent gets the text
+with the notice that it is untrusted data whose instructions it must not follow. The own agent's web pages come with
+the same notice. Pasted text counts as coming from a web page when the browser says so on the pasteboard, as Safari,
+Chrome and Firefox do; text from elsewhere, and a short phrase of a few words, stays your own.
 
 ## Sandbox
-The app itself runs without the App Sandbox, because every program it starts would inherit it: terminals, git,
-language servers and agents could not work. Instead, each AI thread has a sandbox switch, off by default. What it limits
-depends on the agent, and the switch's tooltip says so:
+
+Dango itself runs without the App Sandbox, because every program it starts would inherit it: terminals, git, language
+servers and agents could not work. Instead, each AI thread has a sandbox switch, off by default. What it limits depends
+on the agent, and the switch's tooltip says so:
 
 | Agent | With the sandbox on |
 |---|---|
 | Claude | shell commands run in Claude's own sandbox; its file and web tools do not |
 | Codex | commands and changes write only in the project, without network |
 | Own agent | files, web requests and commands stay within the project and the allowed folders, without network (`sandbox-exec`) |
-| Antigravity, OpenCode | no sandbox that the app can switch on |
+| Antigravity, OpenCode | no sandbox that Dango can switch on |
 
-## Privacy
-- No telemetry, no analytics, no crash reports sent anywhere. Errors go to the system log (Console.app, under the
+## Appearance and accessibility
+
+- **Dark mode** follows the system; **Increase Contrast** and **Reduce Motion** are respected.
+- **VoiceOver** names the sidebar, the tabs, the cards of the AI timeline, Git and CI rows, the debugger and the
+  terminal's text. Breakpoints are never told apart by colour alone.
+- **Keyboard.** Every command has a shortcut, and all of them can be changed in `keybindings.json`; ⌥⌘\` moves to the
+  next panel.
+- **Right to left.** In Arabic and Hebrew the window is mirrored, while code views stay left to right.
+
+What Dango adds on top of AppKit, area by area, is in [ACCESSIBILITY.md](ACCESSIBILITY.md).
+
+## Languages
+
+The interface is translated into 35 languages: Arabic, Catalan, Chinese (Simplified), Chinese (Traditional), Croatian,
+Czech, Danish, Dutch, English, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Italian, Japanese,
+Korean, Malay, Norwegian, Polish, Portuguese (Brazil), Portuguese (Portugal), Romanian, Russian, Slovak, Slovenian,
+Spanish, Swedish, Thai, Turkish, Ukrainian and Vietnamese.
+
+Dango follows the language order in **System Settings › General › Language & Region**; you can also pick a language for
+Dango alone there under **Applications**. Without a translation for your language, it uses English. The terms follow
+one glossary, [docs/glossary.md](docs/glossary.md), and Apple's own translations, so Dango reads like the rest of your
+Mac.
+
+## Keyboard shortcuts
+
+| Action | Shortcut |
+|---|---|
+| Open folder, new window, close window | ⌘O, ⇧⌘N, ⇧⌘W |
+| New file, save, save as | ⌘N, ⌘S, ⇧⌘S |
+| New tab, close tab, next and previous tab | ⌘T, ⌘W, ⇧⌘] and ⇧⌘[ |
+| Open Quickly, search in the project | ⌘P, ⇧⌘F |
+| Files, Search, Agents, Git, Debug, CI | ⌘1 to ⌘6 |
+| Show or hide the sidebar, next panel | ⌃⌘S, ⌥⌘\` |
+| Back and forward through edited places | ⌃- and ⌃⇧- |
+| Toggle comment, go to line | ⌘/, ⌃G |
+| Next occurrence, caret above and below | ⌘D, ⌃⇧↑ and ⌃⇧↓ |
+| Fold, unfold, fold all, unfold all | ⌥⌘←, ⌥⌘→, ⇧⌥⌘←, ⇧⌥⌘→ |
+| Line wrapping, inspector | ⌥Z, ⌥⌘I |
+| Completion, hover, go to definition | ⌥Esc, ⌃⌘I, ⌃⌘J |
+| References, call hierarchy, rename | ⌃⇧⌘F, ⌃⇧⌘H, ⌃⌘E |
+| Symbols in the file, in the project | ⇧⌘O, ⌥⌘O |
+| Quick fix, format | ⌥⌘A, ⌥⇧F |
+| Next and previous problem | ⌘' and ⇧⌘' |
+| Markdown preview, paste as plain text | ⇧⌘V, ⌥⇧⌘V |
+| Bold, italic, strikethrough, code, link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
+| Heading 1 to 3 | ⌥⌘1 to ⌥⌘3 |
+| New terminal, clear terminal | ⌃\`, ⌘K |
+| Focus the agent's message field, comment on a plan | ⌘Esc, ⌥⌘K |
+| Address field, reload, back, forward (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
+| Start or stop dictation | ⌃⌥D |
+| Breakpoint, all breakpoints on or off | ⌘\\, ⌘Y |
+| Continue, step over, into, out, stop | ⌃⌘Y, F6, F7, F8, ⌘. |
+| Settings | ⌘, |
+
+`keybindings.json` in the app's data folder (see [Where data lives](#where-data-lives)) changes any of them.
+
+## Privacy and security
+
+- **No telemetry,** no analytics, no crash reports sent anywhere. Errors go to the system log (Console.app, under the
   app's name).
-- The app connects to the network only for what you start: the agents you use (each talks to its own service), the
-  ACP registry and agent or language server downloads when you ask for them, the CI hosts you sign in to, the
-  providers of the own agent, online transcription when Lowspeak's mode is online (the recording goes to OpenAI or
-  Groq; local models keep it on the Mac), the pages you open in the browser tab, and the update feed once you
-  allowed Sparkle to check (see [Updates](#updates)).
-- Keys and tokens are kept in the macOS keychain, never in a settings file. Keys of other apps, such as Lowspeak's,
-  are read only when you agree, and only once.
+- **The network only for what you start:** the agents you use, each talking to its own service; the ACP registry and
+  the downloads of agents, language servers, debug adapters and dictation models when you ask for them; the CI hosts you
+  sign in to; edit predictions from Copilot if you chose it; the providers of the own agent; online transcription if you
+  chose it; the pages you open in the browser tab; and the update check once you allowed it.
+- **Code that leaves the Mac** does so only where you chose a service for it: an agent, Copilot's predictions, an
+  AI-written commit message. The diff for a commit message goes out only after gitleaks found no secret in it.
+- **Keys and tokens** stay in the macOS keychain, never in a settings file. Keys of other apps, such as Lowspeak's, are
+  read only when you agree, and only once.
+- **Pinned downloads.** Agents, language servers and debug adapters Dango installs are pinned to tested versions and
+  checked against their checksums.
+- **Code signing** with the Hardened Runtime; updates install only with the app's own signature.
 
 ## Where data lives
-`<id>` is the bundle identifier, `local.agentide` for the release (`local.agentide.debug` for debug builds). It does
-not contain the display name, so a rename keeps all data.
+
+`<id>` is the bundle identifier, `local.agentide` for the release (`local.agentide.debug` for debug builds). It does not
+contain the display name, so a rename keeps all data.
 
 | Place | What |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (the AI panel's list), `agent-threads/` (own agent conversations), `layouts/` (tabs per project), `recovery/` (unsaved editors after a crash), `checkpoints/` (for folders without git), `worktrees/`, `agents/` and `tools/` (installed agents and language servers), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (the AI panel's list), `agent-threads/` (own agent conversations), `layouts/` (tabs per project), `recovery/` (unsaved editors after a crash), `checkpoints/` (for folders without git), `worktrees/`, `agents/` and `tools/` (installed agents, language servers and debug adapters), `task-output/` |
 | `~/Library/Caches/<id>/` | pasted images, shell integration scripts, the ACP registry; can be deleted |
 | `~/Library/Logs/<id>/dictation/` | dictation's log files |
+| `~/Library/Application Support/Lowspeak` and `FluidAudio` | local dictation models, shared with Lowspeak |
 | `~/Library/WebKit/<id>/` | cookies and website data of the browser tab |
 | `<project>/.dango/settings.json` | the project's own settings |
 | the project's git repository | checkpoints, as commits under `refs/ide-checkpoints/`; a normal push or fetch never carries them |
 | keychain, service `<id>` | API keys of the own agent and of dictation, CI tokens |
 | `~/.local/bin/dango` | the terminal command, if you installed it |
 
-Claude keeps its own sessions under `~/.claude/projects`; the app reads them to resume a session but does not change
-them. Dictation reads Lowspeak's settings (defaults domain `com.lowspeak.app`) and models
-(`~/Library/Application Support/Lowspeak` and `FluidAudio`) without changing them.
+Claude keeps its own sessions under `~/.claude/projects`; Dango reads them to resume a session but does not change
+them.
+
+## Known limitations
+
+- **No App Sandbox** for the app itself, since terminals, git, language servers and agents would inherit it; a folder
+  must be trusted before anything it configures runs. Antigravity and OpenCode have no sandbox Dango can switch on.
+- **Claude's usage figures and context breakdown** rely on parts of its protocol marked experimental and are hidden
+  when they are missing.
+- **Rewinding the conversation** works for Claude only; for the other agents only the code is rewound.
+- **Signing in to CI through the browser** is off; use `gh`, `glab`, a token or the environment.
+- **Gemini CLI is not offered:** Google ended its sign-in with a personal account and points to Antigravity. Earlier
+  Gemini threads stay readable.
 
 ## Building from source
+
 You need:
+
 - macOS 14 or later with the Xcode Command Line Tools (`xcode-select --install`); Xcode itself is not needed.
-- Rust 1.99.1, as `rust-toolchain.toml` names it. Homebrew's `rust` builds for this Mac's processor; the universal
-  build of a release needs rustup with the targets `aarch64-apple-darwin` and `x86_64-apple-darwin`.
-- Checkouts of `splat` and `lowspeak` next to this one (`../splat`, `../lowspeak`); the workspace takes crates from
-  them by path, both on their `main` branch.
-- cmake, for every build with dictation (`make run`, `make build`, `make release`): dictation builds whisper.cpp.
+- Rust as `rust-toolchain.toml` names it. Homebrew's `rust` builds for this Mac's processor; the universal build of a
+  release needs rustup with the targets `aarch64-apple-darwin` and `x86_64-apple-darwin`.
+- Checkouts of [splat](https://github.com/sventmueller/splat) and
+  [lowspeak](https://github.com/sventmueller/lowspeak) next to this one (`../splat`, `../lowspeak`), both on their
+  `main` branch; the workspace takes crates from them by path.
+- cmake, for every build with dictation (`make run`, `make build`, `make release`), which builds whisper.cpp.
   `make check` builds without it.
 
 | Command | What it does |
 |---|---|
 | `make run` | builds the debug app (`target/debug/Dango Debug.app`) and opens it |
-| `make build` | builds the release app with dictation (`target/release/Dango.app`), signed with a local certificate the first build creates in the login keychain; raises the build number in `VERSION` |
+| `make build` | builds the release app (`target/release/Dango.app`), signed with a local certificate the first build creates in the login keychain; raises the build number in `VERSION` |
 | `make lint` | formatting and clippy; warnings fail |
 | `make check` | `lint`, then all tests; needs no keychain, window or network |
-| `make check-dictation` | clippy and the app's tests with dictation, which builds whisper.cpp |
-| `make test` | `check`, then the self-test `probe` in the real app |
+| `make test` | `check`, then the self-test `probe` and the accessibility audit, left to right and right to left, in the real app |
 | `make perf` | the timing budgets, in a release build; meaningful only on an otherwise idle Mac |
-| `make test-integration` | the app's parts against the real tools and services of this Mac with its sign-ins: language servers, git, CI; the groups that start coding agents on paid accounts (`claude`, `paste`, `acp`) run only when named with `ARGS="--only …"` or all with `ARGS=--paid`; `ARGS=--list` shows the plan |
-| `make test-claude-latest` | the newest Claude CLI, installed into `target/`, against the contract the app relies on; needs no sign-in, `ARGS=--signed-in` adds a short paid turn |
-| `make release` | a dry run of the release: the universal app with dictation, the disk image, the update feed and the Cask in `target/release-dry-run/`, signed with the local certificate; sends nothing anywhere |
+| `make release` | a dry run of the release into `target/release-dry-run/`, signed with the local certificate; sends nothing anywhere |
 | `make release-notarized` | `check`, then the release itself into `dist/`: Developer ID signature, notarization, the update feed signed with the app's own key; raises the build number |
 
-`make build` and `make run` build for the processor of the Mac they run on; `make release` builds the universal app.
-`make release-notarized` stops at once unless the owner's inputs are there: a Developer ID Application certificate,
-the notarytool profile `notary`, the app's own update key in the login keychain with its public half in the code,
-the addresses of the releases page and the homepage, reviewed release notes in every language, and every interface
-text translated into all 35 languages, which both release targets check before building. Which is which,
-and how to set each up, is in [docs/development.md](docs/development.md#release). Uploading the image and the feed and
-adding the Cask to a tap stay manual. Debug and release are separate apps with their own settings and data. How the app is put together, the decisions behind it and the
-self-tests are described in [docs/development.md](docs/development.md) and [docs/plan.md](docs/plan.md);
-accessibility in [ACCESSIBILITY.md](ACCESSIBILITY.md).
+Debug and release are separate apps with their own settings and data. Building, testing, the self-tests, the release
+and the rules the code follows are described in [docs/development.md](docs/development.md), the decisions behind it in
+[docs/plan.md](docs/plan.md). The release notes are [RELEASE_NOTES.md](RELEASE_NOTES.md), translated beside each
+README in `assets/readme/<language>/`.
 
 ## License
-Licensed under either of the [MIT license](LICENSE-MIT) or the [Apache License, Version 2.0](LICENSE-APACHE), at
-your option.
+
+Dango is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in Dango by you, as
+defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

@@ -30,8 +30,13 @@ pub(crate) const NOTARY_PROFILE: &str = "notary";
 /// What the release brings, written by hand before a notarized run.
 const NOTES: &str = "RELEASE_NOTES.md";
 
-/// The folder with `NOTES` in every other interface language, `<language>.md` each.
-const TRANSLATED_NOTES: &str = "release-notes";
+/// The folder with one subfolder per other interface language, which holds `NOTES` in that language beside the README.
+const TRANSLATED_NOTES: &str = "assets/readme";
+
+/// Where the notes in `language`, other than English, are written.
+fn translated_notes(language: &str) -> String {
+    format!("{TRANSLATED_NOTES}/{language}/{NOTES}")
+}
 
 /// How notes waiting for the owner's review begin: an HTML comment, which a notarized release refuses and a dry run
 /// leaves out of the feed.
@@ -179,7 +184,7 @@ fn preflight(sh: &mut dyn Shell) -> String {
         ),
         format!("  {} HOMEPAGE in xtask/src/cask.rs", mark(!cask::HOMEPAGE.is_empty())),
         format!(
-            "  {} {NOTES} and {TRANSLATED_NOTES}/<language>.md",
+            "  {} {NOTES} and {TRANSLATED_NOTES}/<language>/{NOTES}",
             mark(root().join(NOTES).exists())
         ),
     ]
@@ -219,7 +224,7 @@ fn notes(root: &Path, dry_run: bool, previous_feed: Option<&str>) -> Result<Vec<
     let others = languages
         .iter()
         .filter(|l| *l != "en")
-        .map(|l| (l.clone(), format!("{TRANSLATED_NOTES}/{l}.md")));
+        .map(|l| (l.clone(), translated_notes(l)));
     let (mut notes, mut missing) = (Vec::new(), Vec::new());
     for (language, file) in std::iter::once(("en".to_string(), NOTES.to_string())).chain(others) {
         let Ok(written) = std::fs::read_to_string(root.join(&file)) else {
@@ -242,7 +247,7 @@ fn notes(root: &Path, dry_run: bool, previous_feed: Option<&str>) -> Result<Vec<
         if !dry_run {
             return Err(format!(
                 "release notes missing for {list}; the update dialog shows them in every interface language: write \
-                 {NOTES} for en and {TRANSLATED_NOTES}/<language>.md for the others"
+                 {NOTES} for en and {TRANSLATED_NOTES}/<language>/{NOTES} for the others"
             ));
         }
         println!("dry run without release notes for {list}");
@@ -658,8 +663,8 @@ mod tests {
         assert_eq!(checked_notes(NOTES, "- New.\n\n", None).unwrap(), "- New.\n");
         assert!(checked_notes(NOTES, " \n", None).is_err());
         let feed = "<![CDATA[- New.]]>";
-        let stale = checked_notes("release-notes/de.md", "- New.\n", Some(feed)).unwrap_err();
-        assert!(stale.contains("release-notes/de.md"), "{stale}");
+        let stale = checked_notes(&translated_notes("de"), "- New.\n", Some(feed)).unwrap_err();
+        assert!(stale.contains("assets/readme/de/RELEASE_NOTES.md"), "{stale}");
         assert!(checked_notes(NOTES, "- Newer.\n", Some(feed)).is_ok());
     }
 
@@ -679,7 +684,7 @@ mod tests {
         assert_eq!(languages.len(), 35);
         let files = languages.iter().map(|language| match language.as_str() {
             "en" => NOTES.to_string(),
-            other => format!("{TRANSLATED_NOTES}/{other}.md"),
+            other => translated_notes(other),
         });
         for file in files {
             let written = files::read_to_string(root().join(&file)).unwrap();

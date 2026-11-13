@@ -1,7 +1,7 @@
 <!-- DRAFT for the owner's review. Check each point against the release build, adjust what differs, then delete this
 comment; `cargo xtask release --notarize` refuses notes that still carry it. To check before publishing: whether
-browser sign-in for CI is on (it needs the registered OAuth apps), and that release-notes/<language>.md still say the
-same as this file. -->
+browser sign-in for CI is on (it needs the registered OAuth apps), and that assets/readme/<language>/RELEASE_NOTES.md
+still say the same as this file. -->
 This is the first release of Dango, a native macOS editor for working with coding agents. Editor, terminals, a
 browser, git, CI, a debugger and AI threads share one window per folder. The app is written in Rust on AppKit;
 WebKit appears only in the browser tab. The interface is in 35 languages.
