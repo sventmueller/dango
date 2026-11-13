@@ -1,5 +1,7 @@
-//! The parts every panel beside the activity bar shares: its title buttons, lists that line up with its title, and
-//! announcements for VoiceOver.
+//! The parts every panel beside the activity bar shares: its title buttons, its page and source lists, lists that line
+//! up with its title, and announcements for VoiceOver.
+
+mod list;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -12,6 +14,7 @@ use objc2_foundation::{NSDictionary, NSNumber, NSPoint, NSRect, NSSize};
 
 use crate::constant;
 use crate::util::{ns, set_label, symbol_button};
+pub use list::*;
 
 /// How far a title's buttons keep from the sidebar's trailing edge.
 pub const ACCESSORY_INSET: f64 = 6.0;

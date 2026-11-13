@@ -13,10 +13,10 @@ use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAccessibility, NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSImageView, NSMenu,
-    NSMenuDelegate, NSScrollView, NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSMenuDelegate, NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource,
+    NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSEdgeInsets, NSObjectProtocol};
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
@@ -177,16 +177,7 @@ impl TestsPanel {
         for button in [&run, &find, &failed, &stop] {
             header.addArrangedSubview(button);
         }
-        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-        let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("tests"));
-        column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
-        // The table scales its columns by their share of its width, so the one column starts as wide as the table.
-        column.setWidth(frame.size.width);
-        table.addTableColumn(&column);
-        table.setHeaderView(None);
-        table.setStyle(NSTableViewStyle::SourceList);
-        table.setAccessibilityLabel(Some(&ns(t("Tests"))));
+        let (scroll, table) = ide_ui_common::panel::source_list_table(mtm, "tests", t("Tests"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
             table.setDataSource(Some(ProtocolObject::from_ref(self)));
@@ -201,24 +192,12 @@ impl TestsPanel {
         menu.setDelegate(Some(ProtocolObject::from_ref(self)));
         // SAFETY: The table keeps the menu; its delegate, the panel, outlives the table through the registry.
         unsafe { table.setMenu(Some(&menu)) };
-        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-        scroll.setHasVerticalScroller(true);
-        scroll.setAutohidesScrollers(true);
-        scroll.setDrawsBackground(false);
-        scroll.setDocumentView(Some(&table));
         let status = label(mtm, "");
         status.setTextColor(Some(&NSColor::secondaryLabelColor()));
         status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
             ide_ui_common::style::SMALL,
         )));
-        let page = NSStackView::new(mtm);
-        page.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        page.setEdgeInsets(NSEdgeInsets {
-            top: 4.0,
-            left: 8.0,
-            bottom: 6.0,
-            right: 8.0,
-        });
+        let page = ide_ui_common::panel::panel_page(mtm);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         page.addView_inGravity(&status, NSStackViewGravity::Bottom);
         *self.ivars().table.borrow_mut() = Some(table);
