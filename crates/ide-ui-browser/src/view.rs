@@ -192,7 +192,14 @@ define_class!(
 
         #[unsafe(method(webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:))]
         fn run_alert(&self, _web: &WKWebView, message: &NSString, frame: &WKFrameInfo, done: &DynBlock<dyn Fn()>) {
-            dialogs::alert(self.window().as_deref(), message, frame, done);
+            let asked = guarded(false, || {
+                dialogs::alert(self.window().as_deref(), message, frame, done);
+                true
+            });
+            // WebKit raises an exception when a panel's completion handler is never called.
+            if !asked {
+                done.call(());
+            }
         }
 
         #[unsafe(method(webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:))]
@@ -203,7 +210,13 @@ define_class!(
             frame: &WKFrameInfo,
             done: &DynBlock<dyn Fn(Bool)>,
         ) {
-            dialogs::confirm(self.window().as_deref(), message, frame, done);
+            let asked = guarded(false, || {
+                dialogs::confirm(self.window().as_deref(), message, frame, done);
+                true
+            });
+            if !asked {
+                done.call((Bool::NO,));
+            }
         }
 
         #[unsafe(method(webView:runJavaScriptTextInputPanelWithPrompt:defaultText:initiatedByFrame:completionHandler:))]
@@ -215,7 +228,13 @@ define_class!(
             frame: &WKFrameInfo,
             done: &DynBlock<dyn Fn(*mut NSString)>,
         ) {
-            dialogs::prompt(self.window().as_deref(), question, default, frame, done);
+            let asked = guarded(false, || {
+                dialogs::prompt(self.window().as_deref(), question, default, frame, done);
+                true
+            });
+            if !asked {
+                done.call((std::ptr::null_mut(),));
+            }
         }
 
         #[unsafe(method(webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:))]
@@ -226,7 +245,13 @@ define_class!(
             _frame: &WKFrameInfo,
             done: &DynBlock<dyn Fn(*mut NSArray<NSURL>)>,
         ) {
-            dialogs::choose_files(self.window().as_deref(), parameters, done);
+            let asked = guarded(false, || {
+                dialogs::choose_files(self.window().as_deref(), parameters, done);
+                true
+            });
+            if !asked {
+                done.call((std::ptr::null_mut(),));
+            }
         }
 
         #[unsafe(method(webView:requestMediaCapturePermissionForOrigin:initiatedByFrame:type:decisionHandler:))]
