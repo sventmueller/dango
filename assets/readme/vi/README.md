@@ -71,6 +71,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
   - [Điểm kiểm tra và worktree](#điểm-kiểm-tra-và-worktree)
 - [Trình soạn thảo](#trình-soạn-thảo)
 - [Máy chủ ngôn ngữ](#máy-chủ-ngôn-ngữ)
+- [Kiểm thử](#kiểm-thử)
 - [Trình gỡ lỗi](#trình-gỡ-lỗi)
 - [Terminal](#terminal)
 - [Trình duyệt](#trình-duyệt)
@@ -177,6 +178,10 @@ Những gì chúng mang lại: chẩn đoán (⌘' và ⇧⌘' di chuyển giữ
 
 Bên cạnh máy chủ riêng của tệp, ESLint kiểm tra JavaScript và TypeScript của những dự án dùng nó, kèm các bản sửa nhanh của nó, và các viết tắt của Emmet xuất hiện trong tự động hoàn thành cho HTML, CSS và JSX. Dango cài cả hai khi bạn yêu cầu; **Cài đặt › Cài đặt chung** sửa các vấn đề của ESLint khi lưu nếu bạn muốn.
 
+## Kiểm thử
+
+Khung Kiểm thử liệt kê các kiểm thử của một thư mục theo gói và tệp cùng trạng thái của chúng: `cargo test` hoặc cargo-nextest, Go, pytest, Vitest và Jest. Một biểu tượng cạnh mỗi kiểm thử ở lề sẽ chạy kiểm thử đó, ⌥-bấm để gỡ lỗi nó, và một assert thất bại đánh dấu dòng của nó. Menu Gỡ lỗi chạy kiểm thử tại con trỏ (⌃⌥⌘U), chạy lại các kiểm thử gần nhất (⌃⌥⌘G) hoặc tất cả, và gỡ lỗi kiểm thử tại con trỏ. Kiểm thử chỉ chạy trong thư mục được tin cậy, vì chúng chạy mã của dự án; `cargo test` chỉ liệt kê các kiểm thử của nó khi bạn yêu cầu, vì việc liệt kê sẽ build mọi chương trình kiểm thử.
+
 ## Trình gỡ lỗi
 
 Điểm ngắt, kể cả có điều kiện và dưới dạng điểm ghi nhật ký, chạy từng bước, các luồng thực thi cùng ngăn xếp lệnh gọi của chúng, biến và biểu thức theo dõi trong Bộ kiểm tra (⌥⌘I), giá trị bên cạnh mã khi chương trình đang tạm dừng, và bảng điều khiển gỡ lỗi để tính biểu thức trong khung đang tạm dừng.
@@ -274,7 +279,7 @@ Dango theo thứ tự ngôn ngữ trong **Cài đặt hệ thống › Cài đ�
 | Tệp mới, lưu, lưu thành | ⌘N, ⌘S, ⇧⌘S |
 | Tab mới, đóng tab, tab tiếp theo và trước đó | ⌘T, ⌘W, ⇧⌘] và ⇧⌘[ |
 | Mở nhanh, tìm kiếm trong dự án | ⌘P, ⇧⌘F |
-| Tệp, Tìm kiếm, Tác nhân, Git, Gỡ lỗi, CI | ⌘1 đến ⌘6 |
+| Tệp, Tìm kiếm, Tác nhân, Git, Kiểm thử, Gỡ lỗi, CI | ⌘1 đến ⌘7 |
 | Hiện hoặc ẩn thanh bên, khung tiếp theo | ⌃⌘S, ⌥⌘\` |
 | Lùi và tiến qua những chỗ đã sửa | ⌃- và ⌃⇧- |
 | Bật/tắt chú thích, đi tới dòng | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango theo thứ tự ngôn ngữ trong **Cài đặt hệ thống › Cài đ�
 | Trường địa chỉ, tải lại, lùi, tiến (trình duyệt) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Bắt đầu hoặc dừng đọc chính tả | ⌃⌥D |
 | Điểm ngắt, bật hoặc tắt tất cả điểm ngắt | ⌘\\, ⌘Y |
+| Chạy kiểm thử tại con trỏ, chạy lại các kiểm thử gần nhất | ⌃⌥⌘U, ⌃⌥⌘G |
 | Tiếp tục, bước qua, bước vào, bước ra, dừng | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Cài đặt | ⌘, |
 

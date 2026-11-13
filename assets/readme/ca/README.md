@@ -71,6 +71,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
   - [Punts de control i worktrees](#punts-de-control-i-worktrees)
 - [Editor](#editor)
 - [Servidors de llenguatge](#servidors-de-llenguatge)
+- [Proves](#proves)
 - [Depurador](#depurador)
 - [Terminal](#terminal)
 - [Navegador](#navegador)
@@ -177,6 +178,10 @@ El que aporten: diagnòstics (⌘' i ⇧⌘' passen de l’un a l’altre), info
 
 A més del servidor propi d’un fitxer, l’ESLint revisa el JavaScript i el TypeScript dels projectes que el fan servir, amb les seves correccions ràpides, i les abreviatures d’Emmet apareixen a la compleció per a HTML, CSS i JSX. El Dango els instal·la tots dos quan ho demanes; **Configuració › General** corregeix els problemes d’ESLint en desar, si vols.
 
+## Proves
+
+El tauler de Proves llista les proves d’una carpeta per paquet i fitxer amb el seu estat: `cargo test` o cargo-nextest, Go, pytest, Vitest i Jest. Un símbol al costat de cada prova al marge l’executa, ⌥-clic la depura, i una asserció fallida en marca la línia. El menú Depura executa la prova al punt d’inserció (⌃⌥⌘U), les últimes proves una altra vegada (⌃⌥⌘G) o totes, i depura la prova al punt d’inserció. Les proves només s’executen en carpetes de confiança, perquè executen el codi del projecte; `cargo test` llista les seves proves quan ho demanes, ja que llistar-les compila tots els programes de prova.
+
 ## Depurador
 
 Punts d’interrupció, també amb condicions i com a logpoints, execució pas a pas, fils d’execució amb les seves piles de crides, variables i expressions vigilades a l’Inspector (⌥⌘I), valors al costat del codi mentre el programa està en pausa, i una consola de depuració que avalua en el frame en pausa.
@@ -274,7 +279,7 @@ El Dango segueix l’ordre d’idiomes de **Configuració del Sistema › Genera
 | Fitxer nou, desar, desar com a | ⌘N, ⌘S, ⇧⌘S |
 | Pestanya nova, tancar pestanya, pestanya següent i anterior | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Obertura ràpida, cercar al projecte | ⌘P, ⇧⌘F |
-| Fitxers, Cerca, Agents, Git, Depura, CI | ⌘1 a ⌘6 |
+| Fitxers, Cerca, Agents, Git, Proves, Depura, CI | ⌘1 a ⌘7 |
 | Mostrar o amagar la barra lateral, tauler següent | ⌃⌘S, ⌥⌘\` |
 | Enrere i endavant pels llocs editats | ⌃- i ⌃⇧- |
 | Comentar o descomentar, anar a la línia | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ El Dango segueix l’ordre d’idiomes de **Configuració del Sistema › Genera
 | Camp d’adreça, tornar a carregar, enrere, endavant (navegador) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Iniciar o aturar el dictat | ⌃⌥D |
 | Punt d’interrupció, activar o desactivar-los tots | ⌘\\, ⌘Y |
+| Executar la prova al punt d’inserció, tornar a executar les últimes proves | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continuar, passar per sobre, entrar, sortir, aturar | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Configuració | ⌘, |
 

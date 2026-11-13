@@ -71,6 +71,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
   - [Tarkistuspisteet ja worktreet](#tarkistuspisteet-ja-worktreet)
 - [Editori](#editori)
 - [Kielipalvelimet](#kielipalvelimet)
+- [Testit](#testit)
 - [Virheenjäljitin](#virheenjäljitin)
 - [Pääte](#pääte)
 - [Selain](#selain)
@@ -177,6 +178,10 @@ Mitä ne tuovat: diagnostiikka (⌘' ja ⇧⌘' siirtävät niiden välillä), h
 
 Tiedoston oman palvelimen rinnalla ESLint tarkistaa sitä käyttävien projektien JavaScriptin ja TypeScriptin pikakorjauksineen, ja Emmetin lyhenteet näkyvät täydennyksessä HTML:lle, CSS:lle ja JSX:lle. Dango asentaa molemmat pyynnöstäsi; **Asetukset › Yleiset** korjaa halutessasi ESLint-ongelmat tallennettaessa.
 
+## Testit
+
+Testit-paneeli luettelee kansion testit paketeittain ja tiedostoittain tiloineen: `cargo test` tai cargo-nextest, Go, pytest, Vitest ja Jest. Kunkin testin kohdalla reunuksessa oleva symboli suorittaa testin, ⌥-osoitus käynnistää sen virheenjäljityksen, ja epäonnistunut assert merkitsee rivinsä. Virheenjäljitys-valikko suorittaa kohdistimen kohdalla olevan testin (⌃⌥⌘U), viimeisimmät testit uudelleen (⌃⌥⌘G) tai kaikki testit sekä käynnistää kohdistimen kohdalla olevan testin virheenjäljityksen. Testit suoritetaan vain luotetuissa kansioissa, koska ne suorittavat projektin koodia; `cargo test` luettelee testinsä vasta pyydettäessä, sillä luettelointi kääntää jokaisen testiohjelman.
+
 ## Virheenjäljitin
 
 Keskeytyskohdat, myös ehdollisina ja lokipisteinä, askellus, säikeet kutsupinoineen, muuttujat ja tarkkailtavat lausekkeet Tarkastus-näkymässä (⌥⌘I), arvot koodin vieressä ohjelman ollessa pysäytettynä sekä virheenjäljityskonsoli, joka evaluoi lausekkeet pysäytetyssä kehyksessä.
@@ -274,7 +279,7 @@ Dango seuraa kielijärjestystä kohdassa **Järjestelmäasetukset › Yleiset �
 | Uusi tiedosto, tallenna, tallenna nimellä | ⌘N, ⌘S, ⇧⌘S |
 | Uusi välilehti, sulje välilehti, seuraava ja edellinen välilehti | ⌘T, ⌘W, ⇧⌘] ja ⇧⌘[ |
 | Avaa nopeasti, etsi projektista | ⌘P, ⇧⌘F |
-| Tiedostot, Haku, Agentit, Git, Virheenjäljitys, CI | ⌘1–⌘6 |
+| Tiedostot, Haku, Agentit, Git, Testit, Virheenjäljitys, CI | ⌘1–⌘7 |
 | Näytä tai kätke sivupalkki, seuraava paneeli | ⌃⌘S, ⌥⌘\` |
 | Taakse- ja eteenpäin muokattujen kohtien läpi | ⌃- ja ⌃⇧- |
 | Kommentoinnin vaihtaminen, siirry riville | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango seuraa kielijärjestystä kohdassa **Järjestelmäasetukset › Yleiset �
 | Osoitekenttä, lataa uudelleen, takaisin, eteenpäin (selain) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Aloita tai lopeta sanelu | ⌃⌥D |
 | Keskeytyskohta, kaikki keskeytyskohdat päälle tai pois | ⌘\\, ⌘Y |
+| Suorita kohdistimen kohdalla oleva testi, suorita viimeisimmät testit uudelleen | ⌃⌥⌘U, ⌃⌥⌘G |
 | Jatka, askella yli, sisään, ulos, pysäytä | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Asetukset | ⌘, |
 

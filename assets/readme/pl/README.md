@@ -71,6 +71,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
   - [Punkty kontrolne i worktree](#punkty-kontrolne-i-worktree)
 - [Edytor](#edytor)
 - [Serwery języka](#serwery-języka)
+- [Testy](#testy)
 - [Debuger](#debuger)
 - [Terminal](#terminal)
 - [Przeglądarka](#przeglądarka)
@@ -177,6 +178,10 @@ Co dają: diagnostykę (⌘' i ⇧⌘' przechodzą między komunikatami), inform
 
 Obok własnego serwera pliku ESLint sprawdza JavaScript i TypeScript projektów, które go używają, wraz ze swoimi szybkimi poprawkami, a skróty Emmet pojawiają się w uzupełnianiu dla HTML, CSS i JSX. Dango instaluje oba na żądanie; **Ustawienia › Ogólne** naprawiają problemy ESLint przy zachowywaniu, jeśli chcesz.
 
+## Testy
+
+Panel Testy wyświetla testy folderu według pakietu i pliku wraz z ich stanem: `cargo test` lub cargo-nextest, Go, pytest, Vitest i Jest. Symbol przy każdym teście na marginesie uruchamia go, ⌥-kliknięcie uruchamia jego debugowanie, a nieudana asercja oznacza swój wiersz. Menu Debugowanie uruchamia test w punkcie wstawiania (⌃⌥⌘U), ponownie ostatnie testy (⌃⌥⌘G) lub wszystkie oraz debuguje test w punkcie wstawiania. Testy działają tylko w zaufanych folderach, ponieważ uruchamiają kod projektu; `cargo test` wyświetla listę swoich testów dopiero na prośbę, bo tworzenie listy buduje każdy program testowy.
+
 ## Debuger
 
 Punkty przerwania, także z warunkami i jako punkty rejestrowania, praca krokowa, wątki z ich stosami wywołań, zmienne i obserwowane wyrażenia w inspektorze (⌥⌘I), wartości obok kodu, gdy program jest wstrzymany, oraz konsola debugowania, która oblicza wyrażenia we wstrzymanej ramce.
@@ -274,7 +279,7 @@ Dango podąża za kolejnością języków w **Ustawienia systemowe › Ogólne �
 | Nowy plik, zachowaj, zachowaj jako | ⌘N, ⌘S, ⇧⌘S |
 | Nowa karta, zamknij kartę, następna i poprzednia karta | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Szybko otwórz, szukaj w projekcie | ⌘P, ⇧⌘F |
-| Pliki, Wyszukiwanie, Agenty, Git, Debugowanie, CI | ⌘1 do ⌘6 |
+| Pliki, Wyszukiwanie, Agenty, Git, Testy, Debugowanie, CI | ⌘1 do ⌘7 |
 | Pokaż lub ukryj pasek boczny, następny panel | ⌃⌘S, ⌥⌘\` |
 | Wstecz i dalej przez edytowane miejsca | ⌃- i ⌃⇧- |
 | Przełącz komentarz, przejdź do wiersza | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango podąża za kolejnością języków w **Ustawienia systemowe › Ogólne �
 | Pole adresu, odśwież, wstecz, dalej (przeglądarka) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Rozpocznij lub zatrzymaj dyktowanie | ⌃⌥D |
 | Punkt przerwania, włącz lub wyłącz wszystkie | ⌘\\, ⌘Y |
+| Uruchom test w punkcie wstawiania, uruchom ponownie ostatnie testy | ⌃⌥⌘U, ⌃⌥⌘G |
 | Kontynuuj, przejdź nad, wejdź, wyjdź, zatrzymaj | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Ustawienia | ⌘, |
 

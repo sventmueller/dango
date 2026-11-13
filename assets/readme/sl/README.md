@@ -71,6 +71,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
   - [Kontrolne točke in worktreeji](#kontrolne-točke-in-worktreeji)
 - [Urejevalnik](#urejevalnik)
 - [Jezikovni strežniki](#jezikovni-strežniki)
+- [Testi](#testi)
 - [Razhroščevalnik](#razhroščevalnik)
 - [Terminal](#terminal)
 - [Brskalnik](#brskalnik)
@@ -177,6 +178,10 @@ Kaj prinašajo: diagnostiko (⌘' in ⇧⌘' se premikata med njimi), informacij
 
 Poleg lastnega strežnika datoteke ESLint preverja JavaScript in TypeScript projektov, ki ga uporabljajo, s svojimi hitrimi popravki, okrajšave Emmet pa se pojavijo pri dokončevanju za HTML, CSS in JSX. Dango oba namesti na zahtevo; **Nastavitve › Splošno** po želji odpravi težave ESLint ob shranjevanju.
 
+## Testi
+
+Podokno Testi navede teste mape po paketih in datotekah z njihovim stanjem: `cargo test` ali cargo-nextest, Go, pytest, Vitest in Jest. Simbol ob vsakem testu na robu ga zažene, ⌥-klik zažene odpravljanje napak v njem, neuspešen assert pa označi svojo vrstico. Meni Odpravljanje napak zažene test na mestu kazalke (⌃⌥⌘U), znova zadnje teste (⌃⌥⌘G) ali vse ter zažene odpravljanje napak v testu na mestu kazalke. Testi se izvajajo samo v zaupanja vrednih mapah, ker izvajajo kodo projekta; `cargo test` navede svoje teste šele, ko to zahtevate, ker navajanje zgradi vsak testni program.
+
 ## Razhroščevalnik
 
 Prekinitvene točke, tudi s pogoji in kot točke dnevnika, izvajanje po korakih, niti programa z njihovimi skladi klicev, spremenljivke in opazovani izrazi v Inšpektorju (⌥⌘I), vrednosti ob kodi, ko je program ustavljen, in konzola za odpravljanje napak, ki vrednoti v ustavljenem okviru.
@@ -274,7 +279,7 @@ Dango sledi vrstnemu redu jezikov v **Nastavitve sistema › Splošno › Jezik 
 | Nova datoteka, shrani, shrani kot | ⌘N, ⌘S, ⇧⌘S |
 | Nov zavihek, zapri zavihek, naslednji in prejšnji zavihek | ⌘T, ⌘W, ⇧⌘] in ⇧⌘[ |
 | Hitro odpri, išči po projektu | ⌘P, ⇧⌘F |
-| Datoteke, Iskanje, Agenti, Git, Odpravljanje napak, CI | ⌘1 do ⌘6 |
+| Datoteke, Iskanje, Agenti, Git, Testi, Odpravljanje napak, CI | ⌘1 do ⌘7 |
 | Prikaži ali skrij stransko vrstico, naslednje podokno | ⌃⌘S, ⌥⌘\` |
 | Nazaj in naprej po urejanih mestih | ⌃- in ⌃⇧- |
 | Preklopi komentar, pojdi na vrstico | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango sledi vrstnemu redu jezikov v **Nastavitve sistema › Splošno › Jezik 
 | Naslovno polje, znova naloži, nazaj, naprej (brskalnik) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Začni ali ustavi narekovanje | ⌃⌥D |
 | Prekinitvena točka, vklopi ali izklopi vse prekinitvene točke | ⌘\\, ⌘Y |
+| Zaženi test na mestu kazalke, znova zaženi zadnje teste | ⌃⌥⌘U, ⌃⌥⌘G |
 | Nadaljuj, preskoči, vstopi, izstopi, ustavi | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Nastavitve | ⌘, |
 

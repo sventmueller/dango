@@ -177,6 +177,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | debug console | the tab with the program's output and the expressions evaluated in the paused frame |
 | Startkonfiguration | launch configuration | how a program is started for debugging, as `.vscode/launch.json` describes it |
 | Inspektor | Inspector | the column at the window's trailing edge with details, ⌥⌘I (macOS's word) |
+| **Tests** | | |
+| Tests | Tests | the panel that lists a folder's tests by package and file with their state, fifth in the sidebar (E111) |
+| Test | test | one test of the project, run or debugged from the Tests panel, the gutter or the Debug menu; also the Activity's kind of a test run |
 
 ## Languages
 
@@ -336,6 +339,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | وحدة تحكم التصحيح |
 | Startkonfiguration | إعداد التشغيل |
 | Inspektor | المفتش |
+| **Tests** | |
+| Tests | الاختبارات |
+| Test | اختبار |
 
 ### Catalan (`ca`)
 - Address: informal "tu", as macOS Catalan does ("Vols desar els canvis?", "Torna‑ho a provar"); menu items and buttons
@@ -489,6 +495,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | consola de depuració |
 | Startkonfiguration | configuració d’inici |
 | Inspektor | Inspector |
+| **Tests** | |
+| Tests | Proves |
+| Test | prova |
 
 ### Czech (`cs`)
 - Address: formal "vy" (vykání) with plural imperatives ("Zadejte", "Vyberte"), as macOS Czech; menu items and buttons
@@ -641,6 +650,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konzole ladění |
 | Startkonfiguration | konfigurace spuštění |
 | Inspektor | Inspektor |
+| **Tests** | |
+| Tests | Testy |
+| Test | test |
 
 ### Danish (`da`)
 - Address: informal "du", as Danish macOS addresses the user
@@ -791,6 +803,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | fejlfindingskonsol |
 | Startkonfiguration | startkonfiguration |
 | Inspektor | Inspektør |
+| **Tests** | |
+| Tests | Tests |
+| Test | test |
 
 ### Greek (`el`)
 - Address: formal plural (εσείς), imperatives such as "Επιλέξτε", "Εισαγάγετε", "Δοκιμάστε ξανά", as macOS Greek does;
@@ -944,6 +959,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | κονσόλα αποσφαλμάτωσης |
 | Startkonfiguration | διαμόρφωση εκκίνησης |
 | Inspektor | Επιθεωρητής |
+| **Tests** | |
+| Tests | Δοκιμές |
+| Test | δοκιμή |
 
 ### Spanish (`es`)
 - Address: "tú", as macOS in Spanish (Spain) does: imperatives "Introduce", "Elige", "Abre"; possessives "tu", "tus"
@@ -1097,6 +1115,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | consola de depuración |
 | Startkonfiguration | configuración de inicio |
 | Inspektor | Inspector |
+| **Tests** | |
+| Tests | Pruebas |
+| Test | prueba |
 
 ### Finnish (`fi`)
 - Address: informal singular "sinä", as Finnish macOS uses it ("Haluatko tallentaa…?", imperatives "Valitse", "Avaa");
@@ -1251,6 +1272,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | virheenjäljityskonsoli |
 | Startkonfiguration | käynnistysmääritys |
 | Inspektor | Tarkastus |
+| **Tests** | |
+| Tests | Testit |
+| Test | testi |
 
 ### French (`fr`)
 - Address: "vous", with "vous" imperatives ("Saisissez…", "Ouvrez…"), as macOS does
@@ -1402,6 +1426,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | console de débogage |
 | Startkonfiguration | configuration de lancement |
 | Inspektor | Inspecteur |
+| **Tests** | |
+| Tests | Tests |
+| Test | test |
 
 ### Hebrew (`he`)
 - Address: neutral, as macOS Hebrew: commands and buttons as verbal nouns ("שמירה", "סגירת הכרטיסיה"), confirmation
@@ -1557,6 +1584,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | מסוף ניפוי באגים |
 | Startkonfiguration | תצורת הפעלה |
 | Inspektor | חוקר |
+| **Tests** | |
+| Tests | בדיקות |
+| Test | בדיקה |
 
 ### Hindi (`hi`)
 - Address: formal "आप", with polite "-ें/-एँ" imperatives ("खोलें", "दर्ज करें", "दिखाएँ"), as macOS does
@@ -1708,6 +1738,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | डीबग कंसोल |
 | Startkonfiguration | लॉन्च कॉन्फ़िगरेशन |
 | Inspektor | इंस्पेक्टर |
+| **Tests** | |
+| Tests | टेस्ट |
+| Test | टेस्ट |
 
 ### Croatian (`hr`)
 - Address: formal "vi" in sentences, lowercase as macOS writes it ("Želite li…", "Odaberite…", "vaš"); menu items and
@@ -1860,6 +1893,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konzola za otklanjanje pogrešaka |
 | Startkonfiguration | konfiguracija pokretanja |
 | Inspektor | Inspektor |
+| **Tests** | |
+| Tests | Testovi |
+| Test | test |
 
 ### Hungarian (`hu`)
 - Address: formal, as Hungarian macOS: the polite third-person (Ön) verb forms with the pronoun left out ("Biztosan
@@ -2014,6 +2050,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | hibakeresési konzol |
 | Startkonfiguration | indítási konfiguráció |
 | Inspektor | Inspektor |
+| **Tests** | |
+| Tests | Tesztek |
+| Test | teszt |
 
 ### Indonesian (`id`)
 - Address: formal "Anda", capitalized, as Indonesian macOS ("Apakah Anda ingin…", "Buka tautan hanya jika Anda
@@ -2166,6 +2205,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konsol debug |
 | Startkonfiguration | konfigurasi peluncuran |
 | Inspektor | Inspektur |
+| **Tests** | |
+| Tests | Tes |
+| Test | tes |
 
 ### Italian (`it`)
 - Address: "tu", as Italian macOS ("Vuoi riprovare?", "Apri il link solo se ti fidi della fonte"); menu items and
@@ -2318,6 +2360,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | console di debug |
 | Startkonfiguration | configurazione di avvio |
 | Inspektor | Inspector |
+| **Tests** | |
+| Tests | Test |
+| Test | test |
 
 ### Japanese (`ja`)
 - Address: no pronoun; explanations and questions in the polite です/ます form ("保存しますか?", "…してください"); menu items and
@@ -2471,6 +2516,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | デバッグコンソール |
 | Startkonfiguration | 起動構成 |
 | Inspektor | インスペクタ |
+| **Tests** | |
+| Tests | テスト |
+| Test | テスト |
 
 ### Korean (`ko`)
 - Address: no pronoun; sentences in the formal 합쇼체, as Korean macOS ("저장하겠습니까?", "…하십시오", "…합니다"); menu items and
@@ -2623,6 +2671,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | 디버그 콘솔 |
 | Startkonfiguration | 실행 구성 |
 | Inspektor | 인스펙터 |
+| **Tests** | |
+| Tests | 테스트 |
+| Test | 테스트 |
 
 ### Malay (`ms`)
 - Address: "anda" in lower case, as Malay macOS ("Adakah anda ingin…", "Buka pautan hanya jika anda mempercayai
@@ -2774,6 +2825,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konsol nyahpepijat |
 | Startkonfiguration | konfigurasi pelancaran |
 | Inspektor | Pemeriksa |
+| **Tests** | |
+| Tests | Ujian |
+| Test | ujian |
 
 ### Dutch (`nl`)
 - Address: "je", as Dutch macOS ("Wil je…", "Weet je zeker dat…"); menu items and buttons as imperatives, verb first
@@ -2926,6 +2980,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | debugconsole |
 | Startkonfiguration | startconfiguratie |
 | Inspektor | Inspecteur |
+| **Tests** | |
+| Tests | Tests |
+| Test | test |
 
 ### Norwegian Bokmål (`no`)
 - Address: "du", as Norwegian macOS ("Vil du…", "Er du sikker på at…"); menu items and buttons as imperatives ("Åpne",
@@ -3078,6 +3135,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | feilsøkingskonsoll |
 | Startkonfiguration | startkonfigurasjon |
 | Inspektor | Inspektør |
+| **Tests** | |
+| Tests | Tester |
+| Test | test |
 
 ### Polish (`pl`)
 - Address: informal second person singular with the pronoun left out, as Polish macOS ("Czy chcesz…", "Otwieraj łącze
@@ -3230,6 +3290,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konsola debugowania |
 | Startkonfiguration | konfiguracja uruchamiania |
 | Inspektor | Inspektor |
+| **Tests** | |
+| Tests | Testy |
+| Test | test |
 
 ### Portuguese (Brazil) (`pt_BR`)
 - Address: "você" with third-person verbs and "seu/sua", as Brazilian macOS ("Deseja tentar novamente?", "Abra o link
@@ -3383,6 +3446,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | console de depuração |
 | Startkonfiguration | configuração de inicialização |
 | Inspektor | Inspetor |
+| **Tests** | |
+| Tests | Testes |
+| Test | teste |
 
 ### Portuguese (Portugal) (`pt_PT`)
 - Address: formal third person with the pronoun left out, as European Portuguese macOS ("Pretende ignorar as
@@ -3536,6 +3602,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | consola de depuração |
 | Startkonfiguration | configuração de arranque |
 | Inspektor | Inspetor |
+| **Tests** | |
+| Tests | Testes |
+| Test | teste |
 
 ### Romanian (`ro`)
 - Address: formal "dumneavoastră" (written "dvs."), as macOS Romanian; menu items, buttons and instructions in the
@@ -3689,6 +3758,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | consolă de depanare |
 | Startkonfiguration | configurație de pornire |
 | Inspektor | Inspector |
+| **Tests** | |
+| Tests | Teste |
+| Test | test |
 
 ### Russian (`ru`)
 - Address: formal "Вы", capitalized as macOS Russian writes it ("Вы", "Ваш"); menu items and buttons in the infinitive
@@ -3842,6 +3914,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | консоль отладки |
 | Startkonfiguration | конфигурация запуска |
 | Inspektor | Инспектор |
+| **Tests** | |
+| Tests | Тесты |
+| Test | тест |
 
 ### Slovak (`sk`)
 - Address: formal "vy" (vykanie), lowercase; menu items and buttons in the infinitive, as macOS Slovak has them
@@ -3995,6 +4070,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | ladiaca konzola |
 | Startkonfiguration | konfigurácia spustenia |
 | Inspektor | Inšpektor |
+| **Tests** | |
+| Tests | Testy |
+| Test | test |
 
 ### Slovenian (`sl`)
 - Address: formal "vi" (vikanje), lowercase; menu items and buttons in the singular imperative, as macOS Slovenian has
@@ -4149,6 +4227,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | konzola za odpravljanje napak |
 | Startkonfiguration | konfiguracija zagona |
 | Inspektor | Inšpektor |
+| **Tests** | |
+| Tests | Testi |
+| Test | test |
 
 ### Swedish (`sv`)
 - Address: "du", as macOS Swedish ("Vill du …?", "Välj …"); menu items and buttons in the imperative ("Spara", "Göm
@@ -4301,6 +4382,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | felsökningskonsol |
 | Startkonfiguration | startkonfiguration |
 | Inspektor | Inspektör |
+| **Tests** | |
+| Tests | Tester |
+| Test | test |
 
 ### Thai (`th`)
 - Address: polite neutral "คุณ", as macOS Thai; menu items and buttons are bare verbs ("บันทึก", "ซ่อนแถบเครื่องมือ");
@@ -4454,6 +4538,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | คอนโซลดีบัก |
 | Startkonfiguration | การกำหนดค่าการเริ่มต้น |
 | Inspektor | ตัวตรวจสอบ |
+| **Tests** | |
+| Tests | การทดสอบ |
+| Test | การทดสอบ |
 
 ### Turkish (`tr`)
 - Address: formal "siz", as macOS Turkish ("… istediğinizden emin misiniz?", "Seçin"); menu items and buttons in the
@@ -4608,6 +4695,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | hata ayıklama konsolu |
 | Startkonfiguration | başlatma yapılandırması |
 | Inspektor | Denetçi |
+| **Tests** | |
+| Tests | Testler |
+| Test | test |
 
 ### Ukrainian (`uk`)
 - Address: formal "ви", lowercase as macOS Ukrainian writes it ("ви", "ваш"); menu items and buttons in the infinitive
@@ -4760,6 +4850,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | консоль налагодження |
 | Startkonfiguration | конфігурація запуску |
 | Inspektor | Інспектор |
+| **Tests** | |
+| Tests | Тести |
+| Test | тест |
 
 ### Vietnamese (`vi`)
 - Address: "bạn", as macOS Vietnamese ("Bạn có chắc chắn muốn …?"); menu items and buttons are bare verbs ("Lưu", "Ẩn
@@ -4912,6 +5005,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | bảng điều khiển gỡ lỗi |
 | Startkonfiguration | cấu hình khởi chạy |
 | Inspektor | Bộ kiểm tra |
+| **Tests** | |
+| Tests | Kiểm thử |
+| Test | kiểm thử |
 
 ### Chinese, Simplified (`zh-Hans`)
 - Address: "你", as macOS Simplified Chinese (never "您"); menu items and buttons are bare verbs ("保存", "隐藏工具栏")
@@ -5063,6 +5159,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | 调试控制台 |
 | Startkonfiguration | 启动配置 |
 | Inspektor | 检查器 |
+| **Tests** | |
+| Tests | 测试 |
+| Test | 测试 |
 
 ### Chinese, Traditional (`zh-Hant`)
 - Address: "你", as macOS Traditional Chinese (never "您"); Taiwan usage and macOS's Taiwan words (檔案, 視窗, 設定, 打開); menu
@@ -5215,3 +5314,6 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Debug-Konsole | 除錯主控台 |
 | Startkonfiguration | 啟動設定 |
 | Inspektor | 檢閱器 |
+| **Tests** | |
+| Tests | 測試 |
+| Test | 測試 |

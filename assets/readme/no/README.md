@@ -71,6 +71,7 @@ Dango samler koden, agentene som endrer den, og alt rundt dem i ett vindu per ma
   - [Sjekkpunkter og worktrees](#sjekkpunkter-og-worktrees)
 - [Editor](#editor)
 - [Språktjenere](#språktjenere)
+- [Tester](#tester)
 - [Debugger](#debugger)
 - [Terminal](#terminal)
 - [Nettleser](#nettleser)
@@ -177,6 +178,10 @@ Dette gir de: diagnostikk (⌘' og ⇧⌘' går mellom dem), hover (⌃⌘I), fu
 
 I tillegg til filens egen tjener sjekker ESLint JavaScript og TypeScript i prosjekter som bruker det, med hurtigrettingene sine, og forkortelsene til Emmet vises i fullføringen for HTML, CSS og JSX. Dango installerer begge når du ber om det; **Innstillinger › Generelt** retter ESLint-problemer ved lagring hvis du vil.
 
+## Tester
+
+Tester-panelet viser testene i en mappe etter pakke og fil med tilstanden deres: `cargo test` eller cargo-nextest, Go, pytest, Vitest og Jest. Et symbol ved hver test i margen kjører den, ⌥-klikk feilsøker den, og en mislykket assert markerer linjen sin. Feilsøk-menyen kjører testen ved innsettingspunktet (⌃⌥⌘U), de siste testene på nytt (⌃⌥⌘G) eller alle, og feilsøker testen ved innsettingspunktet. Tester kjører bare i mapper du stoler på, siden de kjører koden i prosjektet; `cargo test` lister testene sine først når du ber om det, fordi listingen bygger hvert testprogram.
+
 ## Debugger
 
 Stoppunkter, også med betingelser og som loggpunkter, trinnvis kjøring, tråder med kallstablene sine, variabler og overvåkede uttrykk i inspektøren (⌥⌘I), verdier ved siden av koden mens programmet er satt på pause, og en feilsøkingskonsoll som evaluerer i den pausede rammen.
@@ -274,7 +279,7 @@ Dango følger språkrekkefølgen i **Systeminnstillinger › Generelt › Språk
 | Ny fil, lagre, lagre som | ⌘N, ⌘S, ⇧⌘S |
 | Ny fane, lukk fane, neste og forrige fane | ⌘T, ⌘W, ⇧⌘] og ⇧⌘[ |
 | Åpne raskt, søk i prosjektet | ⌘P, ⇧⌘F |
-| Filer, Søk, Agenter, Git, Feilsøk, CI | ⌘1 til ⌘6 |
+| Filer, Søk, Agenter, Git, Tester, Feilsøk, CI | ⌘1 til ⌘7 |
 | Vis eller skjul sidepanelet, neste panel | ⌃⌘S, ⌥⌘\` |
 | Tilbake og fram gjennom redigerte steder | ⌃- og ⌃⇧- |
 | Slå kommentar av/på, gå til linje | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango følger språkrekkefølgen i **Systeminnstillinger › Generelt › Språk
 | Adressefelt, last inn på nytt, tilbake, fram (nettleser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Start eller stopp diktering | ⌃⌥D |
 | Stoppunkt, alle stoppunkter av eller på | ⌘\\, ⌘Y |
+| Kjør testen ved innsettingspunktet, kjør de siste testene på nytt | ⌃⌥⌘U, ⌃⌥⌘G |
 | Fortsett, gå over, inn, ut, stopp | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Innstillinger | ⌘, |
 

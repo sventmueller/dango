@@ -71,6 +71,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
   - [Visszaállítási pontok és worktree-k](#visszaállítási-pontok-és-worktree-k)
 - [Szerkesztő](#szerkesztő)
 - [Nyelvi szerverek](#nyelvi-szerverek)
+- [Tesztek](#tesztek)
 - [Hibakereső](#hibakereső)
 - [Terminál](#terminál)
 - [Böngésző](#böngésző)
@@ -177,6 +178,10 @@ Amit nyújtanak: diagnosztika (a ⌘' és a ⇧⌘' lép közöttük), informác
 
 A fájl saját szervere mellett az ESLint ellenőrzi az azt használó projektek JavaScript- és TypeScript-kódját, a saját gyorsjavításaival együtt, az Emmet rövidítései pedig megjelennek a kiegészítésben HTML-hez, CSS-hez és JSX-hez. A Dango kérésre mindkettőt telepíti; a **Beállítások › Általános** igény szerint mentéskor kijavítja az ESLint-problémákat.
 
+## Tesztek
+
+A Tesztek panel csomag és fájl szerint listázza egy mappa tesztjeit az állapotukkal: `cargo test` vagy cargo-nextest, Go, pytest, Vitest és Jest. Az egyes tesztek mellett a margón lévő szimbólum futtatja a tesztet, a ⌥-kattintás hibakeresést indít rajta, a sikertelen assert pedig megjelöli a sorát. A Hibakeresés menü futtatja a kurzornál lévő tesztet (⌃⌥⌘U), újra a legutóbbi teszteket (⌃⌥⌘G) vagy az összeset, és hibakeresést indít a kurzornál lévő teszten. A tesztek csak megbízható mappákban futnak, mivel a projekt kódját futtatják; a `cargo test` csak kérésre listázza a tesztjeit, mert a listázás minden tesztprogramot lefordít.
+
 ## Hibakereső
 
 Töréspontok, feltételekkel és naplópontként is, léptetés, szálak a hívási vermükkel, változók és figyelt kifejezések az Inspektorban (⌥⌘I), értékek a kód mellett, amíg a program szüneteltetve van, és egy hibakeresési konzol, amely a szüneteltetett keretben értékel ki.
@@ -274,7 +279,7 @@ A Dango a **Rendszerbeállítások › Általános › Nyelv és régió** nyelv
 | Új fájl, mentés, mentés másként | ⌘N, ⌘S, ⇧⌘S |
 | Új lap, lap bezárása, következő és előző lap | ⌘T, ⌘W, ⇧⌘] és ⇧⌘[ |
 | Gyors megnyitás, keresés a projektben | ⌘P, ⇧⌘F |
-| Fájlok, Keresés, Ügynökök, Git, Hibakeresés, CI | ⌘1–⌘6 |
+| Fájlok, Keresés, Ügynökök, Git, Tesztek, Hibakeresés, CI | ⌘1–⌘7 |
 | Oldalsáv megjelenítése vagy elrejtése, következő panel | ⌃⌘S, ⌥⌘\` |
 | Vissza és előre a szerkesztett helyek között | ⌃- és ⌃⇧- |
 | Megjegyzés be/ki, ugrás sorra | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ A Dango a **Rendszerbeállítások › Általános › Nyelv és régió** nyelv
 | Címmező, újratöltés, vissza, előre (böngésző) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Diktálás indítása vagy leállítása | ⌃⌥D |
 | Töréspont, összes töréspont be- vagy kikapcsolása | ⌘\\, ⌘Y |
+| A kurzornál lévő teszt futtatása, a legutóbbi tesztek újrafuttatása | ⌃⌥⌘U, ⌃⌥⌘G |
 | Folytatás, átlépés, belépés, kilépés, leállítás | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Beállítások | ⌘, |
 

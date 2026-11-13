@@ -71,6 +71,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
   - [Checkpoint dan worktree](#checkpoint-dan-worktree)
 - [Editor](#editor)
 - [Server bahasa](#server-bahasa)
+- [Tes](#tes)
 - [Debugger](#debugger)
 - [Terminal](#terminal)
 - [Browser](#browser)
@@ -177,6 +178,10 @@ Yang mereka berikan: diagnostik (⌘' dan ⇧⌘' berpindah di antaranya), info 
 
 Selain server milik file itu sendiri, ESLint memeriksa JavaScript dan TypeScript pada proyek yang menggunakannya, dengan perbaikan cepatnya, dan singkatan Emmet muncul dalam pelengkapan untuk HTML, CSS, dan JSX. Dango menginstal keduanya saat Anda memintanya; **Pengaturan › Umum** memperbaiki masalah ESLint saat menyimpan jika Anda mau.
 
+## Tes
+
+Panel Tes mencantumkan tes sebuah folder per paket dan file beserta statusnya: `cargo test` atau cargo-nextest, Go, pytest, Vitest, dan Jest. Simbol di samping setiap tes pada margin menjalankannya, ⌥-klik men-debug-nya, dan assert yang gagal menandai barisnya. Menu Debug menjalankan tes di titik sisip (⌃⌥⌘U), tes terakhir sekali lagi (⌃⌥⌘G), atau semuanya, dan men-debug tes di titik sisip. Tes hanya berjalan di folder tepercaya, karena tes menjalankan kode proyek; `cargo test` mencantumkan tesnya saat Anda memintanya, karena pencantuman membangun setiap program tes.
+
 ## Debugger
 
 Breakpoint, juga dengan kondisi dan sebagai logpoint, eksekusi langkah demi langkah, thread dengan call stack-nya, variabel dan ekspresi yang dipantau di inspektur (⌥⌘I), nilai di samping kode selama program dijeda, dan konsol debug yang mengevaluasi di frame yang dijeda.
@@ -274,7 +279,7 @@ Dango mengikuti urutan bahasa di **Pengaturan Sistem › Umum › Bahasa & Wilay
 | File baru, simpan, simpan sebagai | ⌘N, ⌘S, ⇧⌘S |
 | Tab baru, tutup tab, tab berikutnya dan sebelumnya | ⌘T, ⌘W, ⇧⌘] dan ⇧⌘[ |
 | Buka Cepat, cari di proyek | ⌘P, ⇧⌘F |
-| File, Pencarian, Agen, Git, Debug, CI | ⌘1 hingga ⌘6 |
+| File, Pencarian, Agen, Git, Tes, Debug, CI | ⌘1 hingga ⌘7 |
 | Tampilkan atau sembunyikan bar samping, panel berikutnya | ⌃⌘S, ⌥⌘\` |
 | Mundur dan maju melalui tempat yang diedit | ⌃- dan ⌃⇧- |
 | Alihkan komentar, buka baris | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango mengikuti urutan bahasa di **Pengaturan Sistem › Umum › Bahasa & Wilay
 | Kolom alamat, muat ulang, mundur, maju (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Mulai atau hentikan dikte | ⌃⌥D |
 | Breakpoint, aktifkan atau nonaktifkan semua breakpoint | ⌘\\, ⌘Y |
+| Jalankan tes di titik sisip, jalankan ulang tes terakhir | ⌃⌥⌘U, ⌃⌥⌘G |
 | Lanjutkan, langkahi, masuk, keluar, hentikan | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Pengaturan | ⌘, |
 

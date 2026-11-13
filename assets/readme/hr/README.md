@@ -71,6 +71,7 @@ Dango okuplja kôd, agente koji ga mijenjaju i sve oko njih u jednom prozoru po 
   - [Kontrolne točke i worktreeji](#kontrolne-točke-i-worktreeji)
 - [Urednik](#urednik)
 - [Jezični poslužitelji](#jezični-poslužitelji)
+- [Testovi](#testovi)
 - [Program za otklanjanje pogrešaka](#program-za-otklanjanje-pogrešaka)
 - [Terminal](#terminal)
 - [Preglednik](#preglednik)
@@ -177,6 +178,10 @@ Go, Rust, TypeScript i JavaScript, Python, C, C++ i Objective-C, Swift, shell sk
 
 Uz vlastiti poslužitelj datoteke ESLint provjerava JavaScript i TypeScript projekata koji ga koriste, sa svojim brzim popravcima, a Emmet kratice pojavljuju se u dovršavanju za HTML, CSS i JSX. Dango instalira oba na vaš zahtjev; **Postavke › Općenito** po želji ispravlja probleme ESLinta pri spremanju.
 
+## Testovi
+
+Okno Testovi navodi testove mape po paketu i datoteci s njihovim stanjem: `cargo test` ili cargo-nextest, Go, pytest, Vitest i Jest. Simbol uz svaki test na rubu pokreće ga, ⌥-klik pokreće otklanjanje pogrešaka u njemu, a neuspjeli assert označava svoj redak. Izbornik Otklanjanje pogrešaka pokreće test na mjestu kursora (⌃⌥⌘U), ponovno zadnje testove (⌃⌥⌘G) ili sve te pokreće otklanjanje pogrešaka u testu na mjestu kursora. Testovi se pokreću samo u pouzdanim mapama jer izvršavaju kod projekta; `cargo test` navodi svoje testove tek kad to zatražite jer popisivanje gradi svaki testni program.
+
 ## Program za otklanjanje pogrešaka
 
 Prekidne točke, i s uvjetima i kao točke zapisivanja, izvršavanje korak po korak, niti sa stogovima poziva, varijable i praćeni izrazi u Inspektoru (⌥⌘I), vrijednosti pokraj koda dok je program zaustavljen te konzola za otklanjanje pogrešaka koja izračunava izraze u zaustavljenom okviru.
@@ -274,7 +279,7 @@ Dango slijedi redoslijed jezika u **Postavke sustava › Općenito › Jezik i r
 | Nova datoteka, spremi, spremi kao | ⌘N, ⌘S, ⇧⌘S |
 | Nova kartica, zatvori karticu, sljedeća i prethodna kartica | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Brzo otvaranje, pretraga u projektu | ⌘P, ⇧⌘F |
-| Datoteke, Pretraga, Agenti, Git, Otklanjanje pogrešaka, CI | ⌘1 do ⌘6 |
+| Datoteke, Pretraga, Agenti, Git, Testovi, Otklanjanje pogrešaka, CI | ⌘1 do ⌘7 |
 | Prikaži ili sakrij rubni stupac, sljedeće okno | ⌃⌘S, ⌥⌘\` |
 | Natrag i naprijed kroz uređivana mjesta | ⌃- i ⌃⇧- |
 | Uključi/isključi komentar, idi na redak | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango slijedi redoslijed jezika u **Postavke sustava › Općenito › Jezik i r
 | Polje adrese, ponovno učitaj, natrag, naprijed (preglednik) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Započni ili zaustavi diktat | ⌃⌥D |
 | Prekidna točka, uključi ili isključi sve prekidne točke | ⌘\\, ⌘Y |
+| Pokreni test na mjestu kursora, ponovno pokreni zadnje testove | ⌃⌥⌘U, ⌃⌥⌘G |
 | Nastavi, preskoči, uđi u funkciju, iziđi iz funkcije, zaustavi | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Postavke | ⌘, |
 

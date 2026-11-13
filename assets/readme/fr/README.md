@@ -71,6 +71,7 @@ Dango réunit le code, les agents qui le modifient et tout ce qui les entoure da
   - [Points de contrôle et worktrees](#points-de-contrôle-et-worktrees)
 - [Éditeur](#éditeur)
 - [Serveurs de langage](#serveurs-de-langage)
+- [Tests](#tests)
 - [Débogueur](#débogueur)
 - [Terminal](#terminal)
 - [Navigateur](#navigateur)
@@ -177,6 +178,10 @@ Ce qu’ils apportent : diagnostics (⌘' et ⇧⌘' passent de l’un à l’au
 
 En plus du serveur propre à un fichier, ESLint vérifie le JavaScript et le TypeScript des projets qui l’utilisent, avec ses corrections rapides, et les abréviations Emmet apparaissent dans la complétion pour HTML, CSS et JSX. Dango installe les deux à votre demande ; **Réglages › Général** corrige les problèmes ESLint à l’enregistrement si vous le souhaitez.
 
+## Tests
+
+Le panneau Tests liste les tests d’un dossier par paquet et par fichier avec leur état : `cargo test` ou cargo-nextest, Go, pytest, Vitest et Jest. Un symbole à côté de chaque test dans la marge l’exécute, ⌥-clic le débogue, et une assertion en échec marque sa ligne. Le menu Déboguer exécute le test au point d’insertion (⌃⌥⌘U), à nouveau les derniers tests (⌃⌥⌘G) ou tous, et débogue le test au point d’insertion. Les tests ne s’exécutent que dans les dossiers de confiance, puisqu’ils exécutent le code du projet ; `cargo test` ne liste ses tests que lorsque vous le demandez, car les lister compile chaque programme de test.
+
 ## Débogueur
 
 Points d’arrêt, aussi avec conditions et comme points de journalisation, pas à pas, fils d’exécution avec leurs piles d’appels, variables et expressions surveillées dans l’inspecteur (⌥⌘I), valeurs à côté du code tant que le programme est en pause, et une console de débogage qui évalue dans le cadre en pause.
@@ -274,7 +279,7 @@ Dango suit l’ordre des langues de **Réglages Système › Général › Langu
 | Nouveau fichier, enregistrer, enregistrer sous | ⌘N, ⌘S, ⇧⌘S |
 | Nouvel onglet, fermer l’onglet, onglet suivant et précédent | ⌘T, ⌘W, ⇧⌘] et ⇧⌘[ |
 | Ouverture rapide, rechercher dans le projet | ⌘P, ⇧⌘F |
-| Fichiers, Recherche, Agents, Git, Déboguer, CI | ⌘1 à ⌘6 |
+| Fichiers, Recherche, Agents, Git, Tests, Déboguer, CI | ⌘1 à ⌘7 |
 | Afficher ou masquer la barre latérale, panneau suivant | ⌃⌘S, ⌥⌘\` |
 | Retour et avance parmi les endroits modifiés | ⌃- et ⌃⇧- |
 | Activer/désactiver le commentaire, aller à la ligne | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango suit l’ordre des langues de **Réglages Système › Général › Langu
 | Champ d’adresse, actualiser, précédent, suivant (navigateur) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Démarrer ou arrêter la dictée | ⌃⌥D |
 | Point d’arrêt, activer ou désactiver tous les points d’arrêt | ⌘\\, ⌘Y |
+| Exécuter le test au point d’insertion, réexécuter les derniers tests | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continuer, pas par-dessus, entrer, sortir, arrêter | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Réglages | ⌘, |
 

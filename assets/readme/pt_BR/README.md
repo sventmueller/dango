@@ -71,6 +71,7 @@ O Dango reúne o código, os agentes que o alteram e tudo ao redor em uma janela
   - [Pontos de restauração e worktrees](#pontos-de-restauração-e-worktrees)
 - [Editor](#editor)
 - [Servidores de linguagem](#servidores-de-linguagem)
+- [Testes](#testes)
 - [Depurador](#depurador)
 - [Terminal](#terminal)
 - [Navegador](#navegador)
@@ -177,6 +178,10 @@ O que eles oferecem: diagnósticos (⌘' e ⇧⌘' passam de um para outro), inf
 
 Além do servidor próprio de um arquivo, o ESLint verifica o JavaScript e o TypeScript dos projetos que o usam, com suas correções rápidas, e as abreviações do Emmet aparecem no preenchimento para HTML, CSS e JSX. O Dango instala os dois quando você pede; **Ajustes › Geral** corrige os problemas do ESLint ao salvar, se você quiser.
 
+## Testes
+
+O painel Testes lista os testes de uma pasta por pacote e arquivo com o estado de cada um: `cargo test` ou cargo-nextest, Go, pytest, Vitest e Jest. Um símbolo ao lado de cada teste na margem o executa, ⌥-clique o depura, e uma asserção com falha marca a linha dela. O menu Depurar executa o teste no ponto de inserção (⌃⌥⌘U), os últimos testes novamente (⌃⌥⌘G) ou todos, e depura o teste no ponto de inserção. Os testes só são executados em pastas confiáveis, já que executam o código do projeto; o `cargo test` lista seus testes quando você pede, pois listar compila todos os programas de teste.
+
 ## Depurador
 
 Pontos de interrupção, também com condições e como logpoints, execução passo a passo, threads com suas pilhas de chamadas, variáveis e expressões monitoradas no Inspetor (⌥⌘I), valores ao lado do código enquanto o programa está pausado, e um console de depuração que avalia no frame pausado.
@@ -274,7 +279,7 @@ O Dango segue a ordem de idiomas em **Ajustes › Geral › Idioma e Região**; 
 | Novo arquivo, salvar, salvar como | ⌘N, ⌘S, ⇧⌘S |
 | Nova aba, fechar aba, próxima aba e aba anterior | ⌘T, ⌘W, ⇧⌘] e ⇧⌘[ |
 | Abrir Rapidamente, buscar no projeto | ⌘P, ⇧⌘F |
-| Arquivos, Busca, Agentes, Git, Depurar, CI | ⌘1 a ⌘6 |
+| Arquivos, Busca, Agentes, Git, Testes, Depurar, CI | ⌘1 a ⌘7 |
 | Mostrar ou ocultar a barra lateral, próximo painel | ⌃⌘S, ⌥⌘\` |
 | Voltar e avançar pelos lugares editados | ⌃- e ⌃⇧- |
 | Ativar ou desativar comentário, ir para a linha | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ O Dango segue a ordem de idiomas em **Ajustes › Geral › Idioma e Região**; 
 | Campo de endereço, recarregar, voltar, avançar (navegador) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Iniciar ou parar o ditado | ⌃⌥D |
 | Ponto de interrupção, ativar ou desativar todos | ⌘\\, ⌘Y |
+| Executar o teste no ponto de inserção, executar novamente os últimos testes | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continuar, contornar, intervir, sair, parar | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Ajustes | ⌘, |
 

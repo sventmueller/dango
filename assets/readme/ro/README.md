@@ -71,6 +71,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
   - [Puncte de control și worktree-uri](#puncte-de-control-și-worktree-uri)
 - [Editor](#editor)
 - [Servere de limbaj](#servere-de-limbaj)
+- [Teste](#teste)
 - [Depanator](#depanator)
 - [Terminal](#terminal)
 - [Browser](#browser)
@@ -177,6 +178,10 @@ Ce oferă: diagnosticări (⌘' și ⇧⌘' trec de la una la alta), informații
 
 Pe lângă serverul propriu al unui fișier, ESLint verifică codul JavaScript și TypeScript al proiectelor care îl folosesc, cu remedierile sale rapide, iar abrevierile Emmet apar în completare pentru HTML, CSS și JSX. Dango le instalează pe amândouă la cerere; **Configurări › General** remediază problemele ESLint la salvare, dacă doriți.
 
+## Teste
+
+Panoul Teste listează testele unui dosar pe pachete și fișiere, cu starea lor: `cargo test` sau cargo-nextest, Go, pytest, Vitest și Jest. Un simbol lângă fiecare test în margine îl rulează, ⌥-clic îl depanează, iar un assert eșuat îi marchează linia. Meniul Depanare rulează testul de la punctul de inserare (⌃⌥⌘U), din nou ultimele teste (⌃⌥⌘G) sau pe toate și depanează testul de la punctul de inserare. Testele rulează doar în dosarele de încredere, deoarece rulează codul proiectului; `cargo test` își listează testele doar când i-o cereți, deoarece listarea compilează fiecare program de test.
+
 ## Depanator
 
 Puncte de întrerupere, și cu condiții sau ca puncte de jurnal, execuție pas cu pas, fire de execuție cu stivele lor de apeluri, variabile și expresii urmărite în inspector (⌥⌘I), valori lângă cod cât timp programul este în pauză și o consolă de depanare care evaluează în cadrul aflat în pauză.
@@ -274,7 +279,7 @@ Dango urmează ordinea limbilor din **Configurări sistem › General › Limbă
 | Fișier nou, salvare, salvare ca | ⌘N, ⌘S, ⇧⌘S |
 | Filă nouă, închidere filă, fila următoare și anterioară | ⌘T, ⌘W, ⇧⌘] și ⇧⌘[ |
 | Deschidere rapidă, căutare în proiect | ⌘P, ⇧⌘F |
-| Fișiere, Căutare, Agenți, Git, Depanare, CI | ⌘1 până la ⌘6 |
+| Fișiere, Căutare, Agenți, Git, Teste, Depanare, CI | ⌘1 până la ⌘7 |
 | Afișarea sau ascunderea barei laterale, panoul următor | ⌃⌘S, ⌥⌘\` |
 | Înapoi și înainte prin locurile editate | ⌃- și ⌃⇧- |
 | Activare/dezactivare comentariu, salt la linie | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango urmează ordinea limbilor din **Configurări sistem › General › Limbă
 | Câmp de adresă, reîncărcare, înapoi, înainte (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Pornirea sau oprirea dictării | ⌃⌥D |
 | Punct de întrerupere, activarea sau dezactivarea tuturor | ⌘\\, ⌘Y |
+| Rularea testului de la punctul de inserare, rularea din nou a ultimelor teste | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continuare, pas peste, în interior, în afară, oprire | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Configurări | ⌘, |
 

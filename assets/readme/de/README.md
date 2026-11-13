@@ -71,6 +71,7 @@ Dango bringt den Code, die Agenten, die ihn ändern, und alles drumherum in ein 
   - [Sicherungspunkte und Worktrees](#sicherungspunkte-und-worktrees)
 - [Editor](#editor)
 - [Sprachserver](#sprachserver)
+- [Tests](#tests)
 - [Debugger](#debugger)
 - [Terminal](#terminal)
 - [Browser](#browser)
@@ -177,6 +178,10 @@ Was sie bringen: Diagnosen (⌘' und ⇧⌘' springen zwischen ihnen), Hover (�
 
 Neben dem eigenen Server einer Datei prüft ESLint das JavaScript und TypeScript von Projekten, die es nutzen, mit seinen Schnellkorrekturen, und die Kürzel von Emmet erscheinen in der Vervollständigung für HTML, CSS und JSX. Dango installiert beide auf Nachfrage; unter **Einstellungen › Allgemein** behebt es die Probleme von ESLint beim Sichern, wenn du willst.
 
+## Tests
+
+Das Panel „Tests“ listet die Tests eines Ordners nach Paket und Datei mit ihrem Zustand: `cargo test` oder cargo-nextest, Go, pytest, Vitest und Jest. Ein Symbol an jedem Test in der Spalte der Zeilennummern führt ihn aus, ⌥-Klick debuggt ihn, und ein fehlgeschlagenes Assert markiert seine Zeile. Das Menü „Debuggen“ führt den Test an der Einfügemarke aus (⌃⌥⌘U), die letzten Tests noch einmal (⌃⌥⌘G) oder alle, und debuggt den Test an der Einfügemarke. Tests laufen nur in vertrauten Ordnern, weil sie den Code des Projekts ausführen; `cargo test` listet seine Tests erst, wenn du darum bittest, denn das Auflisten baut jedes Testprogramm.
+
 ## Debugger
 
 Haltepunkte, auch mit Bedingungen und als Logpunkte, Schrittbetrieb, Threads mit ihrer Aufrufliste, Variablen und überwachte Ausdrücke im Inspektor (⌥⌘I), Werte neben dem Code, solange das Programm angehalten ist, und eine Debug-Konsole, die im angehaltenen Frame auswertet.
@@ -274,7 +279,7 @@ Dango folgt der Sprachreihenfolge unter **Systemeinstellungen › Allgemein › 
 | Neue Datei, sichern, sichern unter | ⌘N, ⌘S, ⇧⌘S |
 | Neuer Tab, Tab schließen, nächster und vorheriger Tab | ⌘T, ⌘W, ⇧⌘] und ⇧⌘[ |
 | Schnell öffnen, im Projekt suchen | ⌘P, ⇧⌘F |
-| Dateien, Suche, Agenten, Git, Debuggen, CI | ⌘1 bis ⌘6 |
+| Dateien, Suche, Agenten, Git, Tests, Debuggen, CI | ⌘1 bis ⌘7 |
 | Seitenleiste ein- oder ausblenden, nächstes Panel | ⌃⌘S, ⌥⌘\` |
 | Zurück und vorwärts durch bearbeitete Stellen | ⌃- und ⌃⇧- |
 | Kommentar umschalten, gehe zu Zeile | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango folgt der Sprachreihenfolge unter **Systemeinstellungen › Allgemein › 
 | Adressfeld, neu laden, zurück, vor (Browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Diktat starten oder stoppen | ⌃⌥D |
 | Haltepunkt, alle Haltepunkte ein oder aus | ⌘\\, ⌘Y |
+| Test an der Einfügemarke ausführen, letzten Testlauf wiederholen | ⌃⌥⌘U, ⌃⌥⌘G |
 | Fortfahren, darüber, hinein, heraus, stoppen | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Einstellungen | ⌘, |
 

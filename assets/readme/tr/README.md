@@ -71,6 +71,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
   - [Kontrol noktaları ve worktree’ler](#kontrol-noktaları-ve-worktreeler)
 - [Düzenleyici](#düzenleyici)
 - [Dil sunucuları](#dil-sunucuları)
+- [Testler](#testler)
 - [Hata ayıklayıcı](#hata-ayıklayıcı)
 - [Terminal](#terminal)
 - [Tarayıcı](#tarayıcı)
@@ -177,6 +178,10 @@ Getirdikleri: tanılamalar (⌘' ve ⇧⌘' aralarında gezinir), üzerine gelin
 
 Bir dosyanın kendi sunucusunun yanında ESLint, onu kullanan projelerin JavaScript ve TypeScript kodunu hızlı düzeltmeleriyle birlikte denetler, Emmet’in kısaltmaları da HTML, CSS ve JSX için tamamlamada görünür. Dango ikisini de istediğinizde kurar; **Ayarlar › Genel** içinde isterseniz ESLint’in sorunları kaydederken düzeltilir.
 
+## Testler
+
+Testler paneli bir klasörün testlerini paket ve dosyaya göre durumlarıyla birlikte listeler: `cargo test` ya da cargo-nextest, Go, pytest, Vitest ve Jest. Kenar boşluğunda her testin yanındaki simge testi çalıştırır, ⌥-tıklama testte hata ayıklar ve başarısız bir assert kendi satırını işaretler. Hata Ayıkla menüsü imleç konumundaki testi (⌃⌥⌘U), son testleri yeniden (⌃⌥⌘G) ya da tümünü çalıştırır ve imleç konumundaki testte hata ayıklar. Testler projenin kodunu çalıştırdığından yalnızca güvenilen klasörlerde çalışır; listeleme her test programını derlediğinden `cargo test` testlerini yalnızca siz istediğinizde listeler.
+
 ## Hata ayıklayıcı
 
 Koşullu olanlar ve günlük noktaları dahil kesme noktaları, adım adım ilerleme, çağrı yığınlarıyla iş parçacıkları, Denetçi’de (⌥⌘I) değişkenler ve izlenen ifadeler, program duraklatılmışken kodun yanında değerler ve duraklatılmış çerçevede değerlendirme yapan bir hata ayıklama konsolu.
@@ -274,7 +279,7 @@ Dango, **Sistem Ayarları › Genel › Dil ve Bölge** içindeki dil sırasın�
 | Yeni dosya, kaydet, farklı kaydet | ⌘N, ⌘S, ⇧⌘S |
 | Yeni sekme, sekmeyi kapat, sonraki ve önceki sekme | ⌘T, ⌘W, ⇧⌘] ve ⇧⌘[ |
 | Hızlı Aç, projede ara | ⌘P, ⇧⌘F |
-| Dosyalar, Arama, Ajanlar, Git, Hata Ayıkla, CI | ⌘1–⌘6 |
+| Dosyalar, Arama, Ajanlar, Git, Testler, Hata Ayıkla, CI | ⌘1–⌘7 |
 | Kenar çubuğunu göster ya da gizle, sonraki panel | ⌃⌘S, ⌥⌘\` |
 | Düzenlenen yerler arasında geri ve ileri | ⌃- ve ⌃⇧- |
 | Yorumu aç/kapat, satıra git | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango, **Sistem Ayarları › Genel › Dil ve Bölge** içindeki dil sırasın�
 | Adres alanı, yeniden yükle, geri, ileri (tarayıcı) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Dikteyi başlat ya da durdur | ⌃⌥D |
 | Kesme noktası, tüm kesme noktalarını aç ya da kapat | ⌘\\, ⌘Y |
+| İmleç konumundaki testi çalıştır, son testleri yeniden çalıştır | ⌃⌥⌘U, ⌃⌥⌘G |
 | Devam et, üzerinden, içine, dışına adımla, durdur | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Ayarlar | ⌘, |
 

@@ -71,6 +71,7 @@ Dango riunisce il codice, gli agenti che lo modificano e tutto ciò che li circo
   - [Punti di ripristino e worktree](#punti-di-ripristino-e-worktree)
 - [Editor](#editor)
 - [Server di linguaggio](#server-di-linguaggio)
+- [Test](#test)
 - [Debugger](#debugger)
 - [Terminale](#terminale)
 - [Browser](#browser)
@@ -177,6 +178,10 @@ Cosa offrono: diagnostica (⌘' e ⇧⌘' passano da una all’altra), informazi
 
 Accanto al server proprio di un file, ESLint controlla il JavaScript e il TypeScript dei progetti che lo usano, con le sue correzioni rapide, e le abbreviazioni Emmet compaiono nel completamento per HTML, CSS e JSX. Dango li installa entrambi quando lo chiedi; **Impostazioni › Generali** corregge i problemi di ESLint al salvataggio, se vuoi.
 
+## Test
+
+Il riquadro Test elenca i test di una cartella per pacchetto e file con il loro stato: `cargo test` o cargo-nextest, Go, pytest, Vitest e Jest. Un simbolo accanto a ogni test nel margine lo esegue, ⌥-clic ne esegue il debug, e un’asserzione non riuscita ne segna la riga. Il menu Debug esegue il test nel punto di inserimento (⌃⌥⌘U), di nuovo gli ultimi test (⌃⌥⌘G) o tutti, ed esegue il debug del test nel punto di inserimento. I test vengono eseguiti solo nelle cartelle attendibili, perché eseguono il codice del progetto; `cargo test` elenca i suoi test quando lo chiedi, perché elencarli compila ogni programma di test.
+
 ## Debugger
 
 Punti di interruzione, anche con condizioni e come logpoint, esecuzione passo passo, thread con i loro stack di chiamate, variabili ed espressioni di controllo nell’Inspector (⌥⌘I), valori accanto al codice mentre il programma è in pausa, e una console di debug che valuta nel frame in pausa.
@@ -274,7 +279,7 @@ Dango segue l’ordine delle lingue in **Impostazioni di Sistema › Generali �
 | Nuovo file, salva, salva con nome | ⌘N, ⌘S, ⇧⌘S |
 | Nuovo pannello, chiudi pannello, pannello successivo e precedente | ⌘T, ⌘W, ⇧⌘] e ⇧⌘[ |
 | Apertura rapida, cerca nel progetto | ⌘P, ⇧⌘F |
-| File, Ricerca, Agenti, Git, Debug, CI | da ⌘1 a ⌘6 |
+| File, Ricerca, Agenti, Git, Test, Debug, CI | da ⌘1 a ⌘7 |
 | Mostra o nascondi la barra laterale, riquadro successivo | ⌃⌘S, ⌥⌘\` |
 | Indietro e avanti tra i punti modificati | ⌃- e ⌃⇧- |
 | Attiva o disattiva commento, vai alla riga | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango segue l’ordine delle lingue in **Impostazioni di Sistema › Generali �
 | Campo dell’indirizzo, ricarica, indietro, avanti (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Avvia o interrompi la dettatura | ⌃⌥D |
 | Punto di interruzione, attiva o disattiva tutti i punti di interruzione | ⌘\\, ⌘Y |
+| Esegui il test nel punto di inserimento, riesegui gli ultimi test | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continua, esegui istruzione/routine, esegui istruzione, esci da istruzione/routine, interrompi | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Impostazioni | ⌘, |
 

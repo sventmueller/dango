@@ -71,6 +71,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
   - [Titik semak dan worktree](#titik-semak-dan-worktree)
 - [Editor](#editor)
 - [Pelayan bahasa](#pelayan-bahasa)
+- [Ujian](#ujian)
 - [Penyahpepijat](#penyahpepijat)
 - [Terminal](#terminal)
 - [Pelayar](#pelayar)
@@ -177,6 +178,10 @@ Apa yang dibawanya: diagnostik (⌘' dan ⇧⌘' bergerak antaranya), hover (⌃
 
 Selain pelayan fail itu sendiri, ESLint menyemak JavaScript dan TypeScript dalam projek yang menggunakannya, dengan pembetulan pantasnya, dan singkatan Emmet muncul dalam pelengkapan untuk HTML, CSS dan JSX. Dango memasang kedua-duanya apabila anda memintanya; **Seting › Umum** membetulkan masalah ESLint semasa menyimpan jika anda mahu.
 
+## Ujian
+
+Panel Ujian menyenaraikan ujian sesebuah folder mengikut pakej dan fail beserta keadaannya: `cargo test` atau cargo-nextest, Go, pytest, Vitest dan Jest. Simbol di sebelah setiap ujian pada jidar menjalankannya, ⌥-klik menyahpepijatnya, dan assert yang gagal menandakan barisnya. Menu Nyahpepijat menjalankan ujian pada kursor (⌃⌥⌘U), ujian terakhir sekali lagi (⌃⌥⌘G) atau kesemuanya, dan menyahpepijat ujian pada kursor. Ujian hanya berjalan dalam folder yang dipercayai, kerana ujian menjalankan kod projek; `cargo test` menyenaraikan ujiannya apabila anda memintanya, kerana penyenaraian membina setiap program ujian.
+
 ## Penyahpepijat
 
 Titik henti, juga dengan syarat dan sebagai titik log, langkah demi langkah, thread dengan tindanan panggilannya, pemboleh ubah dan ungkapan pantauan dalam Pemeriksa (⌥⌘I), nilai di sebelah kod semasa program dijeda, dan konsol nyahpepijat yang menilai ungkapan dalam bingkai yang dijeda.
@@ -274,7 +279,7 @@ Dango mengikut susunan bahasa dalam **Seting Sistem › Umum › Bahasa & Rantau
 | Fail baharu, simpan, simpan sebagai | ⌘N, ⌘S, ⇧⌘S |
 | Tab baharu, tutup tab, tab seterusnya dan sebelumnya | ⌘T, ⌘W, ⇧⌘] dan ⇧⌘[ |
 | Buka Dengan Pantas, cari dalam projek | ⌘P, ⇧⌘F |
-| Fail, Carian, Ejen, Git, Nyahpepijat, CI | ⌘1 hingga ⌘6 |
+| Fail, Carian, Ejen, Git, Ujian, Nyahpepijat, CI | ⌘1 hingga ⌘7 |
 | Tunjukkan atau sembunyikan bar sisi, panel seterusnya | ⌃⌘S, ⌥⌘\` |
 | Undur dan maju melalui tempat yang disunting | ⌃- dan ⌃⇧- |
 | Togol ulasan, pergi ke baris | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango mengikut susunan bahasa dalam **Seting Sistem › Umum › Bahasa & Rantau
 | Medan alamat, muat semula, undur, maju (pelayar) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Mulakan atau hentikan perencanaan | ⌃⌥D |
 | Titik henti, hidupkan atau matikan semua titik henti | ⌘\\, ⌘Y |
+| Jalankan ujian pada kursor, jalankan semula ujian terakhir | ⌃⌥⌘U, ⌃⌥⌘G |
 | Teruskan, langkah lalu, masuk, keluar, henti | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Seting | ⌘, |
 

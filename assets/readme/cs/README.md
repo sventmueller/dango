@@ -71,6 +71,7 @@ Dango spojuje kód, agenty, kteří ho mění, a vše kolem nich do jednoho okna
   - [Kontrolní body a worktree](#kontrolní-body-a-worktree)
 - [Editor](#editor)
 - [Jazykové servery](#jazykové-servery)
+- [Testy](#testy)
 - [Ladicí nástroj](#ladicí-nástroj)
 - [Terminál](#terminál)
 - [Prohlížeč](#prohlížeč)
@@ -177,6 +178,10 @@ Co přinášejí: diagnostiku (⌘' a ⇧⌘' přecházejí mezi hlášeními), 
 
 Vedle vlastního serveru souboru kontroluje ESLint JavaScript a TypeScript projektů, které ho používají, i se svými rychlými opravami, a zkratky Emmet se objevují v doplňování pro HTML, CSS a JSX. Dango oba nainstaluje na požádání; **Nastavení › Obecné** opraví problémy ESLint při ukládání, pokud chcete.
 
+## Testy
+
+Podokno Testy vypisuje testy složky podle balíčku a souboru s jejich stavem: `cargo test` nebo cargo-nextest, Go, pytest, Vitest a Jest. Symbol u každého testu na okraji vedle čísel řádků test spustí, ⌥-kliknutí ho ladí a neúspěšný assert označí svůj řádek. Nabídka Ladit spustí test u kurzoru (⌃⌥⌘U), znovu poslední testy (⌃⌥⌘G) nebo všechny a ladí test u kurzoru. Testy běží jen v důvěryhodných složkách, protože spouštějí kód projektu; `cargo test` vypíše své testy, až když o to požádáte, protože výpis sestaví každý testovací program.
+
 ## Ladicí nástroj
 
 Zarážky, i s podmínkami a jako logpointy, krokování, vlákna s jejich zásobníky volání, proměnné a sledované výrazy v inspektoru (⌥⌘I), hodnoty vedle kódu, dokud je program pozastavený, a ladicí konzole, která vyhodnocuje v pozastaveném rámci.
@@ -274,7 +279,7 @@ Dango se řídí pořadím jazyků v **Nastavení systému › Obecné › Jazyk
 | Nový soubor, uložit, uložit jako | ⌘N, ⌘S, ⇧⌘S |
 | Nový panel, zavřít panel, další a předchozí panel | ⌘T, ⌘W, ⇧⌘] a ⇧⌘[ |
 | Rychle otevřít, hledat v projektu | ⌘P, ⇧⌘F |
-| Soubory, Hledání, Agenti, Git, Ladit, CI | ⌘1 až ⌘6 |
+| Soubory, Hledání, Agenti, Git, Testy, Ladit, CI | ⌘1 až ⌘7 |
 | Zobrazit nebo skrýt boční panel, další podokno | ⌃⌘S, ⌥⌘\` |
 | Zpět a vpřed přes upravená místa | ⌃- a ⌃⇧- |
 | Přepnout komentář, přejít na řádek | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango se řídí pořadím jazyků v **Nastavení systému › Obecné › Jazyk
 | Pole adresy, znovu načíst, zpět, vpřed (prohlížeč) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Spustit nebo zastavit diktování | ⌃⌥D |
 | Zarážka, zapnout nebo vypnout všechny | ⌘\\, ⌘Y |
+| Spustit test u kurzoru, znovu spustit poslední testy | ⌃⌥⌘U, ⌃⌥⌘G |
 | Pokračovat, přeskočit, vstoupit, vystoupit, zastavit | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Nastavení | ⌘, |
 

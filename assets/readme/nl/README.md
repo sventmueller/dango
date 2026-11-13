@@ -71,6 +71,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
   - [Checkpoints en worktrees](#checkpoints-en-worktrees)
 - [Editor](#editor)
 - [Taalservers](#taalservers)
+- [Tests](#tests)
 - [Debugger](#debugger)
 - [Terminal](#terminal)
 - [Browser](#browser)
@@ -177,6 +178,10 @@ Wat ze bieden: diagnoses (⌘' en ⇧⌘' gaan ertussen heen en weer), hover (�
 
 Naast de eigen server van een bestand controleert ESLint het JavaScript en TypeScript van projecten die het gebruiken, met zijn snelle oplossingen, en de afkortingen van Emmet verschijnen bij het aanvullen voor HTML, CSS en JSX. Dango installeert beide als je erom vraagt; **Instellingen › Algemeen** herstelt ESLint-problemen bij bewaren als je dat wilt.
 
+## Tests
+
+Het Tests-paneel toont de tests van een map per pakket en bestand met hun status: `cargo test` of cargo-nextest, Go, pytest, Vitest en Jest. Een symbool bij elke test in de marge voert hem uit, ⌥-klik debugt hem, en een mislukte assert markeert zijn regel. Het menu 'Debug' voert de test bij het invoegpunt uit (⌃⌥⌘U), de laatste tests opnieuw (⌃⌥⌘G) of allemaal, en debugt de test bij het invoegpunt. Tests draaien alleen in vertrouwde mappen, omdat ze de code van het project uitvoeren; `cargo test` somt zijn tests pas op als je erom vraagt, omdat opsommen elk testprogramma bouwt.
+
 ## Debugger
 
 Breekpunten, ook met voorwaarden en als logpunten, stapsgewijs uitvoeren, threads met hun aanroepstapels, variabelen en bewaakte expressies in de inspector (⌥⌘I), waarden naast de code zolang het programma gepauzeerd is, en een debugconsole die evalueert in het gepauzeerde frame.
@@ -274,7 +279,7 @@ Dango volgt de taalvolgorde in **Systeeminstellingen › Algemeen › Taal en re
 | Nieuw bestand, bewaren, bewaren als | ⌘N, ⌘S, ⇧⌘S |
 | Nieuw tabblad, tabblad sluiten, volgend en vorig tabblad | ⌘T, ⌘W, ⇧⌘] en ⇧⌘[ |
 | Open snel, zoeken in het project | ⌘P, ⇧⌘F |
-| Bestanden, Zoeken, Agents, Git, Debug, CI | ⌘1 tot ⌘6 |
+| Bestanden, Zoeken, Agents, Git, Tests, Debug, CI | ⌘1 tot ⌘7 |
 | Navigatiekolom tonen of verbergen, volgend paneel | ⌃⌘S, ⌥⌘\` |
 | Terug en vooruit langs bewerkte plekken | ⌃- en ⌃⇧- |
 | Commentaar aan/uit, ga naar regel | ⌘/, ⌃G |
@@ -294,6 +299,7 @@ Dango volgt de taalvolgorde in **Systeeminstellingen › Algemeen › Taal en re
 | Adresveld, opnieuw laden, terug, vooruit (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Dicteren starten of stoppen | ⌃⌥D |
 | Breekpunt, alle breekpunten aan of uit | ⌘\\, ⌘Y |
+| Test bij invoegpunt uitvoeren, laatste tests opnieuw uitvoeren | ⌃⌥⌘U, ⌃⌥⌘G |
 | Doorgaan, stap over, in, uit, stoppen | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Instellingen | ⌘, |
 
