@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "O ESLint não pôde verificar o projeto";
 "Nicht mehr fragen" = "Não Perguntar Novamente";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} é executado ao lado do servidor de linguagem do arquivo e depois vale para todos os projetos.";
+"Vim-Modus" = "Modo Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERÇÃO";
+"ERSETZEN" = "SUBSTITUIÇÃO";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL/LINHA";
+"VISUELL BLOCK" = "VISUAL/BLOCO";
+"ESLint-Probleme beim Sichern beheben" = "Corrigir problemas do ESLint ao salvar";
+"Emmet-Kürzel in der Vervollständigung" = "Abreviações do Emmet no autocompletar";

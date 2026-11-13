@@ -162,12 +162,20 @@ Ennen jokaista kehotetta Dango tallentaa tarkistuspisteen commitina polkuun `ref
 - **Laskostus** (⌥⌘← ja ⌥⌘→, ⇧-näppäimen kanssa kaikki), kommentoinnin vaihtaminen (⌘/), siirtyminen riville (⌃G), näkyvät tyhjämerkit ja rivitys (⌥Z).
 - **Tiedostot säilyttävät merkistökoodauksensa**, BOM-merkkinsä ja rivinvaihtonsa. Levyllä muuttunut tiedosto ladataan uudelleen, jos editorissa ei ole tallentamatonta tekstiä; muuten palkki tarjoaa erot ja yhdistämisen.
 - **Muokkausennusteet.** Kun kirjoitat, ehdotus näkyy harmaana, ja Tab hyväksyy sen. Ehdotus tulee GitHub Copilotilta tai paikalliselta mallilta Ollamassa tai LM Studiossa sen mukaan, mitä valitset kohdassa **Asetukset › Ennustus**; paikallinen malli pitää koodisi tässä Macissa.
+- **Minikartta ja kiinnitetty vieritys** (Editori-valikko): kapea kuva koko tiedostosta tekstin vieressä sekä niiden lohkojen otsikkorivit, joissa ylin rivi on, pidettynä sen yläpuolella.
+- **Diagnostiikka rivin lopussa** (Näytä-valikko): kunkin rivin vakavin ilmoitus sekunnin tauon jälkeen, vakavuutta kuvaavan symbolin kanssa.
+- **Staattisten sivujen live-esikatselu:** Editori › Avaa selainvälilehdessä tarjoilee luotetun kansion sivut suoraan Dangosta ja lataa välilehden uudelleen, kun tiedosto tallennetaan.
+- **Prettier** muotoilee JavaScriptin, TypeScriptin, CSS:n, HTML:n, Markdownin ja muuta siellä, missä projekti sen määrittää, projektin omalla `node_modules/.bin/prettier`-komennolla; asetus `formatter` valitsee muotoilijan kielikohtaisesti.
+- **Vim-tila** (Editori › Vim-tila): normaali-, syöttö-, valinta- ja korvaustila, toistomäärät, operaattorit liikkeineen ja tekstiobjekteineen, `.`, rekisterit, merkit ja makrot. `u` ja ⌃R käyttävät editorin perumista, ja yksi syöttökerta on yksi vaihe. `"+` ja `"*` ovat leikepöytä; asetus `vimClipboard` tekee myös nimettömästä rekisteristä leikepöydän. `/`, `?`, `n`, `N`, `*`, `:s` ja `:%s` hakevat Rustin säännöllisillä lausekkeilla, eivät Vimin hakukuvioilla: `\v` ei toimi, ja `\<` ja `\>` korvautuvat `\b`:llä. Ex-komennot ovat `:w`, `:q`, `:wq`, `:x`, `:noh` ja `:<line>`. Normaalitilassa Vim ottaa ⌃G:n itselleen Siirry riville -komennolta.
+- **Asetusten synkronointi** iCloud Driven kansion kautta (**Asetukset › Yleiset**): asetuksesi ja pikanäppäimesi seuraavat sinua muille Maceillesi; polut, paikalliset osoitteet ja suostumukset pysyvät kussakin Macissa erikseen.
 
 ## Kielipalvelimet
 
 Go, Rust, TypeScript ja JavaScript, Python, C, C++ ja Objective-C, Swift, shell-skriptit, JSON, YAML, CSS, HTML, TOML, Markdown ja Lua sekä omat palvelimesi kohdasta **Asetukset › Kielipalvelin**. Dango asentaa palvelimen pyynnöstäsi omaan työkalukansioonsa ja käyttää TypeScript-projektin omaa `tsc`-komentoa, kun se kelpaa kielipalvelimeksi.
 
 Mitä ne tuovat: diagnostiikka (⌘' ja ⇧⌘' siirtävät niiden välillä), hover-tiedot (⌃⌘I), täydennys (⌥Esc), allekirjoitusohje, siirtyminen määrittelyyn (⌃⌘J), tyypin määrittelyyn ja toteutukseen, viittaukset (⌃⇧⌘F), kutsu- ja tyyppihierarkiat (⌃⇧⌘H), uudelleennimeäminen (⌃⌘E), muotoilu (⌥⇧F), semanttiset värit, laskostus ja jäsennys (⇧⌘O); tyypit ja parametrien nimet rivin sisällä; pikakorjaukset ja refaktoroinnit hehkulampun takana (⌥⌘A); projektin symbolit näppäimillä ⌥⌘O.
+
+Tiedoston oman palvelimen rinnalla ESLint tarkistaa sitä käyttävien projektien JavaScriptin ja TypeScriptin pikakorjauksineen, ja Emmetin lyhenteet näkyvät täydennyksessä HTML:lle, CSS:lle ja JSX:lle. Dango asentaa molemmat pyynnöstäsi; **Asetukset › Yleiset** korjaa halutessasi ESLint-ongelmat tallennettaessa.
 
 ## Virheenjäljitin
 

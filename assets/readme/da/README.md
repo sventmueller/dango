@@ -162,12 +162,20 @@ Før hver prompt gemmer Dango et checkpoint som et commit under `refs/ide-checkp
 - **Foldning** (⌥⌘← og ⌥⌘→, med ⇧ for alt), slå kommentar til/fra (⌘/), gå til linje (⌃G), synlige mellemrum og linjeombrydning (⌥Z).
 - **Arkiver beholder deres tegnkodning**, byte order mark og linjeskift. Et arkiv, der ændres på disken, indlæses igen, når editoren ikke har ikke-arkiveret tekst; ellers tilbyder en bjælke forskellene og en sammenfletning.
 - **Forudsigelser, mens du skriver.** Mens du skriver, vises et forslag i gråt, og Tab tager det. Det kommer fra GitHub Copilot eller fra en lokal model i Ollama eller LM Studio, som valgt i **Indstillinger › Forudsigelse**; en lokal model holder din kode på denne Mac.
+- **Minikort og fastgjort rulning** (menuen Editor): et smalt billede af hele arkivet ved siden af teksten, og overskriftslinjerne for de blokke, den øverste linje står i, holdt fast over den.
+- **Diagnoser ved linjeslut** (menuen Oversigt): hver linjes alvorligste meddelelse efter et sekunds ro, med et symbol for dens alvorsgrad.
+- **Live-eksempel af statiske sider:** Editor › Åbn i browserfane leverer en betroet mappes sider fra Dango selv og genindlæser fanen, når et arkiv gemmes.
+- **Prettier** formaterer JavaScript, TypeScript, CSS, HTML, Markdown og mere, hvor projektet sætter det op, med projektets egen `node_modules/.bin/prettier`; indstillingen `formatter` vælger formateringsværktøjet pr. sprog.
+- **Vim-tilstand** (Editor › Vim-tilstand): tilstandene Normal, Indsæt, Visuel og Erstat, antal, operatorer med bevægelser og tekstobjekter, `.`, registre, mærker og makroer. `u` og ⌃R bruger editorens Fortryd, og alt, der indsættes i én omgang, er ét trin. `"+` og `"*` er udklipsholderen; indstillingen `vimClipboard` gør også det unavngivne register til udklipsholderen. `/`, `?`, `n`, `N`, `*`, `:s` og `:%s` søger med Rusts regulære udtryk, ikke med Vims mønstre: ingen `\v`, og `\b` i stedet for `\<` og `\>`. Ex-kommandoer er `:w`, `:q`, `:wq`, `:x`, `:noh` og `:<line>`. I Normal-tilstand tager Vim ⌃G fra gå til linje.
+- **Synkronisering af indstillinger** via en mappe på iCloud Drive (**Indstillinger › Generelt**): dine indstillinger og tastaturgenveje følger dig til dine andre Mac-computere; stier, lokale adresser og samtykker bliver på hver enkelt.
 
 ## Sprogservere
 
 Go, Rust, TypeScript og JavaScript, Python, C, C++ og Objective-C, Swift, shellscripts, JSON, YAML, CSS, HTML, TOML, Markdown og Lua samt dine egne servere fra **Indstillinger › Sprogserver**. Dango installerer en server, når du beder om det, i sin egen værktøjsmappe og bruger et TypeScript-projekts egen `tsc`, når den kan fungere som sprogserver.
 
 Det giver de: diagnoser (⌘' og ⇧⌘' skifter mellem dem), hover (⌃⌘I), fuldførelse (⌥Esc), signaturhjælp, gå til definition (⌃⌘J), typedefinition og implementering, referencer (⌃⇧⌘F), kalde- og typehierarkier (⌃⇧⌘H), omdøbning (⌃⌘E), formatering (⌥⇧F), semantiske farver, foldning og dispositionen (⇧⌘O); typer og parameternavne inde i linjen; hurtige rettelser og refaktoreringer bag en pære (⌥⌘A); projektets symboler med ⌥⌘O.
+
+Ud over et arkivs egen server tjekker ESLint JavaScript og TypeScript i projekter, der bruger det, med sine hurtige rettelser, og Emmets forkortelser vises i fuldførelsen for HTML, CSS og JSX. Dango installerer begge, når du beder om det; **Indstillinger › Generelt** retter ESLints problemer ved lagring, hvis du vil.
 
 ## Debugger
 

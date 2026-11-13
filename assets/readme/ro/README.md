@@ -162,12 +162,20 @@ Conversațiile noi încep în modul „Manual”: agentul întreabă înainte s�
 - **Pliere** (⌥⌘← și ⌥⌘→, cu ⇧ pentru tot), activarea sau dezactivarea comentariului (⌘/), salt la linie (⌃G), spații vizibile și încadrarea liniilor (⌥Z).
 - **Fișierele își păstrează codificarea**, marcajul de ordine a octeților și terminațiile de linie. Un fișier modificat pe disc este reîncărcat dacă editorul nu are text nesalvat; altfel, o bară oferă diferențele și o comasare.
 - **Predicții în timp ce tastați.** În timp ce tastați apare o sugestie cu gri, iar Tab o acceptă. Provine de la GitHub Copilot sau de la un model local din Ollama sau LM Studio, după alegerea din **Configurări › Predicție**; un model local vă păstrează codul pe acest Mac.
+- **Minihartă și Derulare fixată** (meniul Editor): o imagine îngustă a întregului fișier lângă text și liniile de antet ale blocurilor în care se află linia de sus, fixate deasupra ei.
+- **Diagnostice la sfârșitul rândului** (meniul Vizualizare): cel mai grav mesaj al fiecărei linii după o secundă de repaus, cu un simbol pentru gravitatea sa.
+- **Previzualizare în timp real a paginilor statice:** Editor › Deschideți într-o filă de browser servește paginile unui dosar de încredere chiar din Dango și reîncarcă fila când un fișier este salvat.
+- **Prettier** formatează JavaScript, TypeScript, CSS, HTML, Markdown și altele acolo unde proiectul îl configurează, cu propriul `node_modules/.bin/prettier` al proiectului; configurarea `formatter` alege formatatorul pentru fiecare limbaj.
+- **Mod Vim** (Editor › Mod Vim): modurile Normal, Insert, Visual și Replace, contoare, operatori cu mișcări și obiecte text, `.`, registre, marcaje și macrocomenzi. `u` și ⌃R folosesc anularea editorului, iar o trecere prin modul Insert este un singur pas. `"+` și `"*` sunt clipboardul; configurarea `vimClipboard` face și din registrul fără nume clipboardul. `/`, `?`, `n`, `N`, `*`, `:s` și `:%s` caută cu expresiile regulate din Rust, nu cu tiparele din Vim: fără `\v`, iar `\b` în loc de `\<` și `\>`. Comenzile Ex sunt `:w`, `:q`, `:wq`, `:x`, `:noh` și `:<line>`. În modul Normal, ⌃G îi revine lui Vim în locul saltului la linie.
+- **Sincronizarea configurărilor** printr-un dosar din iCloud Drive (**Configurări › General**): configurările și scurtăturile dvs. vă urmează pe celelalte Mac-uri; căile, adresele locale și consimțămintele rămân pe fiecare.
 
 ## Servere de limbaj
 
 Go, Rust, TypeScript și JavaScript, Python, C, C++ și Objective-C, Swift, scripturi shell, JSON, YAML, CSS, HTML, TOML, Markdown și Lua, plus servere proprii din **Configurări › Server de limbaj**. Dango instalează un server la cerere, în propriul dosar de instrumente, și folosește `tsc`-ul unui proiect TypeScript atunci când poate servi drept server de limbaj.
 
 Ce oferă: diagnosticări (⌘' și ⇧⌘' trec de la una la alta), informații la trecerea cursorului (⌃⌘I), completare (⌥Esc), ajutor pentru semnături, salt la definiție (⌃⌘J), la definiția tipului și la implementare, referințe (⌃⇧⌘F), ierarhii de apeluri și de tipuri (⌃⇧⌘H), redenumire (⌃⌘E), formatare (⌥⇧F), culori semantice, pliere și schița (⇧⌘O); tipuri și nume de parametri în interiorul liniei; corecturi rapide și refactorizări în spatele unui bec (⌥⌘A); simbolurile proiectului cu ⌥⌘O.
+
+Pe lângă serverul propriu al unui fișier, ESLint verifică codul JavaScript și TypeScript al proiectelor care îl folosesc, cu remedierile sale rapide, iar abrevierile Emmet apar în completare pentru HTML, CSS și JSX. Dango le instalează pe amândouă la cerere; **Configurări › General** remediază problemele ESLint la salvare, dacă doriți.
 
 ## Depanator
 

@@ -162,12 +162,20 @@ Vóór elke prompt bewaart Dango een checkpoint, als commit onder `refs/ide-chec
 - **Invouwen** (⌥⌘← en ⌥⌘→, met ⇧ voor alles), commentaar aan/uit (⌘/), ga naar regel (⌃G), zichtbare witruimte en regelafbreking (⌥Z).
 - **Bestanden behouden hun codering**, byte order mark en regeleinden. Een bestand dat op schijf verandert, wordt opnieuw geladen als de editor geen niet-bewaarde tekst heeft; anders biedt een balk de verschillen en samenvoegen aan.
 - **Voorspellingen tijdens het typen.** Terwijl je typt, verschijnt een suggestie in grijs, en Tab neemt hem over. Hij komt van GitHub Copilot of van een lokaal model in Ollama of LM Studio, zoals gekozen in **Instellingen › Voorspelling**; een lokaal model houdt je code op deze Mac.
+- **Minimap en vastgezet scrollen** (menu 'Editor'): een smalle afbeelding van het hele bestand naast de tekst, en de kopregels van de blokken waarin de bovenste regel staat, erboven vastgehouden.
+- **Diagnoses aan regeleinde** (menu 'Weergave'): de ernstigste melding van elke regel na een seconde rust, met een symbool voor de ernst.
+- **Live voorvertoning van statische pagina's:** Editor › Open in browsertabblad serveert de pagina's van een vertrouwde map vanuit Dango zelf en laadt het tabblad opnieuw als een bestand wordt bewaard.
+- **Prettier** maakt JavaScript, TypeScript, CSS, HTML, Markdown en meer op waar het project het instelt, met de eigen `node_modules/.bin/prettier` van het project; de instelling `formatter` kiest de formatter per taal.
+- **Vim-modus** (Editor › Vim-modus): de modi Normaal, Invoegen, Visueel en Vervangen, aantallen, operatoren met bewegingen en tekstobjecten, `.`, registers, markeringen en macro's. `u` en ⌃R gebruiken 'Herstel' van de editor, en alles wat in één keer wordt ingevoegd, is één stap. `"+` en `"*` zijn het klembord; de instelling `vimClipboard` maakt ook het naamloze register het klembord. `/`, `?`, `n`, `N`, `*`, `:s` en `:%s` zoeken met de reguliere expressies van Rust, niet met de patronen van Vim: geen `\v`, en `\b` in plaats van `\<` en `\>`. Ex-commando's zijn `:w`, `:q`, `:wq`, `:x`, `:noh` en `:<line>`. In de modus Normaal neemt Vim ⌃G over van ga naar regel.
+- **Synchronisatie van instellingen** via een map in iCloud Drive (**Instellingen › Algemeen**): je instellingen en toetscombinaties volgen je naar je andere Macs; paden, lokale adressen en toestemmingen blijven op elke Mac afzonderlijk.
 
 ## Taalservers
 
 Go, Rust, TypeScript en JavaScript, Python, C, C++ en Objective-C, Swift, shellscripts, JSON, YAML, CSS, HTML, TOML, Markdown en Lua, en eigen servers via **Instellingen › Taalserver**. Dango installeert een server als je erom vraagt, in zijn eigen toolsmap, en gebruikt de eigen `tsc` van een TypeScript-project als die als taalserver kan dienen.
 
 Wat ze bieden: diagnoses (⌘' en ⇧⌘' gaan ertussen heen en weer), hover (⌃⌘I), aanvulling (⌥Esc), hulp bij signaturen, ga naar definitie (⌃⌘J), typedefinitie en implementatie, verwijzingen (⌃⇧⌘F), aanroep- en typehiërarchieën (⌃⇧⌘H), hernoemen (⌃⌘E), opmaken (⌥⇧F), semantische kleuren, invouwen en de structuur (⇧⌘O); typen en parameternamen in de regel; snelle oplossingen en refactorings achter een lampje (⌥⌘A); de symbolen van het project met ⌥⌘O.
+
+Naast de eigen server van een bestand controleert ESLint het JavaScript en TypeScript van projecten die het gebruiken, met zijn snelle oplossingen, en de afkortingen van Emmet verschijnen bij het aanvullen voor HTML, CSS en JSX. Dango installeert beide als je erom vraagt; **Instellingen › Algemeen** herstelt ESLint-problemen bij bewaren als je dat wilt.
 
 ## Debugger
 

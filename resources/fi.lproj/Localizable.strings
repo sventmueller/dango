@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint ei voinut tarkistaa projektia";
 "Nicht mehr fragen" = "Älä kysy uudelleen";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} toimii tiedoston kielipalvelimen rinnalla ja koskee sen jälkeen kaikkia projekteja.";
+"Vim-Modus" = "Vim-tila";
+"NORMAL" = "NORMAALI";
+"EINFÜGEN" = "SYÖTTÖ";
+"ERSETZEN" = "KORVAUS";
+"VISUELL" = "VALINTA";
+"VISUELL ZEILE" = "VALINTARIVI";
+"VISUELL BLOCK" = "VALINTALOHKO";
+"ESLint-Probleme beim Sichern beheben" = "Korjaa ESLint-ongelmat tallennettaessa";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet-lyhenteet täydennyksessä";

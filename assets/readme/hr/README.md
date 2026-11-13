@@ -162,12 +162,20 @@ Prije svakog prompta Dango sprema kontrolnu točku, kao commit pod `refs/ide-che
 - **Sažimanje blokova** (⌥⌘← i ⌥⌘→, s ⇧ za sve), uključivanje i isključivanje komentara (⌘/), odlazak na redak (⌃G), vidljive praznine i prelamanje redaka (⌥Z).
 - **Datoteke zadržavaju kodiranje**, oznaku redoslijeda bajtova i završetke redaka. Datoteka promijenjena na disku ponovno se učitava ako urednik nema nespremljenog teksta; inače traka nudi razlike i spajanje.
 - **Predviđanja pri uređivanju.** Dok tipkate, prijedlog se pojavljuje sivo, a tipka Tab ga prihvaća. Dolazi od GitHub Copilota ili od lokalnog modela u aplikaciji Ollama ili LM Studio, kako odaberete u **Postavke › Predviđanje**; lokalni model zadržava vaš kôd na ovom Macu.
+- **Minikarta i fiksno pomicanje** (izbornik Urednik): uska slika cijele datoteke pokraj teksta te retci zaglavlja blokova u kojima je gornji redak, zadržani iznad njega.
+- **Dijagnostika na kraju retka** (izbornik Prikaz): najozbiljnija poruka svakog retka nakon sekunde mirovanja, sa simbolom njezine ozbiljnosti.
+- **Pregled statičkih stranica uživo:** Urednik › Otvori u kartici preglednika poslužuje stranice pouzdane mape izravno iz aplikacije Dango i ponovno učitava karticu kad se datoteka spremi.
+- **Prettier** formatira JavaScript, TypeScript, CSS, HTML, Markdown i drugo gdje ga projekt konfigurira, vlastitim `node_modules/.bin/prettier` projekta; postavka `formatter` bira alat za formatiranje po jeziku.
+- **Način rada Vim** (Urednik › Način rada Vim): načini Normal, Insert, Visual i Replace, brojevi ponavljanja, operatori s pokretima i tekstnim objektima, `.`, registri, oznake i makronaredbe. `u` i ⌃R koriste poništavanje urednika, a jedan prolaz umetanja jedan je korak. `"+` i `"*` su memorijski pretinac; postavka `vimClipboard` i neimenovani registar pretvara u memorijski pretinac. `/`, `?`, `n`, `N`, `*`, `:s` i `:%s` pretražuju regularnim izrazima Rusta, ne Vimovim uzorcima: nema `\v`, a `\b` umjesto `\<` i `\>`. Ex naredbe su `:w`, `:q`, `:wq`, `:x`, `:noh` i `:<line>`. U načinu Normal Vim preuzima ⌃G od naredbe Idi na redak.
+- **Sinkronizacija postavki** putem mape na iCloud Driveu (**Postavke › Općenito**): vaše postavke i prečaci prate vas na vaša druga Mac računala; putanje, lokalne adrese i privole ostaju na svakom zasebno.
 
 ## Jezični poslužitelji
 
 Go, Rust, TypeScript i JavaScript, Python, C, C++ i Objective-C, Swift, shell skripte, JSON, YAML, CSS, HTML, TOML, Markdown i Lua te vaši vlastiti poslužitelji iz **Postavke › Jezični poslužitelj**. Dango instalira poslužitelj na vaš zahtjev, u vlastitu mapu s alatima, i koristi vlastiti `tsc` projekta TypeScript kad može služiti kao jezični poslužitelj.
 
 Što donose: dijagnostiku (⌘' i ⇧⌘' prelaze između stavki), informacije pri prelasku pokazivačem (⌃⌘I), dovršavanje (⌥Esc), pomoć za potpise, odlazak na definiciju (⌃⌘J), na definiciju tipa i implementaciju, reference (⌃⇧⌘F), hijerarhije poziva i tipova (⌃⇧⌘H), preimenovanje (⌃⌘E), formatiranje (⌥⇧F), semantičke boje, sažimanje blokova i strukturu (⇧⌘O); tipove i nazive parametara unutar retka; brze popravke i refaktoriranja iza žarulje (⌥⌘A); simbole projekta pomoću ⌥⌘O.
+
+Uz vlastiti poslužitelj datoteke ESLint provjerava JavaScript i TypeScript projekata koji ga koriste, sa svojim brzim popravcima, a Emmet kratice pojavljuju se u dovršavanju za HTML, CSS i JSX. Dango instalira oba na vaš zahtjev; **Postavke › Općenito** po želji ispravlja probleme ESLinta pri spremanju.
 
 ## Program za otklanjanje pogrešaka
 

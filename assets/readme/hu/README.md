@@ -162,12 +162,20 @@ A Dango minden prompt előtt visszaállítási pontot ment, commitként a `refs/
 - **Összecsukás** (⌥⌘← és ⌥⌘→, ⇧ billentyűvel mindenre), megjegyzés be- és kikapcsolása (⌘/), ugrás sorra (⌃G), látható szóközök és sortördelés (⌥Z).
 - **A fájlok megőrzik a kódolásukat**, a bájtsorrend-jelzőjüket és a sorvégeiket. A lemezen módosult fájl újratöltődik, ha a szerkesztőben nincs mentetlen szöveg; ellenkező esetben egy sáv felkínálja a különbségeket és az összefésülést.
 - **Szerkesztési előrejelzések.** Gépelés közben szürkén megjelenik egy javaslat, a Tab pedig elfogadja. A GitHub Copilottól vagy egy helyi modelltől érkezik az Ollamában vagy az LM Studióban, aszerint, hogy mit választ a **Beállítások › Előrejelzés** lapon; helyi modellel a kód ezen a Macen marad.
+- **Minitérkép és rögzített görgetés** (Szerkesztő menü): a teljes fájl keskeny képe a szöveg mellett, és azoknak a blokkoknak a fejsorai, amelyekben a legfelső sor áll, fölötte rögzítve.
+- **Diagnosztika a sor végén** (Nézet menü): minden sor legsúlyosabb üzenete egy másodpercnyi nyugalom után, a súlyosságát jelző szimbólummal.
+- **Statikus oldalak élő előnézete:** a Szerkesztő › Megnyitás böngészőlapon egy megbízható mappa oldalait magából a Dangóból szolgálja ki, és egy fájl mentésekor újratölti a lapot.
+- **A Prettier** formázza a JavaScriptet, a TypeScriptet, a CSS-t, a HTML-t, a Markdownt és egyebeket, ahol a projekt beállítja, a projekt saját `node_modules/.bin/prettier` programjával; a `formatter` beállítás nyelvenként választja ki a formázót.
+- **Vim mód** (Szerkesztő › Vim mód): normál, beszúró, vizuális és csere mód, ismétlésszámok, operátorok mozgásokkal és szövegobjektumokkal, `.`, regiszterek, jelölők és makrók. Az `u` és a ⌃R a szerkesztő visszavonását használja, és egy beszúrási menet egyetlen lépés. A `"+` és a `"*` a vágólap; a `vimClipboard` beállítás a névtelen regisztert is vágólappá teszi. A keresés (`/`, `?`, `n`, `N`, `*`, `:s` és `:%s`) a Rust reguláris kifejezéseit használja, nem a Vim mintáit: nincs `\v`, és `\<` meg `\>` helyett `\b` áll. Az Ex-parancsok: `:w`, `:q`, `:wq`, `:x`, `:noh` és `:<line>`. Normál módban a Vim elveszi a ⌃G billentyűt az Ugrás sorra parancstól.
+- **Beállítások szinkronizálása** egy iCloud Drive-mappán keresztül (**Beállítások › Általános**): a beállításai és billentyűparancsai a többi Macére is elkísérik; az elérési utak, a helyi címek és a hozzájárulások mindegyik gépen külön maradnak.
 
 ## Nyelvi szerverek
 
 Go, Rust, TypeScript és JavaScript, Python, C, C++ és Objective-C, Swift, shellszkriptek, JSON, YAML, CSS, HTML, TOML, Markdown és Lua, valamint saját szerverek a **Beállítások › Nyelvi szerver** lapról. A Dango kérésre telepít egy szervert, a saját eszközmappájába, és egy TypeScript-projekt saját `tsc` fordítóját használja, ha az nyelvi szerverként működni tud.
 
 Amit nyújtanak: diagnosztika (a ⌘' és a ⇧⌘' lép közöttük), információ rámutatáskor (⌃⌘I), kiegészítés (⌥Esc), aláírássúgó, ugrás definícióra (⌃⌘J), típusdefinícióra és implementációra, hivatkozások (⌃⇧⌘F), hívási és típushierarchia (⌃⇧⌘H), átnevezés (⌃⌘E), formázás (⌥⇧F), szemantikus színek, összecsukás és vázlat (⇧⌘O); típusok és paraméternevek a soron belül; gyorsjavítások és refaktorálások egy villanykörte mögött (⌥⌘A); a projekt szimbólumai a ⌥⌘O billentyűkkel.
+
+A fájl saját szervere mellett az ESLint ellenőrzi az azt használó projektek JavaScript- és TypeScript-kódját, a saját gyorsjavításaival együtt, az Emmet rövidítései pedig megjelennek a kiegészítésben HTML-hez, CSS-hez és JSX-hez. A Dango kérésre mindkettőt telepíti; a **Beállítások › Általános** igény szerint mentéskor kijavítja az ESLint-problémákat.
 
 ## Hibakereső
 

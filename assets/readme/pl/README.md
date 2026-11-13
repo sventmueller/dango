@@ -162,12 +162,20 @@ Przed każdym promptem Dango zachowuje punkt kontrolny jako commit w `refs/ide-c
 - **Zwijanie** (⌥⌘← i ⌥⌘→, z ⇧ dla wszystkiego), przełączanie komentarza (⌘/), przejście do wiersza (⌃G), widoczne białe znaki i zawijanie wierszy (⌥Z).
 - **Pliki zachowują kodowanie**, znacznik kolejności bajtów i końce wierszy. Plik zmieniony na dysku jest wczytywany ponownie, gdy edytor nie ma niezachowanego tekstu; w przeciwnym razie pasek oferuje różnice i scalenie.
 - **Przewidywanie podczas pisania.** Gdy piszesz, pojawia się szara podpowiedź, a Tab ją przyjmuje. Pochodzi z GitHub Copilot lub z modelu lokalnego w Ollama lub LM Studio, zależnie od wyboru w **Ustawienia › Przewidywanie**; model lokalny zostawia Twój kod na tym Macu.
+- **Minimapa i przyklejone przewijanie** (menu Edytor): wąski obraz całego pliku obok tekstu oraz wiersze nagłówków bloków, w których leży górny wiersz, przytrzymane nad nim.
+- **Diagnostyka na końcu wiersza** (menu Widok): najpoważniejszy komunikat każdego wiersza po sekundzie spokoju, z symbolem jego ważności.
+- **Podgląd na żywo stron statycznych:** Edytor › Otwórz w karcie przeglądarki udostępnia strony zaufanego folderu prosto z Dango i odświeża kartę, gdy plik zostanie zachowany.
+- **Prettier** formatuje JavaScript, TypeScript, CSS, HTML, Markdown i inne, gdzie projekt go konfiguruje, za pomocą własnego `node_modules/.bin/prettier` projektu; ustawienie `formatter` wybiera formater dla każdego języka.
+- **Tryb Vim** (Edytor › Tryb Vim): tryb normalny, wprowadzania, wizualny i zamiany, liczniki, operatory z ruchami i obiektami tekstowymi, `.`, rejestry, zakładki i makra. `u` i ⌃R korzystają z cofania edytora, a jedno przejście wprowadzania to jeden krok. `"+` i `"*` to schowek; ustawienie `vimClipboard` sprawia, że schowkiem staje się też rejestr nienazwany. `/`, `?`, `n`, `N`, `*`, `:s` i `:%s` szukają wyrażeniami regularnymi Rust, nie wzorcami Vim: bez `\v`, a `\b` zamiast `\<` i `\>`. Polecenia Ex to `:w`, `:q`, `:wq`, `:x`, `:noh` i `:<line>`. W trybie normalnym Vim zabiera ⌃G przejściu do wiersza.
+- **Synchronizacja ustawień** przez folder na iCloud Drive (**Ustawienia › Ogólne**): Twoje ustawienia i skróty podążają za Tobą na Twoje inne Maki; ścieżki, adresy lokalne i zgody zostają na każdym z osobna.
 
 ## Serwery języka
 
 Go, Rust, TypeScript i JavaScript, Python, C, C++ i Objective-C, Swift, skrypty powłoki, JSON, YAML, CSS, HTML, TOML, Markdown i Lua, a także własne serwery z **Ustawienia › Serwer języka**. Dango instaluje serwer na żądanie we własnym folderze narzędzi i używa `tsc` projektu TypeScript, gdy ten może służyć jako serwer języka.
 
 Co dają: diagnostykę (⌘' i ⇧⌘' przechodzą między komunikatami), informacje po najechaniu (⌃⌘I), uzupełnianie (⌥Esc), pomoc dla sygnatur, przejście do definicji (⌃⌘J), definicji typu i implementacji, odwołania (⌃⇧⌘F), hierarchie wywołań i typów (⌃⇧⌘H), zmianę nazwy (⌃⌘E), formatowanie (⌥⇧F), kolory semantyczne, zwijanie i konspekt (⇧⌘O); typy i nazwy parametrów wewnątrz wiersza; szybkie poprawki i refaktoryzacje pod żarówką (⌥⌘A); symbole projektu z ⌥⌘O.
+
+Obok własnego serwera pliku ESLint sprawdza JavaScript i TypeScript projektów, które go używają, wraz ze swoimi szybkimi poprawkami, a skróty Emmet pojawiają się w uzupełnianiu dla HTML, CSS i JSX. Dango instaluje oba na żądanie; **Ustawienia › Ogólne** naprawiają problemy ESLint przy zachowywaniu, jeśli chcesz.
 
 ## Debuger
 

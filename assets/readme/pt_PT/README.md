@@ -162,12 +162,20 @@ Antes de cada prompt, o Dango guarda um ponto de restauro, como commit em `refs/
 - **Recolha de blocos** (⌥⌘← e ⌥⌘→, com ⇧ para tudo), ativar ou desativar comentário (⌘/), ir para a linha (⌃G), espaços visíveis e quebra de linha (⌥Z).
 - **Os ficheiros mantêm a codificação**, a marca de ordem de bytes e as quebras de linha. Um ficheiro alterado no disco é recarregado quando o editor não tem texto por guardar; caso contrário, uma barra oferece as diferenças e uma fusão.
 - **Previsões durante a escrita.** Enquanto escreve, aparece uma sugestão a cinzento, e Tab aceita-a. Vem do GitHub Copilot ou de um modelo local no Ollama ou no LM Studio, conforme a escolha em **Definições › Previsão**; um modelo local mantém o seu código neste Mac.
+- **Minimapa e Deslocamento fixo** (menu Editor): uma imagem estreita do ficheiro inteiro ao lado do texto, e as linhas de cabeçalho dos blocos em que se encontra a linha do topo, fixadas por cima dela.
+- **Diagnósticos no fim da linha** (menu Visualização): a mensagem mais grave de cada linha após um segundo de pausa, com um símbolo para a sua gravidade.
+- **Pré-visualização em direto de páginas estáticas:** Editor › Abrir num separador do navegador serve as páginas de uma pasta de confiança a partir do próprio Dango e recarrega o separador quando um ficheiro é guardado.
+- **Prettier** formata JavaScript, TypeScript, CSS, HTML, Markdown e mais onde o projeto o configura, com o próprio `node_modules/.bin/prettier` do projeto; a definição `formatter` escolhe o formatador por linguagem.
+- **Modo Vim** (Editor › Modo Vim): modos Normal, Insert, Visual e Replace, contagens, operadores com movimentos e objetos de texto, `.`, registos, marcas e macros. `u` e ⌃R utilizam o desfazer do editor, e cada passagem pelo modo Insert conta como um único passo. `"+` e `"*` são o clipboard; a definição `vimClipboard` faz do registo sem nome também o clipboard. `/`, `?`, `n`, `N`, `*`, `:s` e `:%s` procuram com as expressões regulares de Rust, não com os padrões do Vim: sem `\v`, e `\b` em vez de `\<` e `\>`. Os comandos Ex são `:w`, `:q`, `:wq`, `:x`, `:noh` e `:<line>`. No modo Normal, ⌃G fica com o Vim em vez de ir para a linha.
+- **Sincronização das definições** através de uma pasta no iCloud Drive (**Definições › Geral**): as suas definições e atalhos seguem consigo para os seus outros Mac; caminhos, endereços locais e consentimentos ficam em cada um.
 
 ## Servidores de linguagem
 
 Go, Rust, TypeScript e JavaScript, Python, C, C++ e Objective-C, Swift, scripts de shell, JSON, YAML, CSS, HTML, TOML, Markdown e Lua, além de servidores próprios em **Definições › Servidor de linguagem**. O Dango instala um servidor quando o pede, na sua própria pasta de ferramentas, e utiliza o `tsc` de um projeto TypeScript quando este pode servir de servidor de linguagem.
 
 O que oferecem: diagnósticos (⌘' e ⇧⌘' passam de um para outro), informação ao passar o ponteiro (⌃⌘I), preenchimento (⌥Esc), ajuda de assinaturas, ir para a definição (⌃⌘J), para a definição de tipo e para a implementação, referências (⌃⇧⌘F), hierarquias de chamadas e de tipos (⌃⇧⌘H), alterar o nome (⌃⌘E), formatar (⌥⇧F), cores semânticas, recolha de blocos e a estrutura (⇧⌘O); tipos e nomes de parâmetros dentro da linha; correções rápidas e refatorações atrás de uma lâmpada (⌥⌘A); os símbolos do projeto com ⌥⌘O.
+
+Além do servidor próprio de um ficheiro, o ESLint verifica o JavaScript e o TypeScript dos projetos que o utilizam, com as suas correções rápidas, e as abreviaturas do Emmet aparecem no preenchimento para HTML, CSS e JSX. O Dango instala ambos quando o pede; **Definições › Geral** corrige os problemas do ESLint ao guardar, se assim o desejar.
 
 ## Depurador
 

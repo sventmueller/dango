@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint no ha pogut comprovar el projecte";
 "Nicht mehr fragen" = "No ho tornis a preguntar";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} s’executa al costat del servidor de llenguatge del fitxer i després s’aplica a tots els projectes.";
+"Vim-Modus" = "Mode Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERIR";
+"ERSETZEN" = "SUBSTITUIR";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LÍNIA";
+"VISUELL BLOCK" = "VISUAL BLOC";
+"ESLint-Probleme beim Sichern beheben" = "Corregeix els problemes d’ESLint en desar";
+"Emmet-Kürzel in der Vervollständigung" = "Abreviatures d’Emmet a la compleció";

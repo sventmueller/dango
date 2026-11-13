@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint nije mogao provjeriti projekt";
 "Nicht mehr fragen" = "Ne pitaj ponovno";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} radi uz jezični poslužitelj datoteke i nakon toga vrijedi za sve projekte.";
+"Vim-Modus" = "Način rada Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERT";
+"ERSETZEN" = "REPLACE";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LINE";
+"VISUELL BLOCK" = "VISUAL BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "Ispravi probleme ESLinta pri spremanju";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet kratice u dovršavanju";

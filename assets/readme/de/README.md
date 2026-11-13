@@ -162,12 +162,20 @@ Vor jedem Prompt legt Dango einen Sicherungspunkt an, als Commit unter `refs/ide
 - **Faltung** (⌥⌘← und ⌥⌘→, mit ⇧ für alles), Kommentar umschalten (⌘/), Gehe zu Zeile (⌃G), sichtbare Leerzeichen und Zeilenumbruch (⌥Z).
 - **Dateien behalten ihre Kodierung**, Byte-Order-Mark und Zeilenenden. Ändert sich eine Datei auf der Platte, lädt der Editor sie neu, solange er keinen ungesicherten Text hat; sonst bietet ein Balken die Unterschiede und das Zusammenführen an.
 - **Vorhersagen beim Tippen.** Während du tippst, erscheint ein Vorschlag in grauer Schrift, und Tab übernimmt ihn. Er kommt von GitHub Copilot oder von einem lokalen Modell in Ollama oder LM Studio, je nach Wahl unter **Einstellungen › Vorhersage**; ein lokales Modell lässt deinen Code auf diesem Mac.
+- **Minimap und Sticky Scroll** (Menü Editor): ein schmales Bild der ganzen Datei neben dem Text, und die Kopfzeilen der Blöcke, in denen die oberste Zeile steht, über ihr festgehalten.
+- **Diagnosen am Zeilenende** (Menü Darstellung): die schwerste Meldung jeder Zeile nach einer Sekunde Ruhe, mit einem Symbol für ihren Schweregrad.
+- **Live-Vorschau statischer Seiten:** Editor › Im Browser-Tab öffnen liefert die Seiten eines vertrauten Ordners aus Dango selbst aus und lädt den Tab neu, wenn eine Datei gesichert wird.
+- **Prettier** formatiert JavaScript, TypeScript, CSS, HTML, Markdown und mehr, wo das Projekt es einrichtet, mit dem eigenen `node_modules/.bin/prettier` des Projekts; die Einstellung `formatter` wählt den Formatierer je Sprache.
+- **Vim-Modus** (Editor › Vim-Modus): Normal-, Einfüge-, Visual- und Ersetzen-Modus, Zähler, Operatoren mit Bewegungen und Textobjekten, `.`, Register, Marken und Makros. `u` und ⌃R nutzen das Widerrufen des Editors, und ein Einfügedurchgang ist ein Schritt. `"+` und `"*` sind die Zwischenablage; die Einstellung `vimClipboard` macht auch das unbenannte Register zur Zwischenablage. `/`, `?`, `n`, `N`, `*`, `:s` und `:%s` suchen mit den regulären Ausdrücken von Rust, nicht mit Vims Mustern: kein `\v`, und `\b` statt `\<` und `\>`. Ex-Befehle sind `:w`, `:q`, `:wq`, `:x`, `:noh` und `:<line>`. Im Normal-Modus nimmt Vim ⌃G dem Gehe zu Zeile weg.
+- **Abgleich der Einstellungen** über einen Ordner in iCloud Drive (**Einstellungen › Allgemein**): Deine Einstellungen und Tastaturkurzbefehle folgen dir auf deine anderen Macs; Pfade, lokale Adressen und Einwilligungen bleiben auf jedem für sich.
 
 ## Sprachserver
 
 Go, Rust, TypeScript und JavaScript, Python, C, C++ und Objective-C, Swift, Shell-Skripte, JSON, YAML, CSS, HTML, TOML, Markdown und Lua, dazu eigene Server unter **Einstellungen › Sprachserver**. Dango installiert einen Server auf Nachfrage in seinen eigenen Werkzeugordner und nutzt das `tsc` eines TypeScript-Projekts, wenn es als Sprachserver dienen kann.
 
 Was sie bringen: Diagnosen (⌘' und ⇧⌘' springen zwischen ihnen), Hover (⌃⌘I), Vervollständigung (⌥Esc), Signaturhilfe, Gehe zu Definition (⌃⌘J), Typdefinition und Implementierung, Referenzen (⌃⇧⌘F), Aufruf- und Typhierarchie (⌃⇧⌘H), Umbenennen (⌃⌘E), Formatieren (⌥⇧F), semantische Farben, Faltung und die Gliederung (⇧⌘O); Typen und Parameternamen in der Zeile; Schnellkorrekturen und Refactorings hinter einer Glühbirne (⌥⌘A); die Symbole des Projekts mit ⌥⌘O.
+
+Neben dem eigenen Server einer Datei prüft ESLint das JavaScript und TypeScript von Projekten, die es nutzen, mit seinen Schnellkorrekturen, und die Kürzel von Emmet erscheinen in der Vervollständigung für HTML, CSS und JSX. Dango installiert beide auf Nachfrage; unter **Einstellungen › Allgemein** behebt es die Probleme von ESLint beim Sichern, wenn du willst.
 
 ## Debugger
 

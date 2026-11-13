@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLintがプロジェクトをチェックできませんでした";
 "Nicht mehr fragen" = "今後確認しない";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}はファイルの言語サーバと並行して動作し、以降はすべてのプロジェクトに適用されます。";
+"Vim-Modus" = "Vimモード";
+"NORMAL" = "ノーマル";
+"EINFÜGEN" = "挿入";
+"ERSETZEN" = "置換";
+"VISUELL" = "ビジュアル";
+"VISUELL ZEILE" = "ビジュアル 行";
+"VISUELL BLOCK" = "ビジュアル 矩形";
+"ESLint-Probleme beim Sichern beheben" = "保存時にESLintの問題を修正";
+"Emmet-Kürzel in der Vervollständigung" = "補完にEmmetの省略記法を含める";

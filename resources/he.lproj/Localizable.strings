@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint לא הצליח לבדוק את הפרויקט";
 "Nicht mehr fragen" = "אל תשאל שוב";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} פועל לצד שרת השפה של הקובץ ולאחר מכן חל על כל הפרויקטים.";
+"Vim-Modus" = "מצב Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERT";
+"ERSETZEN" = "REPLACE";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LINE";
+"VISUELL BLOCK" = "VISUAL BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "תיקון בעיות ESLint בעת השמירה";
+"Emmet-Kürzel in der Vervollständigung" = "קיצורי Emmet בהשלמה";

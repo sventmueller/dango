@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint 無法檢查專案";
 "Nicht mehr fragen" = "不要再詢問";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} 與檔案的語言伺服器並行執行，之後適用於所有專案。";
+"Vim-Modus" = "Vim 模式";
+"NORMAL" = "一般";
+"EINFÜGEN" = "插入";
+"ERSETZEN" = "取代";
+"VISUELL" = "選取";
+"VISUELL ZEILE" = "選取 行";
+"VISUELL BLOCK" = "選取 區塊";
+"ESLint-Probleme beim Sichern beheben" = "儲存時修正 ESLint 問題";
+"Emmet-Kürzel in der Vervollständigung" = "自動完成中的 Emmet 縮寫";

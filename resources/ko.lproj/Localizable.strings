@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint가 프로젝트를 검사할 수 없음";
 "Nicht mehr fragen" = "다시 묻지 않음";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}은(는) 파일의 언어 서버와 함께 실행되며 이후 모든 프로젝트에 적용됩니다.";
+"Vim-Modus" = "Vim 모드";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERT";
+"ERSETZEN" = "REPLACE";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LINE";
+"VISUELL BLOCK" = "VISUAL BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "저장할 때 ESLint 문제 수정";
+"Emmet-Kürzel in der Vervollständigung" = "완성에 Emmet 약어 포함";

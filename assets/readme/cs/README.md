@@ -162,12 +162,20 @@ Před každým promptem si Dango uloží kontrolní bod jako commit pod `refs/id
 - **Sbalování** (⌥⌘← a ⌥⌘→, s ⇧ pro vše), přepnutí komentáře (⌘/), přechod na řádek (⌃G), viditelné bílé znaky a zalamování řádků (⌥Z).
 - **Soubory si zachovávají kódování**, značku pořadí bajtů a konce řádků. Soubor změněný na disku se znovu načte, pokud editor nemá neuložený text; jinak lišta nabídne rozdíly a sloučení.
 - **Předpovědi při psaní.** Během psaní se šedě zobrazí návrh a Tab ho přijme. Pochází z GitHub Copilotu nebo z lokálního modelu v Ollama či LM Studio, podle volby v **Nastavení › Předpověď**; lokální model nechá váš kód na tomto Macu.
+- **Minimapa a pevné posouvání** (nabídka Editor): úzký obraz celého souboru vedle textu a řádky záhlaví bloků, ve kterých leží horní řádek, přidržené nad ním.
+- **Diagnostika na konci řádku** (nabídka Zobrazení): nejzávažnější hlášení každého řádku po sekundě klidu, se symbolem jeho závažnosti.
+- **Živý náhled statických stránek:** Editor › Otevřít v panelu prohlížeče poskytuje stránky důvěryhodné složky přímo z Danga a po uložení souboru panel znovu načte.
+- **Prettier** formátuje JavaScript, TypeScript, CSS, HTML, Markdown a další jazyky, kde ho projekt nastavuje, a to vlastním `node_modules/.bin/prettier` projektu; nastavení `formatter` vybírá formátovač pro každý jazyk.
+- **Režim Vim** (Editor › Režim Vim): režimy Normal, Insert, Visual a Replace, počty, operátory s pohyby a textovými objekty, `.`, registry, značky a makra. `u` a ⌃R používají kroky zpět editoru a jeden průchod vkládáním je jeden krok. `"+` a `"*` jsou schránka; nastavení `vimClipboard` udělá schránkou i nepojmenovaný registr. `/`, `?`, `n`, `N`, `*`, `:s` a `:%s` hledají regulárními výrazy Rustu, ne vzory Vimu: žádné `\v` a `\b` místo `\<` a `\>`. Příkazy Ex jsou `:w`, `:q`, `:wq`, `:x`, `:noh` a `:<line>`. V režimu Normal si Vim bere ⌃G od přechodu na řádek.
+- **Synchronizace nastavení** přes složku na iCloud Drive (**Nastavení › Obecné**): vaše nastavení a zkratky vás následují na vaše ostatní Macy; cesty, místní adresy a souhlasy zůstávají na každém zvlášť.
 
 ## Jazykové servery
 
 Go, Rust, TypeScript a JavaScript, Python, C, C++ a Objective-C, Swift, skripty shellu, JSON, YAML, CSS, HTML, TOML, Markdown a Lua, plus vlastní servery z **Nastavení › Jazykový server**. Dango nainstaluje server na požádání do vlastní složky nástrojů a použije `tsc` projektu TypeScript, pokud může sloužit jako jazykový server.
 
 Co přinášejí: diagnostiku (⌘' a ⇧⌘' přecházejí mezi hlášeními), informace po najetí (⌃⌘I), doplňování (⌥Esc), nápovědu k signaturám, přechod na definici (⌃⌘J), definici typu a implementaci, odkazy (⌃⇧⌘F), hierarchie volání a typů (⌃⇧⌘H), přejmenování (⌃⌘E), formátování (⌥⇧F), sémantické barvy, sbalování a osnovu (⇧⌘O); typy a názvy parametrů přímo v řádku; rychlé opravy a refaktoring za žárovkou (⌥⌘A); symboly projektu pomocí ⌥⌘O.
+
+Vedle vlastního serveru souboru kontroluje ESLint JavaScript a TypeScript projektů, které ho používají, i se svými rychlými opravami, a zkratky Emmet se objevují v doplňování pro HTML, CSS a JSX. Dango oba nainstaluje na požádání; **Nastavení › Obecné** opraví problémy ESLint při ukládání, pokud chcete.
 
 ## Ladicí nástroj
 

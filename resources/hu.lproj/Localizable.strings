@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "Az ESLint nem tudta ellenőrizni a projektet";
 "Nicht mehr fragen" = "Ne kérdezze többé";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "A(z) {} a fájl nyelvi szervere mellett fut, és ezután minden projektre érvényes.";
+"Vim-Modus" = "Vim mód";
+"NORMAL" = "NORMÁL";
+"EINFÜGEN" = "BESZÚR";
+"ERSETZEN" = "CSERE";
+"VISUELL" = "VIZUÁLIS";
+"VISUELL ZEILE" = "VIZUÁLIS SOR";
+"VISUELL BLOCK" = "VIZUÁLIS BLOKK";
+"ESLint-Probleme beim Sichern beheben" = "ESLint-problémák javítása mentéskor";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet-rövidítések a kiegészítésben";

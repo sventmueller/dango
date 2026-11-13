@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint projeyi denetleyemedi";
 "Nicht mehr fragen" = "Bir Daha Sorma";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}, dosyanın dil sunucusunun yanında çalışır ve ardından tüm projeler için geçerli olur.";
+"Vim-Modus" = "Vim Modu";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "EKLE";
+"ERSETZEN" = "DEĞİŞTİR";
+"VISUELL" = "GÖRSEL";
+"VISUELL ZEILE" = "GÖRSEL SATIR";
+"VISUELL BLOCK" = "GÖRSEL BLOK";
+"ESLint-Probleme beim Sichern beheben" = "Kaydederken ESLint sorunlarını düzelt";
+"Emmet-Kürzel in der Vervollständigung" = "Tamamlamada Emmet kısaltmaları";

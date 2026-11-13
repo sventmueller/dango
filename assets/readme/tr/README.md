@@ -162,12 +162,20 @@ Dango her istemden önce bir kontrol noktası tutar: projenin deposunda `refs/id
 - **Katlama** (⌥⌘← ve ⌥⌘→, hepsi için ⇧ ile), yorum açma/kapama (⌘/), satıra git (⌃G), görünür boşluklar ve satır kaydırma (⌥Z).
 - **Dosyalar kodlamalarını,** bayt sırası işaretlerini ve satır sonlarını korur. Diskte değişen bir dosya, düzenleyicide kaydedilmemiş metin yoksa yeniden yüklenir; aksi hâlde bir çubuk farkları ve birleştirmeyi sunar.
 - **Düzenleme tahminleri.** Siz yazarken gri renkte bir öneri belirir ve Tab onu kabul eder. Öneri, **Ayarlar › Tahmin** içinde seçtiğinize göre GitHub Copilot’tan ya da Ollama veya LM Studio’daki yerel bir modelden gelir; yerel bir model kodunuzu bu Mac’te tutar.
+- **Mini Harita ve Yapışkan Kaydırma** (Düzenleyici menüsü): metnin yanında tüm dosyanın dar bir resmi ve en üst satırın içinde bulunduğu blokların başlık satırları, bu satırın üstünde sabitlenmiş olarak.
+- **Satır Sonunda Tanılamalar** (Görüntü menüsü): her satırın en ciddi iletisi, bir saniyelik duraklamadan sonra, önem derecesini gösteren bir simgeyle.
+- **Statik sayfaların canlı önizlemesi:** Düzenleyici › Tarayıcı Sekmesinde Aç, güvenilen bir klasörün sayfalarını doğrudan Dango’nun kendisinden sunar ve bir dosya kaydedildiğinde sekmeyi yeniden yükler.
+- **Prettier**, projenin yapılandırdığı yerlerde JavaScript, TypeScript, CSS, HTML, Markdown ve daha fazlasını projenin kendi `node_modules/.bin/prettier` dosyasıyla biçimlendirir; `formatter` ayarı her dil için biçimlendiriciyi seçer.
+- **Vim Modu** (Düzenleyici › Vim Modu): Normal, Ekle, Görsel ve Değiştir modları, tekrar sayıları, hareketler ve metin nesneleriyle operatörler, `.`, yazmaçlar, imler ve makrolar. `u` ve ⌃R düzenleyicinin geri alma özelliğini kullanır ve bir ekleme turu tek bir adımdır. `"+` ve `"*` panodur; `vimClipboard` ayarı adsız yazmacı da pano yapar. `/`, `?`, `n`, `N`, `*`, `:s` ve `:%s`, Vim’in desenleriyle değil, Rust’ın düzenli ifadeleriyle arar: `\v` yoktur ve `\<` ile `\>` yerine `\b` kullanılır. Ex komutları `:w`, `:q`, `:wq`, `:x`, `:noh` ve `:<line>` şeklindedir. Normal modda ⌃G kestirmesini satıra git yerine Vim kullanır.
+- **Ayar eşzamanlama**, iCloud Drive’daki bir klasör üzerinden (**Ayarlar › Genel**): ayarlarınız ve kestirmeleriniz diğer Mac’lerinize de sizinle gelir; yollar, yerel adresler ve onaylar her Mac’te ayrı kalır.
 
 ## Dil sunucuları
 
 Go, Rust, TypeScript ve JavaScript, Python, C, C++ ve Objective-C, Swift, kabuk betikleri, JSON, YAML, CSS, HTML, TOML, Markdown ve Lua; ayrıca **Ayarlar › Dil sunucusu** içinden eklediğiniz kendi sunucularınız. Dango bir sunucuyu istediğinizde kendi araçlar klasörüne kurar ve bir TypeScript projesinin kendi `tsc`’si dil sunucusu olarak çalışabiliyorsa onu kullanır.
 
 Getirdikleri: tanılamalar (⌘' ve ⇧⌘' aralarında gezinir), üzerine gelince bilgi (⌃⌘I), tamamlama (⌥Esc), imza yardımı, tanıma git (⌃⌘J), tür tanımı ve uygulama, başvurular (⌃⇧⌘F), çağrı ve tür hiyerarşileri (⌃⇧⌘H), yeniden adlandırma (⌃⌘E), biçimlendirme (⌥⇧F), anlamsal renkler, katlama ve ana hat (⇧⌘O); satırın içinde türler ve parametre adları; bir ampulün arkasında hızlı düzeltmeler ve yeniden düzenlemeler (⌥⌘A); ⌥⌘O ile projenin sembolleri.
+
+Bir dosyanın kendi sunucusunun yanında ESLint, onu kullanan projelerin JavaScript ve TypeScript kodunu hızlı düzeltmeleriyle birlikte denetler, Emmet’in kısaltmaları da HTML, CSS ve JSX için tamamlamada görünür. Dango ikisini de istediğinizde kurar; **Ayarlar › Genel** içinde isterseniz ESLint’in sorunları kaydederken düzeltilir.
 
 ## Hata ayıklayıcı
 

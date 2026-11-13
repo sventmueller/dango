@@ -162,12 +162,20 @@ Pred vsakim pozivom Dango shrani kontrolno točko, kot commit pod `refs/ide-chec
 - **Zlaganje** (⌥⌘← in ⌥⌘→, s ⇧ za vse), preklop komentarjev (⌘/), pojdi na vrstico (⌃G), vidni presledki in prelom vrstic (⌥Z).
 - **Datoteke ohranijo kodiranje**, oznako vrstnega reda bajtov in konce vrstic. Datoteka, spremenjena na disku, se znova naloži, če urejevalnik nima neshranjenega besedila; sicer vrstica ponudi razlike in združitev.
 - **Napovedovanje med tipkanjem.** Med tipkanjem se v sivi barvi prikaže predlog, tipka Tab pa ga sprejme. Prihaja iz GitHub Copilot ali iz lokalnega modela v Ollama ali LM Studio, kot izberete v **Nastavitve › Napovedovanje**; lokalni model obdrži vašo kodo v tem Macu.
+- **Mini zemljevid in pripeto drsenje** (meni Urejevalnik): ozka slika celotne datoteke ob besedilu ter vrstice glav blokov, v katerih je zgornja vrstica, pridržane nad njo.
+- **Diagnostika na koncu vrstice** (meni Prikaz): najresnejše sporočilo vsake vrstice po sekundi mirovanja, s simbolom njegove resnosti.
+- **Predogled statičnih strani v živo:** Urejevalnik › Odpri v zavihku brskalnika streže strani zaupanja vredne mape neposredno iz aplikacije Dango in znova naloži zavihek, ko se datoteka shrani.
+- **Prettier** oblikuje JavaScript, TypeScript, CSS, HTML, Markdown in drugo, kjer ga projekt nastavi, z lastnim `node_modules/.bin/prettier` projekta; nastavitev `formatter` izbere oblikovalnik za vsak jezik.
+- **Način Vim** (Urejevalnik › Način Vim): načini Normal, Insert, Visual in Replace, števci, operatorji s premiki in besedilnimi objekti, `.`, registri, oznake in makri. `u` in ⌃R uporabljata razveljavitev urejevalnika, en prehod vstavljanja pa je en korak. `"+` in `"*` sta odložišče; nastavitev `vimClipboard` naredi odložišče tudi iz neimenovanega registra. `/`, `?`, `n`, `N`, `*`, `:s` in `:%s` iščejo z regularnimi izrazi jezika Rust, ne z Vimovimi vzorci: brez `\v`, in `\b` namesto `\<` in `\>`. Ukazi Ex so `:w`, `:q`, `:wq`, `:x`, `:noh` in `:<line>`. V načinu Normal Vim prevzame ⌃G od ukaza Pojdi v vrstico.
+- **Sinhronizacija nastavitev** prek mape v storitvi iCloud Drive (**Nastavitve › Splošno**): vaše nastavitve in bližnjice vam sledijo na vaše druge računalnike Mac; poti, lokalni naslovi in soglasja ostanejo na vsakem posebej.
 
 ## Jezikovni strežniki
 
 Go, Rust, TypeScript in JavaScript, Python, C, C++ in Objective-C, Swift, skripti lupine, JSON, YAML, CSS, HTML, TOML, Markdown in Lua ter vaši lastni strežniki iz **Nastavitve › Jezikovni strežnik**. Dango strežnik namesti na zahtevo, v lastno mapo z orodji, in uporabi lastni `tsc` projekta TypeScript, kadar lahko deluje kot jezikovni strežnik.
 
 Kaj prinašajo: diagnostiko (⌘' in ⇧⌘' se premikata med njimi), informacije ob lebdenju (⌃⌘I), dokončanje (⌥Esc), pomoč pri podpisih, pojdi na definicijo (⌃⌘J), na definicijo tipa in implementacijo, sklice (⌃⇧⌘F), hierarhije klicev in tipov (⌃⇧⌘H), preimenovanje (⌃⌘E), oblikovanje (⌥⇧F), semantične barve, zlaganje in oris (⇧⌘O); tipe in imena parametrov znotraj vrstice; hitre popravke in refaktoriranja za žarnico (⌥⌘A); simbole projekta z ⌥⌘O.
+
+Poleg lastnega strežnika datoteke ESLint preverja JavaScript in TypeScript projektov, ki ga uporabljajo, s svojimi hitrimi popravki, okrajšave Emmet pa se pojavijo pri dokončevanju za HTML, CSS in JSX. Dango oba namesti na zahtevo; **Nastavitve › Splošno** po želji odpravi težave ESLint ob shranjevanju.
 
 ## Razhroščevalnik
 

@@ -162,12 +162,20 @@ Trước mỗi prompt, Dango lưu một điểm kiểm tra, dưới dạng commi
 - **Thu gọn khối mã** (⌥⌘← và ⌥⌘→, kèm ⇧ cho tất cả), bật/tắt chú thích (⌘/), đi tới dòng (⌃G), hiển thị khoảng trắng và ngắt dòng (⌥Z).
 - **Tệp giữ nguyên bảng mã**, dấu thứ tự byte và ký tự xuống dòng. Tệp bị thay đổi trên ổ đĩa sẽ được tải lại khi trình soạn thảo không có văn bản chưa lưu; nếu không, một thanh thông báo sẽ đưa ra các khác biệt và tùy chọn hợp nhất.
 - **Dự đoán chỉnh sửa.** Khi bạn gõ, một đề xuất xuất hiện bằng chữ xám, và Tab sẽ nhận đề xuất đó. Đề xuất đến từ GitHub Copilot hoặc từ một mô hình cục bộ trong Ollama hay LM Studio, tùy lựa chọn trong **Cài đặt › Dự đoán**; mô hình cục bộ giữ mã của bạn trên máy Mac này.
+- **Bản đồ thu nhỏ và Cuộn cố định** (menu Trình soạn thảo): hình hẹp của toàn bộ tệp bên cạnh văn bản, và các dòng tiêu đề của những khối chứa dòng trên cùng, được giữ cố định phía trên dòng đó.
+- **Chẩn đoán ở cuối dòng** (menu Xem): thông báo nghiêm trọng nhất của mỗi dòng sau một giây không gõ, kèm biểu tượng cho mức độ nghiêm trọng.
+- **Xem trước trực tiếp trang tĩnh:** Trình soạn thảo › Mở trong tab trình duyệt phục vụ các trang của một thư mục được tin cậy ngay từ Dango và tải lại tab khi một tệp được lưu.
+- **Prettier** định dạng JavaScript, TypeScript, CSS, HTML, Markdown và nhiều loại khác ở nơi dự án cấu hình nó, bằng `node_modules/.bin/prettier` riêng của dự án; cài đặt `formatter` chọn trình định dạng cho từng ngôn ngữ.
+- **Chế độ Vim** (Trình soạn thảo › Chế độ Vim): chế độ Normal, Chèn, Visual và Thay thế, số đếm, toán tử với chuyển động và đối tượng văn bản, `.`, thanh ghi, dấu và macro. `u` và ⌃R dùng chức năng hoàn tác của trình soạn thảo, và một lượt chèn là một bước. `"+` và `"*` là bảng nhớ tạm; cài đặt `vimClipboard` biến cả thanh ghi không tên thành bảng nhớ tạm. `/`, `?`, `n`, `N`, `*`, `:s` và `:%s` tìm kiếm bằng biểu thức chính quy của Rust, không phải mẫu của Vim: không có `\v`, và `\b` thay cho `\<` và `\>`. Lệnh Ex là `:w`, `:q`, `:wq`, `:x`, `:noh` và `:<line>`. Ở chế độ Normal, ⌃G thuộc về Vim thay vì đi tới dòng.
+- **Đồng bộ hóa cài đặt** qua một thư mục trong iCloud Drive (**Cài đặt › Cài đặt chung**): cài đặt và phím tắt của bạn theo bạn sang các máy Mac khác; đường dẫn, địa chỉ cục bộ và các sự đồng ý vẫn ở riêng trên từng máy.
 
 ## Máy chủ ngôn ngữ
 
 Go, Rust, TypeScript và JavaScript, Python, C, C++ và Objective-C, Swift, shell script, JSON, YAML, CSS, HTML, TOML, Markdown và Lua, cùng các máy chủ riêng của bạn từ **Cài đặt › Máy chủ ngôn ngữ**. Dango cài máy chủ khi bạn yêu cầu, vào thư mục công cụ riêng của nó, và dùng `tsc` riêng của một dự án TypeScript khi nó có thể làm máy chủ ngôn ngữ.
 
 Những gì chúng mang lại: chẩn đoán (⌘' và ⇧⌘' di chuyển giữa các chẩn đoán), thông tin khi di chuột (⌃⌘I), tự động hoàn thành (⌥Esc), trợ giúp chữ ký hàm, đi tới định nghĩa (⌃⌘J), định nghĩa kiểu và triển khai, tham chiếu (⌃⇧⌘F), phân cấp lệnh gọi và phân cấp kiểu (⌃⇧⌘H), đổi tên (⌃⌘E), định dạng (⌥⇧F), màu ngữ nghĩa, thu gọn khối mã và dàn ý (⇧⌘O); kiểu và tên tham số ngay trong dòng; sửa nhanh và tái cấu trúc sau biểu tượng bóng đèn (⌥⌘A); ký hiệu của dự án bằng ⌥⌘O.
+
+Bên cạnh máy chủ riêng của tệp, ESLint kiểm tra JavaScript và TypeScript của những dự án dùng nó, kèm các bản sửa nhanh của nó, và các viết tắt của Emmet xuất hiện trong tự động hoàn thành cho HTML, CSS và JSX. Dango cài cả hai khi bạn yêu cầu; **Cài đặt › Cài đặt chung** sửa các vấn đề của ESLint khi lưu nếu bạn muốn.
 
 ## Trình gỡ lỗi
 

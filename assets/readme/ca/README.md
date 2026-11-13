@@ -162,12 +162,20 @@ Abans de cada prompt, el Dango desa un punt de control, com a commit sota `refs/
 - **Plegat** (⌥⌘← i ⌥⌘→, amb ⇧ per a tot), comentar o descomentar (⌘/), anar a la línia (⌃G), espais visibles i ajustar les línies (⌥Z).
 - **Els fitxers conserven la codificació**, la marca d’ordre de bytes i els finals de línia. Un fitxer que canvia al disc es torna a carregar si l’editor no té text sense desar; si no, una barra n’ofereix les diferències i una fusió.
 - **Prediccions mentre escrius.** Mentre escrius apareix un suggeriment en gris, i Tab l’accepta. Ve de GitHub Copilot o d’un model local a Ollama o LM Studio, segons el que hagis triat a **Configuració › Predicció**; un model local manté el teu codi en aquest Mac.
+- **Minimapa i Desplaçament fix** (menú Editor): una imatge estreta de tot el fitxer al costat del text, i les línies de capçalera dels blocs on es troba la línia superior, fixades a sobre seu.
+- **Diagnòstics al final de la línia** (menú Mostra): el missatge més greu de cada línia després d’un segon de repòs, amb un símbol per a la seva gravetat.
+- **Previsualització en directe de pàgines estàtiques:** Editor › Obre a la pestanya del navegador serveix les pàgines d’una carpeta de confiança des del mateix Dango i torna a carregar la pestanya quan es desa un fitxer.
+- **El Prettier** dona format a JavaScript, TypeScript, CSS, HTML, Markdown i més allà on el projecte el configura, amb el `node_modules/.bin/prettier` propi del projecte; l’opció `formatter` tria el formatador per a cada llenguatge.
+- **Mode Vim** (Editor › Mode Vim): modes Normal, Inserir, Visual i Substituir, comptadors, operadors amb moviments i objectes de text, `.`, registres, marques i macros. `u` i ⌃R fan servir el desfer de l’editor, i una passada d’inserció és un sol pas. `"+` i `"*` són el porta-retalls; l’opció `vimClipboard` fa que el registre sense nom també sigui el porta-retalls. `/`, `?`, `n`, `N`, `*`, `:s` i `:%s` cerquen amb les expressions regulars de Rust, no amb els patrons del Vim: sense `\v`, i `\b` en lloc de `\<` i `\>`. Les ordres Ex són `:w`, `:q`, `:wq`, `:x`, `:noh` i `:<line>`. En mode Normal, ⌃G és del Vim en lloc d’anar a la línia.
+- **Sincronització de la configuració** a través d’una carpeta de l’iCloud Drive (**Configuració › General**): la teva configuració i les teves dreceres et segueixen als teus altres Mac; els camins, les adreces locals i els consentiments es queden a cada un.
 
 ## Servidors de llenguatge
 
 Go, Rust, TypeScript i JavaScript, Python, C, C++ i Objective-C, Swift, scripts de shell, JSON, YAML, CSS, HTML, TOML, Markdown i Lua, i servidors propis des de **Configuració › Servidor de llenguatge**. El Dango instal·la un servidor quan ho demanes, a la seva pròpia carpeta d’eines, i fa servir el `tsc` d’un projecte de TypeScript quan pot fer de servidor de llenguatge.
 
 El que aporten: diagnòstics (⌘' i ⇧⌘' passen de l’un a l’altre), informació del símbol (⌃⌘I), compleció (⌥Esc), ajuda de signatures, anar a la definició (⌃⌘J), a la definició de tipus i a la implementació, referències (⌃⇧⌘F), jerarquies de crides i de tipus (⌃⇧⌘H), canvi de nom (⌃⌘E), format (⌥⇧F), colors semàntics, plegat i l’esquema (⇧⌘O); tipus i noms de paràmetres dins de la línia; correccions ràpides i refactoritzacions darrere d’una bombeta (⌥⌘A); els símbols del projecte amb ⌥⌘O.
+
+A més del servidor propi d’un fitxer, l’ESLint revisa el JavaScript i el TypeScript dels projectes que el fan servir, amb les seves correccions ràpides, i les abreviatures d’Emmet apareixen a la compleció per a HTML, CSS i JSX. El Dango els instal·la tots dos quan ho demanes; **Configuració › General** corregeix els problemes d’ESLint en desar, si vols.
 
 ## Depurador
 

@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint kunde inte kontrollera projektet";
 "Nicht mehr fragen" = "Fråga inte igen";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} körs bredvid filens språkserver och gäller sedan för alla projekt.";
+"Vim-Modus" = "Vim-läge";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INFOGA";
+"ERSETZEN" = "ERSÄTT";
+"VISUELL" = "VISUELL";
+"VISUELL ZEILE" = "VISUELL RAD";
+"VISUELL BLOCK" = "VISUELLT BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "Åtgärda ESLint-problem när du sparar";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet-förkortningar i kompletteringen";

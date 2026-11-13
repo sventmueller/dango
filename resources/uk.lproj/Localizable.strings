@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint не вдалося перевірити проєкт";
 "Nicht mehr fragen" = "Більше не питати";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} працює поруч із мовним сервером файлу й потім діє для всіх проєктів.";
+"Vim-Modus" = "Режим Vim";
+"NORMAL" = "НОРМАЛЬНИЙ";
+"EINFÜGEN" = "ВСТАВИТИ";
+"ERSETZEN" = "ЗАМІНА";
+"VISUELL" = "ВИБІР";
+"VISUELL ZEILE" = "ВИБІР РЯДКІВ";
+"VISUELL BLOCK" = "ВИБІР БЛОКУ";
+"ESLint-Probleme beim Sichern beheben" = "Виправляти проблеми ESLint під час збереження";
+"Emmet-Kürzel in der Vervollständigung" = "Скорочення Emmet в автодоповненні";

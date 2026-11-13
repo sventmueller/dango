@@ -162,12 +162,20 @@ Sebelum setiap prompt, Dango menyimpan checkpoint, sebagai commit di bawah `refs
 - **Pelipatan** (⌥⌘← dan ⌥⌘→, dengan ⇧ untuk semuanya), alihkan komentar (⌘/), buka baris (⌃G), spasi kosong yang terlihat, dan bungkus baris (⌥Z).
 - **File mempertahankan pengodeannya**, tanda urutan byte, dan akhir barisnya. File yang berubah di disk dimuat ulang jika editor tidak berisi teks yang belum disimpan; jika ada, sebuah bar menawarkan perbedaannya dan penggabungan.
 - **Prediksi saat mengetik.** Saat Anda mengetik, sebuah saran muncul dalam warna abu-abu, dan Tab menerimanya. Saran berasal dari GitHub Copilot atau dari model lokal di Ollama atau LM Studio, sesuai pilihan di **Pengaturan › Prediksi**; model lokal menjaga kode Anda tetap di Mac ini.
+- **Minimap dan Sticky Scroll** (menu Editor): gambar sempit dari seluruh file di samping teks, dan baris judul dari blok-blok tempat baris teratas berada, ditahan di atasnya.
+- **Diagnostik di akhir baris** (menu Lihat): pesan paling serius di setiap baris setelah jeda satu detik, dengan simbol untuk tingkat keparahannya.
+- **Pratinjau langsung halaman statis:** Editor › Buka di Tab Browser menyajikan halaman dari folder tepercaya langsung dari Dango sendiri dan memuat ulang tab saat file disimpan.
+- **Prettier** memformat JavaScript, TypeScript, CSS, HTML, Markdown, dan lainnya jika proyek mengonfigurasinya, dengan `node_modules/.bin/prettier` milik proyek itu sendiri; pengaturan `formatter` memilih pemformat per bahasa.
+- **Mode Vim** (Editor › Mode Vim): mode Normal, Insert, Visual, dan Replace, hitungan, operator dengan gerakan dan objek teks, `.`, register, tanda, dan makro. `u` dan ⌃R menggunakan urungkan milik editor, dan satu putaran penyisipan adalah satu langkah. `"+` dan `"*` adalah papan klip; pengaturan `vimClipboard` juga menjadikan register tanpa nama sebagai papan klip. `/`, `?`, `n`, `N`, `*`, `:s`, dan `:%s` mencari dengan ekspresi reguler Rust, bukan pola Vim: tidak ada `\v`, dan `\b` sebagai pengganti `\<` dan `\>`. Perintah Ex adalah `:w`, `:q`, `:wq`, `:x`, `:noh`, dan `:<line>`. Dalam mode Normal, ⌃G dipakai Vim, bukan untuk buka baris.
+- **Sinkronisasi pengaturan** melalui folder di iCloud Drive (**Pengaturan › Umum**): pengaturan dan pintasan Anda mengikuti Anda ke Mac Anda yang lain; jalur, alamat lokal, dan persetujuan tetap di masing-masing Mac.
 
 ## Server bahasa
 
 Go, Rust, TypeScript dan JavaScript, Python, C, C++ dan Objective-C, Swift, skrip shell, JSON, YAML, CSS, HTML, TOML, Markdown, dan Lua, serta server milik Anda sendiri dari **Pengaturan › Server bahasa**. Dango menginstal server saat Anda memintanya, ke folder alatnya sendiri, dan menggunakan `tsc` milik proyek TypeScript jika dapat berfungsi sebagai server bahasa.
 
 Yang mereka berikan: diagnostik (⌘' dan ⇧⌘' berpindah di antaranya), info saat menunjuk (⌃⌘I), pelengkapan (⌥Esc), bantuan tanda tangan, buka definisi (⌃⌘J), definisi tipe dan implementasi, referensi (⌃⇧⌘F), hierarki panggilan dan tipe (⌃⇧⌘H), ganti nama (⌃⌘E), pemformatan (⌥⇧F), warna semantik, pelipatan, dan kerangka (⇧⌘O); tipe dan nama parameter di dalam baris; perbaikan cepat dan refaktor di balik bola lampu (⌥⌘A); simbol proyek dengan ⌥⌘O.
+
+Selain server milik file itu sendiri, ESLint memeriksa JavaScript dan TypeScript pada proyek yang menggunakannya, dengan perbaikan cepatnya, dan singkatan Emmet muncul dalam pelengkapan untuk HTML, CSS, dan JSX. Dango menginstal keduanya saat Anda memintanya; **Pengaturan › Umum** memperbaiki masalah ESLint saat menyimpan jika Anda mau.
 
 ## Debugger
 

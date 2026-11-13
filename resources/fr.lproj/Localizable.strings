@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint n’a pas pu vérifier le projet";
 "Nicht mehr fragen" = "Ne plus demander";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} s’exécute à côté du serveur de langage du fichier et s’applique ensuite à tous les projets.";
+"Vim-Modus" = "Mode Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERTION";
+"ERSETZEN" = "REMPLACEMENT";
+"VISUELL" = "VISUEL";
+"VISUELL ZEILE" = "VISUEL LIGNE";
+"VISUELL BLOCK" = "VISUEL BLOC";
+"ESLint-Probleme beim Sichern beheben" = "Corriger les problèmes ESLint à l’enregistrement";
+"Emmet-Kürzel in der Vervollständigung" = "Abréviations Emmet dans la complétion";

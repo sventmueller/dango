@@ -162,12 +162,20 @@ Före varje prompt sparar Dango en kontrollpunkt, som en commit under `refs/ide-
 - **Vikning** (⌥⌘← och ⌥⌘→, med ⇧ för allt), växla kommentar (⌘/), gå till rad (⌃G), synliga blanksteg och radbrytning (⌥Z).
 - **Filer behåller sin teckenkodning**, byte order mark och radslut. En fil som ändras på disken läses in igen när redigeraren inte har någon osparad text; annars erbjuder ett fält skillnaderna och en sammanslagning.
 - **Förutsägelser medan du skriver.** Medan du skriver visas ett förslag i grått, och Tabb tar det. Det kommer från GitHub Copilot eller från en lokal modell i Ollama eller LM Studio, enligt valet i **Inställningar › Förutsägelse**; en lokal modell håller din kod på den här Macen.
+- **Minikarta och fäst rullning** (menyn Redigerare): en smal bild av hela filen bredvid texten, och rubrikraderna för de block som den översta raden ligger i, fästa ovanför den.
+- **Diagnostik vid radslut** (menyn Innehåll): varje rads allvarligaste meddelande efter en sekunds vila, med en symbol för dess allvarlighetsgrad.
+- **Live-förhandsvisning av statiska sidor:** Redigerare › Öppna i webbläsarflik låter Dango själv servera sidorna i en mapp du litar på och läser in fliken igen när en fil sparas.
+- **Prettier** formaterar JavaScript, TypeScript, CSS, HTML, Markdown med mera där projektet konfigurerar det, med projektets eget `node_modules/.bin/prettier`; inställningen `formatter` väljer formaterare per språk.
+- **Vim-läge** (Redigerare › Vim-läge): lägena Normal, Infoga, Visuell och Ersätt, antal, operatorer med rörelser och textobjekt, `.`, register, märken och makron. `u` och ⌃R använder redigerarens Ångra, och allt som infogas i en omgång är ett steg. `"+` och `"*` är urklippet; inställningen `vimClipboard` gör även det namnlösa registret till urklippet. `/`, `?`, `n`, `N`, `*`, `:s` och `:%s` söker med Rusts reguljära uttryck, inte med Vims mönster: inget `\v`, och `\b` i stället för `\<` och `\>`. Ex-kommandon är `:w`, `:q`, `:wq`, `:x`, `:noh` och `:<line>`. I läget Normal tar Vim ⌃G från gå till rad.
+- **Synkronisering av inställningar** via en mapp på iCloud Drive (**Inställningar › Allmänt**): dina inställningar och kortkommandon följer med dig till dina andra Mac-datorer; sökvägar, lokala adresser och medgivanden stannar på var och en.
 
 ## Språkservrar
 
 Go, Rust, TypeScript och JavaScript, Python, C, C++ och Objective-C, Swift, skalskript, JSON, YAML, CSS, HTML, TOML, Markdown och Lua, och egna servrar från **Inställningar › Språkserver**. Dango installerar en server när du ber om det, i sin egen verktygsmapp, och använder ett TypeScript-projekts eget `tsc` när det kan fungera som språkserver.
 
 Det här ger de: diagnostik (⌘' och ⇧⌘' går mellan dem), hovring (⌃⌘I), komplettering (⌥Esc), signaturhjälp, gå till definition (⌃⌘J), typdefinition och implementering, referenser (⌃⇧⌘F), anrops- och typhierarkier (⌃⇧⌘H), byt namn (⌃⌘E), formatering (⌥⇧F), semantiska färger, vikning och dispositionen (⇧⌘O); typer och parameternamn inne i raden; snabbkorrigeringar och refaktoreringar bakom en glödlampa (⌥⌘A); projektets symboler med ⌥⌘O.
+
+Utöver en fils egen server kontrollerar ESLint JavaScript och TypeScript i projekt som använder det, med dess snabbkorrigeringar, och Emmets förkortningar visas i kompletteringen för HTML, CSS och JSX. Dango installerar båda när du ber om det; **Inställningar › Allmänt** åtgärdar ESLint-problem när du sparar, om du vill.
 
 ## Felsökare
 

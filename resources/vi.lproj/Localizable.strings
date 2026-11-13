@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint không thể kiểm tra dự án";
 "Nicht mehr fragen" = "Không hỏi lại";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} chạy bên cạnh máy chủ ngôn ngữ của tệp và sau đó áp dụng cho mọi dự án.";
+"Vim-Modus" = "Chế độ Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "CHÈN";
+"ERSETZEN" = "THAY THẾ";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "DÒNG VISUAL";
+"VISUELL BLOCK" = "KHỐI VISUAL";
+"ESLint-Probleme beim Sichern beheben" = "Sửa vấn đề ESLint khi lưu";
+"Emmet-Kürzel in der Vervollständigung" = "Viết tắt Emmet trong gợi ý hoàn tất";

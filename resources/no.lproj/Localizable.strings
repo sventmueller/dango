@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint kunne ikke kontrollere prosjektet";
 "Nicht mehr fragen" = "Ikke spør igjen";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} kjører ved siden av filens språktjener og gjelder deretter for alle prosjekter.";
+"Vim-Modus" = "Vim-modus";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "SETT INN";
+"ERSETZEN" = "ERSTATT";
+"VISUELL" = "VISUELL";
+"VISUELL ZEILE" = "VISUELL LINJE";
+"VISUELL BLOCK" = "VISUELL BLOKK";
+"ESLint-Probleme beim Sichern beheben" = "Rett ESLint-problemer ved lagring";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet-forkortelser i fullføring";

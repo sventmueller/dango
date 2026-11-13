@@ -1582,3 +1582,12 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint ไม่สามารถตรวจสอบโปรเจ็กต์ได้";
 "Nicht mehr fragen" = "ไม่ต้องถามอีก";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} ทำงานควบคู่กับเซิร์ฟเวอร์ภาษาของไฟล์ และหลังจากนั้นจะใช้กับทุกโปรเจ็กต์";
+"Vim-Modus" = "โหมด Vim";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERT";
+"ERSETZEN" = "REPLACE";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LINE";
+"VISUELL BLOCK" = "VISUAL BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "แก้ไขปัญหา ESLint เมื่อบันทึก";
+"Emmet-Kürzel in der Vervollständigung" = "ตัวย่อ Emmet ในการเติมคำ";
