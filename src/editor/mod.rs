@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 use ide_document::recovery::{Recovered, RecoveryId};
 use ide_document::{Change, Document, SaveError};
 use objc2::rc::{Retained, Weak};
-use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSColor,
     NSFontAttributeName, NSForegroundColorAttributeName, NSModalResponseOK, NSSavePanel, NSScrollView,
@@ -114,17 +114,8 @@ pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
     let content = view.textContentStorage()?;
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
     let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).unwrap_or(isize::MAX))?;
-    // TextKit 2 places a fragment below text it has not laid out by estimated heights, which shift once that text is.
-    let above = objc2_app_kit::NSTextRange::initWithLocation_endLocation(
-        objc2_app_kit::NSTextRange::alloc(),
-        &start,
-        Some(&location),
-    )?;
-    layout.ensureLayoutForRange(&above);
-    layout.ensureLayoutForRange(&objc2_app_kit::NSTextRange::initWithLocation(
-        objc2_app_kit::NSTextRange::alloc(),
-        &location,
-    ));
+    // TextKit 2 places a fragment by estimated heights until all text is laid out, and a jump would land beside it.
+    layout.ensureLayoutForRange(&objc2_app_kit::NSTextElementProvider::documentRange(&*content));
     let fragment = layout.textLayoutFragmentForLocation(&location)?;
     Some(fragment.layoutFragmentFrame().origin.y + view.textContainerOrigin().y)
 }

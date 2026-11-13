@@ -747,6 +747,14 @@ define_class!(
             guarded((), || super::sticky::keep_clear(self, range));
         }
 
+        // TextKit 2's own `textContainerOrigin` lays out the whole text on every call, and the caret asks for it at
+        // every keystroke; for this view it is always the inset.
+        #[unsafe(method(textContainerOrigin))]
+        fn text_container_origin(&self) -> NSPoint {
+            let inset = self.textContainerInset();
+            NSPoint::new(inset.width, inset.height)
+        }
+
         #[unsafe(method(ideFitMinimap))]
         fn fit_minimap(&self) {
             guarded((), || super::minimap::fit(self));
