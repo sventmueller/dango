@@ -4,41 +4,25 @@
 mod docker;
 mod panel;
 
-use std::cell::RefCell;
-
 use ide_docker::board::{Node, Row};
 use ide_docker::{Action, Compose};
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSMenu, NSMenuItem};
 use splat_i18n::{t, tf};
 
 use crate::window::{Panel, WindowController};
 pub use panel::{ContainersPanel, Reach};
 
-/// The Containers panels of every window, by window id.
-#[derive(Default)]
-pub struct Panels(RefCell<Vec<Retained<ContainersPanel>>>);
-
-fn panels(mtm: MainThreadMarker) -> std::rc::Rc<crate::context::AppContext> {
-    crate::context::AppContext::get(mtm)
-}
-
-/// Calls `f` with the panel of window `window`, if it has one.
-pub fn with_panel<R>(window: u64, f: impl FnOnce(&ContainersPanel) -> R) -> Option<R> {
-    let mtm = MainThreadMarker::new()?;
-    let panel = panels(mtm)
-        .containers_panels
-        .0
-        .borrow()
-        .iter()
-        .find(|p| p.window() == window)
-        .cloned()?;
-    Some(f(&panel))
+/// Runs `f` with the panel `id`, if its window is still open.
+pub fn with_panel(id: u64, f: impl FnOnce(&ContainersPanel)) {
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::context::AppContext::get(mtm).containers_panels.with(id, f);
+    }
 }
 
 fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
-    with_panel(controller.id(), |panel| panel.retain())
+    controller.context().containers_panels.of(controller.handle())
 }
 
 /// The window shows a folder: its panel reads Docker, whether or not the folder is trusted, since nothing of the
@@ -46,15 +30,12 @@ fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
-    let panel = ContainersPanel::new(controller.mtm(), controller.id(), root);
+    let panels = &controller.context().containers_panels;
+    let panel = ContainersPanel::new(controller.mtm(), panels.next_id(), controller.id(), root);
     let (page, header) = panel.build();
     controller.set_panel_page(Panel::Containers, &page);
     controller.set_panel_accessory(Panel::Containers, &header);
-    panels(controller.mtm())
-        .containers_panels
-        .0
-        .borrow_mut()
-        .push(panel.clone());
+    panels.insert(panel.id(), panel.clone());
     if controller.shown_panel() == Some(Panel::Containers) {
         panel.start();
     }
@@ -70,13 +51,12 @@ pub fn shown(controller: &WindowController) {
 
 /// The window's folder closes: its panel stops watching Docker and goes.
 pub fn window_closed(controller: &WindowController) {
+    let panels = &controller.context().containers_panels;
     let id = controller.id();
-    let context = panels(controller.mtm());
-    let mut all = context.containers_panels.0.borrow_mut();
-    for panel in all.iter().filter(|p| p.window() == id) {
+    for panel in panels.all().iter().filter(|p| p.window() == id) {
         panel.stop_watching();
     }
-    all.retain(|p| p.window() != id);
+    panels.detach(controller.handle());
 }
 
 /// What the panel and the Containers menu can do.
@@ -313,14 +293,14 @@ fn remove(controller: &WindowController, panel: &ContainersPanel, node: &Node) {
         ),
         Node::Section(_) | Node::Project(..) => return,
     };
-    let id = panel.window();
+    let id = panel.id();
     ide_ui_git::confirm_delete(
         &window,
         &tf("„{}“ löschen?", &[&name]),
         info,
         t("Löschen"),
         move || {
-            let _ = with_panel(id, |panel| panel.run(command));
+            with_panel(id, |panel| panel.run(command));
         },
     );
 }
@@ -329,7 +309,7 @@ fn remove(controller: &WindowController, panel: &ContainersPanel, node: &Node) {
 fn prune(controller: &WindowController, panel: &ContainersPanel) {
     let Some(window) = controller.window() else { return };
     let command = ide_docker::prune(&panel.context());
-    let id = panel.window();
+    let id = panel.id();
     ide_ui_git::confirm_delete(
         &window,
         &tf("Ungenutzte Docker-Daten in „{}“ aufräumen?", &[&panel.context()]),
@@ -338,7 +318,7 @@ fn prune(controller: &WindowController, panel: &ContainersPanel) {
         ),
         t("Aufräumen"),
         move || {
-            let _ = with_panel(id, |panel| panel.run(command));
+            with_panel(id, |panel| panel.run(command));
         },
     );
 }

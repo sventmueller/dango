@@ -4,11 +4,13 @@
 //! menu, deleting only after a sheet whose destructive button is never the default.
 
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
+use ide_ui_common::registry::WindowPart;
+use ide_ui_common::window::Window;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -45,6 +47,7 @@ pub enum Reach {
 }
 
 pub struct PanelIvars {
+    id: u64,
     window: u64,
     root: PathBuf,
     context: RefCell<String>,
@@ -136,8 +139,10 @@ define_class!(
 );
 
 impl ContainersPanel {
-    pub fn new(mtm: MainThreadMarker, window: u64, root: PathBuf) -> Retained<ContainersPanel> {
+    /// The panel `id` of the window `window` for the folder `root`.
+    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<ContainersPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
+            id,
             window,
             root,
             context: RefCell::new(String::new()),
@@ -159,6 +164,10 @@ impl ContainersPanel {
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.ivars().id
     }
 
     pub fn window(&self) -> u64 {
@@ -237,7 +246,7 @@ impl ContainersPanel {
     /// events when it answers.
     pub fn refresh(&self) {
         let context = self.context();
-        let window = self.window();
+        let id = self.id();
         let asked = self.ivars().asked.get() + 1;
         self.ivars().asked.set(asked);
         let root = self.root().to_path_buf();
@@ -247,7 +256,7 @@ impl ContainersPanel {
             let env = environment(path, ENVIRONMENT_WAIT);
             let read = read_all(&env, &context, &root);
             main_soon(move || {
-                let _ = super::with_panel(window, |panel| panel.read_done(asked, read));
+                super::with_panel(id, |panel| panel.read_done(asked, read));
             });
         });
         if let Err(error) = spawned {
@@ -290,9 +299,9 @@ impl ContainersPanel {
         let attempt = self.ivars().failures.get();
         self.ivars().failures.set(attempt + 1);
         let asked = self.ivars().asked.get();
-        let window = self.window();
+        let id = self.id();
         main_after(ide_docker::backoff(attempt), move || {
-            let _ = super::with_panel(window, |panel| {
+            super::with_panel(id, |panel| {
                 if panel.ivars().asked.get() != asked {
                     return;
                 }
@@ -312,7 +321,7 @@ impl ContainersPanel {
             return;
         }
         let env = environment(self.path(), Duration::ZERO);
-        let window = self.window();
+        let id = self.id();
         let watch = self.ivars().watches.get() + 1;
         self.ivars().watches.set(watch);
         let started = docker::watch(
@@ -321,13 +330,13 @@ impl ContainersPanel {
             move |line| {
                 if ide_docker::event(line).is_some_and(|e| e.changes_listing()) {
                     main_soon(move || {
-                        let _ = super::with_panel(window, ContainersPanel::changed);
+                        super::with_panel(id, ContainersPanel::changed);
                     });
                 }
             },
             move |error| {
                 main_soon(move || {
-                    let _ = super::with_panel(window, |panel| panel.watch_ended(watch, error));
+                    super::with_panel(id, |panel| panel.watch_ended(watch, error));
                 });
             },
         );
@@ -342,9 +351,9 @@ impl ContainersPanel {
 
     fn changed(&self) {
         let asked = self.ivars().asked.get();
-        let window = self.window();
+        let id = self.id();
         main_after(SETTLE, move || {
-            let _ = super::with_panel(window, |panel| {
+            super::with_panel(id, |panel| {
                 if panel.ivars().asked.get() == asked {
                     panel.refresh();
                 }
@@ -474,7 +483,7 @@ impl ContainersPanel {
 
     /// Runs `command` and reads Docker again after it; an error shows in an alert.
     pub fn run(&self, command: ide_docker::Command) {
-        let window = self.window();
+        let id = self.id();
         let path = self.path();
         let spawned = std::thread::Builder::new().name("docker-action".into()).spawn(move || {
             let env = environment(path, ENVIRONMENT_WAIT);
@@ -485,7 +494,7 @@ impl ContainersPanel {
                 {
                     crate::editor::show_alert(mtm, t("Docker-Befehl fehlgeschlagen"), &error);
                 }
-                let _ = super::with_panel(window, ContainersPanel::refresh);
+                super::with_panel(id, ContainersPanel::refresh);
             });
         });
         if let Err(error) = spawned {
@@ -535,6 +544,16 @@ impl ContainersPanel {
             }
             _ => false,
         }
+    }
+}
+
+impl WindowPart for ContainersPanel {
+    fn window(&self) -> Option<Window> {
+        Window::open(self.ivars().window)
+    }
+
+    fn root(&self) -> &Path {
+        ContainersPanel::root(self)
     }
 }
 

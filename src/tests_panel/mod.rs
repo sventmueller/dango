@@ -5,7 +5,6 @@
 mod panel;
 mod run;
 
-use std::cell::RefCell;
 use std::path::Path;
 
 use ide_test::{DebugTarget, Scope, State, TestId, Tool};
@@ -21,67 +20,41 @@ pub use panel::{TestsPanel, state_symbol};
 /// The source of the marks failed asserts leave, beside the language servers' own (E111).
 pub const SOURCE: u64 = u64::MAX;
 
-/// The Tests panels of every window, by window id.
-#[derive(Default)]
-pub struct Panels(RefCell<Vec<Retained<TestsPanel>>>);
-
-fn panels(mtm: MainThreadMarker) -> std::rc::Rc<crate::context::AppContext> {
-    crate::context::AppContext::get(mtm)
-}
-
-/// Calls `f` with the panel of window `window`, if it has one.
-pub fn with_panel<R>(window: u64, f: impl FnOnce(&TestsPanel) -> R) -> Option<R> {
-    let mtm = MainThreadMarker::new()?;
-    let panel = panels(mtm)
-        .tests_panels
-        .0
-        .borrow()
-        .iter()
-        .find(|p| p.window() == window)
-        .cloned()?;
-    Some(f(&panel))
+/// Runs `f` with the panel `id`, if its window is still open.
+pub fn with_panel(id: u64, f: impl FnOnce(&TestsPanel)) {
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::context::AppContext::get(mtm).tests_panels.with(id, f);
+    }
 }
 
 fn of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
-    let id = controller.id();
-    panels(controller.mtm())
-        .tests_panels
-        .0
-        .borrow()
-        .iter()
-        .find(|p| p.window() == id)
-        .cloned()
+    controller.context().tests_panels.of(controller.handle())
 }
 
 /// The window shows a folder: its panel lists the tests that list without building.
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
-    let panel = TestsPanel::new(controller.mtm(), controller.id(), root);
+    let panels = &controller.context().tests_panels;
+    let panel = TestsPanel::new(controller.mtm(), panels.next_id(), controller.id(), root);
     let (page, header) = panel.build();
     controller.set_panel_page(Panel::Tests, &page);
     controller.set_panel_accessory(Panel::Tests, &header);
-    panels(controller.mtm()).tests_panels.0.borrow_mut().push(panel.clone());
+    panels.insert(panel.id(), panel.clone());
     panel.list(false);
 }
 
 /// The user trusts `root` now: its panels list their tests.
 pub fn trust_changed(root: &Path) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let all = panels(mtm).tests_panels.0.borrow().clone();
-    for panel in all.iter().filter(|p| p.root() == root) {
+    for panel in crate::context::AppContext::get(mtm).tests_panels.for_root(root) {
         panel.list(false);
     }
 }
 
 /// The window's folder closes: its panel goes.
 pub fn window_closed(controller: &WindowController) {
-    let id = controller.id();
-    panels(controller.mtm())
-        .tests_panels
-        .0
-        .borrow_mut()
-        .retain(|p| p.window() != id);
+    controller.context().tests_panels.detach(controller.handle());
 }
 
 /// The test at the caret of the focused editor of `controller`, with its tool.

@@ -3,11 +3,13 @@
 //! show failed ones only and stop; a context menu to run, debug or show a test's output.
 
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
+use ide_ui_common::registry::WindowPart;
+use ide_ui_common::window::Window;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -25,6 +27,7 @@ use crate::util::{guarded, label, main_after, ns, set_action};
 const POLL: Duration = Duration::from_millis(300);
 
 pub struct PanelIvars {
+    id: u64,
     window: u64,
     root: PathBuf,
     pub(super) board: RefCell<Board>,
@@ -130,9 +133,10 @@ define_class!(
 );
 
 impl TestsPanel {
-    /// The panel of the window `window` for the folder `root`.
-    pub fn new(mtm: MainThreadMarker, window: u64, root: PathBuf) -> Retained<TestsPanel> {
+    /// The panel `id` of the window `window` for the folder `root`.
+    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<TestsPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
+            id,
             window,
             root,
             board: RefCell::new(Board::default()),
@@ -147,6 +151,10 @@ impl TestsPanel {
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.ivars().id
     }
 
     pub fn window(&self) -> u64 {
@@ -290,9 +298,9 @@ impl TestsPanel {
         if self.ivars().polling.replace(true) {
             return;
         }
-        let window = self.window();
+        let id = self.id();
         main_after(POLL, move || {
-            let _ = super::with_panel(window, |panel| panel.poll(listing));
+            super::with_panel(id, |panel| panel.poll(listing));
         });
     }
 
@@ -439,6 +447,16 @@ impl TestsPanel {
             .iter()
             .map(|r| (r.level, r.label.clone(), r.state))
             .collect()
+    }
+}
+
+impl WindowPart for TestsPanel {
+    fn window(&self) -> Option<Window> {
+        Window::open(self.ivars().window)
+    }
+
+    fn root(&self) -> &Path {
+        TestsPanel::root(self)
     }
 }
 
