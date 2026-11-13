@@ -55,7 +55,17 @@ pub fn attach(controller: &WindowController) {
         .0
         .borrow_mut()
         .push(panel.clone());
-    panel.refresh();
+    if controller.shown_panel() == Some(Panel::Containers) {
+        panel.start();
+    }
+}
+
+/// The window shows its Containers panel: the panel reads Docker the first time, so a window that never shows it
+/// runs no `docker`.
+pub fn shown(controller: &WindowController) {
+    if let Some(panel) = of(controller) {
+        panel.start();
+    }
 }
 
 /// The window's folder closes: its panel stops watching Docker and goes.

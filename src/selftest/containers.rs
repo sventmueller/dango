@@ -131,7 +131,13 @@ pub fn run() {
                 check("the stand-in docker is made", false, error);
                 return finish(SCENARIO);
             }
+            let idle = panel::panel_of(&controller).is_some_and(|p| !p.started());
             controller.activate_panel(Panel::Containers);
+            check(
+                "a window runs no docker before it shows its Containers panel, and reads once it does",
+                idle && panel::panel_of(&controller).is_some_and(|p| p.started()),
+                String::new(),
+            );
             missing();
         },
     );

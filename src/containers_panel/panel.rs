@@ -60,6 +60,7 @@ pub struct PanelIvars {
     watches: Cell<u64>,
     failures: Cell<u32>,
     asked: Cell<u64>,
+    started: Cell<bool>,
     /// The PATH the self-test gives in place of the login shell's, to a stand-in `docker` or none.
     #[cfg(feature = "selftest")]
     path: RefCell<Option<String>>,
@@ -149,6 +150,7 @@ impl ContainersPanel {
             watches: Cell::new(0),
             failures: Cell::new(0),
             asked: Cell::new(0),
+            started: Cell::new(false),
             #[cfg(feature = "selftest")]
             path: RefCell::new(None),
         });
@@ -233,6 +235,13 @@ impl ContainersPanel {
         (Retained::into_super(page), header)
     }
 
+    /// Reads Docker for the first time, unless it did.
+    pub fn start(&self) {
+        if !self.ivars().started.replace(true) {
+            self.refresh();
+        }
+    }
+
     /// Reads Docker again on a worker thread: contexts, version, containers, images and volumes; starts watching its
     /// events when it answers.
     pub fn refresh(&self) {
@@ -243,6 +252,7 @@ impl ContainersPanel {
         let root = self.root().to_path_buf();
         let path = self.path();
         let spawned = std::thread::Builder::new().name("docker-read".into()).spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
             let env = environment(path, ENVIRONMENT_WAIT);
             let read = read_all(&env, &context, &root);
             main_soon(move || {
@@ -369,6 +379,7 @@ impl ContainersPanel {
     /// Gives the panel `path` in place of the login shell's PATH, for the self-test.
     #[cfg(feature = "selftest")]
     pub fn set_path(&self, path: &std::path::Path) {
+        self.ivars().started.set(true);
         self.stop_watching();
         *self.ivars().path.borrow_mut() = Some(format!("{}:/usr/bin:/bin", path.display()));
         *self.ivars().reach.borrow_mut() = Reach::Unknown;
@@ -380,6 +391,12 @@ impl ContainersPanel {
     #[cfg(feature = "selftest")]
     pub fn reach(&self) -> Reach {
         self.ivars().reach.borrow().clone()
+    }
+
+    /// Whether the panel read Docker at all, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn started(&self) -> bool {
+        self.ivars().started.get()
     }
 
     /// Whether the panel watches Docker's events, for the self-test.

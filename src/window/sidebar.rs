@@ -74,6 +74,15 @@ impl WindowController {
         if let Some(activity) = self.ivars().activity.borrow().as_ref() {
             activity.select(Some(panel));
         }
+        if self.shown_panel() == Some(Panel::Containers) {
+            crate::containers_panel::shown(self);
+        }
+    }
+
+    /// The panel the sidebar shows, if it is open.
+    pub fn shown_panel(&self) -> Option<Panel> {
+        let ivars = self.ivars();
+        ivars.panel_open.get().then(|| ivars.panel.get()).flatten()
     }
 
     /// Hides the activity bar's symbols of `hidden`; a hidden panel that showed gives way to the first that still has
@@ -132,6 +141,9 @@ impl WindowController {
             self.remember_sidebar_width(&tab);
         }
         ivars.panel_open.set(open);
+        if open && self.shown_panel() == Some(Panel::Containers) {
+            crate::containers_panel::shown(self);
+        }
         self.fit_sidebar(&tab, tab.sidebar_collapsed());
         if let Some(activity) = ivars.activity.borrow().as_ref() {
             activity.select(open.then(|| ivars.panel.get()).flatten());
