@@ -30,6 +30,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make test` | `check`, then `cargo xtask selftest probe` |
 | `make perf` | the timing budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
 | `make fuzz` | `cargo xtask fuzz`: the crates' fuzz targets, see [Fuzzing](#fuzzing); outside `make check` |
+| `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
@@ -67,6 +68,26 @@ from that input, then the file goes.
 
 Property tests (E96) run in `make check` with a fixed seed, `crates/ide-document/tests/properties.rs`; a failing case
 is kept in `crates/ide-document/proptest-regressions/`, which is checked in.
+
+## Coverage
+`make coverage` (`cargo xtask coverage`, `xtask/src/coverage.rs`) measures line coverage of `cargo test --workspace`
+(unit and integration tests, not doctests: their coverage needs a nightly compiler) together with the selftest
+scenarios that need no network, account, real agent CLI or person: every scenario of `src/selftest.rs` except
+`agent-live`, `ci-live`, `ci-login`, `paste-cli` and `show`. The scenarios run in one selftest bundle built with
+dictation, so `dictation` is measured too; a failed test or check is reported and the run goes on. Homebrew's Rust has
+no llvm-tools, so it builds with rustup's toolchain of `rust-toolchain.toml` (`rustup component add llvm-tools
+--toolchain 1.99.1`) and `cargo-llvm-cov` (`brew install cargo-llvm-cov`), instrumented by `cargo llvm-cov show-env` in
+`target/llvm-cov-target` with a build folder of its own, so it never touches the normal build. A run takes 17 to 20
+minutes, about 15 of them the self-tests. A launch that is killed, such as the first one of `recovery`, writes no
+coverage data.
+
+Counted is every Rust file in `src/`, `crates/*/src` and `xtask/src`, the selftest code under `src/selftest` included,
+except `tests/`, `benches/`, `examples/` and `fuzz/` folders, build scripts, the unit test files cargo-llvm-cov leaves
+out (`tests.rs`, `*_tests.rs`) and the fuzz targets' entry points `fuzzing.rs`. A file the build compiled without code
+to run (only `mod` lines or types) counts with no lines; a file no instrumented program contains counts with its code
+lines as uncovered. The results are in `target/coverage/`: `coverage.txt` (the summary,
+then folders and files, lowest first), `files.json` (the same per file) and `llvm-cov.json` (llvm-cov's export).
+`make coverage ARGS=--check` fails below 90 % in total or 50 % in any file, naming them.
 
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.

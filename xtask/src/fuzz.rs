@@ -41,7 +41,7 @@ pub(crate) fn fuzz(names: &[String]) -> Result<(), String> {
         return Err(format!("{unknown} is no fuzz target; there are {}", known.join(", ")));
     }
     let root = crate::root();
-    let path = search_path()?;
+    let path = toolchain_path(NIGHTLY)?;
     let chosen = TARGETS
         .iter()
         .filter(|(_, target, _)| names.is_empty() || names.iter().any(|name| name == target));
@@ -67,16 +67,16 @@ pub(crate) fn fuzz(names: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// `PATH` with the pinned nightly's programs first: cargo-fuzz runs whichever `cargo` comes first, and Homebrew's
-/// stable one does without rustup's proxies.
-fn search_path() -> Result<std::ffi::OsString, String> {
+/// `PATH` with the programs of rustup's `toolchain` first: cargo subcommands run whichever `cargo` comes first, and
+/// Homebrew's does without rustup's proxies and components.
+pub(crate) fn toolchain_path(toolchain: &str) -> Result<std::ffi::OsString, String> {
     let output = Command::new("rustup")
-        .args(["which", "--toolchain", NIGHTLY, "cargo"])
+        .args(["which", "--toolchain", toolchain, "cargo"])
         .output()
         .map_err(|e| format!("rustup: {e}"))?;
     if !output.status.success() {
         return Err(format!(
-            "{NIGHTLY} is missing: rustup toolchain install {NIGHTLY} --profile minimal"
+            "{toolchain} is missing: rustup toolchain install {toolchain} --profile minimal"
         ));
     }
     let cargo = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());

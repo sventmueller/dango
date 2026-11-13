@@ -1,6 +1,6 @@
 # Entry points only; the build logic lives in xtask/src.
 .DEFAULT_GOAL := help
-.PHONY: help build run icon lint check check-dictation perf fuzz test test-integration test-claude-latest release release-notarized
+.PHONY: help build run icon lint check check-dictation perf fuzz coverage test test-integration test-claude-latest release release-notarized
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -37,6 +37,9 @@ perf: ## Timing budgets (E25) in a release build; meaningful only while the Mac 
 
 fuzz: ## The crates' fuzz targets with the pinned nightly, FUZZ_SECONDS each (60 by default); ARGS=<target> picks some
 	cargo xtask fuzz $(ARGS)
+
+coverage: ## Line coverage of the tests and the offline selftest scenarios into target/coverage/; ARGS=--check fails below the goals
+	cargo xtask coverage $(ARGS)
 
 test: check ## check, then the selftest probe and the accessibility audit, left to right and right to left
 	cargo xtask selftest probe a11y a11y-rtl

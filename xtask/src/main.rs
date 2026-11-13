@@ -4,6 +4,7 @@
 mod bundle;
 mod cask;
 mod claude_latest;
+mod coverage;
 mod focus;
 mod fuzz;
 mod icon;
@@ -50,6 +51,9 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    app relies on without a sign-in; --signed-in adds a short turn with haiku (R7)
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
+  coverage [--check]               line coverage of cargo test and the offline selftest scenarios, instrumented with
+                                   rustup's toolchain and cargo-llvm-cov, into target/coverage/; --check fails below
+                                   90 % in total or 50 % in any file
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
@@ -85,6 +89,7 @@ fn task(args: &[String]) -> Result<(), String> {
         "integration" => integration::integration(rest),
         "claude-latest" => claude_latest::claude_latest(rest),
         "fuzz" => fuzz::fuzz(rest),
+        "coverage" => coverage::coverage(rest),
         "release" => {
             let [notarize, layout] = flags(rest, ["--notarize", "--layout"])?;
             let out = release::release(release::Options {
