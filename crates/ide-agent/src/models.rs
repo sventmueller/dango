@@ -29,3 +29,18 @@ impl ModelInfo {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_model_known_only_by_its_id_claims_nothing_else() {
+        let model = ModelInfo::id("gpt-5.5-mini");
+        assert_eq!(model.id, "gpt-5.5-mini");
+        assert_eq!(
+            (model.name, model.context, model.max_output, model.price),
+            (None, None, None, None)
+        );
+    }
+}

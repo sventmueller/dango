@@ -211,3 +211,32 @@ fn cancelling_ends_both_requests_at_the_server_and_replies_off_the_callers_threa
     let log = wait_for_count(&setup, "$/cancelRequest", 2);
     assert_eq!(log.matches("$/cancelRequest").count(), 2, "{log}");
 }
+
+#[test]
+fn a_signed_in_user_is_told_so_by_sign_in_and_the_oldest_of_many_documents_is_closed() {
+    let setup = start("many", &[("FAKE_SIGNED_IN", "1")]);
+    until(&setup.accounts, |a| matches!(a, Account::SignedIn { .. }));
+    assert_eq!(setup.copilot.account(), Account::SignedIn { user: "octocat".into() });
+    let (tx, rx) = channel();
+    setup.copilot.sign_in(move |answer| {
+        let _ = tx.send(answer);
+    });
+    assert_eq!(
+        rx.recv_timeout(WAIT).unwrap(),
+        Ok(SignIn::Already { user: "octocat".into() })
+    );
+    setup.copilot.check();
+    wait_for_log(&setup, "checkStatus");
+    for n in 0..11 {
+        let mut asked = request(&setup.root, "x|", 1);
+        asked.path = setup.root.join(format!("src/file{n}.rs"));
+        assert!(predict(&setup.copilot, asked).is_ok());
+    }
+    let log = wait_for_log(&setup, "textDocument/didClose");
+    assert_eq!(log.matches("textDocument/didOpen").count(), 11, "{log}");
+    assert_eq!(
+        log.matches("textDocument/didClose").count(),
+        1,
+        "only the eleventh pushes one out: {log}"
+    );
+}

@@ -379,3 +379,71 @@ fn error_of(error: ide_lsp::Error, down: bool) -> Error {
 }
 
 mod predict;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn program(path: &Path, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).unwrap();
+    }
+
+    #[test]
+    fn the_installed_server_comes_before_one_on_the_path_and_only_programs_count() {
+        let dir = std::env::temp_dir().join(format!("ide-predict-find-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let (tools, plain, bin) = (dir.join("tools"), dir.join("plain"), dir.join("bin"));
+        program(&plain.join(PROGRAM), 0o644);
+        program(&bin.join(PROGRAM), 0o755);
+        let path = vec![("PATH".to_string(), format!("::{}:{}", plain.display(), bin.display()))];
+        assert_eq!(
+            find(&tools, &path),
+            Some(bin.join(PROGRAM)),
+            "a file that cannot run is passed over"
+        );
+        assert_eq!(find(&tools, &[]), None);
+        program(&tools.join("node_modules/.bin").join(PROGRAM), 0o755);
+        assert_eq!(find(&tools, &path), Some(tools.join("node_modules/.bin").join(PROGRAM)));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_failed_request_tells_the_user_whether_to_wait_sign_in_or_restart() {
+        let server = |message: &str| ide_lsp::Error::Server {
+            code: 1000,
+            message: message.into(),
+        };
+        assert_eq!(error_of(ide_lsp::Error::Cancelled, false), Error::Cancelled);
+        assert_eq!(
+            error_of(ide_lsp::Error::NotRunning, false),
+            Error::Unavailable(texts::copilot_starting())
+        );
+        assert_eq!(
+            error_of(ide_lsp::Error::ServerGone, true),
+            Error::Unavailable(texts::copilot_down())
+        );
+        assert_eq!(
+            error_of(ide_lsp::Error::Malformed("no items".into()), false),
+            Error::Malformed("no items".into())
+        );
+        for words in [
+            "Not signed in",
+            "NotSignedIn",
+            "Please sign in",
+            "User not authenticated",
+        ] {
+            assert_eq!(error_of(server(words), false), Error::SignIn, "{words}");
+        }
+        assert_eq!(
+            error_of(server("rate limited"), false),
+            Error::Unavailable(texts::failed("Copilot", "rate limited"))
+        );
+        assert_eq!(
+            error_of(ide_lsp::Error::Timeout, false),
+            Error::Unavailable(texts::failed("Copilot", &ide_lsp::Error::Timeout.to_string()))
+        );
+    }
+}

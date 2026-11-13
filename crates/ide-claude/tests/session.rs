@@ -627,3 +627,219 @@ fn remote_control_fails_when_its_connection_breaks_off_but_not_for_an_older_one(
     session.close_input();
     wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
 }
+
+/// A stand-in CLI in `dir` that answers `initialize`, prints `frames` and then answers each control request with the
+/// payload in `answers` for its subtype, or refuses it.
+fn responder(dir: &Path, frames: &[Value], answers: &[(&str, Value)]) -> Launch {
+    let mut launch = stand_in(dir, json!({"subscriptionType": "pro"}), frames);
+    let folder = dir.join("answers");
+    std::fs::create_dir_all(&folder).unwrap();
+    for (subtype, payload) in answers {
+        std::fs::write(folder.join(format!("{subtype}.json")), payload.to_string()).unwrap();
+    }
+    std::fs::write(
+        dir.join("claude"),
+        r#"#!/bin/sh
+read -r first
+printf '%s\n' "$first" > "$OUT"
+cat "$FIXTURE"
+while IFS= read -r line; do
+  printf '%s\n' "$line" >> "$OUT"
+  case "$line" in *'"type":"control_request"'*) ;; *) continue ;; esac
+  id=$(printf '%s' "$line" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
+  sub=$(printf '%s' "$line" | sed -n 's/.*"subtype":"\([^"]*\)".*/\1/p')
+  if [ -f "$ANSWERS/$sub.json" ]; then
+    printf '{"type":"control_response","response":{"subtype":"success","request_id":"%s","response":%s}}\n' "$id" "$(cat "$ANSWERS/$sub.json")"
+  else
+    printf '{"type":"control_response","response":{"subtype":"error","request_id":"%s","error":"no %s here"}}\n' "$id" "$sub"
+  fi
+done
+"#,
+    )
+    .unwrap();
+    launch
+        .env
+        .push(("ANSWERS".into(), folder.to_string_lossy().into_owned()));
+    launch
+}
+
+#[test]
+fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_thread() {
+    let dir = scratch("controls");
+    let launch = responder(
+        &dir,
+        &[
+            json!({"type": "system", "subtype": "init", "session_id": "s-c", "cwd": "/w", "model": "claude-haiku-5-5", "permissionMode": "default", "tools": ["Bash"], "claude_code_version": "2.1.322"}),
+            json!({"type": "system", "subtype": "background_tasks_changed", "tasks": [{"task_id": "bash1", "task_type": "local_bash", "description": "count"}], "session_id": "s-c"}),
+        ],
+        &[
+            ("set_permission_mode", json!({})),
+            ("set_model", json!({})),
+            ("apply_flag_settings", json!({})),
+            ("background_tasks", json!({"backgrounded": false})),
+            (
+                "get_task_output",
+                json!({"output": "3\n2\n1\n", "total_bytes": 4096, "truncated": true}),
+            ),
+            (
+                "get_usage",
+                json!({"session": {"total_cost_usd": 0.25}, "subscription_type": "max", "rate_limits": {"five_hour": {"utilization": 0.4, "resets_at": "2026-11-13T18:00:00Z"}}}),
+            ),
+            (
+                "rewind_files",
+                json!({"canRewind": true, "filesChanged": ["src/a.rs"], "insertions": 3, "deletions": 1}),
+            ),
+            (
+                "get_context_usage",
+                json!({"categories": [{"id": "messages", "name": "Messages", "tokens": 900, "kind": "used"}], "totalTokens": 900, "rawMaxTokens": 200000, "percentage": 0.45, "model": "claude-haiku-5-5"}),
+            ),
+        ],
+    );
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    wait_for(&rx, |_| session.with_thread(|t| !t.background().is_empty()));
+
+    assert_eq!(session.set_permission_mode("plan").wait(), Ok(()));
+    assert_eq!(session.set_model(Some("claude-opus-5-5")).wait(), Ok(()));
+    assert_eq!(session.set_effort("high").wait(), Ok(()));
+    session.with_thread(|t| {
+        assert_eq!(t.mode(), Some("plan"));
+        assert_eq!(t.model(), Some("claude-opus-5-5"));
+        assert_eq!(t.effort(), Some("high"));
+    });
+    assert_eq!(session.background(Some("toolu_b")).wait(), Ok(false));
+    assert!(matches!(
+        session.stop_task("bash1").wait(),
+        Err(ControlError::Refused(why)) if why == "no stop_task here"
+    ));
+
+    let output = session.task_output("bash1").wait().unwrap();
+    assert_eq!(
+        (output.output.as_str(), output.total_bytes, output.truncated),
+        ("3\n2\n1\n", 4096, true)
+    );
+    let tail = session.with_thread(|t| t.background()[0].output.clone());
+    assert_eq!(tail.text.as_deref(), Some("3\n2\n1\n"));
+    assert_eq!(tail.total_bytes, Some(4096));
+
+    let usage = session.usage().wait().unwrap();
+    assert_eq!(usage.session_cost_usd, Some(0.25));
+    assert_eq!(usage.subscription.as_deref(), Some("max"));
+    assert_eq!(usage.windows[0].utilization, Some(0.4));
+    let rewind = session.rewind_files("u-1", true).wait().unwrap();
+    assert!(rewind.can_rewind);
+    assert_eq!(rewind.files_changed, ["src/a.rs"]);
+    assert_eq!(session.context_usage(true).wait().unwrap().total_tokens, 900);
+    let breakdown = session.with_thread(|t| t.usage().breakdown.clone()).unwrap();
+    assert!(breakdown.exact, "a full count is kept as exact");
+
+    let (tx, answered) = channel();
+    session.set_model(None).then(move |result| {
+        let _ = tx.send(result);
+    });
+    assert_eq!(answered.recv_timeout(WAIT).unwrap(), Ok(()));
+    assert_eq!(
+        session.with_thread(|t| t.model().map(str::to_string)),
+        Some("claude-opus-5-5".into()),
+        "returning to the default names no model"
+    );
+
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+    assert_eq!(session.set_effort("low").wait(), Err(ControlError::Closed));
+    let frames = written(&dir);
+    let sent = |subtype: &str| {
+        frames
+            .iter()
+            .find(|f| f["request"]["subtype"] == subtype)
+            .map(|f| f["request"].clone())
+            .unwrap_or_else(|| panic!("no {subtype} was sent"))
+    };
+    assert_eq!(sent("set_permission_mode")["mode"], "plan");
+    assert_eq!(sent("apply_flag_settings")["settings"]["effortLevel"], "high");
+    assert_eq!(sent("background_tasks")["tool_use_id"], "toolu_b");
+    assert_eq!(sent("stop_task")["task_id"], "bash1");
+    assert_eq!(sent("rewind_files")["dry_run"], true);
+    assert_eq!(sent("get_context_usage")["detail"], "full");
+}
+
+#[test]
+fn questions_and_plans_are_answered_with_the_users_choice() {
+    let dir = scratch("questions");
+    let question = json!({"questions": [{"question": "Which color?", "header": "Color", "options": [{"label": "red", "description": ""}, {"label": "blue", "description": ""}], "multiSelect": false}]});
+    let plan = json!({"plan": "## Plan\n1. Fix it"});
+    let launch = responder(
+        &dir,
+        &[
+            json!({"type": "system", "subtype": "init", "session_id": "s-q", "cwd": "/w", "model": "claude-haiku-5-5", "permissionMode": "plan", "tools": ["AskUserQuestion", "ExitPlanMode"], "claude_code_version": "2.1.322"}),
+            json!({"type": "assistant", "message": {"id": "m1", "content": [{"type": "tool_use", "id": "toolu_q", "name": "AskUserQuestion", "input": question}]}, "parent_tool_use_id": null}),
+            json!({"type": "control_request", "request_id": "cli-q", "request": {"subtype": "can_use_tool", "tool_name": "AskUserQuestion", "input": question, "tool_use_id": "toolu_q"}}),
+            json!({"type": "assistant", "message": {"id": "m2", "content": [{"type": "tool_use", "id": "toolu_p", "name": "ExitPlanMode", "input": plan}]}, "parent_tool_use_id": null}),
+            json!({"type": "control_request", "request_id": "cli-p", "request": {"subtype": "can_use_tool", "tool_name": "ExitPlanMode", "input": plan, "tool_use_id": "toolu_p"}}),
+            json!({"type": "control_request", "request_id": "cli-gone", "request": {"subtype": "can_use_tool", "tool_name": "Bash", "input": {"command": "ls"}, "tool_use_id": "toolu_g"}}),
+            json!({"type": "control_cancel_request", "request_id": "cli-gone"}),
+        ],
+        &[],
+    );
+    let supervisor = Supervisor::new();
+    let (session, rx) = start(&launch, &supervisor);
+    wait_for(&rx, |_| session.with_thread(|t| t.pending_requests().len() == 2));
+    session
+        .answer_questions(
+            "cli-q",
+            vec![ide_thread::Answer {
+                question: "Which color?".into(),
+                answer: "blue".into(),
+            }],
+        )
+        .unwrap();
+    session
+        .answer_plan("cli-p", ide_claude::PlanAnswer::Revise(Some("Add a test first".into())))
+        .unwrap();
+    assert!(matches!(
+        session.answer_plan("cli-gone", ide_claude::PlanAnswer::Approve),
+        Err(SessionError::UnknownRequest(id)) if id == "cli-gone"
+    ));
+    assert!(session.with_thread(|t| t.pending_requests().is_empty()));
+    session.close_input();
+    wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
+
+    let frames = written(&dir);
+    let answer = |id: &str| {
+        frames
+            .iter()
+            .find(|f| f["response"]["request_id"] == id)
+            .map(|f| f["response"]["response"].clone())
+            .unwrap_or_else(|| panic!("no answer to {id}"))
+    };
+    let chosen = answer("cli-q");
+    assert_eq!(chosen["behavior"], "allow");
+    assert_eq!(chosen["updatedInput"]["answers"]["Which color?"], "blue");
+    assert_eq!(chosen["updatedInput"]["questions"], question["questions"]);
+    let revised = answer("cli-p");
+    assert_eq!(revised["behavior"], "deny");
+    assert_eq!(revised["message"], "Add a test first");
+}
+
+#[test]
+fn session_errors_say_what_the_user_can_do() {
+    let texts = [
+        SessionError::NotFound("/opt/claude".into()).to_string(),
+        SessionError::Start("no pipes".into()).to_string(),
+        SessionError::SignInRequired("Not logged in".into()).to_string(),
+        SessionError::RewindRejected("drops a turn".into()).to_string(),
+        SessionError::UnknownRequest("cli-9".into()).to_string(),
+        SessionError::Closed.to_string(),
+    ];
+    assert_eq!(
+        texts,
+        [
+            "/opt/claude not found",
+            "claude did not start: no pipes",
+            "sign in by running claude in a terminal: Not logged in",
+            "the rewind was refused: drops a turn",
+            "no request cli-9 waits for an answer",
+            "the claude process has ended",
+        ]
+    );
+}

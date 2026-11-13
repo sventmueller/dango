@@ -350,16 +350,116 @@ fn a_session_through_the_recorder_works_and_leaves_both_sides_in_the_recording()
     let (session, _, _) = start(recorded);
     wait("a session", || session.is_ready());
     session.stop(Duration::from_millis(500));
-    let lines: Vec<serde_json::Value> = std::fs::read_to_string(&file)
-        .unwrap()
-        .lines()
-        .map(|line| serde_json::from_str(line).unwrap())
-        .collect();
+    // The recorder may still be writing its last line when the session has stopped.
+    let recorded = || -> Option<Vec<serde_json::Value>> {
+        let text = std::fs::read_to_string(&file).ok()?;
+        text.lines().map(|line| serde_json::from_str(line).ok()).collect()
+    };
+    wait("a whole recording", || recorded().is_some());
+    let lines = recorded().unwrap();
     assert_eq!(lines[0]["to"], "agent");
     assert_eq!(lines[0]["message"]["method"], "initialize");
     assert!(
         lines
             .iter()
             .any(|l| l["to"] == "client" && l["message"]["result"]["sessionId"] == SESSION)
+    );
+}
+
+fn permission(thread: &Thread) -> ide_thread::PermissionRequest {
+    thread
+        .entries(&Lane::Main)
+        .iter()
+        .find_map(|e| match &e.kind {
+            EntryKind::PermissionRequest(r) => Some(r.clone()),
+            _ => None,
+        })
+        .expect("a permission request")
+}
+
+#[test]
+fn allowing_always_and_dismissing_are_told_apart() {
+    let always = answered_turn(Choice::Option(1));
+    assert_eq!(
+        permission(&always).state,
+        RequestState::Decided(Decision::Allowed {
+            always: true,
+            edited: false
+        })
+    );
+    assert_eq!(tool(&always, "call-1").status, ToolStatus::Completed);
+    let dismissed = answered_turn(Choice::Dismiss);
+    assert_eq!(
+        permission(&dismissed).state,
+        RequestState::Decided(Decision::Denied { message: None })
+    );
+    assert_eq!(tool(&dismissed, "call-1").status, ToolStatus::Failed);
+}
+
+#[test]
+fn cancelling_while_the_agent_asks_withdraws_the_request() {
+    let (session, _, _) = ready("basic");
+    session.send(message("list the files")).unwrap();
+    wait("a permission request", || {
+        session.with_thread(|t| t.pending_requests().len() == 1)
+    });
+    let request = permission(&session.snapshot()).request_id;
+    session.cancel();
+    wait("the cancelled turn", || session.snapshot().status() == Status::Idle);
+    assert_eq!(permission(&session.snapshot()).state, RequestState::Withdrawn);
+    assert_eq!(
+        session.answer(&request, Choice::Option(0)),
+        Err(SessionError::Closed),
+        "a withdrawn request takes no answer"
+    );
+    session.stop(Duration::from_millis(500));
+}
+
+#[test]
+fn an_agent_that_dies_at_start_is_reported_and_its_last_words_come_with_the_end() {
+    let mut launch = launch("basic");
+    launch.program = "/bin/sh".into();
+    launch.args = vec!["-c".into(), "echo 'no API key set' >&2; exit 3".into()];
+    let (session, events, _) = start(launch);
+    wait("the failure", || {
+        events.has(|e| matches!(e, Event::Failed(SessionError::Agent(_))))
+    });
+    assert!(!session.is_ready());
+    session.cancel();
+    assert_eq!(session.send(message("hello")), Err(SessionError::Closed));
+    assert_eq!(session.set_mode("code"), Err(SessionError::Closed));
+    assert_eq!(session.set_flag("fast", true), Err(SessionError::Closed));
+    session.stop(Duration::from_millis(500));
+    wait("the end", || events.has(|e| matches!(e, Event::Ended { .. })));
+    assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == "no API key set")));
+    assert_eq!(session.authenticate("browser"), Err(SessionError::Closed));
+}
+
+#[test]
+fn a_missing_program_is_reported_before_anything_starts_and_errors_read_plainly() {
+    let mut launch = launch("basic");
+    launch.program = "/nonexistent/agent".into();
+    let thread = Thread::new(ThreadId::from("t"), "x", "/tmp");
+    let result = Session::start(&Supervisor::new(), launch, thread, |_| {});
+    assert!(matches!(result, Err(SessionError::NotFound(ref p)) if p == std::path::Path::new("/nonexistent/agent")));
+    let texts = [
+        SessionError::NotFound("/opt/agent".into()),
+        SessionError::Start("no pipes".into()),
+        SessionError::SignIn,
+        SessionError::Version(2),
+        SessionError::Agent("model overloaded".into()),
+        SessionError::Closed,
+    ]
+    .map(|e| e.to_string());
+    assert_eq!(
+        texts,
+        [
+            "/opt/agent is not there",
+            "the agent did not start: no pipes",
+            "the agent asks for a sign-in",
+            "the agent speaks protocol version 2",
+            "model overloaded",
+            "the session has ended"
+        ]
     );
 }

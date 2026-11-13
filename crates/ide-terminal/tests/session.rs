@@ -379,3 +379,165 @@ fn bash_5_integration_marks_commands_and_keeps_the_users_prompt_command_and_debu
     }
     bash_integration(bash);
 }
+
+/// A program that switches on mouse reports in SGR, focus reports and bracketed paste, then shows its input lines
+/// with control characters made visible.
+fn reporting_cat(dir: &std::path::Path) -> Harness {
+    let script = r"printf '\033[?1000h\033[?1006h\033[?1004h\033[?2004hready\n'; stty -echo; exec cat -v";
+    let mut harness = Harness::start(command("/bin/sh", &["-c", script], dir), dir);
+    assert!(harness.wait_until(|h| h.screen_line("ready") && h.session.input_modes().bracketed_paste));
+    harness
+}
+
+#[test]
+fn a_program_that_asked_for_them_gets_mouse_focus_and_paste_reports() {
+    let dir = temporary("reports");
+    let mut harness = reporting_cat(&dir);
+    assert!(harness.session.is_running());
+    assert!(harness.session.pid() > 0);
+    let modes = harness.session.input_modes();
+    assert!(modes.focus_reporting && modes.mouse != ide_terminal::input::MouseTracking::Off);
+    let click = ide_terminal::MouseEvent {
+        action: ide_terminal::MouseAction::Press(ide_terminal::MouseButton::Left),
+        line: 1,
+        column: 2,
+        modifiers: ide_terminal::Modifiers::default(),
+    };
+    assert!(harness.session.mouse(&click), "the program takes the click");
+    harness.session.focus(true);
+    harness
+        .session
+        .wheel(1, Point { line: 0, column: 0 }, ide_terminal::Modifiers::default());
+    harness.session.paste("hi");
+    harness.session.write("\n");
+    assert!(
+        harness.wait_until(|h| h.screen_has("^[[<0;3;2M^[[I^[[<64;1;1M^[[200~hi^[[201~")),
+        "{:?}",
+        harness.session.visible_text()
+    );
+    harness.session.paste_paths(&[dir.join("a file.txt")]);
+    harness.session.write("\n");
+    let quoted = format!("^[[200~'{}'^[[201~", dir.join("a file.txt").display());
+    assert!(
+        harness.wait_until(|h| h.session.visible_text().concat().contains(&quoted)),
+        "{quoted} in {:?}",
+        harness.session.visible_text()
+    );
+}
+
+#[test]
+fn the_history_scrolls_and_typing_returns_to_the_live_screen() {
+    let dir = temporary("scroll");
+    let mut harness = interactive_sh(&dir);
+    harness
+        .session
+        .write("i=0; while [ $i -lt 60 ]; do i=$((i+1)); echo row$i; done; echo done\n");
+    assert!(harness.wait_until(|h| h.screen_line("done") && h.session.snapshot().history > 30));
+    harness.session.scroll(ide_terminal::Scroll::Top);
+    let top = harness.session.snapshot();
+    assert_eq!(top.display_offset, top.history);
+    assert!(harness.screen_has("row1"), "{:?}", harness.session.visible_text());
+    harness.session.scroll(ide_terminal::Scroll::PageDown);
+    let page = harness.session.snapshot().display_offset;
+    assert_eq!(page, top.history.saturating_sub(top.lines));
+    harness.session.scroll(ide_terminal::Scroll::Lines(-2));
+    assert_eq!(harness.session.snapshot().display_offset, page - 2);
+    harness.session.scroll(ide_terminal::Scroll::PageUp);
+    assert_eq!(
+        harness.session.snapshot().display_offset,
+        (page - 2 + top.lines).min(top.history)
+    );
+
+    harness
+        .session
+        .select(SelectionKind::Simple, Point { line: 0, column: 0 }, CellSide::Left);
+    let first = harness.session.visible_text()[0].clone();
+    harness
+        .session
+        .extend_selection(Point { line: 0, column: 2 }, CellSide::Right);
+    assert_eq!(harness.session.selected_text().as_deref(), Some(&first[..3]));
+
+    harness.session.scroll(ide_terminal::Scroll::Bottom);
+    assert_eq!(harness.session.snapshot().display_offset, 0);
+    harness.session.scroll(ide_terminal::Scroll::Lines(5));
+    assert!(harness.session.key(&Key::text('x')));
+    assert_eq!(
+        harness.session.snapshot().display_offset,
+        0,
+        "typing shows the live screen"
+    );
+    assert!(!harness.session.key(&Key::named(NamedKey::Modifier(
+        ide_terminal::input::ModifierKey::Shift,
+        ide_terminal::input::Side::Left
+    ))));
+    harness.session.scroll(ide_terminal::Scroll::Lines(5));
+    harness
+        .session
+        .wheel(-5, Point { line: 0, column: 0 }, ide_terminal::Modifiers::default());
+    assert_eq!(
+        harness.session.snapshot().display_offset,
+        0,
+        "without mouse reports the wheel scrolls"
+    );
+}
+
+#[test]
+fn a_new_palette_colours_the_next_snapshot() {
+    let dir = temporary("palette");
+    let mut harness = Harness::start(command("/bin/sh", &["-c", "printf 'plain'; sleep 5"], &dir), &dir);
+    assert!(harness.wait_until(|h| h.screen_has("plain")));
+    let palette = ide_terminal::Palette {
+        foreground: ide_terminal::Rgb { r: 1, g: 2, b: 3 },
+        background: ide_terminal::Rgb { r: 250, g: 240, b: 230 },
+        ..ide_terminal::Palette::default()
+    };
+    harness.session.set_palette(palette.clone());
+    let snapshot = harness.session.snapshot();
+    assert_eq!(snapshot.damage, ide_terminal::Damage::Full);
+    assert_eq!(
+        (snapshot.rows[0][0].fg, snapshot.background),
+        (palette.foreground, palette.background)
+    );
+}
+
+#[test]
+fn queries_are_answered_on_the_programs_input_and_an_unfinished_synchronized_update_still_shows() {
+    let dir = temporary("queries");
+    // The terminal echoes the answers it writes to the program's input, so they show on the screen.
+    let script = r"printf '\033]4;1;rgb:12/34/56\007\033]4;1;?\007\033]10;?\007\033[6n\033[14t\033[22t\033[23t'; sleep 1; printf '\033[?2026hsynced'; sleep 1; kill -TERM $$";
+    let mut harness = Harness::start(command("/bin/sh", &["-c", script], &dir), &dir);
+    let text = |h: &Harness| h.session.visible_text().concat();
+    assert!(
+        harness.wait_until(|h| text(h).contains("^[[4;") && text(h).contains("synced")),
+        "{:?}",
+        harness.session.visible_text()
+    );
+    let screen = text(&harness);
+    assert!(
+        screen.contains("^[]4;1;rgb:1212/3434/5656^G"),
+        "the program's own colour: {screen}"
+    );
+    let foreground = ide_terminal::Palette::default().foreground;
+    let expected = format!(
+        "^[]10;rgb:{0:02x}{0:02x}/{1:02x}{1:02x}/{2:02x}{2:02x}^G",
+        foreground.r, foreground.g, foreground.b
+    );
+    assert!(
+        screen.contains(&expected),
+        "the palette's text colour {expected}: {screen}"
+    );
+    assert!(
+        screen.contains("R^[[4;"),
+        "the cursor position comes before the size: {screen}"
+    );
+    assert!(
+        harness.wait_until(|h| h.saw(&Event::Exited(Ending::Signal(15)))),
+        "{:?}",
+        harness.events
+    );
+    assert!(
+        harness.saw(&Event::Title(None)),
+        "popping the pushed empty title resets it: {:?}",
+        harness.events
+    );
+}

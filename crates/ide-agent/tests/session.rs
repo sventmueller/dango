@@ -1,51 +1,19 @@
 //! The agent's turn against a stub provider in a scratch project: tools that read, edit and run, the approvals the
 //! policy asks for, the sandbox, retries, cancelling and resuming a stored thread.
 
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+mod common;
 
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+use common::{Project, Run, config, entries, event, idle, notices, says, send, sent_results, start, tool, wait_for};
 use ide_agent::stub::{Answer, Stub};
-use ide_agent::{
-    ApiKey, Approval, Choice, Config, Endpoint, Event, Http, Policy, PriceTable, Profile, Provider, ProviderKind, Rule,
-    Session, Workspace,
-};
+use ide_agent::{Approval, Choice, Event, Profile, Rule, Session};
 use ide_thread::{
-    Decision, Entry, EntryKind, Lane, Notice, PermissionOption, RequestState, Status, Thread, ThreadId, TodoStatus,
-    ToolOutput, ToolStatus, UserMessage,
+    Decision, EntryKind, Lane, Notice, PermissionOption, RequestState, TodoStatus, ToolOutput, ToolStatus,
 };
 use serde_json::{Value, json};
-
-/// A scratch project with a file to work on, removed when dropped.
-struct Project(PathBuf);
-
-impl Project {
-    fn new(name: &str) -> Project {
-        let dir = std::env::temp_dir().join(format!("ide-agent-session-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(dir.join("project/src")).unwrap();
-        std::fs::write(
-            dir.join("project/src/main.rs"),
-            "fn main() {\n    println!(\"hello\");\n}\n",
-        )
-        .unwrap();
-        Project(dir)
-    }
-
-    fn root(&self) -> PathBuf {
-        self.0.join("project").canonicalize().unwrap()
-    }
-}
-
-impl Drop for Project {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-fn event(name: &str, value: &Value) -> String {
-    format!("event: {name}\ndata: {value}\n\n")
-}
 
 /// An Anthropic stream that calls `tools`, given as id, name and input.
 fn calls(tools: &[(&str, &str, Value)]) -> Answer {
@@ -75,103 +43,6 @@ fn calls(tools: &[(&str, &str, Value)]) -> Answer {
     Answer::events(&text)
 }
 
-/// An Anthropic stream that answers `text` and ends the turn.
-fn says(text: &str) -> Answer {
-    let mut stream = event(
-        "message_start",
-        &json!({"type": "message_start", "message": {"model": "claude-opus-5-5", "usage": {"input_tokens": 200, "output_tokens": 1}}}),
-    );
-    stream.push_str(&event(
-        "content_block_start",
-        &json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
-    ));
-    stream.push_str(&event(
-        "content_block_delta",
-        &json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": text}}),
-    ));
-    stream.push_str(&event(
-        "message_delta",
-        &json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 10}}),
-    ));
-    stream.push_str(&event("message_stop", &json!({"type": "message_stop"})));
-    Answer::events(&stream)
-}
-
-struct Run {
-    session: Session,
-    events: Arc<Mutex<Vec<Event>>>,
-}
-
-fn config(stub: &Stub, project: &Project, approval: Approval, sandbox: bool, store: Option<PathBuf>) -> Config {
-    let endpoint = Endpoint::new("stub", ProviderKind::AnthropicCompatible, "Stub", &stub.url());
-    let environment: Vec<(String, String)> = std::env::vars().collect();
-    let workspace = Workspace::new(
-        &project.root(),
-        environment,
-        ide_process::Supervisor::new(),
-        Http::new(),
-    )
-    .unwrap();
-    Config {
-        thread: ThreadId::from("t1"),
-        provider: Provider::new(endpoint, ApiKey::new("k"), Http::new()),
-        model: "claude-opus-5-5".into(),
-        effort: Some("high".into()),
-        workspace,
-        policy: Policy {
-            profile: Profile::Write,
-            approval,
-            sandbox,
-            rules: vec![],
-        },
-        prices: PriceTable::default(),
-        listed_price: Some(ide_agent::Price::new(4.0, 20.0)),
-        context_size: Some(1_000_000),
-        max_tokens: None,
-        store,
-        wording: Arc::new(ide_agent::Plain),
-    }
-}
-
-fn start(config: Config) -> Run {
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let sink = events.clone();
-    let session = Session::start(config, move |event| sink.lock().unwrap().push(event));
-    Run { session, events }
-}
-
-fn send(run: &Run, text: &str) {
-    run.session
-        .send(UserMessage {
-            text: text.into(),
-            ..UserMessage::default()
-        })
-        .unwrap();
-}
-
-fn wait_for(run: &Run, what: &str, ready: impl Fn(&Thread) -> bool) -> Thread {
-    let deadline = Instant::now() + Duration::from_secs(20);
-    loop {
-        let thread = run.session.snapshot();
-        if ready(&thread) {
-            return thread;
-        }
-        assert!(
-            Instant::now() < deadline,
-            "waited in vain for {what}: {:#?}",
-            thread.entries(&Lane::Main)
-        );
-        std::thread::sleep(Duration::from_millis(20));
-    }
-}
-
-fn idle(run: &Run) -> Thread {
-    std::thread::sleep(Duration::from_millis(30));
-    wait_for(run, "the turn's end", |t| {
-        t.status() == Status::Idle && !run.session.is_running()
-    })
-}
-
 fn pending_request(run: &Run) -> (String, Vec<PermissionOption>, bool) {
     let thread = wait_for(run, "a permission request", |t| !t.pending_requests().is_empty());
     let entry = thread.pending_requests()[0].clone();
@@ -183,23 +54,6 @@ fn pending_request(run: &Run) -> (String, Vec<PermissionOption>, bool) {
         request.options.clone(),
         request.default_to_no,
     )
-}
-
-fn entries(thread: &Thread) -> Vec<Entry> {
-    thread.entries(&Lane::Main).iter().map(|e| (**e).clone()).collect()
-}
-
-fn tool(thread: &Thread, id: &str) -> ide_thread::ToolCall {
-    match &thread.entry_by_key(id).expect(id).kind {
-        EntryKind::ToolCall(call) => call.clone(),
-        other => panic!("{other:?}"),
-    }
-}
-
-fn sent_results(stub: &Stub, request: usize) -> Vec<Value> {
-    let body = stub.seen()[request].json();
-    let last = body["messages"].as_array().unwrap().last().unwrap().clone();
-    last["content"].as_array().unwrap().clone()
 }
 
 struct GatedDiagnostics(std::sync::mpsc::Sender<std::sync::mpsc::Sender<()>>);
@@ -593,16 +447,6 @@ fn a_read_only_thread_is_not_offered_the_writing_tools() {
     assert!(body["system"][0]["text"].as_str().unwrap().contains("may only read"));
     let path: &Path = project.0.as_path();
     assert!(path.exists());
-}
-
-fn notices(thread: &Thread) -> Vec<Notice> {
-    entries(thread)
-        .iter()
-        .filter_map(|e| match &e.kind {
-            EntryKind::Notice(n) => Some(n.clone()),
-            _ => None,
-        })
-        .collect()
 }
 
 fn first_message(stub: &Stub, request: usize) -> Vec<Value> {

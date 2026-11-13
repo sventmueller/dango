@@ -222,3 +222,116 @@ fn hook_notice(hook: &Hook, now: SystemTime) -> Update {
         }),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use ide_thread::{Thread, ThreadId};
+    use serde_json::{Value, json};
+
+    use super::*;
+
+    fn thread_after(frames: &[Value]) -> Thread {
+        let mut mapper = Mapper::new();
+        let mut thread = Thread::new(ThreadId::new(), "claude", "/w");
+        for frame in frames {
+            let message = crate::protocol::parse(&frame.to_string()).unwrap();
+            thread.apply_all(mapper.map(&message, UNIX_EPOCH));
+        }
+        thread
+    }
+
+    fn notices(thread: &Thread) -> Vec<Notice> {
+        thread
+            .entries(&Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                EntryKind::Notice(n) => Some(n.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn info(level: InfoLevel, text: &str) -> Notice {
+        Notice::Info {
+            level,
+            text: text.into(),
+        }
+    }
+
+    #[test]
+    fn notices_of_the_cli_keep_their_level_and_lost_writes_are_an_error() {
+        let system = |subtype: &str, fields: Value| {
+            let mut frame = json!({"type": "system", "subtype": subtype, "session_id": "s"});
+            frame
+                .as_object_mut()
+                .unwrap()
+                .extend(fields.as_object().unwrap().clone());
+            frame
+        };
+        let thread = thread_after(&[
+            system(
+                "informational",
+                json!({"content": "Try /compact", "level": "suggestion"}),
+            ),
+            system(
+                "informational",
+                json!({"content": "Using the API key", "level": "notice"}),
+            ),
+            system("informational", json!({"content": "Plain", "level": "other"})),
+            system("notification", json!({"text": "Task finished"})),
+            system("session_writes_lost", json!({"error_code": "ENOSPC"})),
+            system(
+                "status",
+                json!({"status": null, "compact_result": "failed", "compact_error": "too long"}),
+            ),
+            system("session_state_changed", json!({"state": "hibernating"})),
+        ]);
+        assert_eq!(
+            notices(&thread),
+            [
+                info(InfoLevel::Suggestion, "Try /compact"),
+                info(InfoLevel::Notice, "Using the API key"),
+                info(InfoLevel::Info, "Plain"),
+                info(InfoLevel::Notice, "Task finished"),
+                Notice::Error {
+                    kind: ErrorKind::Disk,
+                    message: "ENOSPC".into()
+                },
+                Notice::Error {
+                    kind: ErrorKind::Compaction,
+                    message: "too long".into()
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_denied_call_fails_and_a_refusal_takes_back_what_the_declining_model_wrote() {
+        let thread = thread_after(&[
+            json!({"type": "assistant", "uuid": "a-1", "session_id": "s", "parent_tool_use_id": null,
+                   "message": {"id": "m1", "content": [{"type": "text", "text": "Sure, here is"}]}}),
+            json!({"type": "assistant", "uuid": "a-2", "session_id": "s", "parent_tool_use_id": null,
+                   "message": {"id": "m2", "content": [{"type": "tool_use", "id": "toolu_1", "name": "Bash", "input": {"command": "ls"}}]}}),
+            json!({"type": "system", "subtype": "permission_denied", "tool_use_id": "toolu_1", "message": "auto mode", "session_id": "s"}),
+            json!({"type": "system", "subtype": "model_refusal_fallback", "content": "Switched to another model",
+                   "retracted_message_uuids": ["a-1"], "session_id": "s"}),
+        ]);
+        let texts: Vec<&str> = thread
+            .entries(&Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                EntryKind::AgentMessage(m) => Some(m.markdown.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert!(texts.is_empty(), "{texts:?}");
+        match &thread.entry_by_key("toolu_1").map(|e| &e.kind) {
+            Some(EntryKind::ToolCall(call)) => assert_eq!(call.status, ToolStatus::Failed),
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(
+            notices(&thread),
+            [info(InfoLevel::Warning, "Switched to another model")]
+        );
+    }
+}

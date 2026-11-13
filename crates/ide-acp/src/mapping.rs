@@ -600,4 +600,316 @@ mod tests {
         assert!(request.expect("a permission request").default_to_no);
         assert!(mapper.is_destructive(&call));
     }
+
+    /// The thread after the session updates `updates`, given as their JSON.
+    fn thread_after(updates: &[Value]) -> (ide_thread::Thread, Capabilities) {
+        let mut mapper = Mapper::new();
+        let mut caps = Capabilities::default();
+        let mut thread = ide_thread::Thread::new(ide_thread::ThreadId::new(), "acp", "/w");
+        for update in updates {
+            let params = json!({"sessionId": "s-1", "update": update});
+            let (changes, _) = mapper.apply_json(&params, &mut caps, SystemTime::UNIX_EPOCH);
+            thread.apply_all(changes);
+        }
+        (thread, caps)
+    }
+
+    fn call(thread: &ide_thread::Thread, id: &str) -> ToolCall {
+        match &thread.entry_by_key(id).map(|e| &e.kind) {
+            Some(EntryKind::ToolCall(call)) => call.clone(),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    fn texts(thread: &ide_thread::Thread) -> Vec<String> {
+        thread
+            .entries(&Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                EntryKind::AgentMessage(m) => Some(m.markdown.clone()),
+                EntryKind::Thought(t) => Some(format!("thought: {}", t.text)),
+                EntryKind::UserMessage(m) => Some(format!("user: {}", m.text)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn links_and_resources_read_as_markdown_links_and_images_add_nothing() {
+        let chunk = |kind: &str, content: Value| json!({"sessionUpdate": kind, "content": content});
+        let (thread, _) = thread_after(&[
+            chunk("agent_thought_chunk", json!({"type": "text", "text": "Looking."})),
+            chunk("agent_message_chunk", json!({"type": "text", "text": "See "})),
+            chunk(
+                "agent_message_chunk",
+                json!({"type": "resource_link", "name": "a.rs", "uri": "file:///w/a.rs"}),
+            ),
+            chunk(
+                "agent_message_chunk",
+                json!({"type": "resource_link", "name": "b", "title": "B file", "uri": "file:///w/b"}),
+            ),
+            chunk(
+                "agent_message_chunk",
+                json!({"type": "resource", "resource": {"uri": "file:///w/c.md", "text": "# C"}}),
+            ),
+            chunk(
+                "agent_message_chunk",
+                json!({"type": "resource", "resource": {"uri": "file:///w/d.bin", "blob": "AAEC"}}),
+            ),
+            chunk(
+                "agent_message_chunk",
+                json!({"type": "image", "data": "iVBORw==", "mimeType": "image/png"}),
+            ),
+            chunk(
+                "user_message_chunk",
+                json!({"type": "text", "text": "an earlier prompt"}),
+            ),
+        ]);
+        assert_eq!(
+            texts(&thread),
+            [
+                "thought: Looking.",
+                "See [a.rs](file:///w/a.rs)[B file](file:///w/b)[file:///w/c.md](file:///w/c.md)",
+                "user: an earlier prompt"
+            ]
+        );
+    }
+
+    /// A `tool_call` update for the call `id` of `kind` with `input` and the further fields `extra`.
+    fn tool(id: &str, kind: &str, input: Value, extra: Value) -> Value {
+        let mut call = json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": id, "kind": kind,
+                              "status": "in_progress", "rawInput": input});
+        call.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        call
+    }
+
+    #[test]
+    fn each_kind_of_tool_call_shows_its_input_field_by_field() {
+        let (thread, _) = thread_after(&[
+            tool(
+                "run",
+                "execute",
+                json!({"command": ["cargo", "test"], "description": "tests"}),
+                json!({}),
+            ),
+            tool(
+                "read",
+                "read",
+                json!({}),
+                json!({"locations": [{"path": "/w/a.rs", "line": 40}]}),
+            ),
+            tool(
+                "find",
+                "search",
+                json!({"query": "fn main", "path": "src", "include": "*.rs"}),
+                json!({}),
+            ),
+            tool(
+                "get",
+                "fetch",
+                json!({"url": "https://example.test", "prompt": "the title"}),
+                json!({}),
+            ),
+            tool(
+                "new",
+                "edit",
+                json!({}),
+                json!({"content": [{"type": "diff", "path": "/w/n.rs", "newText": "fn n() {}\n"}]}),
+            ),
+        ]);
+        assert_eq!(
+            call(&thread, "run").view,
+            ToolView::Command {
+                command: "cargo test".into(),
+                description: Some("tests".into()),
+                background: false,
+                timeout: None
+            }
+        );
+        assert_eq!(
+            call(&thread, "read").view,
+            ToolView::Read {
+                path: "/w/a.rs".into(),
+                offset: Some(40),
+                limit: None
+            }
+        );
+        assert_eq!(
+            call(&thread, "find").view,
+            ToolView::Search {
+                pattern: "fn main".into(),
+                path: Some("src".into()),
+                glob: Some("*.rs".into()),
+                results: None
+            }
+        );
+        assert_eq!(
+            call(&thread, "get").view,
+            ToolView::Fetch {
+                url: "https://example.test".into(),
+                prompt: Some("the title".into())
+            }
+        );
+        let new = call(&thread, "new");
+        assert_eq!(
+            new.view,
+            ToolView::Write {
+                path: "/w/n.rs".into(),
+                content: "fn n() {}\n".into()
+            }
+        );
+        assert!(matches!(new.output, Some(ToolOutput::Diff { ref path, .. }) if path == "/w/n.rs"));
+    }
+
+    #[test]
+    fn each_kind_of_tool_call_keeps_its_kind_and_its_output_in_the_shape_it_came() {
+        let (thread, _) = thread_after(&[
+            tool(
+                "rm",
+                "delete",
+                json!({"path": "/w/x"}),
+                json!({"status": "completed", "rawOutput": "removed"}),
+            ),
+            tool(
+                "mv",
+                "move",
+                json!({}),
+                json!({"status": "failed", "rawOutput": {"stdout": "", "stderr": "denied"}}),
+            ),
+            tool("plan", "think", json!({}), json!({"rawOutput": {"steps": 3}})),
+            tool(
+                "mode",
+                "switch_mode",
+                json!({}),
+                json!({"content": [{"type": "content", "content": {"type": "text", "text": "now in plan mode"}}]}),
+            ),
+            tool("odd", "other", json!({}), json!({})),
+        ]);
+        let rm = call(&thread, "rm");
+        assert_eq!((rm.kind, rm.status), (ToolKind::Delete, ToolStatus::Completed));
+        assert_eq!(rm.output, Some(ToolOutput::Text("removed".into())));
+        assert!(rm.ended.is_some());
+        let mv = call(&thread, "mv");
+        assert_eq!((mv.kind, mv.status), (ToolKind::Move, ToolStatus::Failed));
+        assert_eq!(
+            mv.output,
+            Some(ToolOutput::Terminal {
+                stdout: String::new(),
+                stderr: "denied".into(),
+                interrupted: false
+            })
+        );
+        assert_eq!(call(&thread, "plan").kind, ToolKind::Think);
+        assert_eq!(
+            call(&thread, "plan").output,
+            None,
+            "an output of no known shape is left out"
+        );
+        assert_eq!(call(&thread, "mode").kind, ToolKind::SwitchMode);
+        assert_eq!(
+            call(&thread, "mode").output,
+            Some(ToolOutput::Text("now in plan mode".into()))
+        );
+        assert_eq!(
+            (call(&thread, "odd").kind, call(&thread, "odd").view.clone()),
+            (ToolKind::Other, ToolView::Other)
+        );
+    }
+
+    #[test]
+    fn an_update_renames_a_known_call_and_one_for_an_unknown_call_starts_it() {
+        let (thread, _) = thread_after(&[
+            json!({"sessionUpdate": "tool_call", "toolCallId": "c1", "title": "Read", "kind": "read", "status": "pending"}),
+            json!({"sessionUpdate": "tool_call_update", "toolCallId": "c1", "title": "Read a.rs", "kind": "read",
+                   "status": "completed", "rawInput": {"path": "a.rs"}}),
+            json!({"sessionUpdate": "tool_call_update", "toolCallId": "c2", "title": "Fetch", "kind": "fetch",
+                   "status": "in_progress", "rawInput": {"url": "https://example.test"}}),
+        ]);
+        let first = call(&thread, "c1");
+        assert_eq!(
+            (first.title.as_str(), first.status),
+            ("Read a.rs", ToolStatus::Completed)
+        );
+        assert_eq!(
+            first.view,
+            ToolView::Read {
+                path: "a.rs".into(),
+                offset: None,
+                limit: None
+            }
+        );
+        let second = call(&thread, "c2");
+        assert_eq!(
+            (second.title.as_str(), second.status),
+            ("Fetch", ToolStatus::InProgress)
+        );
+        assert!(second.started.is_some() && second.ended.is_none());
+    }
+
+    #[test]
+    fn titles_modes_and_options_the_agent_announces_reach_the_thread() {
+        let option = |id: &str, category: &str, current: &str| {
+            json!({"id": id, "name": id, "category": category, "type": "select", "currentValue": current,
+                   "options": [{"value": current, "name": current}]})
+        };
+        let (thread, caps) = thread_after(&[
+            json!({"sessionUpdate": "session_info_update", "title": "Fix the parser"}),
+            json!({"sessionUpdate": "current_mode_update", "currentModeId": "plan"}),
+            json!({"sessionUpdate": "config_option_update", "configOptions": [
+                option("model", "model", "deep"), option("effort", "thought_level", "high"), option("mode", "mode", "code")
+            ]}),
+            json!({"sessionUpdate": "plan", "entries": [
+                {"content": "parse", "priority": "high", "status": "completed"},
+                {"content": "test", "priority": "medium", "status": "in_progress"},
+                {"content": "ship", "priority": "low", "status": "pending"}
+            ]}),
+            json!({"sessionUpdate": "not_in_the_protocol"}),
+        ]);
+        assert_eq!(thread.title(), "Fix the parser");
+        assert_eq!(
+            (thread.model(), thread.effort(), thread.mode()),
+            (Some("deep"), Some("high"), Some("code"))
+        );
+        assert_eq!(caps.mode.as_deref(), Some("plan"));
+        let statuses: Vec<TodoStatus> = thread.todos().iter().map(|t| t.status).collect();
+        assert_eq!(
+            statuses,
+            [TodoStatus::Completed, TodoStatus::InProgress, TodoStatus::Pending]
+        );
+    }
+
+    #[test]
+    fn a_turn_that_stops_early_or_fails_says_why() {
+        let mut mapper = Mapper::new();
+        let mut thread = ide_thread::Thread::new(ide_thread::ThreadId::new(), "acp", "/w");
+        let at = SystemTime::UNIX_EPOCH;
+        for reason in ["end_turn", "cancelled", "max_tokens"] {
+            thread.apply_all(mapper.begin_turn(&UserMessage::default(), at));
+            thread.apply_all(mapper.end_turn(reason, at));
+        }
+        thread.apply_all(mapper.error(ErrorKind::Process, "the agent exited".into(), at));
+        let notices: Vec<Notice> = thread
+            .entries(&Lane::Main)
+            .iter()
+            .filter_map(|e| match &e.kind {
+                EntryKind::Notice(n) => Some(n.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            notices,
+            [
+                Notice::Interrupted,
+                Notice::Error {
+                    kind: ErrorKind::Turn,
+                    message: "max_tokens".into()
+                },
+                Notice::Error {
+                    kind: ErrorKind::Process,
+                    message: "the agent exited".into()
+                }
+            ]
+        );
+        assert_eq!(thread.status(), Status::Idle);
+    }
 }

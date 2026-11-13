@@ -380,3 +380,227 @@ fn modes_are_read_from_the_terminal() {
     assert_eq!(modes.mouse_encoding, MouseEncoding::Sgr);
     assert_eq!(modes.kitty.bits(), 3);
 }
+
+#[test]
+fn every_named_key_has_its_kitty_number() {
+    let named = |key| Key::named(key);
+    check(
+        &[
+            (named(NamedKey::Up), "\x1b[A"),
+            (named(NamedKey::Down).with(CTRL), "\x1b[1;5B"),
+            (named(NamedKey::Right), "\x1b[C"),
+            (named(NamedKey::Left), "\x1b[D"),
+            (named(NamedKey::Home), "\x1b[H"),
+            (named(NamedKey::End), "\x1b[F"),
+            (named(NamedKey::F(1)), "\x1b[P"),
+            (named(NamedKey::F(2)).with(ALT), "\x1b[1;3Q"),
+            (named(NamedKey::F(3)), "\x1b[13~"),
+            (named(NamedKey::F(4)), "\x1b[S"),
+            (named(NamedKey::F(6)), "\x1b[17~"),
+            (named(NamedKey::F(11)), "\x1b[23~"),
+            (named(NamedKey::F(13)), "\x1b[57376u"),
+            (named(NamedKey::F(35)), "\x1b[57398u"),
+            (named(NamedKey::Insert), "\x1b[2~"),
+            (named(NamedKey::Delete).with(SHIFT), "\x1b[3;2~"),
+            (named(NamedKey::PageUp), "\x1b[5~"),
+            (named(NamedKey::PageDown), "\x1b[6~"),
+            (named(NamedKey::Escape), "\x1b[27u"),
+            (named(NamedKey::Enter), "\r"),
+            (named(NamedKey::Enter).with(CTRL), "\x1b[13;5u"),
+            (named(NamedKey::Tab).with(ALT), "\x1b[9;3u"),
+            (named(NamedKey::ScrollLock), "\x1b[57359u"),
+            (named(NamedKey::PrintScreen), "\x1b[57361u"),
+            (named(NamedKey::Pause), "\x1b[57362u"),
+            (named(NamedKey::Menu), "\x1b[57363u"),
+            (named(NamedKey::CapsLock), ""),
+            (named(NamedKey::NumLock), ""),
+        ],
+        &kitty(&[KittyFlags::DISAMBIGUATE]),
+    );
+    check(
+        &[
+            (named(NamedKey::NumLock), "\x1b[57360u"),
+            (
+                named(NamedKey::Modifier(ModifierKey::Control, Side::Left)).with(CTRL),
+                "\x1b[57442;5u",
+            ),
+            (
+                named(NamedKey::Modifier(ModifierKey::Control, Side::Right)).with(CTRL),
+                "\x1b[57448;5u",
+            ),
+            (
+                named(NamedKey::Modifier(ModifierKey::Alt, Side::Left)).with(ALT),
+                "\x1b[57443;3u",
+            ),
+            (
+                named(NamedKey::Modifier(ModifierKey::Alt, Side::Right)).with(ALT),
+                "\x1b[57449;3u",
+            ),
+            (named(NamedKey::F(21)), "\x1b[57384u"),
+        ],
+        &kitty(&[KittyFlags::ALL_KEYS]),
+    );
+}
+
+#[test]
+fn keypad_keys_have_numbers_of_their_own_in_the_kitty_protocol() {
+    let pad = |c: char| keypad(KeyCode::Char(c), Some(&c.to_string()));
+    let pad_named = |key| keypad(KeyCode::Named(key), None);
+    check(
+        &[
+            (pad('0'), "\x1b[57399u"),
+            (pad('9'), "\x1b[57408u"),
+            (pad('.'), "\x1b[57409u"),
+            (pad('/'), "\x1b[57410u"),
+            (pad('*'), "\x1b[57411u"),
+            (pad('-'), "\x1b[57412u"),
+            (pad('+'), "\x1b[57413u"),
+            (pad_named(NamedKey::Enter), "\x1b[57414u"),
+            (pad('='), "\x1b[57415u"),
+            (pad(','), "\x1b[57416u"),
+            (pad_named(NamedKey::Left), "\x1b[57417u"),
+            (pad_named(NamedKey::Right), "\x1b[57418u"),
+            (pad_named(NamedKey::Up), "\x1b[57419u"),
+            (pad_named(NamedKey::Down), "\x1b[57420u"),
+            (pad_named(NamedKey::PageUp), "\x1b[57421u"),
+            (pad_named(NamedKey::PageDown), "\x1b[57422u"),
+            (pad_named(NamedKey::Home), "\x1b[57423u"),
+            (pad_named(NamedKey::End), "\x1b[57424u"),
+            (pad_named(NamedKey::Insert), "\x1b[57425u"),
+            (pad_named(NamedKey::Delete), "\x1b[57426u"),
+            (pad('a'), "\x1b[97u"),
+        ],
+        &kitty(&[KittyFlags::DISAMBIGUATE]),
+    );
+    let app = InputModes {
+        app_keypad: true,
+        ..InputModes::default()
+    };
+    check(
+        &[
+            (pad('0'), "\x1bOp"),
+            (pad('7'), "\x1bOw"),
+            (pad('.'), "\x1bOn"),
+            (pad('+'), "\x1bOk"),
+            (pad('-'), "\x1bOm"),
+            (pad('*'), "\x1bOj"),
+            (pad('/'), "\x1bOo"),
+            (pad('='), "\x1bOX"),
+            (pad(','), "\x1bOl"),
+            (pad('a'), "a"),
+        ],
+        &app,
+    );
+}
+
+#[test]
+fn legacy_control_bytes_and_function_keys_follow_xterm() {
+    let ctrl = |c: char| Key::text(c).with(CTRL);
+    check(
+        &[
+            (ctrl('2'), "\0"),
+            (ctrl('@'), "\0"),
+            (ctrl('3'), "\x1b"),
+            (ctrl('\\'), "\x1c"),
+            (ctrl('4'), "\x1c"),
+            (ctrl(']'), "\x1d"),
+            (ctrl('5'), "\x1d"),
+            (ctrl('^'), "\x1e"),
+            (ctrl('6'), "\x1e"),
+            (ctrl('~'), "\x1e"),
+            (ctrl('_'), "\x1f"),
+            (ctrl('-'), "\x1f"),
+            (ctrl('7'), "\x1f"),
+            (ctrl('?'), "\x7f"),
+            (ctrl('8'), "\x7f"),
+            (
+                Key {
+                    text: None,
+                    ..Key::text('x')
+                },
+                "",
+            ),
+            (Key::named(NamedKey::Down), "\x1b[B"),
+            (Key::named(NamedKey::Right), "\x1b[C"),
+            (Key::named(NamedKey::Insert), "\x1b[2~"),
+            (Key::named(NamedKey::PageDown), "\x1b[6~"),
+            (Key::named(NamedKey::F(2)), "\x1bOQ"),
+            (Key::named(NamedKey::F(3)), "\x1bOR"),
+            (Key::named(NamedKey::F(6)), "\x1b[17~"),
+            (Key::named(NamedKey::F(7)), "\x1b[18~"),
+            (Key::named(NamedKey::F(8)), "\x1b[19~"),
+            (Key::named(NamedKey::F(9)), "\x1b[20~"),
+            (Key::named(NamedKey::F(10)), "\x1b[21~"),
+            (Key::named(NamedKey::F(11)), "\x1b[23~"),
+            (Key::named(NamedKey::F(13)), "\x1b[25~"),
+            (Key::named(NamedKey::F(14)), "\x1b[26~"),
+            (Key::named(NamedKey::F(15)), "\x1b[28~"),
+            (Key::named(NamedKey::F(16)), "\x1b[29~"),
+            (Key::named(NamedKey::F(17)), "\x1b[31~"),
+            (Key::named(NamedKey::F(18)), "\x1b[32~"),
+            (Key::named(NamedKey::F(19)), "\x1b[33~"),
+            (Key::named(NamedKey::Menu), ""),
+        ],
+        &legacy(),
+    );
+}
+
+#[test]
+fn every_mouse_button_has_its_report_code_and_wheel_releases_are_not_reported() {
+    let sgr = InputModes {
+        mouse: MouseTracking::Clicks,
+        mouse_encoding: MouseEncoding::Sgr,
+        ..InputModes::default()
+    };
+    let press = |button| MouseEvent {
+        action: MouseAction::Press(button),
+        line: 0,
+        column: 0,
+        modifiers: Modifiers::default(),
+    };
+    let codes: Vec<String> = [
+        MouseButton::Middle,
+        MouseButton::WheelLeft,
+        MouseButton::WheelRight,
+        MouseButton::Back,
+        MouseButton::Forward,
+    ]
+    .into_iter()
+    .map(|button| String::from_utf8(encode_mouse(&press(button), &sgr).unwrap()).unwrap())
+    .collect();
+    assert_eq!(
+        codes,
+        [
+            "\x1b[<1;1;1M",
+            "\x1b[<66;1;1M",
+            "\x1b[<67;1;1M",
+            "\x1b[<128;1;1M",
+            "\x1b[<129;1;1M"
+        ]
+    );
+    let wheel_release = MouseEvent {
+        action: MouseAction::Release(MouseButton::WheelDown),
+        ..press(MouseButton::WheelDown)
+    };
+    assert_eq!(encode_mouse(&wheel_release, &sgr), None);
+    assert_eq!(
+        encode_wheel(0, 0, 0, Modifiers::default(), &sgr),
+        Wheel::Send(Vec::new())
+    );
+}
+
+#[test]
+fn every_tracking_mode_and_encoding_is_read_from_the_terminal() {
+    let any = InputModes::from_term(TermMode::MOUSE_MOTION | TermMode::UTF8_MOUSE);
+    assert_eq!(
+        (any.mouse, any.mouse_encoding),
+        (MouseTracking::AnyMotion, MouseEncoding::Utf8)
+    );
+    let clicks = InputModes::from_term(TermMode::MOUSE_REPORT_CLICK);
+    assert_eq!(
+        (clicks.mouse, clicks.mouse_encoding),
+        (MouseTracking::Clicks, MouseEncoding::Default)
+    );
+    assert!(clicks.kitty.is_empty());
+    assert!(!any.kitty.with(KittyFlags::ALL_KEYS).is_empty());
+}

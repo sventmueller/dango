@@ -141,3 +141,25 @@ pub enum EntryKind {
     /// A status line: compaction, a retry, an error, hook output, a limit.
     Notice(Notice),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_thread_ids_differ_and_a_stored_one_reads_back_unchanged() {
+        let (a, b) = (ThreadId::default(), ThreadId::default());
+        assert_ne!(a, b);
+        let stored = ThreadId::from(a.to_string().as_str());
+        assert_eq!(stored.as_str(), a.as_str());
+        assert_eq!(stored, a);
+        assert_eq!(EntryId(7).get(), 7);
+        let tokens = Tokens {
+            input: 1,
+            output: 2,
+            cache_read: 30,
+            cache_write: 400,
+        };
+        assert_eq!(tokens.total(), 433);
+    }
+}

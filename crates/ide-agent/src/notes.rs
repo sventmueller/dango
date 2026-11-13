@@ -227,3 +227,105 @@ impl Wording for Plain {
         format!("{:?}", error.kind)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_model_reads_what_went_wrong_with_the_path_and_how_to_go_on() {
+        let cases = [
+            (ToolNote::InvalidJson, "The input was not a valid JSON object."),
+            (ToolNote::Declined, "The user declined this call."),
+            (ToolNote::Withdrawn, "The user cancelled."),
+            (
+                ToolNote::Io {
+                    path: "src/a.rs".into(),
+                    detail: "Permission denied".into(),
+                },
+                "src/a.rs: Permission denied",
+            ),
+            (ToolNote::Folder("src".into()), "src is a folder; list it with glob"),
+            (
+                ToolNote::TooLarge {
+                    path: "big.bin".into(),
+                    bytes: 9_000_000,
+                },
+                "big.bin is too large to read (9000000 bytes)",
+            ),
+            (ToolNote::Binary("logo.png".into()), "logo.png holds binary data"),
+            (
+                ToolNote::EmptyEdit,
+                "old_string is empty; use write_file to create a file",
+            ),
+            (ToolNote::NoChange, "old_string and new_string are the same"),
+            (
+                ToolNote::NotFound("a.rs".into()),
+                "old_string does not occur in a.rs; read the file and copy the text exactly",
+            ),
+            (
+                ToolNote::Ambiguous {
+                    path: "a.rs".into(),
+                    count: 3,
+                },
+                "old_string occurs 3 times in a.rs; include more surrounding text or set replace_all",
+            ),
+            (
+                ToolNote::NotWeb("ftp://x".into()),
+                "ftp://x is not an http or https address",
+            ),
+            (ToolNote::NoHost("https://".into()), "https:// names no host"),
+            (
+                ToolNote::NotText {
+                    url: "https://x/a.pdf".into(),
+                    kind: "application/pdf".into(),
+                },
+                "https://x/a.pdf is application/pdf, not text",
+            ),
+            (
+                ToolNote::Pattern("unclosed group".into()),
+                "invalid pattern: unclosed group",
+            ),
+            (
+                ToolNote::NotStarted("No such file".into()),
+                "the command did not start: No such file",
+            ),
+            (ToolNote::TodoStatus("later".into()), "unknown to-do status \"later\""),
+            (ToolNote::EmptyFile("a.rs".into()), "a.rs is empty."),
+            (
+                ToolNote::PastEnd {
+                    path: "a.rs".into(),
+                    lines: 12,
+                },
+                "a.rs has only 12 lines.",
+            ),
+        ];
+        for (note, text) in cases {
+            assert_eq!(note.for_model(), text, "{note:?}");
+        }
+    }
+
+    #[test]
+    fn problems_are_listed_one_per_line_like_a_compiler_prints_them() {
+        let problem = |line, severity, message: &str| Problem {
+            path: "src/main.rs".into(),
+            line,
+            column: 5,
+            severity,
+            message: message.into(),
+        };
+        let note = ToolNote::Diagnostics(vec![
+            problem(3, Severity::Error, "E0425 cannot find value `x` (rustc)"),
+            problem(7, Severity::Warning, "unused variable"),
+            problem(9, Severity::Info, "consider this"),
+            problem(11, Severity::Hint, "remove this"),
+        ]);
+        assert_eq!(
+            note.for_model(),
+            "src/main.rs:3:5: error: E0425 cannot find value `x` (rustc)\n\
+             src/main.rs:7:5: warning: unused variable\n\
+             src/main.rs:9:5: info: consider this\n\
+             src/main.rs:11:5: hint: remove this"
+        );
+    }
+}

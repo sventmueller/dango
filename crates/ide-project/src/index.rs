@@ -792,4 +792,88 @@ mod tests {
             assert!(Instant::now() < deadline, "the new file never showed up");
         }
     }
+
+    #[test]
+    fn a_rescan_reads_everything_again_and_a_folder_gone_takes_its_files_along() {
+        let root = generate("index-rescan", 2, 2);
+        let mut index = FileIndex::build(&root, &Cancel::new()).unwrap();
+        assert_eq!(index.root(), root);
+        assert!(!index.is_empty());
+        assert!(index.query("file", 0, &Cancel::new()).is_empty(), "no room for any hit");
+
+        write(&root, "src/module1/later.rs", "");
+        index
+            .apply(&WatchEvent::Rescan(crate::RescanReason::Dropped), &Cancel::new())
+            .unwrap();
+        assert!(index.contains("src/module1/later.rs"));
+
+        fs::remove_dir_all(root.join("src/module0")).unwrap();
+        write(&root, "build/fresh/hidden.rs", "");
+        let changes = Changes {
+            dirs: [root.join("src/module0")].into(),
+            subtrees: [root.join("build/fresh")].into(),
+            ..Changes::default()
+        };
+        index.apply(&WatchEvent::Changed(changes), &Cancel::new()).unwrap();
+        assert!(
+            !index.files().any(|f| f.starts_with("src/module0/")),
+            "{:?}",
+            index.files().collect::<Vec<_>>()
+        );
+        assert!(
+            !index.contains("build/fresh/hidden.rs"),
+            "an ignored folder that appears stays out"
+        );
+        assert!(index.contains("src/module1/file0.rs"));
+
+        let empty = scratch("index-empty");
+        assert!(FileIndex::build(&empty, &Cancel::new()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_cancelled_update_leaves_the_index_as_it_was() {
+        let root = generate("index-cancel", 2, 2);
+        let mut index = FileIndex::build(&root, &Cancel::new()).unwrap();
+        let before: Vec<String> = index.files().map(str::to_string).collect();
+        write(&root, "src/added/one.rs", "");
+        let cancelled = Cancel::new();
+        cancelled.cancel();
+        let changes = Changes {
+            subtrees: [root.join("src/added")].into(),
+            ..Changes::default()
+        };
+        let error = index.apply(&WatchEvent::Changed(changes), &cancelled).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        assert_eq!(index.files().collect::<Vec<_>>(), before);
+    }
+
+    #[test]
+    fn a_newer_query_replaces_one_not_yet_answered_and_a_rescan_reindexes() {
+        // Enough files that the walk is still running when both queries arrive.
+        let root = generate("index-replace", 40, 25);
+        let (indexed, built) = channel();
+        let quick = QuickOpen::start(&root, move |i| indexed.send(i).unwrap()).unwrap();
+        let (sender, answers) = channel();
+        let first = sender.clone();
+        quick.query("module0", 1, move |_| first.send("first").unwrap());
+        let second = sender.clone();
+        quick.query("module1", 1, move |_| second.send("second").unwrap());
+        assert_eq!(answers.recv_timeout(Duration::from_secs(10)).unwrap(), "second");
+        assert!(
+            answers.recv_timeout(Duration::from_millis(200)).is_err(),
+            "the replaced query got no answer"
+        );
+        assert_eq!(built.recv_timeout(Duration::from_secs(10)).unwrap().files, 1_001);
+
+        write(&root, "src/module2/rescanned.rs", "");
+        quick.changed(&WatchEvent::Rescan(crate::RescanReason::Overflow));
+        assert_eq!(
+            built.recv_timeout(Duration::from_secs(10)).unwrap().files,
+            1_002,
+            "a rescan walks the project again"
+        );
+        let last = sender.clone();
+        quick.query("never answered", 1, move |_| last.send("late").unwrap());
+        drop(quick);
+    }
 }
