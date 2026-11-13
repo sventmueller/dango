@@ -127,6 +127,8 @@ impl CardText {
         // that belongs to a layout manager of a storage this view keeps.
         let view: Retained<CardText> =
             unsafe { msg_send![super(this), initWithFrame: frame, textContainer: &*container] };
+        // Laid out before `setSelectable`, which otherwise lays out the whole text itself and `measure` again after.
+        view.measure();
         view.setEditable(false);
         view.setSelectable(selectable);
         view.setDrawsBackground(false);
