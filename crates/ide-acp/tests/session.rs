@@ -484,14 +484,23 @@ fn a_missing_program_is_reported_before_anything_starts_and_errors_read_plainly(
     );
 }
 
-/// Waits until the session ended on its own, then checks that it stays ended once, also after `stop`.
-fn ended_once(session: &Session, events: &Events, supervisor: &Supervisor) {
+/// Drops `session` and waits until nothing of it holds the sink any more, after which no event can arrive.
+fn let_go(session: Session, events: &Arc<Events>) {
+    drop(session);
+    wait("the session lets go of its sink", || Arc::strong_count(events) == 1);
+}
+
+/// Waits until the session ended on its own, then checks that it stays ended once, also after `stop`; the thread as
+/// it was left.
+fn ended_once(session: Session, events: &Arc<Events>, supervisor: &Supervisor) -> Thread {
     wait("the end", || session.is_ended() && events.ends() == 1);
     wait("no agent process left", || supervisor.running().is_empty());
     assert_eq!(session.send(message("hello")), Err(SessionError::Closed));
     session.stop(Duration::from_millis(100));
-    std::thread::sleep(Duration::from_millis(300));
+    let thread = session.snapshot();
+    let_go(session, events);
     assert_eq!(events.ends(), 1, "stop after the end ends nothing more");
+    thread
 }
 
 #[test]
@@ -499,9 +508,8 @@ fn an_agent_that_exits_mid_turn_ends_the_session_with_its_reason() {
     let dir = scratch("acp-session");
     let (session, events, supervisor) = ready("basic", &dir);
     session.send(message("crash now")).unwrap();
-    ended_once(&session, &events, &supervisor);
+    let thread = ended_once(session, &events, &supervisor);
     assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == CRASH)));
-    let thread = session.snapshot();
     assert_eq!(thread.status(), Status::Idle);
     let errors: Vec<&Notice> = thread
         .entries(&Lane::Main)
@@ -534,8 +542,7 @@ fn an_agent_whose_output_outlives_it_still_ends_the_session() {
         crashed.elapsed() < Duration::from_secs(5),
         "the end waited for the open output"
     );
-    ended_once(&session, &events, &supervisor);
-    assert_eq!(session.snapshot().status(), Status::Idle);
+    assert_eq!(ended_once(session, &events, &supervisor).status(), Status::Idle);
     assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == CRASH)));
 }
 
@@ -544,8 +551,7 @@ fn an_agent_that_exits_while_idle_ends_the_session() {
     let dir = scratch("acp-session");
     let (session, events, supervisor) = ready("basic", &dir);
     session.send(message("quit")).unwrap();
-    ended_once(&session, &events, &supervisor);
-    let thread = session.snapshot();
+    let thread = ended_once(session, &events, &supervisor);
     assert_eq!(thread.status(), Status::Idle);
     assert!(
         !thread
@@ -564,7 +570,7 @@ fn stopping_a_live_agent_ends_it_once() {
     session.stop(Duration::from_millis(500));
     wait("the end", || session.is_ended() && events.ends() == 1);
     wait("no agent process left", || supervisor.running().is_empty());
-    std::thread::sleep(Duration::from_millis(300));
+    let_go(session, &events);
     assert_eq!(events.ends(), 1);
     assert!(!events.has(|e| matches!(e, Event::Failed(_))), "a stop is no failure");
 }

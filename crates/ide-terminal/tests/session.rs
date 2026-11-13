@@ -105,6 +105,7 @@ fn a_job_that_ignores_hang_up_and_sigterm_is_killed_after_the_grace_periods() {
         close_grace: Duration::from_secs(1),
         ..command("/bin/sh", &["-i"], &dir)
     };
+    let grace = options.close_grace;
     let mut harness = Harness::start(options, &dir);
     harness
         .session
@@ -112,13 +113,14 @@ fn a_job_that_ignores_hang_up_and_sigterm_is_killed_after_the_grace_periods() {
     assert!(harness.wait_until(|h| h.number_after("pid=").is_some()));
     let stubborn = harness.number_after("pid=").unwrap();
     assert!(harness.wait_until(|h| h.session.foreground() == Foreground::Other("sleep".into())));
+    let closed = Instant::now();
     harness.session.close();
-    // SIGHUP went out with `close`; SIGTERM follows only after the grace of a second.
-    assert!(
-        !gone_within(stubborn, Duration::from_millis(300)),
-        "hang-up alone should not have ended it"
-    );
     assert!(gone_within(stubborn, Duration::from_secs(5)), "SIGKILL did not come");
+    assert!(
+        closed.elapsed() >= grace * 2,
+        "hang-up or SIGTERM ended it after {:?}",
+        closed.elapsed()
+    );
 }
 
 #[test]

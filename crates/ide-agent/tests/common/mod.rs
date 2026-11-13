@@ -127,7 +127,6 @@ pub fn wait_for(run: &Run, what: &str, ready: impl Fn(&Thread) -> bool) -> Threa
 }
 
 pub fn idle(run: &Run) -> Thread {
-    std::thread::sleep(Duration::from_millis(30));
     wait_for(run, "the turn's end", |t| {
         t.status() == Status::Idle && !run.session.is_running()
     })

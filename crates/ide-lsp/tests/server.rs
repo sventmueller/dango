@@ -1,7 +1,7 @@
 //! The client against the fake server in `support/fake_server.rs`, a real process under a real supervisor.
 
 use std::path::Path;
-use std::sync::mpsc::{Receiver, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -403,8 +403,32 @@ fn quitting_the_app_stops_the_server_without_a_restart() {
     f.supervisor.shutdown(Duration::from_millis(500));
     assert!(f.supervisor.running().is_empty());
     assert!(f.server.wait_for(WAIT, |s| s == Status::Stopped));
-    std::thread::sleep(Duration::from_millis(200));
-    assert_eq!(f.server.status(), Status::Stopped);
+    let Fixture { server, seen, .. } = f;
+    drop(server);
+    let mut after_the_stop = everything(&seen)
+        .into_iter()
+        .skip_while(|s| *s != Seen::Status(Status::Stopped));
+    assert_eq!(after_the_stop.next(), Some(Seen::Status(Status::Stopped)));
+    let after_the_stop: Vec<Seen> = after_the_stop.collect();
+    assert!(
+        !after_the_stop
+            .iter()
+            .any(|s| matches!(s, Seen::Status(_) | Seen::Crashed(_))),
+        "{after_the_stop:?}"
+    );
+}
+
+/// Every event in `seen` until the server's last handle is gone and so nothing can send any more.
+fn everything(seen: &Receiver<Seen>) -> Vec<Seen> {
+    let deadline = Instant::now() + WAIT;
+    let mut all = Vec::new();
+    loop {
+        match seen.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+            Ok(event) => all.push(event),
+            Err(RecvTimeoutError::Disconnected) => return all,
+            Err(RecvTimeoutError::Timeout) => panic!("the server kept its sink: {all:?}"),
+        }
+    }
 }
 
 #[test]
