@@ -673,11 +673,6 @@ define_class!(
             guarded((), || super::sticky::refresh(self));
         }
 
-        #[unsafe(method(ideDiagnosticsNow))]
-        fn diagnostics_now(&self) {
-            guarded((), || super::line_diagnostics::refresh(self));
-        }
-
         #[unsafe(method(ideDiagnosticsRested))]
         fn diagnostics_rested(&self) {
             guarded((), || super::line_diagnostics::refresh(self));
@@ -832,7 +827,7 @@ impl EditorTextView {
         super::changes::schedule(self);
         super::whitespace::redraw(self);
         super::minimap::redraw(self);
-        // Both read the layout, which TextKit forbids while the edit is still under way.
+        // It reads the layout, which TextKit forbids while the edit is still under way.
         self.later(objc2::sel!(ideStickyRefresh), 0.0);
         super::line_diagnostics::edited(self, change);
         if (change.start.line != change.new_end.line || change.start.line != change.old_end.line)

@@ -89,7 +89,7 @@ pub fn edited(view: &EditorTextView, change: &Change) {
     }
     drop(edits);
     view.later(objc2::sel!(ideDiagnosticsRested), REST.as_secs_f64() + 0.05);
-    view.later(objc2::sel!(ideDiagnosticsNow), 0.0);
+    refresh(view);
 }
 
 /// Shows the diagnostics of `view` at the end of their lines, or none while the setting is off.
