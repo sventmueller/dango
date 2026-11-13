@@ -1,6 +1,7 @@
 use std::ptr::NonNull;
 
 use block2::RcBlock;
+use dispatch2::MainThreadBound;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
@@ -24,20 +25,27 @@ impl Drop for Observation {
 
 /// Runs `f`, guarded, for each notification `name` that `object` posts on the main thread, or any sender when
 /// `None`; the watch ends when the returned value drops.
+///
+/// `f` runs synchronously inside `postNotification`, so a view that follows a scroll or resize redraws in the same
+/// pass instead of one run loop turn late, as it would through the main operation queue. A post from another thread
+/// does not reach `f`.
 pub fn observe(
-    _mtm: MainThreadMarker,
+    mtm: MainThreadMarker,
     name: &NSNotificationName,
     object: Option<&AnyObject>,
     f: impl Fn(&NSNotification) + 'static,
 ) -> Observation {
+    let f = MainThreadBound::new(f, mtm);
     let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
         // SAFETY: The center hands the block a notification it keeps alive for the length of the call.
         let notification = unsafe { notification.as_ref() };
-        guarded((), || f(notification));
+        guarded((), || f.get(mtm)(notification));
     });
-    // SAFETY: The center copies the block, which owns everything it captures; without a queue it runs on the posting
-    // thread, and the names observed here are view and window notifications, which AppKit posts on the main thread
-    // that the marker shows this is.
+    // SAFETY: The block captures only a `MainThreadBound`, which may be called and released on any thread and lets
+    // `f` run only on the main thread; without a queue the center calls the block on the posting thread.
     let token = unsafe {
         NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
             Some(name),
