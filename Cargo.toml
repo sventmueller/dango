@@ -5,6 +5,8 @@ default-members = [".", "crates/*"]
 # Splat's root carries this patch (reference links in short documents); a path dependency's patches do not reach here.
 [patch.crates-io]
 comrak = { path = "../splat/vendor/comrak" }
+# ropey without its default `unicode_lines`, which would make ide-document count U+2028 and others as line breaks (F1).
+modalkit = { path = "vendor/modalkit" }
 
 [workspace.dependencies]
 ide-acp = { path = "crates/ide-acp" }

@@ -585,7 +585,6 @@ pub fn eslint_settings(root: &Path, path: Option<&str>) -> serde_json::Value {
         "run": "onType",
         "packageManager": "npm",
         "useESLintClass": false,
-        "experimental": {"useFlatConfig": crate::language::flat_config(root)},
         "useFlatConfig": crate::language::flat_config(root),
         "workingDirectory": {"mode": "auto"},
         "workspaceFolder": {"uri": crate::uri::from_path(root).as_str(), "name": name},

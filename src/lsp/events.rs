@@ -10,6 +10,10 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
     let Some(slot) = slot(folder, id) else { return };
     match event {
         Event::Diagnostics { uri, diagnostics, .. } => diagnostics_arrived(folder, id, &uri, &diagnostics),
+        #[cfg(feature = "selftest")]
+        Event::Log { message, .. } if std::env::var_os("IDE_SELFTEST_SERVER_LOG").is_some() => {
+            eprintln!("server log [{}]: {message}", slot.language.name());
+        }
         Event::Notice { method, .. } => {
             let text = notice_text(&slot.language, &method);
             crate::diag::report("language server notice", &method);

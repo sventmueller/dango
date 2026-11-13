@@ -72,7 +72,8 @@ fn rust_files(folder: &Path) -> Vec<PathBuf> {
         let name = entry.file_name();
         let name = name.to_string_lossy();
         if path.is_dir() {
-            if name != "target" && !name.starts_with('.') {
+            // `vendor` holds copies of other projects' crates, patched in (E14, E104), which keep their own shape.
+            if name != "target" && name != "vendor" && !name.starts_with('.') {
                 files.extend(rust_files(&path));
             }
         } else if path.extension().is_some_and(|e| e == "rs") {

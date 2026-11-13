@@ -14,7 +14,14 @@ use super::{check, finish};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController};
 
-const SCENARIO: &str = "companions";
+/// The name of the scenario that runs, which its report carries.
+fn scenario() -> &'static str {
+    if LATEST.load(std::sync::atomic::Ordering::Relaxed) {
+        "companions-eslint-latest"
+    } else {
+        "companions"
+    }
+}
 const PROJECT: &str = "companions-project";
 const SCRIPT: &str = "src/a.js";
 const PAGE: &str = "index.html";
@@ -30,15 +37,29 @@ fn view(file: &str) -> Option<Retained<EditorTextView>> {
     editor::editor_for(&*window::for_project(&root())?, &root().join(file))
 }
 
+/// Whether the scenario runs against ESLint's current major version in place of 9 (A11), without Emmet.
+static LATEST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The `companions-eslint-latest` scenario: ESLint's part of `companions` against its current major version (A11).
+pub fn run_latest() {
+    LATEST.store(true, std::sync::atomic::Ordering::Relaxed);
+    run();
+}
+
 pub fn run() {
+    let eslint = if LATEST.load(std::sync::atomic::Ordering::Relaxed) {
+        "latest"
+    } else {
+        "^9"
+    };
+    let package = format!(
+        r#"{{"name":"companions","private":true,"type":"module","devDependencies":{{"eslint":"{eslint}","jiti":"^2"}}}}"#
+    );
     helpers::open_project(
-        SCENARIO,
+        scenario(),
         PROJECT,
         &[
-            (
-                "package.json",
-                r#"{"name":"companions","private":true,"type":"module","devDependencies":{"eslint":"^9","jiti":"^2"}}"#,
-            ),
+            ("package.json", &package),
             (
                 "eslint.config.ts",
                 "export default [{ rules: { \"no-debugger\": \"error\" } }];\n",
@@ -75,12 +96,12 @@ fn npm_install(controller: Retained<WindowController>) {
         move |_| {
             let installed = matches!(*seen.borrow(), Some(Ok(true)));
             check(
-                "the project gets ESLint 9 with npm",
+                "the project gets ESLint with npm",
                 installed,
                 format!("{:?}", seen.borrow()),
             );
             if !installed {
-                return finish(SCENARIO);
+                return finish(scenario());
             }
             controller.open_file(&root().join(SCRIPT));
             servers_ready(SCRIPT, "ESLint", eslint_error);
@@ -116,7 +137,7 @@ fn servers_ready(file: &'static str, name: &'static str, then: fn()) {
                         running,
                         format!("{state:?}"),
                     );
-                    if running { then() } else { finish(SCENARIO) }
+                    if running { then() } else { finish(scenario()) }
                 },
             );
         },
@@ -171,6 +192,10 @@ fn quick_fix() {
                 chosen && fixed,
                 titles.join(" | "),
             );
+            if LATEST.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = editor::save_all();
+                return finish(scenario());
+            }
             if let Some(controller) = window::for_project(&root()) {
                 controller.open_file(&root().join(PAGE));
             }
@@ -181,7 +206,7 @@ fn quick_fix() {
 
 fn emmet() {
     let Some(view) = view(PAGE) else {
-        return finish(SCENARIO);
+        return finish(scenario());
     };
     let at = view.line_start(2).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));
@@ -202,7 +227,7 @@ fn emmet() {
                 let _ = editor::save_all();
                 drop(view);
             }
-            finish(SCENARIO);
+            finish(scenario());
         },
     );
 }

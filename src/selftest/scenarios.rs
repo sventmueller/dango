@@ -177,6 +177,14 @@ pub const SCENARIOS: &[Scenario] = &[
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))
     },
+    Scenario {
+        offline: false,
+        ..limited(
+            "companions-eslint-latest",
+            companions::run_latest,
+            Duration::from_secs(1200),
+        )
+    },
     plain("search", search::run),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),
