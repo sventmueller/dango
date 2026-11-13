@@ -38,7 +38,8 @@ fn with_plugin(root: &Path, scratch: &Path, args: &[&str]) -> Command {
     run.files.push((scratch.join("dango_pytest.py"), PYTEST_PLUGIN.into()));
     run.files.push((events.clone(), String::new()));
     run.env.push(("PYTHONPATH".into(), scratch.display().to_string()));
-    run.env.push(("DANGO_PYTEST_EVENTS".into(), events.display().to_string()));
+    run.env
+        .push(("DANGO_PYTEST_EVENTS".into(), events.display().to_string()));
     run.results = Some(events);
     run
 }
@@ -59,7 +60,9 @@ pub(crate) fn run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
 }
 
 fn lines(output: &str) -> impl Iterator<Item = Line> + '_ {
-    output.lines().filter_map(|line| serde_json::from_str::<Line>(line).ok())
+    output
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Line>(line).ok())
 }
 
 /// The file of a node id such as `tests/test_a.py::test_b[1]`.

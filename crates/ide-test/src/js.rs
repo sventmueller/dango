@@ -78,7 +78,14 @@ fn filter(run: &mut Command, scope: &Scope, flag: &str) {
             if let Some(file) = &test.file {
                 run.args.push(file.display().to_string());
             }
-            let title = test.name.rsplit(" > ").collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" ");
+            let title = test
+                .name
+                .rsplit(" > ")
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+                .join(" ");
             run.args.extend([flag.to_string(), format!("^{}$", escaped(&title))]);
         }
     }

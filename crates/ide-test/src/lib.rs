@@ -177,7 +177,11 @@ pub fn tools(root: &Path, path: Option<&str>) -> Vec<Tool> {
     let on_path = |name: &str| path.is_some_and(|p| p.split(':').any(|d| Path::new(d).join(name).is_file()));
     let mut out = Vec::new();
     if root.join("Cargo.toml").is_file() {
-        out.push(if on_path("cargo-nextest") { Tool::Nextest } else { Tool::Cargo });
+        out.push(if on_path("cargo-nextest") {
+            Tool::Nextest
+        } else {
+            Tool::Cargo
+        });
     }
     if root.join("go.mod").is_file() {
         out.push(Tool::Go);
@@ -309,14 +313,24 @@ fn place(text: &str, root: &Path) -> Option<Location> {
         return None;
     }
     let path = Path::new(file);
-    let path = if path.is_absolute() { path.to_path_buf() } else { root.join(path) };
+    let path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    };
     Some(Location { path, line })
 }
 
 /// The regular-expression form of `text`, for a filter that must match one name exactly.
 fn escaped(text: &str) -> String {
     text.chars()
-        .map(|c| if "\\.+*?()|[]{}^$".contains(c) { format!("\\{c}") } else { c.to_string() })
+        .map(|c| {
+            if "\\.+*?()|[]{}^$".contains(c) {
+                format!("\\{c}")
+            } else {
+                c.to_string()
+            }
+        })
         .collect()
 }
 

@@ -31,7 +31,8 @@ pub(crate) fn run(root: &Path, scope: &Scope) -> Command {
         Scope::Package(package) => run.args.push(package.clone()),
         Scope::File(file) => run.args.push(package_dir(root, file)),
         Scope::Test(test) => {
-            run.args.extend(["-run".into(), format!("^{}$", path_pattern(&test.name))]);
+            run.args
+                .extend(["-run".into(), format!("^{}$", path_pattern(&test.name))]);
             run.args.push(test.package.clone());
         }
     }
@@ -53,7 +54,9 @@ fn package_dir(root: &Path, file: &Path) -> String {
 }
 
 fn events(output: &str) -> impl Iterator<Item = Event> + '_ {
-    output.lines().filter_map(|line| serde_json::from_str::<Event>(line).ok())
+    output
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Event>(line).ok())
 }
 
 pub(crate) fn tests(_root: &Path, output: &str) -> Vec<Test> {
@@ -95,7 +98,9 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
     let mut out: Vec<Report> = Vec::new();
     for event in events(output) {
         let Some(name) = event.test.clone() else { continue };
-        let index = out.iter().position(|r| r.id.name == name && r.id.package == event.package);
+        let index = out
+            .iter()
+            .position(|r| r.id.name == name && r.id.package == event.package);
         let index = index.unwrap_or_else(|| {
             out.push(Report {
                 id: TestId {

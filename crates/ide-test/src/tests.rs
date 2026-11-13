@@ -6,7 +6,10 @@ use std::path::{Path, PathBuf};
 use super::*;
 
 fn fixture(tool: &str, name: &str) -> String {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(tool).join(name);
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(tool)
+        .join(name);
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 
@@ -22,14 +25,20 @@ fn state(reports: &[Report], name: &str) -> State {
 }
 
 fn report<'a>(reports: &'a [Report], name: &str) -> &'a Report {
-    reports.iter().find(|r| r.id.name == name).unwrap_or_else(|| panic!("no {name} in {reports:#?}"))
+    reports
+        .iter()
+        .find(|r| r.id.name == name)
+        .unwrap_or_else(|| panic!("no {name} in {reports:#?}"))
 }
 
 #[test]
 fn cargo_test_lists_by_test_program_and_reads_libtest_text_of_rust_1_99() {
     let root = sample("rust");
     let tests = Tool::Cargo.tests(&root, &fixture("cargo", "list-1.99.txt"));
-    let names: Vec<(&str, &str)> = tests.iter().map(|t| (t.id.package.as_str(), t.id.name.as_str())).collect();
+    let names: Vec<(&str, &str)> = tests
+        .iter()
+        .map(|t| (t.id.package.as_str(), t.id.name.as_str()))
+        .collect();
     assert_eq!(
         names,
         [
@@ -46,8 +55,17 @@ fn cargo_test_lists_by_test_program_and_reads_libtest_text_of_rust_1_99() {
     assert_eq!(state(&reports, "api_works"), State::Passed);
     let failed = report(&reports, "tests::fails");
     assert_eq!(failed.state, State::Failed);
-    assert_eq!(failed.failure, Some(Location { path: root.join("src/lib.rs"), line: 16 }));
-    assert!(failed.message.as_deref().is_some_and(|m| m.contains("one and two")), "{failed:?}");
+    assert_eq!(
+        failed.failure,
+        Some(Location {
+            path: root.join("src/lib.rs"),
+            line: 16
+        })
+    );
+    assert!(
+        failed.message.as_deref().is_some_and(|m| m.contains("one and two")),
+        "{failed:?}"
+    );
     assert!(!Tool::Cargo.reports_starts() && Tool::Cargo.lists_by_building());
 }
 
@@ -55,15 +73,33 @@ fn cargo_test_lists_by_test_program_and_reads_libtest_text_of_rust_1_99() {
 fn nextest_lists_its_suites_and_reads_the_junit_report_of_0_9_151() {
     let root = sample("rust");
     let tests = Tool::Nextest.tests(&root, &fixture("nextest", "list-0.9.151.json"));
-    assert!(tests.iter().any(|t| t.id.package == "sample::api" && t.id.name == "api_works"));
-    assert!(tests.iter().any(|t| t.id.package == "sample" && t.id.name == "tests::nested::inner"));
+    assert!(
+        tests
+            .iter()
+            .any(|t| t.id.package == "sample::api" && t.id.name == "api_works")
+    );
+    assert!(
+        tests
+            .iter()
+            .any(|t| t.id.package == "sample" && t.id.name == "tests::nested::inner")
+    );
     let reports = Tool::Nextest.reports(&root, &fixture("nextest", "run-0.9.151.junit.xml"));
     assert_eq!(state(&reports, "tests::adds"), State::Passed);
     let failed = report(&reports, "tests::fails");
     assert_eq!(failed.state, State::Failed);
-    assert_eq!(failed.failure, Some(Location { path: root.join("src/lib.rs"), line: 16 }));
+    assert_eq!(
+        failed.failure,
+        Some(Location {
+            path: root.join("src/lib.rs"),
+            line: 16
+        })
+    );
     let run = Tool::Nextest.run(&root, &Scope::All, Some(Path::new("/tmp/s")));
-    assert!(run.args.windows(2).any(|w| w[0] == "--tool-config-file" && w[1] == "dango:/tmp/s/dango-nextest.toml"));
+    assert!(
+        run.args
+            .windows(2)
+            .any(|w| w[0] == "--tool-config-file" && w[1] == "dango:/tmp/s/dango-nextest.toml")
+    );
     assert_eq!(run.files[0].1, nextest::CONFIG);
 }
 
@@ -79,7 +115,13 @@ fn go_lists_top_level_tests_and_reads_the_json_events_of_go_1_27() {
     assert_eq!(state(&reports, "TestTable/case_one"), State::Passed);
     let failed = report(&reports, "TestTable/case_two");
     assert_eq!(failed.state, State::Failed);
-    assert_eq!(failed.failure, Some(Location { path: root.join("sample_test.go"), line: 23 }));
+    assert_eq!(
+        failed.failure,
+        Some(Location {
+            path: root.join("sample_test.go"),
+            line: 23
+        })
+    );
     assert_eq!(failed.message.as_deref(), Some("second case fails"));
     assert!(Tool::Go.reports_starts());
 }
@@ -89,14 +131,29 @@ fn pytest_reads_collection_starts_and_results_from_dangos_plugin_with_pytest_9_2
     let root = sample("py");
     let tests = Tool::Pytest.tests(&root, &fixture("pytest", "list-9.2.jsonl"));
     assert_eq!(tests.len(), 5);
-    let param = tests.iter().find(|t| t.id.name == "test_sample.py::test_param[2]").unwrap();
-    assert_eq!(param.location, Some(Location { path: root.join("test_sample.py"), line: 17 }));
+    let param = tests
+        .iter()
+        .find(|t| t.id.name == "test_sample.py::test_param[2]")
+        .unwrap();
+    assert_eq!(
+        param.location,
+        Some(Location {
+            path: root.join("test_sample.py"),
+            line: 17
+        })
+    );
     let reports = Tool::Pytest.reports(&root, &fixture("pytest", "run-9.2.jsonl"));
     assert_eq!(state(&reports, "test_sample.py::test_pass"), State::Passed);
     assert_eq!(state(&reports, "test_sample.py::test_skip"), State::Skipped);
     let failed = report(&reports, "test_sample.py::test_param[2]");
     assert_eq!(failed.state, State::Failed);
-    assert_eq!(failed.failure, Some(Location { path: root.join("test_sample.py"), line: 19 }));
+    assert_eq!(
+        failed.failure,
+        Some(Location {
+            path: root.join("test_sample.py"),
+            line: 19
+        })
+    );
     assert_eq!(failed.message.as_deref(), Some("assert 2 == 1"));
 }
 
@@ -131,8 +188,15 @@ fn jest_lists_files_and_takes_its_tests_from_the_json_of_30_5() {
 #[test]
 fn one_test_runs_and_debugs_with_its_own_filter() {
     let root = Path::new("/p");
-    let rust = TestId { package: "api".into(), file: None, name: "api_works".into() };
-    assert_eq!(Tool::Cargo.run(root, &Scope::Test(rust.clone()), None).args[2..], ["--", "api_works", "--exact"]);
+    let rust = TestId {
+        package: "api".into(),
+        file: None,
+        name: "api_works".into(),
+    };
+    assert_eq!(
+        Tool::Cargo.run(root, &Scope::Test(rust.clone()), None).args[2..],
+        ["--", "api_works", "--exact"]
+    );
     match Tool::Cargo.debug(root, &rust) {
         DebugTarget::Native { build, args } => {
             assert!(build.args.contains(&"ide-debug".to_string()) && build.args.contains(&"api".to_string()));
@@ -140,7 +204,11 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         }
         other => panic!("{other:?}"),
     }
-    let go = TestId { package: "example.com/m/sub".into(), file: None, name: "TestTable/case_one".into() };
+    let go = TestId {
+        package: "example.com/m/sub".into(),
+        file: None,
+        name: "TestTable/case_one".into(),
+    };
     std::fs::create_dir_all("/tmp/ide-test-go").unwrap();
     std::fs::write("/tmp/ide-test-go/go.mod", "module example.com/m\n").unwrap();
     match Tool::Go.debug(Path::new("/tmp/ide-test-go"), &go) {
@@ -150,10 +218,20 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         }
         other => panic!("{other:?}"),
     }
-    let py = TestId { package: String::new(), file: None, name: "t.py::test_a[1]".into() };
-    assert!(matches!(Tool::Pytest.debug(root, &py), DebugTarget::PythonModule { module, args, .. }
-        if module == "pytest" && args == ["t.py::test_a[1]"]));
-    let js = TestId { package: String::new(), file: Some("/p/a.test.js".into()), name: "math > adds".into() };
+    let py = TestId {
+        package: String::new(),
+        file: None,
+        name: "t.py::test_a[1]".into(),
+    };
+    assert!(
+        matches!(Tool::Pytest.debug(root, &py), DebugTarget::PythonModule { module, args, .. }
+        if module == "pytest" && args == ["t.py::test_a[1]"])
+    );
+    let js = TestId {
+        package: String::new(),
+        file: Some("/p/a.test.js".into()),
+        name: "math > adds".into(),
+    };
     match Tool::Jest.debug(root, &js) {
         DebugTarget::Node { program, args, .. } => {
             assert_eq!(program, Path::new("/p/node_modules/jest/bin/jest.js"));

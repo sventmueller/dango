@@ -15,7 +15,11 @@ pub(crate) fn list(root: &Path) -> Command {
 
 pub(crate) fn run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
     let config = scratch.join("dango-nextest.toml");
-    let mut run = command("cargo", &["nextest", "run", "--profile", "dango", "--no-fail-fast"], root);
+    let mut run = command(
+        "cargo",
+        &["nextest", "run", "--profile", "dango", "--no-fail-fast"],
+        root,
+    );
     run.args.insert(2, format!("dango:{}", config.display()));
     run.args.insert(2, "--tool-config-file".into());
     run.files.push((config, CONFIG.into()));
