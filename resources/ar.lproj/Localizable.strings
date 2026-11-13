@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "تغيّر الملف في هذه الأثناء";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "الملف تالف وسيبقى دون تغيير إلى أن تصلحه.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "الملف من إصدار أحدث وسيبقى دون تغيير.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "لا يمكن قراءة الملف وسيبقى دون تغيير.";
 "Die Modelle ließen sich nicht laden: {}" = "تعذّر تحميل النماذج: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "يعرف التطبيق أسعار Anthropic، ويذكر OpenRouter أسعاره بنفسه، والنماذج المحلية مجانية. أما غيرها، فلا تعرض السلسلة تكاليفها إلا بعد إدخال سعر هنا.";
 "Die Umgebung der Login-Shell fehlt." = "بيئة صدفة تسجيل الدخول مفقودة.";

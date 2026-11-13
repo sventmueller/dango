@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "הקובץ השתנה בינתיים";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "הקובץ פגום ויישאר ללא שינוי עד לתיקונו.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "הקובץ נוצר בגירסה חדשה יותר ויישאר ללא שינוי.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "לא ניתן לקרוא את הקובץ והוא יישאר ללא שינוי.";
 "Die Modelle ließen sich nicht laden: {}" = "לא ניתן היה לטעון את המודלים: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "היישום מכיר את המחירים של Anthropic, ו-OpenRouter מדווח על המחירים שלו; מודלים מקומיים אינם עולים דבר. עבור מודלים אחרים, השרשור מציג עלויות רק לאחר שהוזן כאן מחיר.";
 "Die Umgebung der Login-Shell fehlt." = "הסביבה של מעטפת ההתחברות חסרה.";

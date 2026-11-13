@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "A fájl időközben megváltozott";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "A fájl sérült, és változatlan marad, amíg ki nem javítja.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "A fájl egy újabb verzióból származik, és változatlan marad.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "A fájl nem olvasható, és változatlan marad.";
 "Die Modelle ließen sich nicht laden: {}" = "A modellek betöltése nem sikerült: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Az Anthropic árait az app ismeri, az OpenRouter maga adja meg a sajátjait, a helyi modellek ingyenesek. Más modelleknél a szál csak akkor mutat költséget, ha itt megad egy árat.";
 "Die Umgebung der Login-Shell fehlt." = "Hiányzik a bejelentkezési shell környezete.";

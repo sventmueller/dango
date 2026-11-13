@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "ไฟล์มีการเปลี่ยนแปลงในระหว่างนี้";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "ไฟล์เสียหายและจะไม่ถูกเปลี่ยนแปลงจนกว่าคุณจะซ่อมแซม";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "ไฟล์มาจากเวอร์ชั่นที่ใหม่กว่าและจะไม่ถูกเปลี่ยนแปลง";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "ไม่สามารถอ่านไฟล์ได้และจะไม่ถูกเปลี่ยนแปลง";
 "Die Modelle ließen sich nicht laden: {}" = "ไม่สามารถโหลดโมเดลได้: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "แอปรู้ราคาของ Anthropic ส่วน OpenRouter แจ้งราคาของตัวเอง และโมเดลในเครื่องไม่มีค่าใช้จ่าย สำหรับรายอื่น เธรดจะแสดงค่าใช้จ่ายก็ต่อเมื่อป้อนราคาไว้ที่นี่";
 "Die Umgebung der Login-Shell fehlt." = "ไม่มีสภาพแวดล้อมของ login shell";

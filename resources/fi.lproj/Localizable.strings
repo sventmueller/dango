@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Tiedosto on muuttunut sillä välin";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Tiedosto on vahingoittunut, eikä sitä muuteta ennen kuin korjaat sen.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Tiedosto on peräisin uudemmasta versiosta, eikä sitä muuteta.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Tiedostoa ei voi lukea, eikä sitä muuteta.";
 "Die Modelle ließen sich nicht laden: {}" = "Malleja ei voitu ladata: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Appi tuntee Anthropicin hinnat, OpenRouter ilmoittaa omansa, ja paikalliset mallit ovat ilmaisia. Muiden kohdalla ketju näyttää kustannukset vasta, kun hinta on syötetty tähän.";
 "Die Umgebung der Login-Shell fehlt." = "Kirjautumiskomentotulkin ympäristö puuttuu.";

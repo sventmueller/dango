@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "इस बीच फ़ाइल बदल गई है";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "फ़ाइल क्षतिग्रस्त है और जब तक आप उसे ठीक नहीं करते, वह अपरिवर्तित रहेगी।";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "यह फ़ाइल किसी नए संस्करण की है और अपरिवर्तित रहेगी।";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "यह फ़ाइल पढ़ी नहीं जा सकती और अपरिवर्तित रहेगी।";
 "Die Modelle ließen sich nicht laden: {}" = "मॉडल लोड नहीं किए जा सके : {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "ऐप Anthropic की कीमतें जानता है, OpenRouter अपनी कीमतें खुद बताता है और लोकल मॉडल मुफ़्त हैं। अन्य मॉडलों के लिए थ्रेड लागत तभी दिखाता है, जब यहाँ उनकी कीमत दर्ज हो।";
 "Die Umgebung der Login-Shell fehlt." = "लॉगिन शेल का एनवायरनमेंट उपलब्ध नहीं है।";

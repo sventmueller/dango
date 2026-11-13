@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Dosya bu arada değişti";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Dosya hasarlı ve siz onarana kadar değiştirilmeden kalır.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Dosya daha yeni bir sürümden geliyor ve değiştirilmeden kalır.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Dosya okunamıyor ve değiştirilmeden kalır.";
 "Die Modelle ließen sich nicht laden: {}" = "Modeller yüklenemedi: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Uygulama Anthropic’in fiyatlarını bilir, OpenRouter kendi fiyatlarını bildirir, yerel modeller ücretsizdir. Diğerleri için sohbet, maliyetleri ancak burada bir fiyat girildiğinde gösterir.";
 "Die Umgebung der Login-Shell fehlt." = "Oturum açma kabuğunun ortamı eksik.";

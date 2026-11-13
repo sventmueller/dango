@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Filen har ändrats under tiden";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Filen är skadad och lämnas oförändrad tills du reparerar den.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Filen kommer från en nyare version och lämnas oförändrad.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Filen kan inte läsas och lämnas oförändrad.";
 "Die Modelle ließen sich nicht laden: {}" = "Det gick inte att läsa in modellerna: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Appen känner till Anthropics priser, OpenRouter anger sina egna och lokala modeller kostar ingenting. För andra visar tråden kostnader först när ett pris har angetts här.";
 "Die Umgebung der Login-Shell fehlt." = "Inloggningsskalets miljö saknas.";

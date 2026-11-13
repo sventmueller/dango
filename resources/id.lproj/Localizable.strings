@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "File telah berubah sementara itu";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "File rusak dan tidak akan diubah sampai Anda memperbaikinya.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "File berasal dari versi yang lebih baru dan tidak akan diubah.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "File tidak dapat dibaca dan tidak akan diubah.";
 "Die Modelle ließen sich nicht laden: {}" = "Model tidak dapat dimuat: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplikasi mengetahui harga Anthropic, OpenRouter menyebutkan harganya sendiri, dan model lokal gratis. Untuk model lain, thread baru menampilkan biaya setelah harga dimasukkan di sini.";
 "Die Umgebung der Login-Shell fehlt." = "Lingkungan shell login tidak ada.";

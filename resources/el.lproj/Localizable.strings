@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Το αρχείο έχει αλλάξει στο μεταξύ";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Το αρχείο είναι κατεστραμμένο και μένει αμετάβλητο μέχρι να το επιδιορθώσετε.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Το αρχείο προέρχεται από νεότερη έκδοση και μένει αμετάβλητο.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Το αρχείο δεν μπορεί να διαβαστεί και μένει αμετάβλητο.";
 "Die Modelle ließen sich nicht laden: {}" = "Δεν ήταν δυνατή η φόρτωση των μοντέλων: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Η εφαρμογή γνωρίζει τις τιμές της Anthropic, το OpenRouter αναφέρει τις δικές του και τα τοπικά μοντέλα δεν κοστίζουν τίποτα. Για τα υπόλοιπα, το νήμα εμφανίζει κόστος μόνο αφού καταχωρίσετε εδώ μια τιμή.";
 "Die Umgebung der Login-Shell fehlt." = "Λείπει το περιβάλλον του κελύφους σύνδεσης.";

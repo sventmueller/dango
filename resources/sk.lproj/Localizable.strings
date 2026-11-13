@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Súbor sa medzitým zmenil";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Súbor je poškodený a zostane nezmenený, kým ho neopravíte.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Súbor pochádza z novšej verzie a zostane nezmenený.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Súbor sa nedá prečítať a zostane nezmenený.";
 "Die Modelle ließen sich nicht laden: {}" = "Modely sa nepodarilo načítať: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Ceny od Anthropic aplikácia pozná, OpenRouter uvádza vlastné a lokálne modely nič nestoja. Pri ostatných vlákno zobrazí náklady, až keď tu zadáte cenu.";
 "Die Umgebung der Login-Shell fehlt." = "Chýba prostredie prihlasovacieho shellu.";

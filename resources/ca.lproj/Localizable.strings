@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "El fitxer ha canviat mentrestant";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "El fitxer està malmès i no es modificarà fins que el reparis.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "El fitxer és d’una versió més nova i no es modificarà.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "No es pot llegir el fitxer i no es modificarà.";
 "Die Modelle ließen sich nicht laden: {}" = "No s’han pogut carregar els models: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "L’app coneix els preus d’Anthropic, OpenRouter indica els seus i els models locals no costen res. Per als altres, el fil només mostra els costos quan hi ha un preu introduït aquí.";
 "Die Umgebung der Login-Shell fehlt." = "Falta l’entorn de l’intèrpret d’ordres d’inici de sessió.";

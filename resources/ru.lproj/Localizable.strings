@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Файл тем временем изменился";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Файл поврежден и останется без изменений, пока Вы его не исправите.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Файл создан более новой версией и останется без изменений.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Файл не удаётся прочитать, он останется без изменений.";
 "Die Modelle ließen sich nicht laden: {}" = "Не удалось загрузить модели: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Цены Anthropic приложению известны, OpenRouter сообщает свои сам, локальные модели бесплатны. Для остальных чат показывает стоимость, только если цена указана здесь.";
 "Die Umgebung der Login-Shell fehlt." = "Отсутствует окружение оболочки входа.";

@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "ファイルはその間に変更されました";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "ファイルが破損しているため、修復するまで変更されません。";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "ファイルはより新しいバージョンのものなので、変更されません。";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "ファイルを読み込めないため、変更されません。";
 "Die Modelle ließen sich nicht laden: {}" = "モデルを読み込めませんでした: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Anthropicの料金はアプリが把握しています。OpenRouterは自身の料金を通知し、ローカルモデルは無料です。そのほかのモデルでは、ここで料金を入力するとスレッドにコストが表示されます。";
 "Die Umgebung der Login-Shell fehlt." = "ログインシェルの環境がありません。";

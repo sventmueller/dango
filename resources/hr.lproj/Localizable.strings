@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Datoteka se u međuvremenu promijenila";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Datoteka je oštećena i ostaje nepromijenjena dok je ne popravite.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Datoteka potječe iz novije verzije i ostaje nepromijenjena.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Datoteku nije moguće pročitati i ostaje nepromijenjena.";
 "Die Modelle ließen sich nicht laden: {}" = "Modele nije moguće učitati: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplikacija zna cijene Anthropica, OpenRouter navodi svoje, a lokalni modeli ne koštaju ništa. Za ostale nit prikazuje troškove tek kad ovdje unesete cijenu.";
 "Die Umgebung der Login-Shell fehlt." = "Nedostaje okruženje ljuske za prijavu.";

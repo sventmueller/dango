@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Het bestand is intussen gewijzigd";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Het bestand is beschadigd en blijft ongewijzigd tot je het herstelt.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Het bestand komt van een nieuwere versie en blijft ongewijzigd.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Het bestand kan niet worden gelezen en blijft ongewijzigd.";
 "Die Modelle ließen sich nicht laden: {}" = "De modellen konden niet worden geladen: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "De app kent de prijzen van Anthropic, OpenRouter geeft zijn eigen prijzen door en lokale modellen kosten niets. Voor andere toont een thread pas kosten als je hier een prijs invoert.";
 "Die Umgebung der Login-Shell fehlt." = "De omgeving van de login-shell ontbreekt.";

@@ -587,6 +587,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         let reason = match locked {
             Locked::Damaged => t("Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst."),
             Locked::Newer => t("Die Datei stammt von einer neueren Version und bleibt unverändert."),
+            Locked::Unreadable => t("Die Datei lässt sich nicht lesen und bleibt unverändert."),
         };
         let warning = form::value(mtm, &tf("{}: {}", &[&path.display().to_string(), reason]));
         warning.setTextColor(Some(&NSColor::systemRedColor()));

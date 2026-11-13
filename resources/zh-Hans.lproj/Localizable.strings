@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "文件已在此期间更改";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "此文件已损坏，在你修复之前将保持不变。";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "此文件来自更新的版本，将保持不变。";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "无法读取此文件，将保持不变。";
 "Die Modelle ließen sich nicht laden: {}" = "无法载入模型：{}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "此 App 知道 Anthropic 的价格，OpenRouter 会自行提供价格，本地模型不产生费用。对于其他模型，只有在此处填入价格后，对话才会显示费用。";
 "Die Umgebung der Login-Shell fehlt." = "缺少登录 Shell 的环境。";

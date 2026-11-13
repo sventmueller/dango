@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Tệp đã thay đổi trong lúc đó";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Tệp bị hỏng và được giữ nguyên cho đến khi bạn sửa tệp.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Tệp đến từ một phiên bản mới hơn và được giữ nguyên.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Không thể đọc tệp và tệp được giữ nguyên.";
 "Die Modelle ließen sich nicht laden: {}" = "Không thể tải các mô hình: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Ứng dụng biết giá của Anthropic, OpenRouter tự báo giá của mình, còn mô hình cục bộ thì miễn phí. Với các nhà cung cấp khác, luồng chỉ hiển thị chi phí khi có giá được nhập ở đây.";
 "Die Umgebung der Login-Shell fehlt." = "Thiếu môi trường của shell đăng nhập.";

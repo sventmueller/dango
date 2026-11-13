@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Fișierul s-a modificat între timp";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Fișierul este deteriorat și rămâne neschimbat până când îl reparați.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Fișierul provine dintr-o versiune mai nouă și rămâne neschimbat.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Fișierul nu poate fi citit și rămâne neschimbat.";
 "Die Modelle ließen sich nicht laden: {}" = "Modelele nu au putut fi încărcate: {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "Aplicația cunoaște prețurile Anthropic, OpenRouter le comunică pe ale sale, iar modelele locale nu costă nimic. Pentru celelalte, conversația afișează costurile abia după ce introduceți aici un preț.";
 "Die Umgebung der Login-Shell fehlt." = "Lipsește mediul shellului de login.";

@@ -33,22 +33,25 @@ pub enum Locked {
     Newer,
     /// Not a JSON object.
     Damaged,
+    /// There, but not readable, such as without permission or on a failing disk.
+    Unreadable,
 }
 
 impl Store {
     /// The object in `path` brought to the version `migrations` lead to; empty if the file is missing or unreadable.
     pub(crate) fn load(path: PathBuf, migrations: &[Migration]) -> Store {
-        let (values, damaged) = match std::fs::read(&path) {
-            Err(_) => (Map::new(), false),
+        let (values, problem) = match std::fs::read(&path) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => (Map::new(), None),
+            Err(_) => (Map::new(), Some(Locked::Unreadable)),
             Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
-                Ok(Value::Object(map)) => (map, false),
-                _ => (Map::new(), true),
+                Ok(Value::Object(map)) => (map, None),
+                _ => (Map::new(), Some(Locked::Damaged)),
             },
         };
         let current = current_version(migrations);
         let found = values.get(VERSION_FIELD).and_then(Value::as_u64).unwrap_or(current);
-        let locked = if damaged {
-            Some(Locked::Damaged)
+        let locked = if problem.is_some() {
+            problem
         } else if found > current {
             Some(Locked::Newer)
         } else {
@@ -221,5 +224,30 @@ pub(crate) mod tests {
         assert_eq!(store.locked(), Some(Locked::Damaged));
         assert!(store.set("a", Value::from("b"), &[]).is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "{ not json");
+    }
+
+    #[test]
+    fn a_file_that_cannot_be_read_is_never_overwritten() {
+        use std::os::unix::fs::PermissionsExt;
+        let scratch_dir = scratch("unreadable");
+        let path = scratch_dir.join("settings.json");
+        let original = r#"{"version": 1, "kept": true}"#;
+        std::fs::write(&path, original).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o200)).unwrap();
+        let mut store = Store::load(path.clone(), &[]);
+        assert_eq!(store.locked(), Some(Locked::Unreadable));
+        assert!(store.set("a", Value::from("b"), &[]).is_err());
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+    }
+
+    #[test]
+    fn a_missing_file_is_written() {
+        let scratch_dir = scratch("missing");
+        let path = scratch_dir.join("settings.json");
+        let mut store = Store::load(path.clone(), &[]);
+        assert_eq!(store.locked(), None);
+        store.set("a", Value::from("b"), &[]).unwrap();
+        assert!(path.exists());
     }
 }

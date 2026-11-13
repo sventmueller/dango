@@ -89,6 +89,7 @@
 "Die Datei hat sich inzwischen geändert" = "Le fichier a été modifié entre-temps";
 "Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst." = "Le fichier est endommagé et reste inchangé jusqu’à ce que vous le répariez.";
 "Die Datei stammt von einer neueren Version und bleibt unverändert." = "Le fichier provient d’une version plus récente et reste inchangé.";
+"Die Datei lässt sich nicht lesen und bleibt unverändert." = "Le fichier est illisible et reste inchangé.";
 "Die Modelle ließen sich nicht laden: {}" = "Impossible de charger les modèles : {}";
 "Die Preise von Anthropic kennt die App, OpenRouter nennt seine selbst, lokale Modelle kosten nichts. Für andere zeigt der Thread Kosten erst mit einem Preis von hier." = "L’app connaît les prix d’Anthropic, OpenRouter indique les siens et les modèles locaux sont gratuits. Pour les autres, un fil n’affiche les coûts qu’une fois un prix saisi ici.";
 "Die Umgebung der Login-Shell fehlt." = "L’environnement du shell de connexion est manquant.";
