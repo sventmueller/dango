@@ -30,7 +30,7 @@ pub struct AppContext {
     pub exports: Rc<ide_ui_export::State>,
     pub search_panels: crate::window::SearchPanels,
     pub hierarchy_panels: crate::window::HierarchyPanels,
-    pub terminal_views: crate::terminal::TerminalViews,
+    pub terminal_views: Rc<ide_ui_terminal::State>,
     pub lsp_workspaces: crate::lsp::Workspaces,
     pub server_leases: crate::lsp::Leases,
     pub inlay_requests: crate::lsp::inlay::InlayRequests,
@@ -45,13 +45,9 @@ pub struct AppContext {
     pub ci_panels: crate::ci_panel::CiPanels,
     pub ci_log_tabs: crate::ci_panel::LogTabs,
     pub debug: crate::debug::DebugState,
-    pub browser_tabs: crate::browser::BrowserTabs,
-    pub downloads: crate::browser::Downloading,
-    pub certificates: crate::browser::Certificates,
-    #[cfg(feature = "selftest")]
-    pub browser_dialogs: crate::browser::Dialogs,
+    pub browser: Rc<ide_ui_browser::State>,
     #[cfg(feature = "dictation")]
-    pub dictation: crate::dictation::DictationState,
+    pub dictation: Rc<crate::dictation::State>,
 }
 
 impl AppContext {

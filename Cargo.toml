@@ -22,7 +22,9 @@ ide-product = { path = "crates/ide-product" }
 ide-project = { path = "crates/ide-project" }
 ide-terminal = { path = "crates/ide-terminal" }
 ide-thread = { path = "crates/ide-thread" }
+ide-ui-browser = { path = "crates/ide-ui-browser" }
 ide-ui-common = { path = "crates/ide-ui-common" }
+ide-ui-dictation = { path = "crates/ide-ui-dictation" }
 ide-ui-export = { path = "crates/ide-ui-export" }
 ide-ui-icons = { path = "crates/ide-ui-icons" }
 ide-ui-terminal = { path = "crates/ide-ui-terminal" }
@@ -111,7 +113,9 @@ ide-product.workspace = true
 ide-project.workspace = true
 ide-terminal.workspace = true
 ide-thread.workspace = true
+ide-ui-browser.workspace = true
 ide-ui-common.workspace = true
+ide-ui-dictation = { workspace = true, optional = true }
 ide-ui-export.workspace = true
 ide-ui-icons.workspace = true
 ide-ui-terminal.workspace = true
@@ -131,19 +135,12 @@ libc.workspace = true
 objc2 = { workspace = true, features = ["catch-all"] }
 objc2-app-kit.workspace = true
 objc2-core-foundation.workspace = true
-objc2-application-services = { workspace = true, optional = true }
-objc2-av-foundation = { workspace = true, optional = true }
 objc2-core-graphics.workspace = true
 objc2-core-image.workspace = true
-objc2-core-text.workspace = true
 objc2-foundation.workspace = true
-objc2-metal.workspace = true
-objc2-quartz-core.workspace = true
-objc2-security.workspace = true
 objc2-user-notifications.workspace = true
 objc2-web-kit.workspace = true
 image = { version = "0.25", default-features = false, features = ["png"] }
-kurbo = "0.13"
 serde.workspace = true
 serde_json.workspace = true
 
@@ -151,9 +148,9 @@ serde_json.workspace = true
 splat-i18n.workspace = true
 
 [features]
-selftest = ["splat-decoder/selftest", "splat-render/selftest", "ide-ui-export/selftest"]
+selftest = ["splat-decoder/selftest", "splat-render/selftest", "ide-ui-browser/selftest", "ide-ui-export/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
 # Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
-dictation = ["dep:lowspeak", "dep:objc2-application-services", "dep:objc2-av-foundation"]
+dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak"]
 
 # The terminal emulator, ripgrep's searcher and JSON handling are too slow to judge without optimisation.
 [profile.dev.package."*"]

@@ -1,7 +1,7 @@
 [package]
 name = "ide-ui-terminal"
 version = "0.0.0"
-description = "How a terminal tab draws: fonts and cells with Core Graphics or Metal, colours, line characters, links, keys and the view's decisions"
+description = "A terminal tab's view: keys, mouse, pasteboard, banners, and its drawing with Core Graphics or Metal"
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
@@ -10,9 +10,12 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+ide-core.workspace = true
+ide-process.workspace = true
 ide-terminal.workspace = true
 ide-ui-common.workspace = true
 splat-i18n.workspace = true
+block2.workspace = true
 objc2 = { workspace = true, features = ["catch-all"] }
 objc2-app-kit.workspace = true
 objc2-core-foundation.workspace = true
@@ -24,3 +27,7 @@ objc2-quartz-core.workspace = true
 
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["png"] }
+
+[features]
+# What the self-test drives and reads in a terminal view.
+selftest = []

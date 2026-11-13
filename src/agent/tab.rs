@@ -192,7 +192,7 @@ impl AgentTab {
         let status = StatusLine::new(mtm, key);
         #[cfg(feature = "dictation")]
         crate::dictation::register(
-            crate::dictation::Kind::Composer(key),
+            Rc::new(ComposerField(key)),
             &composer.text,
             &composer.mic,
             &status.dictation,
@@ -685,6 +685,18 @@ fn input_constraints(bottom: &NSView, column: &NSView) -> Vec<Retained<NSLayoutC
             .bottomAnchor()
             .constraintEqualToAnchor_constant(&column.bottomAnchor(), -8.0),
     ]
+}
+
+/// The composer of the AI tab with this key, as a field that dictation goes into.
+#[cfg(feature = "dictation")]
+struct ComposerField(u64);
+
+#[cfg(feature = "dictation")]
+impl crate::dictation::DictationField for ComposerField {
+    fn notice(&self, text: &str) -> bool {
+        let controller = super::controller_of(self.0);
+        controller.inspect(|controller| controller.show_notice(text)).is_some()
+    }
 }
 
 /// What a session is called before anything names it.

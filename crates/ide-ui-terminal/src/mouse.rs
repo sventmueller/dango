@@ -1,0 +1,439 @@
+//! The mouse: selecting text, reporting to programs that asked for the mouse, the wheel, and ⌘-click on links.
+//!
+//! ⌥ held keeps the mouse with the terminal while a program has it, so text can still be selected; ⌘⌥-drag selects a
+//! rectangle.
+
+use std::cell::{Cell, RefCell};
+use std::path::PathBuf;
+use std::ptr::NonNull;
+
+use block2::RcBlock;
+
+use ide_terminal::input::MouseTracking;
+use ide_terminal::{CellSide, Modifiers, MouseAction, MouseButton, MouseEvent, Point, Scroll, SelectionKind};
+use objc2::DefinedClass;
+use objc2::rc::{Retained, Weak};
+use objc2_app_kit::{NSCursor, NSEvent, NSEventModifierFlags, NSWorkspace};
+use objc2_foundation::{NSPoint, NSTimer, NSURL};
+
+use super::view::TerminalView;
+use crate::links;
+use crate::render::clamp_to;
+use ide_ui_common::util::{guarded, ns};
+
+/// How often a selection dragged beyond the top or bottom scrolls on.
+const AUTOSCROLL: f64 = 0.05;
+
+#[derive(Default)]
+pub struct MouseState {
+    drag: Cell<Option<Drag>>,
+    /// The button the program was told is held.
+    reported: Cell<Option<MouseButton>>,
+    /// The cell of the last movement reported.
+    last_cell: Cell<Option<Point>>,
+    /// Wheel turns not yet a whole line.
+    scroll: Cell<f64>,
+    /// Scrolls while a selection is dragged beyond the top or bottom.
+    autoscroll: RefCell<Option<Retained<NSTimer>>>,
+    /// How far beyond the lines the dragging pointer is, above when negative, and its column.
+    beyond: Cell<Option<(f64, usize, CellSide)>>,
+    /// The cell under the pointer while ⌘ is held, and whether a link or file is there.
+    hover: Cell<Option<(Point, bool)>>,
+    /// Where the pointer was last seen, in the window's coordinates.
+    pointer: Cell<Option<NSPoint>>,
+    /// The pointing hand shows rather than the I-beam.
+    hand: Cell<bool>,
+}
+
+impl MouseState {
+    pub fn stop_autoscroll(&self) {
+        if let Some(timer) = self.autoscroll.borrow_mut().take() {
+            timer.invalidate();
+        }
+    }
+}
+
+/// A selection the pressed button is making.
+#[derive(Debug, Clone, Copy)]
+struct Drag {
+    origin: Point,
+    side: CellSide,
+    kind: SelectionKind,
+    /// The selection exists; a plain click starts one only once the mouse moves.
+    started: bool,
+}
+
+/// Where an event happened on the grid.
+#[derive(Debug, Clone, Copy)]
+struct Spot {
+    /// The nearest cell.
+    point: Point,
+    side: CellSide,
+    /// How far beyond the lines the pointer is, in points: negative above them, positive below, else 0.
+    beyond: f64,
+}
+
+fn modifiers(flags: NSEventModifierFlags) -> Modifiers {
+    Modifiers {
+        shift: flags.contains(NSEventModifierFlags::Shift),
+        control: flags.contains(NSEventModifierFlags::Control),
+        alt: flags.contains(NSEventModifierFlags::Option),
+        command: flags.contains(NSEventModifierFlags::Command),
+    }
+}
+
+/// Whole lines out of `lines`, at most ten thousand either way.
+fn whole_lines(lines: f64) -> i32 {
+    let count = i32::try_from(clamp_to(lines.abs().trunc(), 10_000)).unwrap_or(0);
+    if lines < 0.0 { -count } else { count }
+}
+
+impl TerminalView {
+    fn spot(&self, event: &NSEvent) -> Option<Spot> {
+        self.spot_at(self.convertPoint_fromView(event.locationInWindow(), None))
+    }
+
+    fn spot_at(&self, location: NSPoint) -> Option<Spot> {
+        let size = self.ivars().state.size.get()?;
+        let (columns, lines) = (usize::from(size.columns), usize::from(size.lines));
+        let m = self.metrics();
+        let (column, line) = m.position(location.x, location.y);
+        let side = if column >= columns as f64 || (column >= 0.0 && column.fract() >= 0.5) {
+            CellSide::Right
+        } else {
+            CellSide::Left
+        };
+        Some(Spot {
+            point: Point {
+                line: clamp_to(line.floor(), lines.saturating_sub(1)),
+                column: clamp_to(column.floor(), columns.saturating_sub(1)),
+            },
+            side,
+            beyond: if line < 0.0 {
+                line * m.cell_height
+            } else {
+                (line - lines as f64).max(0.0) * m.cell_height
+            },
+        })
+    }
+
+    /// Whether the program takes the mouse for this event: it asked for it and ⌥ is not held.
+    fn reporting(&self, event: &NSEvent) -> bool {
+        !event.modifierFlags().contains(NSEventModifierFlags::Option)
+            && self
+                .with_session(|session| session.input_modes().mouse != MouseTracking::Off)
+                .unwrap_or(false)
+    }
+
+    fn report(&self, action: MouseAction, point: Point, event: &NSEvent) {
+        let report = MouseEvent {
+            action,
+            line: point.line,
+            column: point.column,
+            modifiers: modifiers(event.modifierFlags()),
+        };
+        self.with_session(|session| session.mouse(&report));
+    }
+
+    pub(super) fn mouse_down(&self, event: &NSEvent) {
+        if let Some(window) = self.window() {
+            window.makeFirstResponder(Some(self));
+        }
+        let Some(spot) = self.spot(event) else { return };
+        let flags = event.modifierFlags();
+        if flags.contains(NSEventModifierFlags::Command)
+            && !flags.contains(NSEventModifierFlags::Option)
+            && self.open_link(spot.point)
+        {
+            return;
+        }
+        let mouse = &self.ivars().mouse;
+        if self.reporting(event) {
+            self.report(MouseAction::Press(MouseButton::Left), spot.point, event);
+            mouse.reported.set(Some(MouseButton::Left));
+            mouse.last_cell.set(Some(spot.point));
+            return;
+        }
+        let selecting = |kind| Drag {
+            origin: spot.point,
+            side: spot.side,
+            kind,
+            started: true,
+        };
+        let drag = match event.clickCount() {
+            2 => selecting(SelectionKind::Word),
+            3.. => selecting(SelectionKind::Line),
+            _ if flags.contains(NSEventModifierFlags::Shift) && self.selected_text().is_some() => {
+                self.with_session(|session| session.extend_selection(spot.point, spot.side));
+                selecting(SelectionKind::Simple)
+            }
+            _ => {
+                self.with_session(ide_terminal::Session::clear_selection);
+                let block = flags.contains(NSEventModifierFlags::Command | NSEventModifierFlags::Option);
+                Drag {
+                    started: false,
+                    ..selecting(if block {
+                        SelectionKind::Block
+                    } else {
+                        SelectionKind::Simple
+                    })
+                }
+            }
+        };
+        if drag.started && event.clickCount() >= 2 {
+            self.with_session(|session| session.select(drag.kind, spot.point, spot.side));
+        }
+        mouse.drag.set(Some(drag));
+        self.refresh(true);
+    }
+
+    pub(super) fn mouse_dragged(&self, event: &NSEvent) {
+        let Some(spot) = self.spot(event) else { return };
+        let mouse = &self.ivars().mouse;
+        if let Some(button) = mouse.reported.get() {
+            if mouse.last_cell.replace(Some(spot.point)) != Some(spot.point) {
+                self.report(MouseAction::Move(Some(button)), spot.point, event);
+            }
+            return;
+        }
+        let Some(mut drag) = mouse.drag.get() else { return };
+        self.with_session(|session| {
+            if !drag.started {
+                session.select(drag.kind, drag.origin, drag.side);
+                drag.started = true;
+            }
+            session.extend_selection(spot.point, spot.side);
+        });
+        mouse.drag.set(Some(drag));
+        mouse.beyond.set(Some((spot.beyond, spot.point.column, spot.side)));
+        if spot.beyond == 0.0 {
+            mouse.stop_autoscroll();
+        } else {
+            self.start_autoscroll();
+        }
+        self.refresh(true);
+    }
+
+    fn start_autoscroll(&self) {
+        let mut timer = self.ivars().mouse.autoscroll.borrow_mut();
+        if timer.is_some() {
+            return;
+        }
+        let view = Weak::from(self);
+        let block = RcBlock::new(move |_: NonNull<NSTimer>| {
+            guarded((), || {
+                if let Some(view) = view.load() {
+                    view.autoscroll();
+                }
+            });
+        });
+        // SAFETY: The block holds the view weakly; the main run loop fires the timer on the main thread.
+        *timer = Some(unsafe { NSTimer::scheduledTimerWithTimeInterval_repeats_block(AUTOSCROLL, true, &block) });
+    }
+
+    /// Scrolls the history under a selection dragged beyond the lines, faster the farther the pointer is.
+    fn autoscroll(&self) {
+        let mouse = &self.ivars().mouse;
+        let size = self.ivars().state.size.get();
+        let (Some((beyond, column, side)), Some(size), Some(_)) = (mouse.beyond.get(), size, mouse.drag.get()) else {
+            mouse.stop_autoscroll();
+            return;
+        };
+        if beyond == 0.0 {
+            mouse.stop_autoscroll();
+            return;
+        }
+        let step = 1 + whole_lines((beyond / self.metrics().cell_height).abs()).min(9);
+        let (lines, line) = if beyond < 0.0 {
+            (step, 0)
+        } else {
+            (-step, usize::from(size.lines).saturating_sub(1))
+        };
+        self.with_session(|session| {
+            session.scroll(Scroll::Lines(lines));
+            session.extend_selection(Point { line, column }, side);
+        });
+        self.refresh(true);
+    }
+
+    pub(super) fn mouse_up(&self, event: &NSEvent) {
+        let mouse = &self.ivars().mouse;
+        mouse.drag.set(None);
+        mouse.stop_autoscroll();
+        if let Some(button) = mouse.reported.take()
+            && let Some(spot) = self.spot(event)
+        {
+            self.report(MouseAction::Release(button), spot.point, event);
+        }
+    }
+
+    /// The right, middle and side buttons; whether the program took the event, else the right button opens the menu.
+    pub(super) fn other_button(&self, event: &NSEvent, down: bool) -> bool {
+        let button = match event.buttonNumber() {
+            1 => MouseButton::Right,
+            2 => MouseButton::Middle,
+            3 => MouseButton::Back,
+            4 => MouseButton::Forward,
+            _ => return false,
+        };
+        let mouse = &self.ivars().mouse;
+        let Some(spot) = self.spot(event) else { return false };
+        if down {
+            if !self.reporting(event) {
+                return false;
+            }
+            self.report(MouseAction::Press(button), spot.point, event);
+            mouse.reported.set(Some(button));
+            return true;
+        }
+        if mouse.reported.get() != Some(button) {
+            return false;
+        }
+        mouse.reported.set(None);
+        self.report(MouseAction::Release(button), spot.point, event);
+        true
+    }
+
+    /// Movement, reported to a program that follows the mouse whenever it enters another cell.
+    pub(super) fn mouse_moved(&self, event: &NSEvent) {
+        self.update_pointer(event.modifierFlags(), Some(event.locationInWindow()));
+        if event.modifierFlags().contains(NSEventModifierFlags::Option) {
+            return;
+        }
+        let Some(spot) = self.spot(event) else { return };
+        let mouse = &self.ivars().mouse;
+        if mouse.last_cell.replace(Some(spot.point)) == Some(spot.point) {
+            return;
+        }
+        self.report(MouseAction::Move(mouse.reported.get()), spot.point, event);
+    }
+
+    /// The wheel and trackpad: the history, or the program when it takes the mouse or shows the alternate screen.
+    pub(super) fn scroll_wheel(&self, event: &NSEvent) {
+        let delta = event.scrollingDeltaY();
+        let lines = if event.hasPreciseScrollingDeltas() {
+            delta / self.metrics().cell_height
+        } else {
+            delta
+        };
+        let mouse = &self.ivars().mouse;
+        let total = mouse.scroll.get() + lines;
+        let whole = whole_lines(total);
+        mouse.scroll.set(total - f64::from(whole));
+        if whole == 0 {
+            return;
+        }
+        let Some(spot) = self.spot(event) else { return };
+        let flags = event.modifierFlags();
+        self.with_session(|session| {
+            if flags.contains(NSEventModifierFlags::Option) {
+                session.scroll(Scroll::Lines(whole));
+            } else {
+                session.wheel(whole, spot.point, modifiers(flags));
+            }
+        });
+        self.refresh(false);
+    }
+
+    /// The pointing hand while ⌘ is held over a link or a file ⌘-click opens, else the I-beam.
+    /// `seen` is the pointer's place in the window when the event has one; a key event has none.
+    pub(super) fn update_pointer(&self, flags: NSEventModifierFlags, seen: Option<NSPoint>) {
+        let Some(window) = self.window() else { return };
+        let mouse = &self.ivars().mouse;
+        if seen.is_some() {
+            mouse.pointer.set(seen);
+        }
+        let in_window = mouse
+            .pointer
+            .get()
+            .unwrap_or_else(|| window.mouseLocationOutsideOfEventStream());
+        let location = self.convertPoint_fromView(in_window, None);
+        if !objc2_foundation::NSPointInRect(location, self.bounds()) {
+            return;
+        }
+        let command = flags.contains(NSEventModifierFlags::Command) && !flags.contains(NSEventModifierFlags::Option);
+        let link = match self.spot_at(location).filter(|_| command) {
+            Some(spot) => match mouse.hover.get() {
+                Some((point, link)) if point == spot.point => link,
+                _ => {
+                    let link = self.link_at(spot.point);
+                    mouse.hover.set(Some((spot.point, link)));
+                    link
+                }
+            },
+            None => {
+                mouse.hover.set(None);
+                false
+            }
+        };
+        mouse.hand.set(link);
+        if link {
+            NSCursor::pointingHandCursor().set();
+        } else {
+            NSCursor::IBeamCursor().set();
+        }
+    }
+
+    /// Whether the pointing hand shows, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub(super) fn pointing_hand(&self) -> bool {
+        self.ivars().mouse.hand.get()
+    }
+
+    /// Whether ⌘-click at `point` opens something.
+    fn link_at(&self, point: Point) -> bool {
+        let (url, word) = {
+            let screen = self.ivars().screen.borrow();
+            let Some(screen) = screen.as_ref() else { return false };
+            (links::url_at(&screen.rows, point), links::path_at(&screen.rows, point))
+        };
+        url.is_some() || word.is_some_and(|file| self.file_at(&file.path).is_some())
+    }
+
+    /// Opens the link or file at `point`; whether there was one.
+    fn open_link(&self, point: Point) -> bool {
+        let (url, word) = {
+            let screen = self.ivars().screen.borrow();
+            let Some(screen) = screen.as_ref() else { return false };
+            (links::url_at(&screen.rows, point), links::path_at(&screen.rows, point))
+        };
+        if let Some(url) = url {
+            let lower = url.to_ascii_lowercase();
+            if lower.starts_with("http://") || lower.starts_with("https://") {
+                super::host().opened(self.window_id(), super::Opened::Url(url));
+            } else if let Some(url) = NSURL::URLWithString(&ns(&url)) {
+                NSWorkspace::sharedWorkspace().openURL(&url);
+            }
+            return true;
+        }
+        let Some(file) = word else { return false };
+        let Some(path) = self.file_at(&file.path) else {
+            return false;
+        };
+        let (line, column) = (file.line.unwrap_or(1), file.column.unwrap_or(1));
+        super::host().opened(self.window_id(), super::Opened::File { path, line, column });
+        true
+    }
+
+    /// The file `word` names, relative to the shell's working directory, as the path editor tabs know it by.
+    fn file_at(&self, word: &str) -> Option<PathBuf> {
+        let path = match word.strip_prefix("~/") {
+            Some(rest) => ide_core::paths::home().join(rest),
+            None => self.ivars().cwd.borrow().join(word),
+        };
+        path.canonicalize().ok().filter(|path| path.is_file())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wheel_turns_become_whole_lines_toward_zero() {
+        assert_eq!(whole_lines(2.7), 2);
+        assert_eq!(whole_lines(-2.7), -2);
+        assert_eq!(whole_lines(0.4), 0);
+        assert_eq!(whole_lines(1e9), 10_000);
+    }
+}

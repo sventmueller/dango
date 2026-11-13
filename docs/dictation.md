@@ -119,18 +119,20 @@ Other changes in lowspeak:
 ## Dango
 
 ### Build (R6)
-- Cargo feature `dictation = ["dep:lowspeak"]`, off by default: `make lint`/`make check` and the self-test do not
-  build whisper.cpp, cmake or CoreML. The debug app (`cargo xtask run`) and the release bundle (`make build`, xtask's
-  `bundle --release`) turn it on.
-- `make check-dictation`: clippy and tests with the feature, for changes that touch dictation.
-- Without the feature the mic buttons, menu items and the fn handling are not there; `src/dictation/` compiles to
-  nothing.
+- Cargo feature `dictation`, off by default, which turns on the crate `ide-ui-dictation` with its feature `engine`
+  (lowspeak): `make lint`/`make check` and the self-test do not build whisper.cpp, cmake or CoreML. The debug app
+  (`cargo xtask run`) and the release bundle (`make build`, xtask's `bundle --release`) turn it on.
+- `make check-dictation`: clippy and tests of the app and `ide-ui-dictation` with the feature, for changes that touch
+  dictation.
+- Without the feature the mic buttons, menu items and the fn handling are not there; `ide-ui-dictation` without
+  `engine` holds only the `DictationField` trait and the shortcut's spelling.
 - Info.plist gets `NSMicrophoneUsageDescription` (Dango's own words, translated with the other texts in the
   release phase) and the hardened runtime the `com.apple.security.device.audio-input` entitlement, both only in
   bundles built with the feature.
-- The first dictation asks macOS for the microphone (`src/dictation/microphone.rs`) and starts once the user allows
-  it; a dictation by fn ends with the question, since the key is up by then. Lowspeak's recorder never asks, it only
-  reports a missing permission, and macOS lists an app under Privacy & Security > Microphone only after it asked.
+- The first dictation asks macOS for the microphone (`crates/ide-ui-dictation/src/hub/microphone.rs`) and starts
+  once the user allows it; a dictation by fn ends with the question, since the key is up by then. Lowspeak's recorder
+  never asks, it only reports a missing permission, and macOS lists an app under Privacy & Security > Microphone only
+  after it asked.
 
 ### Where dictation goes
 - A dictation is bound to the text field that had the focus when it started: an AI tab's composer or an editor.

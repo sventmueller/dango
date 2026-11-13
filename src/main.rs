@@ -48,6 +48,10 @@ fn main() {
     }
     i18n::install(&app::localized_strings());
     ide_ui_export::install(&host::AppHost);
+    ide_ui_browser::install(&host::AppHost);
+    ide_ui_terminal::install(&host::AppHost);
+    #[cfg(feature = "dictation")]
+    dictation::install(&host::AppHost);
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {
         ide_core::paths::set_identity(&id.to_string());
     }

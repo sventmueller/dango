@@ -1316,26 +1316,21 @@ dependencies = [
  "ide-project",
  "ide-terminal",
  "ide-thread",
+ "ide-ui-browser",
  "ide-ui-common",
+ "ide-ui-dictation",
  "ide-ui-export",
  "ide-ui-icons",
  "ide-ui-terminal",
  "image",
- "kurbo",
  "libc",
  "lowspeak",
  "objc2",
  "objc2-app-kit",
- "objc2-application-services",
- "objc2-av-foundation",
  "objc2-core-foundation",
  "objc2-core-graphics",
  "objc2-core-image",
- "objc2-core-text",
  "objc2-foundation",
- "objc2-metal",
- "objc2-quartz-core",
- "objc2-security",
  "objc2-user-notifications",
  "objc2-web-kit",
  "serde",
@@ -1502,6 +1497,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ide-ui-browser"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-core",
+ "ide-product",
+ "ide-ui-common",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-security",
+ "objc2-web-kit",
+ "splat-i18n",
+]
+
+[[package]]
 name = "ide-ui-common"
 version = "0.0.0"
 dependencies = [
@@ -1513,6 +1525,26 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "splat-markdown",
+]
+
+[[package]]
+name = "ide-ui-dictation"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-ci",
+ "ide-core",
+ "ide-product",
+ "ide-ui-common",
+ "libc",
+ "lowspeak",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-application-services",
+ "objc2-av-foundation",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1553,6 +1585,9 @@ dependencies = [
 name = "ide-ui-terminal"
 version = "0.0.0"
 dependencies = [
+ "block2",
+ "ide-core",
+ "ide-process",
  "ide-terminal",
  "ide-ui-common",
  "image",

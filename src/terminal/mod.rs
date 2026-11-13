@@ -1,58 +1,22 @@
 //! The terminal tab (E8, E9): the user's login shell in a PTY, drawn by `TerminalView` under banners for a dev server
 //! it started and for short notices.
 
-mod access;
-mod banner;
-mod clip;
-mod frame;
-mod input;
-#[cfg(feature = "selftest")]
-pub mod inspect;
-mod mouse;
-mod session;
-mod view;
-
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
-use ide_terminal::Event;
-use objc2::rc::{Retained, Weak};
-use objc2::{DefinedClass, MainThreadOnly};
+use ide_ui_terminal::{all_views, find};
+use objc2::MainThreadOnly;
+use objc2::rc::Retained;
 use splat_i18n::{t, tf};
 
 use crate::util::main_soon;
 use crate::window::{TabKind, WindowController};
-pub use view::TerminalView;
+#[cfg(feature = "selftest")]
+pub use ide_ui_terminal::inspect;
+pub use ide_ui_terminal::{TerminalView, set_option_as_meta};
 
 /// How long a new terminal waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
-
-/// The terminal views of every window by id.
-#[derive(Default)]
-pub struct TerminalViews {
-    pub(super) views: RefCell<HashMap<u64, Weak<TerminalView>>>,
-}
-
-fn with_views<R>(f: impl FnOnce(&RefCell<HashMap<u64, Weak<TerminalView>>>) -> R) -> R {
-    f(&crate::context::app().terminal_views.views)
-}
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-
-/// The setting `OPTION_AS_META`, read when a terminal opens and set by the settings window.
-static OPTION_AS_META: AtomicBool = AtomicBool::new(false);
-
-/// Makes ⌥ Meta for every key in all terminals, or only where it types no character.
-pub fn set_option_as_meta(on: bool) {
-    OPTION_AS_META.store(on, Ordering::Relaxed);
-}
-
-fn option_as_meta() -> bool {
-    OPTION_AS_META.load(Ordering::Relaxed)
-}
 
 /// Gives every open terminal fonts of `size` points.
 pub fn set_font_size(size: f64) {
@@ -61,45 +25,12 @@ pub fn set_font_size(size: f64) {
     }
 }
 
-fn next_id() -> u64 {
-    NEXT_ID.fetch_add(1, Ordering::Relaxed)
-}
-
-fn register(view: &TerminalView) {
-    with_views(|views| views.borrow_mut().insert(view.id(), Weak::from(view)));
-}
-
-fn forget(id: u64) {
-    if let Some(cx) = crate::context::try_app() {
-        cx.terminal_views.views.borrow_mut().remove(&id);
-    }
-}
-
-fn find(id: u64) -> Option<Retained<TerminalView>> {
-    with_views(|views| views.borrow().get(&id).and_then(Weak::load))
-}
-
 /// The folder the shell of the terminal in tab `tab` of `controller`'s window last reported, for opening it again.
 pub fn folder_of_tab(controller: &WindowController, tab: isize) -> Option<std::path::PathBuf> {
-    use objc2::DefinedClass;
-    with_views(|views| {
-        views.borrow().values().filter_map(Weak::load).find_map(|view| {
-            let ivars = view.ivars();
-            let mine = ivars.controller.load().is_some_and(|c| std::ptr::eq(&*c, controller));
-            (mine && ivars.tab.get() == Some(tab)).then(|| ivars.cwd.borrow().clone())
-        })
-    })
-}
-
-/// Hands the session's events, which arrive on its reader thread, to the view on the main thread.
-fn listener(id: u64) -> impl Fn(Event) + Send + Sync + 'static {
-    move |event| {
-        main_soon(move || {
-            if let Some(view) = find(id) {
-                view.handle(event);
-            }
-        });
-    }
+    all_views()
+        .into_iter()
+        .find(|view| view.window_id() == controller.id() && view.tab() == Some(tab))
+        .map(|view| view.cwd())
 }
 
 /// Opens a terminal tab in `cwd`, else in the window's folder or the home folder.
@@ -110,7 +41,7 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
         .or_else(|| controller.project())
         .filter(|dir| dir.is_dir())
         .unwrap_or_else(ide_core::paths::home);
-    let (view, root) = TerminalView::new(controller.mtm(), controller, cwd);
+    let (view, root) = TerminalView::new(controller.mtm(), controller.id(), cwd);
     let tab = controller.add_tab(TabKind::Terminal, None, t("Terminal"), root);
     view.set_tab(tab);
     if let Some(window) = controller.window() {
@@ -152,21 +83,11 @@ fn type_when_started(id: u64, line: String, then: Box<dyn FnOnce(Option<u32>) + 
     }
 }
 
-/// The terminals open now, in every window.
-fn all_views() -> Vec<Retained<TerminalView>> {
-    with_views(|views| views.borrow().values().filter_map(Weak::load).collect())
-}
-
 /// The programs that run in the terminals of `controller`'s window in place of a shell that waits.
 pub fn running_in(controller: &WindowController) -> Vec<String> {
     all_views()
         .into_iter()
-        .filter(|view| {
-            view.ivars()
-                .controller
-                .load()
-                .is_some_and(|own| std::ptr::eq(&*own, controller))
-        })
+        .filter(|view| view.window_id() == controller.id())
         .filter_map(|view| {
             view.with_session(|session| match session.foreground() {
                 ide_terminal::Foreground::Shell(_) | ide_terminal::Foreground::Unknown => None,
@@ -207,14 +128,8 @@ fn start(view: &TerminalView) {
 
 /// The terminals of `controller`'s window, the one in view first.
 fn of_window(controller: &WindowController) -> Vec<Retained<TerminalView>> {
-    let mut views: Vec<Retained<TerminalView>> =
-        with_views(|views| views.borrow().values().filter_map(Weak::load).collect());
-    views.retain(|view| {
-        view.ivars()
-            .controller
-            .load()
-            .is_some_and(|own| std::ptr::eq(&*own, controller))
-    });
+    let mut views = all_views();
+    views.retain(|view| view.window_id() == controller.id());
     views.sort_by_key(|view| (!in_view(view), std::cmp::Reverse(view.id())));
     views
 }
@@ -229,12 +144,7 @@ fn in_view(view: &TerminalView) -> bool {
 pub fn tab_of_process(controller: &WindowController, pid: u32) -> Option<isize> {
     let shells: Vec<(u32, isize)> = of_window(controller)
         .iter()
-        .filter_map(|view| {
-            Some((
-                view.with_session(ide_terminal::Session::pid)?,
-                objc2::DefinedClass::ivars(&**view).tab.get()?,
-            ))
-        })
+        .filter_map(|view| Some((view.with_session(ide_terminal::Session::pid)?, view.tab()?)))
         .collect();
     let mut current = pid;
     for _ in 0..32 {

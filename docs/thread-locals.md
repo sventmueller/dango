@@ -6,6 +6,11 @@ which the app delegate creates and hands to the window controllers by `Rc`; an a
 only ids and the result, and finds its object through the context on the main thread, or nothing once it closed
 (Review C11).
 
+The UI crates split off in B19 (E99, `crates/ide-ui-*`) cannot see the app context. Each declares a `Host` trait and
+an install-once hook (a `OnceLock`, like `splat_i18n::install`); `src/host.rs` implements the traits and `src/main.rs`
+installs them at launch. A crate reaches its state, an `Rc` the app context owns, and windows by their id only
+through its `Host`. The hooks are not thread-locals and need no row here.
+
 A thread-local may stay only for one of these reasons:
 
 - **cache**: it holds nothing the app decides on, only what it could make again: colours, fonts, pictures, a setting
@@ -22,14 +27,25 @@ needs a row here first, and a reason from the list above.
 | File | Static | Holds | Lives | Target |
 |---|---|---|---|---|
 | `crates/ide-claude/src/session.rs` | `LATER` | events of a Claude session that wait until the state lock is released | until the session's reader thread empties it | into the session: `Shared::later` (a mutex); the crate knows no app context |
+| `crates/ide-ui-browser/src/dialogs.rs` | `ASKING` | a page's open panel with text fields, for the self-test | while it shows | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`, only with `selftest`) |
+| `crates/ide-ui-browser/src/downloads.rs` | `DOWNLOADS` | the download delegate with its list of running downloads | app | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`) |
+| `crates/ide-ui-browser/src/tabs.rs` | `SERIAL` | counter for the keys of tabs without an address | app | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`) |
+| `crates/ide-ui-browser/src/tabs.rs` | `TABS` | the browser tabs of every window | from opening to closing | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`) |
+| `crates/ide-ui-browser/src/trust.rs` | `ACCEPTED` | the certificates the user accepted | app | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`) |
+| `crates/ide-ui-browser/src/trust.rs` | `REFUSED` | certificates of development servers that macOS refused | app | AppContext: `browser` (`ide_ui_browser::State`, reached through its `Host`) |
+| `crates/ide-ui-browser/src/web.rs` | `STORE` | the browser tabs' `WKWebsiteDataStore` | app | stays: once per process |
 | `crates/ide-ui-common/src/style.rs` | `ACCENT` | the terracotta as a dynamic colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `ACCENTS` | accent colours by base colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `TOKEN_COLORS` | colours by token kind | app, until the appearance changes | stays: cache |
+| `crates/ide-ui-dictation/src/hub/fn_key.rs` | `FN` | what fn does: hotkey, gesture, running recording, observers | app | AppContext: `dictation` (`ide_ui_dictation::State`, reached through its `Host`; nur mit `dictation`) |
+| `crates/ide-ui-dictation/src/hub.rs` | `HUB` | the dictations: fields, running recognition, keys, questions | app | AppContext: `dictation` (`ide_ui_dictation::State`, reached through its `Host`; nur mit `dictation`) |
+| `crates/ide-ui-dictation/src/hub.rs` | `TARGET` | action target of the dictation buttons and menu item, without state | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `crates/ide-ui-export/src/lib.rs` | `FAILED` | the sheets of failed exports | until the user closes them | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
 | `crates/ide-ui-export/src/lib.rs` | `NEXT` | the next export number | app | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
 | `crates/ide-ui-export/src/lib.rs` | `RUNS` | the running exports | until they end | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
 | `crates/ide-ui-icons/src/logo.rs` | `IMAGES` | drawn logos by name | app | stays: cache |
 | `crates/ide-ui-terminal/src/gpu.rs` | `SHARED` | Metal device, queue and pipeline of every terminal | app | stays: once per process |
+| `crates/ide-ui-terminal/src/host.rs` | `VIEWS` | the terminal views of every window by id | from opening to closing | AppContext: `terminal_views` (`ide_ui_terminal::State`, reached through its `Host`) |
 | `src/activity/mod.rs` | `ACTIVITIES` | the activity items of every window's toolbar | from a window's first toolbar on | AppContext: `activities` |
 | `src/agent/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
 | `src/agent/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
@@ -49,18 +65,8 @@ needs a row here first, and a reason from the list above.
 | `src/agent/usage.rs` | `REPORT` | the last answer to `get_usage` with its time | until it is stale (2 min) | AppContext: `agent.usage`; the `ASKING` flag (a static `AtomicBool`) moves along |
 | `src/agent_panel/agents.rs` | `OFFERED` | the agents the "new session" menu offers, by tag | until the menu is filled again | AppContext: `agent_panels.offered_agents` |
 | `src/agent_panel/mod.rs` | `PANELS` | the agent panels of every window | from creation until replaced | AppContext: `agent_panels`; callbacks now carry an id instead of the address |
-| `src/browser/dialogs.rs` | `ASKING` | a page's open panel with text fields, for the self-test | while it shows | AppContext: `browser_dialogs` (nur mit `selftest`) |
-| `src/browser/downloads.rs` | `DOWNLOADS` | the download delegate with its list of running downloads | app | AppContext: `downloads` |
-| `src/browser/mod.rs` | `SERIAL` | counter for the keys of tabs without an address | app | AppContext: `browser_tabs` |
-| `src/browser/mod.rs` | `TABS` | the browser tabs of every window | from opening to closing | AppContext: `browser_tabs` |
-| `src/browser/trust.rs` | `ACCEPTED` | the certificates the user accepted | app | AppContext: `certificates` |
-| `src/browser/trust.rs` | `REFUSED` | certificates of development servers that macOS refused | app | AppContext: `certificates` |
-| `src/browser/web.rs` | `STORE` | the browser tabs' `WKWebsiteDataStore` | app | stays: once per process |
 | `src/ci_panel/log_tab.rs` | `TABS` | the CI log tabs of every window by id | from opening to closing | AppContext: `ci_log_tabs` |
 | `src/ci_panel/panel.rs` | `PANELS` | the CI panels of every window | from creation until replaced | AppContext: `ci_panels` |
-| `src/dictation/fn_key.rs` | `FN` | what fn does: hotkey, gesture, running recording, observers | app | AppContext: `dictation.fn_key` (nur mit `dictation`) |
-| `src/dictation/mod.rs` | `HUB` | the dictations: fields, running recognition, keys, questions | app | AppContext: `dictation.hub` (nur mit `dictation`) |
-| `src/dictation/mod.rs` | `TARGET` | action target of the dictation buttons and menu item, without state | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `src/editor/blame.rs` | `AT_LINE_END` | the setting "blame at the line end" as last chosen | app | stays: cache (of the setting) |
 | `src/editor/blame.rs` | `CACHE` | blame results by file and commit | app, the oldest drop out | stays: cache |
 | `src/editor/compare.rs` | `SHOWN` | the text views of open comparison tabs | while the tab is open | AppContext: `editor.comparisons` |
@@ -118,7 +124,6 @@ needs a row here first, and a reason from the list above.
 | `src/settings/agents.rs` | `WINDOW` | the agent registry window | from the first opening on | AppContext: `settings.agent_registry` |
 | `src/settings/commit_message.rs` | `SHOWN` | the "commit messages" part of the settings on view | while it shows | AppContext: `settings.commit_message_settings` |
 | `src/settings/editor.rs` | `TAB` | the "editor" part of the settings on view | while it shows | AppContext: `settings.editor_settings` |
-| `src/terminal/mod.rs` | `VIEWS` | the terminal views of every window by id | from opening to closing | AppContext: `terminal_views` |
 | `src/updates.rs` | `CONTROLLER` | the Sparkle updater | app | stays: once per process |
 | `src/window/mod.rs` | `WINDOWS` | the open window controllers | from opening to just after closing | AppContext: `windows` (a `Registry` with an id per window) |
 | `src/window/new_tab_button.rs` | `BELOW_PLUS` | whether the last menu stood below the "+", for the self-test | until read | AppContext: `new_tab_menu` |
