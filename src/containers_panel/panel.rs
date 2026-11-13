@@ -61,6 +61,8 @@ pub struct PanelIvars {
     failures: Cell<u32>,
     asked: Cell<u64>,
     started: Cell<bool>,
+    /// A retry came while the panel was hidden and waits for it to show.
+    waiting: Cell<bool>,
     /// The PATH the self-test gives in place of the login shell's, to a stand-in `docker` or none.
     #[cfg(feature = "selftest")]
     path: RefCell<Option<String>>,
@@ -151,6 +153,7 @@ impl ContainersPanel {
             failures: Cell::new(0),
             asked: Cell::new(0),
             started: Cell::new(false),
+            waiting: Cell::new(false),
             #[cfg(feature = "selftest")]
             path: RefCell::new(None),
         });
@@ -235,11 +238,20 @@ impl ContainersPanel {
         (Retained::into_super(page), header)
     }
 
-    /// Reads Docker for the first time, unless it did.
+    /// The panel shows: it reads Docker the first time, and again if a retry waited for it.
     pub fn start(&self) {
-        if !self.ivars().started.replace(true) {
+        let first = !self.ivars().started.replace(true);
+        if first || self.ivars().waiting.take() {
             self.refresh();
         }
+    }
+
+    /// Whether its window shows the panel now.
+    fn shown_now(&self) -> bool {
+        crate::context::AppContext::get(self.mtm())
+            .windows
+            .get(self.window())
+            .is_some_and(|c| c.shown_panel() == Some(crate::window::Panel::Containers))
     }
 
     /// Reads Docker again on a worker thread: contexts, version, containers, images and volumes; starts watching its
@@ -302,8 +314,13 @@ impl ContainersPanel {
         let window = self.window();
         main_after(ide_docker::backoff(attempt), move || {
             let _ = super::with_panel(window, |panel| {
-                if panel.ivars().asked.get() == asked {
+                if panel.ivars().asked.get() != asked {
+                    return;
+                }
+                if panel.shown_now() {
                     panel.refresh();
+                } else {
+                    panel.ivars().waiting.set(true);
                 }
             });
         });
@@ -391,6 +408,12 @@ impl ContainersPanel {
     #[cfg(feature = "selftest")]
     pub fn reach(&self) -> Reach {
         self.ivars().reach.borrow().clone()
+    }
+
+    /// Whether a retry waits for the panel to show, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn waiting(&self) -> bool {
+        self.ivars().waiting.get()
     }
 
     /// Whether the panel read Docker at all, for the self-test.

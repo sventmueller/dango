@@ -193,6 +193,32 @@ fn not_running() {
                 check("the stand-in daemon starts", false, error.to_string());
                 return finish(SCENARIO);
             }
+            hidden();
+        },
+    );
+}
+
+/// Hidden, the panel's retry waits for it to show, then reads at once.
+fn hidden() {
+    let Some(window) = controller() else {
+        return finish(SCENARIO);
+    };
+    window.activate_panel(Panel::Files);
+    let calls_before = calls().lines().count();
+    wait_within(
+        Duration::from_secs(10),
+        || the_panel().is_some_and(|p| p.waiting()),
+        move |waited| {
+            check(
+                "a hidden panel runs no docker while Docker does not run, and its retry waits for it to show",
+                waited
+                    && calls().lines().count() == calls_before
+                    && matches!(the_panel().map(|p| p.reach()), Some(panel::Reach::NotRunning(_))),
+                format!("{} calls before, {} after", calls_before, calls().lines().count()),
+            );
+            if let Some(window) = controller() {
+                window.activate_panel(Panel::Containers);
+            }
             tree();
         },
     );
