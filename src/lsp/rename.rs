@@ -151,6 +151,25 @@ struct Pending {
 #[derive(Default)]
 pub struct Formatting {
     formatting: RefCell<HashMap<u64, Pending>>,
+    /// Prettier's runs by editor: the run's id and what waits for it.
+    prettier: RefCell<HashMap<u64, (u64, Option<Then>)>>,
+}
+
+impl Formatting {
+    /// Keeps `then` until Prettier's run `id` for the editor `serial` ends.
+    pub fn wait(&self, serial: u64, id: u64, then: Option<Then>) {
+        self.prettier.borrow_mut().insert(serial, (id, then));
+    }
+
+    /// What waits for Prettier's run `id` for the editor `serial`; `None` once a later run took its place.
+    pub fn take(&self, serial: u64, id: u64) -> Option<Option<Then>> {
+        let mut runs = self.prettier.borrow_mut();
+        if runs.get(&serial).is_some_and(|(run, _)| *run == id) {
+            runs.remove(&serial).map(|(_, then)| then)
+        } else {
+            None
+        }
+    }
 }
 
 fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Pending>>) -> R) -> R {
@@ -160,6 +179,10 @@ fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Pending>>) -> R) -> R
 /// Formats the document with its server, as one undoable step; `then`, such as saving, runs afterwards, also when
 /// nothing changed or the server did not answer within `FORMAT_WAIT`.
 pub fn format(view: &EditorTextView, then: Option<Then>) {
+    let then = match super::prettier::format(view, then) {
+        Ok(()) => return,
+        Err(then) => then,
+    };
     let Some((server, uri)) = server_of(view) else {
         if let Some(then) = then {
             then(view);
@@ -224,7 +247,7 @@ pub fn save(view: &EditorTextView) {
             .capabilities()
             .is_some_and(|c| c.document_formatting_provider.is_some())
     });
-    if wanted && can {
+    if wanted && (can || super::prettier::formats(view)) {
         format(view, Some(Box::new(|view| editor::save(view, false))));
     } else {
         editor::save(view, false);

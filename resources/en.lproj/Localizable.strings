@@ -1601,3 +1601,6 @@
 "Information" = "Information";
 "Vorschau nur in vertrauten Ordnern" = "Preview Only in Trusted Folders";
 "Die Seite könnte über die Vorschau jede Datei des Ordners lesen. Vertraue dem Ordner zuerst." = "Through the preview, the page could read every file of the folder. Trust the folder first.";
+"Prettier hat nicht rechtzeitig geantwortet" = "Prettier did not answer in time";
+"Ohne Formatieren: der Text hat sich inzwischen geändert" = "Not formatted: the text changed meanwhile";
+"Prettier: {}" = "Prettier: {}";

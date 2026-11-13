@@ -81,6 +81,7 @@ mod own_agent_menus;
 mod page_preview;
 mod predict;
 mod predict_menu;
+mod prettier;
 mod quit;
 mod recovery;
 mod replace;

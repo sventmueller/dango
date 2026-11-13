@@ -127,7 +127,10 @@ pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
 /// Shows the current problem counts and the state of the server.
 pub fn refresh(view: &EditorTextView) {
     let counts = super::problem_counts(view);
-    let (text, action) = super::server_status(view);
+    let (mut text, action) = super::server_status(view);
+    if let Some(note) = view.ivars().lsp.borrow().note.clone() {
+        text = note;
+    }
     let crumbs = super::outline::breadcrumbs(view).join(" › ");
     let state = view.ivars().lsp.borrow();
     let Some(bar) = state.status.as_ref() else { return };
@@ -192,4 +195,27 @@ pub fn shown(view: &EditorTextView) -> (String, String) {
     state.status.as_ref().map_or_else(Default::default, |bar| {
         (bar.problems.title().to_string(), bar.server.stringValue().to_string())
     })
+}
+
+/// Says `text` in the status bar of `view` for a few seconds, in place of the server's state.
+pub fn note(view: &EditorTextView, text: &str) {
+    view.ivars().lsp.borrow_mut().note = Some(text.to_string());
+    refresh(view);
+    let serial = view.ivars().lsp.borrow().serial;
+    let said = text.to_string();
+    crate::util::main_after(std::time::Duration::from_secs(6), move || {
+        if let Some(view) = crate::editor::find_editor(serial) {
+            let same = view.ivars().lsp.borrow().note.as_deref() == Some(said.as_str());
+            if same {
+                view.ivars().lsp.borrow_mut().note = None;
+                refresh(&view);
+            }
+        }
+    });
+}
+
+/// The passing remark the status bar of `view` shows, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn note_of(view: &EditorTextView) -> Option<String> {
+    view.ivars().lsp.borrow().note.clone()
 }

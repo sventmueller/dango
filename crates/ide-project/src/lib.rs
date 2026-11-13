@@ -14,6 +14,7 @@ pub mod files_panel;
 pub mod fuzzy;
 pub mod index;
 pub mod order;
+pub mod prettier;
 pub mod replace;
 pub mod search;
 pub mod search_panel;

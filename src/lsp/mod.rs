@@ -16,7 +16,10 @@ mod lease;
 mod markdown;
 mod navigate;
 mod outline;
+mod prettier;
 pub use outline::scopes as symbol_scopes;
+#[cfg(feature = "selftest")]
+pub use status::note_of as status_note;
 #[cfg(feature = "selftest")]
 mod probe;
 mod project_symbols;
@@ -86,6 +89,8 @@ pub struct ViewState {
     squiggles: Option<objc2::rc::Weak<decorate::Squiggles>>,
     crumbs: Vec<outline::Crumb>,
     actions: actions::State,
+    /// A passing remark in the status bar, such as why a save went without formatting.
+    note: Option<String>,
 }
 
 /// A server for one language and project root, or what keeps it from running.
