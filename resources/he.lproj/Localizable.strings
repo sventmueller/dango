@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "אין שינויים להעברה ל-Stash.";
 "Löschen …" = "מחיקה…";
 "Mit nicht versionierten Dateien" = "כולל קבצים שאינם במעקב";
-"Modell für Commit-Nachrichten:" = "מודל להודעות Commit:";
 "Nachricht (freiwillig)" = "הודעה (אופציונלי)";
 "Neu erzeugen" = "יצירה מחדש";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "לא ניתן היה לשמור את כל המסמכים; ה-Stash ממתין.";

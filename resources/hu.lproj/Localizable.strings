@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Nincs stashelhető módosítás.";
 "Löschen …" = "Törlés…";
 "Mit nicht versionierten Dateien" = "Nem követett fájlokkal együtt";
-"Modell für Commit-Nachrichten:" = "Modell a commitüzenetekhez:";
 "Nachricht (freiwillig)" = "Üzenet (nem kötelező)";
 "Neu erzeugen" = "Újragenerálás";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nem minden dokumentumot sikerült menteni; a stash vár.";

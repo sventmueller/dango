@@ -12,16 +12,15 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSComboBox, NSControlTextEditingDelegate, NSFont, NSGridView, NSPopUpButton, NSTextField, NSView,
+    NSButton, NSComboBox, NSControlTextEditingDelegate, NSGridView, NSPopUpButton, NSTextField, NSView,
 };
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
+use super::form::{self, Row};
 use crate::editor::predict::model::{self, Choice, Local};
 use crate::editor::predict::provider::{self, CopilotState};
-use crate::util::{guarded, label, ns, set_action};
-
-const WIDTH: f64 = 460.0;
+use crate::util::{guarded, ns, set_action};
 
 pub struct Ivars {
     views: OnceCell<Views>,
@@ -105,11 +104,7 @@ fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<PredictionSettings>>>) 
 }
 
 fn small(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
-    let field = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    field.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    field.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    field.setPreferredMaxLayoutWidth(WIDTH);
-    field
+    form::note_field(mtm, text, form::CONTROLS)
 }
 
 fn button(
@@ -122,15 +117,6 @@ fn button(
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
     set_action(&button, target, action);
     button
-}
-
-fn row(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
-    let row = objc2_app_kit::NSStackView::new(mtm);
-    row.setSpacing(8.0);
-    for view in views {
-        row.addArrangedSubview(view);
-    }
-    row.into_super()
 }
 
 /// The tab's view.
@@ -154,19 +140,22 @@ pub fn view(mtm: MainThreadMarker) -> Retained<NSView> {
     model.widthAnchor().constraintEqualToConstant(260.0).setActive(true);
     set_action(&model, &this, sel!(idePredictionModel:));
     let exclude = NSTextField::new(mtm);
-    exclude.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
+    exclude
+        .widthAnchor()
+        .constraintEqualToConstant(form::CONTROLS)
+        .setActive(true);
     set_action(&exclude, &this, sel!(idePredictionExclude:));
     let views = Views {
         provider: provider_menu,
         about: small(mtm, ""),
-        copilot: small(mtm, ""),
+        copilot: form::value(mtm, ""),
         copilot_button: button(mtm, "", &this, sel!(idePredictionCopilot:)),
         url,
         model,
         model_note: small(mtm, ""),
         exclude,
-        off_for: small(mtm, ""),
-        allowed: small(mtm, ""),
+        off_for: form::value(mtm, ""),
+        allowed: form::value(mtm, ""),
         revoke: button(mtm, t("Erlaubnisse zurücknehmen"), &this, sel!(idePredictionRevoke:)),
     };
     let grid = grid(mtm, &views);
@@ -174,74 +163,37 @@ pub fn view(mtm: MainThreadMarker) -> Retained<NSView> {
     this.fill();
     this.load_models();
     with_shown(|shown| *shown.borrow_mut() = Some(this));
-    let view = NSView::new(mtm);
-    view.addSubview(&grid);
-    grid.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        grid.leadingAnchor()
-            .constraintEqualToAnchor_constant(&view.leadingAnchor(), 20.0),
-        grid.trailingAnchor()
-            .constraintEqualToAnchor_constant(&view.trailingAnchor(), -20.0),
-        grid.topAnchor()
-            .constraintEqualToAnchor_constant(&view.topAnchor(), 20.0),
-        grid.bottomAnchor()
-            .constraintEqualToAnchor_constant(&view.bottomAnchor(), -20.0),
-    ] {
-        constraint.setActive(true);
-    }
-    view
+    form::page(mtm, &grid)
 }
 
 fn grid(mtm: MainThreadMarker, views: &Views) -> Retained<NSGridView> {
-    let title = |text: &str| label(mtm, text).into_super().into_super();
-    let caption = |text: &str, control: &objc2_app_kit::NSControl| {
-        let caption = label(mtm, text);
-        crate::util::set_title_element(control, &caption);
-        caption.into_super().into_super()
-    };
-    let empty = || NSView::new(mtm);
-    let rows: Vec<Vec<Retained<NSView>>> = vec![
-        vec![
-            caption(t("Anbieter:"), &views.provider),
-            views.provider.clone().into_super().into_super().into_super(),
+    let exclude_note = small(
+        mtm,
+        t("Muster für Dateinamen, durch Kommas getrennt, wie .env* oder *.pem"),
+    );
+    form::grid(
+        mtm,
+        &[
+            Row::new(mtm, t("Anbieter:"), &views.provider),
+            Row::under(&views.about),
+            Row::new(mtm, "Copilot:", &views.copilot),
+            Row::under(&views.copilot_button),
+            Row::new(mtm, t("Adresse:"), &views.url),
+            Row::new(mtm, t("Modell:"), &views.model),
+            Row::under(&views.model_note),
+            Row::new(mtm, t("Nie senden:"), &views.exclude),
+            Row::under(&exclude_note),
+            Row::new(mtm, t("Sprachen:"), &views.off_for),
+            Row::new(mtm, t("Erlaubnis:"), &views.allowed),
+            Row::under(&views.revoke),
         ],
-        vec![empty(), views.about.clone().into_super().into_super()],
-        vec![title("Copilot:"), row(mtm, &[&views.copilot, &views.copilot_button])],
-        vec![
-            caption(t("Adresse:"), &views.url),
-            views.url.clone().into_super().into_super(),
-        ],
-        vec![
-            caption(t("Modell:"), &views.model),
-            views.model.clone().into_super().into_super().into_super(),
-        ],
-        vec![empty(), views.model_note.clone().into_super().into_super()],
-        vec![
-            caption(t("Nie senden:"), &views.exclude),
-            views.exclude.clone().into_super().into_super(),
-        ],
-        vec![
-            empty(),
-            small(
-                mtm,
-                t("Muster für Dateinamen, durch Kommas getrennt, wie .env* oder *.pem"),
-            )
-            .into_super()
-            .into_super(),
-        ],
-        vec![title(t("Sprachen:")), views.off_for.clone().into_super().into_super()],
-        vec![title(t("Erlaubnis:")), row(mtm, &[&views.allowed, &views.revoke])],
-    ];
-    let rows: Vec<Retained<objc2_foundation::NSArray<NSView>>> = rows
-        .iter()
-        .map(|row| objc2_foundation::NSArray::from_retained_slice(row))
-        .collect();
-    let grid = NSGridView::gridViewWithViews(&objc2_foundation::NSArray::from_retained_slice(&rows), mtm);
-    grid.setRowSpacing(10.0);
-    grid.setColumnSpacing(8.0);
-    grid.columnAtIndex(0)
-        .setXPlacement(objc2_app_kit::NSGridCellPlacement::Trailing);
-    grid
+    )
+}
+
+/// Shows `text` under the model, and the row only when there is something to say.
+fn show_note(note: &NSTextField, text: &str) {
+    note.setStringValue(&ns(text));
+    form::show(note, !text.is_empty());
 }
 
 /// The folder whose Copilot the tab shows: the front window's, if it is trusted, else one Copilot runs for.
@@ -365,7 +317,7 @@ impl PredictionSettings {
         } else {
             String::new()
         };
-        views.model_note.setStringValue(&ns(&note));
+        show_note(&views.model_note, &note);
     }
 
     /// The user picked a provider: one outside the Mac asks for consent first and stays off without it.
@@ -456,10 +408,13 @@ impl PredictionSettings {
                             *this.ivars().models.borrow_mut() = models;
                             this.fill_model_note();
                         }
-                        Err(error) => views.model_note.setStringValue(&ns(&match error {
-                            ide_predict::Error::Unavailable(text) => text,
-                            other => format!("{other:?}"),
-                        })),
+                        Err(error) => show_note(
+                            &views.model_note,
+                            &match error {
+                                ide_predict::Error::Unavailable(text) => text,
+                                other => format!("{other:?}"),
+                            },
+                        ),
                     }
                 });
             });

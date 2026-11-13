@@ -6,21 +6,20 @@ use std::cell::{OnceCell, RefCell};
 use ide_ci::{HostRule, Kind};
 use ide_core::settings::Settings;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSButton, NSColor, NSControlTextEditingDelegate, NSFont,
-    NSLayoutAttribute, NSLineBreakMode, NSPopUpButton, NSScrollView, NSStackView, NSTableColumn, NSTableView,
-    NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSAlert, NSAlertFirstButtonReturn, NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSPopUpButton,
+    NSStackView, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use super::list_bar;
+use super::{form, list_bar};
 use crate::ci_panel::{CI_HOSTS, CI_OAUTH_CLIENTS};
-use crate::util::{guarded, label, ns};
+use crate::util::{guarded, ns};
 
-const TABLE_WIDTH: f64 = 420.0;
 const TABLE_HEIGHT: f64 = 110.0;
 
 /// The two lists of the tab.
@@ -67,11 +66,9 @@ define_class!(
         #[unsafe(method_id(tableView:viewForTableColumn:row:))]
         fn view_for(&self, table: &NSTableView, column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
             guarded(None, || {
-                let first = column.is_some_and(|c| c.identifier().to_string() == "first");
+                let index: usize = column?.identifier().to_string().parse().ok()?;
                 let row = self.rows(self.list_of(table)).into_iter().nth(usize::try_from(row).ok()?)?;
-                let cell = label(self.mtm(), if first { &row[0] } else { &row[1] });
-                cell.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-                Some(cell.into_super().into_super())
+                Some(form::cell(self.mtm(), row.get(index)?))
             })
         }
 
@@ -170,7 +167,7 @@ impl CiSettings {
     fn set_problem(&self, problem: Option<&str>) {
         let Some(views) = self.ivars().views.get() else { return };
         views.problem.setStringValue(&ns(problem.unwrap_or("")));
-        views.problem.setHidden(problem.is_none());
+        form::show(&views.problem, problem.is_some());
     }
 
     /// Writes `entries` as the setting of `list` and tells the CI panels.
@@ -279,22 +276,15 @@ impl CiSettings {
     /// The tab's view.
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
-        let (hosts, hosts_scroll) = table(mtm, self, [t("Host"), t("Dienst")]);
-        let (apps, apps_scroll) = table(mtm, self, [t("Host"), t("App-ID")]);
+        let (hosts, hosts_scroll) = form::table(mtm, self, &[(t("Host"), 320.0), (t("Dienst"), 0.0)], TABLE_HEIGHT);
+        let (apps, apps_scroll) = form::table(mtm, self, &[(t("Host"), 320.0), (t("App-ID"), 0.0)], TABLE_HEIGHT);
         let add_host = list_bar::button(mtm, true, t("CI-Host hinzufügen"), self, sel!(ideAddCiHost:));
         let remove_host = list_bar::button(mtm, false, t("CI-Host entfernen"), self, sel!(ideRemoveCiHost:));
         let remove_app = list_bar::button(mtm, false, t("OAuth-App entfernen"), self, sel!(ideRemoveCiApp:));
-        let problem = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-        problem.setTextColor(Some(&NSColor::systemRedColor()));
-        problem.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-        problem.setHidden(true);
-        let stack = NSStackView::new(mtm);
-        stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        stack.setAlignment(NSLayoutAttribute::Leading);
-        stack.setSpacing(8.0);
+        let problem = form::problem(mtm);
         let views: [Retained<NSView>; 9] = [
-            heading(mtm, t("Hosts mit CI-Dienst")),
-            note(
+            form::heading(mtm, t("Hosts mit CI-Dienst")),
+            form::note(
                 mtm,
                 t(
                     "Für Hosts, deren Name nicht verrät, welcher Dienst dort läuft. Nur du legst sie fest: ein Projekt könnte sonst einen Token an einen fremden Host schicken.",
@@ -303,8 +293,8 @@ impl CiSettings {
             hosts_scroll,
             list_bar::bar(mtm, &[&add_host, &remove_host], &[]),
             problem.clone().into_super().into_super(),
-            heading(mtm, t("OAuth-Apps für die Browser-Anmeldung")),
-            note(
+            form::heading(mtm, t("OAuth-Apps für die Browser-Anmeldung")),
+            form::note(
                 mtm,
                 t(
                     "Auf anderen Hosts als github.com und gitlab.com fragt die Browser-Anmeldung einmal nach der ID der dort registrierten App. Entfernst du sie, fragt sie beim nächsten Mal neu.",
@@ -313,11 +303,7 @@ impl CiSettings {
             apps_scroll,
             list_bar::bar(mtm, &[&remove_app], &[]),
         ];
-        for view in &views {
-            stack.addArrangedSubview(view);
-        }
-        stack.setCustomSpacing_afterView(18.0, &views[4]);
-        list_bar::attach(&stack);
+        let stack = form::stack(mtm, &views);
         let _ = self.ivars().views.set(Views {
             hosts,
             apps,
@@ -326,26 +312,7 @@ impl CiSettings {
             problem,
         });
         self.update_buttons();
-        let view = NSView::new(mtm);
-        view.addSubview(&stack);
-        stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            stack
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&view.leadingAnchor(), 30.0),
-            stack
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -30.0),
-            stack
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&view.topAnchor(), 24.0),
-            stack
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&view.bottomAnchor(), -24.0),
-        ] {
-            constraint.setActive(true);
-        }
-        view
+        form::page(mtm, &stack)
     }
 }
 
@@ -354,54 +321,6 @@ fn service_name(kind: Kind) -> &'static str {
         Kind::GitHub => "GitHub",
         Kind::GitLab => "GitLab",
     }
-}
-
-fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let heading = label(mtm, text);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
-    heading.into_super().into_super()
-}
-
-fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    note.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-    note.into_super().into_super()
-}
-
-/// A table with two columns titled `titles`, whose rows `owner` gives, in its scroll view.
-fn table(mtm: MainThreadMarker, owner: &CiSettings, titles: [&str; 2]) -> (Retained<NSTableView>, Retained<NSView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(TABLE_WIDTH, TABLE_HEIGHT));
-    let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-    for (identifier, title, width) in [("first", titles[0], 260.0), ("second", titles[1], 140.0)] {
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns(identifier));
-        column.setTitle(&ns(title));
-        column.setWidth(width);
-        table.addTableColumn(&column);
-    }
-    table.setUsesAlternatingRowBackgroundColors(true);
-    table.setAllowsEmptySelection(true);
-    table.setAccessibilityLabel(Some(&ns(titles[0])));
-    // SAFETY: The table holds its data source and delegate weakly; the settings controller keeps `owner` alive.
-    unsafe {
-        table.setDataSource(Some(ProtocolObject::from_ref(owner)));
-        table.setDelegate(Some(ProtocolObject::from_ref(owner)));
-    }
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setBorderType(objc2_app_kit::NSBorderType::BezelBorder);
-    scroll.setDocumentView(Some(&table));
-    scroll
-        .widthAnchor()
-        .constraintEqualToConstant(TABLE_WIDTH)
-        .setActive(true);
-    scroll
-        .heightAnchor()
-        .constraintEqualToConstant(TABLE_HEIGHT)
-        .setActive(true);
-    (table, scroll.into_super())
 }
 
 /// What the self-test reads from and does with the CI tab, through the code its controls run.

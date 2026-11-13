@@ -8,22 +8,21 @@ use std::path::{Path, PathBuf};
 use ide_claude::rules::{self, Scope};
 use ide_core::settings::{Key, State, remembered};
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSButton, NSColor, NSControlTextEditingDelegate, NSFont, NSLineBreakMode, NSScrollView,
-    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
+    NSAccessibility, NSAlert, NSButton, NSControlTextEditingDelegate, NSTableColumn, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSNotification, NSObjectProtocol};
 use splat_i18n::t;
 
-use super::list_bar;
-use crate::util::{guarded, label, ns};
+use super::{form, list_bar};
+use crate::util::{guarded, ns};
 
 /// The folders in which the user let Claude store a rule from the app, besides the recent and open ones.
 const FOLDERS: Key<Vec<PathBuf>> = Key::user("claudeRuleFolders", Vec::new);
 
-const WIDTH: f64 = 520.0;
 const HEIGHT: f64 = 110.0;
 
 /// Notes `folder` as one where Claude stored a rule, so the settings list its rules even once it left the recent
@@ -114,10 +113,7 @@ define_class!(
             guarded(None, || {
                 let index: usize = column?.identifier().to_string().parse().ok()?;
                 let text = self.cells().into_iter().nth(usize::try_from(row).ok()?)?.into_iter().nth(index)?;
-                let cell = label(self.mtm(), &text);
-                cell.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-                cell.setToolTip(Some(&ns(&text)));
-                Some(cell.into_super().into_super())
+                Some(form::cell(self.mtm(), &text))
             })
         }
 
@@ -151,13 +147,17 @@ impl StoredRules {
     /// The section: its heading and note, the list with its remove button, and what holds for ACP agents.
     pub fn views(&self) -> Vec<Retained<NSView>> {
         let mtm = self.mtm();
-        let heading = label(mtm, t("Gespeicherte Regeln von Claude"));
-        heading.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
-        let (table, scroll) = self.table(mtm);
+        let (table, scroll) = form::table(
+            mtm,
+            self,
+            &[(t("Projekt"), 170.0), (t("Regel"), 170.0), (t("Gilt für"), 0.0)],
+            HEIGHT,
+        );
+        table.setAccessibilityLabel(Some(&ns(t("Gespeicherte Regeln von Claude"))));
         let remove = list_bar::button(mtm, false, t("Regel entfernen"), self, sel!(ideRemoveStoredRule:));
         let views = vec![
-            heading.into_super().into_super(),
-            note(
+            form::heading(mtm, t("Gespeicherte Regeln von Claude")),
+            form::note(
                 mtm,
                 t(
                     "Was du Claude mit „Immer erlauben“ für ein Projekt freigegeben hast. Zerstörerische Git-Befehle fragen trotzdem jedes Mal.",
@@ -165,7 +165,7 @@ impl StoredRules {
             ),
             scroll,
             list_bar::bar(mtm, &[&remove], &[]),
-            note(
+            form::note(
                 mtm,
                 t("ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann."),
             ),
@@ -246,43 +246,4 @@ impl StoredRules {
         }
         self.reload();
     }
-
-    fn table(&self, mtm: MainThreadMarker) -> (Retained<NSTableView>, Retained<NSView>) {
-        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(WIDTH, HEIGHT));
-        let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-        for (n, (title, width)) in [(t("Projekt"), 150.0), (t("Regel"), 150.0), (t("Gilt für"), 190.0)]
-            .into_iter()
-            .enumerate()
-        {
-            let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns(&n.to_string()));
-            column.setTitle(&ns(title));
-            column.setWidth(width);
-            table.addTableColumn(&column);
-        }
-        table.setUsesAlternatingRowBackgroundColors(true);
-        table.setAllowsEmptySelection(true);
-        table.setAccessibilityLabel(Some(&ns(t("Gespeicherte Regeln von Claude"))));
-        // SAFETY: The table holds its data source and delegate weakly; the Agents tab keeps `self` alive.
-        unsafe {
-            table.setDataSource(Some(ProtocolObject::from_ref(self)));
-            table.setDelegate(Some(ProtocolObject::from_ref(self)));
-        }
-        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-        scroll.setHasVerticalScroller(true);
-        scroll.setAutohidesScrollers(true);
-        scroll.setBorderType(objc2_app_kit::NSBorderType::BezelBorder);
-        scroll.setDocumentView(Some(&table));
-        scroll.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-        scroll.heightAnchor().constraintEqualToConstant(HEIGHT).setActive(true);
-        (table, scroll.into_super())
-    }
-}
-
-fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    note.setPreferredMaxLayoutWidth(WIDTH);
-    note.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-    note.into_super().into_super()
 }

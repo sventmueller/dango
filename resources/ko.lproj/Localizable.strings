@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "스태시할 변경 사항이 없습니다.";
 "Löschen …" = "삭제…";
 "Mit nicht versionierten Dateien" = "추적되지 않는 파일 포함";
-"Modell für Commit-Nachrichten:" = "커밋 메시지용 모델:";
 "Nachricht (freiwillig)" = "메시지(선택 사항)";
 "Neu erzeugen" = "다시 생성";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "일부 문서를 저장할 수 없어 스태시가 대기 중입니다.";

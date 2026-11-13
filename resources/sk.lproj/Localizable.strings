@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Žiadne zmeny na odloženie do stashu.";
 "Löschen …" = "Vymazať…";
 "Mit nicht versionierten Dateien" = "Vrátane nesledovaných súborov";
-"Modell für Commit-Nachrichten:" = "Model pre správy commitov:";
 "Nachricht (freiwillig)" = "Správa (nepovinné)";
 "Neu erzeugen" = "Vygenerovať znova";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nie všetky dokumenty sa podarilo uložiť; stash čaká.";

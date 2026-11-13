@@ -8,21 +8,19 @@ use lowspeak::i18n::Texts;
 use lowspeak::models::{Language, LocalModel, OnlineModel, PostProcessingMode, TranscriptionMode};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSGridCell, NSGridCellPlacement,
-    NSGridRowAlignment, NSGridView, NSMenuItem, NSPopUpButton, NSProgressIndicator, NSProgressIndicatorStyle,
-    NSStackView, NSTextField, NSTokenField, NSUserInterfaceLayoutOrientation, NSView,
+    NSButton, NSControlStateValueOff, NSControlStateValueOn, NSGridView, NSMenuItem, NSPopUpButton,
+    NSProgressIndicator, NSProgressIndicatorStyle, NSStackView, NSTextField, NSTokenField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{
-    NSArray, NSNumber, NSNumberFormatter, NSNumberFormatterStyle, NSObjectProtocol, NSRange, NSString,
-};
+use objc2_foundation::{NSArray, NSNumber, NSNumberFormatter, NSNumberFormatterStyle, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
+use super::form::{self, Row};
 use crate::dictation::{self, FnState, PROVIDERS, choices};
-use crate::util::{guarded, label, ns, set_action, set_title_element};
+use crate::util::{guarded, label, ns, set_action};
 
-const WRAP: f64 = 340.0;
 /// Tags of the transcription menu: an online model's index in `OnlineModel::ALL` above the first, a local one's in
 /// `LocalModel::ALL` above the second.
 pub const ONLINE: isize = 100;
@@ -268,11 +266,7 @@ impl DictationSettings {
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let texts = dictation::lowspeak_texts();
-        let value = || {
-            let field = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-            field.setPreferredMaxLayoutWidth(WRAP);
-            field
-        };
+        let value = || form::value(mtm, "");
         let button = |title: &str, action, tag| {
             // SAFETY: The button sends its action to this object, which answers it, set right below.
             let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
@@ -310,17 +304,16 @@ impl DictationSettings {
                 .map(|(n, _)| {
                     let tag = isize::try_from(n).unwrap_or(-1);
                     KeyRow {
-                        state: value(),
+                        state: label(mtm, ""),
                         change: button("", sel!(ideDictationKey:), tag),
                         remove: button(t("Entfernen"), sel!(ideDictationRemoveKey:), tag),
                     }
                 })
                 .collect(),
             with_fn: self.fn_checkbox(mtm),
-            fn_note: value(),
+            fn_note: form::note_field(mtm, "", form::CONTROLS),
             ask: button(t("Freigabe anfragen"), sel!(ideDictationAskPermission:), 0),
         };
-        views.fn_note.setTextColor(Some(&NSColor::secondaryLabelColor()));
         fill_fixed_menus(&views, texts);
         let take = button(t("Einstellungen übernehmen"), sel!(ideDictationLowspeakChoices:), 1);
         let ignore = button(t("Ignorieren"), sel!(ideDictationLowspeakChoices:), 0);
@@ -332,12 +325,15 @@ impl DictationSettings {
 
     fn vocabulary_field(&self, mtm: MainThreadMarker) -> Retained<NSTokenField> {
         let field = NSTokenField::new(mtm);
-        field.setPreferredMaxLayoutWidth(WRAP);
+        field.setPreferredMaxLayoutWidth(form::CONTROLS);
         if let Some(cell) = field.cell() {
             cell.setWraps(true);
             cell.setSendsActionOnEndEditing(true);
         }
-        field.widthAnchor().constraintEqualToConstant(WRAP).setActive(true);
+        field
+            .widthAnchor()
+            .constraintEqualToConstant(form::CONTROLS)
+            .setActive(true);
         set_action(&field, self, sel!(ideDictationVocabulary:));
         field
     }
@@ -393,6 +389,7 @@ impl DictationSettings {
         }
         show_keys(views);
         show_fn(views);
+        super::fit(super::DICTATION_TAB);
     }
 }
 
@@ -596,114 +593,41 @@ fn download_column(mtm: MainThreadMarker, views: &Views) -> Retained<NSView> {
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
     stack.setSpacing(6.0);
     stack.addArrangedSubview(&views.model);
-    stack.addArrangedSubview(&side(mtm, &[&views.progress, &views.download]));
+    stack.addArrangedSubview(&form::line(mtm, &[&views.progress, &views.download]));
     stack.into_super()
 }
 
-fn side(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(8.0);
-    for view in views {
-        stack.addArrangedSubview(view);
-    }
-    stack.into_super()
-}
-
-/// The rows of the grid, each a caption and its controls; the offer's buttons are `offer`.
-fn rows(mtm: MainThreadMarker, views: &Views, offer: &[&NSButton], texts: &Texts) -> Vec<Vec<Retained<NSView>>> {
-    let up = |view: &NSView| view.retain();
-    let caption = |text: &str| label(mtm, text);
-    let titled = |text: &str, control: &objc2_app_kit::NSControl| {
-        let title = caption(text);
-        set_title_element(control, &title);
-        title.into_super().into_super()
-    };
-    let empty = || NSGridCell::emptyContentView(mtm);
-    let note = NSTextField::wrappingLabelWithString(&ns(texts.vocabulary_info), mtm);
-    note.setPreferredMaxLayoutWidth(WRAP);
-    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
+/// The rows of the form; the offer's buttons are `offer`.
+fn rows(mtm: MainThreadMarker, views: &Views, offer: &[&NSButton], texts: &Texts) -> Vec<Row> {
+    let note = form::note_field(mtm, texts.vocabulary_info, form::CONTROLS);
     let offer: Vec<&NSView> = offer.iter().map(|b| -> &NSView { b }).collect();
-    let mut rows: Vec<Vec<Retained<NSView>>> = vec![
-        vec![
-            caption(t("Lowspeak:")).into_super().into_super(),
-            up(&views.offer),
-            empty(),
-        ],
-        vec![empty(), side(mtm, &offer), empty()],
-        vec![
-            titled(t("Transkription:"), &views.transcription),
-            up(&views.transcription),
-            empty(),
-        ],
-        vec![empty(), download_column(mtm, views), empty()],
-        vec![titled(t("Sprache:"), &views.language), up(&views.language), empty()],
-        vec![
-            titled(t("Nachbearbeitung:"), &views.post_processing),
-            up(&views.post_processing),
-            empty(),
-        ],
-        vec![
-            titled(t("Mikrofon:"), &views.microphone),
-            up(&views.microphone),
-            empty(),
-        ],
-        vec![
-            titled(t("Vokabular:"), &views.vocabulary),
-            up(&views.vocabulary),
-            empty(),
-        ],
-        vec![empty(), note.into_super().into_super(), empty()],
+    let mut rows = vec![
+        Row::new(mtm, t("Lowspeak:"), &views.offer),
+        Row::under(&form::line(mtm, &offer)),
+        Row::new(mtm, t("Transkription:"), &views.transcription),
+        Row::under(&download_column(mtm, views)),
+        Row::new(mtm, t("Sprache:"), &views.language),
+        Row::new(mtm, t("Nachbearbeitung:"), &views.post_processing),
+        Row::new(mtm, t("Mikrofon:"), &views.microphone),
+        Row::new(mtm, t("Vokabular:"), &views.vocabulary),
+        Row::under(&note),
     ];
     for (n, row) in views.keys.iter().enumerate() {
-        let title = if n == 0 { t("API-Schlüssel:") } else { "" };
-        rows.push(vec![
-            caption(title).into_super().into_super(),
-            up(&row.state),
-            side(mtm, &[&row.change, &row.remove]),
-        ]);
+        rows.push(if n == 0 {
+            Row::new(mtm, t("API-Schlüssel:"), &row.state)
+        } else {
+            Row::under(&row.state)
+        });
+        rows.push(Row::under(&form::line(mtm, &[&row.change, &row.remove])));
     }
-    rows.push(vec![
-        caption(t("fn-Taste:")).into_super().into_super(),
-        up(&views.with_fn),
-        empty(),
-    ]);
-    rows.push(vec![empty(), side(mtm, &[&views.fn_note, &views.ask]), empty()]);
+    rows.push(Row::new(mtm, t("fn-Taste:"), &views.with_fn));
+    rows.push(Row::under(&form::line(mtm, &[&views.fn_note, &views.ask])));
     rows
 }
 
 fn layout(mtm: MainThreadMarker, views: &Views, offer: &[&NSButton], texts: &Texts) -> Retained<NSView> {
-    let rows = rows(mtm, views, offer, texts);
-    let count = rows.len();
-    let first_key = count - 2 - views.keys.len();
-    let grid = &views.grid;
-    for row in &rows {
-        grid.addRowWithViews(&NSArray::from_retained_slice(row));
-    }
-    grid.setRowSpacing(10.0);
-    grid.setColumnSpacing(8.0);
-    grid.setRowAlignment(NSGridRowAlignment::FirstBaseline);
-    grid.columnAtIndex(0).setXPlacement(NSGridCellPlacement::Trailing);
-    for row in (0..count).filter(|row| !(first_key..count - 2).contains(row)) {
-        grid.mergeCellsInHorizontalRange_verticalRange(NSRange::new(1, 2), NSRange::new(row, 1));
-    }
-    let view = NSView::new(mtm);
-    view.addSubview(grid);
-    grid.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        grid.leadingAnchor()
-            .constraintEqualToAnchor_constant(&view.leadingAnchor(), 30.0),
-        grid.trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&view.trailingAnchor(), -30.0),
-        grid.topAnchor()
-            .constraintEqualToAnchor_constant(&view.topAnchor(), 24.0),
-        grid.bottomAnchor()
-            .constraintEqualToAnchor_constant(&view.bottomAnchor(), -24.0),
-        view.widthAnchor().constraintGreaterThanOrEqualToConstant(460.0),
-    ] {
-        constraint.setActive(true);
-    }
-    view
+    form::fill(&views.grid, &rows(mtm, views, offer, texts));
+    form::page(mtm, &views.grid)
 }
 
 /// The keys the tab shows, for the self-test: one line per provider.

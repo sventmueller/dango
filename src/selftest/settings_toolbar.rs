@@ -61,9 +61,7 @@ fn counted(index: usize, label: String, mut crowded: Vec<String>) {
         let width = window.contentView().map_or(0.0, |view| view.frame().size.width);
         crowded.push(format!("{label}: {shown} of {all} at {width:.0} pt"));
     }
-    if index == 1 {
-        snapshot(&window, &format!("{}-ci", name()));
-    }
+    snapshot(&window, &format!("{}-{index}", name()));
     step(index + 1, crowded);
 }
 

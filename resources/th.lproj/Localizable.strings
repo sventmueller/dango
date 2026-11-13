@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "ไม่มีการเปลี่ยนแปลงให้ Stash";
 "Löschen …" = "ลบ…";
 "Mit nicht versionierten Dateien" = "รวมไฟล์ที่ไม่ได้ติดตาม";
-"Modell für Commit-Nachrichten:" = "โมเดลสำหรับข้อความ Commit:";
 "Nachricht (freiwillig)" = "ข้อความ (ไม่บังคับ)";
 "Neu erzeugen" = "สร้างใหม่";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "บันทึกเอกสารได้ไม่ครบทุกรายการ Stash จึงรออยู่";

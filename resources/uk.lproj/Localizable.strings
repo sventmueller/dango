@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Немає змін для stash.";
 "Löschen …" = "Видалити…";
 "Mit nicht versionierten Dateien" = "Разом із невідстежуваними файлами";
-"Modell für Commit-Nachrichten:" = "Модель для повідомлень комітів:";
 "Nachricht (freiwillig)" = "Повідомлення (необовʼязково)";
 "Neu erzeugen" = "Створити знову";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Не всі документи вдалося зберегти; stash чекає.";

@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Нет изменений для сохранения в stash.";
 "Löschen …" = "Удалить…";
 "Mit nicht versionierten Dateien" = "Включить неотслеживаемые файлы";
-"Modell für Commit-Nachrichten:" = "Модель для сообщений коммитов:";
 "Nachricht (freiwillig)" = "Сообщение (необязательно)";
 "Neu erzeugen" = "Создать заново";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Не все документы удалось сохранить; stash ожидает.";

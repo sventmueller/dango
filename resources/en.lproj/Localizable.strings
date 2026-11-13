@@ -1383,7 +1383,6 @@
 "Keine Änderungen zum Stashen." = "No changes to stash.";
 "Löschen …" = "Delete…";
 "Mit nicht versionierten Dateien" = "Include Untracked Files";
-"Modell für Commit-Nachrichten:" = "Model for commit messages:";
 "Nachricht (freiwillig)" = "Message (optional)";
 "Neu erzeugen" = "Regenerate";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Not all documents could be saved; the stash is on hold.";

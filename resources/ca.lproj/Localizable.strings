@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "No hi ha canvis per fer stash.";
 "Löschen …" = "Elimina…";
 "Mit nicht versionierten Dateien" = "Inclou els fitxers sense seguiment";
-"Modell für Commit-Nachrichten:" = "Model per als missatges de commit:";
 "Nachricht (freiwillig)" = "Missatge (opcional)";
 "Neu erzeugen" = "Torna a generar";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "No s’han pogut desar tots els documents; l’stash queda en espera.";

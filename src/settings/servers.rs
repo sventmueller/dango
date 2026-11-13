@@ -7,22 +7,20 @@ use std::cell::{OnceCell, RefCell};
 use ide_core::settings::Settings;
 use ide_lsp::CustomServer;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSButton, NSColor, NSControlTextEditingDelegate, NSFont,
-    NSLayoutAttribute, NSLineBreakMode, NSScrollView, NSStackView, NSTableColumn, NSTableView,
-    NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
+    NSAlert, NSAlertFirstButtonReturn, NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSStackView,
+    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
-use super::list_bar;
+use super::{form, list_bar};
 use crate::lsp::LANGUAGE_SERVERS;
-use crate::util::{guarded, label, ns};
+use crate::util::{guarded, ns};
 
-const TABLE_WIDTH: f64 = 520.0;
 const BUILT_IN_HEIGHT: f64 = 190.0;
 const CUSTOM_HEIGHT: f64 = 110.0;
 
@@ -65,10 +63,7 @@ define_class!(
             guarded(None, || {
                 let index: usize = column?.identifier().to_string().parse().ok()?;
                 let row = self.rows(self.is_custom(table)).into_iter().nth(usize::try_from(row).ok()?)?;
-                let cell = label(self.mtm(), row.get(index)?);
-                cell.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-                cell.setToolTip(Some(&ns(&row[index])));
-                Some(cell.into_super().into_super())
+                Some(form::cell(self.mtm(), row.get(index)?))
             })
         }
 
@@ -166,7 +161,7 @@ impl ServersSettings {
     fn set_problem(&self, problem: Option<&str>) {
         let Some(views) = self.ivars().views.get() else { return };
         views.problem.setStringValue(&ns(problem.unwrap_or("")));
-        views.problem.setHidden(problem.is_none());
+        form::show(&views.problem, problem.is_some());
     }
 
     fn store(&self, servers: &[CustomServer]) {
@@ -268,13 +263,13 @@ impl ServersSettings {
     /// The tab's view.
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
-        let (built_in, built_in_scroll) = table(
+        let (built_in, built_in_scroll) = form::table(
             mtm,
             self,
             &[(t("Sprache"), 110.0), (t("Server"), 400.0)],
             BUILT_IN_HEIGHT,
         );
-        let (custom, custom_scroll) = table(
+        let (custom, custom_scroll) = form::table(
             mtm,
             self,
             &[(t("Name"), 110.0), (t("Dateiendungen"), 120.0), (t("Befehl"), 280.0)],
@@ -294,25 +289,18 @@ impl ServersSettings {
             self,
             sel!(ideRemoveLanguageServer:),
         );
-        let problem = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-        problem.setTextColor(Some(&NSColor::systemRedColor()));
-        problem.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-        problem.setHidden(true);
-        let stack = NSStackView::new(mtm);
-        stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        stack.setAlignment(NSLayoutAttribute::Leading);
-        stack.setSpacing(8.0);
+        let problem = form::problem(mtm);
         let views: [Retained<NSView>; 8] = [
-            heading(mtm, t("Eingebaute Sprachserver")),
-            note(
+            form::heading(mtm, t("Eingebaute Sprachserver")),
+            form::note(
                 mtm,
                 t(
                     "Wo die App den Server jeder Sprache auf diesem Mac findet. Ein Server startet erst, wenn ein Editor eine Datei seiner Sprache in einem vertrauten Ordner öffnet.",
                 ),
             ),
             built_in_scroll,
-            heading(mtm, t("Eigene Sprachserver")),
-            note(
+            form::heading(mtm, t("Eigene Sprachserver")),
+            form::note(
                 mtm,
                 t(
                     "Für weitere Sprachen oder statt eines eingebauten Servers: Dateien mit diesen Endungen gehen an den Befehl, der den Server über Standardein- und -ausgabe startet.",
@@ -322,11 +310,7 @@ impl ServersSettings {
             list_bar::bar(mtm, &[&add, &remove], &[]),
             problem.clone().into_super().into_super(),
         ];
-        for view in &views {
-            stack.addArrangedSubview(view);
-        }
-        stack.setCustomSpacing_afterView(18.0, &views[2]);
-        list_bar::attach(&stack);
+        let stack = form::stack(mtm, &views);
         let _ = self.ivars().views.set(Views {
             built_in,
             custom,
@@ -334,79 +318,8 @@ impl ServersSettings {
             problem,
         });
         self.update_buttons();
-        let view = NSView::new(mtm);
-        view.addSubview(&stack);
-        stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            stack
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&view.leadingAnchor(), 30.0),
-            stack
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -30.0),
-            stack
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&view.topAnchor(), 24.0),
-            stack
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&view.bottomAnchor(), -24.0),
-        ] {
-            constraint.setActive(true);
-        }
-        view
+        form::page(mtm, &stack)
     }
-}
-
-fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let heading = label(mtm, text);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
-    heading.into_super().into_super()
-}
-
-fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    note.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-    note.into_super().into_super()
-}
-
-/// A table with the columns `columns`, titles and widths, whose rows `owner` gives, in its scroll view.
-fn table(
-    mtm: MainThreadMarker,
-    owner: &ServersSettings,
-    columns: &[(&str, f64)],
-    height: f64,
-) -> (Retained<NSTableView>, Retained<NSView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(TABLE_WIDTH, height));
-    let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-    table.setColumnAutoresizingStyle(NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle);
-    for (index, (title, width)) in columns.iter().enumerate() {
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns(&index.to_string()));
-        column.setTitle(&ns(title));
-        column.setWidth(*width);
-        table.addTableColumn(&column);
-    }
-    table.setUsesAlternatingRowBackgroundColors(true);
-    table.setAllowsEmptySelection(true);
-    table.setAccessibilityLabel(Some(&ns(columns[0].0)));
-    // SAFETY: The table holds its data source and delegate weakly; the settings controller keeps `owner` alive.
-    unsafe {
-        table.setDataSource(Some(ProtocolObject::from_ref(owner)));
-        table.setDelegate(Some(ProtocolObject::from_ref(owner)));
-    }
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setBorderType(objc2_app_kit::NSBorderType::BezelBorder);
-    scroll.setDocumentView(Some(&table));
-    table.sizeLastColumnToFit();
-    scroll
-        .widthAnchor()
-        .constraintEqualToConstant(TABLE_WIDTH)
-        .setActive(true);
-    scroll.heightAnchor().constraintEqualToConstant(height).setActive(true);
-    (table, scroll.into_super())
 }
 
 /// What the self-test reads from and does with the tab, through the code its controls run.

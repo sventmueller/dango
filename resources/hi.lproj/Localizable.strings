@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "स्टैश करने के लिए कोई बदलाव नहीं।";
 "Löschen …" = "डिलीट करें…";
 "Mit nicht versionierten Dateien" = "अनट्रैक्ड फ़ाइलें शामिल करें";
-"Modell für Commit-Nachrichten:" = "कमिट संदेशों के लिए मॉडल :";
 "Nachricht (freiwillig)" = "संदेश (वैकल्पिक)";
 "Neu erzeugen" = "फिर से बनाएँ";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "सभी दस्तावेज़ सहेजे नहीं जा सके; स्टैश रुका हुआ है।";

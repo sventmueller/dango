@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Ei muutoksia siirrettäväksi stashiin.";
 "Löschen …" = "Poista…";
 "Mit nicht versionierten Dateien" = "Sisällytä seuraamattomat tiedostot";
-"Modell für Commit-Nachrichten:" = "Commit-viestien malli:";
 "Nachricht (freiwillig)" = "Viesti (valinnainen)";
 "Neu erzeugen" = "Luo uudelleen";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Kaikkia dokumentteja ei voitu tallentaa; stash odottaa.";

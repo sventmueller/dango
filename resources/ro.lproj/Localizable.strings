@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Nu există modificări de pus în stash.";
 "Löschen …" = "Ștergeți…";
 "Mit nicht versionierten Dateien" = "Includeți fișierele neversionate";
-"Modell für Commit-Nachrichten:" = "Model pentru mesajele de commit:";
 "Nachricht (freiwillig)" = "Mesaj (opțional)";
 "Neu erzeugen" = "Generați din nou";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nu toate documentele au putut fi salvate; stashul așteaptă.";

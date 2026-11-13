@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "スタッシュする変更がありません。";
 "Löschen …" = "削除…";
 "Mit nicht versionierten Dateien" = "未追跡のファイルを含める";
-"Modell für Commit-Nachrichten:" = "コミットメッセージ用のモデル:";
 "Nachricht (freiwillig)" = "メッセージ（オプション）";
 "Neu erzeugen" = "再生成";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "一部の書類を保存できなかったため、スタッシュは保留中です。";

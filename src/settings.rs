@@ -7,6 +7,7 @@ mod commit_message;
 #[cfg(feature = "dictation")]
 pub(crate) mod dictation;
 mod editor;
+mod form;
 mod list_bar;
 mod predict;
 mod servers;
@@ -19,13 +20,14 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSFontAttributeName, NSGridView,
-    NSPopUpButton, NSStepper, NSStringDrawing, NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem,
-    NSTextField, NSView, NSViewController, NSWindow, NSWindowStyleMask,
+    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSFontAttributeName, NSPopUpButton,
+    NSStepper, NSStringDrawing, NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem, NSTextField, NSView,
+    NSViewController, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSDictionary, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
+use self::form::Row;
 use crate::util::{guarded, label, ns, set_action, symbol};
 
 pub use stored_rules::remember as remember_claude_rules;
@@ -40,7 +42,7 @@ const AGENT_TAB: isize = 3;
 #[cfg(feature = "selftest")]
 const SERVERS_TAB: isize = 4;
 /// Where the dictation tab sits in the toolbar.
-#[cfg(all(feature = "selftest", feature = "dictation"))]
+#[cfg(feature = "dictation")]
 const DICTATION_TAB: isize = 5;
 
 pub struct Ivars {
@@ -213,7 +215,9 @@ pub fn show(mtm: MainThreadMarker) {
         editor::reload();
         window.makeKeyAndOrderFront(None);
     });
-    fit_agents();
+    fit(AGENTS_TAB);
+    #[cfg(feature = "dictation")]
+    fit(DICTATION_TAB);
 }
 
 /// Where the tab of edit prediction sits in the toolbar: the last.
@@ -277,14 +281,15 @@ pub fn show_agents(mtm: MainThreadMarker) {
 pub fn agents_changed() {
     if let Some(agents) = agents_tab_now() {
         agents.reload();
-        fit_agents();
+        fit(AGENTS_TAB);
     }
 }
 
-/// Sizes the Agents tab to what it shows now, and the window with it while that tab is open.
-fn fit_agents() {
+/// Sizes the tab at `tab` to what it shows now, and the window with it while that tab is open; does nothing while
+/// the window is being built or shown, which measures every tab anyway.
+fn fit(tab: isize) {
     with_window(|cell| {
-        let cell = cell.borrow();
+        let Ok(cell) = cell.try_borrow() else { return };
         let Some((window, _)) = cell.as_ref() else { return };
         let Some(tabs) = window
             .contentViewController()
@@ -292,7 +297,7 @@ fn fit_agents() {
         else {
             return;
         };
-        let page = usize::try_from(AGENTS_TAB)
+        let page = usize::try_from(tab)
             .ok()
             .and_then(|n| tabs.tabViewItems().iter().nth(n))
             .and_then(|item| item.viewController(window.mtm()));
@@ -301,7 +306,7 @@ fn fit_agents() {
         page.setPreferredContentSize(size);
         let Some(content) = window.contentView() else { return };
         let now = content.frame().size;
-        if tabs.selectedTabViewItemIndex() != AGENTS_TAB || (now.width == size.width && now.height == size.height) {
+        if tabs.selectedTabViewItemIndex() != tab || (now.width == size.width && now.height == size.height) {
             return;
         }
         let mut frame = window.frame();
@@ -553,53 +558,28 @@ pub fn show_dictation(mtm: MainThreadMarker) {
     });
 }
 
-fn markdown_row(mtm: MainThreadMarker, controller: &SettingsController, settings: &Settings) -> Vec<Retained<NSView>> {
-    vec![
-        label(mtm, t("Markdown:")).into_super().into_super(),
-        checkbox(
-            controller,
-            t("Markdown-Vorschau automatisch daneben öffnen"),
-            sel!(ideToggleMarkdownPreview:),
-            settings.get(&keys::MARKDOWN_PREVIEW),
-        )
-        .into_super()
-        .into_super(),
-    ]
-}
-
-fn files_row(mtm: MainThreadMarker, controller: &SettingsController, settings: &Settings) -> Vec<Retained<NSView>> {
-    let checkbox = checkbox(
-        controller,
-        t("Ignorierte und versteckte Dateien anzeigen"),
-        sel!(ideToggleShowIgnoredFiles:),
-        settings.get(&keys::SHOW_IGNORED_FILES),
-    );
-    checkbox.setToolTip(Some(&ns(t(
-        "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet.",
-    ))));
-    vec![
-        label(mtm, t("Dateien:")).into_super().into_super(),
-        checkbox.into_super().into_super(),
-    ]
-}
-
 fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retained<NSView> {
     let settings = controller.ivars().settings.borrow();
-    let reopen = checkbox(
-        controller,
+    let toggle = |title: &str, action: objc2::runtime::Sel, on: bool| checkbox(controller, title, action, on);
+    let reopen = toggle(
         t("Beim Start die zuletzt offenen Ordner öffnen"),
         sel!(ideToggleReopen:),
         settings.get(&keys::REOPEN_PROJECTS),
     );
-    let previews = checkbox(
-        controller,
+    let previews = toggle(
         t("Ein Klick auf eine Datei öffnet sie in einem Vorschau-Tab"),
         sel!(ideTogglePreviewTabs:),
         settings.get(&keys::PREVIEW_TABS),
     );
-
-    let format_on_save = checkbox(
-        controller,
+    let files = toggle(
+        t("Ignorierte und versteckte Dateien anzeigen"),
+        sel!(ideToggleShowIgnoredFiles:),
+        settings.get(&keys::SHOW_IGNORED_FILES),
+    );
+    files.setToolTip(Some(&ns(t(
+        "Zeigt im Dateibaum auch, was .gitignore ausschließt oder macOS verbirgt, abgeblendet.",
+    ))));
+    let format_on_save = toggle(
         t("Beim Sichern formatieren"),
         sel!(ideToggleFormatOnSave:),
         settings.get(&keys::FORMAT_ON_SAVE),
@@ -607,40 +587,26 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
     format_on_save.setToolTip(Some(&ns(t(
         "Lässt den Sprachserver eine Datei formatieren, bevor ⌘S sie sichert.",
     ))));
-
-    let size_title = label(mtm, t("Schriftgröße:"));
-    let size_row = font_size_row(mtm, controller, settings.get(&keys::FONT_SIZE), &size_title);
-    let engine_title = label(mtm, t("Suchmaschine:"));
-    let engine = search_engine_popup(mtm, controller, settings.get(&keys::SEARCH_ENGINE), &engine_title);
-
-    let mut rows: Vec<Vec<Retained<NSView>>> = vec![
-        vec![
-            label(mtm, t("Start:")).into_super().into_super(),
-            reopen.into_super().into_super(),
-        ],
-        vec![
-            label(mtm, t("Tabs:")).into_super().into_super(),
-            previews.into_super().into_super(),
-        ],
-        files_row(mtm, controller, &settings),
-        vec![size_title.into_super().into_super(), size_row],
-        vec![
-            label(mtm, t("Code:")).into_super().into_super(),
-            format_on_save.into_super().into_super(),
-        ],
-        markdown_row(mtm, controller, &settings),
-        vec![
-            label(mtm, t("Terminal:")).into_super().into_super(),
-            checkbox(
-                controller,
-                t("Wahltaste als Meta-Taste"),
-                sel!(ideToggleOptionAsMeta:),
-                settings.get(&keys::OPTION_AS_META),
-            )
-            .into_super()
-            .into_super(),
-        ],
-        vec![engine_title.into_super().into_super(), engine],
+    let markdown = toggle(
+        t("Markdown-Vorschau automatisch daneben öffnen"),
+        sel!(ideToggleMarkdownPreview:),
+        settings.get(&keys::MARKDOWN_PREVIEW),
+    );
+    let meta = toggle(
+        t("Wahltaste als Meta-Taste"),
+        sel!(ideToggleOptionAsMeta:),
+        settings.get(&keys::OPTION_AS_META),
+    );
+    let engine = search_engine_popup(mtm, controller, settings.get(&keys::SEARCH_ENGINE));
+    let mut rows = vec![
+        Row::new(mtm, t("Start:"), &reopen),
+        Row::new(mtm, t("Tabs:"), &previews),
+        Row::new(mtm, t("Dateien:"), &files),
+        font_size_row(mtm, controller, settings.get(&keys::FONT_SIZE)),
+        Row::new(mtm, t("Code:"), &format_on_save),
+        Row::new(mtm, t("Markdown:"), &markdown),
+        Row::new(mtm, t("Terminal:"), &meta),
+        Row::new(mtm, t("Suchmaschine:"), &engine),
     ];
     rows.extend(editor::rows(mtm));
     for (path, locked) in settings.problems() {
@@ -648,84 +614,29 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
             Locked::Damaged => t("Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst."),
             Locked::Newer => t("Die Datei stammt von einer neueren Version und bleibt unverändert."),
         };
-        let warning =
-            NSTextField::wrappingLabelWithString(&ns(&tf("{}: {}", &[&path.display().to_string(), reason])), mtm);
+        let warning = form::value(mtm, &tf("{}: {}", &[&path.display().to_string(), reason]));
         warning.setTextColor(Some(&NSColor::systemRedColor()));
-        warning.setPreferredMaxLayoutWidth(360.0);
-        rows.push(vec![
-            label(mtm, "").into_super().into_super(),
-            warning.into_super().into_super(),
-        ]);
+        rows.push(Row::under(&warning));
     }
-    let rows: Vec<Retained<objc2_foundation::NSArray<NSView>>> = rows
-        .iter()
-        .map(|row| objc2_foundation::NSArray::from_retained_slice(row))
-        .collect();
-    let grid = NSGridView::gridViewWithViews(&objc2_foundation::NSArray::from_retained_slice(&rows), mtm);
-    grid.setRowSpacing(12.0);
-    grid.setColumnSpacing(8.0);
-    if let Some(column) = grid.columnAtIndex(0).into() {
-        column.setXPlacement(objc2_app_kit::NSGridCellPlacement::Trailing);
-    }
-    let view = NSView::new(mtm);
-    view.addSubview(&grid);
-    grid.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        grid.leadingAnchor()
-            .constraintEqualToAnchor_constant(&view.leadingAnchor(), 30.0),
-        grid.trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&view.trailingAnchor(), -30.0),
-        grid.topAnchor()
-            .constraintEqualToAnchor_constant(&view.topAnchor(), 24.0),
-        grid.bottomAnchor()
-            .constraintEqualToAnchor_constant(&view.bottomAnchor(), -24.0),
-        view.widthAnchor().constraintGreaterThanOrEqualToConstant(460.0),
-    ] {
-        constraint.setActive(true);
-    }
-    view
+    form::page(mtm, &form::grid(mtm, &rows))
 }
 
-/// The font size and the stepper that changes it, which VoiceOver names by `title`.
-fn font_size_row(
-    mtm: MainThreadMarker,
-    controller: &SettingsController,
-    size: f64,
-    title: &NSTextField,
-) -> Retained<NSView> {
+/// The font size and the stepper that changes it.
+fn font_size_row(mtm: MainThreadMarker, controller: &SettingsController, size: f64) -> Row {
     let size_label = label(mtm, &font_size_text(size));
     let stepper = NSStepper::new(mtm);
-    crate::util::set_title_element(&stepper, title);
     stepper.setMinValue(9.0);
     stepper.setMaxValue(32.0);
     stepper.setIncrement(1.0);
     stepper.setDoubleValue(size);
     set_action(&stepper, controller, sel!(ideFontSizeChanged:));
-    let size_row = NSView::new(mtm);
-    size_row.addSubview(&size_label);
-    size_row.addSubview(&stepper);
-    size_label.setTranslatesAutoresizingMaskIntoConstraints(false);
-    stepper.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        size_label
-            .leadingAnchor()
-            .constraintEqualToAnchor(&size_row.leadingAnchor()),
-        size_label
-            .centerYAnchor()
-            .constraintEqualToAnchor(&size_row.centerYAnchor()),
-        stepper
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&size_label.trailingAnchor(), 8.0),
-        stepper
-            .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor(&size_row.trailingAnchor()),
-        stepper.topAnchor().constraintEqualToAnchor(&size_row.topAnchor()),
-        stepper.bottomAnchor().constraintEqualToAnchor(&size_row.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
+    let line = form::line(mtm, &[&size_label, &stepper]);
+    let row = Row::group(mtm, t("Schriftgröße:"), &line, &size_label);
+    if let Some(caption) = row.caption() {
+        crate::util::set_title_element(&stepper, caption);
     }
     *controller.ivars().font_label.borrow_mut() = Some(size_label);
-    size_row
+    row
 }
 
 /// A checkbox titled `title` that sends `action` to `controller`, ticked when `on`.
@@ -741,15 +652,13 @@ fn checkbox(controller: &SettingsController, title: &str, action: objc2::runtime
     checkbox
 }
 
-/// Where the browser's address field searches, which the user picks by name; VoiceOver names it by `title`.
+/// Where the browser's address field searches, which the user picks by name.
 fn search_engine_popup(
     mtm: MainThreadMarker,
     controller: &SettingsController,
     current: SearchEngine,
-    title: &NSTextField,
 ) -> Retained<NSView> {
     let popup = NSPopUpButton::new(mtm);
-    crate::util::set_title_element(&popup, title);
     for engine in SearchEngine::ALL {
         popup.addItemWithTitle(&ns(engine.name()));
     }

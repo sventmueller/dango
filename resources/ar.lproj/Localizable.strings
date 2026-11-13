@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "لا توجد تغييرات لحفظها في Stash.";
 "Löschen …" = "حذف…";
 "Mit nicht versionierten Dateien" = "تضمين الملفات غير المتتبَّعة";
-"Modell für Commit-Nachrichten:" = "نموذج رسائل Commit:";
 "Nachricht (freiwillig)" = "الرسالة (اختيارية)";
 "Neu erzeugen" = "إعادة الإنشاء";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "تعذر حفظ كل المستندات؛ Stash في الانتظار.";

@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Brak zmian do zapisania w stashu.";
 "Löschen …" = "Usuń…";
 "Mit nicht versionierten Dateien" = "Z nieśledzonymi plikami";
-"Modell für Commit-Nachrichten:" = "Model wiadomości commitów:";
 "Nachricht (freiwillig)" = "Wiadomość (opcjonalnie)";
 "Neu erzeugen" = "Wygeneruj ponownie";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nie udało się zachować wszystkich dokumentów; stash czeka.";

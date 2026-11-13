@@ -9,22 +9,22 @@ use std::path::PathBuf;
 use ide_agent::{Endpoint, Price, ProviderKind, Rule};
 use ide_core::settings::Settings;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSBezelStyle, NSButton, NSColor, NSComboBox,
-    NSControlTextEditingDelegate, NSFont, NSLayoutAttribute, NSLineBreakMode, NSModalResponseOK, NSOpenPanel,
-    NSPopUpButton, NSScrollView, NSSecureTextField, NSStackView, NSTableColumn, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSAlert, NSAlertFirstButtonReturn, NSBezelStyle, NSButton, NSColor, NSComboBox, NSControlTextEditingDelegate,
+    NSLayoutAttribute, NSModalResponseOK, NSOpenPanel, NSPopUpButton, NSScrollView, NSSecureTextField, NSStackView,
+    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
+use super::form::{self, Row};
 use super::list_bar;
 use crate::own_agent::{self, ModelChoice};
-use crate::util::{guarded, label, ns, set_action};
+use crate::util::{guarded, ns, set_action};
 
-pub(super) const TABLE_WIDTH: f64 = 480.0;
 /// The height of the endpoints' table, which lists the services and the user's endpoints.
 const TABLE_HEIGHT: f64 = 120.0;
 /// The height of the other tables, which start empty.
@@ -91,9 +91,7 @@ define_class!(
             guarded(None, || {
                 let index: usize = column?.identifier().to_string().parse().ok()?;
                 let row = self.rows(self.list_of(table)).into_iter().nth(usize::try_from(row).ok()?)?;
-                let cell = label(self.mtm(), row.get(index)?);
-                cell.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-                Some(cell.into_super().into_super())
+                Some(form::cell(self.mtm(), row.get(index)?))
             })
         }
 
@@ -302,7 +300,7 @@ impl AgentSettings {
     fn set_status(&self, text: Option<&str>, problem: bool) {
         let Some(views) = self.ivars().views.get() else { return };
         views.status.setStringValue(&ns(text.unwrap_or("")));
-        views.status.setHidden(text.is_none());
+        form::show(&views.status, text.is_some());
         let colour = if problem {
             NSColor::systemRedColor()
         } else {
@@ -686,20 +684,20 @@ impl AgentSettings {
 impl AgentSettings {
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
-        let (endpoints, endpoints_scroll) = table(
+        let (endpoints, endpoints_scroll) = form::table(
             mtm,
             self,
-            &[(t("Anbieter"), 140.0), (t("Adresse"), 210.0), (t("Schlüssel"), 110.0)],
+            &[(t("Anbieter"), 140.0), (t("Adresse"), 260.0), (t("Schlüssel"), 0.0)],
             TABLE_HEIGHT,
         );
-        let (prices, prices_scroll) = table(
+        let (prices, prices_scroll) = form::table(
             mtm,
             self,
-            &[(t("Modell"), 260.0), (t("Eingabe"), 90.0), (t("Ausgabe"), 90.0)],
+            &[(t("Modell"), 300.0), (t("Eingabe"), 100.0), (t("Ausgabe"), 0.0)],
             SHORT_TABLE,
         );
-        let (rules, rules_scroll) = table(mtm, self, &[(t("Projekt"), 280.0), (t("Regel"), 180.0)], SHORT_TABLE);
-        let (folders, folders_scroll) = table(mtm, self, &[(t("Ordner"), 460.0)], SHORT_TABLE);
+        let (rules, rules_scroll) = form::table(mtm, self, &[(t("Projekt"), 300.0), (t("Regel"), 0.0)], SHORT_TABLE);
+        let (folders, folders_scroll) = form::table(mtm, self, &[(t("Ordner"), 0.0)], SHORT_TABLE);
         let button = |add: bool, title: &str, action: Sel| list_bar::button(mtm, add, title, self, action);
         let add_endpoint = button(true, t("Endpunkt hinzufügen"), sel!(ideAddAgentEndpoint:));
         let remove_endpoint = button(false, t("Endpunkt entfernen"), sel!(ideRemoveAgentEndpoint:));
@@ -711,9 +709,7 @@ impl AgentSettings {
         let add_folder = button(true, t("Ordner erlauben …"), sel!(ideAddAgentFolder:));
         let remove_folder = button(false, t("Ordner entfernen"), sel!(ideRemoveAgentFolder:));
         let (endpoint, model, effort) = self.default_controls();
-        let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-        status.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-        status.setHidden(true);
+        let status = form::problem(mtm);
         let mut views = section(
             mtm,
             t("Anbieter und Endpunkte"),
@@ -725,9 +721,16 @@ impl AgentSettings {
             endpoints_scroll,
             list_bar::bar(mtm, &[&add_endpoint, &remove_endpoint], &[&key, &address]),
             status.clone().into_super().into_super(),
-            heading(mtm, t("Neue Threads")),
-            row(mtm, &[&endpoint, &model]),
-            row(mtm, &[&label(mtm, t("Denktiefe:")), &effort]),
+            form::heading(mtm, t("Neue Threads")),
+            form::grid(
+                mtm,
+                &[
+                    Row::new(mtm, t("Anbieter:"), &endpoint),
+                    Row::new(mtm, t("Modell:"), &model),
+                    Row::new(mtm, t("Denktiefe:"), &effort),
+                ],
+            )
+            .into_super(),
         ]);
         views.extend(section(
             mtm,
@@ -747,11 +750,7 @@ impl AgentSettings {
             t("Mit eingeschalteter Sandbox erreichen die Datei- und Webwerkzeuge des eigenen Agenten nur das Projekt, den temporären Ordner und diese Ordner; Befehle schreiben nirgends sonst hin, und es gibt kein Netzwerk. Gilt für Threads, die danach starten."),
         ));
         views.extend([folders_scroll, list_bar::bar(mtm, &[&add_folder, &remove_folder], &[])]);
-        views.extend(super::commit_message::views(
-            mtm,
-            |text| note(mtm, text),
-            |text| heading(mtm, text),
-        ));
+        views.extend(super::commit_message::views(mtm));
         let _ = self.ivars().views.set(Views {
             endpoints,
             prices,
@@ -793,35 +792,28 @@ impl AgentSettings {
 
 /// A section's heading and the note under it.
 fn section(mtm: MainThreadMarker, title: &str, text: &str) -> Vec<Retained<NSView>> {
-    vec![heading(mtm, title), note(mtm, text)]
+    vec![form::heading(mtm, title), form::note(mtm, text)]
 }
 
 /// The views one under another, in a scroll view no taller than a small screen shows whole.
 fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView> {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-    stack.setAlignment(NSLayoutAttribute::Leading);
-    stack.setSpacing(8.0);
-    for view in views {
-        stack.addArrangedSubview(view);
-    }
-    list_bar::attach(&stack);
+    let stack = form::stack(mtm, views);
     let document = crate::agent_panel::flipped(mtm);
     document.addSubview(&stack);
     stack.setTranslatesAutoresizingMaskIntoConstraints(false);
     for constraint in [
         stack
             .leadingAnchor()
-            .constraintEqualToAnchor_constant(&document.leadingAnchor(), 30.0),
+            .constraintEqualToAnchor_constant(&document.leadingAnchor(), form::MARGIN),
         stack
             .trailingAnchor()
-            .constraintEqualToAnchor_constant(&document.trailingAnchor(), -30.0),
+            .constraintEqualToAnchor_constant(&document.trailingAnchor(), -form::MARGIN),
         stack
             .topAnchor()
-            .constraintEqualToAnchor_constant(&document.topAnchor(), 24.0),
+            .constraintEqualToAnchor_constant(&document.topAnchor(), form::MARGIN),
         stack
             .bottomAnchor()
-            .constraintEqualToAnchor_constant(&document.bottomAnchor(), -24.0),
+            .constraintEqualToAnchor_constant(&document.bottomAnchor(), -form::MARGIN),
     ] {
         constraint.setActive(true);
     }
@@ -851,72 +843,12 @@ fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView
     scroll.into_super()
 }
 
-fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let heading = label(mtm, text);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
-    heading.into_super().into_super()
-}
-
-fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
-    let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    note.setPreferredMaxLayoutWidth(TABLE_WIDTH);
-    note.into_super().into_super()
-}
-
-/// A table with the columns `columns` (title, width), whose rows `owner` gives, in its scroll view.
-fn table(
-    mtm: MainThreadMarker,
-    owner: &AgentSettings,
-    columns: &[(&str, f64)],
-    height: f64,
-) -> (Retained<NSTableView>, Retained<NSView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(TABLE_WIDTH, height));
-    let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-    for (n, (title, width)) in columns.iter().enumerate() {
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns(&n.to_string()));
-        column.setTitle(&ns(title));
-        column.setWidth(*width);
-        table.addTableColumn(&column);
-    }
-    table.setUsesAlternatingRowBackgroundColors(true);
-    table.setAllowsEmptySelection(true);
-    table.setAccessibilityLabel(Some(&ns(columns[0].0)));
-    // SAFETY: The table holds its data source and delegate weakly; the settings controller keeps `owner` alive.
-    unsafe {
-        table.setDataSource(Some(ProtocolObject::from_ref(owner)));
-        table.setDelegate(Some(ProtocolObject::from_ref(owner)));
-    }
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setBorderType(objc2_app_kit::NSBorderType::BezelBorder);
-    scroll.setDocumentView(Some(&table));
-    scroll
-        .widthAnchor()
-        .constraintEqualToConstant(TABLE_WIDTH)
-        .setActive(true);
-    scroll.heightAnchor().constraintEqualToConstant(height).setActive(true);
-    (table, scroll.into_super())
-}
-
 fn text_button(mtm: MainThreadMarker, owner: &AgentSettings, title: &str, action: Sel) -> Retained<NSButton> {
     // SAFETY: A nil target sends nothing until `set_action` gives the button its target and action.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
     set_action(&button, owner, action);
     button.setBezelStyle(NSBezelStyle::SmallSquare);
     button
-}
-
-fn row(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(4.0);
-    for view in views {
-        row.addArrangedSubview(view);
-    }
-    row.into_super()
 }
 
 /// What the self-test reads from and does with the Agent tab, through the code its controls run.

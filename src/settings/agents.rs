@@ -28,11 +28,7 @@ use splat_i18n::{t, tf};
 use crate::agent::AcpAgent;
 use crate::util::{guarded, main_soon, ns, set_action};
 
-/// The width of the tab's groups.
-const WIDTH: f64 = 520.0;
-
-/// The room around the groups.
-const MARGIN: f64 = 20.0;
+use super::form::{self, MARGIN, WIDTH};
 
 /// The tallest the groups get before they scroll.
 const MAX_HEIGHT: f64 = 560.0;
@@ -397,45 +393,38 @@ impl AgentsSettings {
     /// past `MAX_HEIGHT`.
     pub fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
-        let note = NSTextField::wrappingLabelWithString(
-            &ns(t(
-                "Die Agenten, mit denen du AI-Threads startest. Bereit ist ein Agent, dessen Programm im PATH der Login-Shell liegt oder den diese App installiert hat.",
-            )),
-            mtm,
-        );
-        note.setFont(Some(&crate::agent::style::small()));
-        note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        note.setPreferredMaxLayoutWidth(WIDTH);
         let agents = self.ivars().agents.get_or_init(|| group_lines(mtm));
         let register = self.ivars().register.get_or_init(|| group_lines(mtm));
         self.reload();
-        let content = NSStackView::new(mtm);
-        content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        content.setAlignment(NSLayoutAttribute::Leading);
-        content.setSpacing(16.0);
-        content.setEdgeInsets(crate::agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
-        content.addArrangedSubview(&note);
-        content.setCustomSpacing_afterView(10.0, &note);
-        for lines in [agents, register] {
-            let group = crate::agent::framed(
+        let mut views = vec![
+            form::heading(mtm, t("Agenten")),
+            form::note(
                 mtm,
-                lines,
-                &NSColor::separatorColor(),
-                Some(&NSColor::quaternarySystemFillColor()),
-                8.0,
-                crate::agent::insets(0.0, 0.0, 0.0, 0.0),
-            );
-            content.addArrangedSubview(&group);
-            group.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-        }
-        let rules = self.ivars().rules.views();
-        for view in &rules {
-            content.addArrangedSubview(view);
-        }
-        if let Some(heading) = rules.first() {
-            content.setCustomSpacing_afterView(6.0, heading);
-        }
-        super::list_bar::attach(&content);
+                t(
+                    "Die Agenten, mit denen du AI-Threads startest. Bereit ist ein Agent, dessen Programm im PATH der Login-Shell liegt oder den diese App installiert hat.",
+                ),
+            ),
+        ];
+        let groups: Vec<Retained<NSView>> = [agents, register]
+            .into_iter()
+            .map(|lines| {
+                let group = crate::agent::framed(
+                    mtm,
+                    lines,
+                    &NSColor::separatorColor(),
+                    Some(&NSColor::quaternarySystemFillColor()),
+                    8.0,
+                    crate::agent::insets(0.0, 0.0, 0.0, 0.0),
+                );
+                group.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
+                group.into_super()
+            })
+            .collect();
+        views.extend(groups.iter().cloned());
+        views.extend(self.ivars().rules.views());
+        let content = form::stack(mtm, &views);
+        content.setCustomSpacing_afterView(12.0, &groups[0]);
+        content.setEdgeInsets(crate::agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
         scrolling(mtm, &content)
     }
 

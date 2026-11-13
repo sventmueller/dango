@@ -6,13 +6,12 @@ use std::cell::RefCell;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
-use objc2_app_kit::{
-    NSButton, NSControlStateValueOff, NSControlStateValueOn, NSMenuItem, NSPopUpButton, NSStackView, NSView,
-};
+use objc2_app_kit::{NSButton, NSControlStateValueOff, NSControlStateValueOn, NSMenuItem, NSPopUpButton};
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
-use crate::util::{guarded, label, ns, set_action};
+use super::form::Row;
+use crate::util::{guarded, ns, set_action};
 
 pub struct EditorIvars {
     views: RefCell<Option<Views>>,
@@ -111,8 +110,8 @@ impl EditorSettings {
     }
 }
 
-/// The rows of the General tab for the editor's switches, each a title and its controls.
-pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
+/// The rows of the General tab for the editor's switches.
+pub fn rows(mtm: MainThreadMarker) -> Vec<Row> {
     let target = EditorSettings::new(mtm);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let hints = unsafe { NSButton::checkboxWithTitle_target_action(&ns(t("Im Editor zeigen")), None, None, mtm) };
@@ -129,14 +128,7 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
             crate::util::set_target(&item, &target);
         }
     }
-    let hint_row = NSStackView::stackViewWithViews(
-        &objc2_foundation::NSArray::from_retained_slice(&[
-            hints.clone().into_super().into_super(),
-            languages.clone().into_super().into_super().into_super(),
-        ]),
-        mtm,
-    );
-    hint_row.setSpacing(12.0);
+    let hint_row = super::form::line(mtm, &[&hints, &languages]);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let blame =
         unsafe { NSButton::checkboxWithTitle_target_action(&ns(t("Am Ende der Cursorzeile zeigen")), None, None, mtm) };
@@ -144,6 +136,10 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
     blame.setToolTip(Some(&ns(t(
         "Zeigt nach kurzer Ruhe, wer die Zeile zuletzt geändert hat, nur in vertrauten Ordnern.",
     ))));
+    let rows = vec![
+        Row::group(mtm, t("Inlay-Hinweise:"), &hint_row, &hints),
+        Row::new(mtm, t("Blame:"), &blame),
+    ];
     *target.ivars().views.borrow_mut() = Some(Views {
         hints,
         languages,
@@ -151,16 +147,7 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Vec<Retained<NSView>>> {
     });
     target.reload();
     with_tab(|tab| *tab.borrow_mut() = Some(target));
-    vec![
-        vec![
-            label(mtm, t("Inlay-Hinweise:")).into_super().into_super(),
-            hint_row.into_super(),
-        ],
-        vec![
-            label(mtm, t("Blame:")).into_super().into_super(),
-            blame.into_super().into_super(),
-        ],
-    ]
+    rows
 }
 
 /// Shows the editor's switches as the settings are now, when the window comes to the front.

@@ -9,18 +9,17 @@ use ide_core::settings::Settings;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
-use objc2_app_kit::{NSBezelStyle, NSButton, NSColor, NSComboBox, NSFont, NSPopUpButton, NSTextField, NSView};
+use objc2_app_kit::{NSBezelStyle, NSButton, NSComboBox, NSPopUpButton, NSTextField, NSView};
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
+use super::form::{self, Row};
 use crate::git_panel::message::source::{self, CLAUDE, CONSENT, MODEL};
 use crate::own_agent::{self, ModelChoice};
-use crate::util::{guarded, label, ns, set_action};
+use crate::util::{guarded, ns, set_action};
 
-use super::agent::TABLE_WIDTH;
-
-/// The width of the model field, as in the row for new threads less what the provider's title needs here.
-const MODEL_WIDTH: f64 = 180.0;
+/// The width of the model field, as in the row for new threads.
+const MODEL_WIDTH: f64 = 260.0;
 
 pub struct Ivars {
     endpoints: RefCell<Vec<Endpoint>>,
@@ -76,11 +75,7 @@ fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<CommitMessageSettings>>
 }
 
 /// The heading, notes and controls of the part, for the Agent tab's column of views.
-pub fn views(
-    mtm: MainThreadMarker,
-    note: impl Fn(&str) -> Retained<NSView>,
-    heading: impl Fn(&str) -> Retained<NSView>,
-) -> Vec<Retained<NSView>> {
+pub fn views(mtm: MainThreadMarker) -> Vec<Retained<NSView>> {
     let this = CommitMessageSettings::alloc(mtm).set_ivars(Ivars {
         endpoints: RefCell::new(Vec::new()),
         views: OnceCell::new(),
@@ -96,7 +91,7 @@ pub fn views(
     );
     endpoint
         .widthAnchor()
-        .constraintLessThanOrEqualToConstant(TABLE_WIDTH - MODEL_WIDTH - 4.0)
+        .constraintLessThanOrEqualToConstant(form::CONTROLS)
         .setActive(true);
     let model = NSComboBox::new(mtm);
     model.setCompletes(true);
@@ -105,30 +100,38 @@ pub fn views(
         .constraintEqualToConstant(MODEL_WIDTH)
         .setActive(true);
     set_action(&model, &this, sel!(ideCommitMessageModel:));
-    crate::util::set_label(&model, Some(t("Modell")));
-    let allowed = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-    allowed.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
-    allowed.setPreferredMaxLayoutWidth(TABLE_WIDTH);
+    let allowed = form::value(mtm, "");
     // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
     let revoke =
         unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Erlaubnisse zurücknehmen")), None, None, mtm) };
     set_action(&revoke, &this, sel!(ideCommitMessageRevoke:));
     revoke.setBezelStyle(NSBezelStyle::Push);
-    let caption = label(mtm, t("Modell für Commit-Nachrichten:"));
-    crate::util::set_title_element(&endpoint, &caption);
-    crate::util::set_title_element(&model, &caption);
-    let views = vec![
-        heading(t("Commit-Nachrichten")),
-        note(t(
-            "Der Knopf im Commit-Feld lässt ein Modell die Nachricht schreiben. Ohne gewähltes Modell schreibt claude mit einem kleinen Modell und ohne Werkzeuge. Vorher prüft gitleaks den Text auf Secrets; bei einem Fund geht nichts hinaus.",
-        )),
-        caption.into_super().into_super(),
-        row(mtm, &[&endpoint, &model]),
-        allowed.clone().into_super().into_super(),
-        revoke.clone().into_super().into_super(),
-        note(t(
+    let consent = form::note_field(
+        mtm,
+        t(
             "Anbieter außerhalb des Macs fragen einmal um Erlaubnis. Ollama und LM Studio auf diesem Mac brauchen keine: Der Code verlässt den Mac nicht.",
-        )),
+        ),
+        form::CONTROLS,
+    );
+    let grid = form::grid(
+        mtm,
+        &[
+            Row::new(mtm, t("Anbieter:"), &endpoint),
+            Row::new(mtm, t("Modell:"), &model),
+            Row::new(mtm, t("Erlaubnis:"), &allowed),
+            Row::under(&revoke),
+            Row::under(&consent),
+        ],
+    );
+    let views = vec![
+        form::heading(mtm, t("Commit-Nachrichten")),
+        form::note(
+            mtm,
+            t(
+                "Der Knopf im Commit-Feld lässt ein Modell die Nachricht schreiben. Ohne gewähltes Modell schreibt claude mit einem kleinen Modell und ohne Werkzeuge. Vorher prüft gitleaks den Text auf Secrets; bei einem Fund geht nichts hinaus.",
+            ),
+        ),
+        grid.into_super(),
     ];
     let _ = this.ivars().views.set(Views {
         endpoint,
@@ -139,16 +142,6 @@ pub fn views(
     this.fill();
     with_shown(|shown| *shown.borrow_mut() = Some(this));
     views
-}
-
-fn row(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
-    let row = objc2_app_kit::NSStackView::new(mtm);
-    row.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(6.0);
-    for view in views {
-        row.addArrangedSubview(view);
-    }
-    row.into_super()
 }
 
 /// What the line about consent says: the providers allowed so far, or that there are none.
@@ -199,7 +192,6 @@ impl CommitMessageSettings {
         views.model.setPlaceholderString(automatic.as_deref());
         let consent = settings.get(&CONSENT);
         views.allowed.setStringValue(&ns(&allowed_text(&consent, &endpoints)));
-        views.allowed.setTextColor(Some(&NSColor::secondaryLabelColor()));
         views.revoke.setEnabled(!consent.is_empty());
         *self.ivars().endpoints.borrow_mut() = endpoints;
         self.fill_models();
@@ -301,7 +293,7 @@ pub mod selftest {
         ]
         .into_iter()
         .fold(0.0, f64::max);
-        Some((reach, super::TABLE_WIDTH))
+        Some((reach, super::form::CONTROLS))
     }
 
     /// Takes every permission back, as the button does.

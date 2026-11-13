@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Ingen endringer å stashe.";
 "Löschen …" = "Slett…";
 "Mit nicht versionierten Dateien" = "Ta med filer som ikke er sporet";
-"Modell für Commit-Nachrichten:" = "Modell for commit-meldinger:";
 "Nachricht (freiwillig)" = "Melding (valgfritt)";
 "Neu erzeugen" = "Generer på nytt";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Ikke alle dokumentene kunne lagres; stashen venter.";

@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Nema promjena za spremanje u stash.";
 "Löschen …" = "Obriši…";
 "Mit nicht versionierten Dateien" = "Uključi nepraćene datoteke";
-"Modell für Commit-Nachrichten:" = "Model za poruke commita:";
 "Nachricht (freiwillig)" = "Poruka (neobavezno)";
 "Neu erzeugen" = "Generiraj ponovno";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nije bilo moguće spremiti sve dokumente; stash čeka.";

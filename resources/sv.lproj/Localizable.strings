@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Inga ändringar att stasha.";
 "Löschen …" = "Radera…";
 "Mit nicht versionierten Dateien" = "Inkludera ospårade filer";
-"Modell für Commit-Nachrichten:" = "Modell för commit-meddelanden:";
 "Nachricht (freiwillig)" = "Meddelande (valfritt)";
 "Neu erzeugen" = "Skapa igen";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Alla dokument kunde inte sparas; stashen väntar.";

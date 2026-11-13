@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Không có thay đổi nào để stash.";
 "Löschen …" = "Xóa…";
 "Mit nicht versionierten Dateien" = "Bao gồm tệp chưa theo dõi";
-"Modell für Commit-Nachrichten:" = "Mô hình cho thông điệp commit:";
 "Nachricht (freiwillig)" = "Thông điệp (tùy chọn)";
 "Neu erzeugen" = "Tạo lại";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Không thể lưu tất cả tài liệu; stash đang chờ.";

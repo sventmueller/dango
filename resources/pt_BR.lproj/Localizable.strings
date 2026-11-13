@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Nenhuma alteração para fazer stash.";
 "Löschen …" = "Apagar…";
 "Mit nicht versionierten Dateien" = "Incluir Arquivos Não Rastreados";
-"Modell für Commit-Nachrichten:" = "Modelo para mensagens de commit:";
 "Nachricht (freiwillig)" = "Mensagem (opcional)";
 "Neu erzeugen" = "Gerar Novamente";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Nem todos os documentos puderam ser salvos; o stash está aguardando.";

@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Stash’lenecek değişiklik yok.";
 "Löschen …" = "Sil…";
 "Mit nicht versionierten Dateien" = "İzlenmeyen Dosyalarla Birlikte";
-"Modell für Commit-Nachrichten:" = "Commit iletileri için model:";
 "Nachricht (freiwillig)" = "İleti (isteğe bağlı)";
 "Neu erzeugen" = "Yeniden Oluştur";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Tüm belgeler kaydedilemedi; stash bekliyor.";

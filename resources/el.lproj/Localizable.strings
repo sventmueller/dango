@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Δεν υπάρχουν αλλαγές για stash.";
 "Löschen …" = "Διαγραφή…";
 "Mit nicht versionierten Dateien" = "Μαζί με μη παρακολουθούμενα αρχεία";
-"Modell für Commit-Nachrichten:" = "Μοντέλο για μηνύματα commit:";
 "Nachricht (freiwillig)" = "Μήνυμα (προαιρετικό)";
 "Neu erzeugen" = "Νέα δημιουργία";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Δεν ήταν δυνατή η αποθήκευση όλων των εγγράφων. Το stash είναι σε αναμονή.";

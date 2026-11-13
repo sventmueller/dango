@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "Aucune modification à placer dans un stash.";
 "Löschen …" = "Supprimer…";
 "Mit nicht versionierten Dateien" = "Inclure les fichiers non suivis";
-"Modell für Commit-Nachrichten:" = "Modèle pour les messages de commit :";
 "Nachricht (freiwillig)" = "Message (facultatif)";
 "Neu erzeugen" = "Régénérer";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "Tous les documents n’ont pas pu être enregistrés ; le stash est en attente.";

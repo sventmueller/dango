@@ -1346,7 +1346,6 @@
 "Keine Änderungen zum Stashen." = "没有可储藏的更改。";
 "Löschen …" = "删除…";
 "Mit nicht versionierten Dateien" = "包括未跟踪的文件";
-"Modell für Commit-Nachrichten:" = "提交信息使用的模型：";
 "Nachricht (freiwillig)" = "信息（可选）";
 "Neu erzeugen" = "重新生成";
 "Nicht alle Dokumente ließen sich sichern; der Stash wartet." = "未能保存所有文稿；储藏正在等待。";
