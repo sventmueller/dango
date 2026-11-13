@@ -316,6 +316,9 @@ fn counted(
             .map_err(|e| e.to_string())?
             .to_string_lossy()
             .into_owned();
+        if is_test_only(&file) {
+            continue;
+        }
         counted.push(match measured.get(&source) {
             Some(&(covered, lines)) => FileCoverage {
                 file,
@@ -359,6 +362,18 @@ fn rust_files(folder: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
 /// which its report leaves out, or a crate's entry points for its fuzz targets, built only with the feature `fuzzing`.
 fn is_not_counted(name: &str) -> bool {
     matches!(name, "build.rs" | "tests.rs" | "fuzzing.rs") || name.ends_with("_tests.rs") || name.ends_with("-tests.rs")
+}
+
+/// Code that exists only to test the rest, at `file` from the workspace root: the window self-test scenarios and their
+/// hooks, and the ACP test agent with its recorder. xtask's self-test runner is tooling and counts.
+fn is_test_only(file: &str) -> bool {
+    file == "src/selftest.rs"
+        || file.starts_with("src/selftest/")
+        || (file.ends_with("/selftest.rs") && !file.starts_with("xtask/"))
+        || file.contains("/selftest/")
+        || file == "crates/ide-ui-terminal/src/inspect.rs"
+        || file == "crates/ide-acp/src/test_agent.rs"
+        || file.starts_with("crates/ide-acp/src/bin/")
 }
 
 /// Every source file the instrumented build compiled, from the dep-info files cargo writes beside each artifact in
@@ -658,6 +673,24 @@ mod tests {
         }
         for name in ["contests.rs", "tests_support.rs", "lib.rs"] {
             assert!(!is_not_counted(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn self_test_code_and_the_acp_test_agent_are_not_counted() {
+        for file in [
+            "src/selftest.rs",
+            "src/selftest/git/stash.rs",
+            "src/debug/selftest.rs",
+            "crates/ide-ui-dictation/src/hub/selftest.rs",
+            "crates/ide-ui-terminal/src/inspect.rs",
+            "crates/ide-acp/src/test_agent.rs",
+            "crates/ide-acp/src/bin/acp-record.rs",
+        ] {
+            assert!(is_test_only(file), "{file}");
+        }
+        for file in ["xtask/src/selftest.rs", "src/debug/session.rs", "crates/ide-acp/src/session.rs"] {
+            assert!(!is_test_only(file), "{file}");
         }
     }
 

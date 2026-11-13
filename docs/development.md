@@ -81,9 +81,11 @@ no llvm-tools, so it builds with rustup's toolchain of `rust-toolchain.toml` (`r
 minutes, about 15 of them the self-tests. A launch that is killed, such as the first one of `recovery`, writes no
 coverage data.
 
-Counted is every Rust file in `src/`, `crates/*/src` and `xtask/src`, the selftest code under `src/selftest` included,
-except `tests/`, `benches/`, `examples/` and `fuzz/` folders, build scripts, the unit test files cargo-llvm-cov leaves
-out (`tests.rs`, `*_tests.rs`) and the fuzz targets' entry points `fuzzing.rs`. A file the build compiled without code
+Counted is every Rust file in `src/`, `crates/*/src` and `xtask/src`, except `tests/`, `benches/`, `examples/` and
+`fuzz/` folders, build scripts, the unit test files cargo-llvm-cov leaves out (`tests.rs`, `*_tests.rs`), the fuzz
+targets' entry points `fuzzing.rs`, and code that only exists to test the rest: the selftest scenarios and hooks
+(`src/selftest*`, `*/selftest.rs`, `selftest/` folders, the terminal's `inspect.rs`) and the ACP test agent with its
+recorder. xtask's selftest runner is tooling and counts. A file the build compiled without code
 to run (only `mod` lines or types) counts with no lines; a file no instrumented program contains counts with its code
 lines as uncovered. The results are in `target/coverage/`: `coverage.txt` (the summary,
 then folders and files, lowest first), `files.json` (the same per file) and `llvm-cov.json` (llvm-cov's export).
