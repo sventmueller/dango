@@ -225,6 +225,7 @@ impl Surface {
         // With `presentsWithTransaction`, the drawable may only be presented once its commands are scheduled.
         buffer.waitUntilScheduled();
         drawable.present();
+        self.sprites.read_by(buffer);
     }
 
     /// The BGRA pixels of the frame `paint` makes, `width` × `height` pixels large; none on a GPU whose memory the
