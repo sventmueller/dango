@@ -64,7 +64,7 @@ pub mod selftest {
     use ide_ci::State;
     use objc2::rc::Retained;
 
-    pub use super::model::Tab;
+    pub use super::model::{Key, Tab};
     use super::panel::{self, CiPanel};
     use crate::window::WindowController;
 
@@ -135,27 +135,6 @@ pub mod selftest {
         }
     }
 
-    /// Re-runs every job of `run`, as its menu item does.
-    pub fn rerun_all(controller: &WindowController, run: u64) {
-        if let Some(panel) = panel(controller) {
-            panel.rerun_all(panel.find_run(run));
-        }
-    }
-
-    /// Starts the finished `job` again, as its menu item does.
-    pub fn retry_job(controller: &WindowController, run: u64, job: u64) {
-        if let Some(panel) = panel(controller) {
-            panel.retry_job(panel.find_job(run, job));
-        }
-    }
-
-    /// Starts the waiting `job`, as its menu item does.
-    pub fn start_job(controller: &WindowController, run: u64, job: u64) {
-        if let Some(panel) = panel(controller) {
-            panel.start_job(panel.find_job(run, job));
-        }
-    }
-
     /// Asks to start a run for the branch, as the header's button does.
     pub fn start_run(controller: &WindowController) {
         if let Some(panel) = panel(controller) {
@@ -171,6 +150,42 @@ pub mod selftest {
     /// The titles of the context menu of `key`'s row and whether each can be chosen.
     pub fn menu_of_job(controller: &WindowController, run: u64, job: u64) -> Vec<(String, bool)> {
         panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::model::Key::Job(run, job)))
+    }
+
+    /// The titles of the context menu of `run`'s row and whether each can be chosen.
+    pub fn menu_of_run(controller: &WindowController, run: u64) -> Vec<(String, bool)> {
+        panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::model::Key::Run(run)))
+    }
+
+    /// The titles of the context menu of the row of the merge request or issue `number`.
+    pub fn menu_of_item(controller: &WindowController, number: u64) -> Vec<(String, bool)> {
+        panel(controller).map_or_else(Vec::new, |p| p.menu_titles(super::model::Key::Item(number)))
+    }
+
+    /// Chooses `action` in the context menu of `key`'s row, as a click on its item does.
+    pub fn choose_in_menu(controller: &WindowController, key: Key, action: objc2::runtime::Sel) {
+        let (Some(panel), Some(mtm)) = (panel(controller), objc2::MainThreadMarker::new()) else {
+            return;
+        };
+        panel.state().menu_keys = vec![key];
+        let item = objc2_app_kit::NSMenuItem::new(mtm);
+        // SAFETY: The panel's own action with a menu item as the sender, as AppKit sends it from the context menu.
+        unsafe {
+            objc2_app_kit::NSApplication::sharedApplication(mtm).sendAction_to_from(action, Some(&panel), Some(&item))
+        };
+    }
+
+    /// The lines of the account button's menu and whether each can be chosen, separators left out.
+    pub fn account_menu(controller: &WindowController) -> Vec<(String, bool)> {
+        let Some(panel) = panel(controller) else {
+            return Vec::new();
+        };
+        let menu = panel.ui().account_menu(&panel);
+        menu.itemArray()
+            .iter()
+            .filter(|item| !item.isSeparatorItem())
+            .map(|item| (item.title().to_string(), item.isEnabled()))
+            .collect()
     }
 
     /// Re-runs the failed jobs of `run`, as its menu item does.

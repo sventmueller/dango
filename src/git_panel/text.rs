@@ -194,4 +194,117 @@ mod tests {
         assert!(changes.message.contains("a, b, c, …"), "{}", changes.message);
         assert_eq!(changes.output, None);
     }
+
+    #[test]
+    fn what_git_printed_comes_along_unless_it_is_blank() {
+        let output = || "fatal: details\n".to_string();
+        let printed = [
+            Error::UnsafeRepository {
+                path: PathBuf::from("/r"),
+                output: output(),
+            },
+            Error::AuthFailed { output: output() },
+            Error::Network { output: output() },
+            Error::LocalChanges {
+                paths: Vec::new(),
+                output: output(),
+            },
+            Error::NotFastForward { output: output() },
+            Error::NoUpstream { output: output() },
+            Error::PushRejected {
+                refs: Vec::new(),
+                output: output(),
+            },
+            Error::NotMerged {
+                branch: "topic".into(),
+                output: output(),
+            },
+            Error::PatchDoesNotApply { output: output() },
+        ];
+        for error in printed {
+            let problem = problem(&error);
+            assert_eq!(problem.output.as_deref(), Some("fatal: details"), "{error:?}");
+            assert!(
+                !problem.message.is_empty() && !problem.hook && !problem.conflicts,
+                "{error:?}"
+            );
+        }
+        assert_eq!(problem(&Error::Network { output: " \n".into() }).output, None);
+        let failed = problem(&Error::Failed {
+            command: "git push".into(),
+            code: Some(1),
+            output: "denied".into(),
+        });
+        assert_eq!(failed.output.as_deref(), Some("git push failed (1): denied"));
+        let io = problem(&Error::Io(std::io::Error::other("disk full")));
+        assert_eq!(io.output.as_deref(), Some("disk full"));
+    }
+
+    #[test]
+    fn errors_without_output_name_what_they_are_about() {
+        let plain = [
+            (Error::GitMissing, "xcode-select --install"),
+            (
+                Error::NotARepository {
+                    path: PathBuf::from("/r"),
+                },
+                "kein Git-Repository",
+            ),
+            (
+                Error::BareRepository {
+                    path: PathBuf::from("/r"),
+                },
+                "keine Arbeitskopie",
+            ),
+            (Error::NothingToCommit, "Nichts vorgemerkt"),
+            (Error::EmptyMessage, "Commit-Nachricht"),
+            (
+                Error::Binary {
+                    path: PathBuf::from("a.png"),
+                },
+                "Binärdatei",
+            ),
+            (Error::Untracked { paths: Vec::new() }, "Papierkorb"),
+            (Error::InvalidName { name: "a..b".into() }, "„a..b“"),
+            (
+                Error::OutsideFolder {
+                    path: PathBuf::from("/etc/hosts"),
+                },
+                "„/etc/hosts“",
+            ),
+            (Error::StashMoved, "Stash"),
+            (Error::Cancelled, "Abgebrochen"),
+            (Error::TimedOut, "zu lange"),
+            (Error::OutputTooLarge, "mehr ausgegeben"),
+        ];
+        for (error, words) in plain {
+            let problem = problem(&error);
+            assert!(problem.message.contains(words), "{error:?}: {}", problem.message);
+            assert_eq!(problem.output, None, "{error:?}");
+        }
+    }
+
+    #[test]
+    fn conflicts_are_counted_and_marked_so_they_go_once_resolved() {
+        let one = problem(&Error::Conflicts {
+            paths: vec![PathBuf::from("a")],
+            output: String::new(),
+        });
+        let three = problem(&Error::Conflicts {
+            paths: ["a", "b", "c"].iter().map(PathBuf::from).collect(),
+            output: String::new(),
+        });
+        assert!(one.conflicts && three.conflicts);
+        assert!(one.message.starts_with("Ein Konflikt"), "{}", one.message);
+        assert!(three.message.contains("Konflikte in 3 Dateien"), "{}", three.message);
+        let two = problem(&Error::LocalChanges {
+            paths: vec![PathBuf::from("a"), PathBuf::from("b")],
+            output: String::new(),
+        });
+        assert!(
+            two.message.contains("a, b") && !two.message.contains('…'),
+            "{}",
+            two.message
+        );
+    }
 }

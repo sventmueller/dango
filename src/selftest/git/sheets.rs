@@ -11,8 +11,8 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::{t, tf};
 
 use super::{
-    SCENARIO, answer_sheet, fixture_git, has, in_background, open_plain_folder, sheet_default_button, sheet_ready,
-    sheet_text, wait_for, window_of, write,
+    SCENARIO, answer_sheet, fixture_git, has, in_background, sheet_default_button, sheet_ready, sheet_text, wait_for,
+    window_of, write,
 };
 use crate::git_panel::selftest as panel;
 use crate::selftest::{check, finish};
@@ -142,7 +142,7 @@ fn hook_sheet(root: PathBuf, ok: bool) {
             true,
             "skipped: gitleaks is not on the login shell's PATH",
         );
-        return open_plain_folder();
+        return super::history::start(root);
     }
     if let Err(error) = write(&root, CREDENTIALS, FAKE_KEY) {
         check("a file with an access key is written", false, error);
@@ -237,5 +237,5 @@ fn committed_anyway(root: PathBuf, ok: bool) {
         ok,
         format!("top {:?}", top(&controller)),
     );
-    open_plain_folder();
+    super::history::start(root);
 }

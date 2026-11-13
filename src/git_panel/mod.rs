@@ -103,6 +103,8 @@ pub mod selftest {
     use super::panel;
     use crate::window::WindowController;
 
+    pub use super::model::HISTORY_PAGE;
+
     /// The panel's phase, its sections, the branch and what is running.
     pub struct Seen {
         pub phase: String,
@@ -258,6 +260,30 @@ pub mod selftest {
         }
     }
 
+    /// Selects every row of the diff tab of `path` and copies them, as ⌘A and ⌘C do.
+    pub fn copy_diff(controller: &WindowController, path: &Path, staged: bool) {
+        let (Some(tab), Some(mtm)) = (
+            super::diff::find(controller, &super::diff::key(path, staged)),
+            objc2::MainThreadMarker::new(),
+        ) else {
+            return;
+        };
+        tab.select_all();
+        send(mtm, &tab, sel!(copy:));
+    }
+
+    /// Sends `action` to the Git panel, as its button does.
+    pub fn press(controller: &WindowController, action: objc2::runtime::Sel) {
+        if let (Some(panel), Some(mtm)) = (panel::of(controller), objc2::MainThreadMarker::new()) {
+            send(mtm, &panel, action);
+        }
+    }
+
+    fn send(mtm: objc2::MainThreadMarker, target: &objc2::runtime::AnyObject, action: objc2::runtime::Sel) {
+        // SAFETY: The target's own action with no sender, as a click made in code sends it.
+        unsafe { objc2_app_kit::NSApplication::sharedApplication(mtm).sendAction_to_from(action, Some(target), None) };
+    }
+
     /// Rows and hunks of the diff tab of `path`, once it has read its diff.
     pub fn diff_counts(controller: &WindowController, path: &Path, staged: bool) -> Option<(usize, usize)> {
         super::diff::find(controller, &super::diff::key(path, staged)).map(|tab| tab.counts())
@@ -353,6 +379,41 @@ pub mod selftest {
             .iter()
             .find(|c| c.subject == subject)
             .map(|c| c.hash.clone())
+    }
+
+    /// Chooses `action` in the context menu of the commit `hash`'s row, as a click on its item does.
+    pub fn commit_action(controller: &WindowController, hash: &str, action: objc2::runtime::Sel) {
+        menu_action(controller, RowKey::Commit(hash.to_string()), action);
+    }
+
+    /// Chooses `action` in the context menu of the staged file `path`'s row, as a click on its item does.
+    pub fn staged_file_action(controller: &WindowController, path: &Path, action: objc2::runtime::Sel) {
+        menu_action(controller, RowKey::File(Section::Staged, path.to_path_buf()), action);
+    }
+
+    fn menu_action(controller: &WindowController, key: RowKey, action: objc2::runtime::Sel) {
+        let (Some(panel), Some(mtm)) = (panel::of(controller), objc2::MainThreadMarker::new()) else {
+            return;
+        };
+        panel.state().menu_keys = vec![key];
+        let item = objc2_app_kit::NSMenuItem::new(mtm);
+        // SAFETY: The panel's own action with a menu item as the sender, as AppKit sends it from the context menu.
+        unsafe {
+            objc2_app_kit::NSApplication::sharedApplication(mtm).sendAction_to_from(action, Some(&panel), Some(&item))
+        };
+    }
+
+    /// Whether the list ends in the row that reads more of the history.
+    pub fn has_more_row(controller: &WindowController) -> bool {
+        let Some(panel) = panel::of(controller) else {
+            return false;
+        };
+        let outline = &panel.ui().outline;
+        let last = outline.numberOfRows() - 1;
+        outline
+            .itemAtRow(last)
+            .and_then(|item| panel::key_of(&item))
+            .is_some_and(|key| key == RowKey::More)
     }
 
     /// Opens the row of the commit titled `subject`, as a click on it does.

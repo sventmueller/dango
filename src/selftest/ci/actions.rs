@@ -3,13 +3,14 @@
 
 use std::path::PathBuf;
 
+use objc2::sel;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 use splat_i18n::t;
 
 use super::super::git::{answer_sheet, pictures, wait_for, window_of};
 use super::super::{check, finish};
 use super::{SCENARIO, describe, posted_to, stubs};
-use crate::ci_panel::selftest::{self as panel, Tab};
+use crate::ci_panel::selftest::{self as panel, Key, Tab};
 use crate::window::WindowController;
 
 fn idle(controller: &WindowController) -> bool {
@@ -32,7 +33,27 @@ pub(super) fn github(root: PathBuf) {
             && menu.contains(&(t("Deployment freigeben").to_string(), false)),
         format!("{menu:?}"),
     );
-    panel::retry_job(&controller, 9001, 72);
+    let item = |title: &'static str, enabled: bool| (t(title).to_string(), enabled);
+    let failed = panel::menu_of_run(&controller, 9001);
+    check(
+        "a failed GitHub run offers its failed jobs or all of them again, but not to be cancelled",
+        failed
+            == [
+                item("Fehlgeschlagene Jobs neu starten", true),
+                item("Alle Jobs neu starten", true),
+                item("Lauf abbrechen …", false),
+                item("Im Browser öffnen", true),
+            ],
+        format!("{failed:?}"),
+    );
+    let account = panel::account_menu(&controller);
+    check(
+        "without a token the account menu says only public data is read and offers to sign in",
+        account.get(1) == Some(&item("Ohne Anmeldung, nur öffentliche Daten", false))
+            && account.last() == Some(&item("Anmelden …", true)),
+        format!("{account:?}"),
+    );
+    panel::choose_in_menu(&controller, Key::Job(9001, 72), sel!(ideCiRetryJob:));
     wait_for(root, |c| github_posted("/actions/jobs/72/rerun")(c), job_retried);
 }
 
@@ -41,8 +62,12 @@ fn job_retried(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     check("a single GitHub job starts again", ok, "");
-    panel::rerun_all(&controller, 9001);
-    wait_for(root, |c| github_posted("/actions/runs/9001/rerun")(c), run_rerun);
+    panel::choose_in_menu(&controller, Key::Run(9001), sel!(ideCiRerunAll:));
+    wait_for(
+        root,
+        |c| github_posted("/actions/runs/9001/rerun")(c) && panel::can_start_run(c),
+        run_rerun,
+    );
 }
 
 fn run_rerun(root: PathBuf, ok: bool) {
@@ -109,6 +134,26 @@ fn pulls_listed(root: PathBuf, ok: bool) {
         ok && numbers == [31, 30] && seen.as_ref().is_some_and(|s| s.rows == 2 && s.note.is_none()),
         describe(&controller),
     );
+    let menu = panel::menu_of_item(&controller, 31);
+    check(
+        "a pull request's row opens it in the browser or copies its link",
+        menu == [
+            (t("Im Browser öffnen").to_string(), true),
+            (t("Link kopieren").to_string(), true),
+        ],
+        format!("{menu:?}"),
+    );
+    panel::choose_in_menu(&controller, Key::Item(31), sel!(ideCiCopyLink:));
+    // SAFETY: The string type is AppKit's constant.
+    let copied = unsafe {
+        objc2_app_kit::NSPasteboard::generalPasteboard().stringForType(objc2_app_kit::NSPasteboardTypeString)
+    }
+    .map(|s| s.to_string());
+    check(
+        "\"Link kopieren\" puts the pull request's page on the pasteboard",
+        copied.as_deref() == Some("https://github.com/acme/widget/pull/31"),
+        format!("{copied:?}"),
+    );
     pictures(root, "ci-pulls", |root| {
         if let Some(controller) = window_of(&root) {
             panel::choose_tab(&controller, Tab::Issues);
@@ -154,7 +199,18 @@ pub(super) fn gitlab(root: PathBuf) {
         menu.contains(&(t("Job starten").to_string(), true)),
         format!("{menu:?}"),
     );
-    panel::retry_job(&controller, 501, 3002);
+    let running = panel::menu_of_run(&controller, 501);
+    check(
+        "a running GitLab pipeline can be cancelled, and GitLab has no re-run of all its jobs",
+        running
+            == [
+                (t("Fehlgeschlagene Jobs neu starten").to_string(), false),
+                (t("Lauf abbrechen …").to_string(), true),
+                (t("Im Browser öffnen").to_string(), true),
+            ],
+        format!("{running:?}"),
+    );
+    panel::choose_in_menu(&controller, Key::Job(501, 3002), sel!(ideCiRetryJob:));
     wait_for(root, |c| gitlab_posted("/jobs/3002/retry")(c), gitlab_retried);
 }
 
@@ -163,7 +219,7 @@ fn gitlab_retried(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     check("a single GitLab job starts again", ok, "");
-    panel::start_job(&controller, 501, 3004);
+    panel::choose_in_menu(&controller, Key::Job(501, 3004), sel!(ideCiStartJob:));
     wait_for(root, |c| gitlab_posted("/jobs/3004/play")(c), played);
 }
 

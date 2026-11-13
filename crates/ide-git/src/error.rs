@@ -192,3 +192,151 @@ impl From<io::Error> for Error {
         Error::Io(error)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error as _;
+
+    use super::*;
+    use crate::remote::PushFlag;
+
+    #[test]
+    fn each_failure_of_the_repository_or_the_remote_names_what_it_concerns() {
+        let path = || PathBuf::from("src/main.rs");
+        let output = || "fatal: details\n".to_string();
+        let cases = [
+            (Error::GitMissing, "git is not installed"),
+            (
+                Error::NotARepository { path: path() },
+                "src/main.rs is not in a git repository",
+            ),
+            (
+                Error::BareRepository { path: path() },
+                "src/main.rs is a bare repository",
+            ),
+            (
+                Error::UnsafeRepository {
+                    path: path(),
+                    output: output(),
+                },
+                "git does not trust src/main.rs",
+            ),
+            (
+                Error::AuthFailed { output: output() },
+                "the remote did not accept the credentials",
+            ),
+            (Error::Network { output: output() }, "the remote could not be reached"),
+            (
+                Error::Conflicts {
+                    paths: vec![path(), path()],
+                    output: output(),
+                },
+                "conflicts in 2 files",
+            ),
+            (
+                Error::LocalChanges {
+                    paths: Vec::new(),
+                    output: output(),
+                },
+                "local changes would be overwritten",
+            ),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected, "{error:?}");
+            assert!(error.source().is_none(), "{error:?}");
+        }
+    }
+
+    #[test]
+    fn each_refusal_of_the_working_tree_or_a_command_says_what_was_refused() {
+        let path = || PathBuf::from("src/main.rs");
+        let output = || "fatal: details\n".to_string();
+        let rejected = PushedRef {
+            flag: PushFlag::Rejected,
+            from: "refs/heads/main".into(),
+            to: "refs/heads/main".into(),
+            summary: "[rejected] (fetch first)".into(),
+        };
+        let cases = [
+            (Error::NothingToCommit, "nothing to commit"),
+            (Error::EmptyMessage, "the commit message is empty"),
+            (
+                Error::HookFailed {
+                    hook: "pre-commit".into(),
+                    output: output(),
+                },
+                "the pre-commit hook failed",
+            ),
+            (
+                Error::NotFastForward { output: output() },
+                "the branch cannot be fast-forwarded",
+            ),
+            (Error::NoUpstream { output: output() }, "the branch has no upstream"),
+            (
+                Error::PushRejected {
+                    refs: vec![rejected],
+                    output: output(),
+                },
+                "the remote rejected the push",
+            ),
+            (
+                Error::NotMerged {
+                    branch: "topic".into(),
+                    output: output(),
+                },
+                "topic is not merged",
+            ),
+            (
+                Error::PatchDoesNotApply { output: output() },
+                "the change no longer applies",
+            ),
+            (Error::Binary { path: path() }, "src/main.rs is binary"),
+            (Error::Untracked { paths: vec![path()] }, "1 files are untracked"),
+            (
+                Error::InvalidName { name: "a..b".into() },
+                "\"a..b\" is not a valid name",
+            ),
+            (
+                Error::OutsideFolder { path: path() },
+                "src/main.rs is outside the folder",
+            ),
+            (Error::StashMoved, "the stash changed since it was read"),
+            (Error::Cancelled, "cancelled"),
+            (Error::TimedOut, "git took too long"),
+            (Error::OutputTooLarge, "git printed too much"),
+            (
+                Error::Failed {
+                    command: "git commit".into(),
+                    code: Some(128),
+                    output: output(),
+                },
+                "git commit failed (128): fatal: details",
+            ),
+            (
+                Error::Failed {
+                    command: "git push".into(),
+                    code: None,
+                    output: output(),
+                },
+                "git push was ended: fatal: details",
+            ),
+            (
+                Error::Unexpected { what: "a line".into() },
+                "unexpected output from git: a line",
+            ),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected, "{error:?}");
+            assert!(error.source().is_none(), "{error:?}");
+        }
+    }
+
+    #[test]
+    fn a_file_error_keeps_the_io_error_as_its_source() {
+        let error = Error::from(io::Error::new(io::ErrorKind::PermissionDenied, "no access"));
+        assert!(matches!(error, Error::Io(_)));
+        assert_eq!(error.to_string(), "no access");
+        let source = error.source().and_then(|s| s.downcast_ref::<io::Error>());
+        assert_eq!(source.map(io::Error::kind), Some(io::ErrorKind::PermissionDenied));
+    }
+}

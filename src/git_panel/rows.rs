@@ -824,6 +824,9 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
     entries
 }
 
+#[cfg(test)]
+mod tests;
+
 /// A file's icon, name and folder in a row; the name is the stack's label for VoiceOver.
 pub(super) fn file_text(
     mtm: MainThreadMarker,

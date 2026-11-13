@@ -422,4 +422,33 @@ mod tests {
         let rules = [ide_ci::HostRule::parse("git.example.com=gitlab").unwrap()];
         assert_eq!(availability(&forge("https://git.example.com/a/b.git", &rules)), Ok(()));
     }
+
+    #[test]
+    fn a_failed_login_says_why_and_one_the_user_stopped_says_nothing() {
+        assert_eq!(message(&LoginError::Cancelled), None);
+        let said = |error: LoginError| message(&error).unwrap_or_default();
+        assert_eq!(said(LoginError::Denied), t("Die Anmeldung wurde im Browser abgelehnt."));
+        assert_eq!(
+            said(LoginError::Expired),
+            t("Die Anmeldung ist abgelaufen; starte sie neu.")
+        );
+        assert_eq!(
+            said(LoginError::StateMismatch),
+            t("Die Antwort des Browsers gehörte zu einer anderen Anmeldung und wurde nicht angenommen.")
+        );
+        assert!(said(LoginError::PortInUse(47819)).contains("47819"));
+        assert!(said(LoginError::Refused("invalid_client".into())).ends_with("invalid_client"));
+        let api = ide_ci::Error::Network("refused".into());
+        assert_eq!(said(LoginError::Api(api.clone())), text::problem(&api));
+    }
+
+    #[test]
+    fn a_wait_ends_early_once_its_login_is_stopped() {
+        let cancel = AtomicBool::new(false);
+        assert!(wait(Duration::from_millis(20), &cancel));
+        cancel.store(true, Ordering::Relaxed);
+        let started = std::time::Instant::now();
+        assert!(!wait(Duration::from_secs(30), &cancel));
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
 }

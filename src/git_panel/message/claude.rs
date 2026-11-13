@@ -216,4 +216,121 @@ mod tests {
         assert_eq!(after("--system-prompt"), Some(SYSTEM));
         assert!(args.contains(&"--safe-mode") && args.contains(&"--no-session-persistence"));
     }
+
+    const FAKE: &str = r#"#!/bin/sh
+piece() { printf '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"%s"}}}\n' "$1"; }
+case "$FAKE" in
+answer)
+    input=$(cat)
+    printf '{"type":"system","subtype":"init"}\n'
+    piece "Fix "
+    piece "parser"
+    printf '{"type":"result","subtype":"success","is_error":false,"result":"got %s in %s with %s arguments"}\n' "$input" "$(pwd)" "$#"
+    ;;
+pieces)
+    piece "Fix "
+    piece "parser"
+    printf '{"type":"result","subtype":"success","is_error":false,"result":""}\n'
+    ;;
+refused)
+    printf '{"type":"result","subtype":"success","is_error":true,"result":"Not logged in"}\n'
+    ;;
+stderr)
+    echo "  boom  " >&2
+    exit 1
+    ;;
+slow)
+    piece "Fix "
+    exec sleep 30
+    ;;
+esac
+"#;
+
+    /// A stand-in for `claude` that answers as `mode` says.
+    fn fake(mode: &str) -> (PathBuf, Vec<(String, String)>) {
+        use std::os::unix::fs::PermissionsExt;
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("ide-fake-claude-{}-{n}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let program = dir.join("claude");
+        std::fs::write(&program, FAKE).unwrap();
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let environment = vec![
+            ("PATH".to_string(), "/usr/bin:/bin".to_string()),
+            ("FAKE".to_string(), mode.to_string()),
+        ];
+        (program, environment)
+    }
+
+    fn ask(mode: &str, cancel_on_first_piece: bool) -> (Result<String, Failure>, Vec<String>) {
+        let (program, environment) = fake(mode);
+        let cancel = Cancel::new();
+        let mut pieces = Vec::new();
+        let result = run(&program, &environment, "the diff", &cancel, &mut |piece| {
+            pieces.push(piece.to_string());
+            if cancel_on_first_piece {
+                cancel.cancel();
+            }
+        });
+        let _ = std::fs::remove_dir_all(program.parent().unwrap());
+        (result, pieces)
+    }
+
+    #[test]
+    fn claude_reads_the_request_in_an_empty_folder_that_is_gone_afterwards() {
+        let (result, pieces) = ask("answer", false);
+        assert_eq!(pieces, ["Fix ", "parser"]);
+        let answer = result.unwrap();
+        let folder = answer
+            .strip_prefix("got the diff in ")
+            .and_then(|rest| rest.strip_suffix(&format!(" with {} arguments", arguments().len())))
+            .unwrap_or_else(|| panic!("{answer}"));
+        let folder = Path::new(folder);
+        assert!(
+            folder
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("ide-commit-message-"),
+            "{answer}"
+        );
+        assert!(!folder.exists(), "{answer}");
+    }
+
+    #[test]
+    fn an_end_without_text_gives_the_pieces_that_streamed() {
+        let (result, _) = ask("pieces", false);
+        assert_eq!(result, Ok("Fix parser".to_string()));
+    }
+
+    #[test]
+    fn a_failed_end_or_a_silent_exit_says_what_claude_said() {
+        assert_eq!(ask("refused", false).0, Err(Failure::Failed("Not logged in".into())));
+        assert_eq!(ask("stderr", false).0, Err(Failure::Failed("boom".into())));
+        assert_eq!(
+            ask("nothing", false).0,
+            Err(Failure::Failed(t("claude hat ohne Antwort aufgehört.").into()))
+        );
+    }
+
+    #[test]
+    fn a_cancel_stops_claude_while_it_answers() {
+        let started = std::time::Instant::now();
+        let (result, pieces) = ask("slow", true);
+        assert_eq!(result, Err(Failure::Cancelled));
+        assert_eq!(pieces, ["Fix "]);
+        assert!(started.elapsed() < Duration::from_secs(10), "{:?}", started.elapsed());
+    }
+
+    #[test]
+    fn a_program_that_does_not_start_says_so() {
+        let missing = std::env::temp_dir().join("ide-no-such-claude/claude");
+        let result = run(&missing, &[], "", &Cancel::new(), &mut |_| {});
+        let prefix = tf("claude ließ sich nicht starten: {}", &[""]);
+        assert!(
+            matches!(&result, Err(Failure::Failed(why)) if why.starts_with(&prefix) && why.len() > prefix.len()),
+            "{result:?}"
+        );
+    }
 }

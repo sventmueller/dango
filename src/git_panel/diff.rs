@@ -667,6 +667,16 @@ impl DiffTab {
         let state = self.ivars().state.borrow();
         (state.rows.len(), state.diff.as_ref().map_or(0, |d| d.hunks.len()))
     }
+
+    /// Selects every row, as ⌘A in the table does.
+    pub fn select_all(&self) {
+        let table = &self.ui().table;
+        let rows = objc2_foundation::NSRange::new(0, usize::try_from(table.numberOfRows()).unwrap_or(0));
+        table.selectRowIndexes_byExtendingSelection(
+            &objc2_foundation::NSIndexSet::indexSetWithIndexesInRange(rows),
+            false,
+        );
+    }
 }
 
 /// The diff tab showing `key` in `controller`'s window.

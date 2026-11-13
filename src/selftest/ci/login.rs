@@ -10,6 +10,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use ide_ci::oauth;
+use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::t;
 
@@ -18,7 +19,7 @@ use super::super::{check, finish};
 use super::stub::{DEVICE_TOKEN, USER_CODE};
 use super::{TOKEN, describe, stubs};
 use crate::ci_panel::selftest as panel;
-use crate::window::WindowController;
+use crate::window::{Panel, WindowController};
 
 pub(super) const SCENARIO: &str = "ci-login";
 const GITLAB_APP: &str = "selftest-app";
@@ -116,16 +117,33 @@ fn authorize_opened(root: PathBuf, ok: bool) {
         ok && fitting && !controller.has_sheet() && panel::login(&controller) == Some(None),
         &url,
     );
+    let account = panel::account_menu(&controller);
+    check(
+        "while the browser is out the account menu says so and offers to stop",
+        account
+            .iter()
+            .any(|(line, _)| line == t("Warte auf die Anmeldung im Browser …"))
+            && account.last() == Some(&(t("Abbrechen").to_string(), true)),
+        format!("{account:?}"),
+    );
     pictures(root, "ci-login-wait", |root| {
         let twin = ide_core::paths::home().join("ci-gitlab-twin");
         match copy_tree(&root, &twin).and_then(|()| twin.canonicalize()) {
-            Ok(twin) => super::open(twin, twin_ready),
+            Ok(twin) => open_beside(twin),
             Err(error) => {
                 check("a second window on the same repository opens", false, error.to_string());
                 finish(SCENARIO);
             }
         }
     });
+}
+
+/// Opens `twin` in a window of its own; opening a project otherwise replaces the one in the front window.
+fn open_beside(twin: PathBuf) {
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    crate::project::trust(&twin);
+    WindowController::open(mtm, Some(twin.clone())).activate_panel(Panel::Ci);
+    wait_for(twin, super::ready, twin_ready);
 }
 
 fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {

@@ -19,7 +19,7 @@ const TOTAL_GOAL: f64 = 90.0;
 const FILE_GOAL: f64 = 50.0;
 
 /// Scenarios that need the network, an account, a real agent CLI or someone looking at the screen.
-const OUTSIDE: &[&str] = &["agent-live", "ci-live", "ci-login", "paste-cli", "show"];
+const OUTSIDE: &[&str] = &["agent-live", "ci-live", "paste-cli", "show"];
 
 /// Folders under a counted source folder whose files are not counted.
 const NOT_COUNTED: &[&str] = &["tests", "benches", "examples", "fuzz"];
@@ -635,7 +635,15 @@ mod tests {
     fn the_offline_scenarios_are_those_of_the_app_without_the_outside_ones() {
         let selftest = files::read_to_string(root().join("src/selftest.rs")).unwrap();
         let scenarios = offline_scenarios(&selftest);
-        for expected in ["probe", "a11y", "a11y-rtl", "recovery", "restore", "dictation"] {
+        for expected in [
+            "probe",
+            "a11y",
+            "a11y-rtl",
+            "recovery",
+            "restore",
+            "dictation",
+            "ci-login",
+        ] {
             assert!(scenarios.iter().any(|s| s == expected), "{expected} is missing");
         }
         for outside in OUTSIDE {
@@ -689,7 +697,11 @@ mod tests {
         ] {
             assert!(is_test_only(file), "{file}");
         }
-        for file in ["xtask/src/selftest.rs", "src/debug/session.rs", "crates/ide-acp/src/session.rs"] {
+        for file in [
+            "xtask/src/selftest.rs",
+            "src/debug/session.rs",
+            "crates/ide-acp/src/session.rs",
+        ] {
             assert!(!is_test_only(file), "{file}");
         }
     }

@@ -594,4 +594,62 @@ mod tests {
         assert_eq!(product_client(&github), None, "empty until the app is registered");
         assert!(is_public_host(&github));
     }
+
+    /// A folder with the program `fake-tool`, whose shell `body` runs, and a home folder.
+    fn tool_folder(name: &str, body: &str) -> (PathBuf, Vec<(String, String)>) {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("ide-ci-tool-{name}-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("home")).unwrap();
+        let dir = dir.canonicalize().unwrap();
+        let program = dir.join("fake-tool");
+        std::fs::write(&program, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let path = format!("/nonexistent:{}:/usr/bin:/bin", dir.display());
+        let home = dir.join("home").to_string_lossy().into_owned();
+        (dir, env(&[("PATH", &path), ("HOME", &home)]))
+    }
+
+    #[test]
+    fn a_tool_on_the_path_runs_in_the_home_folder_and_one_that_is_not_there_gives_nothing() {
+        let (dir, environment) = tool_folder("prints", "pwd; echo \"$1\"; echo warned >&2");
+        let tools = Supervised::new(&Supervisor::new(), environment, Duration::from_secs(20));
+        let printed = tools.run("fake-tool", &["auth"]).unwrap();
+        assert_eq!(printed.stdout, format!("{}\nauth\n", dir.join("home").display()));
+        assert_eq!(printed.stderr, "warned\n");
+        assert_eq!(tools.run("not-installed-anywhere", &[]), None);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_tool_that_does_not_end_in_time_is_stopped_and_gives_nothing() {
+        let (dir, environment) = tool_folder("hangs", "exec sleep 30");
+        let tools = Supervised::new(&Supervisor::new(), environment, Duration::from_millis(300));
+        let started = Instant::now();
+        assert_eq!(tools.run("fake-tool", &[]), None);
+        assert!(started.elapsed() < Duration::from_secs(10), "{:?}", started.elapsed());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn signing_out_forgets_the_apps_token_and_an_old_token_without_account_still_counts() {
+        let store = Arc::new(Memory::default());
+        let auth = Auth::new(store.clone(), Arc::new(Tools::default()), Vec::new());
+        let lab = forge("https://gitlab.com/a/b.git");
+        auth.save(&lab, "someone", " glpat-typed \n").unwrap();
+        let found = auth.find(&lab).unwrap();
+        assert_eq!(
+            (found.token.as_str(), found.account.as_deref()),
+            ("glpat-typed", Some("someone"))
+        );
+        auth.forget(&lab).unwrap();
+        assert_eq!(auth.find(&lab), None);
+        store.set(&host_account(&lab), "glpat-from-before").unwrap();
+        let old = auth.find(&lab).unwrap();
+        assert_eq!(
+            (old.token.as_str(), old.account.as_deref()),
+            ("glpat-from-before", None)
+        );
+        auth.forget(&lab).unwrap();
+        assert_eq!(store.get(&host_account(&lab)), Ok(None));
+    }
 }

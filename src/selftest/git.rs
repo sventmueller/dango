@@ -5,6 +5,7 @@
 //! appearance.
 
 mod flows;
+mod history;
 pub(super) mod message;
 mod sheets;
 pub(super) mod stash;
@@ -129,7 +130,7 @@ pub(super) fn append(file: &Path, text: &str) -> Result<(), String> {
 }
 
 /// Runs `job` on the repository at `root` on a thread of its own, then `then` on the main thread.
-fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>, then: fn(PathBuf)) {
+pub(super) fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>, then: fn(PathBuf)) {
     std::thread::spawn(move || {
         let done = job(&root);
         main_soon(move || match done {
@@ -400,6 +401,20 @@ fn readme_diff(root: PathBuf, ok: bool) {
         ok && counts.is_some_and(|(_, hunks)| hunks == 1),
         format!("{counts:?} (rows, hunks)"),
     );
+    panel::copy_diff(&controller, Path::new(README), true);
+    // SAFETY: The string type is AppKit's constant.
+    let copied = unsafe {
+        objc2_app_kit::NSPasteboard::generalPasteboard().stringForType(objc2_app_kit::NSPasteboardTypeString)
+    }
+    .map(|s| s.to_string())
+    .unwrap_or_default();
+    check(
+        "copying the diff's rows gives the hunk's title and its lines with their markers",
+        copied.starts_with("@@ -")
+            && copied.contains("\n−A repository for the Git panel.\n")
+            && copied.contains("\n+A repository for the Git panel, changed.\n"),
+        &copied,
+    );
     pictures(root, "git-diff", |root| {
         if let Some(controller) = window_of(&root) {
             panel::show_diff(&controller, Path::new(LIBRARY), false);
@@ -599,7 +614,7 @@ fn fetched(root: PathBuf, ok: bool) {
 }
 
 /// Opens a folder without git that the user does not trust yet.
-fn open_plain_folder() {
+pub(super) fn open_plain_folder() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let plain = ide_core::paths::home().join("plain-folder");
     let _ = std::fs::create_dir_all(&plain);
@@ -646,5 +661,15 @@ fn not_a_repository(root: PathBuf, ok: bool) {
     if let Some(window) = controller.window() {
         snapshot(&window, "git-no-repository");
     }
+    panel::press(&controller, objc2::sel!(ideGitInit:));
+    wait_for(root, |c| phase_is(c, "Ready"), initialized);
+}
+
+fn initialized(root: PathBuf, ok: bool) {
+    check(
+        "making a repository there turns the folder into one the panel reads",
+        ok && root.join(".git").is_dir(),
+        "",
+    );
     finish(SCENARIO);
 }

@@ -73,7 +73,7 @@ is kept in `crates/ide-document/proptest-regressions/`, which is checked in.
 `make coverage` (`cargo xtask coverage`, `xtask/src/coverage.rs`) measures line coverage of `cargo test --workspace`
 (unit and integration tests, not doctests: their coverage needs a nightly compiler) together with the selftest
 scenarios that need no network, account, real agent CLI or person: every scenario of `src/selftest.rs` except
-`agent-live`, `ci-live`, `ci-login`, `paste-cli` and `show`. The scenarios run in one selftest bundle built with
+`agent-live`, `ci-live`, `paste-cli` and `show`. The scenarios run in one selftest bundle built with
 dictation, so `dictation` is measured too; a failed test or check is reported and the run goes on. Homebrew's Rust has
 no llvm-tools, so it builds with rustup's toolchain of `rust-toolchain.toml` (`rustup component add llvm-tools
 --toolchain 1.99.1`) and `cargo-llvm-cov` (`brew install cargo-llvm-cov`), instrumented by `cargo llvm-cov show-env` in

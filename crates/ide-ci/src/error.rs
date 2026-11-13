@@ -57,3 +57,46 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_failure_reads_as_what_went_wrong_with_what_the_service_said() {
+        let cases = [
+            (
+                Error::Unauthorized {
+                    host: "gitlab.com".into(),
+                },
+                "gitlab.com wants a valid token",
+            ),
+            (
+                Error::Forbidden {
+                    message: "read-only".into(),
+                },
+                "not allowed: read-only",
+            ),
+            (Error::NotFound { what: "run 7".into() }, "not found: run 7"),
+            (
+                Error::RateLimited {
+                    until: Some(1_700_000_000),
+                },
+                "rate limited until 1700000000",
+            ),
+            (Error::RateLimited { until: None }, "rate limited"),
+            (
+                Error::Http {
+                    status: 502,
+                    message: "Bad Gateway".into(),
+                },
+                "HTTP 502: Bad Gateway",
+            ),
+            (Error::Network("refused".into()), "network: refused"),
+            (Error::Decode("missing id".into()), "unexpected answer: missing id"),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected, "{error:?}");
+        }
+    }
+}

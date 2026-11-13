@@ -363,6 +363,24 @@ fn gitlab_listed(root: PathBuf, ok: bool) {
             .iter()
             .any(|s| s.authorization.as_deref() == Some(&bearer));
     check("the token goes to its own host only", only_there, "");
+    let account = panel::account_menu(&controller);
+    let host = seen.as_ref().and_then(|s| s.forge.clone()).unwrap_or_default();
+    check(
+        "the account menu names the repository and the account with its token's place, and signs out",
+        account
+            == [
+                (host, false),
+                (
+                    splat_i18n::tf(
+                        "Angemeldet als {} ({})",
+                        &["lab-selftest", splat_i18n::t("Schlüsselbund")],
+                    ),
+                    false,
+                ),
+                (splat_i18n::t("Abmelden").to_string(), true),
+            ],
+        format!("{account:?}"),
+    );
     pictures(root, "ci-gitlab", actions::gitlab);
 }
 
