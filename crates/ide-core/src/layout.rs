@@ -42,6 +42,11 @@ pub enum Tab {
         /// The page.
         url: String,
     },
+    /// The live preview of a static page (E131), which opens again with a server on a new port.
+    SitePreview {
+        /// The page's file.
+        path: PathBuf,
+    },
     /// An AI thread, opened again by resuming its session.
     Agent {
         /// The agent's id for the session.

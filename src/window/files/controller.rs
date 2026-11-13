@@ -112,6 +112,11 @@ impl FileTreeSource {
                     crate::preview::open_drawing(&controller, &path);
                 }
             }
+            Effect::OpenInBrowserTab(path) => {
+                if let Some(controller) = controller {
+                    crate::site_preview::open(&controller, &path);
+                }
+            }
             Effect::RevealInFinder(path) => {
                 let urls = NSArray::from_retained_slice(&[file_url(&path)]);
                 NSWorkspace::sharedWorkspace().activateFileViewerSelectingURLs(&urls);

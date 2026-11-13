@@ -65,7 +65,12 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
         },
         TabKind::Welcome => Some(Tab::Welcome),
         TabKind::Terminal => crate::terminal::folder_of_tab(controller, id).map(|folder| Tab::Terminal { folder }),
-        TabKind::Browser => crate::browser::url_of_tab(controller, id).map(|url| Tab::Browser { url }),
+        TabKind::Browser => crate::browser::url_of_tab(controller, id).map(|url| {
+            match crate::site_preview::page_of(objc2::MainThreadOnly::mtm(controller), &url) {
+                Some(path) => Tab::SitePreview { path },
+                None => Tab::Browser { url },
+            }
+        }),
         TabKind::Agent => {
             let key = key?;
             crate::agent::of_window(controller)
@@ -166,6 +171,10 @@ impl Documents<'_, '_> {
             }
             Tab::Browser { url } => {
                 crate::browser::open_tab(controller, Some(url));
+                true
+            }
+            Tab::SitePreview { path } if trusted && path.is_file() => {
+                crate::site_preview::open(controller, path);
                 true
             }
             Tab::Agent { session } if trusted => resume_agent(controller, root, session),

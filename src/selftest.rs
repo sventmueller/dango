@@ -78,6 +78,7 @@ mod lsp_navigation;
 mod minimap;
 mod own_agent;
 mod own_agent_menus;
+mod page_preview;
 mod predict;
 mod predict_menu;
 mod quit;

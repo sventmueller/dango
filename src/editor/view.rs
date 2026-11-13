@@ -404,6 +404,11 @@ define_class!(
                     .or_else(|| super::minimap::validate(item))
                     .or_else(|| super::sticky::validate(item))
                     .or_else(|| super::line_diagnostics::validate(item))
+                    .or_else(|| {
+                        (item.action() == Some(objc2::sel!(ideOpenPageInBrowserTab:))).then(|| {
+                            self.document().path().is_some_and(crate::site_preview::is_page)
+                        })
+                    })
                     .or_else(|| super::predict::validate(self, item))
                     .or_else(|| crate::lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
@@ -646,6 +651,16 @@ define_class!(
         #[unsafe(method(ideRevertHunk:))]
         fn revert_hunk(&self, _sender: Option<&AnyObject>) {
             guarded((), || super::changes::revert(self));
+        }
+
+        #[unsafe(method(ideOpenPageInBrowserTab:))]
+        fn open_page_in_browser_tab(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                let page = self.document().path().map(std::path::Path::to_path_buf);
+                if let (Some(page), Some(controller)) = (page, self.controller()) {
+                    crate::site_preview::open(&controller, &page);
+                }
+            });
         }
 
         #[unsafe(method(ideToggleDiagnosticsAtLineEnd:))]

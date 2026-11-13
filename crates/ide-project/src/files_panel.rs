@@ -31,6 +31,8 @@ pub enum Command {
     OpenBeside,
     /// Open an SVG file's drawing.
     OpenAsPreview,
+    /// Open an HTML page in a browser tab, served by the app (E131).
+    OpenInBrowserTab,
     /// Make a new file.
     NewFile,
     /// Make a new folder.
@@ -93,6 +95,8 @@ pub enum Effect {
     OpenBeside(PathBuf),
     /// Open the drawing of an SVG file.
     OpenAsPreview(PathBuf),
+    /// Open the page in a browser tab, served by the app.
+    OpenInBrowserTab(PathBuf),
     /// Show the path in the Finder.
     RevealInFinder(PathBuf),
     /// Put the text on the pasteboard.
@@ -203,6 +207,9 @@ impl Model {
             item(t("Umbenennen …"), Command::Rename, row),
             item(t("In den Papierkorb legen"), Command::Trash, row),
         ];
+        if file && path.is_some_and(is_page) {
+            entries.insert(1, item(t("Im Browser-Tab öffnen"), Command::OpenInBrowserTab, true));
+        }
         if file && path.is_some_and(is_svg) {
             entries.insert(1, item(t("Als Vorschau öffnen"), Command::OpenAsPreview, true));
         }
@@ -215,6 +222,7 @@ impl Model {
         Some(match command {
             Command::OpenBeside => Effect::OpenBeside(path),
             Command::OpenAsPreview => Effect::OpenAsPreview(path),
+            Command::OpenInBrowserTab => Effect::OpenInBrowserTab(path),
             Command::NewFile | Command::NewFolder => {
                 return Some(create_in(&path, kind, command == Command::NewFolder));
             }
@@ -320,6 +328,13 @@ fn file_name(path: &Path) -> String {
 /// Whether `a` and `b` name one file on a volume that ignores case, as a rename that only changes case does.
 fn same_file_ignoring_case(a: &Path, b: &Path) -> bool {
     a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+}
+
+/// Whether `path` is an HTML page.
+fn is_page(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("html") || e.eq_ignore_ascii_case("htm"))
 }
 
 /// Whether `path` names an SVG drawing, which opens as a picture as well as as text.

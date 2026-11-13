@@ -71,6 +71,14 @@ pub fn reload_matching(window: u64, origin: &str) {
     }
 }
 
+/// The addresses the browser tabs of `window` show.
+pub fn urls(window: u64) -> Vec<String> {
+    tabs_of(window)
+        .into_iter()
+        .filter_map(|view| view.current_url())
+        .collect()
+}
+
 /// The address the browser tab `tab` of `window` shows, for opening it again.
 pub fn url_of_tab(window: u64, tab: isize) -> Option<String> {
     tabs_of(window)

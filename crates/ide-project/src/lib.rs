@@ -17,6 +17,7 @@ pub mod order;
 pub mod replace;
 pub mod search;
 pub mod search_panel;
+pub mod site;
 pub mod tree;
 pub mod trust;
 pub mod watch;

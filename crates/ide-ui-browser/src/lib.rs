@@ -25,8 +25,9 @@ mod view;
 mod web;
 
 pub use host::{Host, State, install};
-pub use tabs::{open_tab, perform, reload_matching, url_of_tab, validate};
+pub use tabs::{open_tab, perform, reload_matching, url_of_tab, urls, validate};
 pub use trust::may_accept;
+pub use web::set_local_cookie;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]

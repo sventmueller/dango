@@ -52,7 +52,13 @@ impl Project {
                     && !changes.files.is_empty()
                 {
                     let (root, files) = (window_root.clone(), changes.files.clone());
-                    main_soon(move || crate::lsp::files_changed(&root, &files));
+                    main_soon(move || {
+                        crate::lsp::files_changed(&root, &files);
+                        if let Some(mtm) = objc2::MainThreadMarker::new() {
+                            let paths: Vec<std::path::PathBuf> = files.keys().cloned().collect();
+                            crate::site_preview::files_changed(mtm, &root, &paths);
+                        }
+                    });
                 }
                 let root = window_root.clone();
                 main_soon(move || {

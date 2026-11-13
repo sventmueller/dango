@@ -17,6 +17,7 @@ use objc2_web_kit::{
 };
 
 use super::address;
+use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -43,6 +44,37 @@ fn store(mtm: MainThreadMarker) -> Retained<WKWebsiteDataStore> {
             })
             .clone()
     })
+}
+
+/// Sets the cookie `name` with `value` for pages of 127.0.0.1 in the tabs' store, then calls `done`; `None` when
+/// WebKit could not make the cookie.
+pub fn set_local_cookie(mtm: MainThreadMarker, name: &str, value: &str, done: impl FnOnce() + 'static) -> Option<()> {
+    use objc2_foundation::{
+        NSDictionary, NSHTTPCookie, NSHTTPCookieDomain, NSHTTPCookieName, NSHTTPCookiePath, NSHTTPCookieValue,
+    };
+    let keys = [
+        constant!(NSHTTPCookieName),
+        constant!(NSHTTPCookieValue),
+        constant!(NSHTTPCookieDomain),
+        constant!(NSHTTPCookiePath),
+    ];
+    let values = [ns(name), ns(value), ns("127.0.0.1"), ns("/")];
+    let properties = NSDictionary::from_retained_objects(&keys, &values.map(|v| v.into()));
+    // SAFETY: The properties hold the cookie's name, value, domain and path as strings, as the method expects.
+    let cookie = unsafe { NSHTTPCookie::cookieWithProperties(&properties) }?;
+    let done = std::cell::Cell::new(Some(done));
+    let block = block2::RcBlock::new(move || {
+        if let Some(done) = done.take() {
+            ide_ui_common::util::guarded((), done);
+        }
+    });
+    // SAFETY: The store and the cookie live on the main thread; WebKit calls the block there once the cookie is set.
+    unsafe {
+        store(mtm)
+            .httpCookieStore()
+            .setCookie_completionHandler(&cookie, Some(&block))
+    };
+    Some(())
 }
 
 /// The configuration of a new tab. It adds no script message handler, so no page can call into the app.

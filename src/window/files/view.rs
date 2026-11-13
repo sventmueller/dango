@@ -147,6 +147,11 @@ define_class!(
             guarded((), || self.command(Command::OpenAsPreview));
         }
 
+        #[unsafe(method(ideOpenInBrowserTab:))]
+        fn open_in_browser_tab(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.command(Command::OpenInBrowserTab));
+        }
+
         #[unsafe(method(ideRevealInFinder:))]
         fn reveal(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.command(Command::Reveal));
@@ -296,6 +301,7 @@ fn action(command: Command) -> Sel {
     match command {
         Command::OpenBeside => sel!(ideOpenBesideClicked:),
         Command::OpenAsPreview => sel!(ideOpenAsPreview:),
+        Command::OpenInBrowserTab => sel!(ideOpenInBrowserTab:),
         Command::NewFile => sel!(ideNewFile:),
         Command::NewFolder => sel!(ideNewFolder:),
         Command::Reveal => sel!(ideRevealInFinder:),
