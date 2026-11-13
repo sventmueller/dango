@@ -1,6 +1,7 @@
-//! The readers against Docker's output. `contexts-29.9.3.jsonl` is a recording of Docker 29.9.3; the `*-format`
-//! files follow the documented `--format '{{json .}}'` objects of Docker 24.0.6 and later, field by field, until
-//! recordings of the oldest and the newest Docker replace them (A10).
+//! The readers against Docker's output (A10). The `*-24.0.6` files are recordings of the oldest supported Docker
+//! (Compose 2.23.0), the `*-29.9.3` ones of the newest at the time (Compose 5.7.0). The `*-format` files hold cases
+//! the recordings lack, a dangling image and a label value with commas, in the documented form; `events-health-29.9.3`
+//! keeps the shape of a recorded health check with neutral names and values.
 
 use std::path::Path;
 
@@ -53,6 +54,64 @@ fn images_volumes_contexts_and_events_read_as_docker_writes_them() {
         }
     );
     assert_eq!(events[1].kind, "volume");
+}
+
+/// The same Compose project, a container alone, a stop and start, recorded by the oldest and the newest Docker.
+fn reads_recording(version: &str) {
+    let recorded = |what: &str| fixture(&format!("{what}-{version}.jsonl"));
+    let list = containers(&recorded("ps"));
+    let named = |name: &str| {
+        list.iter()
+            .find(|c| c.name == name)
+            .unwrap_or_else(|| panic!("{name} listed"))
+    };
+    let db = named("dangorec-db-1");
+    assert_eq!(
+        (db.project.as_deref(), db.service.as_deref(), db.running()),
+        (Some("dangorec"), Some("db"), true)
+    );
+    assert_eq!(db.url().as_deref(), Some("http://localhost:18080"));
+    let web = named("dangorec-web-1");
+    assert!(!web.running() && web.status.starts_with("Exited (1)"));
+    let proxy = named("dangorec-proxy");
+    assert_eq!((proxy.project.as_deref(), proxy.ports.len()), (None, 1));
+    assert_eq!(images(&recorded("images"))[0].reference(), "alpine:3.20");
+    let volumes = volumes(&recorded("volumes"));
+    assert_eq!(
+        (volumes[0].name.as_str(), volumes[0].project.as_deref()),
+        ("dangorec_data", Some("dangorec"))
+    );
+    let raw = recorded("events");
+    let events: Vec<Event> = raw.lines().filter_map(event).collect();
+    assert_eq!(events.len(), raw.lines().count(), "every line is a change");
+    assert!(
+        events
+            .iter()
+            .any(|e| e.kind == "container" && e.action == "start" && e.id == proxy.id)
+    );
+    assert!(events.iter().any(|e| e.action == "die" && e.id == web.id));
+    assert!(events.iter().all(Event::changes_listing));
+    assert!(contexts(&recorded("contexts")).iter().any(|c| c.current));
+}
+
+#[test]
+fn docker_24_0_6_output_reads_as_recorded() {
+    reads_recording("24.0.6");
+}
+
+#[test]
+fn docker_29_output_reads_as_recorded() {
+    reads_recording("29.9.3");
+}
+
+#[test]
+fn a_health_check_changes_nothing_listed() {
+    let checks: Vec<Event> = fixture("events-health-29.9.3.jsonl")
+        .lines()
+        .filter_map(event)
+        .collect();
+    assert_eq!(checks.len(), 4);
+    assert!(checks.iter().all(|e| !e.changes_listing()), "{checks:?}");
 }
 
 #[test]

@@ -132,6 +132,25 @@ pub struct Event {
     pub id: String,
 }
 
+impl Event {
+    /// Whether it can change what the panel lists; a container's health check alone reports `exec_*` and
+    /// `health_status` every few seconds.
+    pub fn changes_listing(&self) -> bool {
+        const QUIET: &[&str] = &[
+            "exec_",
+            "health_status",
+            "top",
+            "resize",
+            "attach",
+            "detach",
+            "archive-path",
+            "extract-to-dir",
+            "export",
+        ];
+        !QUIET.iter().any(|q| self.action.starts_with(q))
+    }
+}
+
 /// The object of one line, all values strings as Docker writes them.
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]

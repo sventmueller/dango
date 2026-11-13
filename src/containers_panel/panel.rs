@@ -313,7 +313,7 @@ impl ContainersPanel {
             &ide_docker::watch_events(&self.context()),
             &env,
             move |line| {
-                if ide_docker::event(line).is_some() {
+                if ide_docker::event(line).is_some_and(|e| e.changes_listing()) {
                     main_soon(move || {
                         let _ = super::with_panel(window, ContainersPanel::changed);
                     });
