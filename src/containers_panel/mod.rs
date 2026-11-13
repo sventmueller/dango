@@ -4,7 +4,7 @@
 mod docker;
 mod panel;
 
-use ide_docker::board::{Node, Row};
+use ide_docker::board::{Board, Node, Row};
 use ide_docker::{Action, Compose};
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
@@ -124,18 +124,23 @@ impl Command {
     /// Whether it applies to `row` of `panel`, which may be no row.
     fn applies(self, panel: &ContainersPanel, row: Option<&Row>) -> bool {
         let reach = panel.ivars().reach.borrow().clone();
-        if reach == Reach::Missing {
+        let board = panel.ivars().board.borrow();
+        self.applies_to(&reach, &board, crate::project::is_trusted(panel.root()), row)
+    }
+
+    /// Whether it applies to `row`, which may be no row, while Docker answers as `reach` says and lists `board`, in
+    /// a folder that is `trusted` or not.
+    fn applies_to(self, reach: &Reach, board: &Board, trusted: bool, row: Option<&Row>) -> bool {
+        if *reach == Reach::Missing {
             return false;
         }
-        let ready = reach == Reach::Ready;
-        let board = panel.ivars().board.borrow();
+        let ready = *reach == Reach::Ready;
         let container = match row.map(|r| &r.node) {
             Some(Node::Container(id)) => board.container(id),
             _ => None,
         };
         let running = container.is_some_and(ide_docker::Container::running);
         let file = matches!(row.map(|r| &r.node), Some(Node::Project(_, Some(_))));
-        let trusted = crate::project::is_trusted(panel.root());
         match self {
             Command::Start => ready && container.is_some() && !running,
             Command::Stop | Command::Restart | Command::Shell => ready && running,
@@ -352,6 +357,8 @@ pub fn enabled(controller: &WindowController, title: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use ide_docker::board::Look;
+
     use super::*;
 
     #[test]
@@ -361,5 +368,110 @@ mod tests {
         }
         assert_eq!(Command::from_tag(0), None);
         assert_eq!(Command::from_tag(13), None);
+    }
+
+    fn board(state: &str, published: bool) -> Board {
+        let ports = published.then(|| ide_docker::Port {
+            host_ip: "0.0.0.0".into(),
+            host_port: 8080,
+            container_port: 80,
+            protocol: "tcp".into(),
+        });
+        Board {
+            containers: vec![ide_docker::Container {
+                id: "c1".into(),
+                name: "web".into(),
+                image: "nginx".into(),
+                state: state.into(),
+                status: String::new(),
+                ports: ports.into_iter().collect(),
+                project: None,
+                service: None,
+            }],
+            ..Board::default()
+        }
+    }
+
+    fn row(node: Node) -> Row {
+        Row {
+            level: 1,
+            label: String::new(),
+            detail: String::new(),
+            look: Look::Plain,
+            node,
+        }
+    }
+
+    fn applying(reach: &Reach, board: &Board, trusted: bool, row: Option<&Row>) -> Vec<Command> {
+        COMMANDS
+            .into_iter()
+            .filter(|c| c.applies_to(reach, board, trusted, row))
+            .collect()
+    }
+
+    #[test]
+    fn a_stopped_container_starts_and_a_running_one_stops_shows_logs_and_opens_its_port() {
+        let container = row(Node::Container("c1".into()));
+        let stopped = applying(&Reach::Ready, &board("exited", true), true, Some(&container));
+        assert_eq!(
+            stopped,
+            [
+                Command::Start,
+                Command::Logs,
+                Command::Remove,
+                Command::Prune,
+                Command::Refresh
+            ]
+        );
+        let running = applying(&Reach::Ready, &board("running", true), true, Some(&container));
+        assert_eq!(
+            running,
+            [
+                Command::Stop,
+                Command::Restart,
+                Command::Logs,
+                Command::Shell,
+                Command::OpenPort,
+                Command::Remove,
+                Command::Prune,
+                Command::Refresh
+            ]
+        );
+        let unpublished = applying(&Reach::Ready, &board("running", false), true, Some(&container));
+        assert!(!unpublished.contains(&Command::OpenPort));
+    }
+
+    #[test]
+    fn compose_runs_only_for_a_file_in_a_trusted_folder() {
+        let project = row(Node::Project("app".into(), Some("compose.yaml".into())));
+        let compose = [Command::Up, Command::Down, Command::Pull];
+        let trusted = applying(&Reach::Ready, &Board::default(), true, Some(&project));
+        assert!(compose.iter().all(|c| trusted.contains(c)));
+        let untrusted = applying(&Reach::Ready, &Board::default(), false, Some(&project));
+        assert!(compose.iter().all(|c| !untrusted.contains(c)));
+        let without_file = row(Node::Project("app".into(), None));
+        let listed = applying(&Reach::Ready, &Board::default(), true, Some(&without_file));
+        assert!(compose.iter().all(|c| !listed.contains(c)));
+    }
+
+    #[test]
+    fn without_docker_nothing_applies_and_without_its_daemon_only_refresh() {
+        let container = row(Node::Container("c1".into()));
+        let board = board("running", true);
+        assert!(applying(&Reach::Missing, &board, true, Some(&container)).is_empty());
+        let not_running = Reach::NotRunning("no daemon".into());
+        assert_eq!(
+            applying(&not_running, &board, true, Some(&container)),
+            [Command::Refresh]
+        );
+        assert_eq!(
+            applying(&Reach::Ready, &board, true, None),
+            [Command::Prune, Command::Refresh]
+        );
+        let section = row(Node::Section(ide_docker::board::Section::Images));
+        assert_eq!(
+            applying(&Reach::Ready, &board, true, Some(&section)),
+            [Command::Prune, Command::Refresh]
+        );
     }
 }

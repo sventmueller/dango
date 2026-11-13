@@ -364,19 +364,9 @@ impl TestsPanel {
         self.ivars().rows.borrow().get(usize::try_from(row).ok()?).cloned()
     }
 
-    /// The tool and scope of `row`.
-    fn scope_of(&self, row: &Row) -> Option<(Tool, Scope)> {
-        match &row.node {
-            Node::Package(tool, package) if package.is_empty() => Some((*tool, Scope::All)),
-            Node::Package(tool, package) => Some((*tool, Scope::Package(package.clone()))),
-            Node::File(tool, _, file) => Some((*tool, Scope::File(file.clone()))),
-            Node::Test(index) => self.ivars().board.borrow().scope_of(*index),
-        }
-    }
-
     fn on_row(&self, _sender: Option<&AnyObject>, debug: bool) {
         let Some(row) = self.clicked_row() else { return };
-        let Some((tool, scope)) = self.scope_of(&row) else {
+        let Some((tool, scope)) = scope_of(&self.ivars().board.borrow(), &row.node) else {
             return;
         };
         match (debug, scope) {
@@ -413,11 +403,9 @@ impl TestsPanel {
             crate::util::set_target(&entry, me);
             entry
         };
-        menu.addItem(&item(t("Ausführen"), sel!(ideTestsRunRow:)));
-        if matches!(row.node, Node::Test(_)) {
-            menu.addItem(&item(t("Debuggen"), sel!(ideTestsDebugRow:)));
+        for command in row_commands(&row.node) {
+            menu.addItem(&item(command.title(), command.action()));
         }
-        menu.addItem(&item(t("Ausgabe zeigen"), sel!(ideTestsShowOutput:)));
     }
 
     fn output_sheet(&self) {
@@ -460,6 +448,50 @@ impl WindowPart for TestsPanel {
     }
 }
 
+/// What the context menu offers on a row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RowCommand {
+    Run,
+    Debug,
+    ShowOutput,
+}
+
+impl RowCommand {
+    fn title(self) -> &'static str {
+        match self {
+            RowCommand::Run => t("Ausführen"),
+            RowCommand::Debug => t("Debuggen"),
+            RowCommand::ShowOutput => t("Ausgabe zeigen"),
+        }
+    }
+
+    fn action(self) -> objc2::runtime::Sel {
+        match self {
+            RowCommand::Run => sel!(ideTestsRunRow:),
+            RowCommand::Debug => sel!(ideTestsDebugRow:),
+            RowCommand::ShowOutput => sel!(ideTestsShowOutput:),
+        }
+    }
+}
+
+/// What the context menu offers on a row of `node`; only a single test can be debugged.
+fn row_commands(node: &Node) -> Vec<RowCommand> {
+    match node {
+        Node::Test(_) => vec![RowCommand::Run, RowCommand::Debug, RowCommand::ShowOutput],
+        Node::Package(..) | Node::File(..) => vec![RowCommand::Run, RowCommand::ShowOutput],
+    }
+}
+
+/// The tool and scope that run the tests of `node`; a package without a name stands for all of its tool's tests.
+fn scope_of(board: &Board, node: &Node) -> Option<(Tool, Scope)> {
+    match node {
+        Node::Package(tool, package) if package.is_empty() => Some((*tool, Scope::All)),
+        Node::Package(tool, package) => Some((*tool, Scope::Package(package.clone()))),
+        Node::File(tool, _, file) => Some((*tool, Scope::File(file.clone()))),
+        Node::Test(index) => board.scope_of(*index),
+    }
+}
+
 /// Whether `running` lists rather than runs, which only a listing's command line says.
 fn listing_command(running: &Running) -> bool {
     running.listing
@@ -490,4 +522,40 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     let spoken = format!("{}, {description}", row.label);
     let (view, _) = ide_ui_common::panel::icon_row(mtm, (name, description, &color), &row.label, row.level, &spoken);
     view.into_super()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_single_test_offers_debugging() {
+        let file = Node::File(Tool::Cargo, "app".into(), "src/lib.rs".into());
+        assert_eq!(row_commands(&file), [RowCommand::Run, RowCommand::ShowOutput]);
+        assert_eq!(
+            row_commands(&Node::Test(0)),
+            [RowCommand::Run, RowCommand::Debug, RowCommand::ShowOutput]
+        );
+    }
+
+    #[test]
+    fn a_row_runs_its_package_its_file_or_every_test_of_its_tool() {
+        let board = Board::default();
+        assert_eq!(
+            scope_of(&board, &Node::Package(Tool::Go, String::new())),
+            Some((Tool::Go, Scope::All))
+        );
+        assert_eq!(
+            scope_of(&board, &Node::Package(Tool::Go, "pkg".into())),
+            Some((Tool::Go, Scope::Package("pkg".into())))
+        );
+        assert_eq!(
+            scope_of(
+                &board,
+                &Node::File(Tool::Pytest, "tests".into(), "tests/test_a.py".into())
+            ),
+            Some((Tool::Pytest, Scope::File("tests/test_a.py".into())))
+        );
+        assert_eq!(scope_of(&board, &Node::Test(3)), None);
+    }
 }
