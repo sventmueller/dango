@@ -153,7 +153,16 @@ fn install(folder: &Path, slot: &Slot) {
 
 fn install_progress(folder: &Path, id: u64, progress: &ide_lsp::Progress) {
     let Some(slot) = slot(folder, id) else { return };
-    let text = match progress {
+    let Some(text) = progress_text(progress) else { return };
+    if let State::Installing(_, shown) = &mut *slot.state.borrow_mut() {
+        *shown = text;
+    }
+    refresh_slot(folder, id);
+}
+
+/// What the status bar says while an installation reports `progress`; `None` for a byte count of unknown size.
+fn progress_text(progress: &ide_lsp::Progress) -> Option<String> {
+    Some(match progress {
         ide_lsp::Progress::Step(step) => match step {
             ide_lsp::Step::Resolving => t("Installation: suche die neueste Version …").to_string(),
             ide_lsp::Step::Downloading => t("Installation: lade herunter …").to_string(),
@@ -168,16 +177,12 @@ fn install_progress(folder: &Path, id: u64, progress: &ide_lsp::Progress) {
             "Installation: lade herunter … {} %",
             &[&(done.saturating_mul(100) / total).to_string()],
         ),
-        ide_lsp::Progress::Bytes { .. } => return,
+        ide_lsp::Progress::Bytes { .. } => return None,
         ide_lsp::Progress::Output(line) => {
             let line: String = line.chars().take(80).collect();
             tf("Installiere … {}", &[&line])
         }
-    };
-    if let State::Installing(_, shown) = &mut *slot.state.borrow_mut() {
-        *shown = text;
-    }
-    refresh_slot(folder, id);
+    })
 }
 
 fn installed(folder: &Path, id: u64, result: Result<(), String>) {
@@ -193,4 +198,118 @@ fn installed(folder: &Path, id: u64, result: Result<(), String>) {
         }
     }
     refresh_slot(folder, id);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+
+    use ide_lsp::{Progress, Server, Step};
+
+    use super::*;
+
+    #[test]
+    fn an_installation_tells_its_stage_its_share_and_the_installers_last_line() {
+        assert_eq!(
+            progress_text(&Progress::Step(Step::Verifying)).as_deref(),
+            Some(t("Installation: prüfe die Prüfsumme …"))
+        );
+        assert_eq!(
+            progress_text(&Progress::Step(Step::Done)).as_deref(),
+            Some(t("Installiere …"))
+        );
+        let share = progress_text(&Progress::Bytes {
+            done: 512,
+            total: Some(2048),
+        });
+        assert_eq!(share, Some(tf("Installation: lade herunter … {} %", &["25"])));
+        for unknown in [None, Some(0)] {
+            assert_eq!(
+                progress_text(&Progress::Bytes {
+                    done: 9,
+                    total: unknown
+                }),
+                None
+            );
+        }
+        let long = "x".repeat(200);
+        let line = progress_text(&Progress::Output(long)).unwrap();
+        assert_eq!(line, tf("Installiere … {}", &[&"x".repeat(80)]));
+    }
+
+    fn slot(state: State) -> Slot {
+        Slot {
+            id: 1,
+            language: ide_lsp::Language::Go,
+            root: std::env::temp_dir(),
+            state: RefCell::new(state),
+            progress: RefCell::default(),
+            #[cfg(feature = "selftest")]
+            progress_at: std::cell::Cell::new(None),
+            message: RefCell::new(None),
+            hold: std::cell::Cell::new(super::super::lease::Hold::default()),
+            timer: std::cell::Cell::new(false),
+        }
+    }
+
+    #[test]
+    fn the_status_bar_offers_what_fits_where_the_server_stands() {
+        let finding = slot_status(&slot(State::Finding));
+        assert_eq!(
+            finding,
+            (tf("Suche Sprachserver für {} …", &["Go"]), status::Action::None)
+        );
+        let installing = slot_status(&slot(State::Installing(Cancel::new(), "50 %".into())));
+        assert_eq!(installing, ("50 %".to_string(), status::Action::Cancel));
+        let failed = slot_status(&slot(State::Failed("no disk".into())));
+        assert_eq!(failed, ("no disk".to_string(), status::Action::Retry));
+    }
+
+    fn server(program: &str, args: &[&str]) -> Server {
+        let mut config = ide_lsp::ServerConfig::new("stub", Path::new(program), &std::env::temp_dir(), vec![]);
+        config.args = args.iter().map(ToString::to_string).collect();
+        config.restart.max_restarts = 0;
+        config.stop_grace = std::time::Duration::from_millis(100);
+        Server::start(&Supervisor::new(), config, |_| {}).unwrap()
+    }
+
+    #[test]
+    fn a_server_that_did_not_answer_yet_starts_and_one_that_crashed_can_be_restarted() {
+        let wait = std::time::Duration::from_secs(10);
+        let silent = server("/bin/sleep", &["30"]);
+        let starting = slot(State::Running(silent.clone()));
+        assert_eq!(
+            slot_status(&starting),
+            (tf("{} startet …", &["stub"]), status::Action::None)
+        );
+        silent.stop();
+        assert!(silent.wait_for(wait, |s| s == Status::Stopped));
+        assert_eq!(
+            slot_status(&starting),
+            (tf("{} ist beendet", &["stub"]), status::Action::Restart)
+        );
+        let crashing = server("/usr/bin/false", &[]);
+        assert!(crashing.wait_for(wait, |s| s == Status::Failed));
+        let failed = slot_status(&slot(State::Running(crashing)));
+        assert_eq!(
+            failed,
+            (tf("{} ist wiederholt abgestürzt", &["stub"]), status::Action::Restart)
+        );
+    }
+
+    #[test]
+    fn every_stage_has_words_of_its_own() {
+        let stages = [
+            Step::Resolving,
+            Step::Downloading,
+            Step::Verifying,
+            Step::Unpacking,
+            Step::Running,
+        ];
+        let texts: std::collections::BTreeSet<String> = stages
+            .iter()
+            .filter_map(|step| progress_text(&Progress::Step(*step)))
+            .collect();
+        assert_eq!(texts.len(), stages.len());
+    }
 }

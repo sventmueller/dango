@@ -268,6 +268,14 @@ pub fn show_menu(view: &EditorTextView, sender: Option<&AnyObject>) {
     let Some(button) = sender.and_then(|s| s.downcast_ref::<NSButton>()) else {
         return;
     };
+    let menu = menu(view);
+    let below = NSPoint::new(0.0, button.bounds().size.height + 4.0);
+    let view_of_button: &NSView = button;
+    menu.popUpMenuPositioningItem_atLocation_inView(None, below, Some(view_of_button));
+}
+
+/// The indentation menu of `view`: tabs or spaces and the widths, the current ones ticked.
+pub fn menu(view: &EditorTextView) -> Retained<NSMenu> {
     let mtm = view.mtm();
     let format = view.ivars().spacing.borrow().format.clone();
     let menu = NSMenu::new(mtm);
@@ -298,9 +306,7 @@ pub fn show_menu(view: &EditorTextView, sender: Option<&AnyObject>) {
         crate::util::set_target(item, view);
         menu.addItem(item);
     }
-    let below = NSPoint::new(0.0, button.bounds().size.height + 4.0);
-    let view_of_button: &NSView = button;
-    menu.popUpMenuPositioningItem_atLocation_inView(None, below, Some(view_of_button));
+    menu
 }
 
 /// The user chose an entry of the indentation menu, by its tag.
@@ -379,6 +385,27 @@ pub fn shown(view: &EditorTextView) -> (String, Option<String>) {
 mod tests {
     use super::*;
     use ide_project::editorconfig::IndentSize;
+
+    #[test]
+    fn a_charset_fits_only_the_encoding_and_mark_it_names() {
+        let cases = [
+            (Charset::Utf8, (Encoding::Utf8, false), true),
+            (Charset::Utf8, (Encoding::Utf8, true), false),
+            (Charset::Utf8Bom, (Encoding::Utf8, true), true),
+            (Charset::Utf8Bom, (Encoding::Utf8, false), false),
+            (Charset::Utf16Le, (Encoding::Utf16Le, true), true),
+            (Charset::Utf16Be, (Encoding::Utf16Le, true), false),
+            (Charset::Utf16Be, (Encoding::Utf16Be, false), true),
+            (Charset::Latin1, (Encoding::Utf8, false), false),
+        ];
+        for (charset, read, wanted) in cases {
+            assert_eq!(fits(charset, read), wanted, "{charset:?} for {read:?}");
+        }
+        assert_eq!(
+            [EndOfLine::Lf, EndOfLine::Crlf, EndOfLine::Cr].map(ending),
+            [LineEnding::Lf, LineEnding::Crlf, LineEnding::Cr]
+        );
+    }
 
     #[test]
     fn editorconfig_wins_over_the_lines_and_the_lines_over_the_default() {

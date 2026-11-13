@@ -23,6 +23,7 @@ enum Seen {
     Diagnostics(Uri, Vec<Diagnostic>),
     Progress(WorkDoneProgress),
     Log(String),
+    Message(String),
     ApplyEdit(WorkspaceEdit),
     Capabilities,
     Refresh(Refresh),
@@ -67,6 +68,7 @@ fn start(name: &str, env: &[(&str, &str)], tweak: impl FnOnce(&mut ServerConfig)
             Event::Diagnostics { uri, diagnostics, .. } => Seen::Diagnostics(uri, diagnostics),
             Event::Progress { progress, .. } => Seen::Progress(progress),
             Event::Log { message, .. } => Seen::Log(message),
+            Event::Message { message, .. } => Seen::Message(message),
             Event::ApplyEdit { edit, reply, .. } => {
                 reply.send(ApplyWorkspaceEditResponse {
                     applied: true,
@@ -601,4 +603,223 @@ fn navigation_across_the_project_comes_back_in_utf16() {
     assert_eq!(supertypes[0].item.selection_range, range((0, 3), (0, 7)));
     let subtypes = wait(|r| f.server.types(&typed[0], Types::Subtypes, r)).unwrap();
     assert_eq!(subtypes[0].item.name, "sub of name");
+}
+
+#[test]
+fn a_projects_typescript_compiler_that_answers_initialize_serves_the_project() {
+    let dir = root("tsc");
+    let bin = dir.join("node_modules/.bin");
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::create_dir_all(dir.join("path")).unwrap();
+    let fake = env!("CARGO_BIN_EXE_ide-lsp-fake-server");
+    for (path, body) in [
+        (bin.join("tsc"), format!("#!/bin/sh\nexec '{fake}' \"$@\"\n")),
+        (dir.join("path/node"), "#!/bin/sh\n".to_string()),
+    ] {
+        std::fs::write(&path, body).unwrap();
+        std::fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    }
+    let env = vec![(
+        "PATH".to_string(),
+        format!("{}:/usr/bin:/bin", dir.join("path").display()),
+    )];
+    let registry = ide_lsp::Registry::with_tools(&Supervisor::new(), env, dir.join("tools"));
+    let found = registry.find(&ide_lsp::Language::TypeScript, &dir, &dir).unwrap();
+    assert_eq!(found.program, bin.join("tsc"));
+    assert_eq!(
+        (found.label.as_str(), found.source),
+        ("tsc --lsp", ide_lsp::Source::Project)
+    );
+    assert_eq!(found.args, ["--lsp", "--stdio"]);
+    let again = registry.find(&ide_lsp::Language::TypeScript, &dir, &dir).unwrap();
+    assert_eq!(
+        again, found,
+        "the answer is remembered while the compiler stays the same"
+    );
+}
+
+#[test]
+fn a_server_asking_for_whole_texts_gets_them_and_saves_without_text() {
+    let f = start("full", &[("FAKE_SYNC", "1")], |_| {});
+    assert_eq!((f.server.label(), f.server.root()), ("fake", f.root.as_path()));
+    assert!(f.server.process().is_some());
+    let doc = f.uri("a.go");
+    f.server.open(&doc, "go", 1, "one\ntwo\n");
+    f.server
+        .change(&doc, 2, &[edit(Some(range((1, 0), (1, 3))), "three")])
+        .unwrap();
+    assert_eq!(
+        f.ask("fake/changes", Value::Null).unwrap(),
+        json!([{"text": "one\nthree\n"}]),
+        "the whole text, not the range"
+    );
+    f.server.save(&doc);
+    assert_eq!(f.ask("fake/saved", Value::Null).unwrap(), json!([null]));
+    f.server.close(&doc);
+    assert!(!f.server.is_open(&doc));
+    assert_eq!(
+        f.ask("fake/text", json!({"textDocument": {"uri": doc}})).unwrap(),
+        Value::Null
+    );
+
+    f.server
+        .did_change_configuration(json!({"fake": {"answer": 43}}))
+        .unwrap();
+    f.server.watched_files_changed(vec![]).unwrap();
+    f.server.notify_value("fake/nothing", Value::Null).unwrap();
+    let received = f.received();
+    for method in [
+        "workspace/didChangeConfiguration",
+        "workspace/didChangeWatchedFiles",
+        "fake/nothing",
+    ] {
+        assert!(received.iter().any(|m| m == method), "{method} in {received:?}");
+    }
+    f.server.stop();
+    assert!(f.server.wait_for(WAIT, |s| s == Status::Stopped));
+    assert_eq!(
+        f.server.notify_value("fake/nothing", Value::Null),
+        Err(Error::NotRunning)
+    );
+}
+
+#[test]
+fn a_server_that_wants_no_documents_hears_nothing_about_them() {
+    let f = start(
+        "nosync",
+        &[("FAKE_SYNC", r#"{"openClose": false, "change": 0, "save": true}"#)],
+        |_| {},
+    );
+    let doc = f.uri("a.go");
+    f.server.open(&doc, "go", 1, "one");
+    f.server.change(&doc, 2, &[edit(None, "two")]).unwrap();
+    f.server.save(&doc);
+    f.server.open(&doc, "go", 3, "three");
+    f.server.close(&doc);
+    let told: Vec<String> = f
+        .received()
+        .into_iter()
+        .filter(|m| m.starts_with("textDocument/"))
+        .collect();
+    assert!(told.is_empty(), "{told:?}");
+}
+
+#[test]
+fn the_server_learns_its_folder_and_requests_of_the_wrong_shape_are_refused() {
+    let f = start("shapes", &[], |_| {});
+    let folders = f
+        .ask("fake/ask", json!({"method": "workspace/workspaceFolders"}))
+        .unwrap();
+    let name = f.root.file_name().unwrap().to_str().unwrap();
+    assert_eq!(
+        folders["answer"],
+        json!([{"uri": uri::from_path(&f.root), "name": name}])
+    );
+    for method in [
+        "window/showMessageRequest",
+        "window/showDocument",
+        "client/registerCapability",
+        "client/unregisterCapability",
+        "workspace/applyEdit",
+    ] {
+        let refused = f
+            .ask("fake/ask", json!({"method": method, "params": {"nothing": 1}}))
+            .unwrap();
+        assert_eq!(refused["error"]["code"], -32602, "{method}");
+    }
+    for (method, refresh) in [
+        ("workspace/inlayHint/refresh", Refresh::InlayHints),
+        ("workspace/diagnostic/refresh", Refresh::Diagnostics),
+        ("workspace/codeLens/refresh", Refresh::CodeLenses),
+        ("workspace/foldingRange/refresh", Refresh::FoldingRanges),
+    ] {
+        f.ask("fake/ask", json!({"method": method})).unwrap();
+        f.expect(|s| *s == Seen::Refresh(refresh));
+    }
+    f.ask(
+        "fake/notify",
+        json!({"method": "textDocument/publishDiagnostics", "params": {"uri": 3}}),
+    )
+    .unwrap();
+    f.ask(
+        "fake/notify",
+        json!({"method": "$/logTrace", "params": {"message": "traced"}}),
+    )
+    .unwrap();
+    f.expect(|s| *s == Seen::Log("traced".into()));
+    f.ask(
+        "fake/notify",
+        json!({"method": "window/showMessage", "params": {"type": 1, "message": "broken"}}),
+    )
+    .unwrap();
+    f.expect(|s| *s == Seen::Message("broken".into()));
+}
+
+#[test]
+fn reopening_a_document_on_other_servers_closes_it_where_it_no_longer_is() {
+    let a = start("move-a", &[], |_| {});
+    let b = start("move-b", &[], |_| {});
+    let documents = Documents::new();
+    let doc = a.uri("moved.ts");
+    assert_eq!(documents.change(&doc, 1, &[]), Err(Error::NotOpen));
+    documents.open(&doc, "typescript", 1, "one", std::slice::from_ref(&a.server));
+    documents.open(&doc, "typescript", 2, "two", std::slice::from_ref(&b.server));
+    assert!(!a.server.is_open(&doc), "the server it left closed it");
+    assert_eq!(b.server_text(&doc), "two");
+    documents.save(&doc);
+    assert_eq!(b.ask("fake/saved", Value::Null).unwrap(), json!(["two"]));
+    assert_eq!(a.ask("fake/saved", Value::Null).unwrap(), json!([]));
+}
+
+#[test]
+fn an_edit_in_a_file_that_is_not_open_is_recounted_from_the_file_on_disk() {
+    let f = start("disk", &[("FAKE_ENCODING", "utf-8")], utf8());
+    let path = f.root.join("closed.rs");
+    std::fs::write(&path, "ä😀x").unwrap();
+    let closed = uri::from_path(&path);
+    let change = json!({"changes": {closed.as_str(): [{"range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 6}}, "newText": "y"}]}});
+    f.ask(
+        "fake/ask",
+        json!({"method": "workspace/applyEdit", "params": {"edit": change}}),
+    )
+    .unwrap();
+    let Seen::ApplyEdit(edit) = f.expect(|s| matches!(s, Seen::ApplyEdit(_))) else {
+        unreachable!()
+    };
+    assert_eq!(edit.changes.unwrap()[&closed][0].range, range((0, 1), (0, 3)));
+}
+
+#[test]
+fn formatting_inlay_hints_and_the_plain_shapes_of_answers_come_back_alike() {
+    let f = start("shapes-plain", &[("FAKE_SHAPES", "1")], |_| {});
+    let doc = f.uri("a.rs");
+    f.server.open(&doc, "rust", 1, "let a = 1;\nlet b = 2;\n");
+    let options = ide_lsp::lsp_types::FormattingOptions {
+        tab_size: 4,
+        insert_spaces: true,
+        ..Default::default()
+    };
+    let formatted = wait(|r| f.server.format(&doc, options.clone(), r)).unwrap();
+    assert_eq!(formatted[0].new_text, "// formatted\n");
+    let ranged = wait(|r| f.server.format_range(&doc, range((1, 0), (1, 3)), options, r)).unwrap();
+    assert_eq!(ranged[0].range, range((1, 0), (1, 3)));
+    let hints = wait(|r| f.server.inlay_hints(&doc, range((0, 5), (1, 0)), r)).unwrap();
+    assert_eq!(hints[0].position, at(0, 5));
+    let symbols = wait(|r| f.server.document_symbols(&doc, r)).unwrap();
+    assert_eq!(
+        (
+            symbols[0].name.as_str(),
+            symbols[0].detail.as_deref(),
+            symbols[0].children.is_none()
+        ),
+        ("flat", Some("outer"), true),
+        "a flat symbol becomes one without children, its container as its detail"
+    );
+    let completions = wait(|r| f.server.completion(&doc, at(0, 1), None, r)).unwrap();
+    assert!(!completions.incomplete, "a plain list is complete");
+    assert_eq!(completions.items[0].label, "plain");
+    assert_eq!(
+        wait(|r| f.server.format(&f.uri("closed.rs"), Default::default(), r)),
+        Err(Error::NotOpen)
+    );
 }

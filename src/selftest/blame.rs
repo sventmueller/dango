@@ -21,6 +21,14 @@ use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "editor-blame";
+
+/// Sends `action` to `view` as its menu item does.
+fn send(view: &EditorTextView, action: objc2::runtime::Sel) {
+    use objc2::MainThreadOnly;
+    let app = objc2_app_kit::NSApplication::sharedApplication(view.mtm());
+    // SAFETY: An action the editor answers, sent to it with no sender, as a menu item without a target sends it.
+    unsafe { app.sendAction_to_from(action, Some(view), None) };
+}
 const FILE: &str = "notes.txt";
 
 fn root() -> PathBuf {
@@ -154,7 +162,7 @@ fn line_end() {
                 format!("{drawn:?}"),
             );
             picture("blame-line-end");
-            blame::toggle_column(&view);
+            send(&view, objc2::sel!(ideToggleBlameColumn:));
             main_after(Duration::from_millis(300), column_blocks);
         },
     );
@@ -237,7 +245,7 @@ fn popover() {
     let Some(view) = blamed() else { return finish(SCENARIO) };
     let at = view.line_start(2).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));
-    blame::show_for_cursor(&view);
+    send(&view, objc2::sel!(ideShowLineBlame:));
     wait_until(
         || {
             blamed().and_then(|v| blame::popover_texts(&v)).is_some_and(|texts| {
@@ -257,7 +265,7 @@ fn popover() {
                 texts.join(" | "),
             );
             picture("blame-popover");
-            blame::copy_hash(&view);
+            send(&view, objc2::sel!(ideBlameCopyHash:));
             // SAFETY: The string type is AppKit's constant.
             let copied =
                 unsafe { NSPasteboard::generalPasteboard().stringForType(objc2_app_kit::NSPasteboardTypeString) }
@@ -268,7 +276,7 @@ fn popover() {
                 format!("{copied:?}"),
             );
             blame::show_for_cursor(&view);
-            blame::show_in_graph(&view);
+            send(&view, objc2::sel!(ideBlameShowInGraph:));
             wait_until(
                 || {
                     window::for_project(&root())
@@ -291,7 +299,7 @@ fn graph(ok: bool) {
     picture("blame-graph");
     let Some(view) = blamed() else { return finish(SCENARIO) };
     blame::show_for_cursor(&view);
-    blame::show_diff(&view);
+    send(&view, objc2::sel!(ideBlameShowDiff:));
     let short: String = head().chars().take(7).collect();
     wait_until(
         move || {

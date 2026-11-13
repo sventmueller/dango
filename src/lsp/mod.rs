@@ -863,6 +863,8 @@ pub use actions::selftest as code_action_menu;
 pub use complete::selftest as completion;
 pub use edits::apply_text_edits;
 #[cfg(feature = "selftest")]
+pub use edits::{apply_workspace_edit, question as server_question};
+#[cfg(feature = "selftest")]
 pub use hover::shown_text as hover_text;
 use install::missing_text;
 pub(crate) use install::server_status;
@@ -874,7 +876,7 @@ pub use rename::rename_to;
 #[cfg(feature = "selftest")]
 pub use signature::selftest as signatures;
 #[cfg(feature = "selftest")]
-pub use {navigate::close_list, navigate::listed};
+pub use {navigate::close_list, navigate::listed, navigate::shown_symbols};
 
 #[cfg(test)]
 mod tests {

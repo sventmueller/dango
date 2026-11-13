@@ -44,6 +44,7 @@ mod debug_menus;
 mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
+mod editor_commands;
 mod editor_multi;
 mod editor_scroll;
 mod editor_undo;
@@ -57,9 +58,11 @@ mod inlay_repo;
 mod insets;
 mod lsp;
 mod lsp_actions;
+mod lsp_more;
 mod lsp_navigation;
 mod own_agent;
 mod predict;
+mod predict_menu;
 mod quit;
 mod recovery;
 mod replace;
@@ -165,6 +168,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "editor-multi" => editor_multi::run(),
         "editor-scroll" => editor_scroll::run(),
         "editor-undo" => editor_undo::run(),
+        "editor-commands" => editor_commands::run(),
         "edit-prediction" => predict::run(),
         "editor-insets" => insets::run(),
         "inlay-hints" => inlay::run(),

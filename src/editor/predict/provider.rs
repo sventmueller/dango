@@ -209,61 +209,17 @@ pub fn provider(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
 }
 
 fn local(chosen: &Chosen) -> Result<Arc<dyn Provider>, Blocked> {
-    let Some(local) = chosen.local().cloned() else {
-        return Err(Blocked::Off);
-    };
-    if local.model.trim().is_empty() {
-        return Err(Blocked::Unavailable(
-            t("Kein Modell gewählt – in den Einstellungen unter „Vorhersage“").to_string(),
-        ));
-    }
-    with(|p| {
-        let mut cell = p.local.borrow_mut();
-        if let Some((choice, made, provider)) = cell.as_ref()
-            && *choice == chosen.choice
-            && *made == local
-        {
-            return Ok(provider.clone());
-        }
-        let provider: Arc<dyn Provider> = match chosen.choice {
-            Choice::Ollama => Arc::new(ide_predict::fim::Ollama::new(&local.url, &local.model)),
-            _ => Arc::new(ide_predict::fim::LmStudio::new(&local.url, &local.model)),
-        };
-        *cell = Some((chosen.choice, local, provider.clone()));
-        Ok(provider)
-    })
+    with(|p| p.local_for(chosen))
 }
 
 fn copilot_for(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
-    let state = with(|p| match p.copilots.borrow().get(root) {
-        None => None,
-        Some(Slot::Running(copilot)) => Some(Ok(copilot.clone())),
-        Some(Slot::Starting) => Some(Err(Blocked::Busy(t("Copilot startet …").to_string()))),
-        Some(Slot::Missing) => Some(Err(Blocked::Missing)),
-        Some(Slot::Installing(_, progress)) => Some(Err(Blocked::Busy(progress.clone()))),
-        Some(Slot::Failed(message)) => Some(Err(Blocked::Unavailable(message.clone()))),
-    });
-    match state {
+    match with(|p| p.copilot_answer(root)) {
+        Some(answer) => answer,
         None => {
             start(root);
             Err(Blocked::Busy(t("Copilot startet …").to_string()))
         }
-        Some(Ok(copilot)) => match account(root) {
-            Some(Account::SignedIn { .. }) => Ok(copilot),
-            Some(Account::NeedsSignIn) => Err(Blocked::SignIn),
-            Some(Account::NoSubscription { user }) => {
-                Err(Blocked::Unavailable(tf("Copilot: {} hat kein Copilot-Abo", &[&user])))
-            }
-            Some(Account::Unavailable(message)) => Err(Blocked::Unavailable(message)),
-            Some(Account::Starting) | None => Err(Blocked::Busy(t("Copilot startet …").to_string())),
-        },
-        Some(Err(blocked)) => Err(blocked),
     }
-}
-
-/// What Copilot last said about the account in `root`.
-pub fn account(root: &Path) -> Option<Account> {
-    with(|p| p.accounts.borrow().get(root).cloned())
 }
 
 /// Copilot of `root`, once it runs.
@@ -287,15 +243,66 @@ pub enum CopilotState {
 
 /// Where Copilot of `root` stands now.
 pub fn copilot_state(root: &Path) -> CopilotState {
-    let account = account(root);
-    with(|p| match p.copilots.borrow().get(root) {
-        None => CopilotState::NotStarted,
-        Some(Slot::Starting) => CopilotState::Starting,
-        Some(Slot::Missing) => CopilotState::Missing,
-        Some(Slot::Installing(_, progress)) => CopilotState::Installing(progress.clone()),
-        Some(Slot::Failed(message)) => CopilotState::Failed(message.clone()),
-        Some(Slot::Running(_)) => CopilotState::Running(account),
-    })
+    with(|p| p.copilot_state(root))
+}
+
+impl Predictions {
+    /// The local provider `chosen` names, made once for the settings it was made from.
+    fn local_for(&self, chosen: &Chosen) -> Result<Arc<dyn Provider>, Blocked> {
+        let Some(local) = chosen.local().cloned() else {
+            return Err(Blocked::Off);
+        };
+        if local.model.trim().is_empty() {
+            return Err(Blocked::Unavailable(
+                t("Kein Modell gewählt – in den Einstellungen unter „Vorhersage“").to_string(),
+            ));
+        }
+        let mut cell = self.local.borrow_mut();
+        if let Some((choice, made, provider)) = cell.as_ref()
+            && *choice == chosen.choice
+            && *made == local
+        {
+            return Ok(provider.clone());
+        }
+        let provider: Arc<dyn Provider> = match chosen.choice {
+            Choice::Ollama => Arc::new(ide_predict::fim::Ollama::new(&local.url, &local.model)),
+            _ => Arc::new(ide_predict::fim::LmStudio::new(&local.url, &local.model)),
+        };
+        *cell = Some((chosen.choice, local, provider.clone()));
+        Ok(provider)
+    }
+
+    /// Copilot of `root` for an editor, or why it cannot answer; `None` while nothing runs or starts for `root`.
+    fn copilot_answer(&self, root: &Path) -> Option<Result<Arc<dyn Provider>, Blocked>> {
+        let running: Arc<dyn Provider> = match self.copilots.borrow().get(root)? {
+            Slot::Running(copilot) => copilot.clone(),
+            Slot::Starting => return Some(Err(Blocked::Busy(t("Copilot startet …").to_string()))),
+            Slot::Missing => return Some(Err(Blocked::Missing)),
+            Slot::Installing(_, progress) => return Some(Err(Blocked::Busy(progress.clone()))),
+            Slot::Failed(message) => return Some(Err(Blocked::Unavailable(message.clone()))),
+        };
+        Some(match self.accounts.borrow().get(root).cloned() {
+            Some(Account::SignedIn { .. }) => Ok(running),
+            Some(Account::NeedsSignIn) => Err(Blocked::SignIn),
+            Some(Account::NoSubscription { user }) => {
+                Err(Blocked::Unavailable(tf("Copilot: {} hat kein Copilot-Abo", &[&user])))
+            }
+            Some(Account::Unavailable(message)) => Err(Blocked::Unavailable(message)),
+            Some(Account::Starting) | None => Err(Blocked::Busy(t("Copilot startet …").to_string())),
+        })
+    }
+
+    fn copilot_state(&self, root: &Path) -> CopilotState {
+        let account = self.accounts.borrow().get(root).cloned();
+        match self.copilots.borrow().get(root) {
+            None => CopilotState::NotStarted,
+            Some(Slot::Starting) => CopilotState::Starting,
+            Some(Slot::Missing) => CopilotState::Missing,
+            Some(Slot::Installing(_, progress)) => CopilotState::Installing(progress.clone()),
+            Some(Slot::Failed(message)) => CopilotState::Failed(message.clone()),
+            Some(Slot::Running(_)) => CopilotState::Running(account),
+        }
+    }
 }
 
 /// The folders Copilot runs or starts for.
@@ -443,5 +450,96 @@ pub fn name(choice: Choice) -> &'static str {
         Choice::Copilot => "GitHub Copilot",
         Choice::Ollama => "Ollama",
         Choice::LmStudio => "LM Studio",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn chosen(choice: Choice, model: &str) -> Chosen {
+        let local = Local {
+            url: "http://127.0.0.1:11434".into(),
+            model: model.into(),
+        };
+        Chosen {
+            choice,
+            ollama: Some(local.clone()),
+            lm_studio: Some(local),
+            ..Chosen::default()
+        }
+    }
+
+    #[test]
+    fn a_local_model_is_made_once_for_its_settings_and_anew_when_they_change() {
+        let predictions = Predictions::default();
+        let first = predictions.local_for(&chosen(Choice::Ollama, "qwen")).unwrap();
+        let again = predictions.local_for(&chosen(Choice::Ollama, "qwen")).unwrap();
+        assert!(Arc::ptr_eq(&first, &again));
+        let other = predictions.local_for(&chosen(Choice::Ollama, "llama")).unwrap();
+        assert!(!Arc::ptr_eq(&first, &other));
+        let studio = predictions.local_for(&chosen(Choice::LmStudio, "llama")).unwrap();
+        assert_ne!(studio.name(), other.name());
+    }
+
+    #[test]
+    fn without_a_local_model_there_is_nothing_to_ask() {
+        let predictions = Predictions::default();
+        let unnamed = predictions.local_for(&chosen(Choice::Ollama, "  ")).err();
+        assert_eq!(
+            unnamed,
+            Some(Blocked::Unavailable(
+                t("Kein Modell gewählt – in den Einstellungen unter „Vorhersage“").to_string()
+            ))
+        );
+        assert_eq!(
+            predictions.local_for(&chosen(Choice::Copilot, "x")).err(),
+            Some(Blocked::Off)
+        );
+    }
+
+    #[test]
+    fn copilot_says_why_it_cannot_answer_yet() {
+        let predictions = Predictions::default();
+        let root = Path::new("/project");
+        assert!(predictions.copilot_answer(root).is_none());
+        assert_eq!(predictions.copilot_state(root), CopilotState::NotStarted);
+        let cases = [
+            (
+                Slot::Starting,
+                Blocked::Busy(t("Copilot startet …").to_string()),
+                CopilotState::Starting,
+            ),
+            (Slot::Missing, Blocked::Missing, CopilotState::Missing),
+            (
+                Slot::Installing(ide_lsp::Cancel::new(), "40 %".into()),
+                Blocked::Busy("40 %".into()),
+                CopilotState::Installing("40 %".into()),
+            ),
+            (
+                Slot::Failed("no node".into()),
+                Blocked::Unavailable("no node".into()),
+                CopilotState::Failed("no node".into()),
+            ),
+        ];
+        for (slot, blocked, state) in cases {
+            predictions.copilots.borrow_mut().insert(root.to_path_buf(), slot);
+            assert_eq!(predictions.copilot_answer(root).map(Result::err), Some(Some(blocked)));
+            assert_eq!(predictions.copilot_state(root), state);
+        }
+    }
+
+    #[test]
+    fn consent_is_needed_only_for_a_provider_outside_the_mac() {
+        let local = chosen(Choice::Ollama, "qwen");
+        assert_eq!(local.consent_id(), None);
+        assert!(local.consented());
+        let mut copilot = chosen(Choice::Copilot, "");
+        assert_eq!(copilot.local(), None);
+        assert!(!copilot.consented());
+        copilot.consent = vec!["copilot".into()];
+        assert!(copilot.consented());
+        assert_eq!(name(Choice::LmStudio), "LM Studio");
+        assert_eq!(name(Choice::Off), t("Aus"));
     }
 }

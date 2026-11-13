@@ -141,3 +141,33 @@ pub fn kind_symbol(kind: SymbolKind) -> &'static str {
         _ => "character",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_kind_of_symbol_has_its_picture_and_each_hierarchy_its_two_ways() {
+        let cases = [
+            (SymbolKind::OPERATOR, "function"),
+            (SymbolKind::OBJECT, "cube"),
+            (SymbolKind::INTERFACE, "square.on.square.dashed"),
+            (SymbolKind::ENUM_MEMBER, "list.bullet"),
+            (SymbolKind::FILE, "shippingbox"),
+            (SymbolKind::TYPE_PARAMETER, "t.square"),
+            (SymbolKind::PROPERTY, "rectangle.split.3x1"),
+            (SymbolKind::STRING, "character"),
+        ];
+        for (kind, symbol) in cases {
+            assert_eq!(kind_symbol(kind), symbol, "{kind:?}");
+        }
+        assert_eq!(
+            HierarchyKind::Calls.directions(),
+            [Direction::Callers, Direction::Callees]
+        );
+        assert_eq!(
+            HierarchyKind::Types.directions(),
+            [Direction::Supertypes, Direction::Subtypes]
+        );
+    }
+}

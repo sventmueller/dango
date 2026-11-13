@@ -651,4 +651,173 @@ mod tests {
         let missing = registry.find(&server("nowhere -x".into()), &tools, &tools).unwrap_err();
         assert_eq!((missing.program.as_str(), missing.install), ("nowhere", None));
     }
+
+    /// Writes executable shell scripts under `dir`, by path relative to it.
+    fn scripts(dir: &Path, scripts: &[(&str, &str)]) {
+        for (name, body) in scripts {
+            let path = dir.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        }
+    }
+
+    fn with_home(tools: &Path, path: &str, home: &Path) -> Registry {
+        let env = vec![
+            ("PATH".to_string(), format!("{path}:/usr/bin:/bin")),
+            ("HOME".to_string(), home.display().to_string()),
+        ];
+        Registry::with_tools(&Supervisor::new(), env, tools.to_path_buf())
+    }
+
+    #[test]
+    fn gopls_is_found_in_the_gopath_go_names_or_in_the_home_folders_go() {
+        let dir = tools(&["gopath/bin/gopls", "home/go/bin/gopls"]);
+        let gopath = dir.join("gopath").display().to_string();
+        scripts(
+            &dir,
+            &[("path/go", &format!("[ \"$1 $2\" = 'env GOPATH' ] && echo ':{gopath}'"))],
+        );
+        let with_go = with_home(
+            &dir.join("tools"),
+            &dir.join("path").display().to_string(),
+            &dir.join("home"),
+        );
+        let found = with_go.find(&Language::Go, &dir, &dir).unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (dir.join("gopath/bin/gopls"), Source::GoPath)
+        );
+        let without_go = with_home(&dir.join("tools"), "/nonexistent", &dir.join("home"));
+        let found = without_go.find(&Language::Go, &dir, &dir).unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (dir.join("home/go/bin/gopls"), Source::GoPath)
+        );
+        let nowhere = with_home(&dir.join("tools"), "/nonexistent", &dir.join("nohome"));
+        let missing = nowhere.find(&Language::Go, &dir, &dir).unwrap_err();
+        assert_eq!((missing.missing, missing.install), (Some("go"), Some(Install::Gopls)));
+    }
+
+    #[test]
+    fn rust_analyzer_comes_from_rustup_for_the_projects_toolchain_or_a_working_one_on_the_path() {
+        let dir = tools(&["toolchain/bin/rust-analyzer"]);
+        let program = dir.join("toolchain/bin/rust-analyzer").display().to_string();
+        scripts(
+            &dir,
+            &[
+                (
+                    "home/.cargo/bin/rustup",
+                    &format!("[ \"$1 $2\" = 'which rust-analyzer' ] && echo '{program}'"),
+                ),
+                (
+                    "proxy/rust-analyzer",
+                    "echo 'error: rust-analyzer is not installed' >&2\nexit 1",
+                ),
+                ("real/rust-analyzer", "echo 'rust-analyzer 1.0.0'"),
+            ],
+        );
+        let tools = dir.join("tools");
+        let rustup = with_home(&tools, "/nonexistent", &dir.join("home"));
+        let found = rustup.find(&Language::Rust, &dir, &dir).unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (dir.join("toolchain/bin/rust-analyzer"), Source::Rustup)
+        );
+        let real = with_home(&tools, &dir.join("real").display().to_string(), &dir.join("nohome"));
+        let found = real.find(&Language::Rust, &dir, &dir).unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (dir.join("real/rust-analyzer"), Source::Path)
+        );
+        let proxy = with_home(&tools, &dir.join("proxy").display().to_string(), &dir.join("nohome"));
+        let missing = proxy.find(&Language::Rust, &dir, &dir).unwrap_err();
+        assert_eq!(
+            missing.install,
+            Some(Install::RustAnalyzer),
+            "the failing proxy does not count"
+        );
+    }
+
+    #[test]
+    fn typescript_falls_back_to_vtsls_when_the_projects_compiler_does_not_speak_the_protocol() {
+        let dir = tools(&["path/node"]);
+        scripts(
+            &dir,
+            &[
+                (
+                    "project/node_modules/.bin/tsc",
+                    "echo 'error TS5023: Unknown compiler option --lsp' >&2\nexit 1",
+                ),
+                ("vtsls-path/vtsls", ""),
+            ],
+        );
+        let project = dir.join("project/src");
+        fs::create_dir_all(&project).unwrap();
+        let tools = dir.join("tools");
+        let path = format!("{}:{}", dir.join("path").display(), dir.join("vtsls-path").display());
+        let found = with_home(&tools, &path, &dir)
+            .find(&Language::TypeScript, &project, &dir)
+            .unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (dir.join("vtsls-path/vtsls"), Source::Path)
+        );
+        assert_eq!(found.args, ["--stdio"]);
+        let node_only = with_home(&tools, &dir.join("path").display().to_string(), &dir);
+        let missing = node_only.find(&Language::TypeScript, &project, &dir).unwrap_err();
+        assert_eq!(
+            (missing.program.as_str(), missing.install, missing.missing),
+            ("vtsls", Some(VTSLS), None)
+        );
+        scripts(&tools, &[("node_modules/.bin/vtsls", "")]);
+        let found = node_only.find(&Language::TypeScript, &project, &dir).unwrap();
+        assert_eq!(
+            (found.program, found.source),
+            (tools.join("node_modules/.bin/vtsls"), Source::Tools)
+        );
+    }
+
+    #[test]
+    fn clangd_from_usr_bin_only_counts_through_the_selected_developer_tools() {
+        let tools = tools(&[]);
+        let registry = with_home(&tools, "/nonexistent", &tools);
+        match registry.find(&Language::C, &tools, &tools) {
+            Ok(found) => {
+                assert_eq!(found.source, Source::Xcode);
+                assert!(!found.program.starts_with("/usr/bin"), "{}", found.program.display());
+            }
+            Err(missing) => assert_eq!(missing.hint, Some("xcode-select --install")),
+        }
+        scripts(&tools, &[("path/clangd", "")]);
+        let own = with_home(&tools, &tools.join("path").display().to_string(), &tools);
+        let found = own.find(&Language::C, &tools, &tools).unwrap();
+        assert_eq!((found.program, found.source), (tools.join("path/clangd"), Source::Path));
+    }
+
+    #[test]
+    fn servers_start_with_the_settings_they_need_to_do_their_work() {
+        let tools = tools(&[]);
+        let registry = registry(&tools, "/nonexistent");
+        let config = |language: Language| {
+            let launch = Registry::launch(language, PathBuf::from("/x/server"), &["--stdio"], Source::Path);
+            registry.config(&launch, &tools)
+        };
+        let go = config(Language::Go);
+        assert_eq!(go.settings["gopls"]["semanticTokens"], true);
+        assert_eq!(go.initialization_options.unwrap()["hints"]["parameterNames"], true);
+        let rust = config(Language::Rust);
+        assert_eq!(rust.settings["rust-analyzer"]["cachePriming"]["enable"], false);
+        assert_eq!(rust.args, ["--stdio"]);
+        let css = config(Language::Css);
+        assert_eq!(css.initialization_options.unwrap()["provideFormatter"], true);
+        assert_eq!(css.settings["less"]["validate"], true);
+        let json = config(Language::Json);
+        assert_eq!(json.initialization_options.unwrap()["provideFormatter"], true);
+        assert_eq!(json.settings, Value::Null);
+        assert_eq!(config(Language::Yaml).settings["yaml"]["schemaStore"]["enable"], false);
+        let python = config(Language::Python);
+        assert_eq!((python.settings, python.initialization_options), (Value::Null, None));
+        assert_eq!(registry.tools(), tools);
+    }
 }

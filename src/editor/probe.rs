@@ -65,9 +65,7 @@ pub mod selftest {
 
 /// What the self-test does with blame, through the code the commands run.
 pub mod blame_probe {
-    pub use super::super::blame::{
-        copy_hash, dismiss, line, popover_texts, show_diff, show_for_cursor, show_in_graph, toggle_column,
-    };
+    pub use super::super::blame::{dismiss, line, popover_texts, show_for_cursor};
     pub use super::super::blame_column::of as column;
 }
 
@@ -96,7 +94,7 @@ pub fn save_view(view: &EditorTextView) {
 pub use super::changes::{
     Mark as ChangeMark, Seen as ChangesSeen, popover_parts as change_popover, seen as changes_seen,
 };
-pub use super::indent::shown as indent_shown;
+pub use super::indent::{menu as indent_menu, shown as indent_shown};
 pub use super::whitespace::visible as whitespace_visible;
 
 /// Clicks the change mark of `line`, counted from 0, in `view`'s line number column, as the mouse would.
@@ -161,4 +159,53 @@ pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
         .symbolicTraits()
         .contains(NSFontDescriptorSymbolicTraits::TraitBold);
     Some((rgb.get()?, bold))
+}
+
+/// Sends a mouse event of `kind` to the line number column of `view` beside `line`, counted from 0, `from_right`
+/// points left of the column's right edge, as the mouse would; for the self-test. Gives the titles of the menu a right
+/// click gets, and whether the mouse is over the column then.
+pub fn gutter_mouse(
+    view: &EditorTextView,
+    line: usize,
+    from_right: f64,
+    kind: objc2_app_kit::NSEventType,
+) -> Option<(Vec<String>, bool)> {
+    use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType};
+    let gutter = view.ivars().gutter.borrow().as_ref().and_then(Weak::load)?;
+    let start = view.line_start(line)?;
+    let row = gutter.convertRect_fromView(crate::lsp::rect_of(view, start..start + 1)?, Some(view));
+    let at = NSPoint::new(
+        gutter.bounds().size.width - from_right,
+        row.origin.y + row.size.height / 2.0,
+    );
+    gutter.displayIfNeeded();
+    let event = NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+        if kind == NSEventType::RightMouseDown { kind } else { NSEventType::LeftMouseDown },
+        gutter.convertPoint_toView(at, None),
+        NSEventModifierFlags::empty(),
+        0.0,
+        view.window()?.windowNumber(),
+        None,
+        0,
+        1,
+        0.0,
+    )?;
+    let mut titles = Vec::new();
+    match kind {
+        NSEventType::RightMouseDown => {
+            let menu = gutter.menuForEvent(&event);
+            titles.extend(
+                menu.iter()
+                    .flat_map(|m| m.itemArray().iter().map(|i| i.title().to_string()).collect::<Vec<_>>()),
+            );
+        }
+        // SAFETY: The column's own handlers of these events, each given a mouse event in its window.
+        NSEventType::MouseEntered => unsafe { objc2::msg_send![&*gutter, mouseEntered: &*event] },
+        // SAFETY: As above.
+        NSEventType::MouseExited => unsafe { objc2::msg_send![&*gutter, mouseExited: &*event] },
+        // SAFETY: As above.
+        _ => unsafe { objc2::msg_send![&*gutter, mouseDown: &*event] },
+    }
+    gutter.displayIfNeeded();
+    Some((titles, gutter.hovered()))
 }

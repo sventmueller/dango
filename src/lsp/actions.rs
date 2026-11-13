@@ -579,6 +579,39 @@ pub mod selftest {
         })
     }
 
+    /// Clicks the first item of the menu on screen whose title starts with `title`, which sends its action to the
+    /// menu's chooser as a click does; whether there was one.
+    pub fn click(title: &str) -> bool {
+        let menu = super::with_shown(|cell| cell.borrow().as_ref().map(|shown| shown.menu.clone()));
+        let Some(menu) = menu else { return false };
+        let index = menu
+            .itemArray()
+            .iter()
+            .position(|item| item.title().to_string().starts_with(title));
+        index
+            .and_then(|index| isize::try_from(index).ok())
+            .is_some_and(|index| {
+                menu.performActionForItemAtIndex(index);
+                true
+            })
+    }
+
+    /// Presses the bulb of `view` as a click does; whether it was on view.
+    pub fn press_bulb(view: &EditorTextView) -> bool {
+        let Some(bulb) = view.ivars().lsp.borrow().actions.bulb.clone() else {
+            return false;
+        };
+        let (Some(action), Some(mtm)) = (bulb.action(), objc2::MainThreadMarker::new()) else {
+            return false;
+        };
+        if bulb.isHidden() {
+            return false;
+        }
+        let app = objc2_app_kit::NSApplication::sharedApplication(mtm);
+        // SAFETY: The bulb's own action and target, with the bulb as the sender, as AppKit sends them on a click.
+        unsafe { app.sendAction_to_from(action, bulb.target().as_deref(), Some(&bulb)) }
+    }
+
     /// Forgets the menu shown, so the next one is told apart.
     pub fn forget() {
         super::with_shown(|cell| {

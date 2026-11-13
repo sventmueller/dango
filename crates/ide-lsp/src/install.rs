@@ -601,4 +601,211 @@ mod tests {
         let vtsls = installer.install(crate::VTSLS, &Cancel::new(), &mut |_| {});
         assert!(matches!(vtsls, Err(InstallError::Missing("node"))));
     }
+
+    /// A folder of executable shell scripts, by name, for the PATH of an installer.
+    fn scripts(dir: &Path, scripts: &[(&str, &str)]) -> String {
+        let bin = dir.join("path");
+        fs::create_dir_all(&bin).unwrap();
+        for (name, body) in scripts {
+            let path = bin.join(name);
+            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        }
+        format!("{}:/usr/bin:/bin", bin.display())
+    }
+
+    fn outputs(installer: &Installer, what: Install) -> (Result<PathBuf, InstallError>, Vec<Progress>) {
+        let mut seen = vec![];
+        let result = installer.install(what, &Cancel::new(), &mut |p| seen.push(p));
+        (result, seen)
+    }
+
+    #[test]
+    fn gopls_is_installed_by_go_install_into_the_tools_folder() {
+        let dir = tools("gopls");
+        let go = "echo \"installing $2\" >&2\nprintf '#!/bin/sh\\n' > \"$GOBIN/gopls\"\nchmod 755 \"$GOBIN/gopls\"";
+        let path = scripts(&dir, &[("go", go)]);
+        let installer = Installer::new(
+            &Supervisor::new(),
+            vec![("PATH".into(), path)],
+            dir.join("tools"),
+            Arc::new(Canned::default()),
+        );
+        let (result, seen) = outputs(&installer, Install::Gopls);
+        assert_eq!(result.unwrap(), dir.join("tools/bin/gopls"));
+        assert_eq!(
+            seen,
+            [
+                Progress::Step(Step::Running),
+                Progress::Output("installing golang.org/x/tools/gopls@latest".into()),
+                Progress::Step(Step::Done),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_npm_server_is_installed_under_the_tools_folder_as_its_prefix() {
+        let dir = tools("npm");
+        let npm = "mkdir -p \"$3/node_modules/.bin\"\nprintf '#!/bin/sh\\n' > \"$3/node_modules/.bin/vtsls\"\nchmod 755 \"$3/node_modules/.bin/vtsls\"\necho \"added $6\" >&2";
+        let path = scripts(&dir, &[("node", ""), ("npm", npm)]);
+        let installer = Installer::new(
+            &Supervisor::new(),
+            vec![("PATH".into(), path)],
+            dir.join("tools"),
+            Arc::new(Canned::default()),
+        );
+        let (result, seen) = outputs(&installer, crate::VTSLS);
+        assert_eq!(result.unwrap(), dir.join("tools/node_modules/.bin/vtsls"));
+        assert!(seen.contains(&Progress::Output("added @vtsls/language-server".into())));
+    }
+
+    #[test]
+    fn a_failing_or_empty_install_command_says_what_went_wrong() {
+        let dir = tools("npmfail");
+        let path = scripts(
+            &dir,
+            &[
+                ("node", ""),
+                ("npm", "echo 'E404 not found' >&2\nexit 1"),
+                ("go", "exit 0"),
+            ],
+        );
+        let installer = Installer::new(
+            &Supervisor::new(),
+            vec![("PATH".into(), path)],
+            dir.join("tools"),
+            Arc::new(Canned::default()),
+        );
+        let (failed, _) = outputs(&installer, crate::VTSLS);
+        let Err(InstallError::Failed {
+            program,
+            ending,
+            output,
+        }) = failed
+        else {
+            panic!("npm failed: {failed:?}");
+        };
+        assert!(program.ends_with("/npm"));
+        assert_eq!((ending, output.trim()), (Some(Ending::Code(1)), "E404 not found"));
+        let (empty, _) = outputs(&installer, Install::Gopls);
+        let Err(InstallError::Unusable(why)) = empty else {
+            panic!("go install left nothing: {empty:?}");
+        };
+        assert!(why.starts_with("go install left no "), "{why}");
+    }
+
+    #[test]
+    fn node_without_npm_is_reported_as_missing_npm() {
+        let dir = tools("nonpm");
+        let path = scripts(&dir, &[("node", "")]);
+        let installer = Installer::new(
+            &Supervisor::new(),
+            vec![("PATH".into(), path)],
+            dir.join("tools"),
+            Arc::new(Canned::default()),
+        );
+        assert!(matches!(
+            outputs(&installer, crate::VTSLS).0,
+            Err(InstallError::Missing("npm"))
+        ));
+    }
+
+    #[test]
+    fn a_release_without_a_download_for_this_mac_or_no_network_is_a_network_error() {
+        let dir = tools("noasset");
+        let mut canned = release(None);
+        let json = serde_json::json!({"tag_name": "2099-01-01", "assets": [{"name": "rust-analyzer-sparc.gz", "browser_download_url": "x"}]});
+        canned
+            .files
+            .insert(RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap());
+        let installer = Installer::new(&Supervisor::new(), env(), dir.clone(), Arc::new(canned));
+        let Err(InstallError::Network(why)) = outputs(&installer, Install::RustAnalyzer).0 else {
+            panic!("no asset is a network error");
+        };
+        assert_eq!(why, format!("release 2099-01-01 has no {}", asset_name()));
+        let offline = Installer::new(&Supervisor::new(), env(), dir, Arc::new(Canned::default()));
+        let Err(InstallError::Network(why)) = outputs(&offline, Install::RustAnalyzer).0 else {
+            panic!("an unreachable release is a network error");
+        };
+        assert_eq!(why, "404");
+    }
+
+    #[test]
+    fn a_downloaded_server_that_does_not_start_is_not_installed() {
+        let dir = tools("unusable");
+        let program = gzip(b"#!/bin/sh\necho 'dyld: missing symbol' >&2\nexit 3\n");
+        let url = "https://example.invalid/broken.gz";
+        let json = serde_json::json!({
+            "tag_name": "t",
+            "assets": [{"name": asset_name(), "browser_download_url": url, "digest": format!("sha256:{}", sha256(&program))}],
+        });
+        let canned = Canned {
+            files: HashMap::from([
+                (RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap()),
+                (url.to_string(), program.clone()),
+            ]),
+            asked: Mutex::default(),
+        };
+        let installer = Installer::new(&Supervisor::new(), env(), dir.clone(), Arc::new(canned));
+        let (result, seen) = outputs(&installer, Install::RustAnalyzer);
+        let Err(InstallError::Unusable(why)) = result else {
+            panic!("a broken download is unusable: {result:?}");
+        };
+        assert_eq!(why.trim(), "dyld: missing symbol");
+        let total = Some(program.len() as u64);
+        assert!(seen.contains(&Progress::Bytes {
+            done: program.len() as u64,
+            total
+        }));
+        assert_eq!(
+            fs::read_dir(dir.join("bin")).unwrap().count(),
+            0,
+            "nothing stays behind"
+        );
+    }
+
+    #[test]
+    fn a_refused_connection_is_an_error_not_a_download() {
+        let refused = Http::default().get("http://127.0.0.1:9/", "text/plain");
+        assert!(refused.is_err());
+    }
+
+    #[test]
+    fn every_failure_reads_as_a_sentence() {
+        let cases = [
+            (InstallError::Cancelled, "the installation was cancelled"),
+            (InstallError::Missing("go"), "go is not installed"),
+            (
+                InstallError::Failed {
+                    program: "npm".into(),
+                    ending: None,
+                    output: " E404 \n".into(),
+                },
+                "npm failed (None): E404",
+            ),
+            (InstallError::Network("offline".into()), "the download failed: offline"),
+            (
+                InstallError::Checksum {
+                    expected: "aa".into(),
+                    actual: "bb".into(),
+                },
+                "the download is damaged: expected aa, got bb",
+            ),
+            (
+                InstallError::Unverifiable,
+                "the release publishes no digest to check the download against",
+            ),
+            (
+                InstallError::Unusable("exit 3".into()),
+                "the installed server does not start: exit 3",
+            ),
+            (
+                InstallError::from(io::Error::new(io::ErrorKind::PermissionDenied, "denied")),
+                "the tools folder could not be written: denied",
+            ),
+        ];
+        for (error, text) in cases {
+            assert_eq!(error.to_string(), text);
+        }
+    }
 }

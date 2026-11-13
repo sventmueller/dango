@@ -1,7 +1,8 @@
 //! The `lsp` scenario: a tiny cargo project with a type error, served by the real rust-analyzer. Diagnostics,
 //! hover, completion, definition, references, rename across two files and formatting, each through the code its
 //! command runs. Without rust-analyzer on this Mac it reports itself skipped. Every step waits for the server to
-//! settle and then for its answer, each within a generous bound, and reports how long it waited.
+//! settle and then for its answer, each within a generous bound, and reports how long it waited. It goes on in
+//! `lsp_more`.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -18,9 +19,9 @@ use crate::window::{self, WindowController};
 const SCENARIO: &str = "lsp";
 const POLL: Duration = Duration::from_millis(250);
 /// The longest the server may take to start, to index the project or to settle before a request.
-const WAIT: Duration = Duration::from_secs(180);
+pub(super) const WAIT: Duration = Duration::from_secs(180);
 /// The longest an answer may take once the server settled.
-const ANSWER: Duration = Duration::from_secs(60);
+pub(super) const ANSWER: Duration = Duration::from_secs(60);
 /// How long the server must report no work to count as settled.
 const SETTLE: Duration = Duration::from_secs(3);
 /// How long the server may stay settled without the expected diagnostics before the wait for them ends.
@@ -40,12 +41,12 @@ fn folder() -> PathBuf {
     ide_core::paths::home().join("lsp-project")
 }
 
-fn root() -> PathBuf {
+pub(super) fn root() -> PathBuf {
     let folder = folder();
     folder.canonicalize().unwrap_or(folder)
 }
 
-fn project_window() -> Option<Retained<WindowController>> {
+pub(super) fn project_window() -> Option<Retained<WindowController>> {
     window::for_project(&root())
 }
 
@@ -54,26 +55,26 @@ fn view(file: &str) -> Option<Retained<EditorTextView>> {
     editor::editor_for(&controller, &root().join(file))
 }
 
-fn main_view() -> Option<Retained<EditorTextView>> {
+pub(super) fn main_view() -> Option<Retained<EditorTextView>> {
     view(MAIN)
 }
 
 /// The UTF-16 offset of the `nth` occurrence of `needle` in `view`'s text, plus `into` code units.
-fn offset_of(view: &EditorTextView, needle: &str, nth: usize, into: usize) -> Option<usize> {
+pub(super) fn offset_of(view: &EditorTextView, needle: &str, nth: usize, into: usize) -> Option<usize> {
     let text = view.document().text().to_string();
     let byte = text.match_indices(needle).nth(nth)?.0;
     Some(text[..byte].encode_utf16().count() + into)
 }
 
-fn put_cursor(view: &EditorTextView, at: usize) {
+pub(super) fn put_cursor(view: &EditorTextView, at: usize) {
     view.setSelectedRange(NSRange::new(at, 0));
 }
 
 /// How a wait ended: whether its condition held, how long the server took to settle before the request, and how
 /// long the condition took after it.
 #[derive(Debug, Clone, Copy)]
-struct Waited {
-    ok: bool,
+pub(super) struct Waited {
+    pub(super) ok: bool,
     settled: Option<Duration>,
     took: Duration,
 }
@@ -88,7 +89,11 @@ impl std::fmt::Display for Waited {
 }
 
 /// Calls `then` with how the wait ended, as soon as `ready` holds or once `within` or the scenario's budget passed.
-fn poll(within: Duration, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce(Waited) + Send + 'static) {
+pub(super) fn poll(
+    within: Duration,
+    ready: impl Fn() -> bool + Send + 'static,
+    then: impl FnOnce(Waited) + Send + 'static,
+) {
     fn again(
         started: Instant,
         deadline: Instant,
@@ -121,7 +126,7 @@ fn quiet(quiet: Duration) -> bool {
 }
 
 /// Waits for the server to settle, then makes `request` and waits for `ready`.
-fn ask(
+pub(super) fn ask(
     request: impl FnOnce() + Send + 'static,
     ready: impl Fn() -> bool + Send + 'static,
     then: impl FnOnce(Waited) + Send + 'static,
@@ -151,7 +156,7 @@ fn at_main<R: 'static>(at: usize, command: fn(&EditorTextView) -> R) -> impl FnO
     }
 }
 
-fn has_mark(code: &'static str) -> impl Fn() -> bool + Send + 'static {
+pub(super) fn has_mark(code: &'static str) -> impl Fn() -> bool + Send + 'static {
     move || main_view().is_some_and(|v| crate::lsp::marks_of(&v).iter().any(|(_, m)| m.contains(code)))
 }
 
@@ -173,7 +178,7 @@ fn picture(name: &str) {
 }
 
 /// Ends the scenario with the open editors saved, so quitting asks nothing.
-fn done() {
+pub(super) fn done() {
     let saved = editor::save_all();
     check(
         "every editor is saved before quitting",
@@ -586,5 +591,5 @@ fn watched(waited: Waited) {
         waited.ok,
         format!("{waited}: {marks:?}"),
     );
-    done();
+    super::lsp_more::run();
 }

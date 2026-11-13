@@ -2,7 +2,9 @@
 //! them in the position encoding it picked, and obeys `fake/…` requests that make it crash, stall or ask the client.
 //!
 //! Environment: `FAKE_ENCODING` is the encoding it prefers when offered, `FAKE_LOG` a file it appends every
-//! method it receives to, and `FAKE_EXIT_AT_START` makes it exit at once with code 7.
+//! method it receives to, `FAKE_EXIT_AT_START` makes it exit at once with code 7, and `FAKE_SYNC` is the JSON of the
+//! `textDocumentSync` capability it announces in place of incremental changes with saved texts. `FAKE_SHAPES` makes
+//! it also format and give inlay hints, and answer completion and document symbols in their other, plain shapes.
 
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -32,6 +34,8 @@ fn main() {
         next: 0,
         tokens: 0,
         sent_tokens: HashMap::new(),
+        changes: Value::Null,
+        saved: vec![],
     };
     while let Ok(message) = rx.recv() {
         server.handle(&message);
@@ -89,6 +93,10 @@ struct Fake {
     tokens: u64,
     /// How many numbers the last semantic tokens answer for each document had.
     sent_tokens: HashMap<String, usize>,
+    /// The content changes of the last `didChange`.
+    changes: Value,
+    /// The text of each `didSave`, null where it came without.
+    saved: Vec<Value>,
 }
 
 impl Fake {
@@ -155,6 +163,7 @@ impl Fake {
             }
             "textDocument/didChange" => {
                 let version = params["textDocument"]["version"].as_i64().unwrap_or(0);
+                self.changes = params["contentChanges"].clone();
                 let changes = params["contentChanges"].as_array().cloned().unwrap_or_default();
                 let encoding = self.encoding.clone();
                 if let Some((v, text)) = self.docs.get_mut(&uri) {
@@ -176,6 +185,7 @@ impl Fake {
             "textDocument/didClose" => {
                 self.docs.remove(&uri);
             }
+            "textDocument/didSave" => self.saved.push(params.get("text").cloned().unwrap_or(Value::Null)),
             "$/cancelRequest" => {
                 self.cancelled
                     .lock()
@@ -189,6 +199,9 @@ impl Fake {
 
     fn request(&mut self, method: &str, id: Value, params: &Value) {
         let uri = params["textDocument"]["uri"].as_str().unwrap_or_default().to_string();
+        if let Some(result) = self.other_shape(method, &uri, params) {
+            return self.reply(&id, result);
+        }
         let result = match method {
             "initialize" => self.initialize(params),
             "shutdown" => {
@@ -263,12 +276,6 @@ impl Fake {
                 );
                 Value::Null
             }
-            "fake/text" => self
-                .docs
-                .get(&uri)
-                .map_or(Value::Null, |(version, text)| json!({"version": version, "text": text})),
-            "fake/received" => json!(self.received),
-            "fake/encoding" => json!(self.encoding),
             "fake/crash" => std::process::exit(3),
             "fake/notify" => {
                 self.notify(params["method"].as_str().unwrap_or_default(), params["params"].clone());
@@ -289,6 +296,31 @@ impl Fake {
         self.reply(&id, result);
     }
 
+    /// The answers of `FAKE_SHAPES`, formatting and inlay hints, which only it announces, and what the tests ask
+    /// about what the server heard.
+    fn other_shape(&self, method: &str, uri: &str, params: &Value) -> Option<Value> {
+        let shapes = std::env::var_os("FAKE_SHAPES").is_some();
+        Some(match method {
+            "textDocument/completion" if shapes => json!([{"label": "plain"}]),
+            "textDocument/documentSymbol" if shapes => json!([{
+                "name": "flat", "kind": 12, "containerName": "outer",
+                "location": {"uri": uri, "range": self.range(uri, 0, 0, 0, 1)},
+            }]),
+            "textDocument/formatting" => json!([{"range": self.range(uri, 0, 0, 0, 0), "newText": "// formatted\n"}]),
+            "textDocument/rangeFormatting" => json!([{"range": params["range"], "newText": "x"}]),
+            "textDocument/inlayHint" => json!([{"position": params["range"]["start"], "label": ": i32"}]),
+            "fake/text" => self
+                .docs
+                .get(uri)
+                .map_or(Value::Null, |(version, text)| json!({"version": version, "text": text})),
+            "fake/received" => json!(self.received),
+            "fake/changes" => self.changes.clone(),
+            "fake/saved" => json!(self.saved),
+            "fake/encoding" => json!(self.encoding),
+            _ => return None,
+        })
+    }
+
     fn initialize(&mut self, params: &Value) -> Value {
         let offered: Vec<String> = params["capabilities"]["general"]["positionEncodings"]
             .as_array()
@@ -300,10 +332,18 @@ impl Fake {
         } else {
             "utf-16".into()
         };
+        let sync = std::env::var("FAKE_SYNC")
+            .ok()
+            .and_then(|sync| serde_json::from_str(&sync).ok())
+            .unwrap_or_else(|| json!({"openClose": true, "change": 2, "save": {"includeText": true}}));
+        let shapes = std::env::var_os("FAKE_SHAPES").is_some();
         json!({
             "capabilities": {
                 "positionEncoding": self.encoding,
-                "textDocumentSync": {"openClose": true, "change": 2, "save": {"includeText": true}},
+                "textDocumentSync": sync,
+                "documentFormattingProvider": shapes,
+                "documentRangeFormattingProvider": shapes,
+                "inlayHintProvider": shapes,
                 "hoverProvider": true,
                 "completionProvider": {"resolveProvider": true, "triggerCharacters": ["."]},
                 "definitionProvider": true,

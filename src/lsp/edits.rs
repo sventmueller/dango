@@ -110,6 +110,17 @@ impl super::apply::Editors for OpenEditors {
 
 /// Shows a server's question with its answers as a sheet of the window of `folder`; closing it answers none.
 pub fn ask(folder: &Path, message: &str, actions: Vec<MessageActionItem>, reply: Reply<Option<MessageActionItem>>) {
+    question(folder, message, actions, move |chosen| reply.send(chosen));
+}
+
+/// Shows `message` with up to three of `actions` as buttons in a sheet of the window of `folder`; `answered` hears the
+/// one chosen, or `None` when the sheet closed otherwise.
+pub fn question(
+    folder: &Path,
+    message: &str,
+    actions: Vec<MessageActionItem>,
+    answered: impl FnOnce(Option<MessageActionItem>) + 'static,
+) {
     let Some(window) = crate::window::for_project(folder).and_then(|c| c.window()) else {
         return;
     };
@@ -120,15 +131,15 @@ pub fn ask(folder: &Path, message: &str, actions: Vec<MessageActionItem>, reply:
         alert.addButtonWithTitle(&ns(&action.title));
     }
     alert.addButtonWithTitle(&ns(t("Schließen")));
-    let reply = RefCell::new(Some(reply));
+    let answered = RefCell::new(Some(answered));
     let handler = RcBlock::new(move |response: NSModalResponse| {
         guarded((), || {
             let chosen = usize::try_from(response - NSAlertFirstButtonReturn)
                 .ok()
                 .filter(|i| *i < shown)
                 .and_then(|i| actions.get(i).cloned());
-            if let Some(reply) = reply.borrow_mut().take() {
-                reply.send(chosen);
+            if let Some(answered) = answered.borrow_mut().take() {
+                answered(chosen);
             }
         });
     });

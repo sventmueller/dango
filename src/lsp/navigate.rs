@@ -246,6 +246,13 @@ fn symbol_menu(view: &EditorTextView, symbols: &[DocumentSymbol]) {
         menu.addItem(&entry);
     }
     drop(text);
+    // A tracking menu takes the keyboard even from the app in front, which a self-test must never do
+    // (docs/development.md); the scenario chooses from the menu it built instead.
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        crate::context::app().location_sheet.symbols.replace(Some(menu));
+        return;
+    }
     let cursor = view.selectedRange().location;
     let at = super::hover::rect_of(view, cursor..cursor + 1).map_or(NSPoint::new(0.0, 0.0), |r| {
         NSPoint::new(r.origin.x, r.origin.y + r.size.height)
@@ -344,6 +351,9 @@ define_class!(
 #[derive(Default)]
 pub struct LocationSheets {
     sheet: RefCell<Option<Retained<LocationSheet>>>,
+    /// The last menu of symbols, which the self-test reads instead of tracking it.
+    #[cfg(feature = "selftest")]
+    symbols: RefCell<Option<Retained<NSMenu>>>,
 }
 
 fn with_sheet<R>(f: impl FnOnce(&RefCell<Option<Retained<LocationSheet>>>) -> R) -> R {
@@ -530,5 +540,59 @@ pub fn close_list() {
     let sheet = with_sheet(|cell| cell.borrow().clone());
     if let Some(sheet) = sheet {
         sheet.close();
+    }
+}
+
+/// The menu of symbols the last "Symbole" command built, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn shown_symbols() -> Option<Retained<NSMenu>> {
+    crate::context::app().location_sheet.symbols.borrow().clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn symbol(name: &str, kind: u32, children: serde_json::Value) -> serde_json::Value {
+        let range = serde_json::json!({"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}});
+        serde_json::json!({"name": name, "kind": kind, "range": range, "selectionRange": range, "children": children})
+    }
+
+    #[test]
+    fn nested_symbols_list_in_order_with_their_depth_and_a_mark_for_their_kind() {
+        let tree = serde_json::json!([
+            symbol(
+                "Shape",
+                23,
+                serde_json::json!([
+                    symbol("area", 6, serde_json::json!([])),
+                    symbol("sides", 8, serde_json::json!([]))
+                ])
+            ),
+            symbol(
+                "main",
+                12,
+                serde_json::json!([symbol("LIMIT", 14, serde_json::json!([]))])
+            ),
+            symbol("util", 2, serde_json::json!([])),
+            symbol("T", 26, serde_json::json!([])),
+        ]);
+        let symbols: Vec<DocumentSymbol> = serde_json::from_value(tree).unwrap();
+        let mut entries = vec![];
+        flatten(&symbols, 0, &mut entries);
+        let shown: Vec<(usize, String)> = entries
+            .iter()
+            .map(|(depth, s)| (*depth, format!("{} {}", kind_name(s.kind), s.name)))
+            .collect();
+        let expected = [
+            (0, "◆ Shape"),
+            (1, "ƒ area"),
+            (1, "· sides"),
+            (0, "ƒ main"),
+            (1, "• LIMIT"),
+            (0, "▢ util"),
+            (0, "‣ T"),
+        ];
+        assert_eq!(shown, expected.map(|(depth, title)| (depth, title.to_string())));
     }
 }

@@ -221,4 +221,116 @@ mod tests {
         assert_eq!(&seen[..2], ["file:///origin", "file:///origin"]);
         assert!(seen[2..].iter().all(|u| u == "file:///target"));
     }
+
+    fn lines<T: Positions>(mut part: T, uri: &Uri) -> Vec<(String, u32)> {
+        let mut seen = vec![];
+        part.each(uri, &mut |u, p| seen.push((u.as_str().to_string(), p.line)));
+        seen
+    }
+
+    #[test]
+    fn edits_inside_operations_and_annotations_are_visited_but_file_operations_hold_none() {
+        let edit = |line| TextEdit::new(Range::new(Position::new(line, 0), Position::new(line, 1)), "x".into());
+        let workspace = WorkspaceEdit {
+            changes: None,
+            document_changes: Some(DocumentChanges::Operations(vec![
+                DocumentChangeOperation::Op(lsp_types::ResourceOp::Create(lsp_types::CreateFile {
+                    uri: uri("file:///new"),
+                    options: None,
+                    annotation_id: None,
+                })),
+                DocumentChangeOperation::Edit(TextDocumentEdit {
+                    text_document: OptionalVersionedTextDocumentIdentifier {
+                        uri: uri("file:///c"),
+                        version: Some(3),
+                    },
+                    edits: vec![OneOf::Right(lsp_types::AnnotatedTextEdit {
+                        text_edit: edit(4),
+                        annotation_id: "rename".into(),
+                    })],
+                }),
+            ])),
+            change_annotations: None,
+        };
+        assert_eq!(
+            lines(workspace, &uri("file:///unused")),
+            [("file:///c".into(), 4), ("file:///c".into(), 4)]
+        );
+    }
+
+    #[test]
+    fn every_kind_of_answer_visits_each_of_its_positions_once() {
+        let doc = uri("file:///doc");
+        let r = |line| Range::new(Position::new(line, 0), Position::new(line, 1));
+        let elsewhere = uri("file:///other");
+        let diagnostic = Diagnostic {
+            related_information: Some(vec![lsp_types::DiagnosticRelatedInformation {
+                location: Location::new(elsewhere.clone(), r(9)),
+                message: "first defined here".into(),
+            }]),
+            ..Diagnostic::new_simple(r(1), "twice".into())
+        };
+        let mut related = lines(diagnostic.clone(), &doc);
+        related.sort();
+        assert_eq!(
+            related,
+            [
+                ("file:///doc".into(), 1),
+                ("file:///doc".into(), 1),
+                ("file:///other".into(), 9),
+                ("file:///other".into(), 9)
+            ]
+        );
+        let completion = CompletionItem {
+            text_edit: Some(CompletionTextEdit::InsertAndReplace(lsp_types::InsertReplaceEdit {
+                new_text: "name".into(),
+                insert: r(2),
+                replace: r(3),
+            })),
+            additional_text_edits: Some(vec![TextEdit::new(r(0), "use x;\n".into())]),
+            ..CompletionItem::default()
+        };
+        let seen: Vec<u32> = lines(completion, &doc).into_iter().map(|(_, line)| line).collect();
+        assert_eq!(seen, [2, 2, 3, 3, 0, 0]);
+        assert!(lines(CompletionItem::default(), &doc).is_empty());
+        let symbol: SymbolInformation = serde_json::from_value(serde_json::json!({
+            "name": "f",
+            "kind": 12,
+            "location": {"uri": "file:///other", "range": r(5)},
+        }))
+        .unwrap();
+        assert_eq!(
+            lines(symbol, &doc),
+            [("file:///other".into(), 5), ("file:///other".into(), 5)]
+        );
+        let action = CodeActionOrCommand::CodeAction(CodeAction {
+            diagnostics: Some(vec![diagnostic]),
+            ..CodeAction::default()
+        });
+        assert_eq!(lines(action, &doc).len(), 4);
+        let command = CodeActionOrCommand::Command(lsp_types::Command::new("t".into(), "c".into(), None));
+        assert!(lines(command, &doc).is_empty());
+        let hint = InlayHint {
+            position: Position::new(6, 2),
+            label: lsp_types::InlayHintLabel::String(": i32".into()),
+            kind: None,
+            text_edits: Some(vec![TextEdit::new(r(6), ": i32".into())]),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        };
+        assert_eq!(lines(hint, &doc).len(), 3);
+        let placeholder = PrepareRenameResponse::RangeWithPlaceholder {
+            range: r(7),
+            placeholder: "x".into(),
+        };
+        assert_eq!(
+            lines(placeholder, &doc),
+            [("file:///doc".into(), 7), ("file:///doc".into(), 7)]
+        );
+        let default = PrepareRenameResponse::DefaultBehavior { default_behavior: true };
+        assert!(lines(default, &doc).is_empty());
+        assert_eq!(lines(Position::new(8, 0), &doc), [("file:///doc".into(), 8)]);
+    }
 }

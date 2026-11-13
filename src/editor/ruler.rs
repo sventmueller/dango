@@ -219,6 +219,12 @@ impl LineNumbers {
         }
     }
 
+    /// Whether the mouse is over the column, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub(super) fn hovered(&self) -> bool {
+        self.ivars().hovered.get()
+    }
+
     fn set_hovered(&self, hovered: bool) {
         self.ivars().hovered.set(hovered);
         self.setNeedsDisplay(true);

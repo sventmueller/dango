@@ -20,9 +20,9 @@ use crate::util::{guarded, main_after, main_soon, ns};
 /// How long saving waits for the server's formatting before it saves the text as it is.
 const FORMAT_WAIT: Duration = Duration::from_secs(2);
 
-fn word_at(view: &EditorTextView, index: usize) -> String {
-    let string = view.string().to_string();
-    let units: Vec<u16> = string.encode_utf16().collect();
+/// The word of letters, digits and underscores around UTF-16 offset `index` of `text`.
+fn word_at(text: &str, index: usize) -> String {
+    let units: Vec<u16> = text.encode_utf16().collect();
     let is_word = |u: &u16| char::from_u32(u32::from(*u)).is_some_and(|c| c.is_alphanumeric() || c == '_');
     let start = units[..index.min(units.len())]
         .iter()
@@ -55,7 +55,7 @@ pub fn rename(view: &EditorTextView) {
                     let range = objc2_foundation::NSRange::new(range.start, range.end - range.start);
                     view.string().substringWithRange(range).to_string()
                 }
-                Ok(Some(PrepareRenameResponse::DefaultBehavior { .. })) => word_at(&view, index),
+                Ok(Some(PrepareRenameResponse::DefaultBehavior { .. })) => word_at(&view.string().to_string(), index),
                 Ok(None) | Err(_) => {
                     objc2_app_kit::NSBeep();
                     return;
@@ -65,7 +65,7 @@ pub fn rename(view: &EditorTextView) {
         });
     });
     if let Err(Error::Unsupported(_)) = started {
-        let current = word_at(view, index);
+        let current = word_at(&view.string().to_string(), index);
         ask_name(view, index, &current);
     }
 }
@@ -224,5 +224,22 @@ pub fn save(view: &EditorTextView) {
         format(view, Some(Box::new(|view| editor::save(view, false))));
     } else {
         editor::save(view, false);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::word_at;
+
+    #[test]
+    fn the_word_at_the_cursor_is_what_renaming_offers_to_change() {
+        let text = "let total_2 = önce(x);";
+        assert_eq!(word_at(text, 6), "total_2");
+        assert_eq!(word_at(text, 4), "total_2", "at the word's start");
+        assert_eq!(word_at(text, 11), "total_2", "right after its end");
+        assert_eq!(word_at(text, 15), "önce");
+        assert_eq!(word_at(text, 12), "");
+        assert_eq!(word_at("😀name", 2), "name", "an emoji is no part of a word");
+        assert_eq!(word_at("abc", 99), "abc");
     }
 }

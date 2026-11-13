@@ -47,3 +47,38 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_error_reads_as_a_sentence_naming_what_failed() {
+        let cases = [
+            (
+                Error::Server {
+                    code: -32801,
+                    message: "content modified".into(),
+                },
+                "the language server answered -32801: content modified",
+            ),
+            (Error::Timeout, "the language server did not answer in time"),
+            (Error::Cancelled, "the request was cancelled"),
+            (Error::NotRunning, "the language server is not running"),
+            (Error::ServerGone, "the language server ended"),
+            (
+                Error::Unsupported("textDocument/rename"),
+                "the language server does not offer textDocument/rename",
+            ),
+            (Error::Congested, "the language server stopped reading its input"),
+            (Error::NotOpen, "the document is not open on the language server"),
+            (
+                Error::Malformed("no range".into()),
+                "the language server's answer is malformed: no range",
+            ),
+        ];
+        for (error, text) in cases {
+            assert_eq!(error.to_string(), text);
+        }
+    }
+}

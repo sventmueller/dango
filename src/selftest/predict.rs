@@ -708,10 +708,10 @@ fn budget() {
         ok,
         detail.join("; "),
     );
-    predict::provider::force(None);
-    let saved = editor::save_all();
-    check("every editor is saved before quitting", saved, "");
-    finish(SCENARIO);
+    match main_view() {
+        Some(view) => super::predict_menu::run(view),
+        None => finish(SCENARIO),
+    }
 }
 
 /// Sixty keystrokes in `view`, every other one after a proposal was put on view; the median and the slowest CPU time
