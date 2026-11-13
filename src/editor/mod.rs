@@ -26,6 +26,7 @@ pub mod recovery;
 mod ruler;
 mod style;
 mod view;
+mod vim;
 mod whitespace;
 
 use std::path::{Path, PathBuf};
@@ -52,6 +53,7 @@ pub struct EditorState {
     minimap: minimap::Shown,
     sticky: sticky::Lines,
     line_diagnostics: line_diagnostics::Shown,
+    vim: vim::Enabled,
     comparisons: compare::Comparisons,
     recovery_copies: recovery::RecoveryCopies,
     #[cfg(feature = "selftest")]
@@ -212,6 +214,12 @@ pub fn settings_changed(names: &[String]) {
             "diagnosticsAtLineEnd" => cx.editor.line_diagnostics.forget(),
             "showWhitespace" => whitespace::forget(),
             "blameAtLineEnd" => blame::forget(),
+            "vimMode" => {
+                cx.editor.vim.forget();
+                for view in open_editors() {
+                    vim::attach(&view);
+                }
+            }
             _ => {}
         }
     }
@@ -254,6 +262,7 @@ pub fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, V
 
 /// Adds the controls of the editor's whitespace rules, and of dictation, to its status bar's `stack`.
 pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
+    vim::status_items(mtm, view, stack);
     indent::status_items(mtm, view, stack);
     predict::status_items(mtm, view, stack);
     #[cfg(feature = "dictation")]
@@ -462,6 +471,7 @@ fn add_tab(
     let (container, gutter) = container::editor_container(mtm, &scroll, &view);
     crate::lsp::follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
+    vim::attach(&view);
     overlay::attach(&view);
     insets::attach(&view);
     crate::debug::attach_rotor(&view, &controller.context().debug_rotors);

@@ -33,6 +33,7 @@ mod preview;
 mod tabs;
 mod terminal;
 mod terminal_view;
+mod vim;
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};

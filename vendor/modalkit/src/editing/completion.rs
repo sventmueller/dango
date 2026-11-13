@@ -492,7 +492,8 @@ pub fn complete_path(input: &EditRope, cursor: &mut Cursor) -> Vec<String> {
         return vec![expanded];
     }
 
-    let mut filepath_expanded = shellexpand::tilde(filepath_noenv.as_ref());
+    // Dango: no `~` expansion, see Cargo.toml.
+    let mut filepath_expanded = std::borrow::Cow::Borrowed(filepath_noenv.as_ref());
     if filepath_noenv.as_ref() == "~" {
         // Expand plain tilde to the home directory:
         cursor.left(parse::escaped_len(filepath_in.as_ref()));

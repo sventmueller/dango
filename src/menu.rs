@@ -372,6 +372,7 @@ fn code_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             separator(mtm),
             item(mtm, t("Minimap"), Some(sel!(ideToggleMinimap:)), ""),
             item(mtm, t("Sticky Scroll"), Some(sel!(ideToggleStickyScroll:)), ""),
+            item(mtm, t("Vim-Modus"), Some(sel!(ideToggleVimMode:)), ""),
             separator(mtm),
             entry(
                 t("Cursor darüber hinzufügen"),

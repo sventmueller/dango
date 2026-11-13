@@ -84,6 +84,9 @@ pub enum Effect {
     Message(String),
     /// Mark the matches of this pattern, or none for `:noh`.
     Highlight(Option<String>),
+    /// Put this text on the system clipboard, which a command wrote into `"+` or `"*`, or into the unnamed register
+    /// while it is the clipboard.
+    Copy(String),
     /// Indent these lines, counted from 0, by this many levels, or take as many away when negative, with the
     /// editor's own rule for a level; `modalkit` leaves indenting to its user.
     Indent(std::ops::Range<usize>, isize),
@@ -106,6 +109,8 @@ pub struct Vim {
     group: CursorGroupId,
     viewport: ViewportContext<Cursor>,
     search: Search,
+    /// Whether the unnamed register is the system clipboard too (`vimClipboard`).
+    shared_clipboard: bool,
 }
 
 impl Vim {
@@ -120,15 +125,32 @@ impl Vim {
             group,
             viewport: ViewportContext::default(),
             search: Search::default(),
+            shared_clipboard: false,
+        }
+    }
+
+    /// Makes the unnamed register the system clipboard too, or Vim's own again (E106).
+    pub fn share_clipboard(&mut self, shared: bool) {
+        self.shared_clipboard = shared;
+    }
+
+    /// Takes the system clipboard's `text` into `"+` and `"*`, and into the unnamed register while it is shared;
+    /// the editor calls it before a key that may paste.
+    pub fn set_clipboard(&mut self, text: &str) {
+        self.store.registers.set_system_text(text);
+        if self.shared_clipboard && self.store.registers.unnamed_text() != text {
+            self.store.registers.set_unnamed_text(text);
         }
     }
 
     /// Takes `text` as the editor's text again after a change Vim did not make, such as the agent's or the file's,
-    /// keeping the cursor where it was as far as the text reaches.
-    pub fn resync(&mut self, text: &str) {
+    /// keeping the cursor where it was as far as the text reaches; where the first change begins, if any.
+    pub fn resync(&mut self, text: &str) -> Option<(usize, usize)> {
         let cursor = self.cursor();
+        let before = self.buffer.get().clone();
         self.buffer.set_text(shadow(text));
         self.set_cursor(cursor.0, cursor.1);
+        difference(before.as_rope(), self.buffer.get().as_rope()).map(|r| r.start)
     }
 
     /// The copy of the text, with LF line ends.
@@ -156,6 +178,27 @@ impl Vim {
             return Mode::Prompt;
         }
         mode_of(self.keys.show_mode().as_deref())
+    }
+
+    /// Feeds the character `c` as typed, `<` and spaces included, which [`Vim::keys`] would read as key names.
+    pub fn char(&mut self, c: char) -> Outcome {
+        use modalkit::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        self.key(TerminalKey::from(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)))
+    }
+
+    /// The selection of Visual mode as its first and last character, each a line and a column; `None` outside it.
+    pub fn selection(&mut self) -> Option<((usize, usize), (usize, usize))> {
+        if !matches!(self.mode(), Mode::Visual | Mode::VisualLine | Mode::VisualBlock) {
+            return None;
+        }
+        let (a, b, _) = self.buffer.get_leader_selection(self.group)?;
+        let (first, last) = if (a.y, a.x) <= (b.y, b.x) { (a, b) } else { (b, a) };
+        Some(((first.y, first.x), (last.y, last.x)))
+    }
+
+    /// What the prompt after `/`, `?` or `:` shows while it is open.
+    pub fn prompt(&self) -> Option<String> {
+        self.search.shown()
     }
 
     /// Feeds the keys written as Vim writes them, such as `dd`, `ciw<Esc>` or `<C-R>`, and says what they did.
@@ -201,9 +244,18 @@ impl Vim {
         let before = self.buffer.get().clone();
         self.keys.input_key(key);
         let mut changes = false;
+        let unnamed = self.store.registers.unnamed_text();
         while let Some((action, context)) = self.keys.pop() {
             changes |= may_change_text(&action, &context);
             effects.extend(self.act(&action, &context));
+        }
+        if let Some(copied) = self.store.registers.take_system_written() {
+            effects.push(Effect::Copy(copied));
+        } else if self.shared_clipboard {
+            let now = self.store.registers.unnamed_text();
+            if now != unnamed {
+                effects.push(Effect::Copy(now));
+            }
         }
         let replacement = if changes {
             difference(before.as_rope(), self.buffer.get().as_rope())

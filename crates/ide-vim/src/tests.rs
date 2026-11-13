@@ -433,3 +433,19 @@ fn indenting_goes_to_the_editor_with_the_lines_it_reaches() {
     assert_eq!(vim.keys("Vj>").effects, [Effect::Indent(0..2, 1)]);
     assert_eq!(vim.mode(), Mode::Normal);
 }
+
+#[test]
+fn the_plus_register_and_a_shared_unnamed_one_are_the_clipboard() {
+    let mut vim = Vim::new("one\ntwo\n");
+    assert_eq!(vim.keys("\"+yy").effects, [Effect::Copy("one\n".into())]);
+    assert!(vim.keys("yy").effects.is_empty(), "the unnamed register is Vim's own");
+    vim.set_clipboard("from mac");
+    vim.keys("\"+p");
+    assert_eq!(vim.text(), "ofrom macne\ntwo\n");
+    let mut shared = Vim::new("one\n");
+    shared.share_clipboard(true);
+    assert_eq!(shared.keys("yw").effects, [Effect::Copy("one".into())]);
+    shared.set_clipboard("X");
+    shared.keys("P");
+    assert_eq!(shared.text(), "Xone\n");
+}

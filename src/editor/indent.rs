@@ -381,6 +381,54 @@ pub fn shown(view: &EditorTextView) -> (String, Option<String>) {
     (title, warning)
 }
 
+/// Indents `lines` of `view`, counted from 0, by `levels` of its own indentation, or takes as many away where negative,
+/// as one undo step; for Vim's `>>`, `<<` and `>` (E106).
+pub fn shift_lines(view: &EditorTextView, lines: std::ops::Range<usize>, levels: isize) {
+    let unit = view.ivars().indent.borrow().clone();
+    let width = unit.chars().count().max(1);
+    let mut changes = Vec::new();
+    for line in lines.rev() {
+        let Some(start) = view.line_start(line) else { continue };
+        let text = view
+            .document()
+            .text()
+            .line(line)
+            .map(|l| l.to_string())
+            .unwrap_or_default();
+        if text.trim().is_empty() {
+            continue;
+        }
+        let edit = if levels > 0 {
+            ide_document::Edit {
+                range_utf16: start..start,
+                text: unit.repeat(levels.unsigned_abs()),
+            }
+        } else {
+            let wanted = levels.unsigned_abs() * width;
+            let mut cut = 0;
+            let mut seen = 0;
+            for c in text.chars() {
+                if seen >= wanted || !(c == ' ' || c == '\t') {
+                    break;
+                }
+                seen += if c == '\t' { width } else { 1 };
+                cut += 1;
+            }
+            ide_document::Edit {
+                range_utf16: start..start + cut,
+                text: String::new(),
+            }
+        };
+        match view.document_mut().apply(edit) {
+            Ok(change) => changes.push(change),
+            Err(error) => crate::diag::report("indenting for Vim", error),
+        }
+    }
+    for change in &changes {
+        view.apply_vim_change(change);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

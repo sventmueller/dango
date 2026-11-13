@@ -127,7 +127,8 @@ impl CommandArgument {
     /// be expanded in the returned [PathBuf] values.
     pub fn paths(&self) -> Result<Vec<PathBuf>, CommandError> {
         fn expand_path(p: String) -> Result<PathBuf, CommandError> {
-            shellexpand::full(&p)
+            // Dango: no `~` expansion, see Cargo.toml.
+            shellexpand::env(&p)
                 .map_err(|e| CommandError::Error(format!("failed to expand path: {e}")))
                 .map(|c| PathBuf::from(c.into_owned()))
         }

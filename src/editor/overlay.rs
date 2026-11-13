@@ -156,6 +156,7 @@ impl Overlay {
         self.draw_placeholders(&editor);
         super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);
+        super::vim::draw_block(&editor);
         self.offer_tooltips(&editor);
     }
 

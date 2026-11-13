@@ -40,6 +40,8 @@ pub enum Sharing {
 /// The settings that follow the user to their other Macs (E113), by name; a test holds this list to the keys'
 /// declarations.
 pub const SHARED: &[&str] = &[
+    "vimClipboard",
+    "vimMode",
     "emmet",
     "eslintFixOnSave",
     "agentEffort",
@@ -136,6 +138,10 @@ pub mod keys {
         Key::project("formatter", Sharing::Shared, std::collections::BTreeMap::new);
     /// Whether Emmet's abbreviations show in completion for HTML, CSS and JSX (E109).
     pub const EMMET: Key<bool> = Key::user("emmet", Sharing::Shared, || true);
+    /// Whether editors use Vim's modes and keys (E106).
+    pub const VIM_MODE: Key<bool> = Key::user("vimMode", Sharing::Shared, || false);
+    /// Whether Vim's unnamed register is the clipboard too (E106).
+    pub const VIM_CLIPBOARD: Key<bool> = Key::user("vimClipboard", Sharing::Shared, || false);
     /// Whether ⌘S runs ESLint's fixes before formatting (E132).
     pub const ESLINT_FIX_ON_SAVE: Key<bool> = Key::user("eslintFixOnSave", Sharing::Shared, || false);
     /// Whether a line's most serious diagnostic shows at its end (E130).

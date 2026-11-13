@@ -169,6 +169,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("editor-blame", blame::run),
     plain("editor-minimap", minimap::run),
     plain("editor-sticky", sticky::run),
+    plain("editor-vim", vim::run),
     plain("editor-line-diagnostics", line_diagnostics::run),
     plain("page-preview", page_preview::run),
     plain("prettier-save", prettier::run),

@@ -171,6 +171,11 @@ pub struct RegisterStore {
 
     #[cfg(feature = "clipboard")]
     clipboard: Option<RefCell<Clipboard>>,
+
+    /// Dango: what `"+` and `"*` hold without the clipboard feature, which the host keeps in step with the system's
+    /// clipboard, and whether a command wrote it since the host last looked.
+    system: RegisterCell,
+    system_written: bool,
 }
 
 impl RegisterCell {
@@ -278,7 +283,30 @@ impl RegisterStore {
 
             #[cfg(feature = "clipboard")]
             clipboard: Clipboard::new().ok().map(RefCell::new),
+
+            system: RegisterCell::default(),
+            system_written: false,
         }
+    }
+
+    /// Dango: puts the system clipboard's `text` into `"+` and `"*`.
+    pub fn set_system_text(&mut self, text: &str) {
+        self.system = RegisterCell::new(CharWise, EditRope::from(text));
+    }
+
+    /// Dango: the text a command wrote into `"+` or `"*` since the last call, for the system clipboard.
+    pub fn take_system_written(&mut self) -> Option<String> {
+        std::mem::take(&mut self.system_written).then(|| self.system.value.to_string())
+    }
+
+    /// Dango: the unnamed register's text.
+    pub fn unnamed_text(&self) -> String {
+        self.unnamed.value.to_string()
+    }
+
+    /// Dango: puts `text` into the unnamed register, as the system clipboard when it is shared.
+    pub fn set_unnamed_text(&mut self, text: &str) {
+        self.unnamed = RegisterCell::new(CharWise, EditRope::from(text));
     }
 
     /// Returns the default register to use for storing text.
@@ -341,7 +369,7 @@ impl RegisterStore {
                 }
 
                 #[cfg(not(feature = "clipboard"))]
-                RegisterCell::default()
+                self.system.clone()
             },
             Register::SelectionClipboard => {
                 #[cfg(feature = "clipboard")]
@@ -360,7 +388,7 @@ impl RegisterStore {
                 }
 
                 #[cfg(not(feature = "clipboard"))]
-                RegisterCell::default()
+                self.system.clone()
             },
 
             /*
@@ -459,6 +487,12 @@ impl RegisterStore {
                     let _ = op.text(&cell.value);
                 }
 
+                #[cfg(not(feature = "clipboard"))]
+                {
+                    self.system = cell.clone();
+                    self.system_written = true;
+                }
+
                 cell
             },
             Register::SelectionClipboard => {
@@ -466,6 +500,12 @@ impl RegisterStore {
                 if let Some(ref mut clipboard) = self.clipboard() {
                     let op = set_clipboard(clipboard);
                     let _ = op.text(&cell.value);
+                }
+
+                #[cfg(not(feature = "clipboard"))]
+                {
+                    self.system = cell.clone();
+                    self.system_written = true;
                 }
 
                 cell

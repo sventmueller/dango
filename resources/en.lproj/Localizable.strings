@@ -1619,3 +1619,10 @@
 "ESLint konnte das Projekt nicht prüfen" = "ESLint could not check the project";
 "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} runs beside the file's language server and then serves every project.";
 "Nicht mehr fragen" = "Don’t Ask Again";
+"Vim-Modus" = "Vim Mode";
+"NORMAL" = "NORMAL";
+"EINFÜGEN" = "INSERT";
+"ERSETZEN" = "REPLACE";
+"VISUELL" = "VISUAL";
+"VISUELL ZEILE" = "VISUAL LINE";
+"VISUELL BLOCK" = "VISUAL BLOCK";

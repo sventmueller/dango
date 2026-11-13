@@ -100,6 +100,9 @@ features = ["cr_lines", "simd"]
 
 [dependencies.shellexpand]
 version = "3.1.1"
+# Dango: without `tilde`, whose `dirs` brings `option-ext`; Dango opens no files through Vim's commands.
+default-features = false
+features = ["base-0"]
 
 [dependencies.thiserror]
 version = "2.0.0"
