@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP 代理程式會自行儲存其規則，App 既無法查看也無法刪除。";
 "Gilt für" = "適用於";
 "Die Regel ließ sich nicht entfernen." = "無法移除規則。";
+"{} wurde beendet" = "{} 已結束";
+"Letzte Meldung: {}" = "最後的訊息：{}";
+"Das Programm hat sich ohne Meldung beendet." = "程式已結束，沒有留下訊息。";
+"Das Programm hat sich beim Start beendet: {}" = "程式在啟動時結束：{}";

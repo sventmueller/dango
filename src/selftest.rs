@@ -3,8 +3,10 @@
 
 mod a11y;
 mod acp;
+mod acp_actions;
 mod activity_actions;
 mod agent;
+mod agent_actions;
 mod agent_background;
 mod agent_context;
 mod agent_live;
@@ -13,6 +15,8 @@ mod agent_perf;
 mod agent_plan;
 mod agent_rewind;
 mod agent_rows;
+mod agent_sessions;
+mod agent_stand_in;
 mod app_context;
 mod app_menus;
 pub mod application;
@@ -64,6 +68,7 @@ mod lsp_actions;
 mod lsp_more;
 mod lsp_navigation;
 mod own_agent;
+mod own_agent_menus;
 mod predict;
 mod predict_menu;
 mod quit;
@@ -145,8 +150,10 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "markdown-commands" => markdown_commands::run(),
         "a11y" | "a11y-rtl" => a11y::run(),
         "acp" => acp::run(),
+        "acp-actions" => acp_actions::run(),
         "own-agent" => own_agent::run(),
         "agent" => agent::run(),
+        "agent-actions" => agent_actions::run(),
         "agent-perf" => agent_perf::run(),
         "agent-background" => agent_background::run(),
         "file-icons" => file_icons::run(),

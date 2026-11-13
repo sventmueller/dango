@@ -260,4 +260,103 @@ mod tests {
         };
         assert_eq!(text(&notice), "Wiederhole … (Versuch 3 von 10) · server_error (529)");
     }
+
+    fn hook(outcome: HookOutcome, exit_code: Option<i32>) -> Notice {
+        Notice::Hook {
+            id: "h1".into(),
+            name: "format".into(),
+            event: "PostToolUse".into(),
+            output: String::new(),
+            exit_code,
+            outcome,
+        }
+    }
+
+    #[test]
+    fn a_hook_says_where_it_stands_and_a_failing_exit_code() {
+        assert_eq!(
+            text(&hook(HookOutcome::Running, None)),
+            "Hook format (PostToolUse) · läuft"
+        );
+        assert_eq!(
+            text(&hook(HookOutcome::Success, Some(0))),
+            "Hook format (PostToolUse) · fertig"
+        );
+        assert_eq!(
+            text(&hook(HookOutcome::Error, Some(2))),
+            "Hook format (PostToolUse) · fehlgeschlagen · Code 2"
+        );
+        assert_eq!(
+            text(&hook(HookOutcome::Cancelled, None)),
+            "Hook format (PostToolUse) · abgebrochen"
+        );
+    }
+
+    #[test]
+    fn errors_stops_rewinds_and_notes_say_what_happened() {
+        let error = |message: &str| Notice::Error {
+            kind: ide_thread::ErrorKind::Process,
+            message: message.into(),
+        };
+        assert_eq!(text(&error("")), "Fehler");
+        assert_eq!(text(&error("the model crashed")), "the model crashed");
+        assert_eq!(text(&Notice::Interrupted), "Unterbrochen");
+        assert_eq!(
+            text(&Notice::RewindRejected {
+                detail: "too far".into()
+            }),
+            "Zurückspulen abgelehnt, die Sitzung geht ohne Rücksprung weiter"
+        );
+        let info = Notice::Info {
+            level: ide_thread::InfoLevel::Info,
+            text: "Model switched".into(),
+        };
+        assert_eq!(text(&info), "Model switched");
+        let compacted = Notice::Compaction {
+            manual: true,
+            tokens_before: 90_000,
+            tokens_after: None,
+        };
+        assert_eq!(text(&compacted), "Verdichtet · 90 k Tokens vorher (von Hand)");
+        let symbols: std::collections::BTreeSet<&str> = [
+            error(""),
+            Notice::Interrupted,
+            info,
+            compacted,
+            hook(HookOutcome::Success, None),
+        ]
+        .iter()
+        .map(symbol)
+        .collect();
+        assert_eq!(symbols.len(), 5, "each kind of notice has a symbol of its own");
+    }
+
+    #[test]
+    fn a_limit_names_its_window_and_how_much_is_used_or_that_it_is_reached() {
+        let limit = |window: &str, status, utilization| RateLimit {
+            window: window.into(),
+            status,
+            utilization,
+            resets_at: None,
+        };
+        assert_eq!(
+            limit_text(&limit("five_hour", LimitStatus::Warning, Some(0.8))),
+            "Nutzung 5-Stundenlimit: 80 %"
+        );
+        assert_eq!(
+            limit_text(&limit("seven_day", LimitStatus::Rejected, None)),
+            "Nutzungslimit Wochenlimit erreicht"
+        );
+        assert_eq!(
+            text(&Notice::RateLimit(limit("seven_day_opus", LimitStatus::Allowed, None))),
+            "Nutzung 7 Tage Opus:"
+        );
+        assert_eq!(window_name("seven_day_sonnet"), "7 Tage Sonnet");
+        assert_eq!(window_name("monthly_extra"), "monthly extra");
+        let reset = RateLimit {
+            resets_at: Some(SystemTime::now()),
+            ..limit("five_hour", LimitStatus::Rejected, None)
+        };
+        assert!(limit_text(&reset).contains(" · zurückgesetzt "));
+    }
 }

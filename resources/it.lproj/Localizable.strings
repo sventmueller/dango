@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Gli agenti ACP salvano da soli le loro regole, dove l’app non può né vederle né eliminarle.";
 "Gilt für" = "Vale per";
 "Die Regel ließ sich nicht entfernen." = "Impossibile rimuovere la regola.";
+"{} wurde beendet" = "{} è terminato";
+"Letzte Meldung: {}" = "Ultimo messaggio: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Il programma è terminato senza messaggi.";
+"Das Programm hat sich beim Start beendet: {}" = "Il programma è terminato durante l’avvio: {}";

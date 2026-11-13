@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP-agentit tallentavat sääntönsä itse paikkaan, jossa appi ei näe eikä voi poistaa niitä.";
 "Gilt für" = "Koskee";
 "Die Regel ließ sich nicht entfernen." = "Sääntöä ei voitu poistaa.";
+"{} wurde beendet" = "{} on päättynyt";
+"Letzte Meldung: {}" = "Viimeisin viesti: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Ohjelma päättyi ilman viestiä.";
+"Das Programm hat sich beim Start beendet: {}" = "Ohjelma päättyi käynnistyessään: {}";

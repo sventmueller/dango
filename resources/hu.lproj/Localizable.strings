@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Az ACP-ügynökök maguk mentik a szabályaikat, ahol az app nem látja és nem is törölheti őket.";
 "Gilt für" = "Vonatkozik";
 "Die Regel ließ sich nicht entfernen." = "A szabályt nem sikerült eltávolítani.";
+"{} wurde beendet" = "A(z) {} leállt";
+"Letzte Meldung: {}" = "Utolsó üzenet: {}";
+"Das Programm hat sich ohne Meldung beendet." = "A program üzenet nélkül leállt.";
+"Das Programm hat sich beim Start beendet: {}" = "A program indítás közben leállt: {}";

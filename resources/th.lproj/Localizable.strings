@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "เอเจนต์ ACP จัดเก็บกฎของตัวเอง ในที่ที่แอปมองไม่เห็นและลบไม่ได้";
 "Gilt für" = "มีผลกับ";
 "Die Regel ließ sich nicht entfernen." = "ไม่สามารถเอากฎออกได้";
+"{} wurde beendet" = "{} สิ้นสุดการทำงานแล้ว";
+"Letzte Meldung: {}" = "ข้อความล่าสุด: {}";
+"Das Programm hat sich ohne Meldung beendet." = "โปรแกรมสิ้นสุดการทำงานโดยไม่มีข้อความ";
+"Das Programm hat sich beim Start beendet: {}" = "โปรแกรมสิ้นสุดการทำงานขณะเริ่มต้น: {}";

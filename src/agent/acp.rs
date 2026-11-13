@@ -1,23 +1,21 @@
 //! AI tabs with agents over ACP (E4, E5, E19): which agent a tab runs, whether it is there or can be installed,
-//! starting it through `ide_acp`, installing it on the user's word, and the composer's menus filled from what the
-//! agent offers instead of Claude's fixed lists.
+//! starting it through `ide_acp`, and the composer's menus filled from what the agent offers instead of Claude's fixed
+//! lists. Installing it on the user's word is in `acp_install`.
 
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 
-use ide_acp::install::{InstallError, Progress, Refusal, Source as InstallSource};
 use ide_acp::launch::Origin;
-use ide_acp::net::Http;
 use ide_acp::register::{self, PRESETS};
-use ide_acp::{Choice, Effect, Installer, Installs, Launch, OptionValue, Plan, Register, Sandbox};
+use ide_acp::{Choice, Effect, Installs, Launch, OptionValue, Plan, Register, Sandbox};
 use ide_process::Supervisor;
 use ide_thread::{EntryKind, PermissionOption, RequestState, Thread};
 use objc2::rc::Retained;
 use objc2::sel;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSColor, NSMenu, NSView};
+use objc2_app_kit::{NSColor, NSMenu};
 use splat_i18n::{t, tf};
 
+use super::acp_install::refusal_text;
 use super::acp_words;
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
 use super::source::{Problem, Source};
@@ -224,20 +222,6 @@ pub enum Availability {
     Unavailable(String),
 }
 
-fn refusal_text(refusal: &Refusal) -> String {
-    match refusal {
-        Refusal::Unversioned(package) => tf(
-            "{} nennt keine feste Version und wird deshalb nicht installiert",
-            &[package],
-        ),
-        Refusal::Nothing { unknown } if unknown.is_empty() => t("Für diesen Mac gibt es keine Ausgabe").to_string(),
-        Refusal::Nothing { unknown } => tf(
-            "Nur als {} erhältlich, was hier nicht unterstützt wird",
-            &[&unknown.join(", ")],
-        ),
-    }
-}
-
 /// Whether `agent` runs with the login shell's environment `env` in `cwd`, or how it could.
 pub fn availability(agent: &AcpAgent, env: &[(String, String)], cwd: &Path) -> Availability {
     if let Some(launch) = launch_of(agent, env, cwd) {
@@ -283,62 +267,6 @@ pub fn launch_of(agent: &AcpAgent, env: &[(String, String)], cwd: &Path) -> Opti
         Some(preset) => Launch::of_preset(preset, &installs, env, cwd),
         None => Launch::installed(&agent.id, &agent.name, &installs, env, cwd),
     }
-}
-
-/// What installing `plan` would download, for the question before it.
-fn plan_text(plan: &Plan) -> String {
-    let source = match &plan.source {
-        InstallSource::Archive { url, .. } => tf("Archiv von {}", &[url]),
-        InstallSource::Npm { package, version, .. } => tf("npm-Paket {}", &[&format!("{package}@{version}")]),
-        InstallSource::Uv { package, version, .. } => {
-            tf("Python-Paket {} über uv", &[&format!("{package}=={version}")])
-        }
-    };
-    let mut lines = vec![
-        tf("Version {}", &[&plan.version]),
-        source,
-        tf(
-            "Ziel: {}",
-            &[&Installs::default_root().join(&plan.id).display().to_string()],
-        ),
-    ];
-    if !plan.verified {
-        lines.push(t("Diese Version wurde mit dieser App nicht erprobt.").to_string());
-    }
-    if !plan.checksum {
-        lines.push(t("Das Register nennt keine Prüfsumme; der Download wird nicht geprüft.").to_string());
-    }
-    lines.join("\n")
-}
-
-fn install_error_text(error: &InstallError) -> String {
-    match error {
-        InstallError::Runtime(name, Some(major)) => tf("{} {} oder neuer wird gebraucht", &[name, &major.to_string()]),
-        InstallError::Runtime(name, None) => tf("{} wird gebraucht", &[name]),
-        InstallError::Checksum { .. } => {
-            t("Der Download stimmt nicht mit seiner Prüfsumme überein und wurde verworfen").to_string()
-        }
-        other => other.to_string(),
-    }
-}
-
-fn progress_text(name: &str, progress: Progress) -> String {
-    match progress {
-        Progress::Checking => tf("{} wird vorbereitet …", &[name]),
-        Progress::Downloading(bytes) => tf("{} wird geladen: {}", &[name, &super::format::bytes(bytes)]),
-        Progress::Unpacking => tf("{} wird entpackt …", &[name]),
-        Progress::Installing => tf("{} wird installiert …", &[name]),
-    }
-}
-
-/// Asks before installing `plan` of `agent`; whether the user agreed.
-pub fn confirm_install(mtm: objc2::MainThreadMarker, agent: &str, plan: &Plan) -> bool {
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(&tf("{} installieren?", &[agent])));
-    alert.setInformativeText(&ns(&plan_text(plan)));
-    alert.addButtonWithTitle(&ns(t("Installieren")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    alert.runModal() == NSAlertFirstButtonReturn
 }
 
 impl AgentTab {
@@ -406,48 +334,19 @@ impl AgentTab {
         }
     }
 
-    /// Installs the agent after the user agreed, showing the progress, then starts it.
-    pub fn install_agent(&self) {
-        let (Some(agent), Some(Problem::Missing(Some(plan)))) = (self.acp_agent(), self.state.borrow().problem.clone())
-        else {
-            return;
+    /// The agent's program ended without the app stopping it: a session that had opened says the agent was ended,
+    /// one that had not says it did not start, each with the last line the agent wrote; either offers to start again.
+    pub(super) fn acp_ended(&self, stderr: &str) {
+        let source = {
+            let mut state = self.state.borrow_mut();
+            if !matches!(state.source, Source::Acp(_)) {
+                return;
+            }
+            std::mem::replace(&mut state.source, Source::Idle)
         };
-        if !confirm_install(self.mtm, &agent.name, &plan) {
-            return;
-        }
-        let key = self.key;
-        let name = agent.name.clone();
-        self.set_problem(Some(Problem::Installing(progress_text(&name, Progress::Checking))));
-        let _ = std::thread::Builder::new().name("acp-install".into()).spawn(move || {
-            let env = crate::environment::wait(Duration::from_secs(15))
-                .map(<[(String, String)]>::to_vec)
-                .unwrap_or_default();
-            let installer = Installer::new(
-                Supervisor::global(),
-                env,
-                Installs::new(Installs::default_root()),
-                Arc::new(Http::new()),
-            );
-            let shown = name.clone();
-            let progress = move |step: Progress| {
-                let text = progress_text(&shown, step);
-                main_soon(move || {
-                    if let Some(tab) = super::get(key)
-                        && matches!(tab.state.borrow().problem, Some(Problem::Installing(_)))
-                    {
-                        tab.set_problem(Some(Problem::Installing(text)));
-                    }
-                });
-            };
-            let result = installer.install(&plan, true, &progress);
-            main_soon(move || {
-                let Some(tab) = super::get(key) else { return };
-                match result {
-                    Ok(_) => tab.start(),
-                    Err(error) => tab.set_problem(Some(Problem::Start(install_error_text(&error)))),
-                }
-            });
-        });
+        let opened = source.acp().is_some_and(|s| s.session_id().is_some());
+        source.end();
+        self.set_problem(Some(ended_problem(opened, stderr)));
     }
 
     /// Signs in with method `index` of the agent: one the agent runs itself goes through the session; one in a
@@ -544,7 +443,7 @@ impl AgentTab {
     }
 
     /// The menu of the model pill: the agent's models, grouped as it groups them, and how much it thinks.
-    pub(super) fn acp_model_menu(&self, view: &NSView) {
+    pub(super) fn acp_model_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let caps = self.state.borrow().acp.clone().unwrap_or_default();
@@ -580,7 +479,7 @@ impl AgentTab {
             }
         }
         self.state.borrow_mut().offered.models = offered;
-        super::actions::pop_up(&menu, view);
+        menu
     }
 
     pub(super) fn acp_pick_model(&self, index: usize) {
@@ -648,7 +547,7 @@ impl AgentTab {
     }
 
     /// The menu of the mode pill: the agent's modes.
-    pub(super) fn acp_mode_menu(&self, view: &NSView) {
+    pub(super) fn acp_mode_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let caps = self.state.borrow().acp.clone().unwrap_or_default();
@@ -668,7 +567,7 @@ impl AgentTab {
             }
         }
         self.state.borrow_mut().offered.modes = caps.modes.iter().map(|m| m.id.clone()).collect();
-        super::actions::pop_up(&menu, view);
+        menu
     }
 
     pub(super) fn acp_pick_mode(&self, index: usize) {
@@ -729,6 +628,24 @@ impl AgentTab {
     }
 }
 
+/// What an agent whose program ended on its own shows, from the end of its stderr: an exit once its session had
+/// `opened`, else a start that failed.
+fn ended_problem(opened: bool, stderr: &str) -> Problem {
+    let last = stderr
+        .lines()
+        .rev()
+        .map(str::trim)
+        .find(|l| !l.is_empty())
+        .map(str::to_string);
+    if opened {
+        return Problem::Exited(last);
+    }
+    Problem::Start(last.map_or_else(
+        || t("Das Programm hat sich ohne Meldung beendet.").to_string(),
+        |why| tf("Das Programm hat sich beim Start beendet: {}", &[&why]),
+    ))
+}
+
 /// What switching the sandbox on limits for an agent with `effect`.
 pub fn effect_text(effect: Effect) -> String {
     match effect {
@@ -775,6 +692,7 @@ impl AgentTab {
             Problem::Missing(_) => "missing",
             Problem::Installing(_) => "installing",
             Problem::NoModel => "no model",
+            Problem::Exited(_) => "exited",
         })
     }
 
@@ -832,5 +750,71 @@ mod colour_tests {
         assert!(four_colours_of("antigravity-acp").is_some());
         assert!(four_colours_of("agy").is_some());
         assert!(four_colours_of("codex-acp").is_none());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_thread_names_its_agent_by_the_registers_id() {
+        assert_eq!(Agent::of_thread(ide_claude::AGENT), Agent::Claude);
+        assert_eq!(Agent::of_thread(ide_agent::session::AGENT_ID), Agent::Own);
+        let codex = Agent::of_thread("codex-acp");
+        assert!(codex.is_acp() && !codex.is_own());
+        assert_eq!((codex.id(), codex.name()), ("codex-acp", "Codex"));
+        assert_eq!(agent_name("gemini"), "Gemini");
+        assert_eq!(Agent::Own.name(), "Eigener Agent");
+        assert!(
+            AcpAgent::presets().iter().all(|a| a.id != "claude-acp"),
+            "Claude runs through its own CLI, not as a preset of the menu"
+        );
+    }
+
+    #[test]
+    fn colours_of_the_register_are_read_as_six_hex_digits() {
+        assert_eq!(rgb_of("#1F6FEB"), Some(splat_markdown::palette::Rgb(0x1F, 0x6F, 0xEB)));
+        assert_eq!(rgb_of("1F6FEB"), None);
+        assert_eq!(rgb_of("#FFF"), None);
+        assert_eq!(rgb_of("#GGGGGG"), None);
+    }
+
+    #[test]
+    fn an_agent_that_ends_on_its_own_says_so_with_its_last_words() {
+        assert_eq!(
+            ended_problem(true, "loading\nthe model crashed\n\n"),
+            Problem::Exited(Some("the model crashed".into()))
+        );
+        assert_eq!(ended_problem(true, "  \n"), Problem::Exited(None));
+        assert_eq!(
+            ended_problem(false, "error: no API key\n"),
+            Problem::Start("Das Programm hat sich beim Start beendet: error: no API key".into())
+        );
+        assert_eq!(
+            ended_problem(false, ""),
+            Problem::Start("Das Programm hat sich ohne Meldung beendet.".into())
+        );
+    }
+
+    #[test]
+    fn the_sandbox_says_what_it_limits() {
+        let effects = [
+            Effect::ShellCommands,
+            Effect::WorkspaceWrite,
+            Effect::ProjectWritesOnly,
+            Effect::None,
+        ]
+        .map(effect_text);
+        assert_eq!(effects[3], "Keine Sandbox");
+        assert_eq!(
+            effects.iter().collect::<std::collections::BTreeSet<_>>().len(),
+            4,
+            "each effect has words of its own"
+        );
+        assert_eq!(
+            sandbox_unavailable("OpenCode"),
+            "OpenCode bietet keine Sandbox, die sich hier einschalten lässt"
+        );
     }
 }

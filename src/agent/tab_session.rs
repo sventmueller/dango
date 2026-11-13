@@ -73,7 +73,7 @@ impl AgentTab {
         });
     }
 
-    fn launch(&self, exe: Option<PathBuf>, env: Vec<(String, String)>, thread: Thread) {
+    pub(super) fn launch(&self, exe: Option<PathBuf>, env: Vec<(String, String)>, thread: Thread) {
         let Some(exe) = exe else {
             self.state.borrow_mut().source = Source::Idle;
             self.set_problem(Some(Problem::NotFound));
@@ -139,6 +139,7 @@ impl AgentTab {
         let mut learned = false;
         let mut remote = false;
         let mut refused = None;
+        let mut ended = None;
         for event in pending.events {
             match &event {
                 Incoming::Claude(Event::Changed(c))
@@ -152,7 +153,8 @@ impl AgentTab {
                 Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
                 Incoming::Claude(event @ Event::Failed(_)) => problem = source::problem_of(event),
                 Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
-                Incoming::Claude(Event::Ended { .. }) | Incoming::Acp(ide_acp::Event::Ended { .. }) => {}
+                Incoming::Acp(ide_acp::Event::Ended { stderr }) => ended = Some(stderr.clone()),
+                Incoming::Claude(Event::Ended { .. }) => {}
             }
         }
         if let Some(why) = refused {
@@ -171,6 +173,7 @@ impl AgentTab {
         };
         if learned && self.agent.is_acp() {
             self.acp_apply_choice();
+            self.send_queued();
         }
         if problem.is_some() {
             self.set_problem(problem);
@@ -182,6 +185,9 @@ impl AgentTab {
             self.refresh();
         } else if remote {
             self.refresh_remote();
+        }
+        if let Some(stderr) = ended {
+            self.acp_ended(&stderr);
         }
     }
 

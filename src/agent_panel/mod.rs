@@ -285,6 +285,23 @@ pub fn session_details(controller: &WindowController) -> Vec<String> {
     })
 }
 
+/// The context menu of row `row` of the session list of `controller`'s panel, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn session_menu(controller: &WindowController, row: isize) -> Option<Retained<objc2_app_kit::NSMenu>> {
+    let panel = panel_of(controller)?;
+    panel.reload();
+    panel.sessions_source.context_menu(row)
+}
+
+/// Opens the session of row `row` of `controller`'s panel, as a click does, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn open_session_row(controller: &WindowController, row: usize) {
+    if let Some(panel) = panel_of(controller) {
+        panel.reload();
+        panel.sessions_source.open_row(row);
+    }
+}
+
 /// What the self-test reads from the panel.
 #[cfg(feature = "selftest")]
 pub struct Inspection {

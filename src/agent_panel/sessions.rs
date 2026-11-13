@@ -410,12 +410,18 @@ impl Source {
     }
 
     fn fill_menu(&self, menu: &NSMenu) {
-        menu.removeAllItems();
-        menu.setAutoenablesItems(false);
         let Some(panel) = super::panel_by_key(self.ivars().panel.get()) else {
+            menu.removeAllItems();
             return;
         };
         let row = panel.sessions.clickedRow();
+        self.fill_menu_for(menu, &panel, row);
+    }
+
+    /// The context menu of row `row` of the list, `-1` for none.
+    fn fill_menu_for(&self, menu: &NSMenu, panel: &super::AgentPanel, row: isize) {
+        menu.removeAllItems();
+        menu.setAutoenablesItems(false);
         let id = panel.sessions.itemAtRow(row).and_then(|item| id_of(&item));
         *self.ivars().clicked.borrow_mut() = id;
         let mtm = self.mtm();
@@ -494,6 +500,24 @@ impl Source {
             crate::diag::report("archiving a session", error);
         }
         self.with_panel(|panel| panel.reload());
+    }
+
+    /// The context menu of row `row`, as a right click on it fills it, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn context_menu(&self, row: isize) -> Option<Retained<NSMenu>> {
+        let panel = super::panel_by_key(self.ivars().panel.get())?;
+        let menu = NSMenu::new(self.mtm());
+        self.fill_menu_for(&menu, &panel, row);
+        Some(menu)
+    }
+
+    /// Opens the session of row `row`, as a click on it does, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn open_row(&self, row: usize) {
+        let id = self.ivars().model.borrow().order.get(row).cloned();
+        if let Some(id) = id {
+            self.open_id(&id);
+        }
     }
 
     /// The quiet texts at the end of the session rows, for the self-test.

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use ide_claude::{PermissionAnswer, PlanAnswer};
 use ide_thread::{Answer, EntryKind, PermissionOption, RequestState};
+use objc2::rc::Retained;
 use objc2::sel;
 use objc2_app_kit::{NSAlert, NSMenu, NSView};
 use splat_i18n::{t, tf};
@@ -16,6 +17,21 @@ use crate::util::{main_soon, ns};
 
 /// What the model is told when the user refuses a tool; for the model, so not translated.
 const DENIED: &str = "The user denied this tool call.";
+
+/// The rules a request offers to store, by suggestion: the rule and where it would be stored.
+pub(super) fn always_rules(options: &[PermissionOption]) -> Vec<(usize, String, String)> {
+    options
+        .iter()
+        .filter_map(|o| match o {
+            PermissionOption::AllowAlways {
+                suggestion,
+                rule,
+                scope,
+            } => Some((*suggestion, rule.clone(), scope.clone())),
+            _ => None,
+        })
+        .collect()
+}
 
 impl AgentTab {
     pub fn permission(&self, id: u64, what: u8, view: Option<&NSView>) {
@@ -55,31 +71,10 @@ impl AgentTab {
                 }
             }
             ALLOW_ALWAYS => {
-                let rules: Vec<(usize, String, String)> = request
-                    .options
-                    .iter()
-                    .filter_map(|o| match o {
-                        PermissionOption::AllowAlways {
-                            suggestion,
-                            rule,
-                            scope,
-                        } => Some((*suggestion, rule.clone(), scope.clone())),
-                        _ => None,
-                    })
-                    .collect();
+                let rules = always_rules(&request.options);
                 if rules.len() > 1 {
-                    let menu = NSMenu::new(self.mtm);
-                    for (suggestion, rule, scope) in &rules {
-                        let tag = pack(entry.id, u8::try_from(*suggestion).unwrap_or(0));
-                        self.menu_item(
-                            &menu,
-                            &tf("{} · {}", &[rule, &scope_name(scope)]),
-                            sel!(ideAgentAllowRule:),
-                            tag,
-                        );
-                    }
                     if let Some(view) = view {
-                        pop_up(&menu, view);
+                        pop_up(&self.rule_items(entry.id, &rules), view);
                     }
                     return;
                 }
@@ -95,6 +90,21 @@ impl AgentTab {
             _ => return,
         };
         self.settle(id, &request.request_id, answer);
+    }
+
+    /// The menu of the rules request `id` could store, each with where it would be stored.
+    pub(super) fn rule_items(&self, id: ide_thread::EntryId, rules: &[(usize, String, String)]) -> Retained<NSMenu> {
+        let menu = NSMenu::new(self.mtm);
+        for (suggestion, rule, scope) in rules {
+            let tag = pack(id, u8::try_from(*suggestion).unwrap_or(0));
+            self.menu_item(
+                &menu,
+                &tf("{} · {}", &[rule, &scope_name(scope)]),
+                sel!(ideAgentAllowRule:),
+                tag,
+            );
+        }
+        menu
     }
 
     /// Allows request `id` and stores the rule of suggestion `suggestion`.

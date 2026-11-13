@@ -5,7 +5,8 @@
 use ide_agent::{Approval, Choice, Profile, Session};
 use ide_thread::{Change, EntryKind, PermissionOption, RequestState};
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSColor, NSControlStateValueOn, NSMenu, NSView};
+use objc2::rc::Retained;
+use objc2_app_kit::{NSColor, NSControlStateValueOn, NSMenu};
 use splat_i18n::{t, tf};
 
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
@@ -254,7 +255,7 @@ impl AgentTab {
     }
 
     /// The model pill's menu: the endpoint's models as last loaded, then the effort levels.
-    pub(super) fn own_model_menu(&self, view: &NSView) {
+    pub(super) fn own_model_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let choice = self.state.borrow().own.clone();
@@ -306,7 +307,7 @@ impl AgentTab {
             state.offered.models = offered;
             state.offered.efforts = efforts;
         }
-        super::actions::pop_up(&menu, view);
+        menu
     }
 
     pub(super) fn own_pick_model(&self, index: usize) {
@@ -367,7 +368,7 @@ impl AgentTab {
     }
 
     /// The mode pill's menu: the profile, then how much runs without asking.
-    pub(super) fn own_mode_menu(&self, view: &NSView) {
+    pub(super) fn own_mode_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let policy = self.state.borrow().source.own().map(Session::policy);
@@ -403,7 +404,7 @@ impl AgentTab {
             modes.push(ide_agent::session::mode_id(item).to_string());
         }
         self.state.borrow_mut().offered.modes = modes;
-        super::actions::pop_up(&menu, view);
+        menu
     }
 
     pub(super) fn own_pick_mode(&self, index: usize) {

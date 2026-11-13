@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenții ACP își salvează singuri regulile, acolo unde aplicația nu le poate vedea și nici șterge.";
 "Gilt für" = "Se aplică pentru";
 "Die Regel ließ sich nicht entfernen." = "Regula nu a putut fi eliminată.";
+"{} wurde beendet" = "{} s-a oprit";
+"Letzte Meldung: {}" = "Ultimul mesaj: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Programul s-a oprit fără niciun mesaj.";
+"Das Programm hat sich beim Start beendet: {}" = "Programul s-a oprit la pornire: {}";

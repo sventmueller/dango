@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Ejen ACP menyimpan peraturan mereka sendiri, di tempat yang app tidak dapat lihat atau padam.";
 "Gilt für" = "Terpakai Untuk";
 "Die Regel ließ sich nicht entfernen." = "Peraturan tidak dapat dibuang.";
+"{} wurde beendet" = "{} telah berhenti";
+"Letzte Meldung: {}" = "Mesej terakhir: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Program berhenti tanpa mesej.";
+"Das Programm hat sich beim Start beendet: {}" = "Program berhenti semasa dimulakan: {}";

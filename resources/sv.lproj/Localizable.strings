@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP-agenter sparar sina regler själva, där appen varken kan se eller radera dem.";
 "Gilt für" = "Gäller för";
 "Die Regel ließ sich nicht entfernen." = "Det gick inte att ta bort regeln.";
+"{} wurde beendet" = "{} har avslutats";
+"Letzte Meldung: {}" = "Senaste meddelande: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Programmet avslutades utan meddelande.";
+"Das Programm hat sich beim Start beendet: {}" = "Programmet avslutades under start: {}";

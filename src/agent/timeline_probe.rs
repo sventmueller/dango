@@ -94,6 +94,144 @@ impl Timeline {
         out
     }
 
+    /// Clicks the `nth` button whose title starts with `title` on the card of the last row, as the user would;
+    /// whether there was one.
+    pub fn press_last(&self, title: &str, nth: usize) -> bool {
+        fn collect(view: &NSView, title: &str, out: &mut Vec<Retained<objc2_app_kit::NSButton>>) {
+            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>()
+                && button.title().to_string().starts_with(title)
+            {
+                out.push(objc2::Message::retain(button));
+            }
+            for child in view.subviews().iter() {
+                collect(&child, title, out);
+            }
+        }
+        let last = self.table.numberOfRows() - 1;
+        let mut found = Vec::new();
+        if let Some(view) = (last >= 0)
+            .then(|| self.table.viewAtColumn_row_makeIfNecessary(0, last, true))
+            .flatten()
+        {
+            collect(&view, title, &mut found);
+        }
+        let Some(button) = found.get(nth) else {
+            return false;
+        };
+        // SAFETY: A click without a sender, on the main thread, sends the button's action as a real click does.
+        unsafe { button.performClick(None) };
+        true
+    }
+
+    /// Clicks the button of the card of entry `id` whose title starts with `label` or whose tooltip is `label`, as
+    /// the user would; whether there was one.
+    pub fn press_on(&self, id: u64, label: &str) -> bool {
+        fn find(view: &NSView, label: &str) -> Option<Retained<objc2_app_kit::NSButton>> {
+            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>()
+                && (button.title().to_string().starts_with(label)
+                    || button.toolTip().is_some_and(|tip| tip.to_string() == label))
+            {
+                return Some(objc2::Message::retain(button));
+            }
+            view.subviews().iter().find_map(|child| find(&child, label))
+        }
+        let row = self
+            .positions
+            .borrow()
+            .iter()
+            .find_map(|(entry, row)| (entry.get() == id).then_some(*row));
+        let Some(row) = row.and_then(|r| isize::try_from(r).ok()) else {
+            return false;
+        };
+        self.table.scrollRowToVisible(row);
+        let button = self
+            .table
+            .viewAtColumn_row_makeIfNecessary(0, row, true)
+            .and_then(|view| find(&view, label));
+        if let Some(button) = &button {
+            // SAFETY: A click without a sender, on the main thread, sends the button's action as a real click does.
+            unsafe { button.performClick(None) };
+        }
+        button.is_some()
+    }
+
+    /// Selects the row of entry `id` and sends the table the key `key`, as typing it with the timeline focused does;
+    /// whether the entry has a row.
+    pub fn key_on(&self, id: u64, key: &str) -> bool {
+        let row = self
+            .positions
+            .borrow()
+            .iter()
+            .find_map(|(entry, row)| (entry.get() == id).then_some(*row));
+        let Some(row) = row else { return false };
+        self.table.scrollRowToVisible(isize::try_from(row).unwrap_or(0));
+        self.table
+            .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        let window = self.table.window().map_or(0, |w| w.windowNumber());
+        let event = objc2_app_kit::NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
+            objc2_app_kit::NSEventType::KeyDown,
+            objc2_foundation::NSPoint::new(0.0, 0.0),
+            objc2_app_kit::NSEventModifierFlags::empty(),
+            0.0,
+            window,
+            None,
+            &crate::util::ns(key),
+            &crate::util::ns(key),
+            false,
+            49,
+        );
+        if let Some(event) = event {
+            self.table.keyDown(&event);
+        }
+        true
+    }
+
+    /// Whether `part` of entry `id` is open.
+    pub fn is_open(&self, id: u64, part: super::cards::Part) -> bool {
+        self.expanded.borrow().contains(&(id, part))
+    }
+
+    /// Replaces what the input editor of permission request `id` holds, as typing would; whether it has one.
+    pub fn edit_input(&self, id: u64, text: &str) -> bool {
+        let inputs = self.inputs.borrow();
+        let view = inputs
+            .editors
+            .get(&id)
+            .and_then(|scroll| scroll.documentView())
+            .and_then(|view| view.downcast::<objc2_app_kit::NSTextView>().ok());
+        if let Some(view) = &view {
+            view.setString(&crate::util::ns(text));
+        }
+        view.is_some()
+    }
+
+    /// Types `text` into the free-text field `what` of request `id`; whether it has one.
+    pub fn type_field(&self, id: u64, what: u8, text: &str) -> bool {
+        let inputs = self.inputs.borrow();
+        let field = inputs.fields.get(&(id, what));
+        if let Some(field) = field {
+            field.setStringValue(&crate::util::ns(text));
+        }
+        field.is_some()
+    }
+
+    /// Ticks the options titled `titles` of question `question` of request `id`, as clicks on them would.
+    pub fn tick_options(&self, id: u64, question: u8, titles: &[&str]) -> usize {
+        let inputs = self.inputs.borrow();
+        let boxes = inputs.checks.get(&(id, question)).cloned().unwrap_or_default();
+        drop(inputs);
+        let mut ticked = 0;
+        for button in boxes
+            .iter()
+            .filter(|b| titles.contains(&b.title().to_string().as_str()))
+        {
+            // SAFETY: A click without a sender, on the main thread, toggles the checkbox as a real click does.
+            unsafe { button.performClick(None) };
+            ticked += 1;
+        }
+        ticked
+    }
+
     /// The cards in view, as their VoiceOver summaries.
     pub fn visible_summaries(&self) -> Vec<String> {
         let range = self.table.rowsInRect(self.table.visibleRect());

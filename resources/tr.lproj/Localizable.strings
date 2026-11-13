@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP ajanları kurallarını kendileri kaydeder; uygulama bunları ne görebilir ne de silebilir.";
 "Gilt für" = "Kapsam";
 "Die Regel ließ sich nicht entfernen." = "Kural kaldırılamadı.";
+"{} wurde beendet" = "{} sonlandı";
+"Letzte Meldung: {}" = "Son ileti: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Program ileti vermeden sonlandı.";
+"Das Programm hat sich beim Start beendet: {}" = "Program başlatılırken sonlandı: {}";

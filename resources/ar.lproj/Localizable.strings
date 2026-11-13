@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "يحفظ وكلاء ACP قواعدهم بأنفسهم، في مكان لا يستطيع التطبيق رؤيتها فيه ولا حذفها.";
 "Gilt für" = "ينطبق على";
 "Die Regel ließ sich nicht entfernen." = "تعذّر حذف القاعدة.";
+"{} wurde beendet" = "انتهى {}";
+"Letzte Meldung: {}" = "آخر رسالة: {}";
+"Das Programm hat sich ohne Meldung beendet." = "انتهى البرنامج دون رسالة.";
+"Das Programm hat sich beim Start beendet: {}" = "انتهى البرنامج أثناء بدء التشغيل: {}";

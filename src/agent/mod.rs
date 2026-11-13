@@ -3,6 +3,7 @@
 //! `ide_acp::Session`; the self-test feeds recordings through `ide_claude::replay::Replay` instead.
 
 mod acp;
+mod acp_install;
 mod acp_words;
 mod actions;
 mod attrs;
@@ -51,9 +52,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::window::WindowController;
-pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_register, confirm_install, launch_of};
+pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_register, launch_of};
 #[cfg(feature = "selftest")]
 pub use acp::{set_test_launch, set_test_register};
+pub use acp_install::confirm_install;
 pub use actions::ask_text;
 pub use cards::request::scope_name;
 #[cfg(feature = "selftest")]
@@ -69,9 +71,13 @@ pub use outside::ci_log;
 #[cfg(feature = "selftest")]
 pub use rewind_actions::{alerts_seen, answer_alerts};
 pub use source::Resume;
+#[cfg(feature = "selftest")]
+pub use source::set_test_program as set_test_claude;
 pub use tab::AgentTab;
 #[cfg(feature = "selftest")]
 pub(crate) use tab::{INPUT_INSET, INPUT_WIDTH, SIDE_MARGIN};
+#[cfg(feature = "selftest")]
+pub use tab_probe::TabMenu;
 pub use ui::{framed, icon, insets, separator};
 #[cfg(feature = "selftest")]
 pub use usage::inject as inject_usage;

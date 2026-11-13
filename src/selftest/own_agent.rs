@@ -564,7 +564,7 @@ fn compact(root: PathBuf, key: u64) {
             if let Some(controller) = controller_of(&root) {
                 picture(&controller, "own-agent-compacted");
             }
-            finish(NAME);
+            super::own_agent_menus::run(root, key, MODEL);
         },
     );
 }

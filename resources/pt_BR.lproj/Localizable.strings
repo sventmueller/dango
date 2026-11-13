@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agentes ACP salvam as próprias regras, onde o app não consegue vê-las nem apagá-las.";
 "Gilt für" = "Vale Para";
 "Die Regel ließ sich nicht entfernen." = "Não foi possível remover a regra.";
+"{} wurde beendet" = "{} foi encerrado";
+"Letzte Meldung: {}" = "Última mensagem: {}";
+"Das Programm hat sich ohne Meldung beendet." = "O programa foi encerrado sem mensagem.";
+"Das Programm hat sich beim Start beendet: {}" = "O programa foi encerrado ao iniciar: {}";

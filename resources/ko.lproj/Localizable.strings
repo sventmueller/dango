@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP 에이전트는 규칙을 직접 저장하므로 앱에서 보거나 삭제할 수 없습니다.";
 "Gilt für" = "적용 대상";
 "Die Regel ließ sich nicht entfernen." = "규칙을 제거할 수 없습니다.";
+"{} wurde beendet" = "{}이(가) 종료되었습니다";
+"Letzte Meldung: {}" = "마지막 메시지: {}";
+"Das Programm hat sich ohne Meldung beendet." = "프로그램이 메시지 없이 종료되었습니다.";
+"Das Programm hat sich beim Start beendet: {}" = "프로그램이 시작 중에 종료되었습니다: {}";

@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP एजेंट अपने नियम ख़ुद सहेजते हैं, जहाँ ऐप उन्हें न देख सकती है, न हटा सकती है।";
 "Gilt für" = "लागू";
 "Die Regel ließ sich nicht entfernen." = "नियम हटाया नहीं जा सका।";
+"{} wurde beendet" = "{} बंद हो गया";
+"Letzte Meldung: {}" = "अंतिम संदेश: {}";
+"Das Programm hat sich ohne Meldung beendet." = "प्रोग्राम बिना किसी संदेश के बंद हो गया।";
+"Das Programm hat sich beim Start beendet: {}" = "प्रोग्राम शुरू होते समय बंद हो गया: {}";

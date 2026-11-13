@@ -43,6 +43,8 @@ pub enum Problem {
     AcpSignIn,
     /// The own agent has no endpoint with a key and a model yet.
     NoModel,
+    /// The ACP agent's program ended on its own after its session opened; the last line it wrote to stderr.
+    Exited(Option<String>),
 }
 
 pub enum Source {
@@ -254,8 +256,22 @@ pub fn replay(thread: Thread) -> Source {
     )))
 }
 
+/// The program the self-test starts as `claude`; process-wide, since the lookup runs on a worker thread.
+#[cfg(feature = "selftest")]
+static TEST_PROGRAM: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
+
+/// Starts every Claude tab with `program` instead of the `claude` on the Mac, as the self-test runs a stand-in.
+#[cfg(feature = "selftest")]
+pub fn set_test_program(program: PathBuf) {
+    *TEST_PROGRAM.lock().unwrap_or_else(|e| e.into_inner()) = Some(program);
+}
+
 /// The `claude` executable on the login shell's PATH, else in the places its installers use.
 pub fn find_claude(env: &[(String, String)]) -> Option<PathBuf> {
+    #[cfg(feature = "selftest")]
+    if let Some(program) = TEST_PROGRAM.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+        return Some(program);
+    }
     let home = ide_core::paths::home();
     let path = env
         .iter()

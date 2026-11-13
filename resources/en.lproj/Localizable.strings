@@ -1587,3 +1587,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACP agents store their rules themselves, where the app can neither see nor delete them.";
 "Gilt für" = "Applies To";
 "Die Regel ließ sich nicht entfernen." = "The rule could not be removed.";
+"{} wurde beendet" = "{} has exited";
+"Letzte Meldung: {}" = "Last message: {}";
+"Das Programm hat sich ohne Meldung beendet." = "The program exited without a message.";
+"Das Programm hat sich beim Start beendet: {}" = "The program exited while starting: {}";

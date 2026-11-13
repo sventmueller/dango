@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use block2::RcBlock;
 use objc2::MainThreadMarker;
+use objc2::rc::Retained;
 use objc2::runtime::Bool;
 use objc2_app_kit::NSApplication;
 use objc2_foundation::{NSBundle, NSError};
@@ -46,16 +47,44 @@ pub fn post(id: &str, title: &str, body: &str) {
             &done,
         );
     }
+    center.addNotificationRequest_withCompletionHandler(&request(id, title, body), None);
+}
+
+/// The notification for the tab `id`, with a sound, shown at once.
+fn request(id: &str, title: &str, body: &str) -> Retained<UNNotificationRequest> {
     let content = UNMutableNotificationContent::new();
     content.setTitle(&ns(title));
     content.setBody(&ns(body));
     content.setSound(Some(&UNNotificationSound::defaultSound()));
-    let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&ns(id), &content, None);
-    center.addNotificationRequest_withCompletionHandler(&request, None);
+    UNNotificationRequest::requestWithIdentifier_content_trigger(&ns(id), &content, None)
 }
 
 /// How many notifications were posted, or would have been where posting is not allowed.
 #[cfg(feature = "selftest")]
 pub fn posted() -> usize {
     NOTIFIED.load(Ordering::Relaxed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_notification_names_its_tab_and_says_what_happened_at_once() {
+        let request = request("agent-7", "Fix the parser", "Claude ist fertig.");
+        let content = request.content();
+        assert_eq!(request.identifier().to_string(), "agent-7");
+        assert_eq!(content.title().to_string(), "Fix the parser");
+        assert_eq!(content.body().to_string(), "Claude ist fertig.");
+        assert!(content.sound().is_some());
+        assert!(request.trigger().is_none(), "shown at once, not scheduled");
+    }
+
+    #[test]
+    fn the_test_run_posts_nothing_and_counts_what_it_would_have_posted() {
+        let before = NOTIFIED.load(Ordering::Relaxed);
+        post("agent-8", "Title", "Body");
+        assert!(!allowed());
+        assert!(NOTIFIED.load(Ordering::Relaxed) > before);
+    }
 }

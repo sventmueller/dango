@@ -143,7 +143,7 @@ pub struct Timeline {
     cwd: PathBuf,
     thread: RefCell<Rc<Thread>>,
     rows: RefCell<Vec<EntryId>>,
-    positions: RefCell<HashMap<EntryId, usize>>,
+    pub(super) positions: RefCell<HashMap<EntryId, usize>>,
     pending: Cell<bool>,
     pending_follow: Cell<bool>,
     figures: RefCell<HashMap<EntryId, Vec<splat_render::js::Key>>>,
@@ -153,7 +153,7 @@ pub struct Timeline {
     heights: RefCell<HashMap<u64, (f64, f64)>>,
     /// The width the rows were last laid out at.
     width: Cell<f64>,
-    expanded: RefCell<HashSet<(u64, Part)>>,
+    pub(super) expanded: RefCell<HashSet<(u64, Part)>>,
     pub(super) inputs: RefCell<Inputs>,
     live: RefCell<Vec<Live>>,
     /// Rows whose card turned out another height than the table had, with that height.

@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenti ACP svoja pravila shranjujejo sami, kjer jih aplikacija ne more niti videti niti izbrisati.";
 "Gilt für" = "Velja za";
 "Die Regel ließ sich nicht entfernen." = "Pravila ni bilo mogoče odstraniti.";
+"{} wurde beendet" = "Agent {} se je končal";
+"Letzte Meldung: {}" = "Zadnje sporočilo: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Program se je končal brez sporočila.";
+"Das Programm hat sich beim Start beendet: {}" = "Program se je končal med zagonom: {}";

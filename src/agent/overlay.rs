@@ -97,6 +97,14 @@ fn acp_problem(
                 detail,
             )
         }
+        Problem::Exited(why) => (
+            "stop.circle",
+            tf("{} wurde beendet", &[agent]),
+            why.as_ref().map_or_else(
+                || t("Das Programm hat sich ohne Meldung beendet.").to_string(),
+                |why| tf("Letzte Meldung: {}", &[why]),
+            ),
+        ),
         _ => return None,
     };
     if !matches!(problem, Problem::Installing(_)) {
@@ -164,12 +172,22 @@ pub fn problem(
             t("Noch kein Modell").to_string(),
             t("Trag in den Einstellungen unter „Agent“ einen Anbieter mit Schlüssel ein und wähl ein Modell, oder richte Ollama oder LM Studio ein.").to_string(),
         ),
-        Problem::Missing(_) | Problem::Installing(_) | Problem::AcpSignIn => return centered(mtm, &[]),
+        Problem::Missing(_) | Problem::Installing(_) | Problem::AcpSignIn | Problem::Exited(_) => {
+            return centered(mtm, &[]);
+        }
     };
     let icon = ui::icon(mtm, symbol, &title, 30.0, &NSColor::tertiaryLabelColor());
     let heading = ui::label(mtm, &title, &style::bold(15.0), &NSColor::labelColor());
     let text = ui::wrapping(mtm, &detail, &style::body(), &NSColor::secondaryLabelColor(), 360.0);
     text.setAlignment(NSTextAlignment::Center);
+    let buttons = buttons(mtm, target, problem);
+    let refs: Vec<&NSView> = buttons.iter().map(|v| &**v).collect();
+    let row = ui::row(mtm, 8.0, &refs);
+    centered(mtm, &[&icon, &heading, &text, &row])
+}
+
+/// What the user can do about `problem`: trust the folder, sign in, open the settings, or try again.
+fn buttons(mtm: MainThreadMarker, target: &AgentTarget, problem: &Problem) -> Vec<Retained<NSView>> {
     let mut buttons: Vec<Retained<NSView>> = Vec::new();
     match problem {
         Problem::Untrusted => {
@@ -205,7 +223,12 @@ pub fn problem(
                 buttons.push(ui::view(&ui::button(mtm, title, target, action, 0)));
             }
         }
-        Problem::NotFound | Problem::Start(_) | Problem::Missing(_) | Problem::Installing(_) | Problem::AcpSignIn => {
+        Problem::NotFound
+        | Problem::Start(_)
+        | Problem::Missing(_)
+        | Problem::Installing(_)
+        | Problem::AcpSignIn
+        | Problem::Exited(_) => {
             buttons.push(ui::view(&ui::button(
                 mtm,
                 t("Erneut versuchen"),
@@ -215,7 +238,5 @@ pub fn problem(
             )));
         }
     }
-    let refs: Vec<&NSView> = buttons.iter().map(|v| &**v).collect();
-    let row = ui::row(mtm, 8.0, &refs);
-    centered(mtm, &[&icon, &heading, &text, &row])
+    buttons
 }

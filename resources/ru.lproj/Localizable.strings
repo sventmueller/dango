@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Агенты ACP сохраняют свои правила сами, там, где приложение не может ни увидеть, ни удалить их.";
 "Gilt für" = "Область действия";
 "Die Regel ließ sich nicht entfernen." = "Не удалось удалить правило.";
+"{} wurde beendet" = "{} завершил работу";
+"Letzte Meldung: {}" = "Последнее сообщение: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Программа завершилась без сообщения.";
+"Das Programm hat sich beim Start beendet: {}" = "Программа завершилась при запуске: {}";

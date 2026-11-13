@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "ACPエージェントはルールを自身で保存するため、アプリからは表示も削除もできません。";
 "Gilt für" = "適用範囲";
 "Die Regel ließ sich nicht entfernen." = "ルールを削除できませんでした。";
+"{} wurde beendet" = "{}が終了しました";
+"Letzte Meldung: {}" = "最後のメッセージ: {}";
+"Das Programm hat sich ohne Meldung beendet." = "プログラムはメッセージなしで終了しました。";
+"Das Programm hat sich beim Start beendet: {}" = "プログラムは起動中に終了しました: {}";

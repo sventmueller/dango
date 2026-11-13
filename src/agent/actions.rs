@@ -255,6 +255,11 @@ impl AgentTab {
 
     /// `/`: the agent's slash commands.
     pub fn slash_menu(&self, view: &NSView) {
+        pop_up(&self.slash_items(), view);
+    }
+
+    /// The slash menu, without showing it.
+    pub(super) fn slash_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let commands: Vec<(String, String)> = if self.agent.is_acp() {
@@ -293,7 +298,7 @@ impl AgentTab {
             }
         }
         self.state.borrow_mut().offered.commands = commands.into_iter().map(|(n, _)| n).collect();
-        pop_up(&menu, view);
+        menu
     }
 
     pub fn pick_command(&self, index: usize) {
@@ -307,11 +312,16 @@ impl AgentTab {
 
     /// The model and effort pill: the models the CLI offers, then the effort levels of the current one.
     pub fn model_menu(&self, view: &NSView) {
+        pop_up(&self.model_items(), view);
+    }
+
+    /// The model pill's menu, without showing it.
+    pub(super) fn model_items(&self) -> Retained<NSMenu> {
         if self.agent.is_acp() {
-            return self.acp_model_menu(view);
+            return self.acp_model_items();
         }
         if self.agent.is_own() {
-            return self.own_model_menu(view);
+            return self.own_model_items();
         }
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
@@ -369,7 +379,7 @@ impl AgentTab {
             state.offered.models = models.into_iter().map(|(v, _, _)| v).collect();
             state.offered.efforts = efforts;
         }
-        pop_up(&menu, view);
+        menu
     }
 
     pub fn pick_model(&self, index: usize) {
@@ -403,11 +413,16 @@ impl AgentTab {
 
     /// The mode pill: how freely Claude may use tools.
     pub fn mode_menu(&self, view: &NSView) {
+        pop_up(&self.mode_items(), view);
+    }
+
+    /// The mode pill's menu, without showing it.
+    pub(super) fn mode_items(&self) -> Retained<NSMenu> {
         if self.agent.is_acp() {
-            return self.acp_mode_menu(view);
+            return self.acp_mode_items();
         }
         if self.agent.is_own() {
-            return self.own_mode_menu(view);
+            return self.own_mode_items();
         }
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
@@ -427,7 +442,7 @@ impl AgentTab {
             }
         }
         self.state.borrow_mut().offered.modes = modes().iter().map(|(id, _, _)| (*id).to_string()).collect();
-        pop_up(&menu, view);
+        menu
     }
 
     pub fn pick_mode(&self, index: usize) {
@@ -502,6 +517,11 @@ impl AgentTab {
 
     /// The clock: sessions of this folder from the index and, experimentally, from the CLI's own transcripts.
     pub fn history_menu(&self, view: &NSView) {
+        pop_up(&self.history_items(), view);
+    }
+
+    /// The clock's menu, without showing it.
+    pub(super) fn history_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let past = crate::agent_panel::past_sessions(&self.cwd, 20);
@@ -520,7 +540,7 @@ impl AgentTab {
             entry.setToolTip(Some(&ns(&title)));
         }
         self.state.borrow_mut().offered.past = past.into_iter().map(|(r, _)| r).collect();
-        pop_up(&menu, view);
+        menu
     }
 
     pub fn open_past(&self, index: usize) {
@@ -612,18 +632,21 @@ impl AgentTab {
         let Some(session) = self.session() else { return };
         match session.remote_control() {
             RemoteControl::Off | RemoteControl::Failed(_) => self.set_remote_control(&session, true),
-            RemoteControl::Connected(_) => {
-                let menu = NSMenu::new(self.mtm);
-                menu.setAutoenablesItems(false);
-                let action = sel!(ideAgentRemoteControlAction:);
-                self.menu_item(&menu, t("Im Browser öffnen"), action, REMOTE_OPEN);
-                self.menu_item(&menu, t("Link kopieren"), action, REMOTE_COPY);
-                menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
-                self.menu_item(&menu, t("Remote Control beenden"), action, REMOTE_END);
-                pop_up(&menu, view);
-            }
+            RemoteControl::Connected(_) => pop_up(&self.remote_items(), view),
             RemoteControl::Connecting | RemoteControl::Unavailable => {}
         }
+    }
+
+    /// What the phone offers while the session is connected: its page and its end.
+    pub(super) fn remote_items(&self) -> Retained<NSMenu> {
+        let menu = NSMenu::new(self.mtm);
+        menu.setAutoenablesItems(false);
+        let action = sel!(ideAgentRemoteControlAction:);
+        self.menu_item(&menu, t("Im Browser öffnen"), action, REMOTE_OPEN);
+        self.menu_item(&menu, t("Link kopieren"), action, REMOTE_COPY);
+        menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
+        self.menu_item(&menu, t("Remote Control beenden"), action, REMOTE_END);
+        menu
     }
 
     /// An item of the Remote Control menu.
@@ -753,6 +776,19 @@ pub fn ask_text(mtm: MainThreadMarker, title: &str, current: &str) -> Option<Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pasted_pictures_of_other_formats_become_png_and_other_data_is_refused() {
+        let gif = [
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+            0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+            0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
+        ];
+        let png = as_png(&gif).expect("a GIF converts");
+        assert!(png.starts_with(&[0x89, b'P', b'N', b'G']));
+        assert_eq!(as_png(&png), Some(png.clone()), "PNG data stays as it is");
+        assert_eq!(as_png(b"not a picture"), None);
+    }
 
     #[test]
     fn pictures_attach_as_images_and_other_files_as_paths() {

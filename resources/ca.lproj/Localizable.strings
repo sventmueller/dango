@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Els agents ACP desen les seves regles ells mateixos, on l’app no les pot veure ni eliminar.";
 "Gilt für" = "S’aplica a";
 "Die Regel ließ sich nicht entfernen." = "No s’ha pogut eliminar la regla.";
+"{} wurde beendet" = "{} s’ha aturat";
+"Letzte Meldung: {}" = "Darrer missatge: {}";
+"Das Programm hat sich ohne Meldung beendet." = "El programa s’ha aturat sense cap missatge.";
+"Das Programm hat sich beim Start beendet: {}" = "El programa s’ha aturat en iniciar-se: {}";

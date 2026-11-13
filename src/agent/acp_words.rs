@@ -123,4 +123,36 @@ mod tests {
         let models = option(Category::Model, "high", &[("high", "High")]);
         assert_eq!(current(&models), "High", "a model named like a level keeps its name");
     }
+
+    #[test]
+    fn every_mode_the_app_words_has_a_name_and_a_description_of_its_own() {
+        let modes = [
+            ("codex-acp", "read-only"),
+            ("codex-acp", "workspace-write"),
+            ("codex-acp", "agent"),
+            ("codex-acp", "agent-full-access"),
+            ("antigravity-acp", "default"),
+            ("antigravity-acp", "accept-edits"),
+            ("antigravity-acp", "auto"),
+            ("antigravity-acp", "plan"),
+        ];
+        let worded: Vec<(&str, &str)> = modes.iter().filter_map(|(agent, id)| mode(agent, id)).collect();
+        assert_eq!(worded.len(), modes.len());
+        let descriptions: std::collections::BTreeSet<&str> = worded.iter().map(|(_, d)| *d).collect();
+        assert_eq!(descriptions.len(), modes.len(), "no two modes are described alike");
+        assert_eq!(
+            mode("codex-acp", "agent-full-access").map(|m| m.0),
+            Some("Voller Zugriff")
+        );
+    }
+
+    #[test]
+    fn other_options_are_headed_by_their_own_name_and_a_switch_names_its_state() {
+        let mut other = option(Category::Other("brain".into()), "x", &[("x", "X")]);
+        assert_eq!(heading(&other), "Reasoning effort");
+        other.value = OptionValue::Bool(true);
+        assert_eq!(current(&other), other.current_name());
+        assert_eq!(level("turbo"), None);
+        assert_eq!(level("max").as_deref(), Some("Maximal"));
+    }
 }

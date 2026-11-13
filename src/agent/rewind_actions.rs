@@ -21,19 +21,25 @@ impl AgentTab {
             return;
         };
         let Some(uuid) = &message.message_id else { return };
+        let menu = self.rewind_items(&entry, uuid);
+        if let Some(view) = view {
+            pop_up(&menu, view);
+        }
+    }
+
+    /// The rewind menu of the prompt `entry`, whose id is `uuid`, without showing it.
+    pub(super) fn rewind_items(&self, entry: &Entry, uuid: &str) -> objc2::rc::Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
         let resting = self.status() == Status::Idle && !self.state.borrow().sending;
-        for (title, what, possible) in self.rewind_choices(&entry, uuid) {
+        for (title, what, possible) in self.rewind_choices(entry, uuid) {
             let item = self.menu_item(&menu, title, sel!(ideAgentRewindPick:), pack(entry.id, what));
             item.setEnabled(possible && resting);
             if !resting {
                 item.setToolTip(Some(&ns(&tf("Erst wenn {} fertig ist", &[self.agent.name()]))));
             }
         }
-        if let Some(view) = view {
-            pop_up(&menu, view);
-        }
+        menu
     }
 
     /// What the rewind menu of user message `entry` offers: the conversation, the code (I6), both; an agent over ACP

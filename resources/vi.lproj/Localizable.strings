@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Các tác nhân ACP tự lưu quy tắc của mình, ở nơi ứng dụng không thể xem cũng không thể xóa.";
 "Gilt für" = "Áp dụng cho";
 "Die Regel ließ sich nicht entfernen." = "Không thể xóa quy tắc.";
+"{} wurde beendet" = "{} đã thoát";
+"Letzte Meldung: {}" = "Thông báo cuối: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Chương trình đã thoát mà không có thông báo.";
+"Das Programm hat sich beim Start beendet: {}" = "Chương trình đã thoát khi khởi động: {}";

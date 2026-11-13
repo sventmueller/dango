@@ -200,6 +200,240 @@ mod tests {
     }
 
     #[test]
+    fn a_call_that_did_not_run_says_why() {
+        let cases = [
+            (ToolNote::Cancelled, "Abgebrochen, bevor der Aufruf lief."),
+            (ToolNote::InvalidJson, "Die Eingabe des Modells war kein gültiges JSON."),
+            (
+                ToolNote::CutOff,
+                "Die Längengrenze der Antwort hat die Eingabe abgeschnitten; nichts lief.",
+            ),
+            (
+                ToolNote::MissingField("path".into()),
+                "Der Eingabe fehlt das Feld „path“.",
+            ),
+            (
+                ToolNote::UnknownTool("rm_rf".into()),
+                "Ein Werkzeug „rm_rf“ gibt es nicht.",
+            ),
+            (
+                ToolNote::Refused(Refusal::ReadOnly),
+                "Abgewiesen: Dieser Thread darf nur lesen.",
+            ),
+            (
+                ToolNote::Refused(Refusal::NoNetwork),
+                "Abgewiesen: Die Sandbox des Threads hat kein Netzwerk.",
+            ),
+            (
+                ToolNote::Refused(Refusal::OutsideSandbox("/etc/hosts".into())),
+                "Abgewiesen: /etc/hosts liegt außerhalb des Projekts und der Ordner, die die Sandbox erlaubt.",
+            ),
+            (ToolNote::Declined, "Von dir abgelehnt."),
+            (ToolNote::Withdrawn, "Zurückgezogen, als der Zug abgebrochen wurde."),
+        ];
+        for (note, words) in cases {
+            assert_eq!(Words.tool(&note), words, "{note:?}");
+        }
+    }
+
+    #[test]
+    fn a_call_that_failed_on_a_file_a_page_or_a_command_names_it() {
+        let fetch = |status| ProviderError {
+            status,
+            ..ProviderError::new(ErrorKind::Network, "connection reset")
+        };
+        let cases = [
+            (
+                ToolNote::Io {
+                    path: "src/a.rs".into(),
+                    detail: "Permission denied".into(),
+                },
+                "src/a.rs: Permission denied",
+            ),
+            (ToolNote::Folder("src".into()), "src ist ein Ordner."),
+            (
+                ToolNote::TooLarge {
+                    path: "big.bin".into(),
+                    bytes: 9000,
+                },
+                "big.bin ist zu groß zum Lesen (9000 Bytes).",
+            ),
+            (ToolNote::Binary("logo.png".into()), "logo.png enthält Binärdaten."),
+            (ToolNote::EmptyEdit, "Die Änderung nennt keinen Text, den sie ersetzt."),
+            (ToolNote::NoChange, "Die Änderung ersetzt einen Text durch denselben."),
+            (
+                ToolNote::NotFound("src/a.rs".into()),
+                "Der zu ersetzende Text steht nicht in src/a.rs.",
+            ),
+            (
+                ToolNote::Ambiguous {
+                    path: "src/a.rs".into(),
+                    count: 3,
+                },
+                "Der zu ersetzende Text steht 3-mal in src/a.rs.",
+            ),
+            (
+                ToolNote::NotWeb("ftp://x".into()),
+                "„ftp://x“ ist keine http- oder https-Adresse.",
+            ),
+            (ToolNote::NoHost("https://".into()), "„https://“ nennt keinen Host."),
+            (
+                ToolNote::NotText {
+                    url: "https://x.org/a.zip".into(),
+                    kind: "application/zip".into(),
+                },
+                "https://x.org/a.zip ist application/zip, kein Text.",
+            ),
+            (
+                ToolNote::Fetch(fetch(Some(404))),
+                "Die Seite ließ sich nicht abrufen (404).",
+            ),
+            (
+                ToolNote::Fetch(fetch(None)),
+                "Die Seite ließ sich nicht abrufen: connection reset",
+            ),
+            (
+                ToolNote::Pattern("unclosed [".into()),
+                "Das Suchmuster ist ungültig: unclosed [",
+            ),
+            (
+                ToolNote::NotStarted("no such file".into()),
+                "Der Befehl startete nicht: no such file",
+            ),
+            (
+                ToolNote::TodoStatus("later".into()),
+                "Unbekannter Status „later“ in der To-do-Liste.",
+            ),
+            (ToolNote::NoProblems, "Die Sprachserver melden keine Probleme."),
+            (
+                ToolNote::NoLanguageServer,
+                "Kein Sprachserver meldet etwas zu diesem Projekt.",
+            ),
+            (ToolNote::EmptyFile("a.txt".into()), "a.txt ist leer."),
+            (
+                ToolNote::PastEnd {
+                    path: "a.txt".into(),
+                    lines: 12,
+                },
+                "a.txt hat nur 12 Zeilen.",
+            ),
+        ];
+        for (note, words) in cases {
+            assert_eq!(Words.tool(&note), words, "{note:?}");
+        }
+    }
+
+    #[test]
+    fn notes_reasons_and_rules_are_worded_for_the_user() {
+        let failed = ProviderError::new(ErrorKind::Overloaded, "busy");
+        let notes = [
+            (
+                Note::LengthLimit,
+                "Die Antwort hat ihre Längengrenze erreicht.".to_string(),
+            ),
+            (
+                Note::Refused(None),
+                "Das Modell hat die Antwort verweigert.".to_string(),
+            ),
+            (
+                Note::Refused(Some("cyber".into())),
+                "Das Modell hat die Antwort verweigert (cyber).".to_string(),
+            ),
+            (
+                Note::Fallback {
+                    from: "opus".into(),
+                    to: "sonnet".into(),
+                },
+                "opus wollte nicht weitermachen; sonnet übernimmt.".to_string(),
+            ),
+            (
+                Note::Failed(failed.clone()),
+                "Der Anbieter ist überlastet: busy".to_string(),
+            ),
+            (
+                Note::CompactionFailed(failed.clone()),
+                "Verdichten ist fehlgeschlagen, der Thread geht unverdichtet weiter: Der Anbieter ist überlastet: busy"
+                    .to_string(),
+            ),
+            (Note::NothingToCompact, "Noch nichts zu verdichten.".to_string()),
+        ];
+        for (note, words) in notes {
+            assert_eq!(Words.note(&note), words, "{note:?}");
+        }
+        assert_eq!(Words.reason(&Reason::Outside), "Der Pfad liegt außerhalb des Projekts");
+        assert_eq!(
+            Words.reason(&Reason::Destructive(Destructive::ForcePush)),
+            "git push --force überschreibt den Verlauf auf dem Server"
+        );
+        let destructive = [
+            Destructive::ForcePush,
+            Destructive::ResetHard,
+            Destructive::Clean,
+            Destructive::StashDrop,
+            Destructive::StashClear,
+        ]
+        .map(destructive_text);
+        assert!(destructive[1].starts_with("git reset --hard"));
+        assert!(destructive[2].starts_with("git clean -f"));
+        assert!(destructive[3].starts_with("git stash drop"));
+        assert!(destructive[4].starts_with("git stash clear"));
+        let rules = [
+            Rule::Command {
+                prefix: "cargo test".into(),
+            },
+            Rule::Edits,
+            Rule::Fetch { host: "docs.rs".into() },
+        ];
+        assert_eq!(
+            rules.iter().map(|r| Words.rule(r)).collect::<Vec<_>>(),
+            ["cargo test …", "Dateien im Projekt ändern", "docs.rs"]
+        );
+        assert_eq!(Words.retry(&failed), "Der Anbieter ist überlastet");
+    }
+
+    #[test]
+    fn every_kind_of_failure_has_words_of_its_own() {
+        let kinds = [
+            ErrorKind::NoKey,
+            ErrorKind::Auth,
+            ErrorKind::Permission,
+            ErrorKind::Billing,
+            ErrorKind::NotFound,
+            ErrorKind::TooLarge,
+            ErrorKind::ContextLength,
+            ErrorKind::RateLimit,
+            ErrorKind::Overloaded,
+            ErrorKind::Server,
+            ErrorKind::BadRequest,
+            ErrorKind::Network,
+            ErrorKind::Malformed,
+            ErrorKind::Incomplete,
+        ];
+        let words: std::collections::BTreeSet<&str> = kinds.iter().map(|k| failure(*k)).collect();
+        assert_eq!(words.len(), kinds.len());
+        assert_eq!(
+            provider_error(&ProviderError {
+                status: Some(429),
+                ..ProviderError::new(ErrorKind::RateLimit, "  slow down  ")
+            }),
+            "Zu viele Anfragen, der Anbieter bremst (429): slow down"
+        );
+    }
+
+    #[test]
+    fn a_stored_thread_that_does_not_open_says_why() {
+        assert_eq!(load_error(&LoadError::NoStore), "Der Thread hat keinen Speicherort.");
+        assert_eq!(
+            load_error(&LoadError::Unreadable("EOF at line 3".into())),
+            "Der gespeicherte Thread ließ sich nicht lesen: EOF at line 3"
+        );
+        assert_eq!(
+            load_error(&LoadError::Version(7)),
+            "Der gespeicherte Thread stammt aus einer anderen Version (Format 7)."
+        );
+    }
+
+    #[test]
     fn diagnostics_name_their_severity_in_the_interface_language() {
         let found = ToolNote::Diagnostics(vec![
             Problem {

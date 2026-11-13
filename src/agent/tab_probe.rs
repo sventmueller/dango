@@ -12,6 +12,16 @@ use super::source;
 use super::tab::AgentTab;
 use crate::window::WindowController;
 
+/// A menu of the composer or the head, as a click on its button shows it.
+pub enum TabMenu {
+    Slash,
+    Model,
+    Mode,
+    History,
+    /// The phone's menu while the session is connected to Remote Control.
+    Remote,
+}
+
 /// What the self-test reads from a tab.
 pub struct Inspection {
     pub rows: usize,
@@ -292,6 +302,146 @@ impl AgentTab {
     /// How many checkpoints were taken before prompts.
     pub fn checkpoint_count(&self) -> usize {
         self.state.borrow().checkpoints.len()
+    }
+
+    /// Menu `which`, built as a click on its button would show it.
+    pub fn menu(&self, which: TabMenu) -> Retained<objc2_app_kit::NSMenu> {
+        match which {
+            TabMenu::Slash => self.slash_items(),
+            TabMenu::Model => self.model_items(),
+            TabMenu::Mode => self.mode_items(),
+            TabMenu::History => self.history_items(),
+            TabMenu::Remote => self.remote_items(),
+        }
+    }
+
+    /// The menu of the rules permission request `id` could store, when it offers several.
+    pub fn rule_menu(&self, id: u64) -> Option<Retained<objc2_app_kit::NSMenu>> {
+        let entry = self.entry(id)?;
+        let ide_thread::EntryKind::PermissionRequest(request) = &entry.kind else {
+            return None;
+        };
+        let rules = super::requests::always_rules(&request.options);
+        (rules.len() > 1).then(|| self.rule_items(entry.id, &rules))
+    }
+
+    /// Starts the session with `program` standing in for `claude`, as `start` does once it looked for the CLI; with
+    /// `None` as when it found none.
+    pub fn launch_with(&self, program: Option<PathBuf>) {
+        let env = crate::environment::get()
+            .map(<[(String, String)]>::to_vec)
+            .unwrap_or_default();
+        let thread = self.snapshot();
+        self.launch(program, env, thread);
+    }
+
+    /// The ids of the entries of the main timeline that `matches` picks, oldest first.
+    pub fn entry_ids(&self, matches: impl Fn(&ide_thread::EntryKind) -> bool) -> Vec<u64> {
+        self.snapshot()
+            .entries(&ide_thread::Lane::Main)
+            .iter()
+            .filter(|e| matches(&e.kind))
+            .map(|e| e.id.get())
+            .collect()
+    }
+
+    /// The messages waiting to be sent, by their text.
+    pub fn queued(&self) -> Vec<String> {
+        self.state.borrow().queue.iter().map(|m| m.text.clone()).collect()
+    }
+
+    /// The rows of the queue above the composer that show.
+    pub fn queue_rows(&self) -> usize {
+        if self.queue_view.isHidden() {
+            0
+        } else {
+            self.queue_view.arrangedSubviews().len()
+        }
+    }
+
+    /// The texts and button titles of the overlay that says what keeps the session from running, while it shows.
+    pub fn problem_texts(&self) -> Vec<String> {
+        fn collect(view: &NSView, out: &mut Vec<String>) {
+            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+                out.push(button.title().to_string());
+            } else if let Some(field) = view.downcast_ref::<objc2_app_kit::NSTextField>() {
+                out.push(field.stringValue().to_string());
+            }
+            for child in view.subviews().iter() {
+                collect(&child, out);
+            }
+        }
+        let mut out = Vec::new();
+        if !self.problem_holder.isHidden() {
+            collect(&self.problem_holder, &mut out);
+        }
+        out
+    }
+
+    /// Clicks the button titled `title` of the overlay that says what keeps the session from running; whether it
+    /// showed one.
+    pub fn press_problem(&self, title: &str) -> bool {
+        fn find(view: &NSView, title: &str) -> Option<Retained<objc2_app_kit::NSButton>> {
+            if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>()
+                && button.title().to_string() == title
+            {
+                return Some(objc2::Message::retain(button));
+            }
+            view.subviews().iter().find_map(|child| find(&child, title))
+        }
+        let button = find(&self.problem_holder, title).filter(|_| !self.problem_holder.isHidden());
+        if let Some(button) = &button {
+            // SAFETY: A click without a sender, on the main thread, sends the button's action as a real click does.
+            unsafe { button.performClick(None) };
+        }
+        button.is_some()
+    }
+
+    /// The rewind menu of prompt `id`, as a click on its button shows it.
+    pub fn rewind_menu_of(&self, id: u64) -> Option<Retained<objc2_app_kit::NSMenu>> {
+        let entry = self.entry(id)?;
+        let ide_thread::EntryKind::UserMessage(message) = &entry.kind else {
+            return None;
+        };
+        let uuid = message.message_id.clone()?;
+        Some(self.rewind_items(&entry, &uuid))
+    }
+
+    /// Clicks the head's button for `part`, as the user would.
+    pub fn press_work(&self, part: crate::activity::Part) {
+        // SAFETY: A click without a sender, on the main thread, sends the button's action as a real click does.
+        unsafe { self.header.work_button(part).performClick(None) };
+    }
+
+    /// Has the composer's text view do `command`, as the key bound to it does.
+    pub fn composer_does(&self, command: objc2::runtime::Sel) {
+        // SAFETY: The selectors the self-test sends are standard text commands a text view knows.
+        let () = unsafe { objc2::msg_send![&*self.composer.text, doCommandBySelector: command] };
+    }
+
+    /// Sends the composer's text view the key with `code` and `characters`, holding `flags`, as typing it does.
+    pub fn composer_key(&self, code: u16, characters: &str, flags: objc2_app_kit::NSEventModifierFlags) {
+        let window = self.composer.text.window().map_or(0, |w| w.windowNumber());
+        let event = objc2_app_kit::NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
+            objc2_app_kit::NSEventType::KeyDown,
+            objc2_foundation::NSPoint::new(0.0, 0.0),
+            flags,
+            0.0,
+            window,
+            None,
+            &crate::util::ns(characters),
+            &crate::util::ns(characters),
+            false,
+            code,
+        );
+        if let Some(event) = event {
+            self.composer.text.keyDown(&event);
+        }
+    }
+
+    /// Whether the user bookmarked the session.
+    pub fn is_bookmarked(&self) -> bool {
+        self.state.borrow().bookmarked
     }
 
     /// Opens every card part with `part`, as a user would click them.

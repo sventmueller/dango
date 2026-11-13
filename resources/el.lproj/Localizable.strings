@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Οι πράκτορες ACP αποθηκεύουν μόνοι τους τους κανόνες τους, εκεί όπου η εφαρμογή δεν μπορεί ούτε να τους δει ούτε να τους διαγράψει.";
 "Gilt für" = "Ισχύει για";
 "Die Regel ließ sich nicht entfernen." = "Δεν ήταν δυνατή η αφαίρεση του κανόνα.";
+"{} wurde beendet" = "Το {} τερματίστηκε";
+"Letzte Meldung: {}" = "Τελευταίο μήνυμα: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Το πρόγραμμα τερματίστηκε χωρίς μήνυμα.";
+"Das Programm hat sich beim Start beendet: {}" = "Το πρόγραμμα τερματίστηκε κατά την εκκίνηση: {}";

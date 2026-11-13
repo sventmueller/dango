@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "סוכני ACP שומרים את הכללים שלהם בעצמם, במקום שבו היישום לא יכול לראות או למחוק אותם.";
 "Gilt für" = "חל על";
 "Die Regel ließ sich nicht entfernen." = "לא ניתן היה להסיר את הכלל.";
+"{} wurde beendet" = "‏{} הסתיים";
+"Letzte Meldung: {}" = "הודעה אחרונה: {}";
+"Das Programm hat sich ohne Meldung beendet." = "התוכנה הסתיימה ללא הודעה.";
+"Das Programm hat sich beim Start beendet: {}" = "התוכנה הסתיימה בזמן ההפעלה: {}";

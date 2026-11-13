@@ -1550,3 +1550,7 @@
 "ACP-Agenten speichern ihre Regeln selbst, wo die App sie weder sieht noch löschen kann." = "Agenty ACP same zachowują swoje reguły, tam gdzie aplikacja nie może ich ani zobaczyć, ani usunąć.";
 "Gilt für" = "Dotyczy";
 "Die Regel ließ sich nicht entfernen." = "Nie można usunąć reguły.";
+"{} wurde beendet" = "{} został zakończony";
+"Letzte Meldung: {}" = "Ostatni komunikat: {}";
+"Das Programm hat sich ohne Meldung beendet." = "Program zakończył się bez komunikatu.";
+"Das Programm hat sich beim Start beendet: {}" = "Program zakończył się podczas uruchamiania: {}";
