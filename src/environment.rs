@@ -76,3 +76,42 @@ fn fallback() -> Vec<(String, String)> {
     environment.push(("PATH".into(), path.join(":")));
     environment
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_capture_failure_is_worded_for_the_log() {
+        let start = describe(&CaptureError::Start(std::io::Error::other("no such shell")));
+        assert_eq!(start, "could not start the shell: no such shell");
+        assert_eq!(describe(&CaptureError::Timeout), "the shell did not finish in time");
+        assert_eq!(
+            describe(&CaptureError::NoEnvironment),
+            "the shell printed no environment"
+        );
+    }
+
+    #[test]
+    fn the_fallback_has_one_path_with_the_home_tool_folders_first_and_the_usual_places_after() {
+        let environment = fallback();
+        let paths: Vec<&str> = environment
+            .iter()
+            .filter(|(name, _)| name == "PATH")
+            .map(|(_, value)| value.as_str())
+            .collect();
+        let [path] = paths.as_slice() else {
+            panic!("one PATH expected, got {paths:?}");
+        };
+        let entries: Vec<&str> = path.split(':').collect();
+        let home = ide_core::paths::home();
+        let tools: Vec<String> = [".cargo/bin", ".local/bin", "go/bin"]
+            .iter()
+            .map(|dir| home.join(dir).to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(entries[..3], tools.iter().map(String::as_str).collect::<Vec<_>>()[..]);
+        assert_eq!(entries[3..], FALLBACK_PATHS[..]);
+        let others = std::env::vars().filter(|(name, _)| name != "PATH").count();
+        assert_eq!(environment.len(), others + 1);
+    }
+}

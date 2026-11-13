@@ -3,6 +3,7 @@
 
 mod a11y;
 mod acp;
+mod activity_actions;
 mod agent;
 mod agent_background;
 mod agent_context;
@@ -13,11 +14,13 @@ mod agent_plan;
 mod agent_rewind;
 mod agent_rows;
 mod app_context;
+mod app_menus;
 pub mod application;
 mod blame;
 mod browser;
 mod browser_dev;
 mod markdown;
+mod markdown_commands;
 mod markdown_editor;
 mod panels;
 mod paste_cli;
@@ -70,9 +73,11 @@ mod restore;
 mod search;
 mod search_replace;
 mod servers;
+mod settings_general;
 mod split;
 mod stored_rules;
 mod worktree;
+mod worktree_git;
 
 struct Check {
     name: &'static str,
@@ -134,6 +139,10 @@ pub fn after_launch(_mtm: MainThreadMarker) {
     main_after(Duration::from_millis(400), move || match scenario.as_str() {
         "probe" => probe(),
         "app-context" => app_context::run(),
+        "app-menus" => app_menus::run(),
+        "activity-actions" => activity_actions::run(),
+        "settings-general" => settings_general::run(),
+        "markdown-commands" => markdown_commands::run(),
         "a11y" | "a11y-rtl" => a11y::run(),
         "acp" => acp::run(),
         "own-agent" => own_agent::run(),
@@ -160,6 +169,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "ci-login" => ci::login(),
         "ci-settings" => ci::hosts(),
         "worktree" => worktree::run(),
+        "worktree-git" => worktree_git::run(),
         "lsp" => lsp::run(),
         "lsp-navigation" => lsp_navigation::run(),
         "lsp-actions" => lsp_actions::run_rust(),

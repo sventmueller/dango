@@ -44,6 +44,7 @@ impl FileCoverage {
 /// The cargo commands of a coverage run: rustup's toolchain, which has llvm-tools, with cargo-llvm-cov's
 /// instrumenting environment and folders apart from the normal build's.
 struct Instrumented {
+    root: PathBuf,
     toolchain: String,
     path: OsString,
     target: PathBuf,
@@ -52,30 +53,31 @@ struct Instrumented {
 }
 
 impl Instrumented {
-    fn prepare() -> Result<Instrumented, String> {
-        let toolchain = toolchain(&files::read_to_string(root().join("rust-toolchain.toml"))?)?;
-        let path = crate::fuzz::toolchain_path(&toolchain)?;
+    fn prepare(sh: &mut dyn Shell, root: &Path, target: &Path) -> Result<Instrumented, String> {
+        let toolchain = toolchain(&files::read_to_string(root.join("rust-toolchain.toml"))?)?;
+        let path = crate::fuzz::toolchain_path(sh, &toolchain)?;
         let mut env = Instrumented {
+            root: root.to_path_buf(),
             toolchain,
             path,
-            target: target_dir().join("llvm-cov-target"),
+            target: target.join("llvm-cov-target"),
             build_dir: None,
             vars: Vec::new(),
         };
-        env.vars = env.show_env()?;
+        env.vars = env.show_env(sh)?;
         // cargo cannot see the flags cargo-llvm-cov's wrapper adds, so a shared build folder would mix instrumented
         // and plain artifacts under the same names.
         if let Some((_, dir)) = env.vars.iter().find(|(key, _)| key == "CARGO_LLVM_COV_BUILD_DIR")
             && !Path::new(dir).starts_with(&env.target)
         {
             env.build_dir = Some(PathBuf::from(format!("{dir}-coverage")));
-            env.vars = env.show_env()?;
+            env.vars = env.show_env(sh)?;
         }
         Ok(env)
     }
 
-    fn show_env(&self) -> Result<Vec<(String, String)>, String> {
-        let shown = stdout(&mut self.plain(&["llvm-cov", "show-env"]))?;
+    fn show_env(&self, sh: &mut dyn Shell) -> Result<Vec<(String, String)>, String> {
+        let shown = sh.stdout(&mut self.plain(&["llvm-cov", "show-env"]))?;
         Ok(parse_shown(&shown))
     }
 
@@ -90,7 +92,7 @@ impl Instrumented {
     /// `show-env` would otherwise wrap a second time.
     fn plain(&self, args: &[&str]) -> Command {
         let mut cmd = Command::new("cargo");
-        cmd.current_dir(root())
+        cmd.current_dir(&self.root)
             .env("PATH", &self.path)
             .env("RUSTUP_TOOLCHAIN", &self.toolchain)
             .env("CARGO_TARGET_DIR", &self.target)
@@ -130,19 +132,23 @@ impl Instrumented {
 
 /// Measures, writes the report and, with `--check`, fails below the goals.
 pub(crate) fn coverage(args: &[String]) -> Result<(), String> {
+    coverage_in(&mut System, args, &root(), &target_dir())
+}
+
+/// `coverage` of the workspace at `root` with the target folder `target`.
+fn coverage_in(sh: &mut dyn Shell, args: &[String], root: &Path, target: &Path) -> Result<(), String> {
     let [check] = flags(args, ["--check"])?;
     let started = Instant::now();
-    let root = root();
-    let out = target_dir().join("coverage");
+    let out = target.join("coverage");
     files::create_dir_all(&out)?;
-    let env = Instrumented::prepare()?;
-    run(&mut env.command(&["llvm-cov", "clean", "--workspace"]))?;
+    let env = Instrumented::prepare(sh, root, target)?;
+    sh.run(&mut env.command(&["llvm-cov", "clean", "--workspace"]))?;
 
     let mut failed = Vec::new();
     let mut timings = Vec::new();
     let step = Instant::now();
     let tests = ["test", "--workspace", "--no-fail-fast", "--lib", "--bins", "--tests"];
-    if run(&mut env.command(&tests)).is_err() {
+    if sh.run(&mut env.command(&tests)).is_err() {
         failed.push("cargo test".to_string());
     }
     timings.push(("cargo test", step.elapsed()));
@@ -153,7 +159,7 @@ pub(crate) fn coverage(args: &[String]) -> Result<(), String> {
     selftest.extend(scenarios.iter().map(String::as_str));
     let mut cmd = env.command(&selftest);
     cmd.env("LLVM_PROFILE_FILE", env.target.join("selftest-%p.profraw"));
-    if run(&mut cmd).is_err() {
+    if sh.run(&mut cmd).is_err() {
         failed.push("selftest (see its output for the scenarios)".to_string());
     }
     timings.push(("selftest", step.elapsed()));
@@ -173,12 +179,12 @@ pub(crate) fn coverage(args: &[String]) -> Result<(), String> {
     ];
     let mut cmd = env.command(&report);
     cmd.arg(&export_arg).env("LLVM_COV_FLAGS", env.bundle_objects()?);
-    run(&mut cmd)?;
+    sh.run(&mut cmd)?;
     timings.push(("report", step.elapsed()));
 
     let measured = parse_export(&std::fs::read(&export).map_err(|e| format!("{}: {e}", export.display()))?)?;
-    let compiled = compiled(env.build_dir.as_ref().unwrap_or(&env.target), &root)?;
-    let counted = counted(&root, &measured, &compiled)?;
+    let compiled = compiled(env.build_dir.as_ref().unwrap_or(&env.target), root)?;
+    let counted = counted(root, &measured, &compiled)?;
     timings.push(("total", started.elapsed()));
     let run = Run {
         scenarios,
@@ -592,6 +598,10 @@ fn verdict(files: &[FileCoverage]) -> Result<(), String> {
         Err(problems.join("\n"))
     }
 }
+
+#[cfg(test)]
+#[path = "coverage_tests.rs"]
+mod run_tests;
 
 #[cfg(test)]
 mod tests {

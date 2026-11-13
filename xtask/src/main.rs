@@ -12,6 +12,7 @@ mod integration;
 mod licenses;
 mod release;
 mod selftest;
+mod shell;
 mod structure;
 mod thread_locals;
 mod universal;
@@ -24,6 +25,7 @@ pub(crate) use bundle::*;
 pub(crate) use icon::*;
 pub(crate) use licenses::*;
 pub(crate) use selftest::*;
+pub(crate) use shell::{Shell, System};
 pub(crate) use universal::*;
 
 /// The package that builds the app.
@@ -101,7 +103,7 @@ fn task(args: &[String]) -> Result<(), String> {
         }
         "universal" => {
             flags(rest, [])?;
-            for program in universal_programs(&[PROGRAM], &Build::Distribution.features())? {
+            for program in universal_programs(&mut System, &[PROGRAM], &Build::Distribution.features())? {
                 println!("{}", program.display());
             }
             Ok(())
@@ -163,24 +165,11 @@ pub(crate) fn target_dir() -> PathBuf {
 }
 
 pub(crate) fn run(cmd: &mut Command) -> Result<(), String> {
-    let status = cmd.status().map_err(|e| format!("{cmd:?}: {e}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("{cmd:?} failed with {status}"))
-    }
+    System.run(cmd)
 }
 
 pub(crate) fn stdout(cmd: &mut Command) -> Result<String, String> {
-    let out = cmd
-        .stderr(std::process::Stdio::inherit())
-        .output()
-        .map_err(|e| format!("{cmd:?}: {e}"))?;
-    if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
-    } else {
-        Err(format!("{cmd:?} failed with {}", out.status))
-    }
+    System.stdout(cmd)
 }
 
 /// Major, minor and build number, digits only.
@@ -311,6 +300,40 @@ mod tests {
         assert_eq!(flags(&strings(&["--release"]), ["--release"]).unwrap(), [true]);
         assert!(flags(&strings(&["--selftest"]), ["--release"]).is_err());
         assert!(flags(&strings(&["--relase"]), ["--release"]).is_err());
+    }
+
+    #[test]
+    fn a_task_with_an_option_it_does_not_know_does_nothing_but_explain() {
+        assert_eq!(task(&[]).unwrap_err(), USAGE);
+        assert_eq!(task(&strings(&["deploy"])).unwrap_err(), USAGE);
+        for args in [
+            &["bundle", "--fast"][..],
+            &["run", "--selftest"],
+            &["claude-latest", "--paid"],
+            &["coverage", "--html"],
+            &["release", "--upload"],
+            &["universal", "--release"],
+            &["acknowledgements", "x"],
+            &["icon", "x"],
+            &["thread-locals", "x"],
+            &["structure", "x"],
+        ] {
+            let refused = task(&strings(args)).unwrap_err();
+            assert!(refused.starts_with("unknown argument "), "{args:?}: {refused}");
+            assert!(refused.ends_with(USAGE), "{args:?}");
+        }
+        assert!(
+            task(&strings(&["selftest", "../escape"]))
+                .unwrap_err()
+                .contains("is no scenario name")
+        );
+        assert!(task(&strings(&["integration", "--only"])).is_err());
+        assert!(
+            task(&strings(&["fuzz", "no-such-target"]))
+                .unwrap_err()
+                .contains("no fuzz target")
+        );
+        assert_eq!(task(&strings(&["thread-locals"])), Ok(()));
     }
 
     #[test]

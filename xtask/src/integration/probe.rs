@@ -46,6 +46,11 @@ impl Machine {
             eprintln!("the login shell's environment could not be read ({e:?}); using this process's");
             std::env::vars().collect()
         });
+        Machine::with(env)
+    }
+
+    /// This Mac with `env` as the login shell's environment.
+    fn with(env: Vec<(String, String)>) -> Machine {
         Machine {
             env,
             reached: RefCell::new(HashMap::new()),
@@ -156,4 +161,108 @@ impl Probe for Machine {
 fn is_executable(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::fs::PermissionsExt;
+
+    use super::*;
+    use crate::shell::fake::scratch;
+
+    fn machine(home: &Path, path: &str) -> Machine {
+        Machine::with(vec![
+            ("HOME".to_string(), home.display().to_string()),
+            ("PATH".to_string(), path.to_string()),
+        ])
+    }
+
+    #[test]
+    fn programs_are_the_executable_files_on_the_login_shells_path() {
+        let dir = scratch("probe-programs");
+        let (first, second) = (dir.join("first"), dir.join("second"));
+        std::fs::create_dir_all(&first).unwrap();
+        std::fs::create_dir_all(&second).unwrap();
+        std::fs::write(first.join("tool"), "not executable").unwrap();
+        std::fs::write(second.join("tool"), "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(second.join("tool"), std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::create_dir_all(first.join("folder")).unwrap();
+        let mac = machine(&dir, &format!("{}::{}", first.display(), second.display()));
+        assert_eq!(mac.program("tool"), Some(second.join("tool")));
+        assert_eq!(mac.program("folder"), None);
+        assert_eq!(mac.program("missing"), None);
+        assert_eq!(mac.var("HOME"), Some(dir.display().to_string()));
+        assert_eq!(mac.var("NOT_SET"), None);
+        assert_eq!(mac.home(), dir);
+        assert!(mac.exists(&second) && !mac.exists(&dir.join("gone")));
+        assert_eq!(Machine::with(Vec::new()).program("sh"), None, "no PATH, no programs");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn without_a_home_in_the_login_shell_the_processs_home_counts() {
+        let mac = Machine::with(Vec::new());
+        assert_eq!(
+            mac.home(),
+            std::env::var_os("HOME").map_or_else(|| PathBuf::from("/"), PathBuf::from)
+        );
+        assert_eq!(mac.process_var("HOME"), std::env::var("HOME").ok());
+    }
+
+    #[test]
+    fn a_program_succeeds_with_the_login_shells_environment_only() {
+        let dir = scratch("probe-succeeds");
+        let mac = Machine::with(vec![("IDE_PROBE".to_string(), "set".to_string())]);
+        let sh = Path::new("/bin/sh");
+        assert!(mac.succeeds(sh, &["-c", "test \"$IDE_PROBE\" = set"]));
+        assert!(
+            !mac.succeeds(sh, &["-c", "test -n \"$HOME\""]),
+            "the process's own variables are left out"
+        );
+        assert!(!mac.succeeds(&dir.join("missing"), &[]));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_hosts_reachability_is_asked_once() {
+        let mac = Machine::with(Vec::new());
+        mac.reached.borrow_mut().insert("example.invalid".to_string(), true);
+        assert!(
+            mac.reachable("example.invalid"),
+            "the remembered answer, without a connection"
+        );
+    }
+
+    #[test]
+    fn the_clones_are_the_git_folders_in_repos_and_their_origin_is_read_with_git() {
+        let dir = scratch("probe-clones");
+        let repos = dir.join("Repos");
+        for name in ["b", "a"] {
+            std::fs::create_dir_all(repos.join(name)).unwrap();
+            let status = Command::new("git")
+                .args(["init", "-q"])
+                .current_dir(repos.join(name))
+                .status()
+                .unwrap();
+            assert!(status.success());
+        }
+        std::fs::create_dir_all(repos.join("plain")).unwrap();
+        let path = std::env::var("PATH").unwrap_or_default();
+        let mac = machine(&dir, &path);
+        assert_eq!(mac.clones(), [repos.join("a"), repos.join("b")]);
+        let added = Command::new("git")
+            .args(["remote", "add", "origin", "https://example.org/a.git"])
+            .current_dir(repos.join("a"))
+            .status()
+            .unwrap();
+        assert!(added.success());
+        assert_eq!(
+            mac.origin(&repos.join("a")).as_deref(),
+            Some("https://example.org/a.git")
+        );
+        assert_eq!(mac.origin(&repos.join("b")), None, "no origin");
+        assert_eq!(machine(&dir, "").origin(&repos.join("a")), None, "no git");
+        assert!(machine(&dir.join("nowhere"), &path).clones().is_empty());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 }

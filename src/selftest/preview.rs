@@ -281,6 +281,7 @@ fn pdf_and_html(root: PathBuf) {
         controller.tab_titles().contains(&"heft.pdf".to_string()) && pages == Some(1),
         format!("{:?}, {pages:?} pages", controller.tab_titles()),
     );
+    documents_again(&controller, &root);
     controller.open_file(&root.join("bild.png"));
     let quick_look = controller
         .selected_view()
@@ -296,6 +297,33 @@ fn pdf_and_html(root: PathBuf) {
         }
         screenshot(root);
     });
+}
+
+/// A PDF opened again selects its tab, kept; a file that only claims to be a PDF opens no tab and says why.
+fn documents_again(controller: &crate::window::WindowController, root: &Path) {
+    let heft = root.join("heft.pdf");
+    let tabs = controller.tab_count();
+    let shown = crate::preview::open_document(controller, &heft, false);
+    let selected = controller.selected_tab() == controller.tab_with_key(&heft.to_string_lossy());
+    check(
+        "a PDF opened again selects the tab it has, without a second one",
+        shown && selected && controller.tab_count() == tabs,
+        format!("{:?}", controller.tab_titles()),
+    );
+    let broken = root.join("kaputt.pdf");
+    let _ = std::fs::write(&broken, "no PDF at all");
+    let message = splat_i18n::tf("„{}“ lässt sich nicht öffnen.", &["kaputt.pdf"]);
+    let said = super::helpers::answer_alert_saying(
+        Duration::from_millis(400),
+        message,
+        objc2_app_kit::NSAlertFirstButtonReturn,
+    );
+    let taken = crate::preview::open_document(controller, &broken, true);
+    check(
+        "a file that only claims to be a PDF opens no tab, and an alert says it is no readable PDF",
+        taken && said.get() && !controller.tab_titles().contains(&"kaputt.pdf".to_string()),
+        format!("alert {}, {:?}", said.get(), controller.tab_titles()),
+    );
 }
 
 /// A picture wider than the window keeps the sidebar at its width, as a screenshot of a whole screen is.

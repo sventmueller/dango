@@ -203,3 +203,21 @@ pub fn recent_output(controller: &WindowController) -> Option<(String, String)> 
         .map_or(0, |n| n + 1);
     Some((view.label(), lines[..end].join("\n")))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parent_of;
+
+    #[test]
+    fn a_process_parent_is_the_one_the_system_names() {
+        // SAFETY: getppid has no preconditions.
+        let parent = unsafe { libc::getppid() };
+        assert_eq!(parent_of(std::process::id()), u32::try_from(parent).ok());
+    }
+
+    #[test]
+    fn a_process_that_does_not_exist_has_no_parent() {
+        assert_eq!(parent_of(u32::MAX), None);
+        assert_eq!(parent_of(99_999_999), None);
+    }
+}

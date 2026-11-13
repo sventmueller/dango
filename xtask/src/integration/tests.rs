@@ -460,3 +460,94 @@ fn a_scenario_that_skipped_each_of_its_checks_counts_as_skipped() {
     );
     assert_eq!(judge_selftest(&report(vec![check("3 runs")])), Outcome::Passed);
 }
+
+#[test]
+fn a_listing_runs_nothing_and_a_run_performs_only_the_steps_that_are_not_skipped() {
+    let fake = complete();
+    let mut performed = Vec::new();
+    let listing = Options::parse(&strings(&["--list", "--paid"])).unwrap();
+    carry_out(&listing, &context(&fake), &mut |action| {
+        performed.push(action.to_string());
+        Outcome::Passed
+    })
+    .unwrap();
+    assert!(performed.is_empty());
+
+    let bare = Fake::default();
+    carry_out(&everything(), &context(&bare), &mut |action| {
+        performed.push(action.to_string());
+        Outcome::Failed("ran".into())
+    })
+    .unwrap();
+    assert!(performed.is_empty(), "a bare Mac skips every step and passes");
+
+    let only_git = Options::parse(&strings(&["--only", "git"])).unwrap();
+    let steps = steps_of(&fake, "git");
+    let failed = carry_out(&only_git, &context(&fake), &mut |action| {
+        performed.push(action.to_string());
+        if performed.len() == 1 {
+            Outcome::Failed("broke".into())
+        } else {
+            Outcome::Skipped("not today".into())
+        }
+    })
+    .unwrap_err();
+    assert_eq!(failed, format!("integration failed: git / {}", steps[0].name));
+    assert_eq!(performed.len(), steps.len());
+    assert_eq!(performed[0], steps[0].action.to_string());
+}
+
+#[test]
+fn an_ignored_test_runs_alone_with_its_variables_and_its_output_is_kept() {
+    let env = vec![("IDE_X".to_string(), "1".to_string())];
+    let command = test_command("ide-lsp", "servers", "gopls_answers", &env);
+    let args: Vec<_> = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+    assert_eq!(
+        args,
+        [
+            "test",
+            "-p",
+            "ide-lsp",
+            "--test",
+            "servers",
+            "--",
+            "--ignored",
+            "--exact",
+            "gopls_answers",
+            "--nocapture",
+            "--test-threads",
+            "1"
+        ]
+    );
+    assert!(
+        command
+            .get_envs()
+            .any(|(key, value)| key == "IDE_X" && value == Some("1".as_ref()))
+    );
+    assert_eq!(command.get_current_dir(), Some(root().as_path()));
+
+    let mut talking = Command::new("/bin/sh");
+    talking.args(["-c", "echo running 1 test; echo said >&2; exit 3"]);
+    let (success, mut lines) = shown(&mut talking).unwrap();
+    lines.sort();
+    assert!(!success);
+    assert_eq!(lines, ["running 1 test", "said"]);
+    assert!(shown(&mut Command::new("/nonexistent/cargo")).is_err());
+}
+
+#[test]
+fn the_report_counts_the_outcomes_and_names_each_failed_step() {
+    let results = [
+        ("git", "status".to_string(), Outcome::Passed),
+        ("ci", "gh".to_string(), Outcome::Skipped("no token".into())),
+        ("lsp", "gopls".to_string(), Outcome::Failed("crashed".into())),
+        ("dap", "lldb".to_string(), Outcome::Failed("hung".into())),
+    ];
+    assert_eq!(
+        report(&results).unwrap_err(),
+        "integration failed: lsp / gopls, dap / lldb"
+    );
+    assert!(report(&results[..2]).is_ok());
+    assert_eq!(summary(&results[1].2), "skipped: no token");
+    assert_eq!(summary(&results[2].2), "FAILED: crashed");
+}

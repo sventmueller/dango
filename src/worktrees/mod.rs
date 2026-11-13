@@ -271,6 +271,7 @@ mod tests {
     fn a_title_becomes_a_branch_and_folder_name() {
         assert_eq!(slug("Fix the Login!"), "fix-the-login");
         assert_eq!(slug("  Größe ändern  "), "groesse-aendern");
+        assert_eq!(slug("Brücke über"), "bruecke-ueber");
         assert_eq!(slug("日本"), "thread");
         assert_eq!(slug("a/b..c"), "a-b-c");
         assert_eq!(slug(&"x".repeat(60)).len(), 40);

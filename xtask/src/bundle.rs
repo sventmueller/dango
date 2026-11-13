@@ -379,7 +379,7 @@ pub(crate) fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
 pub(crate) fn bundle(build: Build) -> Result<PathBuf, String> {
     let version = version()?;
     let app = assemble(build, &version, None)?;
-    sign(&app, &signing_identity()?, build, false)?;
+    sign(&mut System, &app, &signing_identity()?, build, false)?;
     register(&app)?;
     if build == Build::Release {
         next_build(&version)?;
@@ -429,8 +429,8 @@ pub(crate) fn assemble(build: Build, version: &str, feed: Option<&updates::Feed>
     run(Command::new("plutil").args(["-lint", "-s"]).arg(&plist))?;
     files::write(contents.join("PkgInfo"), "APPL????")?;
     if build.updates() {
-        let sparkle = updates::sparkle()?;
-        updates::embed_sparkle(&app, &sparkle)?;
+        let sparkle = updates::sparkle(&mut System)?;
+        updates::embed_sparkle(&mut System, &app, &sparkle)?;
         files::write(
             resources.join(ACKNOWLEDGEMENTS),
             acknowledgements(&build.features(), Some(&sparkle))?,
@@ -447,7 +447,7 @@ fn programs(build: Build) -> Result<Vec<PathBuf>, String> {
         .collect();
     let features = build.features();
     if build == Build::Distribution {
-        return universal_programs(&names, &features);
+        return universal_programs(&mut System, &names, &features);
     }
     let mut cargo = Command::new(env!("CARGO"));
     cargo.current_dir(root()).args(["build", "--package", PACKAGE]);
@@ -470,7 +470,13 @@ fn programs(build: Build) -> Result<Vec<PathBuf>, String> {
 /// Signs with the hardened runtime, inside out as Sparkle's documentation prescribes instead of `--deep`: the services
 /// and Sparkle's helpers with their own entitlements first, the app with the build's last; then has codesign check the
 /// result. Notarization needs the secure timestamp, a request to Apple that local builds skip.
-pub(crate) fn sign(app: &Path, identity: &str, build: Build, timestamp: bool) -> Result<(), String> {
+pub(crate) fn sign(
+    sh: &mut dyn Shell,
+    app: &Path,
+    identity: &str,
+    build: Build,
+    timestamp: bool,
+) -> Result<(), String> {
     let mut parts: Vec<(PathBuf, &[&str])> = SERVICES
         .iter()
         .map(|service| (service.bundle(app), service.entitlements))
@@ -494,11 +500,13 @@ pub(crate) fn sign(app: &Path, identity: &str, build: Build, timestamp: bool) ->
             files::write(&file, entitlements_plist(keys))?;
             codesign.arg("--entitlements").arg(&file);
         }
-        run(codesign.arg(part))?;
+        sh.run(codesign.arg(part))?;
     }
-    run(Command::new("codesign")
-        .args(["--verify", "--deep", "--strict"])
-        .arg(app))
+    sh.run(
+        Command::new("codesign")
+            .args(["--verify", "--deep", "--strict"])
+            .arg(app),
+    )
 }
 
 /// The name of the local signing certificate. macOS ties granted permissions, such as folder access and the keychain's
@@ -511,20 +519,24 @@ pub(crate) fn identity_name() -> String {
 /// The local signing certificate's hash, which codesign takes in place of its name; the certificate is created in the
 /// login keychain on first use.
 pub(crate) fn signing_identity() -> Result<String, String> {
-    let name = identity_name();
-    if let Some(hash) = find_identity(&name)? {
+    signing_identity_named(&mut System, &identity_name())
+}
+
+/// `signing_identity` for the certificate called `name`.
+fn signing_identity_named(sh: &mut dyn Shell, name: &str) -> Result<String, String> {
+    if let Some(hash) = find_identity(sh, name)? {
         return Ok(hash);
     }
     let dir = std::env::temp_dir().join(format!("{BUNDLE_ID}-signing-{}", std::process::id()));
     files::create_private_dir(&dir)?;
-    let created = create_identity(&dir, &name);
+    let created = create_identity(sh, &dir, name);
     let _ = std::fs::remove_dir_all(&dir);
     created?;
-    find_identity(&name)?.ok_or_else(|| format!("the new certificate {name:?} cannot sign code"))
+    find_identity(sh, name)?.ok_or_else(|| format!("the new certificate {name:?} cannot sign code"))
 }
 
-fn find_identity(name: &str) -> Result<Option<String>, String> {
-    let listed = stdout(Command::new("security").args(["find-identity", "-p", "codesigning"]))?;
+fn find_identity(sh: &mut dyn Shell, name: &str) -> Result<Option<String>, String> {
+    let listed = sh.stdout(Command::new("security").args(["find-identity", "-p", "codesigning"]))?;
     Ok(identity_hash(&listed, name).map(str::to_string))
 }
 
@@ -540,7 +552,7 @@ pub(crate) fn identity_hash<'a>(listed: &'a str, name: &str) -> Option<&'a str> 
 }
 
 /// Creates a self-signed code signing certificate in the login keychain, working in `dir`.
-pub(crate) fn create_identity(dir: &Path, name: &str) -> Result<(), String> {
+pub(crate) fn create_identity(sh: &mut dyn Shell, dir: &Path, name: &str) -> Result<(), String> {
     let (key, cert, p12) = (dir.join("key.pem"), dir.join("cert.pem"), dir.join("identity.p12"));
     let password = format!(
         "{}{}",
@@ -551,28 +563,34 @@ pub(crate) fn create_identity(dir: &Path, name: &str) -> Result<(), String> {
     );
     // The system's LibreSSL, since `security import` only reads PKCS#12 files with the older ciphers it writes.
     let openssl = "/usr/bin/openssl";
-    run(Command::new(openssl)
-        .args(["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "7300"])
-        .args(["-subj", &format!("/CN={name}")])
-        .args(["-addext", "extendedKeyUsage=critical,codeSigning"])
-        .args(["-addext", "keyUsage=critical,digitalSignature"])
-        .arg("-keyout")
-        .arg(&key)
-        .arg("-out")
-        .arg(&cert)
-        .stderr(std::process::Stdio::null()))?;
-    run(Command::new(openssl)
-        .args(["pkcs12", "-export", "-inkey"])
-        .arg(&key)
-        .arg("-in")
-        .arg(&cert)
-        .arg("-out")
-        .arg(&p12)
-        .args(["-passout", &format!("pass:{password}")]))?;
-    run(Command::new("security")
-        .arg("import")
-        .arg(&p12)
-        .args(["-P", &password, "-T", "/usr/bin/codesign"]))
+    sh.run(
+        Command::new(openssl)
+            .args(["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "7300"])
+            .args(["-subj", &format!("/CN={name}")])
+            .args(["-addext", "extendedKeyUsage=critical,codeSigning"])
+            .args(["-addext", "keyUsage=critical,digitalSignature"])
+            .arg("-keyout")
+            .arg(&key)
+            .arg("-out")
+            .arg(&cert)
+            .stderr(std::process::Stdio::null()),
+    )?;
+    sh.run(
+        Command::new(openssl)
+            .args(["pkcs12", "-export", "-inkey"])
+            .arg(&key)
+            .arg("-in")
+            .arg(&cert)
+            .arg("-out")
+            .arg(&p12)
+            .args(["-passout", &format!("pass:{password}")]),
+    )?;
+    sh.run(
+        Command::new("security")
+            .arg("import")
+            .arg(&p12)
+            .args(["-P", &password, "-T", "/usr/bin/codesign"]),
+    )
 }
 
 #[cfg(test)]
@@ -596,6 +614,62 @@ mod tests {
         release: true,
         dictation: true,
     };
+
+    #[test]
+    fn a_missing_signing_certificate_is_made_in_a_private_folder_imported_and_then_used_by_its_hash() {
+        use std::os::unix::fs::PermissionsExt;
+
+        use crate::shell::fake::{Fake, arg};
+
+        let mut imported = false;
+        let mut folders = Vec::new();
+        let mut sh = Fake::new(|cmd: &Command, line: &str| {
+            if line.starts_with("security find-identity") {
+                let listed = if imported {
+                    "  1) ABCD \"N Local Signing\"\n     1 identities found\n"
+                } else {
+                    "     0 identities found\n"
+                };
+                return (0, listed.into());
+            }
+            if line.starts_with("/usr/bin/openssl req") {
+                let folder = arg(cmd, Some("-keyout")).parent().unwrap().to_path_buf();
+                let mode = std::fs::metadata(&folder).unwrap().permissions().mode() & 0o777;
+                folders.push((folder, mode));
+            }
+            imported |= line.starts_with("security import");
+            (0, String::new())
+        });
+        assert_eq!(signing_identity_named(&mut sh, "N Local Signing").unwrap(), "ABCD");
+        let programs: Vec<String> = sh
+            .commands
+            .iter()
+            .map(|line| line.split(' ').take(2).collect::<Vec<_>>().join(" "))
+            .collect();
+        assert_eq!(
+            programs,
+            [
+                "security find-identity",
+                "/usr/bin/openssl req",
+                "/usr/bin/openssl pkcs12",
+                "security import",
+                "security find-identity"
+            ]
+        );
+        assert!(sh.commands[1].contains("-subj /CN=N Local Signing -addext extendedKeyUsage=critical,codeSigning"));
+        assert!(sh.commands[3].ends_with("-T /usr/bin/codesign"));
+        drop(sh);
+        let (folder, mode) = &folders[0];
+        assert_eq!(*mode, 0o700);
+        assert!(!folder.exists(), "the key leaves no copy behind");
+
+        let mut known = Fake::new(|_: &Command, _: &str| (0, "  1) EF01 \"N Local Signing\"\n".into()));
+        assert_eq!(signing_identity_named(&mut known, "N Local Signing").unwrap(), "EF01");
+        assert_eq!(known.commands.len(), 1);
+        let mut unusable = Fake::new(|_: &Command, _: &str| (0, String::new()));
+        let failed = signing_identity_named(&mut unusable, "N Local Signing").unwrap_err();
+        assert_eq!(failed, "the new certificate \"N Local Signing\" cannot sign code");
+    }
 
     fn de_en() -> Vec<String> {
         vec!["de".to_string(), "en".to_string()]

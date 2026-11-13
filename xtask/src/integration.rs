@@ -320,7 +320,12 @@ pub(crate) fn integration(args: &[String]) -> Result<(), String> {
         probe: &machine,
         recordings: target_dir().join("integration/acp"),
     };
-    let plan = plan(&options, &cx);
+    carry_out(&options, &cx, &mut perform)
+}
+
+/// Lists the steps `options` select or has `perform` run each that is not skipped, then reports.
+fn carry_out(options: &Options, cx: &Context, perform: &mut dyn FnMut(&Action) -> Outcome) -> Result<(), String> {
+    let plan = plan(options, cx);
     if let Some(notice) = options.paid_notice() {
         println!("{notice}");
     }
@@ -388,29 +393,10 @@ fn perform(action: &Action) -> Outcome {
             file,
             name,
             env,
-        } => {
-            let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-            let mut command = Command::new(cargo);
-            command
-                .current_dir(root())
-                .args([
-                    "test",
-                    "-p",
-                    package,
-                    "--test",
-                    file,
-                    "--",
-                    "--ignored",
-                    "--exact",
-                    name,
-                ])
-                .args(["--nocapture", "--test-threads", "1"])
-                .envs(env.iter().map(|(key, value)| (key, value)));
-            match shown(&mut command) {
-                Ok((success, lines)) => judge_test(success, &lines),
-                Err(e) => Outcome::Failed(e),
-            }
-        }
+        } => match shown(&mut test_command(package, file, name, env)) {
+            Ok((success, lines)) => judge_test(success, &lines),
+            Err(e) => Outcome::Failed(e),
+        },
         Action::Selftest { scenario, env } => match selftest_with(&[(*scenario).to_string()], env) {
             Err(e) => Outcome::Failed(e),
             Ok(()) => {
@@ -423,6 +409,28 @@ fn perform(action: &Action) -> Outcome {
             }
         },
     }
+}
+
+/// The ignored test `name` in the test file `file` of `package`, alone, with its output shown and `env` set.
+fn test_command(package: &str, file: &str, name: &str, env: &[(String, String)]) -> Command {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let mut command = Command::new(cargo);
+    command
+        .current_dir(root())
+        .args([
+            "test",
+            "-p",
+            package,
+            "--test",
+            file,
+            "--",
+            "--ignored",
+            "--exact",
+            name,
+        ])
+        .args(["--nocapture", "--test-threads", "1"])
+        .envs(env.iter().map(|(key, value)| (key, value)));
+    command
 }
 
 /// Runs `command`, showing its output as it comes, and keeps the lines; whether it succeeded.

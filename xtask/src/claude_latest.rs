@@ -25,28 +25,41 @@ const SIGNED_IN: &str = "the_real_cli_answers_a_prompt";
 /// Installs the newest CLI and runs the contract tests against it; the error names the tests that failed.
 pub(crate) fn claude_latest(args: &[String]) -> Result<(), String> {
     let [signed_in] = flags(args, ["--signed-in"])?;
-    let prefix = target_dir().join("claude-latest");
+    check_latest(&mut System, &target_dir().join("claude-latest"), signed_in, &mut shown)
+}
+
+/// Whether a command succeeded and the lines it printed, as `shown` gives them.
+type Shown = (bool, Vec<String>);
+
+/// `claude_latest` with the CLI installed under `prefix` and `test` running each contract test, which tells
+/// whether it succeeded and what it printed.
+fn check_latest(
+    sh: &mut dyn Shell,
+    prefix: &Path,
+    signed_in: bool,
+    test: &mut dyn FnMut(&mut Command) -> Result<Shown, String>,
+) -> Result<(), String> {
     if prefix.exists() {
-        files::remove_dir_all(&prefix)?;
+        files::remove_dir_all(prefix)?;
     }
-    files::create_dir_all(&prefix)?;
-    run(&mut install(&prefix))?;
+    files::create_dir_all(prefix)?;
+    sh.run(&mut install(prefix))?;
     let cli = prefix.join("node_modules/.bin/claude");
-    let version = stdout(Command::new(&cli).arg("--version"))?;
+    let version = sh.stdout(Command::new(&cli).arg("--version"))?;
     println!(
         "newest CLI: {} (the fixtures were recorded with {RECORDED})",
         version.trim()
     );
     let mut failed = Vec::new();
-    for test in tests(signed_in) {
-        println!("-> {test}");
-        let (success, lines) = shown(&mut contract_test(&cli, test))?;
+    for name in tests(signed_in) {
+        println!("-> {name}");
+        let (success, lines) = test(&mut contract_test(&cli, name))?;
         match judge_test(success, &lines) {
-            Outcome::Passed => println!("   {test}: passed"),
-            Outcome::Skipped(why) => println!("   {test}: skipped: {why}"),
+            Outcome::Passed => println!("   {name}: passed"),
+            Outcome::Skipped(why) => println!("   {name}: skipped: {why}"),
             Outcome::Failed(why) => {
-                println!("   {test}: FAILED: {why}");
-                failed.push(test);
+                println!("   {name}: FAILED: {why}");
+                failed.push(name);
             }
         }
     }
@@ -120,6 +133,54 @@ mod tests {
         }
         let mapping = files::read_to_string(root().join("docs/claude-mapping.md")).unwrap();
         assert!(mapping.contains(&format!("come from CLI {RECORDED}")), "{RECORDED}");
+    }
+
+    use crate::shell::fake::{Fake, scratch};
+
+    #[test]
+    fn the_newest_cli_is_installed_afresh_and_must_pass_each_contract_test() {
+        let dir = scratch("claude-latest");
+        let prefix = dir.join("claude-latest");
+        std::fs::create_dir_all(prefix.join("node_modules/old")).unwrap();
+        let mut sh = Fake::new(|_: &Command, line: &str| {
+            if line.ends_with("--version") {
+                (0, "2.1.400 (Claude Code)\n".into())
+            } else {
+                (0, String::new())
+            }
+        });
+        let mut ran = Vec::new();
+        let mut outcomes = vec![
+            (true, vec!["running 1 test".to_string()]),
+            (
+                true,
+                vec!["running 1 test".to_string(), "integration skip: no sign-in".to_string()],
+            ),
+        ]
+        .into_iter();
+        check_latest(&mut sh, &prefix, true, &mut |cmd| {
+            ran.push(crate::shell::fake::env(cmd, "CLAUDE_BIN").unwrap());
+            Ok(outcomes.next().unwrap())
+        })
+        .unwrap();
+        assert!(
+            !prefix.join("node_modules/old").exists(),
+            "an earlier install is removed first"
+        );
+        let cli = prefix.join("node_modules/.bin/claude").display().to_string();
+        assert_eq!(ran, [cli.clone(), cli.clone()]);
+        assert!(sh.commands[0].starts_with(&format!("npm install --prefix {}", prefix.display())));
+        assert_eq!(sh.commands[1], format!("{cli} --version"));
+
+        let broken = check_latest(&mut sh, &prefix, false, &mut |_| Ok((true, Vec::new()))).unwrap_err();
+        assert_eq!(
+            broken,
+            format!("claude 2.1.400 (Claude Code) breaks the contract the app relies on: {SIGNED_OUT}")
+        );
+        let mut failing = Fake::new(|_: &Command, _: &str| (1, String::new()));
+        assert!(check_latest(&mut failing, &prefix, false, &mut |_| Ok((true, Vec::new()))).is_err());
+        assert_eq!(failing.commands.len(), 1, "no CLI, no tests");
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

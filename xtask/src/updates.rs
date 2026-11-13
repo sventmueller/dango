@@ -64,22 +64,28 @@ pub(crate) fn image_url(releases: &str, version: &str) -> String {
 
 /// Sparkle's release archive, downloaded once into target/, checked against its pinned checksum and unpacked: the
 /// framework and the `bin/` tools that sign updates.
-pub(crate) fn sparkle() -> Result<PathBuf, String> {
-    let target = target_dir();
+pub(crate) fn sparkle(sh: &mut dyn Shell) -> Result<PathBuf, String> {
+    sparkle_in(sh, &target_dir())
+}
+
+/// `sparkle` with `target` in place of the target folder.
+fn sparkle_in(sh: &mut dyn Shell, target: &Path) -> Result<PathBuf, String> {
     let dir = target.join(format!("sparkle-{SPARKLE_VERSION}"));
     if dir.join("Sparkle.framework").exists() {
         return Ok(dir);
     }
-    files::create_dir_all(&target)?;
+    files::create_dir_all(target)?;
     let archive = target.join(format!("Sparkle-{SPARKLE_VERSION}.tar.xz"));
     let url = format!(
         "https://github.com/sparkle-project/Sparkle/releases/download/{SPARKLE_VERSION}/Sparkle-{SPARKLE_VERSION}.tar.xz"
     );
-    run(Command::new("curl")
-        .args(["-fsSL", "--proto", "=https", "--proto-redir", "=https", "-o"])
-        .arg(&archive)
-        .arg(&url))?;
-    let actual = sha256(&archive)?;
+    sh.run(
+        Command::new("curl")
+            .args(["-fsSL", "--proto", "=https", "--proto-redir", "=https", "-o"])
+            .arg(&archive)
+            .arg(&url),
+    )?;
+    let actual = sha256(sh, &archive)?;
     if actual != SPARKLE_SHA256 {
         files::remove_file(&archive)?;
         return Err(format!("{url} has checksum {actual}, expected {SPARKLE_SHA256}"));
@@ -89,7 +95,7 @@ pub(crate) fn sparkle() -> Result<PathBuf, String> {
         files::remove_dir_all(&unpacking)?;
     }
     files::create_dir_all(&unpacking)?;
-    run(Command::new("tar").arg("-xf").arg(&archive).arg("-C").arg(&unpacking))?;
+    sh.run(Command::new("tar").arg("-xf").arg(&archive).arg("-C").arg(&unpacking))?;
     files::rename(&unpacking, &dir)?;
     files::remove_file(&archive)?;
     Ok(dir)
@@ -111,12 +117,14 @@ pub(crate) fn sparkle_programs(app: &Path) -> Vec<PathBuf> {
 }
 
 /// Puts the framework into the bundle at `app`.
-pub(crate) fn embed_sparkle(app: &Path, sparkle: &Path) -> Result<(), String> {
+pub(crate) fn embed_sparkle(sh: &mut dyn Shell, app: &Path, sparkle: &Path) -> Result<(), String> {
     let framework = framework(app);
     files::create_dir_all(framework.parent().ok_or("no Frameworks folder")?)?;
-    run(Command::new("ditto")
-        .arg(sparkle.join("Sparkle.framework"))
-        .arg(&framework))?;
+    sh.run(
+        Command::new("ditto")
+            .arg(sparkle.join("Sparkle.framework"))
+            .arg(&framework),
+    )?;
     // Only a sandboxed app needs Sparkle's XPC services (E2: the app has no sandbox).
     files::remove_dir_all(framework.join("Versions/B/XPCServices"))?;
     files::remove_file(framework.join("XPCServices"))
@@ -124,30 +132,31 @@ pub(crate) fn embed_sparkle(app: &Path, sparkle: &Path) -> Result<(), String> {
 
 /// Whether the login keychain holds an update signing key; asks only for the item's attributes, which needs no
 /// permission, so no dialog comes up.
-pub(crate) fn update_key_present() -> bool {
-    Command::new("security")
-        .args([
-            "find-generic-password",
-            "-s",
-            UPDATE_KEY_SERVICE,
-            "-a",
-            UPDATE_KEY_ACCOUNT,
-        ])
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok_and(|status| status.success())
+pub(crate) fn update_key_present(sh: &mut dyn Shell) -> bool {
+    sh.status(
+        Command::new("security")
+            .args([
+                "find-generic-password",
+                "-s",
+                UPDATE_KEY_SERVICE,
+                "-a",
+                UPDATE_KEY_ACCOUNT,
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null()),
+    )
+    .is_ok_and(|status| status.success())
 }
 
-/// Sparkle's tool that creates and shows the update signing key, where `sparkle` unpacks it.
-pub(crate) fn generate_keys() -> PathBuf {
-    target_dir().join(format!("sparkle-{SPARKLE_VERSION}/bin/generate_keys"))
+/// Sparkle's tool that creates and shows the update signing key, where `sparkle` unpacks it in `target`.
+pub(crate) fn generate_keys(target: &Path) -> PathBuf {
+    target.join(format!("sparkle-{SPARKLE_VERSION}/bin/generate_keys"))
 }
 
 /// What to do about a missing key: create it in the keychain, if `present` says it is not there, then copy its public
 /// half into `UPDATE_PUBLIC_KEY`.
 pub(crate) fn missing_key(present: bool) -> String {
-    let tool = generate_keys().display().to_string();
+    let tool = generate_keys(&target_dir()).display().to_string();
     let copy = format!(
         "put the public key it prints into UPDATE_PUBLIC_KEY in crates/ide-product/src/lib.rs (`{tool} -p --account {UPDATE_KEY_ACCOUNT}` \
          prints it again)"
@@ -164,33 +173,40 @@ pub(crate) fn missing_key(present: bool) -> String {
 
 /// The public key a run builds with: in a dry run `UPDATE_PUBLIC_KEY` or a placeholder; otherwise `UPDATE_PUBLIC_KEY`, once the
 /// login keychain holds its private half. macOS may ask once whether this copy of `generate_keys` may read it.
-pub(crate) fn update_key(dry_run: bool) -> Result<&'static str, String> {
+pub(crate) fn update_key(sh: &mut dyn Shell, dry_run: bool) -> Result<&'static str, String> {
+    update_key_of(sh, dry_run, UPDATE_PUBLIC_KEY, &target_dir())
+}
+
+/// `update_key` with `public` in place of `UPDATE_PUBLIC_KEY` and Sparkle unpacked in `target`.
+fn update_key_of(
+    sh: &mut dyn Shell,
+    dry_run: bool,
+    public: &'static str,
+    target: &Path,
+) -> Result<&'static str, String> {
     if dry_run {
-        return Ok(if UPDATE_PUBLIC_KEY.is_empty() {
-            DRY_RUN_UPDATE_KEY
-        } else {
-            UPDATE_PUBLIC_KEY
-        });
+        return Ok(if public.is_empty() { DRY_RUN_UPDATE_KEY } else { public });
     }
-    let present = update_key_present();
-    if !present || UPDATE_PUBLIC_KEY.is_empty() {
+    let present = update_key_present(sh);
+    if !present || public.is_empty() {
         return Err(missing_key(present));
     }
-    sparkle()?;
-    let key = stdout(Command::new(generate_keys()).args(["-p", "--account", UPDATE_KEY_ACCOUNT]))?;
-    if key.trim() != UPDATE_PUBLIC_KEY {
+    sparkle_in(sh, target)?;
+    let key = sh.stdout(Command::new(generate_keys(target)).args(["-p", "--account", UPDATE_KEY_ACCOUNT]))?;
+    if key.trim() != public {
         return Err(format!(
-            "the keychain's update signing key {} under {UPDATE_KEY_ACCOUNT} is not UPDATE_PUBLIC_KEY {UPDATE_PUBLIC_KEY}",
+            "the keychain's update signing key {} under {UPDATE_KEY_ACCOUNT} is not UPDATE_PUBLIC_KEY {public}",
             key.trim()
         ));
     }
-    Ok(UPDATE_PUBLIC_KEY)
+    Ok(public)
 }
 
-/// The EdDSA signature and length of `image` for the feed, with the app's own key.
-pub(crate) fn sign_update(image: &Path) -> Result<String, String> {
-    let tool = sparkle()?.join("bin/sign_update");
-    stdout(Command::new(tool).args(["--account", UPDATE_KEY_ACCOUNT]).arg(image))
+/// The EdDSA signature and length of `image` for the feed, with the app's own key, by the `sign_update` of the
+/// Sparkle release unpacked in `sparkle`.
+pub(crate) fn sign_update(sh: &mut dyn Shell, sparkle: &Path, image: &Path) -> Result<String, String> {
+    let tool = sparkle.join("bin/sign_update");
+    sh.stdout(Command::new(tool).args(["--account", UPDATE_KEY_ACCOUNT]).arg(image))
 }
 
 /// What a release's feed entry says.
@@ -247,8 +263,8 @@ pub(crate) fn appcast(entry: &Entry) -> Result<String, String> {
 }
 
 /// The SHA-256 checksum of a file, in hex.
-pub(crate) fn sha256(path: &Path) -> Result<String, String> {
-    let listed = stdout(Command::new("shasum").args(["-a", "256"]).arg(path))?;
+pub(crate) fn sha256(sh: &mut dyn Shell, path: &Path) -> Result<String, String> {
+    let listed = sh.stdout(Command::new("shasum").args(["-a", "256"]).arg(path))?;
     listed
         .split_whitespace()
         .next()
@@ -322,7 +338,7 @@ mod tests {
         } else {
             UPDATE_PUBLIC_KEY
         };
-        assert_eq!(update_key(true).unwrap(), expected);
+        assert_eq!(update_key(&mut System, true).unwrap(), expected);
         let create = missing_key(false);
         assert!(
             create.contains(&format!("generate_keys --account {BUNDLE_ID}`")),
@@ -330,6 +346,141 @@ mod tests {
         );
         assert!(create.contains("UPDATE_PUBLIC_KEY in crates/ide-product/src/lib.rs"));
         assert!(!missing_key(true).contains("create it"));
+    }
+
+    use crate::shell::fake::{Fake, arg, scratch};
+
+    /// curl, shasum and tar as they behave for Sparkle's archive whose checksum is `checksum`.
+    fn download(checksum: &'static str) -> impl FnMut(&Command, &str) -> (i32, String) {
+        move |cmd: &Command, line: &str| match line.split(' ').next() {
+            Some("curl") => {
+                std::fs::write(arg(cmd, Some("-o")), "archive").unwrap();
+                (0, String::new())
+            }
+            Some("shasum") => (0, format!("{checksum}  archive\n")),
+            Some("tar") => {
+                std::fs::create_dir_all(arg(cmd, Some("-C")).join("Sparkle.framework")).unwrap();
+                (0, String::new())
+            }
+            _ => (0, String::new()),
+        }
+    }
+
+    #[test]
+    fn sparkle_is_downloaded_once_checked_against_its_checksum_and_unpacked() {
+        let target = scratch("sparkle-download");
+        let mut sh = Fake::new(download(SPARKLE_SHA256));
+        let dir = sparkle_in(&mut sh, &target).unwrap();
+        assert_eq!(dir, target.join(format!("sparkle-{SPARKLE_VERSION}")));
+        assert!(dir.join("Sparkle.framework").is_dir());
+        let archive = target.join(format!("Sparkle-{SPARKLE_VERSION}.tar.xz"));
+        assert!(!archive.exists() && !target.join(format!("sparkle-{SPARKLE_VERSION}.partial")).exists());
+        assert!(sh.commands[0].starts_with("curl -fsSL --proto =https --proto-redir =https -o"));
+        assert!(sh.commands[0].ends_with(&format!("{SPARKLE_VERSION}/Sparkle-{SPARKLE_VERSION}.tar.xz")));
+        assert_eq!(sh.commands.len(), 3);
+        assert_eq!(sparkle_in(&mut sh, &target).unwrap(), dir);
+        assert_eq!(sh.commands.len(), 3, "an unpacked release is not downloaded again");
+        std::fs::remove_dir_all(target).unwrap();
+
+        let target = scratch("sparkle-tampered");
+        let mut sh = Fake::new(download("0bad"));
+        let failed = sparkle_in(&mut sh, &target).unwrap_err();
+        assert!(
+            failed.ends_with(&format!("has checksum 0bad, expected {SPARKLE_SHA256}")),
+            "{failed}"
+        );
+        assert!(!target.join(format!("Sparkle-{SPARKLE_VERSION}.tar.xz")).exists());
+        assert!(sh.of("tar").is_empty());
+        std::fs::remove_dir_all(target).unwrap();
+    }
+
+    #[test]
+    fn the_embedded_framework_leaves_out_the_xpc_services_of_sandboxed_apps() {
+        let dir = scratch("sparkle-embed");
+        let app = dir.join("A.app");
+        let mut sh = Fake::new(|cmd: &Command, _: &str| {
+            let framework = arg(cmd, None);
+            std::fs::create_dir_all(framework.join("Versions/B/XPCServices/Installer.xpc")).unwrap();
+            std::fs::create_dir_all(framework.join("Versions/B/Autoupdate")).unwrap();
+            std::fs::write(framework.join("XPCServices"), "link").unwrap();
+            (0, String::new())
+        });
+        embed_sparkle(&mut sh, &app, &dir.join("sparkle")).unwrap();
+        let framework = framework(&app);
+        assert_eq!(
+            sh.commands,
+            [format!(
+                "ditto {} {}",
+                dir.join("sparkle/Sparkle.framework").display(),
+                framework.display()
+            )]
+        );
+        assert!(framework.join("Versions/B/Autoupdate").exists());
+        assert!(!framework.join("Versions/B/XPCServices").exists() && !framework.join("XPCServices").exists());
+        assert_eq!(sparkle_programs(&app)[0], framework.join("Versions/B/Sparkle"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_notarized_release_needs_the_keychains_key_to_be_the_published_one() {
+        let target = scratch("sparkle-key");
+        std::fs::create_dir_all(target.join(format!("sparkle-{SPARKLE_VERSION}/Sparkle.framework"))).unwrap();
+        let answering = |present: i32, key: &'static str| {
+            move |_: &Command, line: &str| {
+                if line.starts_with("security find-generic-password") {
+                    (present, String::new())
+                } else {
+                    (0, format!("{key}\n"))
+                }
+            }
+        };
+        let mut sh = Fake::new(answering(0, "PUBLIC"));
+        assert_eq!(update_key_of(&mut sh, false, "PUBLIC", &target).unwrap(), "PUBLIC");
+        assert_eq!(
+            sh.commands[1],
+            format!("{} -p --account {BUNDLE_ID}", generate_keys(&target).display())
+        );
+        let mut other = Fake::new(answering(0, "OTHER"));
+        let wrong = update_key_of(&mut other, false, "PUBLIC", &target).unwrap_err();
+        assert!(
+            wrong.starts_with("the keychain's update signing key OTHER under"),
+            "{wrong}"
+        );
+        let mut absent = Fake::new(answering(44, ""));
+        assert_eq!(
+            update_key_of(&mut absent, false, "PUBLIC", &target).unwrap_err(),
+            missing_key(false)
+        );
+        let mut unpublished = Fake::new(answering(0, ""));
+        assert_eq!(
+            update_key_of(&mut unpublished, false, "", &target).unwrap_err(),
+            missing_key(true)
+        );
+        assert_eq!(
+            update_key_of(&mut unpublished, true, "", &target).unwrap(),
+            DRY_RUN_UPDATE_KEY
+        );
+        assert_eq!(
+            update_key_of(&mut unpublished, true, "PUBLIC", &target).unwrap(),
+            "PUBLIC"
+        );
+
+        let mut signer = Fake::new(|_: &Command, _: &str| (0, "sparkle:edSignature=\"x\" length=\"1\"\n".into()));
+        let signed = sign_update(&mut signer, &target, Path::new("/i.dmg")).unwrap();
+        assert_eq!(signed, "sparkle:edSignature=\"x\" length=\"1\"\n");
+        assert_eq!(
+            signer.commands,
+            [format!(
+                "{} --account {BUNDLE_ID} /i.dmg",
+                target.join("bin/sign_update").display()
+            )]
+        );
+        let mut empty = Fake::new(|_: &Command, _: &str| (0, String::new()));
+        assert_eq!(
+            sha256(&mut empty, Path::new("/i.dmg")).unwrap_err(),
+            "no checksum for /i.dmg"
+        );
+        std::fs::remove_dir_all(target).unwrap();
     }
 
     #[test]

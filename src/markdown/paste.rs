@@ -70,3 +70,42 @@ fn write_picture(dir: &Path, mime: &str, bytes: &[u8]) -> Option<String> {
     let name = written.file_name()?.to_string_lossy().into_owned();
     Some(link_destination(&name))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{link_destination, write_picture};
+
+    #[test]
+    fn a_pasted_picture_lands_beside_the_document_under_a_name_not_taken() {
+        let dir = std::env::temp_dir().join(format!("ide-paste-pictures-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(
+            write_picture(&dir, "image/png", b"one"),
+            Some(link_destination("Bild.png"))
+        );
+        assert_eq!(
+            write_picture(&dir, "image/png", b"two"),
+            Some(link_destination("Bild 2.png"))
+        );
+        assert_eq!(std::fs::read(dir.join("Bild.png")).unwrap(), b"one");
+        assert_eq!(std::fs::read(dir.join("Bild 2.png")).unwrap(), b"two");
+        for (mime, name) in [
+            ("image/jpeg", "Bild.jpeg"),
+            ("image/gif", "Bild.gif"),
+            ("image/webp", "Bild.webp"),
+        ] {
+            assert_eq!(write_picture(&dir, mime, b"x"), Some(link_destination(name)));
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_picture_of_a_kind_markdown_cannot_show_is_left_out() {
+        let dir = std::env::temp_dir().join(format!("ide-paste-tiff-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(write_picture(&dir, "image/tiff", b"x"), None);
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

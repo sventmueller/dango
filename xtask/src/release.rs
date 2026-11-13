@@ -39,6 +39,7 @@ const DRAFT: &str = "<!-- DRAFT";
 
 /// Builds the release and returns the folder that holds the disk image, its notes, the feed and the Cask.
 pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
+    let sh: &mut dyn Shell = &mut System;
     let dry_run = !options.notarize;
     let version = version()?;
     let releases = updates::releases(dry_run)?;
@@ -52,45 +53,35 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
     let previous_feed = (!dry_run)
         .then(|| std::fs::read_to_string(out.join(updates::FEED)).ok())
         .flatten();
-    let notes = notes(dry_run, previous_feed.as_deref())?;
+    let notes = notes(&root(), dry_run, previous_feed.as_deref())?;
     let (identity, name) = if dry_run {
-        preflight();
+        print!("{}", preflight(sh));
         (signing_identity()?, identity_name())
     } else {
-        developer_id()?
+        developer_id(sh)?
     };
-    let key = updates::update_key(dry_run)?;
+    let key = updates::update_key(sh, dry_run)?;
     if !dry_run {
-        check_notary_profile()?;
+        check_notary_profile(sh)?;
     }
-    check_translations()?;
+    check_translations(sh)?;
     let feed = updates::feed_url(releases);
     let app = assemble(Build::Distribution, &version, Some(&updates::Feed { url: &feed, key }))?;
-    check_universal(&app)?;
     println!("signing {version} with {name}");
-    sign(&app, &identity, Build::Distribution, !dry_run)?;
-    if !dry_run {
-        notarize_app(&app)?;
-    }
-    let image = disk_image(&app, options.layout)?;
-    run(Command::new("codesign")
-        .args(["--force", "--sign", &identity])
-        .arg(if dry_run { "--timestamp=none" } else { "--timestamp" })
-        .arg(&image))?;
-    check_image(&image)?;
-    let signature = if dry_run {
-        // Sparkle's tool would need the private key from the keychain; the length is real, the signature not.
-        let length = std::fs::metadata(&image)
-            .map_err(|e| format!("{}: {e}", image.display()))?
-            .len();
-        format!("sparkle:edSignature=\"DRY-RUN-NOT-SIGNED\" length=\"{length}\"")
-    } else {
-        notarize(&image)?;
-        run(Command::new("xcrun").args(["stapler", "staple"]).arg(&image))?;
-        assess(&image)?;
-        updates::sign_update(&image)?
-    };
+    let sparkle = updates::sparkle(sh)?;
+    let (image, signature) = package(
+        sh,
+        &app,
+        &Signing {
+            identity: &identity,
+            notarize: options.notarize,
+            layout: options.layout,
+            sparkle: &sparkle,
+            mount: &target_dir().join("release-dry-run-mount"),
+        },
+    )?;
     publish(
+        sh,
         &out,
         dry_run,
         &Published {
@@ -108,45 +99,99 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
     Ok(out)
 }
 
-/// Prints what a notarized release needs from this Mac and the owner, and whether it is there. Asks the keychain
-/// only for items' attributes and Apple for nothing.
-fn preflight() {
+/// How `package` signs and checks the release.
+struct Signing<'a> {
+    identity: &'a str,
+    /// Signs with the secure timestamp, has Apple notarize the app and the image and signs the image for Sparkle.
+    notarize: bool,
+    layout: bool,
+    /// The unpacked Sparkle release, whose `sign_update` signs the image.
+    sparkle: &'a Path,
+    /// Where `check_image` mounts the image.
+    mount: &'a Path,
+}
+
+/// Signs the assembled app, packs it into the disk image, signs and checks that, and returns it with the signature
+/// and length the feed offers it with.
+fn package(sh: &mut dyn Shell, app: &Path, signing: &Signing) -> Result<(PathBuf, String), String> {
+    check_universal(sh, app)?;
+    sign(sh, app, signing.identity, Build::Distribution, signing.notarize)?;
+    if signing.notarize {
+        notarize_app(sh, app)?;
+    }
+    let image = disk_image(sh, app, signing.layout)?;
+    sh.run(
+        Command::new("codesign")
+            .args(["--force", "--sign", signing.identity])
+            .arg(if signing.notarize {
+                "--timestamp"
+            } else {
+                "--timestamp=none"
+            })
+            .arg(&image),
+    )?;
+    check_image(sh, &image, signing.mount)?;
+    if !signing.notarize {
+        // Sparkle's tool would need the private key from the keychain; the length is real, the signature not.
+        let length = std::fs::metadata(&image)
+            .map_err(|e| format!("{}: {e}", image.display()))?
+            .len();
+        return Ok((
+            image,
+            format!("sparkle:edSignature=\"DRY-RUN-NOT-SIGNED\" length=\"{length}\""),
+        ));
+    }
+    notarize(sh, &image)?;
+    sh.run(Command::new("xcrun").args(["stapler", "staple"]).arg(&image))?;
+    assess(sh, &image)?;
+    let signature = updates::sign_update(sh, signing.sparkle, &image)?;
+    Ok((image, signature))
+}
+
+/// What a notarized release needs from this Mac and the owner, and whether it is there, for a dry run to print. Asks
+/// the keychain only for items' attributes and Apple for nothing.
+fn preflight(sh: &mut dyn Shell) -> String {
     let mark = |ok: bool| if ok { "ok     " } else { "MISSING" };
-    let developer = developer_id();
-    println!("dry run; a release with --notarize needs:");
-    println!(
-        "  {} Developer ID Application certificate{}",
-        mark(developer.is_ok()),
-        developer.map(|(_, name)| format!(": {name}")).unwrap_or_default()
-    );
-    println!("  ?       notarytool profile \"{NOTARY_PROFILE}\" (checked by a notarized run, which asks Apple)");
-    println!(
-        "  {} Sparkle update key of the app's own under the keychain account {} (`{} --account {}` creates it)",
-        mark(updates::update_key_present()),
-        updates::UPDATE_KEY_ACCOUNT,
-        updates::generate_keys().display(),
-        updates::UPDATE_KEY_ACCOUNT
-    );
-    println!(
-        "  {} UPDATE_PUBLIC_KEY in crates/ide-product/src/lib.rs, the public half of that key",
-        mark(!ide_product::UPDATE_PUBLIC_KEY.is_empty())
-    );
-    println!(
-        "  {} RELEASES in xtask/src/updates.rs",
-        mark(!updates::RELEASES.is_empty())
-    );
-    println!("  {} HOMEPAGE in xtask/src/cask.rs", mark(!cask::HOMEPAGE.is_empty()));
-    println!(
-        "  {} {NOTES} and {TRANSLATED_NOTES}/<language>.md",
-        mark(root().join(NOTES).exists())
-    );
+    let developer = developer_id(sh);
+    let key_present = updates::update_key_present(sh);
+    [
+        "dry run; a release with --notarize needs:".to_string(),
+        format!(
+            "  {} Developer ID Application certificate{}",
+            mark(developer.is_ok()),
+            developer.map(|(_, name)| format!(": {name}")).unwrap_or_default()
+        ),
+        format!("  ?       notarytool profile \"{NOTARY_PROFILE}\" (checked by a notarized run, which asks Apple)"),
+        format!(
+            "  {} Sparkle update key of the app's own under the keychain account {} (`{} --account {}` creates it)",
+            mark(key_present),
+            updates::UPDATE_KEY_ACCOUNT,
+            updates::generate_keys(&target_dir()).display(),
+            updates::UPDATE_KEY_ACCOUNT
+        ),
+        format!(
+            "  {} UPDATE_PUBLIC_KEY in crates/ide-product/src/lib.rs, the public half of that key",
+            mark(!ide_product::UPDATE_PUBLIC_KEY.is_empty())
+        ),
+        format!(
+            "  {} RELEASES in xtask/src/updates.rs",
+            mark(!updates::RELEASES.is_empty())
+        ),
+        format!("  {} HOMEPAGE in xtask/src/cask.rs", mark(!cask::HOMEPAGE.is_empty())),
+        format!(
+            "  {} {NOTES} and {TRANSLATED_NOTES}/<language>.md",
+            mark(root().join(NOTES).exists())
+        ),
+    ]
+    .map(|line| line + "\n")
+    .concat()
 }
 
 /// Runs the translation test with the check of every interface language on (E15), which `make check` leaves out; a
 /// release stops on a missing or stale text before the universal build.
-fn check_translations() -> Result<(), String> {
+fn check_translations(sh: &mut dyn Shell) -> Result<(), String> {
     println!("checking that every interface language translates every text");
-    run(&mut translation_test()).map_err(|e| {
+    sh.run(&mut translation_test()).map_err(|e| {
         format!(
             "{e}\nthe interface is not translated completely; the test's output above names each text, and \
              `IDE_I18N_RELEASE=1 cargo test --test translations` runs it again"
@@ -169,15 +214,15 @@ fn translation_test() -> Command {
 /// The notes in English from `NOTES`, then in each other interface language from `TRANSLATED_NOTES`. A notarized
 /// release needs every one of them, reviewed and new since `previous_feed`, and names all that are missing at once; a
 /// dry run makes do with what there is and says what is missing or still a draft.
-fn notes(dry_run: bool, previous_feed: Option<&str>) -> Result<Vec<(String, String)>, String> {
-    let languages = languages(&root().join("resources"))?;
+fn notes(root: &Path, dry_run: bool, previous_feed: Option<&str>) -> Result<Vec<(String, String)>, String> {
+    let languages = languages(&root.join("resources"))?;
     let others = languages
         .iter()
         .filter(|l| *l != "en")
         .map(|l| (l.clone(), format!("{TRANSLATED_NOTES}/{l}.md")));
     let (mut notes, mut missing) = (Vec::new(), Vec::new());
     for (language, file) in std::iter::once(("en".to_string(), NOTES.to_string())).chain(others) {
-        let Ok(written) = std::fs::read_to_string(root().join(&file)) else {
+        let Ok(written) = std::fs::read_to_string(root.join(&file)) else {
             missing.push(language);
             continue;
         };
@@ -233,8 +278,8 @@ fn checked_notes(file: &str, written: &str, previous_feed: Option<&str>) -> Resu
 }
 
 /// Hash and name of the first valid Developer ID Application certificate, which notarization requires.
-fn developer_id() -> Result<(String, String), String> {
-    let listed = stdout(Command::new("security").args(["find-identity", "-v", "-p", "codesigning"]))?;
+fn developer_id(sh: &mut dyn Shell) -> Result<(String, String), String> {
+    let listed = sh.stdout(Command::new("security").args(["find-identity", "-v", "-p", "codesigning"]))?;
     first_developer_id(&listed).ok_or_else(|| "no Developer ID Application certificate in the keychain".into())
 }
 
@@ -249,10 +294,12 @@ fn first_developer_id(listed: &str) -> Option<(String, String)> {
 }
 
 /// Checks the saved notary login before the universal build, which takes many minutes.
-fn check_notary_profile() -> Result<(), String> {
-    run(Command::new("xcrun")
-        .args(["notarytool", "history", "--keychain-profile", NOTARY_PROFILE])
-        .stdout(Stdio::null()))
+fn check_notary_profile(sh: &mut dyn Shell) -> Result<(), String> {
+    sh.run(
+        Command::new("xcrun")
+            .args(["notarytool", "history", "--keychain-profile", NOTARY_PROFILE])
+            .stdout(Stdio::null()),
+    )
     .map_err(|e| {
         format!(
             "{e}\nno usable notarization login in the keychain profile \"{NOTARY_PROFILE}\"; create it with \
@@ -263,20 +310,22 @@ fn check_notary_profile() -> Result<(), String> {
 
 /// Has Apple notarize the app and staples the ticket to it. The image's own ticket reaches Gatekeeper only when the
 /// image is opened in the Finder; Homebrew copies the app out otherwise, which would need a connection on first launch.
-fn notarize_app(app: &Path) -> Result<(), String> {
+fn notarize_app(sh: &mut dyn Shell, app: &Path) -> Result<(), String> {
     let archive = app.with_extension("zip");
-    run(Command::new("ditto")
-        .args(["-c", "-k", "--keepParent"])
-        .arg(app)
-        .arg(&archive))?;
-    notarize(&archive)?;
+    sh.run(
+        Command::new("ditto")
+            .args(["-c", "-k", "--keepParent"])
+            .arg(app)
+            .arg(&archive),
+    )?;
+    notarize(sh, &archive)?;
     files::remove_file(&archive)?;
-    run(Command::new("xcrun").args(["stapler", "staple"]).arg(app))
+    sh.run(Command::new("xcrun").args(["stapler", "staple"]).arg(app))
 }
 
 /// Uploads a disk image or zip archive to Apple's notary service and waits for the verdict; on a rejection it prints
 /// the service's log, which names each problem.
-fn notarize(file: &Path) -> Result<(), String> {
+fn notarize(sh: &mut dyn Shell, file: &Path) -> Result<(), String> {
     println!("waiting for Apple's notary service, usually a few minutes");
     let mut submit = Command::new("xcrun");
     submit
@@ -291,14 +340,14 @@ fn notarize(file: &Path) -> Result<(), String> {
         ])
         .arg(file)
         .stderr(Stdio::inherit());
-    let out = submit.output().map_err(|e| format!("{submit:?}: {e}"))?;
+    let out = sh.output(&mut submit).map_err(|e| format!("{submit:?}: {e}"))?;
     let result = String::from_utf8_lossy(&out.stdout);
     let status = json_string(&result, "status");
     if status == Some("Accepted") && out.status.success() {
         return Ok(());
     }
     if let Some(id) = json_string(&result, "id") {
-        let _ = run(Command::new("xcrun").args(["notarytool", "log", id, "--keychain-profile", NOTARY_PROFILE]));
+        let _ = sh.run(Command::new("xcrun").args(["notarytool", "log", id, "--keychain-profile", NOTARY_PROFILE]));
     }
     Err(format!(
         "notarization failed: status {}, notarytool {}",
@@ -315,56 +364,64 @@ fn json_string<'a>(json: &'a str, key: &str) -> Option<&'a str> {
 }
 
 /// Gatekeeper's verdict on the stapled image, as a Mac that downloaded it gives it.
-fn assess(image: &Path) -> Result<(), String> {
-    run(Command::new("spctl")
-        .args([
-            "--assess",
-            "--type",
-            "open",
-            "--context",
-            "context:primary-signature",
-            "--verbose",
-        ])
-        .arg(image))
+fn assess(sh: &mut dyn Shell, image: &Path) -> Result<(), String> {
+    sh.run(
+        Command::new("spctl")
+            .args([
+                "--assess",
+                "--type",
+                "open",
+                "--context",
+                "context:primary-signature",
+                "--verbose",
+            ])
+            .arg(image),
+    )
 }
 
 /// Checks the image as far as this Mac can on its own: it is intact, and the app in it is signed, universal and beside
 /// a link to /Applications. Mounted without showing up in the Finder.
-fn check_image(image: &Path) -> Result<(), String> {
-    run(Command::new("hdiutil").arg("verify").arg(image).stdout(Stdio::null()))?;
-    let mount = target_dir().join("release-dry-run-mount");
+fn check_image(sh: &mut dyn Shell, image: &Path, mount: &Path) -> Result<(), String> {
+    sh.run(Command::new("hdiutil").arg("verify").arg(image).stdout(Stdio::null()))?;
     if mount.exists() {
-        let _ = run(Command::new("hdiutil")
-            .args(["detach", "-force"])
-            .arg(&mount)
-            .stdout(Stdio::null()));
+        let _ = sh.run(
+            Command::new("hdiutil")
+                .args(["detach", "-force"])
+                .arg(mount)
+                .stdout(Stdio::null()),
+        );
     }
-    files::create_dir_all(&mount)?;
-    run(Command::new("hdiutil")
-        .args([
-            "attach",
-            "-readonly",
-            "-nobrowse",
-            "-noverify",
-            "-noautoopen",
-            "-mountpoint",
-        ])
-        .arg(&mount)
-        .arg(image)
-        .stdout(Stdio::null()))?;
+    files::create_dir_all(mount)?;
+    sh.run(
+        Command::new("hdiutil")
+            .args([
+                "attach",
+                "-readonly",
+                "-nobrowse",
+                "-noverify",
+                "-noautoopen",
+                "-mountpoint",
+            ])
+            .arg(mount)
+            .arg(image)
+            .stdout(Stdio::null()),
+    )?;
     let app = mount.join(format!("{NAME}.app"));
-    let checked = (|| {
-        run(Command::new("codesign")
-            .args(["--verify", "--deep", "--strict"])
-            .arg(&app))?;
-        check_universal(&app)?;
+    let mut checked = || {
+        sh.run(
+            Command::new("codesign")
+                .args(["--verify", "--deep", "--strict"])
+                .arg(&app),
+        )?;
+        check_universal(sh, &app)?;
         let link = std::fs::read_link(mount.join("Applications")).map_err(|e| format!("Applications link: {e}"))?;
         if link != Path::new("/Applications") {
             return Err(format!("the Applications link leads to {}", link.display()));
         }
         Ok(())
-    })();
-    run(Command::new("hdiutil").arg("detach").arg(&mount).stdout(Stdio::null()))?;
+    };
+    let checked = checked();
+    sh.run(Command::new("hdiutil").arg("detach").arg(mount).stdout(Stdio::null()))?;
     checked
 }
 
@@ -380,7 +437,7 @@ struct Published<'a> {
 
 /// Writes the image, the English notes, the feed and the Cask into `out`, a dry run's emptied first, and checks the
 /// feed is well-formed XML and the Cask valid Ruby.
-fn publish(out: &Path, dry_run: bool, release: &Published) -> Result<(), String> {
+fn publish(sh: &mut dyn Shell, out: &Path, dry_run: bool, release: &Published) -> Result<(), String> {
     if dry_run && out.exists() {
         files::remove_dir_all(out)?;
     }
@@ -391,7 +448,7 @@ fn publish(out: &Path, dry_run: bool, release: &Published) -> Result<(), String>
     files::remove_file(release.image)?;
     let english = release.notes.first().map_or("", |(_, text)| text.as_str());
     files::write(out.join(format!("{NAME}-{}.md", release.version)), english)?;
-    let date = stdout(
+    let date = sh.stdout(
         Command::new("date")
             .env("LC_ALL", "C")
             .args(["-u", "+%a, %d %b %Y %H:%M:%S +0000"]),
@@ -406,23 +463,23 @@ fn publish(out: &Path, dry_run: bool, release: &Published) -> Result<(), String>
     })?;
     let feed_file = out.join(updates::FEED);
     files::write(&feed_file, feed)?;
-    run(Command::new("xmllint").arg("--noout").arg(&feed_file))?;
+    sh.run(Command::new("xmllint").arg("--noout").arg(&feed_file))?;
     let cask_file = out.join(cask::file_name());
     files::write(
         &cask_file,
         cask::cask(&cask::Release {
             version: release.version,
-            sha256: &updates::sha256(&image)?,
+            sha256: &updates::sha256(sh, &image)?,
             releases: release.releases,
             homepage: release.homepage,
         }),
     )?;
-    run(Command::new("ruby").arg("-c").arg(&cask_file).stdout(Stdio::null()))
+    sh.run(Command::new("ruby").arg("-c").arg(&cask_file).stdout(Stdio::null()))
 }
 
 /// Packs the app with a link to /Applications into a compressed, read-only image next to it; with `layout`, Finder
 /// sets its window up first.
-fn disk_image(app: &Path, layout: bool) -> Result<PathBuf, String> {
+fn disk_image(sh: &mut dyn Shell, app: &Path, layout: bool) -> Result<PathBuf, String> {
     let out = app.parent().ok_or("the app has no parent folder")?;
     let staging = out.join("dmg-staging");
     let writable = out.join(format!("{NAME}-writable.dmg"));
@@ -436,48 +493,58 @@ fn disk_image(app: &Path, layout: bool) -> Result<PathBuf, String> {
         files::remove_dir_all(&staging)?;
     }
     files::create_dir_all(&staging)?;
-    run(Command::new("ditto").arg(app).arg(staging.join(format!("{NAME}.app"))))?;
+    sh.run(Command::new("ditto").arg(app).arg(staging.join(format!("{NAME}.app"))))?;
     std::os::unix::fs::symlink("/Applications", staging.join("Applications"))
         .map_err(|e| format!("{}: {e}", staging.display()))?;
-    run(Command::new("hdiutil")
-        .args(["create", "-volname", NAME, "-format", "UDRW", "-ov", "-srcfolder"])
-        .arg(&staging)
-        .arg(&writable)
-        .stdout(Stdio::null()))?;
+    sh.run(
+        Command::new("hdiutil")
+            .args(["create", "-volname", NAME, "-format", "UDRW", "-ov", "-srcfolder"])
+            .arg(&staging)
+            .arg(&writable)
+            .stdout(Stdio::null()),
+    )?;
     if layout {
-        lay_out_image(&writable)?;
+        lay_out_image(sh, &writable)?;
     }
-    run(Command::new("hdiutil")
-        .args(["convert", "-format", "UDZO", "-imagekey", "zlib-level=9", "-o"])
-        .arg(&image)
-        .arg(&writable)
-        .stdout(Stdio::null()))?;
+    sh.run(
+        Command::new("hdiutil")
+            .args(["convert", "-format", "UDZO", "-imagekey", "zlib-level=9", "-o"])
+            .arg(&image)
+            .arg(&writable)
+            .stdout(Stdio::null()),
+    )?;
     files::remove_file(&writable)?;
     files::remove_dir_all(&staging)?;
     Ok(image)
 }
 
 /// Mounts the writable image where Finder sees it, has Finder lay out its window and unmounts it again.
-fn lay_out_image(writable: &Path) -> Result<(), String> {
-    let attached = stdout(
+fn lay_out_image(sh: &mut dyn Shell, writable: &Path) -> Result<(), String> {
+    let attached = sh.stdout(
         Command::new("hdiutil")
             .args(["attach", "-readwrite", "-noverify", "-noautoopen"])
             .arg(writable),
     )?;
-    let mount = attached
+    let mount = mount_point(&attached).ok_or("hdiutil attach reported no mount point")?;
+    let laid_out = lay_out(sh, &root().join("assets/dmg-background.tiff"), &mount);
+    let detached = sh.run(Command::new("hdiutil").arg("detach").arg(&mount).stdout(Stdio::null()));
+    if detached.is_err() {
+        sh.run(
+            Command::new("hdiutil")
+                .args(["detach", "-force"])
+                .arg(&mount)
+                .stdout(Stdio::null()),
+        )?;
+    }
+    laid_out.map_err(|e| format!("laying out the disk image window: {e}"))
+}
+
+/// Where `hdiutil attach` says it mounted the image.
+fn mount_point(attached: &str) -> Option<PathBuf> {
+    attached
         .lines()
         .find_map(|l| l.split('\t').map(str::trim).find(|f| f.starts_with("/Volumes/")))
         .map(PathBuf::from)
-        .ok_or("hdiutil attach reported no mount point")?;
-    let laid_out = lay_out(&mount);
-    let detached = run(Command::new("hdiutil").arg("detach").arg(&mount).stdout(Stdio::null()));
-    if detached.is_err() {
-        run(Command::new("hdiutil")
-            .args(["detach", "-force"])
-            .arg(&mount)
-            .stdout(Stdio::null()))?;
-    }
-    laid_out.map_err(|e| format!("laying out the disk image window: {e}"))
 }
 
 /// The centres of the two icons in points from the top left of the window's content, either side of the arrow in
@@ -491,15 +558,14 @@ const APPLICATIONS_ICON_AT: (u32, u32) = (380, 150);
 /// `assets/dmg-background.tiff` holds `assets/dmg-background.svg`, Splat's, rendered by resvg at 500 × 300 and
 /// 1000 × 600 pixels, joined with `tiffutil -cathidpicheck`; with a single 500 × 300 image, Retina screens show it
 /// blurred.
-fn lay_out(mount: &Path) -> Result<(), String> {
-    let background = root().join("assets/dmg-background.tiff");
+fn lay_out(sh: &mut dyn Shell, background: &Path, mount: &Path) -> Result<(), String> {
     files::create_dir_all(mount.join(".background"))?;
-    files::copy(&background, mount.join(".background/background.tiff"))?;
+    files::copy(background, mount.join(".background/background.tiff"))?;
     let disk = mount
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or("mount point without a name")?;
-    run(Command::new("osascript").args(["-e", &finder_script(disk)]))?;
+    sh.run(Command::new("osascript").args(["-e", &finder_script(disk)]))?;
     // Finder saves the .DS_Store in the background once the window has closed.
     let store = mount.join(".DS_Store");
     let mut checked = Err(format!("Finder wrote no {}", store.display()));
@@ -578,6 +644,10 @@ fn icon_position(store: &[u8], name: &str) -> Option<(u32, u32)> {
     };
     Some((coordinate(start)?, coordinate(start + 4)?))
 }
+
+#[cfg(test)]
+#[path = "release_tests.rs"]
+mod package_tests;
 
 #[cfg(test)]
 mod tests {
@@ -689,6 +759,27 @@ mod tests {
         let moved = [placed(&app, (120, 177)), placed("Applications", APPLICATIONS_ICON_AT)].concat();
         assert!(check_layout(&moved).is_err());
         assert!(finder_script("Disk").contains(&format!("item \"{app}\"")));
+    }
+
+    #[test]
+    fn finder_lays_out_the_window_on_the_background_and_its_store_is_checked() {
+        let mount = crate::shell::fake::scratch("release-lay-out");
+        let background = root().join("assets/dmg-background.tiff");
+        let store = mount.join(".DS_Store");
+        let mut sh = crate::shell::fake::Fake::new(|_: &Command, _: &str| {
+            let app = format!("{NAME}.app");
+            let laid_out = [placed(&app, APP_ICON_AT), placed("Applications", APPLICATIONS_ICON_AT)].concat();
+            std::fs::write(&store, laid_out).unwrap();
+            (0, String::new())
+        });
+        lay_out(&mut sh, &background, &mount).unwrap();
+        assert_eq!(
+            std::fs::read(mount.join(".background/background.tiff")).unwrap(),
+            std::fs::read(&background).unwrap()
+        );
+        let disk = mount.file_name().unwrap().to_str().unwrap();
+        assert_eq!(sh.commands, [format!("osascript -e {}", finder_script(disk))]);
+        std::fs::remove_dir_all(mount).unwrap();
     }
 
     #[test]

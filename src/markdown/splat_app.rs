@@ -37,7 +37,7 @@ pub fn open(_mtm: MainThreadMarker, path: &Path) {
 }
 
 /// Saves every editor of `path` with unsaved changes; whether none is left.
-fn saved(path: &Path) -> bool {
+pub fn saved(path: &Path) -> bool {
     let unsaved = || {
         crate::editor::all_editors()
             .into_iter()

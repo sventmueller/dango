@@ -888,7 +888,7 @@ fn relink(popover: &NSPopover) {
 
 #[cfg(test)]
 mod tests {
-    use super::same_or_next;
+    use super::{BackgroundKind, TaskStatus, background_symbol, same_or_next, task_status};
 
     #[test]
     fn the_focus_keeps_its_row_else_takes_the_next_else_the_one_before() {
@@ -898,5 +898,37 @@ mod tests {
         assert_eq!(same_or_next(&old, 1, &["server", "session"]), Some(0));
         assert_eq!(same_or_next(&old, 3, &["session", "subagent"]), Some(1));
         assert_eq!(same_or_next(&old, 0, &["new"]), None);
+    }
+
+    #[test]
+    fn every_task_status_has_words_of_its_own() {
+        let all = [
+            TaskStatus::Pending,
+            TaskStatus::Running,
+            TaskStatus::Paused,
+            TaskStatus::Completed,
+            TaskStatus::Failed,
+            TaskStatus::Stopped,
+        ];
+        let words: std::collections::BTreeSet<&str> = all.into_iter().map(task_status).collect();
+        assert_eq!(words.len(), all.len());
+        assert_eq!(task_status(TaskStatus::Failed), "Fehlgeschlagen");
+    }
+
+    #[test]
+    fn every_kind_of_background_work_has_a_symbol_of_its_own() {
+        let kinds = [
+            BackgroundKind::Shell,
+            BackgroundKind::Monitor,
+            BackgroundKind::Subagent,
+            BackgroundKind::Workflow,
+            BackgroundKind::Other("cron".into()),
+        ];
+        let symbols: std::collections::BTreeSet<&str> = kinds.iter().map(background_symbol).collect();
+        assert_eq!(symbols.len(), kinds.len());
+        assert_eq!(
+            background_symbol(&BackgroundKind::Other("anything".into())),
+            "gearshape.2"
+        );
     }
 }

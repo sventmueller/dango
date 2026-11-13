@@ -212,26 +212,30 @@ pub fn rules(root: &Path) -> Vec<Rule> {
 
 /// Keeps `rule` for the project at `root`.
 pub fn add_rule(root: &Path, rule: Rule) {
-    change_rules(|all| {
-        let rules = all.entry(root.display().to_string()).or_default();
-        if !rules.contains(&rule) {
-            rules.push(rule);
-        }
-    });
+    change_rules(|all| keep_rule(all, &root.display().to_string(), rule));
 }
 
 /// Forgets the rule at `index` of the project `project`.
 pub fn remove_rule(project: &str, index: usize) {
-    change_rules(|all| {
-        if let Some(rules) = all.get_mut(project)
-            && index < rules.len()
-        {
-            rules.remove(index);
-            if rules.is_empty() {
-                all.remove(project);
-            }
+    change_rules(|all| drop_rule(all, project, index));
+}
+
+fn keep_rule(all: &mut BTreeMap<String, Vec<Rule>>, project: &str, rule: Rule) {
+    let rules = all.entry(project.to_string()).or_default();
+    if !rules.contains(&rule) {
+        rules.push(rule);
+    }
+}
+
+fn drop_rule(all: &mut BTreeMap<String, Vec<Rule>>, project: &str, index: usize) {
+    if let Some(rules) = all.get_mut(project)
+        && index < rules.len()
+    {
+        rules.remove(index);
+        if rules.is_empty() {
+            all.remove(project);
         }
-    });
+    }
 }
 
 fn change_rules(change: impl FnOnce(&mut BTreeMap<String, Vec<Rule>>)) {
@@ -302,5 +306,46 @@ pub fn kind_name(kind: ProviderKind) -> String {
         Some(brand) => brand.to_string(),
         None if kind == ProviderKind::OpenAiCompatible => splat_i18n::t("OpenAI-kompatibel").to_string(),
         None => splat_i18n::t("Anthropic-kompatibel").to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn command(prefix: &str) -> Rule {
+        Rule::Command { prefix: prefix.into() }
+    }
+
+    #[test]
+    fn a_rule_is_kept_once_per_project() {
+        let mut all = BTreeMap::new();
+        keep_rule(&mut all, "/p", command("cargo test"));
+        keep_rule(&mut all, "/p", command("cargo test"));
+        keep_rule(&mut all, "/p", Rule::Edits);
+        keep_rule(&mut all, "/q", command("cargo test"));
+        assert_eq!(all["/p"], vec![command("cargo test"), Rule::Edits]);
+        assert_eq!(all["/q"], vec![command("cargo test")]);
+    }
+
+    #[test]
+    fn removing_a_project_last_rule_forgets_the_project_and_a_wrong_index_changes_nothing() {
+        let mut all = BTreeMap::new();
+        keep_rule(&mut all, "/p", command("cargo test"));
+        keep_rule(&mut all, "/p", Rule::Edits);
+        drop_rule(&mut all, "/p", 5);
+        drop_rule(&mut all, "/other", 0);
+        assert_eq!(all["/p"].len(), 2);
+        drop_rule(&mut all, "/p", 0);
+        assert_eq!(all["/p"], vec![Rule::Edits]);
+        drop_rule(&mut all, "/p", 0);
+        assert!(all.is_empty());
+    }
+
+    #[test]
+    fn a_kind_is_named_by_its_brand_else_by_the_protocol_it_speaks() {
+        assert_eq!(kind_name(ProviderKind::Gemini), "Google Gemini");
+        assert_eq!(kind_name(ProviderKind::OpenAiCompatible), "OpenAI-kompatibel");
+        assert_eq!(kind_name(ProviderKind::AnthropicCompatible), "Anthropic-kompatibel");
     }
 }

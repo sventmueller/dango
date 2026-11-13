@@ -279,4 +279,5 @@ pub mod selftest {
     pub use super::format::link_with;
     pub use super::paste::rich as paste_from;
     pub use super::source_of;
+    pub use super::splat_app::saved as saved_for_splat;
 }
