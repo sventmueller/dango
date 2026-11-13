@@ -486,6 +486,7 @@ impl Timeline {
                 match (old, new) {
                     (Some(old), Some(new)) => {
                         is_quiet_hook(old) != is_quiet_hook(new)
+                            || is_running_hook(old) != is_running_hook(new)
                             || matches!(old.kind, EntryKind::UserMessage(_))
                                 != matches!(new.kind, EntryKind::UserMessage(_))
                             || (self.focus.get() && hidden_in_focus(old) != hidden_in_focus(new))
@@ -856,6 +857,18 @@ pub fn is_quiet_hook(entry: &Entry) -> bool {
     )
 }
 
+/// Whether `entry` is a hook still running; it gets a row only once it failed, so hooks firing around every tool call
+/// do not add and drop a row at the end of the timeline.
+fn is_running_hook(entry: &Entry) -> bool {
+    matches!(
+        &entry.kind,
+        EntryKind::Notice(ide_thread::Notice::Hook {
+            outcome: ide_thread::HookOutcome::Running,
+            ..
+        })
+    )
+}
+
 /// Whether the focus view leaves `entry` out: tools, thinking, to-dos, settled requests and status lines but errors.
 fn hidden_in_focus(entry: &Entry) -> bool {
     match &entry.kind {
@@ -868,7 +881,7 @@ fn hidden_in_focus(entry: &Entry) -> bool {
 }
 
 /// The entries of the main lane that get a row: the hooks of a turn that ran fine share the row of the first of
-/// them, and the focus view leaves out what is not conversation.
+/// them, running hooks have none, and the focus view leaves out what is not conversation.
 fn shown(thread: &Thread, focus: bool) -> Vec<std::sync::Arc<Entry>> {
     let mut hook_row = false;
     let mut out = Vec::new();
@@ -876,7 +889,7 @@ fn shown(thread: &Thread, focus: bool) -> Vec<std::sync::Arc<Entry>> {
         if matches!(entry.kind, EntryKind::UserMessage(_)) {
             hook_row = false;
         }
-        if focus && hidden_in_focus(entry) {
+        if is_running_hook(entry) || (focus && hidden_in_focus(entry)) {
             continue;
         }
         if is_quiet_hook(entry) {
@@ -953,3 +966,7 @@ fn show_scroller_away_from_end(scroll: &NSScrollView) -> Retained<ProtocolObject
         )
     }
 }
+
+#[cfg(test)]
+#[path = "timeline_tests.rs"]
+mod tests;
