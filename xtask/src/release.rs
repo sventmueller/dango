@@ -63,6 +63,7 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
     if !dry_run {
         check_notary_profile()?;
     }
+    check_translations()?;
     let feed = updates::feed_url(releases);
     let app = assemble(Build::Distribution, &version, Some(&updates::Feed { url: &feed, key }))?;
     check_universal(&app)?;
@@ -139,6 +140,30 @@ fn preflight() {
         "  {} {NOTES} and {TRANSLATED_NOTES}/<language>.md",
         mark(root().join(NOTES).exists())
     );
+}
+
+/// Runs the translation test with the check of every interface language on (E15), which `make check` leaves out; a
+/// release stops on a missing or stale text before the universal build.
+fn check_translations() -> Result<(), String> {
+    println!("checking that every interface language translates every text");
+    run(&mut translation_test()).map_err(|e| {
+        format!(
+            "{e}\nthe interface is not translated completely; the test's output above names each text, and \
+             `IDE_I18N_RELEASE=1 cargo test --test translations` runs it again"
+        )
+    })
+}
+
+/// `tests/translations.rs` with all languages, whatever `IDE_I18N_LANGUAGES` of the caller's shell names.
+fn translation_test() -> Command {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let mut command = Command::new(cargo);
+    command
+        .current_dir(root())
+        .args(["test", "--package", PACKAGE, "--test", "translations"])
+        .env("IDE_I18N_RELEASE", "1")
+        .env_remove("IDE_I18N_LANGUAGES");
+    command
 }
 
 /// The notes in English from `NOTES`, then in each other interface language from `TRANSLATED_NOTES`. A notarized
@@ -577,15 +602,43 @@ mod tests {
         assert!(checked_notes(NOTES, without_draft("<!-- DRAFT -->\n").0, None).is_err());
     }
 
-    /// The drafts in the repository read as notes once their comment is gone, in every language they are written in.
+    /// Every interface language has notes, and they read as notes once their draft comment is gone.
     #[test]
     fn the_drafted_notes_are_notes() {
-        for file in [NOTES.to_string(), format!("{TRANSLATED_NOTES}/de.md")] {
+        let languages = languages(&root().join("resources")).unwrap();
+        assert_eq!(languages.len(), 35);
+        let files = languages.iter().map(|language| match language.as_str() {
+            "en" => NOTES.to_string(),
+            other => format!("{TRANSLATED_NOTES}/{other}.md"),
+        });
+        for file in files {
             let written = files::read_to_string(root().join(&file)).unwrap();
             let (text, _) = without_draft(&written);
             let notes = checked_notes(&file, text, None).unwrap();
             assert!(!notes.contains("]]>") && !notes.contains("<!--"), "{file}");
         }
+    }
+
+    #[test]
+    fn the_release_checks_every_language_strictly() {
+        let command = translation_test();
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["test", "--package", PACKAGE, "--test", "translations"]);
+        let envs: Vec<_> = command.get_envs().collect();
+        assert!(
+            envs.contains(&("IDE_I18N_RELEASE".as_ref(), Some("1".as_ref()))),
+            "{envs:?}"
+        );
+        assert!(envs.contains(&("IDE_I18N_LANGUAGES".as_ref(), None)), "{envs:?}");
+        assert_eq!(command.get_current_dir(), Some(root().as_path()));
+    }
+
+    /// The strict check stays switched by the variable the release sets, in the test file it runs.
+    #[test]
+    fn the_translation_test_reads_the_release_switch() {
+        let test = files::read_to_string(root().join("tests/translations.rs")).unwrap();
+        assert!(test.contains("std::env::var_os(\"IDE_I18N_RELEASE\")"));
+        assert!(test.contains("fn every_language_translates_every_text_for_a_release()"));
     }
 
     #[test]

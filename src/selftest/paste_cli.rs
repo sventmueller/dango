@@ -24,8 +24,8 @@ use crate::window::{self, WindowController};
 
 const NAME: &str = "paste-cli";
 
-/// The agents E9 names, by their command.
-const AGENTS: [&str; 4] = ["claude", "codex", "gemini", "agy"];
+/// The agents E9 names, by their command, without Gemini, which E67 no longer offers.
+const AGENTS: [&str; 3] = ["claude", "codex", "agy"];
 
 /// How long the CLIs get to start and settle, together.
 const START: Duration = Duration::from_secs(45);
@@ -329,7 +329,6 @@ fn check_name(name: &str) -> &'static str {
     match name {
         "claude" => "claude shows a pasted image as an attachment",
         "codex" => "codex shows a pasted image as an attachment",
-        "gemini" => "gemini shows a pasted image as an attachment",
         _ => "agy shows a pasted image as an attachment",
     }
 }

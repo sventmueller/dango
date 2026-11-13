@@ -426,7 +426,7 @@ fn perform(action: &Action) -> Outcome {
 }
 
 /// Runs `command`, showing its output as it comes, and keeps the lines; whether it succeeded.
-fn shown(command: &mut Command) -> Result<(bool, Vec<String>), String> {
+pub(crate) fn shown(command: &mut Command) -> Result<(bool, Vec<String>), String> {
     let mut child = command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

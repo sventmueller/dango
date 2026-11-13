@@ -168,7 +168,7 @@ You need:
 - Rust 1.99.1, as `rust-toolchain.toml` names it. Homebrew's `rust` builds for this Mac's processor; the universal
   build of a release needs rustup with the targets `aarch64-apple-darwin` and `x86_64-apple-darwin`.
 - Checkouts of `splat` and `lowspeak` next to this one (`../splat`, `../lowspeak`); the workspace takes crates from
-  them by path. A release takes `lowspeak` from its branch `vibeedit/dictation`.
+  them by path, both on their `main` branch.
 - cmake, for every build with dictation (`make run`, `make build`, `make release`): dictation builds whisper.cpp.
   `make check` builds without it.
 
@@ -182,13 +182,15 @@ You need:
 | `make test` | `check`, then the self-test `probe` in the real app |
 | `make perf` | the timing budgets, in a release build; meaningful only on an otherwise idle Mac |
 | `make test-integration` | the app's parts against the real tools and services of this Mac with its sign-ins: language servers, git, CI; the groups that start coding agents on paid accounts (`claude`, `paste`, `acp`) run only when named with `ARGS="--only …"` or all with `ARGS=--paid`; `ARGS=--list` shows the plan |
+| `make test-claude-latest` | the newest Claude CLI, installed into `target/`, against the contract the app relies on; needs no sign-in, `ARGS=--signed-in` adds a short paid turn |
 | `make release` | a dry run of the release: the universal app with dictation, the disk image, the update feed and the Cask in `target/release-dry-run/`, signed with the local certificate; sends nothing anywhere |
 | `make release-notarized` | `check`, then the release itself into `dist/`: Developer ID signature, notarization, the update feed signed with the app's own key; raises the build number |
 
 `make build` and `make run` build for the processor of the Mac they run on; `make release` builds the universal app.
 `make release-notarized` stops at once unless the owner's inputs are there: a Developer ID Application certificate,
 the notarytool profile `notary`, the app's own update key in the login keychain with its public half in the code,
-the addresses of the releases page and the homepage, and reviewed release notes in every language. Which is which,
+the addresses of the releases page and the homepage, reviewed release notes in every language, and every interface
+text translated into all 35 languages, which both release targets check before building. Which is which,
 and how to set each up, is in [docs/development.md](docs/development.md#release). Uploading the image and the feed and
 adding the Cask to a tap stay manual. Debug and release are separate apps with their own settings and data. How the app is put together, the decisions behind it and the
 self-tests are described in [docs/development.md](docs/development.md) and [docs/plan.md](docs/plan.md);

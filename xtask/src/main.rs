@@ -3,6 +3,7 @@
 
 mod bundle;
 mod cask;
+mod claude_latest;
 mod focus;
 mod fuzz;
 mod icon;
@@ -45,6 +46,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    stapled, into dist/, then the build number goes up
   universal                        target/universal/ide with dictation for Apple Silicon and Intel; needs rustup
   acknowledgements                 target/Acknowledgements.txt, the license texts the distribution carries
+  claude-latest [--signed-in]      install the newest Claude CLI into target/claude-latest and check the contract the
+                                   app relies on without a sign-in; --signed-in adds a short turn with haiku (R7)
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
@@ -80,6 +83,7 @@ fn task(args: &[String]) -> Result<(), String> {
         }
         "selftest" => selftest(&scenarios(rest)?),
         "integration" => integration::integration(rest),
+        "claude-latest" => claude_latest::claude_latest(rest),
         "fuzz" => fuzz::fuzz(rest),
         "release" => {
             let [notarize, layout] = flags(rest, ["--notarize", "--layout"])?;

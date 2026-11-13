@@ -45,7 +45,7 @@ pub(crate) const GROUPS: &[Group] = &[
         name: "paste",
         title: "an image pasted into each installed agent CLI",
         paid: true,
-        uses: "starts claude, codex, gemini and agy with their sign-ins and sends no prompt",
+        uses: "starts claude, codex and agy with their sign-ins and sends no prompt",
         steps: paste,
     },
     Group {
@@ -340,7 +340,7 @@ fn claude(cx: &Context) -> Vec<Step> {
 fn paste(_: &Context) -> Vec<Step> {
     vec![step(
         "selftest paste-cli",
-        vec![Need::AnyProgram(&["claude", "codex", "gemini", "agy"])],
+        vec![Need::AnyProgram(&["claude", "codex", "agy"])],
         selftest("paste-cli", Vec::new()),
     )]
 }

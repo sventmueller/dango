@@ -39,6 +39,9 @@ eingearbeitet (markiert mit *Review*).
   Präfix `ide-`. *Review:* Bundle-ID, Schlüsselbund-Dienst, Defaults-Domäne und Datenordner bekommen von Anfang an eine
   neutrale, dauerhafte Kennung — dann kostet eine Umbenennung auch nach dem Release keine Datenübernahme.
   Name: **Dango** (vorher Arbeitstitel Vibeedit; alte Projektordner `.vibeedit` werden weiter gelesen).
+  *Abweichung (umgesetzt):* Kein `product.toml` und kein `build.rs`; Name, Bundle-ID, URL-Schema, Cask-Name und die
+  übrigen Kennungen stehen als Konstanten in `crates/ide-product/src/lib.rs`, das App, Crates und xtask gleichermaßen
+  einbinden – eine Stelle zum Ändern, ohne Build-Skript.
 - **E20 Mac App Store: Lite-Ausgabe nach Version 1** *(entschieden)*. *Review:* Lite heißt realistisch Editor, Vorschau,
   Browser, CI und eigener Agent ohne Shell; git, LSP und Terminal laufen im Sandbox nicht sinnvoll. Die genaue
   Fähigkeitsmatrix entsteht in der Store-Phase. Vorbereitung in V1 nur dort, wo sie nichts kostet: alle Prozessstarts
@@ -175,10 +178,11 @@ eingearbeitet (markiert mit *Review*).
 ```
 vibeedit/
   Cargo.toml            Workspace + App-Paket, Profile, comrak-Patch, Feature `dictation`
-  product.toml          Anzeigename, URL-Schema, DMG-/Cask-Name (E18)
-  build.rs              Produktkonstanten; clang-Laufzeit für whisper.cpp
+  (kein product.toml, kein build.rs: Produktkonstanten in crates/ide-product, E18; die clang-Laufzeit für
+   whisper.cpp bindet lowspeaks build.rs ein, docs/dictation.md)
   .cargo/config.toml    MACOSX_DEPLOYMENT_TARGET=14.0, LOWSPEAK_LOG_DIR, xtask-Alias
   crates/               alles ohne Fenster, mit `cargo test` prüfbar, ohne Netz
+    ide-product        Anzeigename, Kennungen, URL-Schema, Cask-Name (E18)
     ide-core           Einstellungen (2 Ebenen), Pfade, Login-Shell-Umgebung, Kürzeltabelle, Hintergrund-Threads
     ide-process        Supervisor (E23): Prozessgruppen, Ausgabegrenzen, Beenden, Aktivitätsquelle
     ide-document       Dokumentmodell (E24), Zeilen-Lexerzustand (E7)
@@ -191,8 +195,13 @@ vibeedit/
     ide-claude         Claude-Anschluss (E21): Nachrichten, Steuerbefehle, Abbildung aufs Thread-Modell
     ide-acp            ACP-Anschluss, Register, Installation
     ide-agent          eigener Agent: Anbieter-Clients, Werkzeuge, Regeln, Sandbox-Profil
-  src/                  AppKit: main, app, menu, settings/, window/, sidebar/, editor/, terminal/, browser/,
-                        preview/, agent/, activity/, diff/
+    ide-predict, ide-dap  Vorhersage-Anbieter (B4), Debug Adapter Protocol (B1)
+    ide-ui-common      AppKit-Helfer, Diagnose, Farbregeln (E66); Grundlage der UI-Crates (E99)
+    ide-ui-icons, ide-ui-export, ide-ui-browser, ide-ui-terminal, ide-ui-dictation
+                       vom App-Crate abgetrennte Oberflächenteile (E99); Zustand und Fenster nur über ihren `Host`
+  src/                  AppKit: main, app, menu, settings/, window/, sidebar/, editor/, preview/, agent/, activity/,
+                        diff/, debug/; `host.rs` setzt die `Host`s der UI-Crates um; terminal/, browser.rs,
+                        dictation.rs und util/ sind dünne Fassaden über ihnen
   resources/<35>.lproj  Localizable.strings, InfoPlist.strings
   xtask/                bundle, sign, universal, dmg, notarize, Sparkle, Cask, Acknowledgements
   docs/development.md  ACCESSIBILITY.md  README.md
@@ -263,9 +272,9 @@ LSP vor dem eigenen Agenten, Diff und Checkpoints vor dem Review); große Blöck
 bleibt unverändert *(bestätigt nach den Reviews: alles behalten)*. Jede Phase endet mit lauffähiger App, grünem `make check`, Leistungsbudgets (E25) und
 VoiceOver-Prüfung der neuen Ansichten.
 
-- **Phase 0 — Fundament:** Workspace, `product.toml`, Lints, xtask (bundle, sign), i18n mit Test, Login-Shell-
-  Umgebung, Supervisor (E23), Einstellungen und Kürzeltabelle (E26), Fenster mit Symbolspalte und Tableiste mit „+“,
-  Menüleiste, Einstellungsfenster, Selftest-Gerüst wie splat. TOML in splats Tokenizer.
+- **Phase 0 — Fundament:** Workspace, Produktkonstanten (`crates/ide-product`, statt `product.toml`, E18), Lints,
+  xtask (bundle, sign), i18n mit Test, Login-Shell-Umgebung, Supervisor (E23), Einstellungen und Kürzeltabelle (E26),
+  Fenster mit Symbolspalte und Tableiste mit „+“, Menüleiste, Einstellungsfenster, Selftest-Gerüst wie splat. TOML in splats Tokenizer.
 - **Phase 1 — Dokumentmodell, Dateien, Editor:** E24, Projektvertrauen (E22), Dateibaum mit Beobachtung,
   `dango`-Befehl für das Terminal, Editor mit inkrementellen Farben (E7), Zeilennummern, Git-Marken, Suchen/Ersetzen,
   Schnellöffnen ⌘P, Projektsuche ⌘⇧F. Editor-Grundlagen: Auto-Einrückung, Tabs/Leerzeichen + `.editorconfig`,

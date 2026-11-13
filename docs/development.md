@@ -33,6 +33,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
+| `make test-claude-latest` | `cargo xtask claude-latest`: the newest Claude CLI against the contract the app relies on, see [Newest Claude CLI](#newest-claude-cli) |
 
 `cargo xtask` directly:
 - `bundle [--release] [--selftest]` builds the package `ide-app`, lays out the bundle, signs it and prints its path.
@@ -107,10 +108,12 @@ in `SERVICES`, whose identifier is the build's with `.decoder`.
 
 ## Dictation
 Dictation comes from `../lowspeak` behind the cargo feature `dictation` (docs/dictation.md). lowspeak builds
-whisper.cpp with cmake and links CoreML, so only the release bundles and the `dictation` scenario turn the feature on;
-`make lint`, `make check`, `cargo xtask run` and the other scenarios go without it, and so do the microphone buttons,
-the menu item and the fn key. `make check-dictation` checks the code behind it. A bundle with the feature declares
-`NSMicrophoneUsageDescription` in its `Info.plist` and the audio-input entitlement. The `dictation` scenario replaces
+whisper.cpp with cmake and links CoreML, so only the app bundles (`cargo xtask run` and `make build` as well as the
+release, `Build::dictation` in `xtask/src/bundle.rs`) and the `dictation` scenario turn the feature on; `make lint`,
+`make check` and the other scenarios go without it, and so do their microphone buttons, the menu item and the fn
+key. The first `cargo xtask run` therefore compiles whisper.cpp and needs cmake. `make check-dictation` checks the
+code behind it. A bundle with the feature declares `NSMicrophoneUsageDescription` in its `Info.plist` and the
+audio-input entitlement. The `dictation` scenario replaces
 the microphone and the transcription with substitutes behind lowspeak's own seam (`Dictation::with_parts`) and the
 keychain with memory, so it needs no microphone, model, key or network.
 
@@ -119,7 +122,7 @@ keychain with memory, so it needs no microphone, model, key or network.
 1. The universal program (`cargo xtask universal`): the release with `dictation` (E46) for `aarch64-apple-darwin` and
    `x86_64-apple-darwin` through rustup, each in `target/universal/<target>` with `GGML_NATIVE=OFF` and, for Intel, the
    instruction sets every Intel Mac with macOS 14 has, as Lowspeak builds it; joined with `lipo` into
-   `target/universal/ide`. It needs `../lowspeak` on its branch `vibeedit/dictation` and cmake.
+   `target/universal/ide`. It needs `../lowspeak` on its `main`, which holds the `dictation` module, and cmake.
 2. The distribution bundle in `target/distribution/`: the universal program, Sparkle 2.10.1 without its XPC services
    (only a sandboxed app needs them), `SUFeedURL` and `SUPublicEDKey` in `Info.plist`, and
    `NSMicrophoneUsageDescription`, the audio-input entitlement, and
@@ -141,6 +144,10 @@ Without `--notarize` it is a dry run into `target/release-dry-run/`: signed with
 secure timestamp, no notarization, no stapling, the feed's EdDSA signature a placeholder with the image's real length,
 `https://example.invalid/` for the addresses still missing, VERSION unchanged. It asks Apple for nothing and the
 keychain only for items' attributes, and prints what a notarized release still lacks.
+
+Both runs check the translations before the long build: `cargo test -p ide-app --test translations` with
+`IDE_I18N_RELEASE=1`, for all 35 languages whatever `IDE_I18N_LANGUAGES` says (E15). A missing, stale or doubled text
+in any `Localizable.strings` stops the release; the test's output names each one.
 
 `--notarize` stops before the long build unless everything is there, then signs with the first valid Developer ID
 Application certificate, has Apple notarize the app (as a zip) and then the image, staples both tickets, has Gatekeeper
@@ -279,7 +286,7 @@ without asking, so it also works unattended.
 | `git` | checkpoints restored around an edit of the user's, in a repository and a plain folder, with the git, HOME and global configuration of the login shell | none |
 | `ci` | `selftest ci-live` against a clone on github.com and one on a self-managed GitLab | none paid; reads with the token the app's CI finds through gh or glab or the login shell |
 | `claude` | the ignored real-CLI test of `ide-claude` and `selftest agent-live` | Claude: two short turns with haiku |
-| `paste` | `selftest paste-cli`: an image pasted into claude, codex, gemini and agy, without a prompt | the sign-ins of the four CLIs |
+| `paste` | `selftest paste-cli`: an image pasted into claude, codex and agy, without a prompt (Gemini CLI is no longer offered, E67) | the sign-ins of the three CLIs |
 | `acp` | `ide-acp/tests/live.rs`: gemini, agy and codex-acp, each from the PATH and as the preset pins it, against one tiny prompt | Google and OpenAI accounts, a few tokens each |
 | `predict` | `ide-predict/tests/real_providers.rs`: a fill-in-the-middle proposal and a cancel with a real model under Ollama (`IDE_INTEGRATION_OLLAMA_MODEL`, else `qwen2.5-coder:1.5b`) and under LM Studio's server (`IDE_INTEGRATION_LMSTUDIO_MODEL`, else `qwen2.5-coder-1.5b-instruct`) | none; nothing leaves the Mac |
 | `copilot` | the same file: copilot-language-server, from the tools folder or installed with npm, proposes a completion for a made-up file; only once the user signed in to Copilot | Copilot: two completions |
@@ -293,6 +300,33 @@ The `acp` steps put `acp-record` between the client and the agent and leave each
 `{"to": "agent" | "client", "message": …}`, for replay tests; a recording becomes a fixture only by copying it into
 the repository. A preset's `verified` flag (E35) is set by hand, and only after its pinned step passed here with the
 build at hand.
+
+## Newest Claude CLI
+The app speaks to `claude` over a protocol without a version guarantee (R7, E21). `cargo xtask claude-latest`
+(`xtask/src/claude_latest.rs`) installs `@anthropic-ai/claude-code@latest` with npm into `target/claude-latest/`,
+emptied first and never on the PATH, and runs ignored tests of `crates/ide-claude/tests/session.rs` against it with
+`CLAUDE_BIN`:
+- `the_cli_without_a_sign_in_keeps_the_recorded_contract`, always: the CLI starts with the app's whole command line in
+  a home of its own with only PATH from the environment, so it finds no sign-in; it must answer `initialize` with its
+  version, models and the account `tokenSource: none`, start the session and refuse the prompt as an authentication
+  error, as the fixture `recorded_signed_out` does. No account, no cost; it needs Node.js and the npm registry.
+- `the_real_cli_answers_a_prompt`, only with `--signed-in`: one short turn with haiku, with this Mac's sign-in or
+  `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_API_KEY` in the environment; costs a few tokens.
+
+It prints the newest version beside the one the fixtures were recorded with. When it fails, the CLI changed a part of
+the contract: compare its frames with docs/claude-mapping.md, record new fixtures as described there, and adjust the
+mapping.
+
+`.github/workflows/claude-latest.yml` runs it every night on a GitHub-hosted macOS runner, with the sibling
+repositories `splat` and `lowspeak` checked out next to this one from their public `main`. The default part needs no
+secret. It is off until the owner enables it:
+- Scheduled runs need the repository variable `CLAUDE_NIGHTLY` set to `true` (Settings › Secrets and variables ›
+  Actions › Variables); "Run workflow" on the Actions page starts one at any time. macOS minutes of a private
+  repository count against the account's Actions quota.
+- The paid turn runs only with the secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and either the
+  workflow's input ticked or the variable `CLAUDE_NIGHTLY_SIGNED_IN` set to `true`.
+- The checkouts of `splat` and `lowspeak` take what is pushed; local commits there that this repository needs must be
+  pushed first.
 
 ## Markdown documents
 What a Markdown document offers beyond the code editor (E59) lives in `src/markdown/`: the format commands
