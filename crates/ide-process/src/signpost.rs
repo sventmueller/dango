@@ -40,15 +40,49 @@ fn log() -> *mut c_void {
     address as *mut c_void
 }
 
+/// An interval's name, made by [`name!`] from a string literal.
+#[derive(Debug, Clone, Copy)]
+pub struct Name(&'static CStr);
+
+impl Name {
+    /// The name `name`.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be static data of the image `__dso_handle` stands for, as the bytes of a literal in code linked
+    /// into the app are; os_signpost reads the name relative to that image.
+    #[doc(hidden)]
+    pub const unsafe fn from_literal(name: &'static CStr) -> Self {
+        Self(name)
+    }
+}
+
+/// The [`Name`] of an interval, from a string literal: `signpost::name!("keystroke")`.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __signpost_name {
+    ($name:literal) => {
+        const {
+            match ::core::ffi::CStr::from_bytes_with_nul(::core::concat!($name, "\0").as_bytes()) {
+                // SAFETY: The bytes of a literal are static data of the image the calling crate is linked into.
+                Ok(name) => unsafe { $crate::signpost::Name::from_literal(name) },
+                Err(_) => panic!("a signpost's name holds no zero byte"),
+            }
+        }
+    };
+}
+
+pub use crate::__signpost_name as name;
+
 /// An interval on the Points of Interest track, from `begin` until it is dropped.
 #[must_use = "the interval ends when it is dropped"]
 pub struct Interval {
     id: u64,
-    name: &'static CStr,
+    name: Name,
 }
 
 /// Starts the interval `name`; `None` while signposts are off for the app's log.
-pub fn begin(name: &'static CStr) -> Option<Interval> {
+pub fn begin(name: Name) -> Option<Interval> {
     let log = log();
     // SAFETY: `log` came from `os_log_create` and is never released.
     if log.is_null() || !unsafe { os_signpost_enabled(log) } {
@@ -66,7 +100,7 @@ impl Drop for Interval {
     }
 }
 
-fn emit(kind: u8, id: u64, name: &'static CStr) {
+fn emit(kind: u8, id: u64, name: Name) {
     // An encoded argument list without arguments: no flags, a count of zero.
     let mut arguments = [0u8, 0u8];
     // SAFETY: `name` and the empty format are static strings of this image, as the macros pass them; the argument
@@ -77,7 +111,7 @@ fn emit(kind: u8, id: u64, name: &'static CStr) {
             log(),
             kind,
             id,
-            name.as_ptr(),
+            name.0.as_ptr(),
             c"".as_ptr(),
             arguments.as_mut_ptr(),
             2,
@@ -93,7 +127,7 @@ mod tests {
     fn an_interval_starts_and_ends_quickly() {
         let started = std::time::Instant::now();
         for _ in 0..1000 {
-            drop(begin(c"test"));
+            drop(begin(name!("test")));
         }
         assert!(
             started.elapsed() < std::time::Duration::from_millis(50),
@@ -109,7 +143,7 @@ mod tests {
         let until = std::time::Instant::now() + std::time::Duration::from_secs(3);
         let mut started = 0;
         while std::time::Instant::now() < until {
-            if let Some(interval) = begin(c"probe") {
+            if let Some(interval) = begin(name!("probe")) {
                 started += 1;
                 std::thread::sleep(std::time::Duration::from_millis(5));
                 drop(interval);

@@ -121,7 +121,7 @@ define_class!(
 
         #[unsafe(method(insertText:replacementRange:))]
         fn insert_text(&self, text: &AnyObject, range: NSRange) {
-            let _interval = ide_process::signpost::begin(c"keystroke");
+            let _interval = ide_process::signpost::begin(ide_process::signpost::name!("keystroke"));
             if guarded(false, || super::vim::insert_text(self, text)) {
                 return;
             }
