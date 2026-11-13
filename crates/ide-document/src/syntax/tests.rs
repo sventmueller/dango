@@ -269,19 +269,19 @@ fn spans_count_utf16_columns() {
     );
 }
 
-#[test]
-fn a_very_long_line_stays_plain_and_typing_in_it_stays_cheap() {
+/// A document whose second line is too long to lex, between two short lines of Rust.
+fn with_a_very_long_line() -> Document {
     let rust = Language::named("rust").unwrap();
     let long = "x(\"y\") + ".repeat(LONGEST_LEXED_LINE);
-    let text = format!("let a = 1;\n{long}\nlet b = 2;\n");
-    let mut document = lexed(rust, &text);
-    assert!(document.spans(1).is_empty());
-    assert_eq!(document.spans(2).first().map(|s| s.kind), Some(CodeToken::Keyword));
+    lexed(rust, &format!("let a = 1;\n{long}\nlet b = 2;\n"))
+}
+
+/// Types twenty letters into the long line of `with_a_very_long_line`, highlighting the screen after each.
+fn type_into_the_long_line(document: &mut Document) {
     let at = document
         .text()
         .byte_to_utf16(document.text().line_bytes(1).unwrap().start + 3)
         .unwrap();
-    let start = std::time::Instant::now();
     for _ in 0..20 {
         document
             .apply(Edit {
@@ -291,6 +291,24 @@ fn a_very_long_line_stays_plain_and_typing_in_it_stays_cheap() {
             .unwrap();
         document.highlight(0..3);
     }
+}
+
+#[test]
+fn a_very_long_line_stays_plain_while_typing_in_it() {
+    let mut document = with_a_very_long_line();
+    assert!(document.spans(1).is_empty());
+    assert_eq!(document.spans(2).first().map(|s| s.kind), Some(CodeToken::Keyword));
+    type_into_the_long_line(&mut document);
+    assert!(document.spans(1).is_empty());
+    assert_eq!(document.spans(2).first().map(|s| s.kind), Some(CodeToken::Keyword));
+}
+
+#[test]
+#[ignore = "a timing budget (E25), run by make perf on an idle Mac"]
+fn budget_typing_in_a_very_long_line_stays_cheap() {
+    let mut document = with_a_very_long_line();
+    let start = std::time::Instant::now();
+    type_into_the_long_line(&mut document);
     assert!(
         start.elapsed() < std::time::Duration::from_millis(100),
         "{:?}",

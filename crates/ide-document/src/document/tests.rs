@@ -491,7 +491,8 @@ fn type_in(document: &mut Document, keystrokes: usize) -> (Duration, Duration) {
 }
 
 #[test]
-fn typing_in_ten_thousand_lines_of_rust_stays_far_below_a_frame() {
+#[ignore = "a timing budget (E25), run by make perf on an idle Mac"]
+fn budget_typing_in_ten_thousand_lines_of_rust_stays_far_below_a_frame() {
     let mut document = Document::untitled(&rust_lines(10_000));
     document.set_language(Language::named("rust"));
     document.highlight(4970..5040);
@@ -503,7 +504,8 @@ fn typing_in_ten_thousand_lines_of_rust_stays_far_below_a_frame() {
 }
 
 #[test]
-fn typing_in_ten_thousand_lines_of_markdown_stays_below_a_frame() {
+#[ignore = "a timing budget (E25), run by make perf on an idle Mac"]
+fn budget_typing_in_ten_thousand_lines_of_markdown_stays_below_a_frame() {
     let mut document = Document::untitled(&markdown_lines(10_000));
     document.set_language(Some(Language::MARKDOWN));
     let start = Instant::now();
@@ -528,11 +530,20 @@ fn opening_a_large_file_lexes_only_what_is_shown() {
     let text = rust_lines(40_000);
     let mut document = Document::untitled(&text);
     document.set_language(Language::named("rust"));
-    let start = Instant::now();
     assert_eq!(document.highlight(0..60), Some(0..60));
-    let first_screen = start.elapsed();
     assert!(!document.is_highlighted());
     assert!(document.spans(60).is_empty() && document.spans(39_000).is_empty());
+}
+
+#[test]
+#[ignore = "a timing budget (E25), run by make perf on an idle Mac"]
+fn budget_the_first_screen_of_a_large_file_is_lexed_at_once() {
+    let text = rust_lines(40_000);
+    let mut document = Document::untitled(&text);
+    document.set_language(Language::named("rust"));
+    let start = Instant::now();
+    document.highlight(0..60);
+    let first_screen = start.elapsed();
     assert!(first_screen < Duration::from_millis(100), "{first_screen:?}");
 }
 
@@ -589,7 +600,7 @@ fn markdown_budgets() {
     }
 }
 
-/// Release timings for E25: `cargo test --release -p ide-document -- --ignored --nocapture budgets`.
+/// Release timings for E25: `cargo test --release -p ide-document -- --ignored --nocapture budget`.
 #[test]
 #[ignore = "a measurement, meaningful only in a release build"]
 fn budgets() {

@@ -57,23 +57,34 @@ fn clearing_drops_the_history_and_the_lines_above_the_prompt() {
     assert!(text[1..].iter().all(String::is_empty), "{text:?}");
 }
 
-#[test]
-fn closing_a_session_returns_at_once_and_ends_the_job_in_front() {
-    let dir = temporary("close");
-    let mut harness = interactive_sh(&dir);
+/// An interactive shell in `dir` with `sleep 30` as its job in front, and the pids of the job and the shell.
+fn shell_with_a_sleeping_job(dir: &std::path::Path) -> (Harness, i32, i32) {
+    let mut harness = interactive_sh(dir);
     harness.session.write("/bin/sh -c 'echo pid=$$; exec sleep 30'\n");
     assert!(harness.wait_until(|h| h.number_after("pid=").is_some()));
     let sleeper = harness.number_after("pid=").unwrap();
     assert!(harness.wait_until(|h| h.session.foreground() == Foreground::Other("sleep".into())));
     let shell = i32::try_from(harness.session.pid()).unwrap();
+    (harness, sleeper, shell)
+}
 
+#[test]
+#[ignore = "a timing budget (E25), run by make perf on an idle Mac"]
+fn budget_closing_a_session_returns_at_once() {
+    let dir = temporary("close-budget");
+    let (harness, sleeper, _) = shell_with_a_sleeping_job(&dir);
     let started = Instant::now();
     harness.session.close();
-    assert!(
-        started.elapsed() < Duration::from_millis(50),
-        "close took {:?}",
-        started.elapsed()
-    );
+    let took = started.elapsed();
+    assert!(gone_within(sleeper, Duration::from_secs(5)), "the job survived");
+    assert!(took < Duration::from_millis(50), "close took {took:?}");
+}
+
+#[test]
+fn closing_a_session_ends_the_job_in_front() {
+    let dir = temporary("close");
+    let (harness, sleeper, shell) = shell_with_a_sleeping_job(&dir);
+    harness.session.close();
 
     assert!(gone_within(sleeper, Duration::from_secs(5)), "the job survived");
     assert!(gone_within(shell, Duration::from_secs(5)), "the shell survived");

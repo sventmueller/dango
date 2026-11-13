@@ -33,8 +33,8 @@ check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with di
 
 perf: ## Timing budgets (E25) in a release build; meaningful only while the Mac is otherwise idle
 	cargo test --release -p ide-project -- --ignored --test-threads=1 tree::tests::a_folder_of_many index::tests::twenty_thousand index::tests::two_hundred_thousand
-	cargo test --release -p ide-document -- --ignored --nocapture budgets
-	cargo test --release -p ide-terminal --test throughput -- --ignored --test-threads=1
+	cargo test --release -p ide-document -- --ignored --nocapture budget
+	cargo test --release -p ide-terminal --test throughput --test session -- --ignored --test-threads=1
 	cargo test --release -p ide-vim -- --ignored --nocapture ten_megabyte
 
 fuzz: ## The crates' fuzz targets with the pinned nightly, FUZZ_SECONDS each (60 by default); ARGS=<target> picks some
