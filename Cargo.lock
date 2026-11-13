@@ -1701,6 +1701,7 @@ name = "ide-process"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-product",
  "libc",
 ]
 

@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 ide-core.workspace = true
+ide-product.workspace = true
 libc.workspace = true
 
 [dev-dependencies]

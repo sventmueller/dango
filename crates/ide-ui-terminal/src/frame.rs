@@ -79,6 +79,7 @@ impl TerminalView {
 
     /// Draws with Core Graphics, where there is no GPU and for pictures of the view.
     pub(super) fn draw(&self, dirty: NSRect) {
+        let _interval = ide_process::signpost::begin(c"terminal frame");
         let Some(context) = NSGraphicsContext::currentContext() else {
             return;
         };
@@ -96,6 +97,7 @@ impl TerminalView {
 
     /// Draws a frame on the GPU into the view's layer, or once the window shows again if it is hidden behind others.
     pub(super) fn draw_gpu(&self) {
+        let _interval = ide_process::signpost::begin(c"terminal frame");
         let Some(surface) = &self.ivars().gpu else { return };
         let shown = self
             .window()

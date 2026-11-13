@@ -103,6 +103,7 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
 }
 
 fn diagnostics_arrived(folder: &Path, source: u64, uri: &Uri, diagnostics: &[Diagnostic]) {
+    let _interval = ide_process::signpost::begin(c"diagnostics");
     let Some(path) = uri::to_path(uri) else { return };
     agent::publish(&path, diagnostics);
     for view in editor::all_editors() {

@@ -6,6 +6,7 @@
 pub mod framing;
 pub mod priority;
 pub mod shell_env;
+pub mod signpost;
 pub mod supervisor;
 pub mod tail;
 
