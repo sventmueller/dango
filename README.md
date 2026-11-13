@@ -223,6 +223,22 @@ and takes the work over by merge or cherry-pick.
 - **Edit predictions.** While you type, a suggestion appears in grey, and Tab takes it. It comes from GitHub Copilot or
   from a local model in Ollama or LM Studio, as chosen in **Settings › Prediction**; a local model keeps your code on
   this Mac.
+- **Minimap and Sticky Scroll** (Editor menu): a narrow picture of the whole file beside the text, and the header lines
+  of the blocks the top line is in, held above it.
+- **Diagnostics at the line's end** (View menu): each line's most serious message after a second's rest, with a
+  symbol for its severity.
+- **Live preview of static pages:** Editor › Open in Browser Tab serves a trusted folder's pages from Dango itself and
+  reloads the tab when a file is saved.
+- **Prettier** formats JavaScript, TypeScript, CSS, HTML, Markdown and more where the project configures it, with the
+  project's own `node_modules/.bin/prettier`; the setting `formatter` picks the formatter per language.
+- **Vim mode** (Editor › Vim Mode): Normal, Insert, Visual and Replace mode, counts, operators with motions and text
+  objects, `.`, registers, marks and macros. `u` and ⌃R use the editor's undo, and an insert pass is one step. `"+`
+  and `"*` are the clipboard; the setting `vimClipboard` makes the unnamed register the clipboard too. `/`, `?`, `n`,
+  `N`, `*`, `:s` and `:%s` search with Rust's regular expressions, not Vim's patterns: no `\v`, and `\b` in place of
+  `\<` and `\>`. Ex commands are `:w`, `:q`, `:wq`, `:x`, `:noh` and `:<line>`. In Normal mode Vim takes ⌃G from go to
+  line.
+- **Settings sync** through a folder in iCloud Drive (**Settings › General**): your settings and shortcuts follow you
+  to your other Macs; paths, local addresses and consents stay on each.
 
 ## Language servers
 
@@ -234,6 +250,10 @@ What they bring: diagnostics (⌘' and ⇧⌘' move between them), hover (⌃⌘
 definition (⌃⌘J), type definition and implementation, references (⌃⇧⌘F), call and type hierarchies (⌃⇧⌘H), rename
 (⌃⌘E), formatting (⌥⇧F), semantic colours, folding and the outline (⇧⌘O); types and parameter names inside the line;
 quick fixes and refactorings behind a light bulb (⌥⌘A); the project's symbols with ⌥⌘O.
+
+Beside a file's own server, ESLint checks JavaScript and TypeScript of projects that use it, with its quick fixes, and
+Emmet's abbreviations appear in completion for HTML, CSS and JSX. Dango installs both when you ask; **Settings ›
+General** fixes ESLint's problems on save if you want.
 
 ## Debugger
 

@@ -116,6 +116,27 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideToggleEslintFixOnSave:))]
+        fn toggle_eslint_fix(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let on = sender
+                    .and_then(|s| s.downcast_ref::<NSButton>())
+                    .is_some_and(|b| b.state() == NSControlStateValueOn);
+                self.store(|settings| settings.set(&keys::ESLINT_FIX_ON_SAVE, &on));
+            });
+        }
+
+        #[unsafe(method(ideToggleEmmet:))]
+        fn toggle_emmet(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let on = sender
+                    .and_then(|s| s.downcast_ref::<NSButton>())
+                    .is_some_and(|b| b.state() == NSControlStateValueOn);
+                self.store(|settings| settings.set(&keys::EMMET, &on));
+                crate::lsp::servers_changed();
+            });
+        }
+
         #[unsafe(method(ideToggleOptionAsMeta:))]
         fn toggle_option_as_meta(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -524,6 +545,16 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
     format_on_save.setToolTip(Some(&ns(t(
         "Lässt den Sprachserver eine Datei formatieren, bevor ⌘S sie sichert.",
     ))));
+    let eslint = toggle(
+        t("ESLint-Probleme beim Sichern beheben"),
+        sel!(ideToggleEslintFixOnSave:),
+        settings.get(&keys::ESLINT_FIX_ON_SAVE),
+    );
+    let emmet = toggle(
+        t("Emmet-Kürzel in der Vervollständigung"),
+        sel!(ideToggleEmmet:),
+        settings.get(&keys::EMMET),
+    );
     let markdown = toggle(
         t("Markdown-Vorschau automatisch daneben öffnen"),
         sel!(ideToggleMarkdownPreview:),
@@ -541,6 +572,8 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         Row::new(mtm, t("Dateien:"), &files),
         font_size_row(mtm, controller, settings.get(&keys::FONT_SIZE)),
         Row::new(mtm, t("Code:"), &format_on_save),
+        Row::under(&eslint),
+        Row::under(&emmet),
         Row::new(mtm, t("Markdown:"), &markdown),
         Row::new(mtm, t("Terminal:"), &meta),
         Row::new(mtm, t("Suchmaschine:"), &engine),

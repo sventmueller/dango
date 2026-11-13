@@ -1626,3 +1626,5 @@
 "VISUELL" = "VISUAL";
 "VISUELL ZEILE" = "VISUAL LINE";
 "VISUELL BLOCK" = "VISUAL BLOCK";
+"ESLint-Probleme beim Sichern beheben" = "Fix ESLint problems on save";
+"Emmet-Kürzel in der Vervollständigung" = "Emmet abbreviations in completion";
