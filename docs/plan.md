@@ -301,6 +301,13 @@ VoiceOver-Prüfung der neuen Ansichten.
   Stufe 1 Absicherung (B20 Fuzzing und Property-Tests, B23 Doctests und Crate-READMEs, B24 Subagenten und
   Hintergrundprozesse im Sitzungskopf), Stufe 2 Editor (Prototyp E81 als Sperre, dann B14, B15, B16), Stufe 3 Struktur
   (B22, B21), Stufe 4 Vorhersage und Debugger (B4, B1), Stufe 5 Build (B19 als Teilschnitt).
+- **Phase 12 — Lücken zu VS Code und Zed** *(Entwurf vom 2026-11-13, nicht freigegeben; Einzelheiten in
+  [phase-12.md](phase-12.md))*: Stufe 1 Komfort (B30 Puffer im Checkpoint, B29 Minimap und Sticky Scroll, B35
+  Diagnosen am Zeilenende, B36 Live-Vorschau, B32a Prettier, B28 Einstellungen über iCloud), Stufe 2 Editor (B32b
+  ESLint mit mehreren Servern je Dokument, B29c Emmet, B26 Vim-Modus mit Prototyp als Sperre), Stufe 3 B27
+  Test-Explorer, Stufe 4 B33 Docker-Panel. Zurückgestellt und nicht umzusetzen: B25 Remote-Entwicklung, B31
+  Jupyter-Notebooks, B34 Debugger für C# und Java; ihre Ausarbeitung bleibt im Dokument. Von Codex (C19–C45) und
+  Fable 5.2 (F1–F39, G5–G38) geprüft, alle Befunde eingearbeitet.
 - **Danach:** Store-Lite (E20), I2.
 
 ## Risiken
