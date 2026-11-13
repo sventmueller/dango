@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "フォルダを選択…";
 "Abgleich:" = "同期:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Driveが時間内に応答しませんでした";
+"ESLint findet keine Konfiguration" = "ESLintが構成を見つけられません";
+"ESLint im Projekt nicht installiert" = "ESLintがプロジェクトにインストールされていません";
+"ESLint konnte das Projekt nicht prüfen" = "ESLintがプロジェクトをチェックできませんでした";
+"Nicht mehr fragen" = "今後確認しない";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}はファイルの言語サーバと並行して動作し、以降はすべてのプロジェクトに適用されます。";

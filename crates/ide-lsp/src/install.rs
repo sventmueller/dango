@@ -136,7 +136,16 @@ impl Installer {
             progress,
         )?;
         self.command_in(&unpacked, &npm, &["run", "compile:server"], cancel, progress)?;
-        installed(eslint_server(&self.tools), "npm run compile:server")
+        // A script node runs, not a program of its own, so it only has to be there.
+        let server = eslint_server(&self.tools);
+        if server.is_file() {
+            Ok(server)
+        } else {
+            Err(InstallError::Unusable(format!(
+                "npm run compile:server left no {}",
+                server.display()
+            )))
+        }
     }
 
     fn command_in(

@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "फ़ोल्डर चुनें…";
 "Abgleich:" = "सिंक :";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive ने समय पर जवाब नहीं दिया";
+"ESLint findet keine Konfiguration" = "ESLint को कोई कॉन्फ़िगरेशन नहीं मिला";
+"ESLint im Projekt nicht installiert" = "प्रोजेक्ट में ESLint इंस्टॉल नहीं है";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint प्रोजेक्ट की जाँच नहीं कर सका";
+"Nicht mehr fragen" = "फिर से न पूछें";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} फ़ाइल के लैंग्वेज सर्वर के साथ चलता है और उसके बाद सभी प्रोजेक्ट पर लागू होता है।";

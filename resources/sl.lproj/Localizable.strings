@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Izberi mapo …";
 "Abgleich:" = "Sinhronizacija:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive ni pravočasno odgovoril";
+"ESLint findet keine Konfiguration" = "ESLint ne najde konfiguracije";
+"ESLint im Projekt nicht installiert" = "ESLint ni nameščen v projektu";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint ni mogel preveriti projekta";
+"Nicht mehr fragen" = "Ne sprašuj več";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} se izvaja ob jezikovnem strežniku datoteke in nato velja za vse projekte.";

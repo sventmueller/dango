@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "폴더 선택…";
 "Abgleich:" = "동기화:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive가 제시간에 응답하지 않았습니다";
+"ESLint findet keine Konfiguration" = "ESLint가 구성을 찾을 수 없음";
+"ESLint im Projekt nicht installiert" = "프로젝트에 ESLint가 설치되어 있지 않음";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint가 프로젝트를 검사할 수 없음";
+"Nicht mehr fragen" = "다시 묻지 않음";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}은(는) 파일의 언어 서버와 함께 실행되며 이후 모든 프로젝트에 적용됩니다.";

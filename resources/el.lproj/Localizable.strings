@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Επιλογή φακέλου…";
 "Abgleich:" = "Συγχρονισμός:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "Το iCloud Drive δεν απάντησε εγκαίρως";
+"ESLint findet keine Konfiguration" = "Το ESLint δεν βρίσκει διαμόρφωση";
+"ESLint im Projekt nicht installiert" = "Το ESLint δεν είναι εγκατεστημένο στο έργο";
+"ESLint konnte das Projekt nicht prüfen" = "Το ESLint δεν μπόρεσε να ελέγξει το έργο";
+"Nicht mehr fragen" = "Να μην ερωτηθώ ξανά";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "Το {} εκτελείται δίπλα στον διακομιστή γλώσσας του αρχείου και στη συνέχεια ισχύει για όλα τα έργα.";

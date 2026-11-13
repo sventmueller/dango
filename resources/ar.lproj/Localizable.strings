@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "اختيار مجلد…";
 "Abgleich:" = "المزامنة:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "لم يستجب iCloud Drive في الوقت المحدد";
+"ESLint findet keine Konfiguration" = "لا يجد ESLint أي تكوين";
+"ESLint im Projekt nicht installiert" = "ESLint غير مثبت في المشروع";
+"ESLint konnte das Projekt nicht prüfen" = "تعذر على ESLint فحص المشروع";
+"Nicht mehr fragen" = "عدم السؤال مرة أخرى";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "يعمل {} بجانب خادم اللغة الخاص بالملف ويسري بعد ذلك على كل المشاريع.";

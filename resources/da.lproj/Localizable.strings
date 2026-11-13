@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Vælg mappe…";
 "Abgleich:" = "Synkronisering:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive svarede ikke i tide";
+"ESLint findet keine Konfiguration" = "ESLint finder ingen konfiguration";
+"ESLint im Projekt nicht installiert" = "ESLint er ikke installeret i projektet";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint kunne ikke kontrollere projektet";
+"Nicht mehr fragen" = "Spørg ikke igen";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} kører ved siden af filens sprogserver og gælder derefter for alle projekter.";

@@ -806,14 +806,20 @@ fn end_if_unused(folder: &Path, id: u64) {
 
 /// Asks again, after a pause in typing, for what the server computes over the whole document.
 pub fn refresh(view: &EditorTextView) {
-    let Some((server, uri)) = server_of(view) else {
-        return;
-    };
-    outline::refresh(view, &server, &uri);
+    let serial = view.ivars().lsp.borrow().serial;
+    if let Some((server, uri)) = server_of(view) {
+        refresh_main(view, &server, &uri);
+    }
+    pull_diagnostics(view, serial);
+}
+
+/// What only the main server computes over the whole document: outline, inlay hints and semantic tokens.
+fn refresh_main(view: &EditorTextView, server: &Server, uri: &Uri) {
+    outline::refresh(view, server, uri);
     inlay::request(view);
     let serial = view.ivars().lsp.borrow().serial;
     let revision = view.document().revision();
-    let _ = server.semantic_tokens(&uri, move |answer| {
+    let _ = server.semantic_tokens(uri, move |answer| {
         main_soon(move || {
             let Some(view) = editor::find_editor(serial) else {
                 return;
@@ -827,6 +833,10 @@ pub fn refresh(view: &EditorTextView) {
             }
         });
     });
+}
+
+/// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
+fn pull_diagnostics(view: &EditorTextView, serial: u64) {
     for (source, server, uri) in servers_of(view) {
         if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
             continue;

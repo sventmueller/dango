@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Tria una carpeta…";
 "Abgleich:" = "Sincronització:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "L’iCloud Drive no ha respost a temps";
+"ESLint findet keine Konfiguration" = "ESLint no troba cap configuració";
+"ESLint im Projekt nicht installiert" = "ESLint no està instal·lat al projecte";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint no ha pogut comprovar el projecte";
+"Nicht mehr fragen" = "No ho tornis a preguntar";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} s’executa al costat del servidor de llenguatge del fitxer i després s’aplica a tots els projectes.";

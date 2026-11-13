@@ -171,6 +171,12 @@ fn ask_companion(view: &EditorTextView, language: &ide_lsp::Language) -> bool {
     answer == NSAlertFirstButtonReturn
 }
 
+/// Installs the slot's missing server, as the status bar's button does, for the self-test.
+#[cfg(feature = "selftest")]
+pub(super) fn install_now(folder: &Path, slot: &Slot) {
+    install(folder, slot);
+}
+
 /// Installs the slot's missing server into the app's tools folder, after the user asked for it in the status bar.
 fn install(folder: &Path, slot: &Slot) {
     let what = match &*slot.state.borrow() {

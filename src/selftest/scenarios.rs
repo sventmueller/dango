@@ -173,6 +173,10 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("page-preview", page_preview::run),
     plain("prettier-save", prettier::run),
     plain("settings-sync", settings_sync::run),
+    Scenario {
+        offline: false,
+        ..limited("companions", companions::run, Duration::from_secs(1200))
+    },
     plain("search", search::run),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),

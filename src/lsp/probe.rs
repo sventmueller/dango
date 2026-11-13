@@ -61,3 +61,36 @@ pub fn quiet_for(view: &EditorTextView) -> Option<std::time::Duration> {
     }
     slot.progress_at.get().map(|at| at.elapsed())
 }
+
+/// The state of the second server `name` of `view`, such as ESLint, for the self-test: `Ok(true)` once it runs.
+pub fn companion_running(view: &EditorTextView, name: &str) -> Result<bool, String> {
+    let root = view.controller().and_then(|c| c.project_root()).ok_or("no folder")?;
+    let ids: Vec<u64> = view.ivars().lsp.borrow().companions.iter().map(|(id, _)| *id).collect();
+    let slot = ids
+        .into_iter()
+        .filter_map(|id| slot(&root, id))
+        .find(|slot| slot.language.name() == name)
+        .ok_or_else(|| format!("no {name} beside the file"))?;
+    let state = slot.state.borrow();
+    match &*state {
+        State::Running(server) => Ok(server.status() == Status::Running),
+        State::Missing(_) => Err("missing".into()),
+        State::Failed(message) => Err(message.clone()),
+        State::Finding | State::Installing(..) => Ok(false),
+    }
+}
+
+/// Installs every missing second server of `view` without asking, as "Installieren" does, for the self-test.
+pub fn install_companions(view: &EditorTextView) {
+    let Some(root) = view.controller().and_then(|c| c.project_root()) else {
+        return;
+    };
+    let ids: Vec<u64> = view.ivars().lsp.borrow().companions.iter().map(|(id, _)| *id).collect();
+    for id in ids {
+        if let Some(slot) = slot(&root, id)
+            && matches!(&*slot.state.borrow(), State::Missing(_))
+        {
+            super::install::install_now(&root, &slot);
+        }
+    }
+}

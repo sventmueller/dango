@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Klasör Seç…";
 "Abgleich:" = "Eşzamanlama:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive zamanında yanıt vermedi";
+"ESLint findet keine Konfiguration" = "ESLint yapılandırma bulamıyor";
+"ESLint im Projekt nicht installiert" = "ESLint projede yüklü değil";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint projeyi denetleyemedi";
+"Nicht mehr fragen" = "Bir Daha Sorma";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{}, dosyanın dil sunucusunun yanında çalışır ve ardından tüm projeler için geçerli olur.";

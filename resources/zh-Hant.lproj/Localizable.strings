@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "選擇檔案夾⋯";
 "Abgleich:" = "同步：";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud 雲碟未及時回應";
+"ESLint findet keine Konfiguration" = "ESLint 找不到設定";
+"ESLint im Projekt nicht installiert" = "專案中未安裝 ESLint";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint 無法檢查專案";
+"Nicht mehr fragen" = "不要再詢問";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} 與檔案的語言伺服器並行執行，之後適用於所有專案。";

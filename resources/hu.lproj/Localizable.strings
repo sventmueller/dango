@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Mappa kiválasztása…";
 "Abgleich:" = "Szinkronizálás:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "Az iCloud Drive nem válaszolt időben";
+"ESLint findet keine Konfiguration" = "Az ESLint nem talál konfigurációt";
+"ESLint im Projekt nicht installiert" = "Az ESLint nincs telepítve a projektben";
+"ESLint konnte das Projekt nicht prüfen" = "Az ESLint nem tudta ellenőrizni a projektet";
+"Nicht mehr fragen" = "Ne kérdezze többé";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "A(z) {} a fájl nyelvi szervere mellett fut, és ezután minden projektre érvényes.";

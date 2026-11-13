@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Chọn thư mục…";
 "Abgleich:" = "Đồng bộ hóa:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive không phản hồi kịp thời";
+"ESLint findet keine Konfiguration" = "ESLint không tìm thấy cấu hình";
+"ESLint im Projekt nicht installiert" = "ESLint chưa được cài đặt trong dự án";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint không thể kiểm tra dự án";
+"Nicht mehr fragen" = "Không hỏi lại";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} chạy bên cạnh máy chủ ngôn ngữ của tệp và sau đó áp dụng cho mọi dự án.";

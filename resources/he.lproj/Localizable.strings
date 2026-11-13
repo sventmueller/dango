@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "בחירת תיקיה…";
 "Abgleich:" = "סנכרון:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "‏iCloud Drive לא הגיב בזמן";
+"ESLint findet keine Konfiguration" = "ESLint לא מוצא תצורה";
+"ESLint im Projekt nicht installiert" = "ESLint לא מותקן בפרויקט";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint לא הצליח לבדוק את הפרויקט";
+"Nicht mehr fragen" = "אל תשאל שוב";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} פועל לצד שרת השפה של הקובץ ולאחר מכן חל על כל הפרויקטים.";

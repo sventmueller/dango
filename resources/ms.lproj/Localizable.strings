@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Pilih Folder…";
 "Abgleich:" = "Penyelarasan:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive tidak menjawab tepat pada masanya";
+"ESLint findet keine Konfiguration" = "ESLint tidak menemui konfigurasi";
+"ESLint im Projekt nicht installiert" = "ESLint tidak dipasang dalam projek";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint tidak dapat menyemak projek";
+"Nicht mehr fragen" = "Jangan Tanya Lagi";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} berjalan di sebelah pelayan bahasa fail dan selepas itu digunakan untuk semua projek.";

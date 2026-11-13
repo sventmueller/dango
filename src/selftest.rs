@@ -47,6 +47,7 @@ use crate::util::{main_after, main_soon};
 use crate::window::{self, Panel};
 
 mod ci;
+mod companions;
 mod conflict;
 mod debug;
 mod debug_menus;

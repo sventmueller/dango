@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Kies map…";
 "Abgleich:" = "Synchronisatie:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive heeft niet op tijd geantwoord";
+"ESLint findet keine Konfiguration" = "ESLint vindt geen configuratie";
+"ESLint im Projekt nicht installiert" = "ESLint is niet geïnstalleerd in het project";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint kon het project niet controleren";
+"Nicht mehr fragen" = "Niet meer vragen";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} draait naast de taalserver van het bestand en geldt daarna voor alle projecten.";

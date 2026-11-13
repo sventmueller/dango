@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Escolher Pasta…";
 "Abgleich:" = "Sincronização:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "O iCloud Drive não respondeu a tempo";
+"ESLint findet keine Konfiguration" = "O ESLint não encontra nenhuma configuração";
+"ESLint im Projekt nicht installiert" = "O ESLint não está instalado no projeto";
+"ESLint konnte das Projekt nicht prüfen" = "O ESLint não pôde verificar o projeto";
+"Nicht mehr fragen" = "Não Perguntar Novamente";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} é executado ao lado do servidor de linguagem do arquivo e depois vale para todos os projetos.";

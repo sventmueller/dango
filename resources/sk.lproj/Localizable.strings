@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Vybrať priečinok…";
 "Abgleich:" = "Synchronizácia:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive neodpovedal včas";
+"ESLint findet keine Konfiguration" = "ESLint nenašiel žiadnu konfiguráciu";
+"ESLint im Projekt nicht installiert" = "ESLint nie je v projekte nainštalovaný";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint nemohol skontrolovať projekt";
+"Nicht mehr fragen" = "Už sa nepýtať";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} beží vedľa jazykového servera súboru a potom platí pre všetky projekty.";

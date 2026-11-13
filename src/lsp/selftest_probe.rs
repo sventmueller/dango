@@ -16,7 +16,9 @@ pub use super::edits::{apply_workspace_edit, question as server_question};
 
 pub use super::hover::shown_text as hover_text;
 
-pub use super::probe::{language_name, marks_of, quiet_for, server_running, token_count};
+pub use super::probe::{
+    companion_running, install_companions, language_name, marks_of, quiet_for, server_running, token_count,
+};
 
 pub use super::rename::rename_to;
 

@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "เลือกโฟลเดอร์…";
 "Abgleich:" = "การเชื่อมข้อมูล:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive ไม่ตอบสนองภายในเวลาที่กำหนด";
+"ESLint findet keine Konfiguration" = "ESLint ไม่พบการกำหนดค่า";
+"ESLint im Projekt nicht installiert" = "ไม่ได้ติดตั้ง ESLint ในโปรเจ็กต์";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint ไม่สามารถตรวจสอบโปรเจ็กต์ได้";
+"Nicht mehr fragen" = "ไม่ต้องถามอีก";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} ทำงานควบคู่กับเซิร์ฟเวอร์ภาษาของไฟล์ และหลังจากนั้นจะใช้กับทุกโปรเจ็กต์";

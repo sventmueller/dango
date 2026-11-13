@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Valitse kansio…";
 "Abgleich:" = "Synkronointi:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive ei vastannut ajoissa";
+"ESLint findet keine Konfiguration" = "ESLint ei löydä määrityksiä";
+"ESLint im Projekt nicht installiert" = "ESLintiä ei ole asennettu projektiin";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint ei voinut tarkistaa projektia";
+"Nicht mehr fragen" = "Älä kysy uudelleen";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} toimii tiedoston kielipalvelimen rinnalla ja koskee sen jälkeen kaikkia projekteja.";

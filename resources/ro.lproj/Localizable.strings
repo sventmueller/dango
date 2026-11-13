@@ -1577,3 +1577,8 @@
 "Ordner wählen …" = "Alegeți dosarul…";
 "Abgleich:" = "Sincronizare:";
 "iCloud Drive hat nicht rechtzeitig geantwortet" = "iCloud Drive nu a răspuns la timp";
+"ESLint findet keine Konfiguration" = "ESLint nu găsește nicio configurație";
+"ESLint im Projekt nicht installiert" = "ESLint nu este instalat în proiect";
+"ESLint konnte das Projekt nicht prüfen" = "ESLint nu a putut verifica proiectul";
+"Nicht mehr fragen" = "Nu mai întreba";
+"{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte." = "{} rulează lângă serverul de limbaj al fișierului și apoi se aplică tuturor proiectelor.";
