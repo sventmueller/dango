@@ -1,0 +1,5 @@
+{"event": "collected", "id": "test_sample.py::test_pass", "path": "test_sample.py", "line": 4}
+{"event": "collected", "id": "test_sample.py::test_fail", "path": "test_sample.py", "line": 8}
+{"event": "collected", "id": "test_sample.py::test_skip", "path": "test_sample.py", "line": 12}
+{"event": "collected", "id": "test_sample.py::test_param[1]", "path": "test_sample.py", "line": 17}
+{"event": "collected", "id": "test_sample.py::test_param[2]", "path": "test_sample.py", "line": 17}

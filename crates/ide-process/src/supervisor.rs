@@ -23,6 +23,8 @@ pub enum Kind {
     Git,
     /// A debug adapter, such as lldb-dap.
     DebugAdapter,
+    /// A test run of the Tests panel (E110).
+    Test,
     /// Anything else, such as an installer.
     Tool,
 }

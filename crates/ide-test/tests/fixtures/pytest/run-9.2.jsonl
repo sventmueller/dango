@@ -1,0 +1,15 @@
+{"event": "collected", "id": "test_sample.py::test_pass", "path": "test_sample.py", "line": 4}
+{"event": "collected", "id": "test_sample.py::test_fail", "path": "test_sample.py", "line": 8}
+{"event": "collected", "id": "test_sample.py::test_skip", "path": "test_sample.py", "line": 12}
+{"event": "collected", "id": "test_sample.py::test_param[1]", "path": "test_sample.py", "line": 17}
+{"event": "collected", "id": "test_sample.py::test_param[2]", "path": "test_sample.py", "line": 17}
+{"event": "started", "id": "test_sample.py::test_pass"}
+{"event": "result", "id": "test_sample.py::test_pass", "outcome": "passed"}
+{"event": "started", "id": "test_sample.py::test_fail"}
+{"event": "result", "id": "test_sample.py::test_fail", "outcome": "failed", "path": "/private/tmp/dango-samples/py/test_sample.py", "line": 9, "message": "assert (1 + 2) == 4"}
+{"event": "started", "id": "test_sample.py::test_skip"}
+{"event": "result", "id": "test_sample.py::test_skip", "outcome": "skipped", "message": "Skipped: not now"}
+{"event": "started", "id": "test_sample.py::test_param[1]"}
+{"event": "result", "id": "test_sample.py::test_param[1]", "outcome": "passed"}
+{"event": "started", "id": "test_sample.py::test_param[2]"}
+{"event": "result", "id": "test_sample.py::test_param[2]", "outcome": "failed", "path": "/private/tmp/dango-samples/py/test_sample.py", "line": 19, "message": "assert 2 == 1"}

@@ -1,0 +1,14 @@
+[package]
+name = "ide-test"
+version = "0.0.0"
+description = "Finding, running and debugging tests: an adapter per tool for cargo test, cargo-nextest, Go, pytest, Vitest and Jest"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

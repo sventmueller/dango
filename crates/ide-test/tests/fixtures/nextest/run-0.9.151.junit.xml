@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="nextest-run" tests="4" skipped="0" failures="1" errors="0" uuid="b5f9c057-c64b-4149-8c16-3d4a8bd624df" timestamp="2026-11-13T19:48:38.200+01:00" time="0.007">
+    <testsuite name="sample::api" tests="1" skipped="0" errors="0" failures="0">
+        <testcase name="api_works" classname="sample::api" timestamp="2026-11-13T19:48:38.200+01:00" time="0.007"/>
+    </testsuite>
+    <testsuite name="sample" tests="3" skipped="0" errors="0" failures="1">
+        <testcase name="tests::nested::inner" classname="sample" timestamp="2026-11-13T19:48:38.200+01:00" time="0.007"/>
+        <testcase name="tests::adds" classname="sample" timestamp="2026-11-13T19:48:38.200+01:00" time="0.007"/>
+        <testcase name="tests::fails" classname="sample" timestamp="2026-11-13T19:48:38.200+01:00" time="0.007">
+            <failure message="thread &apos;tests::fails&apos; (16707908) panicked at src/lib.rs:16:9" type="test failure with exit code 101">thread &apos;tests::fails&apos; (16707908) panicked at src/lib.rs:16:9:
+assertion `left == right` failed: one and two
+  left: 3
+ right: 4
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</failure>
+            <system-out>
+running 1 test
+test tests::fails ... FAILED
+
+failures:
+
+failures:
+    tests::fails
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+</system-out>
+            <system-err>
+thread &apos;tests::fails&apos; (16707908) panicked at src/lib.rs:16:9:
+assertion `left == right` failed: one and two
+  left: 3
+ right: 4
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+</system-err>
+        </testcase>
+    </testsuite>
+</testsuites>

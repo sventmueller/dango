@@ -1524,6 +1524,7 @@ dependencies = [
  "ide-product",
  "ide-project",
  "ide-terminal",
+ "ide-test",
  "ide-thread",
  "ide-ui-agent",
  "ide-ui-browser",
@@ -1742,6 +1743,14 @@ dependencies = [
  "libc",
  "memchr",
  "polling",
+]
+
+[[package]]
+name = "ide-test"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

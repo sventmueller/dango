@@ -61,6 +61,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::Git => t("Git"),
         Kind::DebugAdapter => t("Debug-Adapter"),
         Kind::Tool => t("Werkzeug"),
+        Kind::Test => t("Test"),
     }
 }
 

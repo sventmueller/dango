@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/Volumes/Scratch/cargo-build/af/ffbbab1347b4f7/debug/deps/sample-2269f62bb3dee741)
+tests::adds: test
+tests::fails: test
+tests::nested::inner: test
+tests::slow: test
+
+4 tests, 0 benchmarks
+     Running tests/api.rs (/Volumes/Scratch/cargo-build/af/ffbbab1347b4f7/debug/deps/api-37e733e9a564e7db)
+api_works: test
+
+1 test, 0 benchmarks
+   Doc-tests sample
+0 tests, 0 benchmarks
