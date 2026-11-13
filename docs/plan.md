@@ -306,7 +306,7 @@ VoiceOver-Prüfung der neuen Ansichten.
   Stufe 1 Absicherung (B20 Fuzzing und Property-Tests, B23 Doctests und Crate-READMEs, B24 Subagenten und
   Hintergrundprozesse im Sitzungskopf), Stufe 2 Editor (Prototyp E81 als Sperre, dann B14, B15, B16), Stufe 3 Struktur
   (B22, B21), Stufe 4 Vorhersage und Debugger (B4, B1), Stufe 5 Build (B19 als Teilschnitt).
-- **Phase 12 — Lücken zu VS Code und Zed** *(Entwurf vom 2026-11-13, nicht freigegeben; Einzelheiten in
+- **Phase 12 — Lücken zu VS Code und Zed** *(freigegeben 2026-11-13; Einzelheiten in
   [phase-12.md](phase-12.md))*: Stufe 1 Komfort (B30 Puffer im Checkpoint, B29 Minimap und Sticky Scroll, B35
   Diagnosen am Zeilenende, B36 Live-Vorschau, B32a Prettier, B28 Einstellungen über iCloud), Stufe 2 Editor (B32b
   ESLint mit mehreren Servern je Dokument, B29c Emmet, B26 Vim-Modus mit Prototyp als Sperre), Stufe 3 B27
@@ -582,6 +582,37 @@ Risiken aus Phase 11: **R14** Einblendungen über das Kern-Attribut, **R15** Cod
 Commit-Messages), **R16** Lieferkette der Debug-Adapter, **R17** Umbau ohne neue Funktion, **R18** nightly für
 Fuzzing, **R19** Indexierung bei der Projekt-Symbolsuche, **R21** veraltete Vorschläge und Aktionen, **R22**
 undokumentierte Meldungen von Claude zu Subagenten und Hintergrundarbeit.
+
+Phase 12 *(freigegeben 2026-11-13)*: Kurzfassung; die Einzelheiten in [phase-12.md](phase-12.md) sind ebenso
+verbindlich. Zurückgestellt und erst bei Wiederaufnahme gültig: B25 Remote (E115–E129), B31 Notebooks (E137–E139),
+B34 C#- und Java-Debugger (E134, E135).
+
+- **E104 Vim über `modalkit`** als Kopie unter `vendor/` (ohne `ropey`-Standard-Features), Crate `ide-vim`;
+  Prototyp mit Variante A (Schattenkopie mit `EditBuffer`) als Sperre.
+- **E105 Tastenverteilung im Vim-Modus:** alle Modi über den Eingabekontext, Esc schließt nur das Erste, was offen ist.
+- **E106 Umfang der ersten Vim-Ausgabe:** Normal, Einfügen, Visual, Ersetzen, eigene Suche, wenige Ex-Befehle;
+  Block-Cursor als eigene Sperre.
+- **E107 Minimap** neben dem Editor, Standard aus *(umgesetzt)*.
+- **E108 Sticky Scroll,** Standard an, höchstens 5 Kopfzeilen, aus Dokument-Symbolen oder Einrückungs-Faltungen.
+- **E109 Emmet** als zweiter Server je Dokument über `@olrtg/emmet-language-server`.
+- **E110 Crate `ide-test`** mit einem Adapter je Werkzeug (cargo test, nextest, Go, pytest, Vitest, Jest).
+- **E111 Panel „Tests“** vor „Debuggen“ (Tests ⌘5, Debuggen ⌘6, CI ⌘7; ändert E94), Randspalte, ⌃⌥⌘U und ⌃⌥⌘G.
+- **E112 Einstellungen über einen Ordner in iCloud Drive,** nicht CloudKit; vorher ein Besitzer der Einstellungen.
+- **E113 Abgleich je Schlüssel festgelegt,** `sync` als Pflichtargument der Konstruktoren.
+- **E114 Eine Datei je Mac,** zusammengeführt als Maximum einer logischen Uhr je Schlüssel.
+- **E130 Diagnosen am Zeilenende** über die Einblendungen (E81), Standard aus.
+- **E131 Statische Seiten im Browser-Tab** über einen eigenen Nur-GET-Server auf 127.0.0.1 mit Cookie, nur in
+  vertrauten Ordnern.
+- **E132 ESLint als zweiter Server je Dokument,** aus einem festen Tag von `microsoft/vscode-eslint`.
+- **E133 Prettier als Formatierer** neben dem Sprachserver, an die Revision gebunden.
+- **E136 Docker-Panel** über die `docker`-CLI.
+- **E140 Mehrere Sprachserver je Dokument,** Slots nach Register-Eintrag und Wurzel.
+
+Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
+iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen
+Vertrag, **R32** Feature-Vereinigung von Abhängigkeiten, **R33** iCloud-Erlaubnis gilt für die ganze App, **R37**
+Docker-Socket entspricht Root-Rechten, **R38** ESLint-Server aus einem Upstream-Tag. Zu den zurückgestellten
+Bausteinen gehören R26, R27, R30, R31, R34, R35, R36 und R39.
 
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
 

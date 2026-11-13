@@ -1,7 +1,7 @@
 # Dango — Phase 12: Lücken zu VS Code und Zed
 
-**Entwurf vom 2026-11-13, nicht freigegeben.** Mit der Freigabe wandern die Entscheidungen E104–E140 und die Risiken
-R23–R39 als Kurzfassung nach [plan.md](plan.md); die Einzelheiten hier sind dann ebenso verbindlich. Die Kürzel B25–B29
+**Freigegeben am 2026-11-13.** Die Entscheidungen E104–E140 und die Risiken R23–R39 stehen als Kurzfassung in
+[plan.md](plan.md); die Einzelheiten hier sind ebenso verbindlich. Die Kürzel B25–B29
 stammen aus dem Vergleich mit Zed und VS Code vom 2026-11-13. Im Gespräch hießen sie B2, B3, B6, B8 und B9; sie wurden
 verschoben, weil plan.md und [phase-11.md](phase-11.md) B1–B24 schon vergeben haben. B30 ist ein Befund aus dem
 Review. B31–B36 stammen aus einem Abgleich mit den meistinstallierten VS-Code-Erweiterungen (Sitzung dango-7a,

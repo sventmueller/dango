@@ -206,9 +206,52 @@ fn narrow(editor: &EditorTextView) {
                         off == Some(0.0) && !Settings::load_user().get(&keys::MINIMAP),
                         format!("{off:?}"),
                     );
-                    finish(SCENARIO);
+                    budget();
                 },
             );
+        },
+    );
+}
+
+/// E25 with the minimap on: a keystroke in a file of 10 000 lines stays under 16 ms, edit, layout and drawing of the
+/// minimap together.
+fn budget() {
+    let big: String = (0..10_000)
+        .map(|n| format!("    let value_{n} = compute({n}, other_{n});\n"))
+        .collect();
+    let path = root().join("big.rs");
+    if let Err(error) = std::fs::write(&path, &big) {
+        check("the big file is written", false, error.to_string());
+        return finish(SCENARIO);
+    }
+    let Some(controller) = window::for_project(&root()) else {
+        return finish(SCENARIO);
+    };
+    controller.open_file(&path);
+    let opened = path.clone();
+    let big_view = move || window::for_project(&root()).and_then(|c| editor::editor_for(&c, &opened));
+    let ready = big_view.clone();
+    wait_until(
+        move || ready().is_some_and(|v| v.line_start(9_999).is_some()),
+        move |_| {
+            let Some(view) = big_view() else {
+                check("the big file opens", false, "");
+                return finish(SCENARIO);
+            };
+            toggle(&view);
+            let at = view.line_start(5_000).unwrap_or(0) + 20;
+            view.scrollRangeToVisible(objc2_foundation::NSRange::new(at, 0));
+            view.setSelectedRange(objc2_foundation::NSRange::new(at, 0));
+            let width = editor::minimap(&view).map_or(0.0, |m| m.0);
+            let (median, slowest) = super::insets::keystrokes(&view, 40);
+            check(
+                "E25 with the minimap: a keystroke in a file of 10 000 lines stays under 16 ms",
+                width > 0.0 && median < std::time::Duration::from_millis(16),
+                format!("minimap {width} wide, median {median:?}, slowest {slowest:?}"),
+            );
+            toggle(&view);
+            let _ = editor::save_all();
+            finish(SCENARIO);
         },
     );
 }
