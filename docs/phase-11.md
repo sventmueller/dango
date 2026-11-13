@@ -630,6 +630,24 @@ Reihenfolge, jeder Schritt mit grünem `make check` und `selftest probe`:
 
 Wo ein Schnitt nötig ist, kommt er zuerst innerhalb des App-Crates; der Umzug danach ist ein reines Verschieben.
 
+*Umgesetzt am 2026-11-13* in acht Schritten, jeder mit grünem `make check` und `selftest probe`. Gemessen mit einer
+echten Änderung an einer Datei und Neubau (Debug, warm), vorher → nachher:
+- `src/editor/fold.rs`: 2,3 s → 2,3 s
+- `ide-git`: 2,7 s → 2,7 s
+- neu `ide-ui-common`: 3,7 s, da alle UI-Crates und die App neu bauen
+- neu `ide-ui-terminal`: 2,6 s
+
+Die 7,7 s aus dem Befund oben waren schon vor dem Schnitt nicht mehr zu messen, denn der Build-Cache liegt seit dem
+12.11. auf Scratch. Der Schnitt bringt deshalb, wie erwartet, keine messbar kürzeren Builds; er bringt die
+erzwungenen Grenzen.
+
+Abweichungen:
+- Der Zustand der Crates erreicht sie über je einen `Host` mit einmaliger Anmeldung (`src/host.rs`, `src/main.rs`),
+  Fenster nur über ihre Kennung.
+- Das Diktat trennt seine Engine hinter das Feature `engine`, damit `make check` whisper.cpp nicht baut.
+- An den alten Pfaden bleiben dünne Fassaden (`src/util`, `src/browser.rs`, `src/terminal/mod.rs`, `src/dictation.rs`),
+  damit die übrigen Dateien unverändert bleiben.
+
 ## Risiken
 - **R14 Einblendungen über Kern-Attribut:** Kern ist ein Abstand zwischen Zeichen, keine Einfügung; TextKit 2
   kann die Lücke bei Umbruch, Graphemen oder Eingabemethoden falsch vermessen, und am Zeilenanfang gibt es kein
