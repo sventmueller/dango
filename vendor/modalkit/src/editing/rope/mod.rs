@@ -683,6 +683,23 @@ pub struct EditRope {
 }
 
 impl EditRope {
+    /// Dango: the rope underneath, so that a copy can be compared with it leaf by leaf.
+    pub fn as_rope(&self) -> &Rope {
+        &self.rope
+    }
+
+    /// Dango: `start..=end` widened over the blanks that follow on the line, else over those before it.
+    fn with_blanks(&self, start: Cursor, end: Cursor) -> (Cursor, Cursor) {
+        let line: Vec<char> = self.lines(end.y).next().map(|l| l.to_string().chars().collect()).unwrap_or_default();
+        let blank = |c: &char| *c == ' ' || *c == '\t';
+        let after = line.iter().skip(end.x + 1).take_while(|c| blank(c)).count();
+        if after > 0 {
+            return (start, Cursor::new(end.y, end.x + after));
+        }
+        let before = line.iter().take(start.x).rev().take_while(|c| blank(c)).count();
+        (Cursor::new(start.y, start.x - before), end)
+    }
+
     /// Create an empty, zero-length rope.
     pub fn empty() -> EditRope {
         EditRope::from("")
@@ -2672,6 +2689,9 @@ impl CursorMovements<Cursor> for EditRope {
                 )?;
 
                 if &start <= cursor && cursor <= &end {
+                    // Dango: an "a" object (`inclusive` false, see the Vim keys) takes the white space after the
+                    // word, or before it where none follows, as Vim's `aw` does.
+                    let (start, end) = if inclusive { (start, end) } else { self.with_blanks(start, end) };
                     EditRange::inclusive(start, end, TargetShape::CharWise).into()
                 } else {
                     None

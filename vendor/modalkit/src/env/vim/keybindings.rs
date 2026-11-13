@@ -1571,9 +1571,10 @@ fn default_keys<I: ApplicationInfo>() -> Vec<(MappedModes, &'static str, InputSt
         ( NXMAP, ":", cmdbar_focus!(CommandType::Command, VimMode::Normal) ),
 
         // Visual, Operator Pending mode keys
-        ( VOMAP, "aw", edit_range_end!(RangeType::Word(WordStyle::Little)) ),
+        // Dango: "aw" and "aW" pass `false`, which `EditRope::range` takes as "with the white space around".
+        ( VOMAP, "aw", edit_range_end!(RangeType::Word(WordStyle::Little), false) ),
         ( VOMAP, "iw", edit_range_end!(RangeType::Word(WordStyle::Little)) ),
-        ( VOMAP, "aW", edit_range_end!(RangeType::Word(WordStyle::Big)) ),
+        ( VOMAP, "aW", edit_range_end!(RangeType::Word(WordStyle::Big), false) ),
         ( VOMAP, "iW", edit_range_end!(RangeType::Word(WordStyle::Big)) ),
         ( VOMAP, "as", edit_range_end!(RangeType::Sentence) ),
         ( VOMAP, "is", edit_range_end!(RangeType::Sentence) ),
