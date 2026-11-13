@@ -1,0 +1,2 @@
+{"Current":false,"Description":"Current DOCKER_HOST based configuration","DockerEndpoint":"unix:///var/run/docker.sock","Error":"","Name":"default"}
+{"Current":true,"Description":"Docker Desktop","DockerEndpoint":"unix:///Users/Sven/.docker/run/docker.sock","Error":"","Name":"desktop-linux"}

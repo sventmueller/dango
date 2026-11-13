@@ -19,6 +19,7 @@ mod refresh;
 mod reveal;
 mod rows;
 mod sheets;
+pub use sheets::confirm_delete;
 mod stashes;
 use ide_git::panel as text;
 mod toolbar;

@@ -18,6 +18,7 @@ ide-dap = { path = "crates/ide-dap" }
 ide-document = { path = "crates/ide-document" }
 ide-git = { path = "crates/ide-git" }
 ide-lsp = { path = "crates/ide-lsp" }
+ide-docker = { path = "crates/ide-docker" }
 ide-test = { path = "crates/ide-test" }
 ide-vim = { path = "crates/ide-vim" }
 ide-net = { path = "crates/ide-net" }
@@ -117,6 +118,7 @@ ide-dap.workspace = true
 ide-document.workspace = true
 ide-git.workspace = true
 ide-lsp.workspace = true
+ide-docker.workspace = true
 ide-test.workspace = true
 ide-vim.workspace = true
 ide-net.workspace = true

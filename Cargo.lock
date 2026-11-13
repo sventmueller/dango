@@ -1515,6 +1515,7 @@ dependencies = [
  "ide-claude",
  "ide-core",
  "ide-dap",
+ "ide-docker",
  "ide-document",
  "ide-git",
  "ide-lsp",
@@ -1614,6 +1615,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "ide-docker"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
