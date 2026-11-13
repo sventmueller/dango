@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Svazek Dockeru";
 "Volumes" = "Svazky";
 "„{}“ löschen?" = "Smazat „{}“?";
+"Agent-Befehl" = "Příkaz agenta";

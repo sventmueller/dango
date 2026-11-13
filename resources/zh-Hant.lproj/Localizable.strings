@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Docker 磁碟區";
 "Volumes" = "磁碟區";
 "„{}“ löschen?" = "要刪除「{}」嗎？";
+"Agent-Befehl" = "代理程式指令";

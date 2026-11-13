@@ -175,6 +175,10 @@ fn next_question(view: &EditorTextView) -> u64 {
 }
 
 fn spawn(job: impl FnOnce() + Send + 'static) {
+    let job = move || {
+        ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
+        job();
+    };
     if let Err(error) = std::thread::Builder::new().name("ide-git-marks".into()).spawn(job) {
         crate::diag::report("comparing with the last commit", error);
     }

@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Том Docker";
 "Volumes" = "Тома";
 "„{}“ löschen?" = "Удалить «{}»?";
+"Agent-Befehl" = "Команда агента";

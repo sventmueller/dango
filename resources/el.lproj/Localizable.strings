@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Volume Docker";
 "Volumes" = "Volume";
 "„{}“ löschen?" = "Διαγραφή του «{}»;";
+"Agent-Befehl" = "Εντολή πράκτορα";

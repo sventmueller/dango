@@ -27,6 +27,8 @@ pub enum Kind {
     Test,
     /// Anything else, such as an installer.
     Tool,
+    /// A command an agent runs through the app, such as the own agent's shell tool.
+    AgentCommand,
 }
 
 /// How the supervisor knows a process.
@@ -113,7 +115,12 @@ struct Register {
     entries: BTreeMap<ProcessId, Entry>,
     listeners: Vec<Listener>,
     ended: VecDeque<(ProcessId, Ending)>,
+    /// Whether a thread lowers the commands agents run.
+    governed: bool,
 }
+
+/// How often the commands agents started are looked for.
+const GOVERN_EVERY: Duration = Duration::from_secs(1);
 
 /// Keeps every process the app starts, each in a process group of its own so that ending it also ends what it started.
 ///
@@ -155,13 +162,16 @@ impl Supervisor {
         let mut child = command.spawn()?;
         let (stdin, stdout, stderr) = (child.stdin.take(), child.stdout.take(), child.stderr.take());
         let pid = child.id();
+        if let Some(nice) = crate::priority::nice(kind) {
+            crate::priority::lower(pid, nice);
+        }
         let info = self.add(pid, kind, label.into(), Origin::Started);
         let id = info.id;
         let supervisor = self.clone();
-        if let Err(error) = std::thread::Builder::new()
-            .name(format!("wait-{pid}"))
-            .spawn(move || supervisor.wait_for(id, child))
-        {
+        if let Err(error) = std::thread::Builder::new().name(format!("wait-{pid}")).spawn(move || {
+            crate::priority::set_qos(crate::priority::Qos::Utility);
+            supervisor.wait_for(id, child);
+        }) {
             self.abandon(id, pid);
             return Err(error);
         }
@@ -351,7 +361,41 @@ impl Supervisor {
                 graceful: None,
             },
         );
+        let govern = kind == Kind::Agent && !register.governed;
+        register.governed |= govern;
+        drop(register);
+        if govern {
+            self.govern();
+        }
         info
+    }
+
+    /// Lowers, from now on, the commands every agent runs (see `priority::lower_agent_commands`), until the
+    /// supervisor goes.
+    fn govern(&self) {
+        let register = Arc::downgrade(&self.register);
+        let started = ide_core::thread::detach("agent-commands", move || {
+            crate::priority::set_qos(crate::priority::Qos::Utility);
+            let mut lowered = std::collections::HashSet::new();
+            while let Some(register) = register.upgrade() {
+                let agents: Vec<u32> = register
+                    .0
+                    .lock_ignoring_poison()
+                    .entries
+                    .values()
+                    .filter(|e| e.info.kind == Kind::Agent)
+                    .map(|e| e.info.pid)
+                    .collect();
+                drop(register);
+                if !agents.is_empty() || !lowered.is_empty() {
+                    crate::priority::lower_agent_commands(&agents, &mut lowered);
+                }
+                std::thread::sleep(GOVERN_EVERY);
+            }
+        });
+        if let Err(unstarted) = started {
+            ide_core::diag::report("lowering agent commands", unstarted.error);
+        }
     }
 
     /// Kills and reaps a started process nobody can wait for, and takes it off the list unannounced.

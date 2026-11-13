@@ -14,7 +14,7 @@ use crate::util::main_after;
 
 /// Writes the copies into the app's own data folder, apart from the disk lane, where a volume that stopped answering
 /// may hold up every job behind it for minutes.
-static COPIES: Lane = Lane::new("ide-recovery", 1, 64);
+static COPIES: Lane = Lane::with_start("ide-recovery", 1, 64, ide_process::priority::background);
 
 /// How long typing rests before a copy is written.
 const QUIET: Duration = Duration::from_secs(2);

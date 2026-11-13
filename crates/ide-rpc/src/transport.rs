@@ -97,9 +97,10 @@ impl<C: Call> Transport<C> {
             next: AtomicI64::new(1),
         });
         let writer_name = format!("{protocol}-write-{label}");
-        let writer = std::thread::Builder::new()
-            .name(writer_name.clone())
-            .spawn(move || write_all(output, &queue, &writer_name));
+        let writer = std::thread::Builder::new().name(writer_name.clone()).spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+            write_all(output, &queue, &writer_name);
+        });
         let timer = Arc::clone(&transport);
         let started = writer.and_then(|_| {
             std::thread::Builder::new()
@@ -109,9 +110,10 @@ impl<C: Call> Transport<C> {
         let reader = Arc::clone(&transport);
         let read_name = format!("{protocol}-read-{label}");
         let started = started.and_then(|_| {
-            std::thread::Builder::new()
-                .name(read_name.clone())
-                .spawn(move || read_all(input, &reader, &*receiver, &read_name))
+            std::thread::Builder::new().name(read_name.clone()).spawn(move || {
+                ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+                read_all(input, &reader, &*receiver, &read_name);
+            })
         });
         if let Err(error) = started {
             transport.close();

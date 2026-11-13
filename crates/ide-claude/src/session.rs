@@ -539,13 +539,19 @@ fn spawn_threads(
 ) -> std::io::Result<()> {
     std::thread::Builder::new()
         .name("claude-writer".into())
-        .spawn(move || write_lines(stdin, &rx))?;
+        .spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+            write_lines(stdin, &rx);
+        })?;
     let stderr_reader = tail::collect(stderr, stderr_tail)?;
     *shared.stderr_reader.lock_ignoring_poison() = Some(stderr_reader);
     let reader = shared.clone();
     std::thread::Builder::new()
         .name("claude-reader".into())
-        .spawn(move || reader.read(stdout))?;
+        .spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+            reader.read(stdout);
+        })?;
     Ok(())
 }
 

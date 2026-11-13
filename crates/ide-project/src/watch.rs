@@ -103,9 +103,10 @@ impl Watcher {
             lost,
             open: open.clone(),
         };
-        std::thread::Builder::new()
-            .name("ide-watch".into())
-            .spawn(move || gather.run(&received, on_event))?;
+        std::thread::Builder::new().name("ide-watch".into()).spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
+            gather.run(&received, on_event);
+        })?;
         Ok(Watcher {
             root,
             open,

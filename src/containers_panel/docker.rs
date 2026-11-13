@@ -80,6 +80,7 @@ pub fn watch(
     std::thread::Builder::new()
         .name("docker-events".into())
         .spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
             if let Some(stdout) = stdout {
                 for read in BufReader::new(stdout).lines() {
                     match read {

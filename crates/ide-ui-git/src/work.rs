@@ -12,7 +12,7 @@ use ide_process::Supervisor;
 use ide_ui_common::util::main_soon;
 
 /// Local git work, one job at a time, so that a status read after a change sees it.
-static LOCAL: Lane = Lane::new("ide-git", 1, 64);
+static LOCAL: Lane = Lane::with_start("ide-git", 1, 64, ide_process::priority::utility);
 
 static GIT: OnceLock<Git> = OnceLock::new();
 
@@ -65,6 +65,7 @@ pub fn long<T: Send + 'static, D: FnOnce(Option<T>) + Send + 'static>(
     let slot = Arc::new(Mutex::new(Some(done)));
     let theirs = slot.clone();
     let spawned = std::thread::Builder::new().name("ide-git-long".into()).spawn(move || {
+        ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
         let result = ide_core::lane::contained(work);
         if let Some(done) = theirs.lock_ignoring_poison().take() {
             main_soon(move || done(result));

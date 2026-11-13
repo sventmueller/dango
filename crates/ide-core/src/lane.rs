@@ -10,6 +10,7 @@ pub struct Lane {
     name: &'static str,
     workers: usize,
     capacity: usize,
+    start: fn(),
     jobs: OnceLock<SyncSender<Job>>,
 }
 
@@ -20,10 +21,16 @@ pub struct Full;
 impl Lane {
     /// A lane of `workers` threads called `name` that holds up to `capacity` waiting jobs.
     pub const fn new(name: &'static str, workers: usize, capacity: usize) -> Lane {
+        Lane::with_start(name, workers, capacity, nothing)
+    }
+
+    /// A lane as `new` whose threads first call `start`, such as to set how urgent their work is.
+    pub const fn with_start(name: &'static str, workers: usize, capacity: usize, start: fn()) -> Lane {
         Lane {
             name,
             workers,
             capacity,
+            start,
             jobs: OnceLock::new(),
         }
     }
@@ -66,6 +73,7 @@ impl Lane {
             let rx = Arc::new(Mutex::new(rx));
             for n in 0..self.workers.max(1) {
                 let rx = rx.clone();
+                let start = self.start;
                 let name = if self.workers <= 1 {
                     self.name.to_string()
                 } else {
@@ -74,6 +82,7 @@ impl Lane {
                 std::thread::Builder::new()
                     .name(name)
                     .spawn(move || {
+                        start();
                         while let Ok(Ok(job)) = rx.lock().map(|rx| rx.recv()) {
                             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
                         }
@@ -84,6 +93,8 @@ impl Lane {
         })
     }
 }
+
+fn nothing() {}
 
 /// Runs `f`; `None` if it panicked.
 pub fn contained<T>(f: impl FnOnce() -> T) -> Option<T> {

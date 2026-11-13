@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Docker-volym";
 "Volumes" = "Volymer";
 "„{}“ löschen?" = "Vill du radera ”{}”?";
+"Agent-Befehl" = "Agentkommando";

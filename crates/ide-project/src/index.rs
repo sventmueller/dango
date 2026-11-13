@@ -478,13 +478,17 @@ impl QuickOpen {
             closed: Cancel::new(),
         });
         let indexer = shared.clone();
-        std::thread::Builder::new()
-            .name("ide-index".into())
-            .spawn(move || indexer.keep_index(&on_indexed))?;
+        std::thread::Builder::new().name("ide-index".into()).spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
+            indexer.keep_index(&on_indexed);
+        })?;
         let answerer = shared.clone();
         std::thread::Builder::new()
             .name("ide-quick-open".into())
-            .spawn(move || answerer.answer_queries())?;
+            .spawn(move || {
+                ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+                answerer.answer_queries();
+            })?;
         Ok(QuickOpen { shared })
     }
 

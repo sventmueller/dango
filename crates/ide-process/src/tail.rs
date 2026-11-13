@@ -81,6 +81,7 @@ impl Collecting {
 pub fn collect(mut reader: impl Read + Send + 'static, tail: Arc<Mutex<Tail>>) -> std::io::Result<Collecting> {
     let (finished, done) = channel();
     std::thread::Builder::new().name("tail".into()).spawn(move || {
+        crate::priority::set_qos(crate::priority::Qos::Utility);
         let mut buffer = [0u8; 8192];
         while let Ok(n) = reader.read(&mut buffer) {
             if n == 0 {

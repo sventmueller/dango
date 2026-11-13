@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Docker 卷";
 "Volumes" = "卷";
 "„{}“ löschen?" = "要删除“{}”吗？";
+"Agent-Befehl" = "智能体命令";

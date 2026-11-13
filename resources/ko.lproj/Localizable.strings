@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "Docker 볼륨";
 "Volumes" = "볼륨";
 "„{}“ löschen?" = "‘{}’을(를) 삭제하겠습니까?";
+"Agent-Befehl" = "에이전트 명령";

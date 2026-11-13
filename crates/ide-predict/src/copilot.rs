@@ -174,7 +174,10 @@ impl Copilot {
         let (jobs, queue) = channel::<Job>();
         std::thread::Builder::new()
             .name("copilot-predict".into())
-            .spawn(move || queue.into_iter().for_each(|job| job()))?;
+            .spawn(move || {
+                ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+                queue.into_iter().for_each(|job| job());
+            })?;
         let starting = (server.clone(), shared.clone());
         let started = ide_core::thread::detach("copilot-start", move || {
             let (server, shared) = starting;

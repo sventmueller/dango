@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "وحدة تخزين Docker";
 "Volumes" = "وحدات التخزين";
 "„{}“ löschen?" = "هل تريد حذف “{}”؟";
+"Agent-Befehl" = "أمر الوكيل";

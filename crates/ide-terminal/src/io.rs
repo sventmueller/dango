@@ -83,6 +83,7 @@ impl Reader {
         std::thread::Builder::new()
             .name("terminal-reader".into())
             .spawn(move || {
+                ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
                 let mut reader = self;
                 let status = reader.serve();
                 reader.finish(status, &supervisor, process);

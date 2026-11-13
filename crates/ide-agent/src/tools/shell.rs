@@ -59,7 +59,7 @@ pub(super) fn run(input: &Value, context: &Context<'_>) -> Result<Outcome, ToolN
     let supervisor = context.workspace.supervisor();
     let label: String = line.chars().take(60).collect();
     let spawned = supervisor
-        .spawn(command(context, line), Kind::Tool, label)
+        .spawn(command(context, line), Kind::AgentCommand, label)
         .map_err(|e| ToolNote::NotStarted(e.to_string()))?;
     let (out, err) = (
         Arc::new(Mutex::new(Tail::new(KEPT))),

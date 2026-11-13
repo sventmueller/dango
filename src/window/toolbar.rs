@@ -62,6 +62,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::DebugAdapter => t("Debug-Adapter"),
         Kind::Tool => t("Werkzeug"),
         Kind::Test => t("Test"),
+        Kind::AgentCommand => t("Agent-Befehl"),
     }
 }
 

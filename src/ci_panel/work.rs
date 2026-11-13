@@ -21,7 +21,7 @@ const TOOL_TIMEOUT: Duration = Duration::from_secs(8);
 /// How long the first job waits for the login shell's environment.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
 
-static LANE: Lane = Lane::new("ide-ci", 2, 32);
+static LANE: Lane = Lane::with_start("ide-ci", 2, 32, ide_process::priority::utility);
 static NETWORK: OnceLock<Arc<dyn Transport>> = OnceLock::new();
 static AUTH: OnceLock<Auth> = OnceLock::new();
 

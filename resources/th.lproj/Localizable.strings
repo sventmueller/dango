@@ -1644,3 +1644,4 @@
 "Docker-Volume" = "วอลุ่ม Docker";
 "Volumes" = "วอลุ่ม";
 "„{}“ löschen?" = "ลบ “{}” หรือไม่";
+"Agent-Befehl" = "คำสั่งของเอเจนต์";

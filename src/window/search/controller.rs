@@ -142,9 +142,10 @@ impl SearchPanel {
             progressive,
         };
         self.model().spawned(cancel.clone(), progressive);
-        let spawned = std::thread::Builder::new()
-            .name("ide-search".into())
-            .spawn(move || run(job, cancel));
+        let spawned = std::thread::Builder::new().name("ide-search".into()).spawn(move || {
+            ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
+            run(job, cancel);
+        });
         if let Err(error) = spawned {
             crate::diag::report("starting a project search", error);
             self.model().spawn_failed();

@@ -177,6 +177,7 @@ fn data(view: &EditorTextView) -> Option<Rc<Loaded>> {
 /// Reads the blame of `path` at `head` on a thread of its own and hands it to the editor `serial`.
 fn read(serial: u64, path: PathBuf, head: String) {
     let job = move || {
+        ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
         let loaded = blame_of(&path, &head);
         main_soon(move || arrived(serial, path, head, loaded));
     };

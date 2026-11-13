@@ -436,6 +436,7 @@ impl Session {
             .map_err(|unstarted| unstarted.error)
             .and_then(|()| {
                 ide_core::thread::detach(&format!("acp-{}", runner.launch.agent), move || {
+                    ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
                     connect(runner, stdin, stdout, closed);
                 })
                 .map_err(|unstarted| unstarted.error)

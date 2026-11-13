@@ -55,6 +55,7 @@ pub(super) fn replace(
         return;
     }
     let spawned = std::thread::Builder::new().name("ide-replace".into()).spawn(move || {
+        ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
         for path in &closed {
             result.count(path, in_file(path, &options, &with, &only));
         }
