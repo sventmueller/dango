@@ -258,8 +258,10 @@ fn stopping_and_dropping_end_the_session_once() {
     session.stop();
     session.stop();
     assert!(session.wait_until_ended(WAIT));
-    let ends: Vec<Event> = rx.try_iter().filter(|e| matches!(e, Event::Ended(_))).collect();
-    assert_eq!(ends.len(), 1);
+    // The ended state wakes waiters before the program is ended and `Ended` is sent.
+    next(&rx, |e| matches!(e, Event::Ended(_)).then_some(()));
+    let later = std::iter::from_fn(|| rx.recv_timeout(std::time::Duration::from_millis(300)).ok());
+    assert_eq!(later.filter(|e| matches!(e, Event::Ended(_))).count(), 0);
     assert_eq!(session.end().unwrap().reason, EndReason::Stopped);
 
     let (session, rx) = start(&script, setup(&script, vec![script.breakpoint(3)]));
