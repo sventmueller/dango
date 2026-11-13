@@ -127,6 +127,33 @@ fn at_cursor() {
                 passed && state("TestFail") == Some(ide_test::State::Failed),
                 format!("{:?}", rows()),
             );
+            debugged();
+        },
+    );
+}
+
+/// Debugging the test at the caret starts a session named after it in the Debug panel, through Delve.
+fn debugged() {
+    let Some(window) = controller() else {
+        return finish(SCENARIO);
+    };
+    crate::tests_panel::debug_at_cursor(&window);
+    let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let polled = seen.clone();
+    wait_within(
+        RUN,
+        move || {
+            let sessions = controller().map(|c| crate::debug::activity(&c)).unwrap_or_default();
+            let found = sessions.iter().any(|(_, name, _)| name.contains("TestPass"));
+            *polled.borrow_mut() = sessions;
+            found
+        },
+        move |started| {
+            check(
+                "debugging the test at the caret starts a session for it",
+                started,
+                format!("{:?}", seen.borrow()),
+            );
             finish(SCENARIO);
         },
     );

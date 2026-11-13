@@ -255,6 +255,14 @@ Beside a file's own server, ESLint checks JavaScript and TypeScript of projects 
 Emmet's abbreviations appear in completion for HTML, CSS and JSX. Dango installs both when you ask; **Settings ›
 General** fixes ESLint's problems on save if you want.
 
+## Tests
+
+The Tests panel lists a folder's tests by package and file with their state: `cargo test` or cargo-nextest, Go,
+pytest, Vitest and Jest. A symbol at each test in the gutter runs it, ⌥-click debugs it, and a failed assert marks its
+line. The Debug menu runs the test at the caret (⌃⌥⌘U), the last tests again (⌃⌥⌘G) or all of them, and debugs the
+test at the caret. Tests run in trusted folders only, since they run the project's code; `cargo test` lists its tests
+when you ask, as listing builds every test program.
+
 ## Debugger
 
 Breakpoints, also with conditions and as logpoints, stepping, threads with their call stacks, variables and watched
@@ -397,7 +405,7 @@ Mac.
 | New file, save, save as | ⌘N, ⌘S, ⇧⌘S |
 | New tab, close tab, next and previous tab | ⌘T, ⌘W, ⇧⌘] and ⇧⌘[ |
 | Open Quickly, search in the project | ⌘P, ⇧⌘F |
-| Files, Search, Agents, Git, Debug, CI | ⌘1 to ⌘6 |
+| Files, Search, Agents, Git, Tests, Debug, CI | ⌘1 to ⌘7 |
 | Show or hide the sidebar, next panel | ⌃⌘S, ⌥⌘\` |
 | Back and forward through edited places | ⌃- and ⌃⇧- |
 | Toggle comment, go to line | ⌘/, ⌃G |
@@ -417,6 +425,7 @@ Mac.
 | Address field, reload, back, forward (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Start or stop dictation | ⌃⌥D |
 | Breakpoint, all breakpoints on or off | ⌘\\, ⌘Y |
+| Run the test at the caret, run the last tests again | ⌃⌥⌘U, ⌃⌥⌘G |
 | Continue, step over, into, out, stop | ⌃⌘Y, F6, F7, F8, ⌘. |
 | Settings | ⌘, |
 
