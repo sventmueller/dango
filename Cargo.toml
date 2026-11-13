@@ -172,7 +172,7 @@ ide-core = { workspace = true, features = ["testing"] }
 splat-i18n.workspace = true
 
 [features]
-selftest = ["ide-acp/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-git/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
+selftest = ["ide-acp/testing", "ide-core/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-git/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
 # Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
 dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak", "ide-ui-agent/dictation"]
 

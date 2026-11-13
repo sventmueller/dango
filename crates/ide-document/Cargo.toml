@@ -22,4 +22,3 @@ similar = { version = "3.2.1", default-features = false, features = ["std"] }
 [dev-dependencies]
 ide-core = { path = "../ide-core", features = ["testing"] }
 proptest = "1.12.0"
-rustix = { version = "1.1.6", features = ["time"] }

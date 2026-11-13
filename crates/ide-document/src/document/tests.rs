@@ -2,6 +2,8 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, Instant};
 
+use ide_core::testing::thread_time;
+
 use super::*;
 use crate::disk::tests::scratch;
 use crate::merge::Choice;
@@ -457,15 +459,6 @@ fn markdown_lines(count: usize) -> String {
     (0..count)
         .map(|n| section[n % section.len()].replace("{n}", &(n / section.len()).to_string()) + "\n")
         .collect()
-}
-
-/// The CPU time of this thread, so other processes competing for the cores do not count against a budget.
-fn thread_time() -> Duration {
-    let now = rustix::time::clock_gettime(rustix::time::ClockId::ThreadCPUTime);
-    Duration::new(
-        u64::try_from(now.tv_sec).unwrap_or(0),
-        u32::try_from(now.tv_nsec).unwrap_or(0),
-    )
 }
 
 /// Per keystroke, in CPU time: the edit, then lexing the visible lines.

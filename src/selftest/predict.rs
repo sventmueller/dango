@@ -741,14 +741,14 @@ fn keystrokes(view: &EditorTextView, stub: &Arc<dyn Provider>) -> ((Duration, Du
         if let Some(window) = view.window() {
             window.displayIfNeeded();
         }
-        let start = super::insets::thread_time();
+        let start = ide_core::testing::thread_time();
         editor::type_text(view, "x");
         predict::settle_now(view);
         insets::settle(view);
         if let Some(window) = view.window() {
             window.displayIfNeeded();
         }
-        let took = super::insets::thread_time().saturating_sub(start);
+        let took = ide_core::testing::thread_time().saturating_sub(start);
         if proposal { with.push(took) } else { without.push(took) }
     }
     let summary = |times: &mut Vec<Duration>| {
