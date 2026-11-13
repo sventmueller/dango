@@ -82,6 +82,8 @@ pub mod keys {
     pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", || false);
     /// Whether editors show the minimap beside the text (E107).
     pub const MINIMAP: Key<bool> = Key::user("minimap", || false);
+    /// How many header lines Sticky Scroll holds at the top of an editor, 0 for none (E108).
+    pub const STICKY_SCROLL_LINES: Key<usize> = Key::user("stickyScrollLines", || 5);
 
     /// Shows the language server's inlay hints, such as inferred types and parameter names, in editors (E83).
     pub const INLAY_HINTS: Key<bool> = Key::user("inlayHints", || true);

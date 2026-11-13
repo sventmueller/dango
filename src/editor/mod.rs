@@ -5,6 +5,7 @@ mod blame_column;
 mod changes;
 mod compare;
 mod conflict;
+mod container;
 mod context_menu;
 mod editing;
 mod fold;
@@ -18,6 +19,7 @@ mod overlay;
 pub mod predict;
 #[cfg(feature = "selftest")]
 mod probe;
+mod sticky;
 pub use overlay::follow as follow_overlay;
 pub mod recovery;
 mod ruler;
@@ -47,6 +49,7 @@ pub use view::EditorTextView;
 #[derive(Default)]
 pub struct EditorState {
     minimap: minimap::Shown,
+    sticky: sticky::Lines,
     comparisons: compare::Comparisons,
     recovery_copies: recovery::RecoveryCopies,
     #[cfg(feature = "selftest")]
@@ -133,6 +136,7 @@ pub fn redraw_gutter(view: &EditorTextView) {
         gutter.setNeedsDisplay(true);
     }
     minimap::redraw(view);
+    sticky::refresh(view);
 }
 
 /// The rectangle of line `line` across the whole width of `editor`, if TextKit has laid it out.
@@ -428,7 +432,7 @@ fn add_tab(
     scroll.setDocumentView(Some(&view));
     scroll.setHasHorizontalScroller(!wraps(&view));
     follow_width(&scroll, &view);
-    let (container, gutter) = editor_container(mtm, &scroll, &view);
+    let (container, gutter) = container::editor_container(mtm, &scroll, &view);
     crate::lsp::follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
     overlay::attach(&view);
@@ -449,78 +453,6 @@ fn add_tab(
         window.makeFirstResponder(Some(&view));
     }
     view
-}
-
-/// The scroll view with the line numbers beside it and the status bar of the language server below.
-fn editor_container(
-    mtm: MainThreadMarker,
-    scroll: &objc2_app_kit::NSScrollView,
-    view: &EditorTextView,
-) -> (Retained<objc2_app_kit::NSView>, Retained<ruler::LineNumbers>) {
-    let gutter = ruler::LineNumbers::new(mtm, scroll, view);
-    let blame = blame_column::BlameColumn::new(mtm, scroll, view);
-    let status = crate::lsp::status::bar(mtm, view);
-    let bar = conflict::Bar::new(mtm);
-    let map = minimap::Minimap::new(mtm, scroll, view);
-    let container = objc2_app_kit::NSView::new(mtm);
-    container.addSubview(&map);
-    map.setTranslatesAutoresizingMaskIntoConstraints(false);
-    container.addSubview(&blame);
-    container.addSubview(&gutter);
-    container.addSubview(scroll);
-    container.addSubview(&status);
-    container.addSubview(bar.view());
-    bar.view().setTranslatesAutoresizingMaskIntoConstraints(false);
-    blame.setTranslatesAutoresizingMaskIntoConstraints(false);
-    gutter.setTranslatesAutoresizingMaskIntoConstraints(false);
-    scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
-    status.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        bar.view().topAnchor().constraintEqualToAnchor(&container.topAnchor()),
-        bar.view()
-            .leadingAnchor()
-            .constraintEqualToAnchor(&container.leadingAnchor()),
-        bar.view()
-            .trailingAnchor()
-            .constraintEqualToAnchor(&container.trailingAnchor()),
-        // Code and its line numbers stay left to right in a right-to-left interface (E3); the bars around follow it.
-        blame.leftAnchor().constraintEqualToAnchor(&container.leftAnchor()),
-        blame.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
-        blame.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
-        gutter.leftAnchor().constraintEqualToAnchor(&blame.rightAnchor()),
-        gutter.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
-        gutter.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
-        scroll.leftAnchor().constraintEqualToAnchor(&gutter.rightAnchor()),
-        scroll.rightAnchor().constraintEqualToAnchor(&map.leftAnchor()),
-        map.rightAnchor().constraintEqualToAnchor(&container.rightAnchor()),
-        map.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
-        map.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
-        scroll.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
-        scroll.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
-        status
-            .leadingAnchor()
-            .constraintEqualToAnchor(&container.leadingAnchor()),
-        status
-            .trailingAnchor()
-            .constraintEqualToAnchor(&container.trailingAnchor()),
-        status.bottomAnchor().constraintEqualToAnchor(&container.bottomAnchor()),
-        status
-            .heightAnchor()
-            .constraintEqualToConstant(crate::lsp::status::HEIGHT),
-    ] {
-        constraint.setActive(true);
-    }
-    let width = gutter.widthAnchor().constraintEqualToConstant(0.0);
-    width.setActive(true);
-    gutter.set_width_constraint(width);
-    let width = blame.widthAnchor().constraintEqualToConstant(0.0);
-    width.setActive(true);
-    blame.set_width_constraint(width);
-    let width = map.widthAnchor().constraintEqualToConstant(0.0);
-    width.setActive(true);
-    map.set_width_constraint(width);
-    *view.ivars().bar.borrow_mut() = Some(bar);
-    (container, gutter)
 }
 
 fn configure(view: &EditorTextView, font_size: f64) {

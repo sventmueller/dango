@@ -16,6 +16,7 @@ mod lease;
 mod markdown;
 mod navigate;
 mod outline;
+pub use outline::scopes as symbol_scopes;
 #[cfg(feature = "selftest")]
 mod probe;
 mod project_symbols;

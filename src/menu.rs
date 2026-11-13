@@ -364,6 +364,7 @@ fn code_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             entry(t("Alle ausklappen"), sel!(ideUnfoldAll:), "edit.unfoldAll"),
             separator(mtm),
             item(mtm, t("Minimap"), Some(sel!(ideToggleMinimap:)), ""),
+            item(mtm, t("Sticky Scroll"), Some(sel!(ideToggleStickyScroll:)), ""),
             separator(mtm),
             entry(
                 t("Cursor darüber hinzufügen"),

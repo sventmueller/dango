@@ -31,6 +31,11 @@ pub struct Folds {
     hidden: Vec<Range<usize>>,
 }
 
+/// The ranges that can fold, from the server or the indentation, as first line and last hidden line.
+pub fn indent_ranges(view: &EditorTextView) -> Vec<(usize, usize)> {
+    available(view)
+}
+
 /// The ranges that can fold, as first line and last hidden line, ordered by first line.
 fn available(view: &EditorTextView) -> Vec<(usize, usize)> {
     let revision = view.document().revision();

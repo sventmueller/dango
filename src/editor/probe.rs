@@ -13,6 +13,7 @@ use crate::util::{constant, ns};
 use crate::window::WindowController;
 
 pub use super::minimap::{click as click_minimap, probe as minimap};
+pub use super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
 
 /// The logical lines `view` shows, the first to the last on screen, for the self-test.
 pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {

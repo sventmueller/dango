@@ -91,6 +91,7 @@ mod settings_general;
 mod settings_pages;
 mod settings_toolbar;
 mod split;
+mod sticky;
 mod stored_rules;
 mod window_commands;
 mod worktree;

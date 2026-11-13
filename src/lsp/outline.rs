@@ -16,6 +16,8 @@ use crate::util::main_soon;
 #[derive(Debug, Clone)]
 pub struct Crumb {
     range: Range<usize>,
+    /// Where the symbol's name starts, the line a sticky header shows.
+    head: Range<usize>,
     name: String,
 }
 
@@ -23,8 +25,10 @@ pub struct Crumb {
 fn flatten(view: &EditorTextView, symbols: &[DocumentSymbol], out: &mut Vec<Crumb>) {
     for symbol in symbols {
         let range = super::text::range(view.document().text(), symbol.range);
+        let head = super::text::range(view.document().text(), symbol.selection_range);
         out.push(Crumb {
             range,
+            head,
             name: symbol.name.clone(),
         });
         if let Some(children) = &symbol.children {
@@ -50,6 +54,7 @@ pub fn refresh(view: &EditorTextView, server: &Server, uri: &Uri) {
             flatten(&view, &symbols, &mut crumbs);
             view.ivars().lsp.borrow_mut().crumbs = crumbs;
             super::status::refresh(&view);
+            crate::editor::redraw_gutter(&view);
         });
     });
     let started = server.folding_ranges(uri, move |answer| {
@@ -74,6 +79,7 @@ pub fn refresh(view: &EditorTextView, server: &Server, uri: &Uri) {
 pub fn shift(state: &mut ViewState, change: &Change) {
     for crumb in &mut state.crumbs {
         super::decorate::follow(&mut crumb.range, change);
+        super::decorate::follow(&mut crumb.head, change);
     }
 }
 
@@ -95,4 +101,27 @@ pub fn breadcrumbs(view: &EditorTextView) -> Vec<String> {
         .filter(|c| c.range.start <= cursor && cursor <= c.range.end)
         .map(|c| c.name.clone())
         .collect()
+}
+
+/// The symbols of the document as the line of each name and the line its range ends on, in UTF-16 offsets turned into
+/// lines; `None` while the server sent none.
+pub fn scopes(view: &EditorTextView) -> Option<Vec<(usize, usize)>> {
+    let state = view.ivars().lsp.borrow();
+    if state.crumbs.is_empty() {
+        return None;
+    }
+    let document = view.document();
+    let text = document.text();
+    let line = |offset: usize| {
+        text.utf16_to_byte(offset.min(text.len_utf16()))
+            .ok()
+            .map(|b| text.line_of(b))
+    };
+    Some(
+        state
+            .crumbs
+            .iter()
+            .filter_map(|c| Some((line(c.head.start)?, line(c.range.end)?)))
+            .collect(),
+    )
 }
