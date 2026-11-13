@@ -19,10 +19,11 @@ pub enum Panel {
     Ci,
     Debug,
     Tests,
+    Containers,
 }
 
 impl Panel {
-    pub const ALL: [Panel; 7] = [
+    pub const ALL: [Panel; 8] = [
         Panel::Files,
         Panel::Search,
         Panel::Agents,
@@ -30,6 +31,7 @@ impl Panel {
         Panel::Tests,
         Panel::Debug,
         Panel::Ci,
+        Panel::Containers,
     ];
 
     /// The tag of the menu items and buttons that show it; windows save it, so it stays when the order changes.
@@ -42,6 +44,7 @@ impl Panel {
             Panel::Ci => 5,
             Panel::Debug => 6,
             Panel::Tests => 7,
+            Panel::Containers => 8,
         }
     }
 
@@ -58,6 +61,7 @@ impl Panel {
             Panel::Ci => t("CI"),
             Panel::Debug => t("Debuggen"),
             Panel::Tests => t("Tests"),
+            Panel::Containers => t("Container"),
         }
     }
 
@@ -71,6 +75,7 @@ impl Panel {
             Panel::Ci => "ci",
             Panel::Debug => "debug",
             Panel::Tests => "tests",
+            Panel::Containers => "containers",
         }
     }
 
@@ -83,6 +88,7 @@ impl Panel {
             Panel::Ci => "checkmark.seal",
             Panel::Debug => "ladybug",
             Panel::Tests => "checklist",
+            Panel::Containers => "shippingbox",
         }
     }
 }

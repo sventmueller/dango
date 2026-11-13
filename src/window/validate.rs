@@ -12,6 +12,9 @@ impl WindowController {
         if action == Some(sel!(idePlanComment:)) {
             return crate::agent::plan::keyboard_target(self).is_some();
         }
+        if action == Some(sel!(ideContainerCommand:)) {
+            return crate::containers_panel::validate(self, item);
+        }
         if action == Some(sel!(ideShowSessionSubagents:)) {
             return crate::agent::can_show_work(self, crate::activity::Part::Subagents);
         }

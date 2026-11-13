@@ -59,6 +59,7 @@ pub const DEFAULTS: &[Binding] = &[
     bind("panel.tests", "cmd+5"),
     bind("panel.debug", "cmd+6"),
     bind("panel.ci", "cmd+7"),
+    bind("panel.containers", "cmd+8"),
     bind("test.runAtCursor", "ctrl+alt+cmd+u"),
     bind("test.rerun", "ctrl+alt+cmd+g"),
     bind("window.nextPanel", "alt+cmd+`"),

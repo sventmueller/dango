@@ -5,6 +5,7 @@ mod app;
 mod browser;
 mod ci_panel;
 mod command_line;
+mod containers_panel;
 mod context;
 mod debug;
 mod diag;

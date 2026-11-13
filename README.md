@@ -79,11 +79,13 @@ of project it happened with.
   - [Checkpoints and worktrees](#checkpoints-and-worktrees)
 - [Editor](#editor)
 - [Language servers](#language-servers)
+- [Tests](#tests)
 - [Debugger](#debugger)
 - [Terminal](#terminal)
 - [Browser](#browser)
 - [Git](#git)
 - [CI](#ci)
+- [Containers](#containers)
 - [Markdown](#markdown)
 - [Dictation](#dictation)
 - [Trust](#trust)
@@ -106,7 +108,7 @@ of project it happened with.
 - **Review and rewind.** Before each prompt Dango keeps a checkpoint. What an agent changed can be reviewed and rewound
   per message, and a thread can work in a git worktree of its own and hand its work over by merge or cherry-pick.
 - **One window per folder.** Files, terminals, browser pages, AI threads, diffs and previews are macOS tabs of that
-  window. The sidebar holds Files, Search, Agents, Git, Debug and CI.
+  window. The sidebar holds Files, Search, Agents, Git, Tests, Debug, CI and Containers.
 - **A real code editor.** Syntax colours, several carets, folding, `.editorconfig`, language servers for 17 languages
   with completion, go to definition, references, rename, quick fixes and hierarchies, and edit predictions from GitHub
   Copilot or a local model.
@@ -156,8 +158,8 @@ administrator rights; `~/.local/bin` must be on your `PATH`. Then `dango .` open
 
 1. **Open a folder** with ⌘O or `dango <folder>`. The first time, Dango asks whether you trust it (see
    [Trust](#trust)).
-2. **The sidebar** switches between Files (⌘1), Search (⌘2), Agents (⌘3), Git (⌘4), Debug (⌘5) and CI (⌘6); a
-   right-click hides the ones you do not use, and ⌃⌘S folds the sidebar away.
+2. **The sidebar** switches between Files (⌘1), Search (⌘2), Agents (⌘3), Git (⌘4), Tests (⌘5), Debug (⌘6), CI (⌘7)
+   and Containers (⌘8); a right-click hides the ones you do not use, and ⌃⌘S folds the sidebar away.
 3. **Every document is a tab** of the folder's window, macOS's own tabs. The “+” at the end of the tab bar and ⌘T offer
    a new file, a terminal, the browser and each installed agent, also in a git worktree of its own; holding the “+”
    shows the same as a menu.
@@ -310,6 +312,16 @@ GitHub Actions and GitLab CI, also GitHub Enterprise Server and self-managed Git
 The token comes from the keychain, `gh` or `glab`, the login shell's environment, or one you enter in
 **Settings › CI**.
 
+## Containers
+
+The Containers panel shows Docker's Compose projects with their services, single containers, images and volumes, and
+follows Docker's events as they happen. A Compose file of the folder appears as a project even before any of its
+containers exists. Containers start, stop and restart; their logs and a shell open in terminal tabs, and a published
+port opens in the browser tab. Deleting a container, an image or a volume, and cleaning up unused data, ask first.
+Compose's up, down and pull run in trusted folders only, since Compose builds and runs what the project describes. The
+panel's menu chooses the Docker context for the window without changing the one your shells use; the same commands are
+in the Containers menu. It needs the `docker` command line, Docker 24.0.6 or later.
+
 ## Markdown
 
 - **Preview.** A Markdown file opens with its preview beside it; **View › Show/Hide Preview Beside** (⇧⌘V) closes and
@@ -405,7 +417,7 @@ Mac.
 | New file, save, save as | ⌘N, ⌘S, ⇧⌘S |
 | New tab, close tab, next and previous tab | ⌘T, ⌘W, ⇧⌘] and ⇧⌘[ |
 | Open Quickly, search in the project | ⌘P, ⇧⌘F |
-| Files, Search, Agents, Git, Tests, Debug, CI | ⌘1 to ⌘7 |
+| Files, Search, Agents, Git, Tests, Debug, CI, Containers | ⌘1 to ⌘8 |
 | Show or hide the sidebar, next panel | ⌃⌘S, ⌥⌘\` |
 | Back and forward through edited places | ⌃- and ⌃⇧- |
 | Toggle comment, go to line | ⌘/, ⌃G |

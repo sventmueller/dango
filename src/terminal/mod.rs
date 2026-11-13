@@ -30,6 +30,7 @@ pub fn folder_of_tab(controller: &WindowController, tab: isize) -> Option<std::p
     all_views()
         .into_iter()
         .find(|view| view.window_id() == controller.id() && view.tab() == Some(tab))
+        .filter(|view| !view.passing())
         .map(|view| view.cwd())
 }
 
@@ -64,6 +65,20 @@ pub fn open_running(
         return then(None);
     };
     type_when_started(view.id(), line, Box::new(then), 100);
+}
+
+/// Opens a terminal tab in `cwd` that runs the shell command `line` and does not open again after a restart, as the
+/// Containers panel's logs and shells (G30); its title is `title`.
+pub fn open_passing(controller: &WindowController, cwd: &Path, title: &str, line: String) {
+    open_tab(controller, Some(cwd));
+    let Some(view) = of_window(controller).into_iter().next() else {
+        return;
+    };
+    view.set_passing();
+    if let Some(tab) = view.tab() {
+        controller.set_tab_title(tab, title);
+    }
+    type_when_started(view.id(), line + "\n", Box::new(|_| {}), 100);
 }
 
 /// Types `line` into the shell of terminal `id` once it has started, trying `tries` more times.

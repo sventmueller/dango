@@ -181,6 +181,8 @@ impl TestsPanel {
         let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
         let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("tests"));
         column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
+        // The table scales its columns by their share of its width, so the one column starts as wide as the table.
+        column.setWidth(frame.size.width);
         table.addTableColumn(&column);
         table.setHeaderView(None);
         table.setStyle(NSTableViewStyle::SourceList);

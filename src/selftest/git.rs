@@ -243,7 +243,7 @@ pub(super) fn answer_sheet(root: &Path, response: NSModalResponse, text: Option<
 }
 
 /// The views of the sheet on the window of `root`, depth first.
-fn sheet_views(root: &Path) -> Vec<Retained<NSView>> {
+pub(super) fn sheet_views(root: &Path) -> Vec<Retained<NSView>> {
     fn collect(view: &NSView, into: &mut Vec<Retained<NSView>>) {
         for subview in view.subviews().iter() {
             collect(&subview, into);
@@ -278,7 +278,7 @@ pub(super) fn sheet_ready(controller: &WindowController) -> bool {
 }
 
 /// The title of the button Return presses in the sheet on the window of `root`.
-fn sheet_default_button(root: &Path) -> Option<String> {
+pub(super) fn sheet_default_button(root: &Path) -> Option<String> {
     // An alert begun while the app is not active keeps its default here and clears the button's key equivalent.
     let sheet = window_of(root).and_then(|c| c.window()).and_then(|w| w.attachedSheet());
     if let Some(cell) = sheet.and_then(|sheet| sheet.defaultButtonCell()) {

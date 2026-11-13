@@ -43,6 +43,8 @@ pub struct Ivars {
     window: u64,
     font_size: Cell<f64>,
     pub(super) tab: Cell<Option<isize>>,
+    /// Its tab does not open again after a restart, since it shows a command, not a shell of its own (G30).
+    passing: Cell<bool>,
     pub(super) session: RefCell<Option<Session>>,
     fonts: RefCell<Option<Rc<Fonts>>>,
     pub(super) theme: RefCell<Theme>,
@@ -502,6 +504,7 @@ impl TerminalView {
             window,
             font_size: Cell::new(settings.get(&keys::FONT_SIZE)),
             tab: Cell::new(None),
+            passing: Cell::new(false),
             session: RefCell::new(None),
             fonts: RefCell::new(None),
             theme: RefCell::new(palette::theme(false, false)),
@@ -564,6 +567,15 @@ impl TerminalView {
     /// The id of the view's tab.
     pub fn tab(&self) -> Option<isize> {
         self.ivars().tab.get()
+    }
+
+    /// Keeps its tab from opening again after a restart.
+    pub fn set_passing(&self) {
+        self.ivars().passing.set(true);
+    }
+
+    pub fn passing(&self) -> bool {
+        self.ivars().passing.get()
     }
 
     /// The working directory the shell last reported, else the one it started in.

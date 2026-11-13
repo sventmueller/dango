@@ -24,6 +24,7 @@ mod blame;
 mod browser;
 mod browser_dev;
 mod browser_view;
+mod containers;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;
@@ -357,7 +358,14 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         !controller.shown_symbols().contains(&Panel::Git) && stored == ["git"] && after == Some(Panel::Files),
         format!("{:?}, stored {stored:?}, showing {after:?}", controller.shown_symbols()),
     );
-    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Debug, Panel::Ci] {
+    for panel in [
+        Panel::Files,
+        Panel::Search,
+        Panel::Agents,
+        Panel::Tests,
+        Panel::Debug,
+        Panel::Containers,
+    ] {
         window::toggle_activity_symbol(panel);
     }
     let (ticked, enabled) = symbol_menu_state(controller, Panel::Ci);
@@ -373,7 +381,15 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         window.displayIfNeeded();
         snapshot(&window, "probe-symbols-hidden");
     }
-    for panel in [Panel::Files, Panel::Search, Panel::Agents, Panel::Git, Panel::Debug] {
+    for panel in [
+        Panel::Files,
+        Panel::Search,
+        Panel::Agents,
+        Panel::Git,
+        Panel::Tests,
+        Panel::Debug,
+        Panel::Containers,
+    ] {
         window::toggle_activity_symbol(panel);
     }
     controller.activate_panel(Panel::Agents);

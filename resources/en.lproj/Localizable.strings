@@ -1650,3 +1650,34 @@
 "Letzten Testlauf wiederholen" = "Run Last Tests Again";
 "Test ausführen" = "Run Test";
 "Test debuggen" = "Debug Test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Refresh";
+"Aufräumen" = "Clean Up";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Stop (down)";
+"Compose: Images holen (pull)" = "Compose: Pull Images (pull)";
+"Compose: Starten (up)" = "Compose: Start (up)";
+"Container" = "Containers";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "The image is removed from this Docker; it can be pulled or built again.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "The volume and all data in it are deleted. This cannot be undone.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "The container is removed; whatever it stored outside volumes is lost.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker is not installed. Install Docker Desktop or the docker command line, and this panel shows containers, images and volumes.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker is not running. Start Docker; the panel tries again by itself.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} is too old; the panel needs 24.0.6 or later.";
+"Docker-Befehl fehlgeschlagen" = "Docker Command Failed";
+"Docker-Kontext dieses Fensters" = "Docker context of this window";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Stopped containers, unused networks, untagged images and the build cache are deleted. Volumes stay.";
+"Image" = "Image";
+"Images" = "Images";
+"Logs anzeigen" = "Show Logs";
+"Logs: {}" = "Logs: {}";
+"Port im Browser öffnen" = "Open Port in Browser";
+"Shell öffnen" = "Open Shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Partly running";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Clean up unused Docker data in “{}”?";
+"Ungenutztes aufräumen …" = "Clean Up Unused …";
+"Volume" = "Volume";
+"Volumes" = "Volumes";
+"„{}“ löschen?" = "Delete “{}”?";

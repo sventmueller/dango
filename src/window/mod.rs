@@ -224,6 +224,11 @@ define_class!(
             guarded((), || crate::tests_panel::rerun(self));
         }
 
+        #[unsafe(method(ideContainerCommand:))]
+        fn container_command(&self, sender: Option<&AnyObject>) {
+            guarded((), || crate::containers_panel::perform(self, tag_of(sender)));
+        }
+
         #[unsafe(method(ideTestRunAll:))]
         fn test_run_all(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::tests_panel::run_all(self));

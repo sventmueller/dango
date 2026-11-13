@@ -35,6 +35,7 @@ pub struct AppContext {
     pub site_previews: crate::site_preview::SitePreviews,
     pub settings_sync: crate::settings_sync::SettingsSync,
     pub tests_panels: crate::tests_panel::Panels,
+    pub containers_panels: crate::containers_panel::Panels,
     pub exports: Rc<ide_ui_export::State>,
     pub search_panels: crate::window::SearchPanels,
     pub hierarchy_panels: crate::window::HierarchyPanels,

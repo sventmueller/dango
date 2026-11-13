@@ -175,6 +175,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("prettier-save", prettier::run),
     plain("settings-sync", settings_sync::run),
     limited("tests-panel", tests_panel::run, Duration::from_secs(400)),
+    plain("containers-panel", containers::run),
     Scenario {
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))
