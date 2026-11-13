@@ -8,14 +8,12 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::Bool;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSBezierPath, NSColor, NSEvent, NSFont, NSFontAttributeName, NSForegroundColorAttributeName,
+    NSAccessibility, NSBezierPath, NSColor, NSEvent, NSFontAttributeName, NSForegroundColorAttributeName,
     NSLayoutConstraint, NSLineBreakMode, NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSScrollView,
     NSStringDrawing, NSTextElementProvider, NSTextLayoutFragment, NSTextLayoutFragmentEnumerationOptions, NSView,
     NSViewBoundsDidChangeNotification,
 };
-use objc2_foundation::{
-    NSDictionary, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
-};
+use objc2_foundation::{NSDictionary, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::t;
 
 use super::blame::{self, Line};
@@ -29,6 +27,8 @@ const INSET: f64 = 8.0;
 pub struct ColumnIvars {
     editor: Weak<EditorTextView>,
     width: std::cell::RefCell<Option<Retained<NSLayoutConstraint>>>,
+    /// The scrolling it redraws for, which ends with the column.
+    scrolled: std::cell::OnceCell<crate::util::Observation>,
 }
 
 define_class!(
@@ -73,6 +73,7 @@ impl BlameColumn {
         let this = Self::alloc(mtm).set_ivars(ColumnIvars {
             editor: Weak::from(editor),
             width: std::cell::RefCell::new(None),
+            scrolled: std::cell::OnceCell::new(),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -83,24 +84,15 @@ impl BlameColumn {
         let clip = scroll.contentView();
         clip.setPostsBoundsChangedNotifications(true);
         let column = Weak::from(&*this);
-        let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+        let name = constant!(NSViewBoundsDidChangeNotification);
+        let watch = crate::util::observe(mtm, name, Some(&clip), move |_| {
             if let Some(column) = column.load()
                 && column.frame().size.width > 0.0
             {
                 column.setNeedsDisplay(true);
             }
         });
-        let name = constant!(NSViewBoundsDidChangeNotification);
-        // SAFETY: The block only marks the column for drawing; the weak reference makes it do nothing once it is gone.
-        let observer = unsafe {
-            NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-                Some(name),
-                Some(&clip),
-                None,
-                &block,
-            )
-        };
-        std::mem::forget(observer);
+        let _ = this.ivars().scrolled.set(watch);
         editor.ivars().blame.borrow_mut().view = Some(Weak::from(&*this));
         this
     }
@@ -120,7 +112,7 @@ impl BlameColumn {
                 constant!(NSParagraphStyleAttributeName),
             ],
             &[
-                NSFont::systemFontOfSize(NSFont::smallSystemFontSize()).into(),
+                ide_ui_common::style::small_system().into(),
                 objc2::Message::retain(color).into(),
                 style.into_super().into(),
             ],
@@ -145,37 +137,40 @@ impl BlameColumn {
         let bottom = visible.origin.y + visible.size.height;
         let entries = std::cell::RefCell::new(Vec::new());
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
-            // SAFETY: TextKit keeps the fragment alive for the call.
-            let fragment = unsafe { fragment.as_ref() };
-            let frame = fragment.layoutFragmentFrame();
-            let y = frame.origin.y + origin.y;
-            if y > bottom {
-                return Bool::NO;
-            }
-            let offset = content.offsetFromLocation_toLocation(&document_start, &fragment.rangeInElement().location());
-            let document = editor.document();
-            let Some(line) = usize::try_from(offset)
-                .ok()
-                .and_then(|o| document.text().utf16_to_byte(o).ok())
-                .map(|byte| document.text().line_of(byte))
-            else {
-                return Bool::YES;
-            };
-            let here = lines.get(line).cloned().flatten();
-            let starts = line == 0
-                || entries.borrow().is_empty()
-                || lines.get(line - 1).cloned().flatten().as_ref() != here.as_ref()
-                || super::fold::hidden_by_fold(editor, editor.line_start(line.saturating_sub(1)).unwrap_or(0));
-            if let Some(here) = here.filter(|_| starts) {
-                let top = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(editor)).y;
-                entries.borrow_mut().push(Entry {
-                    line,
-                    top,
-                    height: frame.size.height,
-                    text: entry_text(&here),
-                });
-            }
-            Bool::YES
+            crate::util::guarded(Bool::NO, || {
+                // SAFETY: TextKit keeps the fragment alive for the call.
+                let fragment = unsafe { fragment.as_ref() };
+                let frame = fragment.layoutFragmentFrame();
+                let y = frame.origin.y + origin.y;
+                if y > bottom {
+                    return Bool::NO;
+                }
+                let offset =
+                    content.offsetFromLocation_toLocation(&document_start, &fragment.rangeInElement().location());
+                let document = editor.document();
+                let Some(line) = usize::try_from(offset)
+                    .ok()
+                    .and_then(|o| document.text().utf16_to_byte(o).ok())
+                    .map(|byte| document.text().line_of(byte))
+                else {
+                    return Bool::YES;
+                };
+                let here = lines.get(line).cloned().flatten();
+                let starts = line == 0
+                    || entries.borrow().is_empty()
+                    || lines.get(line - 1).cloned().flatten().as_ref() != here.as_ref()
+                    || super::fold::hidden_by_fold(editor, editor.line_start(line.saturating_sub(1)).unwrap_or(0));
+                if let Some(here) = here.filter(|_| starts) {
+                    let top = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(editor)).y;
+                    entries.borrow_mut().push(Entry {
+                        line,
+                        top,
+                        height: frame.size.height,
+                        text: entry_text(&here),
+                    });
+                }
+                Bool::YES
+            })
         });
         let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
             start.as_deref(),

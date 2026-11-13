@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 ide-core.workspace = true
 ide-product.workspace = true
+splat-i18n.workspace = true
 splat-markdown.workspace = true
 block2.workspace = true
 dispatch2.workspace = true

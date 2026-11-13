@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_agent::stub::{Answer, Stub};
 use ide_agent::{Price, PriceTable, ProviderKind};
@@ -17,9 +17,8 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSControlStateValueOn, NSMenu};
 use serde_json::{Value, json};
 
 use super::agent::{controller_of, picture, tab_of};
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::own_agent::{self, ModelChoice};
-use crate::util::main_after;
 
 const NAME: &str = "own-agent";
 const MODEL: &str = "claude-opus-5-5";
@@ -103,24 +102,15 @@ fn provider() -> Option<Stub> {
     .ok()
 }
 
-fn wait(
-    what: &'static str,
-    started: Instant,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    if ready() {
-        return then();
-    }
-    if started.elapsed() > Duration::from_secs(20) {
-        check(what, false, "waited in vain");
-        return finish(NAME);
-    }
-    main_after(Duration::from_millis(100), move || wait(what, started, ready, then));
-}
-
-fn soon(what: &'static str, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce() + Send + 'static) {
-    wait(what, Instant::now(), ready, then);
+fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    helpers::wait_until(ready, move |ok| {
+        if ok {
+            then();
+        } else {
+            check(what, false, "waited in vain");
+            finish(NAME);
+        }
+    });
 }
 
 pub fn run() {
@@ -132,11 +122,14 @@ pub fn run() {
     let url = stub.url();
     // The stub serves until the app quits.
     std::mem::forget(stub);
-    let root = ide_core::paths::home().join("own-project");
-    let _ = std::fs::create_dir_all(root.join("src"));
-    let _ = std::fs::write(root.join("src/lib.rs"), LIB);
-    let _ = std::fs::write(root.join("AGENTS.md"), "Antworte auf Deutsch.\n");
-    let root = root.canonicalize().unwrap_or(root);
+    let made = helpers::make_project(
+        "own-project",
+        &[("src/lib.rs", LIB), ("AGENTS.md", "Antworte auf Deutsch.\n")],
+    );
+    let Ok(root) = made else {
+        check("the scenario's folder is made", false, "");
+        return finish(NAME);
+    };
     crate::project::trust(&root);
     crate::settings::show_agent(mtm);
     settings(root, url);
@@ -250,7 +243,14 @@ fn sandbox_folders(tab: &crate::settings::AgentSettings, root: &std::path::Path)
         endpoint: "custom-1".into(),
         model: MODEL.into(),
     };
-    let reach = own_agent::config(ide_thread::ThreadId::new(), root, &choice, true).map(|config| {
+    let reach = own_agent::config(
+        ide_thread::ThreadId::new(),
+        root,
+        &choice,
+        true,
+        crate::lsp::agent_diagnostics(root),
+    )
+    .map(|config| {
         let workspace = &config.workspace;
         let reaches = |path: &str| workspace.reaches(&workspace.resolve(path));
         (reaches("/Library/Fonts/a.ttf"), reaches("/Library/Caches/a.txt"))
@@ -302,8 +302,8 @@ fn plus_menu() {
 fn open(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || {
-        let Some(controller) = controller_of(&root) else {
+    helpers::wait_for_window(&root.clone(), move |controller| {
+        let Some(controller) = controller else {
             return finish(NAME);
         };
         let Some(tab) = crate::agent::open_own(&controller, None) else {
@@ -487,7 +487,8 @@ fn close_and_reopen(root: PathBuf, key: u64) {
     if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
         controller.close_tab(id);
     }
-    main_after(Duration::from_millis(300), move || reopen(root, thread_id));
+    let key = tab.key;
+    helpers::wait_until(move || tab_of(key).is_none(), move |_| reopen(root, thread_id));
 }
 
 /// The closed thread opens again from its store and shows its conversation.

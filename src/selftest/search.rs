@@ -6,55 +6,36 @@
 //! order mark and CRLF line endings; Esc empties the field.
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSMenu};
 use splat_i18n::{t, tf};
 
-use super::{check, finish, snapshot};
-use crate::util::main_after;
+use super::helpers::wait_until;
+use super::{check, finish, helpers, snapshot};
 use crate::window::{self, Panel, SearchToggle as Toggle, WindowController, search_selftest as search};
 
 const SCENARIO: &str = "search";
-const WAIT: Duration = Duration::from_secs(20);
-const POLL: Duration = Duration::from_millis(200);
 const MANY: usize = 6_000;
-const PICTURE_DELAY: Duration = Duration::from_millis(400);
 
 const MAIN: &str = "fn main() {\n    let needle = 1;\n    println!(\"Needle {needle}\");\n}\n";
 
 pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("search-project");
     let many: String = (0..MANY).map(|n| format!("hit {n}\n")).collect();
-    for (path, text) in [
+    let files = [
         ("src/main.rs", MAIN),
         ("src/lib.rs", "pub fn needles() {}\n// NEEDLE in capitals\n"),
         ("docs/notes.md", "a needle in the docs\n"),
         ("many.txt", many.as_str()),
         (".gitignore", "target/\n"),
         ("target/ignored.txt", "needle\n"),
-    ] {
-        let file = folder.join(path);
-        let _ = std::fs::create_dir_all(file.parent().unwrap_or(&folder));
-        let _ = std::fs::write(file, text);
-    }
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    if window_of(&root).is_none() {
-        check(
-            "the folder opens in a window",
-            false,
-            format!("{:?}", window::open_projects()),
-        );
-        finish(SCENARIO);
-        return;
-    }
-    check_menu(mtm);
-    super::files_header::run(root, searching);
+    ];
+    helpers::open_project(SCENARIO, "search-project", &files, move |_| {
+        check_menu(mtm);
+        super::files_header::run(helpers::root("search-project"), searching);
+    });
 }
 
 /// After the files header: ⌘⇧F, then the first query.
@@ -74,7 +55,7 @@ fn searching(root: PathBuf) {
         format!("{:?}, focused {:?}", inspected.panel, seen.map(|s| s.field_focused)),
     );
     with_panel(&root, |p| search::type_query(p, "needle"));
-    poll(root, Instant::now() + WAIT, settled, found);
+    poll(root, settled, found);
 }
 
 /// The menu item behind ⌘⇧F: Bearbeiten ▸ Suchen ▸ Im Projekt suchen …
@@ -120,15 +101,12 @@ fn with_panel(root: &Path, f: impl FnOnce(&window::SearchPanel)) {
 }
 
 /// Calls `then` once `ready` holds for the search panel of `root`, or with false when time is up.
-fn poll(root: PathBuf, until: Instant, ready: fn(&search::Seen) -> bool, then: fn(PathBuf, bool)) {
-    let done = window_of(&root)
-        .and_then(|c| c.search_panel())
-        .is_some_and(|p| ready(&search::seen(&p)));
-    if done || Instant::now() >= until {
-        then(root, done);
-        return;
-    }
-    main_after(POLL, move || poll(root, until, ready, then));
+fn poll(root: PathBuf, ready: fn(&search::Seen) -> bool, then: fn(PathBuf, bool)) {
+    let probe = root.clone();
+    wait_until(
+        move || seen(&probe).is_some_and(|s| ready(&s)),
+        move |ok| then(root, ok),
+    );
 }
 
 fn settled(seen: &search::Seen) -> bool {
@@ -192,7 +170,7 @@ fn found(root: PathBuf, ok: bool) {
         snapshot(&window, "search-results");
     }
     with_panel(&root, |p| search::set(p, Toggle::Case, true));
-    poll(root, Instant::now() + WAIT, settled, case_sensitive);
+    poll(root, settled, case_sensitive);
 }
 
 /// A closed folder's chevron in the folder tree begins where the search panel's closed chevron does.
@@ -284,7 +262,7 @@ fn case_sensitive(root: PathBuf, ok: bool) {
         search::set(p, Toggle::Case, false);
         search::set(p, Toggle::Word, true);
     });
-    poll(root, Instant::now() + WAIT, settled, whole_word);
+    poll(root, settled, whole_word);
 }
 
 fn whole_word(root: PathBuf, ok: bool) {
@@ -302,7 +280,7 @@ fn whole_word(root: PathBuf, ok: bool) {
         search::set(p, Toggle::Regex, true);
         search::type_query(p, r"fn \w+\(");
     });
-    poll(root, Instant::now() + WAIT, settled, regex);
+    poll(root, settled, regex);
 }
 
 fn regex(root: PathBuf, ok: bool) {
@@ -318,7 +296,7 @@ fn regex(root: PathBuf, ok: bool) {
         snapshot(&window, "search-regex");
     }
     with_panel(&root, |p| search::type_query(p, "fn ("));
-    poll(root, Instant::now() + WAIT, settled, invalid);
+    poll(root, settled, invalid);
 }
 
 fn invalid(root: PathBuf, ok: bool) {
@@ -337,7 +315,7 @@ fn invalid(root: PathBuf, ok: bool) {
         search::set_globs(p, "src", "lib.rs");
         search::type_query(p, "needle");
     });
-    poll(root, Instant::now() + WAIT, settled, filtered);
+    poll(root, settled, filtered);
 }
 
 fn filtered(root: PathBuf, ok: bool) {
@@ -356,7 +334,7 @@ fn filtered(root: PathBuf, ok: bool) {
         search::set_globs(p, "", "");
         search::type_query(p, "hit");
     });
-    poll(root, Instant::now() + WAIT, settled, limited);
+    poll(root, settled, limited);
 }
 
 fn limited(root: PathBuf, ok: bool) {
@@ -373,7 +351,7 @@ fn limited(root: PathBuf, ok: bool) {
         format!("{} ({})", seen.status, files(&seen)),
     );
     with_panel(&root, |p| search::type_query(p, "needle"));
-    poll(root, Instant::now() + WAIT, settled, open_match);
+    poll(root, settled, open_match);
 }
 
 fn open_match(root: PathBuf, ok: bool) {
@@ -381,16 +359,16 @@ fn open_match(root: PathBuf, ok: bool) {
         && window_of(&root)
             .and_then(|c| c.search_panel())
             .is_some_and(|p| search::open(&p, "src/main.rs", 2));
-    // The window shows what changed only after this turn of the run loop, and a picture should show it.
-    main_after(PICTURE_DELAY, move || opened_match(root, opened));
+    let probe = root.clone();
+    wait_until(move || match_opened(&probe).0, move |_| opened_match(root, opened));
 }
 
-fn opened_match(root: PathBuf, opened: bool) {
-    let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+/// Whether the editor of main.rs has the first needle selected and the focus, with its selection.
+fn match_opened(root: &Path) -> (bool, Option<objc2_foundation::NSRange>, bool) {
+    let Some(controller) = window_of(root) else {
+        return (false, None, false);
     };
-    let file = root.join("src/main.rs");
-    let editor = crate::editor::editor_of(&controller, &file);
+    let editor = crate::editor::editor_of(&controller, &root.join("src/main.rs"));
     let selected = editor.as_ref().map(|e| e.selectedRange());
     let focused = editor.as_ref().is_some_and(|e| {
         controller
@@ -399,10 +377,20 @@ fn opened_match(root: PathBuf, opened: bool) {
             .is_some_and(|r| Retained::as_ptr(&r).cast::<()>() == Retained::as_ptr(e).cast())
     });
     let at = MAIN.find("needle").map(|byte| MAIN[..byte].encode_utf16().count());
+    let ok = selected.is_some_and(|r| Some(r.location) == at && r.length == 6) && focused;
+    (ok, selected, focused)
+}
+
+fn opened_match(root: PathBuf, opened: bool) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let editor = crate::editor::editor_of(&controller, &root.join("src/main.rs"));
+    let (ok, selected, focused) = match_opened(&root);
     check(
         "Return on a match opens its file with the match selected and focused",
-        opened && selected.is_some_and(|r| Some(r.location) == at && r.length == 6) && focused,
-        format!("{selected:?}, expected at {at:?}, focused {focused}"),
+        opened && ok,
+        format!("{selected:?}, focused {focused}"),
     );
     if let Some(window) = controller.window() {
         snapshot(&window, "search-editor");
@@ -412,7 +400,7 @@ fn opened_match(root: PathBuf, opened: bool) {
         editor.setSelectedRange(objc2_foundation::NSRange::new(end, 0));
         crate::editor::type_text(&editor, "// needle, not saved yet\n");
     }
-    poll(root, Instant::now() + WAIT, buffer_counted, unsaved);
+    poll(root, buffer_counted, unsaved);
 }
 
 fn buffer_counted(seen: &search::Seen) -> bool {
@@ -429,7 +417,7 @@ fn unsaved(root: PathBuf, ok: bool) {
         files(&seen),
     );
     let _ = std::fs::write(root.join("src/fresh.rs"), "// a needle written by another program\n");
-    poll(root, Instant::now() + WAIT, disk_counted, written);
+    poll(root, disk_counted, written);
 }
 
 fn disk_counted(seen: &search::Seen) -> bool {
@@ -462,7 +450,11 @@ fn written(root: PathBuf, ok: bool) {
 
 fn escape(root: PathBuf) {
     with_panel(&root, search::escape);
-    main_after(PICTURE_DELAY, move || escaped(root));
+    let probe = root.clone();
+    wait_until(
+        move || seen(&probe).is_some_and(|s| !s.results_shown && s.files.is_empty()),
+        move |_| escaped(root),
+    );
 }
 
 fn escaped(root: PathBuf) {

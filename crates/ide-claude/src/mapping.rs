@@ -240,7 +240,8 @@ impl Mapper {
             | Message::ControlRequest { .. }
             | Message::ControlResponse(_)
             | Message::ControlCancel { .. }
-            | Message::Unknown(_) => Vec::new(),
+            | Message::Unknown(_)
+            | Message::Malformed(_) => Vec::new(),
         }
     }
 

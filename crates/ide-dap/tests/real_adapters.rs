@@ -5,6 +5,7 @@
 #[path = "support/drive.rs"]
 mod drive;
 
+use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{Receiver, channel};
@@ -15,20 +16,12 @@ use ide_dap::{
     AdapterKind, Adapters, EndReason, Event, LaunchConfig, Session, Setup, SourceBreakpoint, State, current_program,
     start,
 };
-use ide_lsp::Cancel;
+use ide_net::Cancel;
 use ide_process::Supervisor;
 use serde_json::json;
 
 fn env() -> Vec<(String, String)> {
     std::env::vars().collect()
-}
-
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-dap-real-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    // The compiler writes the folder without symbolic links (/private/var for /var); breakpoints must name it the same.
-    std::fs::canonicalize(&dir).unwrap()
 }
 
 /// The sample Rust program copied into a folder of its own, so its build stays out of the repository.
@@ -39,7 +32,7 @@ fn rust_program() -> PathBuf {
     for file in ["Cargo.toml", "src/main.rs"] {
         std::fs::copy(from.join(file), dir.join(file)).unwrap();
     }
-    dir
+    dir.keep()
 }
 
 fn breakpoint_at(path: &Path, line: u32) -> Setup {
@@ -202,11 +195,11 @@ fn js_debug_launches_and_attaches_to_a_node_program() {
          if (process.argv.includes('--wait')) setTimeout(() => {}, 120000);\n",
     )
     .unwrap();
-    let adapters = Adapters::with_tools(&Supervisor::new(), env(), tools);
+    let adapters = Adapters::with_tools(&Supervisor::new(), env(), tools.to_path_buf());
     adapters
         .install(
             ide_dap::Install::JsDebug,
-            &ide_lsp::Http::new(),
+            &ide_net::Http::new("debug adapter installer"),
             &Cancel::new(),
             &mut |_| {},
         )

@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Thông báo cuối: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Chương trình đã thoát mà không có thông báo.";
 "Das Programm hat sich beim Start beendet: {}" = "Chương trình đã thoát khi khởi động: {}";
+"Konnte keinen Thread starten: {}" = "Không thể khởi động luồng: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Không thể thực hiện thay đổi không gian làm việc.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” là thư viện không có chương trình, và tệp này không có kiểm thử. Hãy gỡ lỗi tệp có main hoặc kiểm thử, hoặc xác định trong .vscode/launch.json chương trình nào khởi động.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Nếu macOS không hỏi mật khẩu, hãy cho phép trình gỡ lỗi một lần trong Terminal bằng “sudo DevToolsSecurity -enable”, hoặc hủy bằng Dừng. Sau mười phút, việc khởi động tự bỏ cuộc.";
+"Haltepunkt, nicht gesetzt" = "Điểm ngắt, chưa đặt";
+"nicht gesetzt" = "chưa đặt";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Trình gỡ lỗi không thể đặt điểm ngắt tại đây: {}";

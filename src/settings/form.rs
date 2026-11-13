@@ -40,7 +40,7 @@ pub fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
 /// The small grey text that explains a section or a control, wrapped at `width`.
 pub fn note_field(mtm: MainThreadMarker, text: &str, width: f64) -> Retained<NSTextField> {
     let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    note.setFont(Some(&ide_ui_common::style::small_system()));
     note.setTextColor(Some(&NSColor::secondaryLabelColor()));
     note.setPreferredMaxLayoutWidth(width);
     note

@@ -15,3 +15,6 @@ CLAUDE.md
 
 # Crash inputs that `cargo xtask fuzz` found; each becomes a regression test before it is deleted.
 /crates/*/fuzz/artifacts/
+
+# Plans and notes stay local; files already tracked there stay tracked, because xtask and CI read some of them.
+/docs/

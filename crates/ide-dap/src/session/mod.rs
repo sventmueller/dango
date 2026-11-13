@@ -9,6 +9,7 @@ mod requests;
 mod start;
 mod stop;
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
@@ -101,7 +102,7 @@ pub(crate) struct Inner {
 
 impl Inner {
     pub(crate) fn lock(&self) -> MutexGuard<'_, Shared> {
-        self.shared.lock().unwrap_or_else(|e| e.into_inner())
+        self.shared.lock_ignoring_poison()
     }
 
     pub(crate) fn emit(&self, event: Event) {
@@ -327,11 +328,7 @@ impl Session {
             if now >= deadline {
                 return false;
             }
-            shared = inner
-                .changed
-                .wait_timeout(shared, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            shared = inner.changed.wait_timeout(shared, deadline - now).ignoring_poison().0;
         }
     }
 

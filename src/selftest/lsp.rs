@@ -4,20 +4,18 @@
 //! settle and then for its answer, each within a generous bound, and reports how long it waited. It goes on in
 //! `lsp_more`.
 
+use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "lsp";
-const POLL: Duration = Duration::from_millis(250);
 /// The longest the server may take to start, to index the project or to settle before a request.
 pub(super) const WAIT: Duration = Duration::from_secs(180);
 /// The longest an answer may take once the server settled.
@@ -37,13 +35,13 @@ const UTIL: &str = "src/util.rs";
 const MAIN_TEXT: &str = "mod util;\n\nfn main() {\n    let total: u32 = util::double(21);\n    let wrong: u32 = \"text\";\n    let _ = (total, wrong);\n}\n";
 const UTIL_TEXT: &str = "pub fn double(n: u32) -> u32 {\n    n * 2\n}\n";
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("lsp-project")
-}
+const PROJECT: &str = "lsp-project";
+/// A turn of the run loop between the edits before formatting and the formatting, so that each is an undo step of
+/// its own; there is no state to wait for.
+const UNDO_TURN: Duration = Duration::from_millis(300);
 
 pub(super) fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 pub(super) fn project_window() -> Option<Retained<WindowController>> {
@@ -89,33 +87,18 @@ impl std::fmt::Display for Waited {
 }
 
 /// Calls `then` with how the wait ended, as soon as `ready` holds or once `within` or the scenario's budget passed.
-pub(super) fn poll(
-    within: Duration,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce(Waited) + Send + 'static,
-) {
-    fn again(
-        started: Instant,
-        deadline: Instant,
-        ready: impl Fn() -> bool + Send + 'static,
-        then: impl FnOnce(Waited) + Send + 'static,
-    ) {
-        main_after(POLL, move || {
-            let ok = ready();
-            if ok || Instant::now() >= deadline {
-                then(Waited {
-                    ok,
-                    settled: None,
-                    took: started.elapsed(),
-                });
-            } else {
-                again(started, deadline, ready, then);
-            }
+pub(super) fn poll(within: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(Waited) + 'static) {
+    let started = Instant::now();
+    let limit = END
+        .get()
+        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
+    helpers::wait_within(limit, ready, move |ok| {
+        then(Waited {
+            ok,
+            settled: None,
+            took: started.elapsed(),
         });
-    }
-    let now = Instant::now();
-    let deadline = (now + within).min(END.get().copied().unwrap_or(now + within));
-    again(now, deadline, ready, then);
+    });
 }
 
 /// Whether the server has reported no work for `quiet`.
@@ -127,9 +110,9 @@ fn quiet(quiet: Duration) -> bool {
 
 /// Waits for the server to settle, then makes `request` and waits for `ready`.
 pub(super) fn ask(
-    request: impl FnOnce() + Send + 'static,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce(Waited) + Send + 'static,
+    request: impl FnOnce() + 'static,
+    ready: impl Fn() -> bool + 'static,
+    then: impl FnOnce(Waited) + 'static,
 ) {
     poll(
         WAIT,
@@ -147,7 +130,7 @@ pub(super) fn ask(
 }
 
 /// Puts the cursor of main.rs at `at` and runs `command` there.
-fn at_main<R: 'static>(at: usize, command: fn(&EditorTextView) -> R) -> impl FnOnce() + Send + 'static {
+fn at_main<R: 'static>(at: usize, command: fn(&EditorTextView) -> R) -> impl FnOnce() + 'static {
     move || {
         if let Some(view) = main_view() {
             put_cursor(&view, at);
@@ -156,7 +139,7 @@ fn at_main<R: 'static>(at: usize, command: fn(&EditorTextView) -> R) -> impl FnO
     }
 }
 
-pub(super) fn has_mark(code: &'static str) -> impl Fn() -> bool + Send + 'static {
+pub(super) fn has_mark(code: &'static str) -> impl Fn() -> bool + 'static {
     move || main_view().is_some_and(|v| crate::lsp::marks_of(&v).iter().any(|(_, m)| m.contains(code)))
 }
 
@@ -164,11 +147,11 @@ pub(super) fn has_mark(code: &'static str) -> impl Fn() -> bool + Send + 'static
 static BEFORE: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
 
 fn remember(view: &EditorTextView) {
-    *BEFORE.lock().unwrap_or_else(|e| e.into_inner()) = view.document().text().to_string();
+    *BEFORE.lock_ignoring_poison() = view.document().text().to_string();
 }
 
 fn remembered() -> String {
-    BEFORE.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    BEFORE.lock_ignoring_poison().clone()
 }
 
 fn picture(name: &str) {
@@ -190,38 +173,18 @@ pub(super) fn done() {
 
 pub fn run() {
     let _ = END.set(Instant::now() + BUDGET);
-    let folder = folder();
-    let written = [
+    let files = [
         (
             "Cargo.toml",
             "[package]\nname = \"selftest\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
         ),
         (MAIN, MAIN_TEXT),
         (UTIL, UTIL_TEXT),
-    ]
-    .iter()
-    .try_for_each(|(path, text)| {
-        let file = folder.join(path);
-        std::fs::create_dir_all(file.parent().unwrap_or(&folder))?;
-        std::fs::write(file, text)
-    });
-    if let Err(error) = written {
-        check("a cargo project is made", false, error.to_string());
-        finish(SCENARIO);
-        return;
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    let Some(controller) = project_window() else {
-        check(
-            "the project opens in a window",
-            false,
-            format!("{:?}", window::open_projects()),
-        );
-        finish(SCENARIO);
-        return;
-    };
+    ];
+    helpers::open_project(SCENARIO, PROJECT, &files, opened);
+}
+
+fn opened(controller: Retained<WindowController>) {
     controller.open_file(&root().join(MAIN));
     poll(
         WAIT,
@@ -504,7 +467,7 @@ fn renamed(waited: Waited) {
         edits.push((call..call, ";".into()));
     }
     crate::lsp::apply_text_edits(&view, edits);
-    main_after(Duration::from_millis(300), format);
+    helpers::after(UNDO_TURN, format);
 }
 
 /// Formats in a turn of the run loop of its own, so its undo step stays apart from the edit before it.

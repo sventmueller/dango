@@ -44,3 +44,12 @@ mod tests {
         );
     }
 }
+
+/// An endpoint and one of its models.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ModelChoice {
+    /// The endpoint's id.
+    pub endpoint: String,
+    /// The model's id.
+    pub model: String,
+}

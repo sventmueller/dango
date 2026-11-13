@@ -25,14 +25,16 @@ use splat_i18n::{t, tf};
 use super::helpers::{
     alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, text_of, type_at, utf16_len, wait_until,
 };
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::editor::{self, EditorTextView};
-use crate::util::{main_after, ns};
+use crate::util::ns;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "editor-commands";
-/// Long enough for a command's effects to show and an alert to be up.
-const SETTLE: Duration = Duration::from_millis(300);
+/// How long after a command its alert is up, for the timer that answers it; the alert runs modal, so no step can wait
+/// for it.
+const ALERT_UP: Duration = Duration::from_millis(300);
+const PROJECT: &str = "commands-project";
 
 const MAIN: &str = "fn main() {\n    let total = 1;\n\n    let other = total;\n}\n";
 const FILES: [(&str, &str); 10] = [
@@ -48,13 +50,16 @@ const FILES: [(&str, &str); 10] = [
     ("list.rs", "let x = a"),
 ];
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("commands-project")
+fn root() -> PathBuf {
+    helpers::root(PROJECT)
 }
 
-fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+/// Runs `step` once no alert is up any more, as the step before may have left one.
+fn next(step: impl FnOnce() + 'static) {
+    wait_until(
+        || MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none()),
+        move |_| step(),
+    );
 }
 
 fn controller() -> Option<Retained<WindowController>> {
@@ -90,16 +95,13 @@ fn unit(view: &EditorTextView) -> String {
 }
 
 pub fn run() {
-    let folder = folder();
-    for (file, text) in FILES {
-        let path = folder.join(file);
-        let written =
-            std::fs::create_dir_all(path.parent().unwrap_or(&folder)).and_then(|()| std::fs::write(&path, text));
-        if let Err(error) = written {
+    let folder = match helpers::make_project(PROJECT, &FILES) {
+        Ok(folder) => folder,
+        Err(error) => {
             check("the files of the folder are made", false, error.to_string());
             return finish(SCENARIO);
         }
-    }
+    };
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, folder);
     let Some(window) = controller().and_then(|c| c.window()) else {
@@ -160,7 +162,7 @@ fn pairs() {
         wrapped == ("([x]()a\"\n".to_string(), (2, 1)),
         format!("{wrapped:?}"),
     );
-    main_after(SETTLE, returns);
+    next(returns);
 }
 
 /// Return between brackets and after a colon, and Tab over several lines.
@@ -197,7 +199,7 @@ fn returns() {
         indented == (wanted.clone(), (0, utf16_len(&wanted))),
         format!("{indented:?}"),
     );
-    main_after(SETTLE, comments);
+    next(comments);
 }
 
 /// Commenting lines out and in again, with the marker of each language.
@@ -239,7 +241,7 @@ fn comments() {
             && markdown.as_deref() == Some("# Notes\n"),
         format!("{python:?} {sql:?} {markdown:?}"),
     );
-    main_after(SETTLE, || go_to_line(&["abc", "3", "999"], Vec::new()));
+    next(|| go_to_line(&["abc", "3", "999"], Vec::new()));
 }
 
 /// The editable field of the alert in front.
@@ -265,10 +267,10 @@ fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
             reached == lines,
             format!("{reached:?}, lines start at {lines:?}"),
         );
-        return main_after(SETTLE, cancelled_line);
+        return next(cancelled_line);
     };
     main.setSelectedRange(NSRange::new(0, 0));
-    in_any_mode_after(SETTLE, move || {
+    in_any_mode_after(ALERT_UP, move || {
         let app = MainThreadMarker::new().map(NSApplication::sharedApplication);
         let field = app
             .and_then(|app| app.modalWindow())
@@ -281,7 +283,7 @@ fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
     });
     send(&main, sel!(ideGoToLine:));
     reached.push(selection(&main).0);
-    main_after(SETTLE, move || go_to_line(rest, reached));
+    next(move || go_to_line(rest, reached));
 }
 
 fn cancelled_line() {
@@ -289,14 +291,14 @@ fn cancelled_line() {
         return finish(SCENARIO);
     };
     main.setSelectedRange(NSRange::new(3, 0));
-    let asked = answer_alert_saying(SETTLE, t("Gehe zu Zeile").to_string(), NSAlertSecondButtonReturn);
+    let asked = answer_alert_saying(ALERT_UP, t("Gehe zu Zeile").to_string(), NSAlertSecondButtonReturn);
     send(&main, sel!(ideGoToLine:));
     check(
         "cancelling Gehe zu Zeile leaves the cursor",
         asked.get() && selection(&main) == (3, 0),
         format!("asked {}, {:?}", asked.get(), selection(&main)),
     );
-    main_after(SETTLE, folds_and_carets);
+    next(folds_and_carets);
 }
 
 /// Folding from the commands, extra carets above, below and at the next occurrence, and line wrapping.
@@ -342,7 +344,7 @@ fn folds_and_carets() {
         toggled != before && editor::wraps(&main) == before,
         format!("{before} → {toggled}"),
     );
-    main_after(SETTLE, option_mouse);
+    next(option_mouse);
 }
 
 /// A mouse event of `kind` with `flags` at UTF-16 offset `at` of `view`, `dx` points to its right.
@@ -422,7 +424,7 @@ fn option_mouse() {
         undo.undo();
     }
     set_carets(&main, std::iter::once(0..0).collect());
-    main_after(SETTLE, gutter);
+    next(gutter);
 }
 
 /// Clicks in the line number column: the fold strip folds and unfolds, a number sets and clears a breakpoint, the
@@ -446,9 +448,9 @@ fn gutter() {
     );
     let number = 8.0 + 12.0 + 8.0;
     click(number, NSEventType::LeftMouseDown);
-    let set = crate::debug::selftest::breakpoint_at(&controller, &path, 0).is_some();
+    let set = crate::debug::probe::breakpoint_at(&controller, &path, 0).is_some();
     click(number, NSEventType::LeftMouseDown);
-    let cleared = crate::debug::selftest::breakpoint_at(&controller, &path, 0).is_none();
+    let cleared = crate::debug::probe::breakpoint_at(&controller, &path, 0).is_none();
     check(
         "a click on a line number sets a breakpoint there and a second one clears it",
         set && cleared,
@@ -471,7 +473,7 @@ fn gutter() {
         entered && left,
         format!("{entered} {left}"),
     );
-    main_after(SETTLE, indentation_menu);
+    next(indentation_menu);
 }
 
 /// The status bar's indentation menu ticks what the file uses, and its entries switch to tabs and another width.
@@ -503,7 +505,7 @@ fn indentation_menu() {
             && shown == tf("Tabs: {}", &["2"]),
         format!("{ticked:?} → {shown}"),
     );
-    main_after(SETTLE, completion_keys);
+    next(completion_keys);
 }
 
 /// Presses `command` in `view` as the keyboard does.
@@ -575,7 +577,7 @@ fn completion_keys() {
         stop == (4, 1) && tabbed == unit(&view).len() && utf16_len(&text_of(&view)) == before + 2 * tabbed,
         format!("{stop:?}, tab {tabbed}"),
     );
-    main_after(SETTLE, changed_outside);
+    next(changed_outside);
 }
 
 /// Saving over a file that changed on disk asks first; a save that fails says so.
@@ -586,7 +588,7 @@ fn changed_outside() {
     type_at(&disk, NSRange::new(0, 0), "mine ");
     let _ = std::fs::write(root().join("disk.txt"), "theirs\n");
     let asked = answer_alert_saying(
-        SETTLE,
+        ALERT_UP,
         tf("„{}“ wurde inzwischen außerhalb geändert.", &["disk.txt"]),
         NSAlertFirstButtonReturn,
     );
@@ -597,7 +599,7 @@ fn changed_outside() {
         asked.get() && written == "mine first\n" && !disk.document().is_dirty(),
         format!("asked {}, on disk {written:?}", asked.get()),
     );
-    main_after(SETTLE, failed_save);
+    next(failed_save);
 }
 
 fn set_mode(path: &Path, mode: u32) {
@@ -614,7 +616,7 @@ fn failed_save() {
     set_mode(&dir, 0o555);
     let seen = Rc::new(RefCell::new(Vec::new()));
     let texts = seen.clone();
-    in_any_mode_after(SETTLE, move || {
+    in_any_mode_after(ALERT_UP, move || {
         texts.borrow_mut().extend(alert_texts());
         answer_alert(NSAlertFirstButtonReturn);
     });
@@ -633,7 +635,7 @@ fn failed_save() {
         !locked.document().is_dirty(),
         "",
     );
-    main_after(SETTLE, close_dirty);
+    next(close_dirty);
 }
 
 /// Closing a tab with unsaved changes asks; Abbrechen keeps it, Nicht sichern closes it and leaves the file.
@@ -649,10 +651,10 @@ fn close_dirty() {
         return finish(SCENARIO);
     };
     let question = tf("Änderungen an „{}“ sichern?", &["notes.md"]);
-    let kept = answer_alert_saying(SETTLE, question.clone(), NSAlertThirdButtonReturn);
+    let kept = answer_alert_saying(ALERT_UP, question.clone(), NSAlertThirdButtonReturn);
     controller.close_tab(tab);
     let still = controller.tab_ids().contains(&tab);
-    let gone = answer_alert_saying(SETTLE, question, NSAlertSecondButtonReturn);
+    let gone = answer_alert_saying(ALERT_UP, question, NSAlertSecondButtonReturn);
     controller.close_tab(tab);
     let disk = std::fs::read_to_string(root().join("notes.md")).unwrap_or_default();
     check(
@@ -660,7 +662,7 @@ fn close_dirty() {
         kept.get() && still && gone.get() && !controller.tab_ids().contains(&tab) && disk == "# Notes\n",
         format!("kept {} {still}, gone {}, disk {disk:?}", kept.get(), gone.get()),
     );
-    main_after(SETTLE, positions);
+    next(positions);
 }
 
 /// A compiler's line and column open the file with the cursor there; the files below the folder save at once; a file
@@ -697,7 +699,7 @@ fn positions() {
         text_of(&main) == "fn main() {}\n",
         format!("{:?}", text_of(&main)),
     );
-    main_after(SETTLE, file_operations);
+    next(file_operations);
 }
 
 /// A workspace edit renames an open file, and its editor and tab follow.
@@ -718,16 +720,20 @@ fn file_operations() {
         )])),
         change_annotations: None,
     };
-    let applied = crate::lsp::apply_workspace_edit(&root(), &edit);
-    let titles = controller().map(|c| c.tab_titles()).unwrap_or_default();
-    let renamed = root().join("renamed.txt");
-    let follows = controller().and_then(|c| editor::editor_for(&c, &renamed)).is_some();
-    check(
-        "a workspace edit renames an open file, and its editor and tab follow",
-        applied.is_ok() && follows && titles.contains(&"renamed.txt".to_string()) && !root().join("moved.txt").exists(),
-        format!("{applied:?}, tabs {titles:?}"),
-    );
-    main_after(SETTLE, server_question);
+    crate::lsp::apply_workspace_edit(&root(), &edit, |applied| {
+        let titles = controller().map(|c| c.tab_titles()).unwrap_or_default();
+        let renamed = root().join("renamed.txt");
+        let follows = controller().and_then(|c| editor::editor_for(&c, &renamed)).is_some();
+        check(
+            "a workspace edit renames an open file, and its editor and tab follow",
+            applied.is_ok()
+                && follows
+                && titles.contains(&"renamed.txt".to_string())
+                && !root().join("moved.txt").exists(),
+            format!("{applied:?}, tabs {titles:?}"),
+        );
+        next(server_question);
+    });
 }
 
 /// A server's question shows its answers as buttons of a sheet; the chosen one is answered.
@@ -752,7 +758,7 @@ fn server_question() {
     if let Some(sheet) = window.attachedSheet() {
         window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
     }
-    in_any_mode_after(SETTLE, move || {
+    in_any_mode_after(ALERT_UP, move || {
         let answer = chosen.take();
         check(
             "a server's question shows three of its answers and a close button, and the chosen one is answered",

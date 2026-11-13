@@ -1,8 +1,9 @@
 //! The frames the CLI writes on stdout, one JSON object per line, as `@anthropic-ai/claude-agent-sdk` types them.
 //!
-//! Only the fields the app uses are typed. A frame whose type or subtype is unknown, or whose known fields do not
-//! fit, becomes `Message::Unknown` with the raw JSON; the CLI adds types and fields over time and readers are to
-//! ignore what they do not know.
+//! Only the fields the app uses are typed. A frame whose type or subtype is unknown becomes `Message::Unknown`, one
+//! of a known type whose fields do not fit becomes `Message::Malformed`, both with the raw JSON; the CLI adds types
+//! and fields over time and readers are to ignore what they do not know, while a known frame that does not fit is
+//! worth a diagnostic.
 
 mod system;
 
@@ -58,8 +59,10 @@ pub enum Message {
         /// The request withdrawn.
         request_id: String,
     },
-    /// A frame the app does not know, kept as it came.
+    /// A frame of a type the app does not know, kept as it came.
     Unknown(Value),
+    /// A frame of a type the app knows whose fields do not fit, kept as it came.
+    Malformed(Value),
 }
 
 /// A line that is not a JSON object.
@@ -110,9 +113,9 @@ impl Message {
             "control_cancel_request" => {
                 text(&value, "request_id").map(|request_id| Message::ControlCancel { request_id })
             }
-            _ => None,
+            _ => return Message::Unknown(value),
         };
-        parsed.unwrap_or(Message::Unknown(value))
+        parsed.unwrap_or(Message::Malformed(value))
     }
 }
 
@@ -552,9 +555,9 @@ mod tests {
     #[test]
     fn a_known_type_that_does_not_fit_is_kept_raw_instead_of_failing() {
         let line = r#"{"type":"system","subtype":"task_progress","task_id":7}"#;
-        assert!(matches!(parse(line).unwrap(), Message::Unknown(_)));
+        assert!(matches!(parse(line).unwrap(), Message::Malformed(_)));
         let line = r#"{"type":"control_request","request_id":"r","request":"text"}"#;
-        assert!(matches!(parse(line).unwrap(), Message::Unknown(_)));
+        assert!(matches!(parse(line).unwrap(), Message::Malformed(_)));
     }
 
     #[test]

@@ -8,9 +8,8 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSButton, NSColor, NSControlSize, NSFont, NSLayoutConstraint,
-    NSLayoutManager, NSScrollView, NSStackView, NSTextContainer, NSTextStorage, NSTextView,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSAutoresizingMaskOptions, NSButton, NSColor, NSControlSize, NSLayoutConstraint, NSLayoutManager,
+    NSScrollView, NSStackView, NSTextContainer, NSTextStorage, NSTextView, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSArray, NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
@@ -186,7 +185,7 @@ fn bar(mtm: MainThreadMarker, page: &Page) -> Retained<NSStackView> {
         mtm,
         t("Der Ordner ist nicht vertraut: Bilder aus dem Netz bleiben ungeladen."),
     );
-    text.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    text.setFont(Some(&ide_ui_common::style::small_system()));
     text.setTextColor(Some(&NSColor::secondaryLabelColor()));
     // The bar is there, at no height, while it is hidden too, so a text that cannot shorten would hold the preview wide.
     text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
@@ -205,10 +204,10 @@ fn bar(mtm: MainThreadMarker, page: &Page) -> Retained<NSStackView> {
         )
     };
     button.setControlSize(NSControlSize::Small);
-    button.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    button.setFont(Some(&ide_ui_common::style::small_system()));
     let bar = NSStackView::stackViewWithViews(&NSArray::from_slice(&[&*text as &NSView, &*button]), mtm);
     bar.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    bar.setSpacing(10.0);
+    bar.setSpacing(ide_ui_common::style::space::L);
     bar.setEdgeInsets(NSEdgeInsets {
         top: 4.0,
         left: 12.0,

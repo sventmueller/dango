@@ -14,10 +14,12 @@ use objc2_app_kit::{
 use objc2_foundation::NSData;
 
 use super::agent::{appearance, controller_of, picture, tab_of};
-use super::{check, finish};
-use crate::util::{constant, main_after, ns};
+use super::{check, finish, helpers};
+use crate::util::{constant, ns};
 
 const NAME: &str = "agent";
+/// A moment for a new tab or a changed appearance to lay out and draw before the next step or picture, which shows
+/// no state to wait for.
 const SETTLE: Duration = Duration::from_millis(400);
 
 /// What a page could say to steer an agent.
@@ -131,7 +133,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     );
     let key = tab.key;
     // The new tab holds its sidebar until it is laid out; the user enlarges a picture in a tab whose sidebar is free.
-    main_after(SETTLE, move || sent(root, key, shot, then));
+    helpers::after(SETTLE, move || sent(root, key, shot, then));
 }
 
 /// The pasted picture opens large; then the picture goes to the agent.
@@ -154,7 +156,7 @@ fn sent(root: PathBuf, key: u64, shot: Option<Vec<u8>>, then: fn(PathBuf)) {
         idle.is_none() && working.as_deref() == Some(&*objc2_app_kit::NSColor::systemGreenColor()),
         format!("idle {idle:?}, working {working:?}"),
     );
-    main_after(SETTLE, move || pictures(root, key, then));
+    helpers::after(SETTLE, move || pictures(root, key, then));
 }
 
 /// The composer with the marked chips, in light and dark; then the tab closes.
@@ -184,7 +186,7 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
     );
     picture(&controller, "agent-outside");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
-    main_after(SETTLE, move || {
+    helpers::after(SETTLE, move || {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
@@ -193,7 +195,7 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
         if let Some(id) = tab_of(key).and_then(|tab| controller.tab_with_key(&tab.tab_key())) {
             controller.close_tab(id);
         }
-        main_after(SETTLE, move || then(root));
+        helpers::wait_until(move || tab_of(key).is_none(), move |_| then(root));
     });
 }
 

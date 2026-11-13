@@ -48,7 +48,11 @@ fn main() {
         return;
     }
     i18n::install(&app::localized_strings());
+    ide_ui_common::window::install(&host::AppHost);
+    ide_ui_debug::install(&host::AppHost);
     ide_ui_export::install(&host::AppHost);
+    ide_ui_git::install(&host::AppHost);
+    ide_ui_agent::install(&host::AppHost);
     ide_ui_browser::install(&host::AppHost);
     ide_ui_terminal::install(&host::AppHost);
     #[cfg(feature = "dictation")]
@@ -56,6 +60,7 @@ fn main() {
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {
         ide_core::paths::set_identity(&id.to_string());
     }
+    ide_core::diag::install(Box::new(|what, detail| diag::report(what, detail)));
     #[cfg(feature = "selftest")]
     selftest::prepare();
     let report = std::panic::take_hook();

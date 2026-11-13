@@ -12,6 +12,10 @@ use super::address::{self, Address};
 use super::host::{host, state};
 use super::view::BrowserView;
 use ide_ui_common::util::main_soon;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// The browser tabs of every window.
 #[derive(Default)]
@@ -167,57 +171,4 @@ fn unique_key() -> String {
         serial.get()
     });
     format!("browser:{serial}")
-}
-
-/// What the self-test reads from a browser tab.
-#[cfg(feature = "selftest")]
-pub struct Seen {
-    pub url: Option<String>,
-    /// The text of the address field.
-    pub address: String,
-    /// Whether the address field is being edited.
-    pub editing: bool,
-    /// Whether the Web Inspector is on.
-    pub inspector: bool,
-    /// The heading of the native page standing in for the web page, while it shows.
-    pub failure: Option<String>,
-    /// Whether that page offers to accept the server's certificate.
-    pub proceed: bool,
-    /// The text of the notice bar, while it shows.
-    pub notice: Option<String>,
-}
-
-/// Presses "Trotzdem öffnen" on the first tab of `window` that offers it; whether one did.
-#[cfg(feature = "selftest")]
-pub fn proceed(window: u64) -> bool {
-    let Some(view) = tabs_of(window).into_iter().find(|view| view.seen().proceed) else {
-        return false;
-    };
-    view.proceed();
-    true
-}
-
-/// Presses the key button of the browser tab in front of `window`, as the self-test's user.
-#[cfg(feature = "selftest")]
-pub fn fill_login(window: u64) {
-    if let Some(view) = front(window) {
-        view.fill_login();
-    }
-}
-
-/// The browser tab in front of `window`, which takes the actions of its buttons.
-#[cfg(feature = "selftest")]
-pub fn front_view(window: u64) -> Option<Retained<objc2_app_kit::NSView>> {
-    front(window).map(Retained::into_super)
-}
-
-/// The address field of the browser tab in front of `window`.
-#[cfg(feature = "selftest")]
-pub fn address_field(window: u64) -> Option<Retained<objc2_app_kit::NSTextField>> {
-    front(window).map(|view| view.address_field())
-}
-
-#[cfg(feature = "selftest")]
-pub fn inspect(window: u64) -> Vec<Seen> {
-    tabs_of(window).iter().map(|view| view.seen()).collect()
 }

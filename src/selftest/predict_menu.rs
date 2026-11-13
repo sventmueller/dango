@@ -16,14 +16,12 @@ use objc2_app_kit::{
 };
 use splat_i18n::t;
 
-use super::helpers::in_any_mode_after;
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::editor::predict::{self, model};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 
 const SCENARIO: &str = "edit-prediction";
-const SETTLE: Duration = Duration::from_millis(400);
+const PROJECT: &str = "predict-project";
 
 /// The Editor menu's item of edit prediction with `tag`.
 fn item(tag: isize) -> Option<Retained<NSMenuItem>> {
@@ -117,12 +115,11 @@ pub fn run(view: Retained<EditorTextView>) {
         off && on && status.as_ref().is_some_and(|(title, _)| title.contains("Rust")),
         format!("{status:?}"),
     );
-    main_after(SETTLE, || settings_button(view_again()));
+    helpers::wait_for(view_again, settings_button);
 }
 
 fn view_again() -> Option<Retained<EditorTextView>> {
-    let root = ide_core::paths::home().join("predict-project");
-    let root = root.canonicalize().unwrap_or(root);
+    let root = helpers::root(PROJECT);
     let controller = crate::window::for_project(&root)?;
     editor::editor_for(&controller, &root.join("src/main.rs"))
 }
@@ -157,19 +154,21 @@ fn settings_button(view: Option<Retained<EditorTextView>>) {
     if let (Some(window), Some(sheet)) = (&window, &sheet) {
         window.endSheet_returnCode(sheet, NSAlertFirstButtonReturn);
     }
-    in_any_mode_after(SETTLE, move || {
-        let consented = predict::chosen().consented();
-        predict::provider::revoke_all();
-        let mut settings = ide_core::settings::Settings::load_user();
-        let restored = settings.set(&model::PROVIDER, &model::Choice::Off);
-        predict::settings_changed();
-        check(
-            "for a provider outside the Mac the button asks in a sheet, and Erlauben gives the consent",
-            stored.is_ok() && restored.is_ok() && sheet.is_some() && consented,
-            format!("sheet {}, consented {consented}", sheet.is_some()),
-        );
-        copilot_missing();
-    });
+    helpers::wait_until(
+        || predict::chosen().consented(),
+        move |consented| {
+            predict::provider::revoke_all();
+            let mut settings = ide_core::settings::Settings::load_user();
+            let restored = settings.set(&model::PROVIDER, &model::Choice::Off);
+            predict::settings_changed();
+            check(
+                "for a provider outside the Mac the button asks in a sheet, and Erlauben gives the consent",
+                stored.is_ok() && restored.is_ok() && sheet.is_some() && consented,
+                format!("sheet {}, consented {consented}", sheet.is_some()),
+            );
+            copilot_missing();
+        },
+    );
 }
 
 /// Copilot chosen and allowed where its server is not installed: it is looked for once, and the status bar offers to
@@ -185,15 +184,14 @@ fn copilot_missing() {
     predict::settings_changed();
     predict::provider::consent();
     let missing = t("Copilot fehlt – installieren?");
-    super::helpers::wait_until(
+    helpers::wait_until(
         move || {
             view_again()
                 .and_then(|v| predict::status_shown(&v))
                 .is_some_and(|(title, _)| title == missing)
         },
         move |ok| {
-            let root = ide_core::paths::home().join("predict-project");
-            let root = root.canonicalize().unwrap_or(root);
+            let root = helpers::root(PROJECT);
             let state = predict::provider::copilot_state(&root);
             predict::provider::wake(&root);
             predict::provider::revoke_all();

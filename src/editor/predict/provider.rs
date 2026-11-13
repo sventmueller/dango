@@ -317,7 +317,8 @@ fn start(root: &Path) {
     }
     with(|p| p.copilots.borrow_mut().insert(root.to_path_buf(), Slot::Starting));
     let root = root.to_path_buf();
-    let _ = std::thread::Builder::new().name("copilot-start".into()).spawn(move || {
+    let failed = root.clone();
+    if let Err(why) = crate::util::spawn("copilot-start", move || {
         let environment = crate::environment::wait(std::time::Duration::from_secs(10))
             .map(<[_]>::to_vec)
             .unwrap_or_default();
@@ -337,7 +338,9 @@ fn start(root: &Path) {
                 Slot::Failed(tf("Copilot startet nicht: {}", &[&error.to_string()])),
             ),
         });
-    });
+    }) {
+        set_slot(&failed, Slot::Failed(why));
+    }
 }
 
 fn set_slot(root: &Path, slot: Slot) {
@@ -360,47 +363,48 @@ pub fn install(root: &Path) {
     let cancel = ide_lsp::Cancel::new();
     set_slot(root, Slot::Installing(cancel.clone(), t("Installiere …").to_string()));
     let root = root.to_path_buf();
-    let _ = std::thread::Builder::new()
-        .name("copilot-install".into())
-        .spawn(move || {
-            let environment = crate::environment::get().map(<[_]>::to_vec).unwrap_or_default();
-            let installer = ide_lsp::Installer::new(
-                Supervisor::global(),
-                environment,
-                ide_lsp::default_tools(),
-                Arc::new(ide_lsp::Http::new()),
-            );
-            let progress_root = root.clone();
-            let mut report = move |progress: ide_lsp::Progress| {
-                if let ide_lsp::Progress::Output(line) = progress {
-                    let root = progress_root.clone();
-                    let line: String = line.chars().take(80).collect();
-                    main_soon(move || {
-                        with(|p| {
-                            if let Some(Slot::Installing(_, shown)) = p.copilots.borrow_mut().get_mut(&root) {
-                                *shown = tf("Installiere … {}", &[&line]);
-                            }
-                        });
-                        super::follow_settings();
+    let failed = root.clone();
+    if let Err(why) = crate::util::spawn("copilot-install", move || {
+        let environment = crate::environment::get().map(<[_]>::to_vec).unwrap_or_default();
+        let installer = ide_lsp::Installer::new(
+            Supervisor::global(),
+            environment,
+            ide_lsp::default_tools(),
+            Arc::new(ide_net::Http::new("Copilot installer")),
+        );
+        let progress_root = root.clone();
+        let mut report = move |progress: ide_lsp::Progress| {
+            if let ide_lsp::Progress::Output(line) = progress {
+                let root = progress_root.clone();
+                let line: String = line.chars().take(80).collect();
+                main_soon(move || {
+                    with(|p| {
+                        if let Some(Slot::Installing(_, shown)) = p.copilots.borrow_mut().get_mut(&root) {
+                            *shown = tf("Installiere … {}", &[&line]);
+                        }
                     });
-                }
-            };
-            let result = installer.install(copilot::INSTALL, &cancel, &mut report);
-            main_soon(move || match result {
-                Ok(_) => {
-                    with(|p| p.copilots.borrow_mut().remove(&root));
-                    start(&root);
                     super::follow_settings();
-                }
-                Err(error) => {
-                    crate::diag::report("installing Copilot", error.to_string());
-                    set_slot(
-                        &root,
-                        Slot::Failed(tf("Installation fehlgeschlagen: {}", &[&error.to_string()])),
-                    );
-                }
-            });
+                });
+            }
+        };
+        let result = installer.install(copilot::INSTALL, &cancel, &mut report);
+        main_soon(move || match result {
+            Ok(_) => {
+                with(|p| p.copilots.borrow_mut().remove(&root));
+                start(&root);
+                super::follow_settings();
+            }
+            Err(error) => {
+                crate::diag::report("installing Copilot", error.to_string());
+                set_slot(
+                    &root,
+                    Slot::Failed(tf("Installation fehlgeschlagen: {}", &[&error.to_string()])),
+                );
+            }
         });
+    }) {
+        set_slot(&failed, Slot::Failed(why));
+    }
 }
 
 /// Stops the installation of Copilot for `root`, if one runs.

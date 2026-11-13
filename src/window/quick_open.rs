@@ -19,6 +19,8 @@ use splat_i18n::t;
 
 use super::WindowController;
 use crate::util::{constant, guarded, main_soon, ns, set_action};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 const WIDTH: f64 = 620.0;
 const HEIGHT: f64 = 380.0;
@@ -191,7 +193,7 @@ impl QuickOpenPanel {
         panel.setDelegate(Some(ProtocolObject::from_ref(self)));
         let field = NSSearchField::new(mtm);
         field.setPlaceholderString(Some(&ns(t("Datei suchen"))));
-        field.setFont(Some(&NSFont::systemFontOfSize(17.0)));
+        field.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::FIELD_LARGE)));
         // SAFETY: The field holds its delegate weakly; the window controller keeps this object alive.
         unsafe { field.setDelegate(Some(ProtocolObject::from_ref(self))) };
         let table = NSTableView::new(mtm);
@@ -419,45 +421,6 @@ impl QuickOpenPanel {
             panel.orderOut(None);
         }
     }
-
-    #[cfg(feature = "selftest")]
-    pub fn hits(&self) -> Vec<String> {
-        match &*self.ivars().hits.borrow() {
-            Rows::Files(hits) => hits.iter().map(|hit| hit.path.clone()).collect(),
-            Rows::Symbols(symbols) => symbols
-                .iter()
-                .map(|found| {
-                    let path = found.path.strip_prefix(&self.ivars().root).unwrap_or(&found.path);
-                    format!("{} {}", found.symbol.name, path.display())
-                })
-                .collect(),
-        }
-    }
-
-    /// What the list says in place of rows, if anything.
-    #[cfg(feature = "selftest")]
-    pub fn status(&self) -> Option<String> {
-        let status = self.ivars().status.borrow();
-        let status = status.as_ref()?;
-        (!status.isHidden()).then(|| status.stringValue().to_string())
-    }
-
-    /// Opens row `row` as Return does.
-    #[cfg(feature = "selftest")]
-    pub fn open_row(&self, row: usize) {
-        if let Some(table) = self.ivars().table.borrow().as_ref() {
-            table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
-        }
-        self.open_selected();
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn type_query(&self, query: &str) {
-        if let Some(field) = self.ivars().field.borrow().as_ref() {
-            field.setStringValue(&ns(query));
-        }
-        self.ask();
-    }
 }
 
 /// A symbol: the kind's symbol, the name with what contains it, and below them its file and line.
@@ -470,9 +433,10 @@ fn symbol_view(mtm: MainThreadMarker, found: &crate::lsp::FoundSymbol, root: &st
     }
     let name = NSTextField::labelWithString(&ns(&title), mtm);
     // SAFETY: AppKit sets its font weight constants when it loads.
-    name.setFont(Some(&NSFont::systemFontOfSize_weight(13.0, unsafe {
-        NSFontWeightSemibold
-    })));
+    name.setFont(Some(&NSFont::systemFontOfSize_weight(
+        ide_ui_common::style::HEADING,
+        unsafe { NSFontWeightSemibold },
+    )));
     name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     let path = found.path.strip_prefix(root).unwrap_or(&found.path);
     let place = match symbol.range {
@@ -480,7 +444,7 @@ fn symbol_view(mtm: MainThreadMarker, found: &crate::lsp::FoundSymbol, root: &st
         None => path.display().to_string(),
     };
     let place = NSTextField::labelWithString(&ns(&place), mtm);
-    place.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    place.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     place.setTextColor(Some(&NSColor::secondaryLabelColor()));
     place.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingHead);
     let icon = objc2_app_kit::NSImageView::new(mtm);
@@ -531,9 +495,10 @@ fn hit_view(mtm: MainThreadMarker, hit: &Hit) -> Retained<NSView> {
     }
     let label = NSTextField::labelWithAttributedString(&text, mtm);
     // SAFETY: AppKit sets its font weight constants when it loads.
-    label.setFont(Some(&NSFont::systemFontOfSize_weight(13.0, unsafe {
-        NSFontWeightSemibold
-    })));
+    label.setFont(Some(&NSFont::systemFontOfSize_weight(
+        ide_ui_common::style::HEADING,
+        unsafe { NSFontWeightSemibold },
+    )));
     label.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingHead);
     let icon = crate::file_icon::image_view(mtm, std::path::Path::new(&hit.path), false);
     let cell = NSView::new(mtm);
@@ -558,4 +523,17 @@ fn hit_view(mtm: MainThreadMarker, hit: &Hit) -> Retained<NSView> {
         constraint.setActive(true);
     }
     cell
+}
+
+#[cfg(test)]
+mod tests {
+    use super::symbol_query;
+
+    #[test]
+    fn a_leading_hash_asks_for_symbols() {
+        assert_eq!(symbol_query("#Model"), Some("Model"));
+        assert_eq!(symbol_query("#"), Some(""));
+        assert_eq!(symbol_query("main.rs"), None);
+        assert_eq!(symbol_query("a#b"), None);
+    }
 }

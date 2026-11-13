@@ -97,37 +97,56 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
     assert_eq!(&lines[1..3], ["cargo llvm-cov show-env"; 2]);
     assert_eq!(lines[3], "cargo llvm-cov clean --workspace");
     assert_eq!(lines[4], "cargo test --workspace --no-fail-fast --lib --bins --tests");
-    assert_eq!(lines[5], "cargo xtask selftest probe", "the outside scenario stays out");
-    assert!(lines[6].starts_with("cargo llvm-cov report --workspace --json --summary-only --failure-mode all"));
+    assert!(
+        lines[5].ends_with("coverage/llvm-cov-unit.json"),
+        "cargo test alone, before the self-test"
+    );
+    assert_eq!(lines[6], "cargo xtask selftest --offline");
+    assert!(lines[7].starts_with("cargo llvm-cov report --workspace --json --summary-only --failure-mode all"));
     drop(sh);
     let instrumented = Some(target.join("llvm-cov-target").display().to_string());
     let own_build = Some(format!("{}-coverage", shared.display()));
     let toolchain = Some("1.99.1".to_string());
     assert_eq!(seen[1].1, [toolchain.clone(), instrumented.clone(), None, None, None]);
     assert_eq!(seen[2].1[2], own_build, "show-env again with a build folder of its own");
-    let selftest = &seen[5].1;
+    assert_eq!(
+        seen[5].1[4].as_deref(),
+        Some(""),
+        "the unit report has no bundle programs"
+    );
+    let selftest = &seen[6].1;
     assert_eq!(selftest[..3], [toolchain, instrumented, own_build]);
     let profiles = target.join("llvm-cov-target/selftest-%p.profraw").display().to_string();
     assert_eq!(selftest[3].as_deref(), Some(profiles.as_str()));
     let objects = format!("-object={}", target.join("llvm-cov-target/release/ide").display());
-    assert_eq!(seen[6].1[4].as_deref(), Some(objects.as_str()));
+    assert_eq!(seen[7].1[4].as_deref(), Some(objects.as_str()));
 
+    written_report_is_complete(&target);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// The report and the file list a run over `workspace` writes into `target`.
+fn written_report_is_complete(target: &Path) {
     let report = std::fs::read_to_string(target.join("coverage/coverage.txt")).unwrap();
     assert!(
         report.starts_with("line coverage 61.5 % (8 of 13 lines) in 3 files, 1 below 50 %;"),
         "{report}"
     );
+    assert!(report.contains("cargo test alone 61.5 % (8 of 13 lines)\n"), "{report}");
     assert!(report.contains("1 files are in no instrumented program and count as uncovered\n"));
-    assert!(report.contains("selftest scenarios: probe\n"));
+    assert!(report.contains("selftest scenarios: --offline\n"));
     assert!(report.contains("failed, so the numbers miss what it did not reach: cargo test\n"));
-    assert!(report.contains("    0.0        0        3  crates/ide-x/src/lib.rs  (in no instrumented program)\n"));
     assert!(
-        report.contains("  100.0        0        0  xtask/src/lib.rs\n"),
+        report.contains("    0.0        0        3      0.0  crates/ide-x/src/lib.rs  (in no instrumented program)\n")
+    );
+    assert!(
+        report.contains("  100.0        0        0    100.0  xtask/src/lib.rs\n"),
         "{report}"
     );
     let json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(target.join("coverage/files.json")).unwrap()).unwrap();
     assert_eq!(json["total"]["lines"], 13);
+    assert_eq!(json["total"]["unit_covered"], 8);
     let files: Vec<&str> = json["files"]
         .as_array()
         .unwrap()
@@ -135,7 +154,6 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
         .map(|f| f["file"].as_str().unwrap())
         .collect();
     assert_eq!(files, ["crates/ide-x/src/lib.rs", "src/main.rs", "xtask/src/lib.rs"]);
-    std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]

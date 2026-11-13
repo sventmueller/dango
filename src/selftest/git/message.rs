@@ -87,7 +87,7 @@ pub fn run() {
         chosen.is_ok() && cleared.is_ok(),
         "",
     );
-    let folder = ide_core::paths::home().join("message-project");
+    let folder = crate::selftest::helpers::folder("message-project");
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
@@ -302,7 +302,7 @@ fn regenerated(root: PathBuf, ok: bool) {
         &root,
         |c| {
             let seen = probe::message(c);
-            seen.running && !seen.text.is_empty()
+            seen.running && !seen.editable && !seen.text.is_empty()
         },
         move |root, ok| {
             if let Some(controller) = window_of(&root) {

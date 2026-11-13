@@ -119,7 +119,7 @@ fn paint(view: &EditorTextView, lines: Option<Range<usize>>) {
             unsafe { storage.addAttribute_value_range(key, &NSColor::textColor(), whole) };
             for span in document.spans(line) {
                 if let Some(range) = part(whole, span.start, span.end) {
-                    // SAFETY: As above.
+                    // SAFETY: AppKit's foreground colour key with a colour value, over a range the span keeps inside the storage.
                     unsafe { storage.addAttribute_value_range(key, &token_color(span.kind), range) };
                 }
             }

@@ -13,7 +13,7 @@ use objc2::rc::{Retained, Weak};
 mod controller;
 mod hierarchy;
 pub use hierarchy::HierarchyPanels;
-mod model;
+use ide_project::search_panel as model;
 mod panel;
 mod replace;
 mod rows;

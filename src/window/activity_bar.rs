@@ -13,9 +13,10 @@ use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
 use crate::util::{ns, set_target, symbol_button, tagged};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 const BUTTON_SIZE: f64 = 32.0;
-const SYMBOL_POINTS: f64 = 16.0;
 
 pub struct ActivityBar {
     view: Retained<NSView>,
@@ -27,7 +28,7 @@ impl ActivityBar {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::CenterX);
-        stack.setSpacing(4.0);
+        stack.setSpacing(ide_ui_common::style::space::XS);
         stack.setEdgeInsets(NSEdgeInsets {
             top: 6.0,
             left: 0.0,
@@ -40,7 +41,7 @@ impl ActivityBar {
                 mtm,
                 panel.symbol(),
                 panel.title(),
-                SYMBOL_POINTS,
+                ide_ui_common::style::symbol::LARGE,
                 Some(target),
                 sel!(ideShowPanel:),
             );
@@ -53,7 +54,7 @@ impl ActivityBar {
             mtm,
             "gearshape",
             t("Einstellungen"),
-            SYMBOL_POINTS,
+            ide_ui_common::style::symbol::LARGE,
             None,
             sel!(ideShowSettings:),
         );
@@ -138,45 +139,6 @@ impl ActivityBar {
             crate::util::set_label(button, Some(description));
             button.setToolTip(Some(&ns(description)));
         }
-    }
-
-    /// The tooltip of `panel`'s symbol.
-    #[cfg(feature = "selftest")]
-    pub fn tip(&self, panel: Panel) -> Option<String> {
-        let (_, button) = self.buttons.iter().find(|(p, _)| *p == panel)?;
-        button.toolTip().map(|tip| tip.to_string())
-    }
-
-    /// How many marks show on the symbols.
-    #[cfg(feature = "selftest")]
-    pub fn marks(&self) -> usize {
-        self.buttons
-            .iter()
-            .flat_map(|(_, button)| button.subviews().to_vec())
-            .filter(|view| view.downcast_ref::<objc2_app_kit::NSBox>().is_some() && !view.isHidden())
-            .count()
-    }
-
-    /// The context menu of `panel`'s symbol.
-    #[cfg(feature = "selftest")]
-    pub fn menu_of(&self, panel: Panel) -> Option<Retained<NSMenu>> {
-        let (_, button) = self.buttons.iter().find(|(p, _)| *p == panel)?;
-        button.menu()
-    }
-
-    /// The panels whose symbol shows.
-    #[cfg(feature = "selftest")]
-    pub fn shown(&self) -> Vec<Panel> {
-        self.buttons
-            .iter()
-            .filter(|(_, button)| !button.isHidden())
-            .map(|(panel, _)| *panel)
-            .collect()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn button_count(&self) -> usize {
-        self.buttons.len() + 1
     }
 }
 

@@ -1,6 +1,7 @@
 //! Running a command line in the user's shell, in the project, under the supervisor with the login shell's
 //! environment; with the thread's sandbox on, inside `sandbox-exec` with writes limited to the project and no network.
 
+use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
@@ -90,12 +91,9 @@ pub(super) fn run(input: &Value, context: &Context<'_>) -> Result<Outcome, ToolN
                 .unwrap_or(Ending::Unknown);
         }
     };
-    let aftermath = Instant::now() + AFTERMATH;
-    while readers.iter().any(|r| !r.is_finished()) && Instant::now() < aftermath {
-        std::thread::sleep(Duration::from_millis(20));
-    }
+    tail::Collecting::wait_all(&readers, AFTERMATH);
     let text = |tail: &Arc<Mutex<Tail>>| {
-        let tail = tail.lock().unwrap_or_else(|e| e.into_inner());
+        let tail = tail.lock_ignoring_poison();
         let dropped = tail.dropped();
         let text = tail.text();
         if dropped > 0 {

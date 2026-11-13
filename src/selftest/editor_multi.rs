@@ -5,18 +5,19 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::sel;
 use objc2_app_kit::NSStandardKeyBindingResponding;
 use objc2_foundation::{NSPoint, NSRange};
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::{self, EditorTextView, selftest as edit};
-use crate::util::main_after;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "editor-multi";
+const PROJECT: &str = "multi-project";
+/// A turn of the event loop between steps, so that AppKit closes the undo group of one step's typing before the next.
+const EVENT_TURN: Duration = Duration::from_millis(100);
 
 const LINES: &str = "alpha\nbeta\ngamma\n";
 const BLOCKS: &str = "if a {}\nif b {}\n";
@@ -24,13 +25,8 @@ const WORDS: &str = "foo bar foo baz foo\n";
 const PYTHON: &str = "def one():\n    a = 1\n    b = 2\n\ndef two():\n    c = 3\n";
 const NOTE: &str = "one\n";
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("multi-project")
-}
-
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn project_window() -> Option<Retained<WindowController>> {
@@ -76,28 +72,16 @@ fn picture(name: &str) {
 }
 
 pub fn run() {
-    let folder = folder();
-    let written = [
+    let files = [
         ("lines.txt", LINES),
         ("blocks.txt", BLOCKS),
         ("words.txt", WORDS),
         ("fold.py", PYTHON),
         ("note.txt", NOTE),
-    ]
-    .iter()
-    .try_for_each(|(name, text)| {
-        std::fs::create_dir_all(&folder)?;
-        std::fs::write(folder.join(name), text)
+    ];
+    helpers::open_project(SCENARIO, PROJECT, &files, |_| {
+        helpers::wait_until(|| open("lines.txt").is_some(), |_| carets_type_and_delete());
     });
-    if let Err(error) = written {
-        check("the files are made", false, error.to_string());
-        finish(SCENARIO);
-        return;
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    main_after(Duration::from_millis(300), carets_type_and_delete);
 }
 
 fn carets_type_and_delete() {
@@ -150,7 +134,7 @@ fn carets_type_and_delete() {
         edit::carets(&view).len() == 1,
         format!("{:?}", edit::carets(&view)),
     );
-    main_after(Duration::from_millis(200), pairs_and_indent);
+    helpers::after(EVENT_TURN, pairs_and_indent);
 }
 
 fn pairs_and_indent() {
@@ -192,7 +176,7 @@ fn pairs_and_indent() {
         found == [0..3, 8..11, 16..19] && text(&words) == "qux bar qux baz qux\n",
         format!("{found:?} → {:?} → {:?}", text(&words), edit::carets(&words)),
     );
-    main_after(Duration::from_millis(200), folds);
+    helpers::after(EVENT_TURN, folds);
 }
 
 /// The point of the given offset's caret in `view`, at the middle of its line.
@@ -237,7 +221,10 @@ fn folds() {
     if let Some(inside) = inside {
         crate::lsp::apply_text_edits(&view, vec![(inside..inside, "x".into())]);
     }
-    main_after(Duration::from_millis(100), unfolded_by_edit);
+    helpers::wait_until(
+        || open("fold.py").is_some_and(|view| edit::folded(&view) == 1),
+        |_| unfolded_by_edit(),
+    );
 }
 
 fn unfolded_by_edit() {
@@ -255,7 +242,7 @@ fn unfolded_by_edit() {
         (0..6).all(|line| shown.contains(&line)),
         format!("{shown:?}"),
     );
-    main_after(Duration::from_millis(100), edit_after_typing);
+    helpers::after(EVENT_TURN, edit_after_typing);
 }
 
 /// A server's edit in the same turn of the run loop as the typing before it, while AppKit's group for the turn is

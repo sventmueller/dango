@@ -12,5 +12,9 @@
 //! ```
 
 pub mod diag;
+pub mod file_outline;
+pub mod panel;
+pub mod registry;
 pub mod style;
 pub mod util;
+pub mod window;

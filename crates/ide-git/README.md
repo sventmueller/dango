@@ -22,4 +22,7 @@ flowchart TB
     loop -->|"Output parsed: FileDiff, Status, Commit, ..."| callers
 ```
 
+`panel` holds what the app's Git panel decides without AppKit (E98): its rows and sections, the commit graph's
+lanes, and its words for git's errors; `ThreadTree` and `TreeState` describe the worktree of an AI thread (I1).
+
 The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

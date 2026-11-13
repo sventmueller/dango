@@ -16,9 +16,9 @@ flowchart TB
     conn -->|"session/update: Mapper, Thread::apply_all"| thread[("Thread")]
     conn -->|"session/request_permission: asks kept for answer"| thread
     conn -->|"sink(Event), on the connection thread"| app
-    app -->|"send, set_mode, set_option, ..."| request["thread acp-request per request: waits for the answer"]
+    app -->|"send, set_mode, set_option, ..."| request["a task of the connection per request: initialize, session/new, session/load and settings with a deadline from the timer of ide-core"]
     request --> conn
-    app -->|"Register::cached, Register::fetch"| net["Net: HTTPS"]
+    app -->|"Register::cached, Register::fetch"| net["ide-net: Net, HTTPS"]
     net --> registry[("ACP registry")]
     app -->|"Installer: Plan of a preset or entry"| installer["download with checksum, npm, uv"]
     installer -->|"helpers through the supervisor"| helpers(["npm, uv"])

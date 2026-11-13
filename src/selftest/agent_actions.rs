@@ -6,9 +6,10 @@
 //! sandbox restart the session, and the AI panel's context menu acts on it. Each answer is checked in what the app
 //! wrote to the stand-in.
 
+use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_thread::{EntryKind, Status};
 use objc2::MainThreadMarker;
@@ -16,19 +17,22 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSApplication, NSMenu, NSModalResp
 use serde_json::Value;
 
 use super::agent::{controller_of, picture, tab_of};
-use super::agent_stand_in::{COLOUR, SESSION, StandIn, TESTS};
+use super::agent_stand_in::{AREAS, COLOUR, EXTRAS, SESSION, StandIn, TESTS};
 use super::helpers::{alert_texts, answer_alert, in_any_mode_after};
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::agent::{AgentTab, TabMenu};
-use crate::util::main_after;
 
 const NAME: &str = "agent-actions";
+/// Time for the timeline to build and lay out the cards that scrolling or a press changed; it reports no end.
+const CARDS_BUILT: Duration = Duration::from_millis(300);
+/// The tools of the stand-in's turn, each with a card of its own.
+const TOOLS: [&str; 5] = ["Grep", "WebSearch", "Frobnicate", "Read", "WebFetch"];
 
 /// The messages of the alerts the scenario answered, first first.
 static ANSWERED: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 pub(super) fn answered() -> Vec<String> {
-    ANSWERED.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    ANSWERED.lock_ignoring_poison().clone()
 }
 
 /// Answers the next alert with `response` as soon as it shows, typing `text` into its field first when given.
@@ -49,7 +53,7 @@ fn poll_alert(response: NSModalResponse, text: Option<&'static str>, tries: u32)
             fill_field(&content, text);
         }
         let message = alert_texts().into_iter().find(|t| !t.is_empty()).unwrap_or_default();
-        ANSWERED.lock().unwrap_or_else(|e| e.into_inner()).push(message);
+        ANSWERED.lock_ignoring_poison().push(message);
         answer_alert(response);
     });
 }
@@ -70,28 +74,16 @@ pub(super) fn stand_in() -> StandIn {
     }
 }
 
-fn wait(
-    what: &'static str,
-    started: Instant,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    if ready() {
-        return then();
-    }
-    if started.elapsed() > Duration::from_secs(20) {
-        check(what, false, "waited in vain");
-        return finish(NAME);
-    }
-    main_after(Duration::from_millis(100), move || wait(what, started, ready, then));
-}
-
-pub(super) fn soon(
-    what: &'static str,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    wait(what, Instant::now(), ready, then);
+/// Calls `then` once `ready` holds; when it does not in time, that is the failed check `what` and the end.
+pub(super) fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    helpers::wait_until(ready, move |ok| {
+        if ok {
+            then();
+        } else {
+            check(what, false, "waited in vain");
+            finish(NAME);
+        }
+    });
 }
 
 /// The titles of `menu`'s items, separators as empty titles.
@@ -120,7 +112,7 @@ fn pending(tab: &AgentTab) -> Option<(u64, String)> {
 }
 
 /// Waits for the stand-in's request `request` to wait for an answer, then hands its entry to `then`.
-fn when_asked(key: u64, request: &'static str, then: impl FnOnce(u64) + Send + 'static) {
+fn when_asked(key: u64, request: &'static str, then: impl FnOnce(u64) + 'static) {
     soon(
         "the stand-in's request waits for an answer",
         move || tab_of(key).and_then(|t| pending(&t)).is_some_and(|(_, r)| r == request),
@@ -131,13 +123,13 @@ fn when_asked(key: u64, request: &'static str, then: impl FnOnce(u64) + Send + '
             if let Some(tab) = tab_of(key) {
                 tab.timeline().scroll_to_end();
             }
-            main_after(Duration::from_millis(300), move || then(id));
+            helpers::after(CARDS_BUILT, move || then(id));
         },
     );
 }
 
 /// Waits for the app's answer to request `request`, then checks it.
-fn when_answered(key: u64, request: &'static str, then: impl FnOnce(Value) + Send + 'static) {
+fn when_answered(key: u64, request: &'static str, then: impl FnOnce(Value) + 'static) {
     soon(
         "the app answers the stand-in's request",
         move || stand_in().answer_to(request).is_some(),
@@ -153,11 +145,11 @@ fn when_answered(key: u64, request: &'static str, then: impl FnOnce(Value) + Sen
 
 pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("actions-project");
-    let _ = std::fs::create_dir_all(&root);
-    let _ = std::fs::write(root.join("hello.txt"), "hello world\n");
-    let _ = std::fs::write(root.join("README.md"), "# Actions\n");
-    let root = root.canonicalize().unwrap_or(root);
+    let files = [("hello.txt", "hello world\n"), ("README.md", "# Actions\n")];
+    let Ok(root) = helpers::make_project("actions-project", &files) else {
+        check("the project is made", false, "");
+        return finish(NAME);
+    };
     crate::project::trust(&root);
     let Ok(prepared) = StandIn::new(&stand_in().dir, &root) else {
         check("the stand-in is written", false, "");
@@ -165,8 +157,8 @@ pub fn run() {
     };
     crate::agent::set_test_claude(prepared.program());
     crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || {
-        let Some(controller) = controller_of(&root) else {
+    helpers::wait_for_window(&root.clone(), move |controller| {
+        let Some(controller) = controller else {
             return finish(NAME);
         };
         tool_cards(root, &controller);
@@ -175,8 +167,8 @@ pub fn run() {
 
 /// The tab that runs the stand-in, once a tab without a program said so.
 fn start(root: PathBuf) {
-    main_after(Duration::from_millis(100), move || {
-        let Some(controller) = controller_of(&root) else {
+    helpers::wait_for_window(&root.clone(), move |controller| {
+        let Some(controller) = controller else {
             return finish(NAME);
         };
         missing_program(&controller);
@@ -241,34 +233,45 @@ fn tool_cards(root: PathBuf, controller: &crate::window::WindowController) {
     tab.select();
     tab.feed(&frames.join("\n"));
     let key = tab.key;
-    main_after(Duration::from_millis(600), move || {
-        let Some(tab) = tab_of(key) else { return finish(NAME) };
-        tab.timeline().scroll_to_end();
-        tab.timeline().settle();
-        let folded = tab.timeline().visible_summaries();
-        for part in [crate::agent::Part::Input, crate::agent::Part::Output] {
-            tab.open_all(part);
-        }
-        main_after(Duration::from_millis(600), move || {
+    helpers::wait_until(
+        move || tab_of(key).is_some_and(|tab| tab.inspect().rows >= 6),
+        move |_| {
             let Some(tab) = tab_of(key) else { return finish(NAME) };
             tab.timeline().scroll_to_end();
             tab.timeline().settle();
-            let opened = tab.timeline().visible_summaries();
-            let named = |seen: &[String], name: &str| seen.iter().any(|s| s.contains(name));
-            check(
-                "searches, fetches, MCP and unknown tools each show a card that opens to its input and output",
-                ["Grep", "WebSearch", "Frobnicate", "Read", "WebFetch"]
-                    .iter()
-                    .all(|name| named(&folded, name) || named(&opened, name))
-                    && tab.inspect().rows >= 6,
-                format!("{folded:?} / {opened:?}"),
-            );
-            if let Some(controller) = controller_of(&root) {
-                picture(&controller, "agent-actions-tools");
+            let folded = tab.timeline().visible_summaries();
+            for part in [crate::agent::Part::Input, crate::agent::Part::Output] {
+                tab.open_all(part);
             }
-            start(root);
-        });
-    });
+            let seen = folded.clone();
+            let all_shown = move || {
+                tab_of(key).is_some_and(|tab| {
+                    tab.timeline().scroll_to_end();
+                    tab.timeline().settle();
+                    let opened = tab.timeline().visible_summaries();
+                    TOOLS
+                        .iter()
+                        .all(|name| [&seen, &opened].iter().any(|s| s.iter().any(|v| v.contains(name))))
+                })
+            };
+            helpers::wait_until(all_shown, move |_| {
+                let Some(tab) = tab_of(key) else { return finish(NAME) };
+                tab.timeline().scroll_to_end();
+                tab.timeline().settle();
+                let opened = tab.timeline().visible_summaries();
+                let named = |seen: &[String], name: &str| seen.iter().any(|s| s.contains(name));
+                check(
+                    "searches, fetches, MCP and unknown tools each show a card that opens to its input and output",
+                    TOOLS.iter().all(|name| named(&folded, name) || named(&opened, name)) && tab.inspect().rows >= 6,
+                    format!("{folded:?} / {opened:?}"),
+                );
+                if let Some(controller) = controller_of(&root) {
+                    picture(&controller, "agent-actions-tools");
+                }
+                start(root);
+            });
+        },
+    );
 }
 
 /// Before the first prompt: the slash, model and mode menus, filled from what `initialize` answered.
@@ -453,7 +456,7 @@ fn questions(root: PathBuf, key: u64, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.timeline().press_last("blue", 0);
     let early = stand_in().answer_to("q1");
-    main_after(Duration::from_millis(300), move || {
+    helpers::after(CARDS_BUILT, move || {
         let Some(tab) = tab_of(key) else { return finish(NAME) };
         let ticked = tab.timeline().tick_options(id, 1, &["unit", "ui"]);
         let typed = tab.timeline().type_field(id, 1, "lint");
@@ -469,8 +472,24 @@ fn questions(root: PathBuf, key: u64, id: u64) {
                     && answers[TESTS] == "unit, ui, lint",
                 format!("{early:?}, {ticked}, {typed}: {answer}"),
             );
-            when_asked(key, "x1", move |id| plan(root, key, id));
+            when_asked(key, "q2", move |id| words(root, key, id));
         });
+    });
+}
+
+/// Two multiple-choice questions answered only in words: one button sends both.
+fn words(root: PathBuf, key: u64, id: u64) {
+    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let typed = tab.timeline().type_field(id, 0, "Alles") && tab.timeline().type_field(id, 1, "Nichts");
+    let pressed = tab.timeline().press_last("Senden", 0);
+    when_answered(key, "q2", move |answer| {
+        let answers = &answer["updatedInput"]["answers"];
+        check(
+            "one button sends every question that has words typed, even where its own button was not pressed",
+            typed && pressed && answers[AREAS] == "Alles" && answers[EXTRAS] == "Nichts",
+            format!("{typed} {pressed}: {answer}"),
+        );
+        when_asked(key, "x1", move |id| plan(root, key, id));
     });
 }
 

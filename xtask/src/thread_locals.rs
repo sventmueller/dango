@@ -61,7 +61,10 @@ fn problems(allowed: &BTreeSet<Static>, found: &BTreeSet<Static>) -> Vec<String>
 
 /// The statics of the inventory's rows whose target starts with "stays".
 fn allowed(inventory: &str) -> BTreeSet<Static> {
-    inventory
+    let thread_locals = inventory
+        .find(crate::rules::STATICS_HEADING)
+        .map_or(inventory, |end| &inventory[..end]);
+    thread_locals
         .lines()
         .filter_map(|line| {
             let cells: Vec<&str> = line.trim().strip_prefix('|')?.split('|').map(str::trim).collect();
@@ -113,7 +116,7 @@ fn statics(source: &str) -> Vec<String> {
 }
 
 /// The `.rs` files under `folder`, without build output.
-fn rust_files(folder: &Path) -> Vec<PathBuf> {
+pub(crate) fn rust_files(folder: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     let Ok(entries) = std::fs::read_dir(folder) else {
         return files;

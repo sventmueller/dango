@@ -101,10 +101,6 @@ pub fn open_document(controller: &WindowController, path: &Path, preview: bool) 
     true
 }
 
-pub fn is_svg(path: &Path) -> bool {
-    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"))
-}
-
 /// Opens the drawing of the SVG file `path` in a tab of its own, apart from an editor of its source, or selects it.
 pub fn open_drawing(controller: &WindowController, path: &Path) {
     let key = format!("preview:{}", path.display());
@@ -375,5 +371,32 @@ pub mod seen {
 
     pub fn is_quick_look(view: &objc2_app_kit::NSView) -> bool {
         super::quick_look::shows(view)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn markdown_and_html_are_known_by_extension_in_any_case() {
+        assert!(is_markdown(Path::new("README.MD")));
+        assert!(is_markdown(Path::new("notes.mkdn")));
+        assert!(!is_markdown(Path::new("md")));
+        assert!(is_html(Path::new("page.XHTML")));
+        assert!(!is_html(Path::new("page.html.txt")));
+    }
+
+    #[test]
+    fn documents_open_in_a_viewer_but_source_files_in_an_editor() {
+        for shown in ["a.pdf", "b.PNG", "c.docx", "d.mp4"] {
+            assert!(is_document(Path::new(shown)), "{shown}");
+        }
+        // Quick Look would take `.ts` as video and `.key` as Keynote.
+        for edited in ["main.ts", "server.key", "a.md", "Makefile"] {
+            assert!(!is_document(Path::new(edited)), "{edited}");
+        }
     }
 }

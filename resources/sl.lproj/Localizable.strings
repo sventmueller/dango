@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Zadnje sporočilo: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Program se je končal brez sporočila.";
 "Das Programm hat sich beim Start beendet: {}" = "Program se je končal med zagonom: {}";
+"Konnte keinen Thread starten: {}" = "Niti ni bilo mogoče zagnati: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Spremembe delovnega prostora ni bilo mogoče izvesti.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "»{}« je knjižnica brez programa in ta datoteka nima testov. Razhroščite datoteko z main ali testi ali v .vscode/launch.json določite, kateri program se zažene.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Če macOS ne zahteva gesla, enkrat dovolite razhroščevalnike v Terminalu z ukazom »sudo DevToolsSecurity -enable« ali prekličite z Ustavi. Po desetih minutah zagon odneha sam.";
+"Haltepunkt, nicht gesetzt" = "Prekinitvena točka, ni nastavljena";
+"nicht gesetzt" = "ni nastavljena";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Razhroščevalnik tukaj ni mogel nastaviti prekinitvene točke: {}";

@@ -123,11 +123,13 @@ mod tests {
         static LANE: Lane = Lane::new("test-full", 1, 2);
         let gate = Arc::new(Barrier::new(2));
         let held = gate.clone();
+        let (started, running) = channel();
         LANE.try_run(move || {
+            started.send(()).unwrap();
             held.wait();
         })
         .unwrap();
-        std::thread::sleep(Duration::from_millis(50));
+        running.recv_timeout(Duration::from_secs(5)).unwrap();
         LANE.try_run(|| ()).unwrap();
         LANE.try_run(|| ()).unwrap();
         assert_eq!(LANE.try_run(|| ()), Err(Full));

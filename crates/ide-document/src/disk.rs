@@ -262,12 +262,7 @@ pub(crate) mod tests {
     use super::*;
     use std::os::unix::fs::symlink;
 
-    pub(crate) fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-document-{name}-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        fs::canonicalize(dir).unwrap()
-    }
+    pub(crate) use ide_core::testing::scratch;
 
     fn content(bytes: &[u8]) -> FileContent {
         FileContent::decode(bytes.to_vec(), Stamp::UNREACHABLE, false)

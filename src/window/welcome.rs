@@ -34,7 +34,7 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::Leading);
-    stack.setSpacing(10.0);
+    stack.setSpacing(ide_ui_common::style::space::L);
 
     if let Some(icon) = NSApplication::sharedApplication(mtm).applicationIconImage() {
         let image = NSImageView::imageViewWithImage(&icon, mtm);
@@ -61,14 +61,15 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
     }
     let title = label(mtm, ide_product::NAME);
     // SAFETY: AppKit sets its font weight constants when it loads.
-    title.setFont(Some(&NSFont::systemFontOfSize_weight(28.0, unsafe {
-        NSFontWeightSemibold
-    })));
+    title.setFont(Some(&NSFont::systemFontOfSize_weight(
+        ide_ui_common::style::DISPLAY,
+        unsafe { NSFontWeightSemibold },
+    )));
     stack.addArrangedSubview(&title);
     let tagline = label(mtm, t("Code, Terminal und Agenten in einem Fenster."));
     tagline.setTextColor(Some(&NSColor::secondaryLabelColor()));
     stack.addArrangedSubview(&tagline);
-    stack.setCustomSpacing_afterView(24.0, &tagline);
+    stack.setCustomSpacing_afterView(ide_ui_common::style::space::GROUP, &tagline);
 
     // SAFETY: A nil target sends the action along the responder chain, which ends at the app delegate that answers it.
     let open = unsafe {
@@ -81,9 +82,9 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
     let recent = recent_folders();
     if !recent.is_empty() {
         let heading = label(mtm, t("Zuletzt geöffnet"));
-        heading.setFont(Some(&NSFont::boldSystemFontOfSize(13.0)));
+        heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING)));
         stack.addArrangedSubview(&heading);
-        stack.setCustomSpacing_afterView(24.0, &open);
+        stack.setCustomSpacing_afterView(ide_ui_common::style::space::GROUP, &open);
         for (index, folder) in recent.iter().enumerate() {
             let entry = borderless_button(
                 mtm,

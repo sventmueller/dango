@@ -2,7 +2,6 @@
 //! access key, which the secrets check lists in a sheet whose default is to cancel. The hook runs because the
 //! scenario trusts its folder.
 
-use std::cell::RefCell;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -16,7 +15,6 @@ use super::{
 };
 use crate::git_panel::selftest as panel;
 use crate::selftest::{check, finish};
-use crate::util::main_after;
 use crate::window::WindowController;
 
 const HOOKED: &str = "hooked.txt";
@@ -27,11 +25,6 @@ const FAKE_KEY: &str = "aws_access_key_id = AKIAQYLPMN5HHHFPZAM2\n";
 const SECRET_SUBJECT: &str = "Add credentials";
 /// How long a sheet takes to slide in and draw.
 const SHEET_SETTLE: Duration = Duration::from_millis(800);
-
-thread_local! {
-    /// The newest commit's subject before the commits that are to be refused.
-    static TOP_BEFORE: RefCell<Option<String>> = const { RefCell::new(None) };
-}
 
 pub fn start(root: PathBuf) {
     let made =
@@ -72,14 +65,16 @@ fn commit_into_hook(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
     };
-    TOP_BEFORE.with(|before| *before.borrow_mut() = top(&controller));
+    let before = top(&controller);
     panel::commit(&controller, "Hooked change");
-    wait_for(root, sheet_ready, |root, ok| settle(root, ok, hook_sheet));
+    wait_for(root, sheet_ready, move |root, ok| {
+        settle(root, ok, move |root, ok| hook_sheet(root, ok, before));
+    });
 }
 
 /// Goes on with `then` once a sheet whose buttons are in place has also drawn itself, for its picture.
-fn settle(root: PathBuf, ok: bool, then: fn(PathBuf, bool)) {
-    main_after(SHEET_SETTLE, move || then(root, ok));
+fn settle(root: PathBuf, ok: bool, then: impl FnOnce(PathBuf, bool) + 'static) {
+    super::super::helpers::after(SHEET_SETTLE, move || then(root, ok));
 }
 
 /// The picture `name` of the window of `root` with its sheet, taken from the screen: a capture of the sheet's own
@@ -109,7 +104,8 @@ fn sheet_picture(root: &Path, name: &str) {
     crate::selftest::capture(&[&region], &path);
 }
 
-fn hook_sheet(root: PathBuf, ok: bool) {
+/// `before` is the newest commit's subject before the commits that are to be refused.
+fn hook_sheet(root: PathBuf, ok: bool, before: Option<String>) {
     sheet_picture(&root, "git-hook-sheet");
     let text = sheet_text(&root);
     check(
@@ -124,7 +120,7 @@ fn hook_sheet(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     let seen = panel::seen(&controller);
-    let unchanged = TOP_BEFORE.with(|before| *before.borrow() == top(&controller));
+    let unchanged = before == top(&controller);
     let named =
         seen.as_ref().and_then(|s| s.problem.clone()) == Some(tf("Der Hook „{}“ hat abgelehnt.", &["pre-commit"]));
     check(
@@ -151,7 +147,13 @@ fn hook_sheet(root: PathBuf, ok: bool) {
     in_background(
         root,
         |root| stage(root, CREDENTIALS),
-        |root| wait_for(root, |c| staged(c, CREDENTIALS), commit_secret),
+        move |root| {
+            wait_for(
+                root,
+                |c| staged(c, CREDENTIALS),
+                move |root, ok| commit_secret(root, ok, before),
+            )
+        },
     );
 }
 
@@ -165,7 +167,7 @@ fn gitleaks_installed() -> bool {
         .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join("gitleaks").is_file()))
 }
 
-fn commit_secret(root: PathBuf, ok: bool) {
+fn commit_secret(root: PathBuf, ok: bool, before: Option<String>) {
     if !ok {
         check(
             "the panel lists the file with the access key staged",
@@ -178,10 +180,12 @@ fn commit_secret(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     panel::commit(&controller, SECRET_SUBJECT);
-    wait_for(root, sheet_ready, |root, ok| settle(root, ok, secrets_sheet));
+    wait_for(root, sheet_ready, move |root, ok| {
+        settle(root, ok, move |root, ok| secrets_sheet(root, ok, before));
+    });
 }
 
-fn secrets_sheet(root: PathBuf, ok: bool) {
+fn secrets_sheet(root: PathBuf, ok: bool, before: Option<String>) {
     sheet_picture(&root, "git-secrets-sheet");
     let text = sheet_text(&root);
     check(
@@ -198,14 +202,20 @@ fn secrets_sheet(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertSecondButtonReturn, None) {
         return finish(SCENARIO);
     }
-    wait_for(root, |c| panel::seen(c).is_some_and(|s| !s.busy), secrets_cancelled);
+    wait_for(
+        root,
+        |c| panel::seen(c).is_some_and(|s| !s.busy),
+        move |root, ok| {
+            secrets_cancelled(root, ok, before);
+        },
+    );
 }
 
-fn secrets_cancelled(root: PathBuf, ok: bool) {
+fn secrets_cancelled(root: PathBuf, ok: bool, before: Option<String>) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
     };
-    let unchanged = TOP_BEFORE.with(|before| *before.borrow() == top(&controller));
+    let unchanged = before == top(&controller);
     let staged = panel::seen(&controller).is_some_and(|s| has(&s.staged, CREDENTIALS));
     check(
         "cancelling at the secrets sheet leaves the commit undone and the file staged",

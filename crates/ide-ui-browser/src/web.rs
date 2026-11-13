@@ -18,6 +18,10 @@ use objc2_web_kit::{
 
 use super::address;
 use ide_ui_common::util::{guarded, ns};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 thread_local! {
     static STORE: OnceCell<Retained<WKWebsiteDataStore>> = const { OnceCell::new() };
@@ -39,17 +43,6 @@ fn store(mtm: MainThreadMarker) -> Retained<WKWebsiteDataStore> {
             })
             .clone()
     })
-}
-
-/// Whether pages open popups without a click, which the self-test's clicks into a window behind others do not
-/// always give them.
-#[cfg(feature = "selftest")]
-static POPUPS_UNASKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Lets the pages of tabs opened from now on open popups without a click.
-#[cfg(feature = "selftest")]
-pub fn open_popups_unasked() {
-    POPUPS_UNASKED.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// The configuration of a new tab. It adds no script message handler, so no page can call into the app.
@@ -109,20 +102,6 @@ fn enable_inspect_element(config: &WKWebViewConfiguration) {
             let _: () = objc2::msg_send![&*preferences, setValue: &*on, forKey: &*ns("developerExtrasEnabled")];
         }
     });
-}
-
-/// Whether `web` offers the Web Inspector, from Safari's Develop menu and its own context menu.
-#[cfg(feature = "selftest")]
-pub fn has_inspector(web: &WKWebView) -> bool {
-    // SAFETY: Plain properties; reading the key `enable_inspect_element` set raises no exception once setting it did
-    // not.
-    unsafe {
-        let preferences = web.configuration().preferences();
-        let extras: Option<Retained<AnyObject>> =
-            objc2::msg_send![&*preferences, valueForKey: &*ns("developerExtrasEnabled")];
-        let extras = extras.is_some_and(|value| value.downcast_ref::<NSNumber>().is_some_and(|n| n.boolValue()));
-        web.isInspectable() && extras
-    }
 }
 
 pub fn new_view(mtm: MainThreadMarker, config: &WKWebViewConfiguration) -> Retained<WKWebView> {
@@ -190,12 +169,12 @@ pub fn go_forward(web: &WKWebView) {
 }
 
 pub fn reload(web: &WKWebView) {
-    // SAFETY: Asks for nothing.
+    // SAFETY: Stopping takes no arguments and does nothing when the view loads nothing.
     unsafe { web.reload() };
 }
 
 pub fn stop(web: &WKWebView) {
-    // SAFETY: Asks for nothing.
+    // SAFETY: Stopping takes no arguments and does nothing when the view loads nothing.
     unsafe { web.stopLoading() };
 }
 

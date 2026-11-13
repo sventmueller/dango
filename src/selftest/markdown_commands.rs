@@ -20,35 +20,31 @@ use super::helpers::{self, editor, text_of, utf16_len, window_of};
 use super::{check, finish};
 use crate::editor::EditorTextView;
 use crate::markdown::selftest::{Command, paste_from, saved_for_splat};
-use crate::util::{constant, main_after, ns};
+use crate::util::{constant, ns};
 
 const NAME: &str = "markdown-commands";
 /// A picture of one pixel.
 const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("markdown-commands");
-    std::fs::create_dir_all(root.join("doc")).expect("scratch project");
-    std::fs::write(root.join("doc/note.md"), "word\n").expect("scratch file");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = window_of(&root) else {
-            check("the project's window opens", false, "");
-            return finish(NAME);
-        };
-        controller.open_file(&root.join("doc/note.md"));
-        let Some(view) = editor(&controller, "note.md") else {
-            check("the Markdown file opens in an editor", false, "");
-            return finish(NAME);
-        };
-        format(&view);
-        link(&view);
-        validate(&view);
-        paste(&view, &root);
-        export(&view, root);
+    helpers::open_project(NAME, "markdown-commands", &[("doc/note.md", "word\n")], |_| {
+        let root = helpers::root("markdown-commands");
+        helpers::wait_for_editor(&root.clone(), &root.join("doc/note.md"), move |view| {
+            on_editor(view, root);
+        });
     });
+}
+
+fn on_editor(view: Option<Retained<EditorTextView>>, root: PathBuf) {
+    let Some(view) = view else {
+        check("the Markdown file opens in an editor", false, "");
+        return finish(NAME);
+    };
+    format(&view);
+    link(&view);
+    validate(&view);
+    paste(&view, &root);
+    export(&view, root);
 }
 
 /// Replaces the text of `view` with `text` and selects `word` in it.
@@ -222,7 +218,10 @@ fn export(view: &EditorTextView, root: PathBuf) {
                     && html.contains("Pasted"),
                 format!("offered {offered:?}, written {written}"),
             );
-            main_after(Duration::from_millis(300), move || splat(root));
+            let closed = || {
+                MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none())
+            };
+            helpers::wait_until(closed, move |_| splat(root));
         },
     );
 }

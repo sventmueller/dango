@@ -11,6 +11,8 @@ use super::{
     ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, WindowController, first_shown, panels::Panels, tabs,
     tabs::TabWindow,
 };
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 impl WindowController {
     /// Keeps the width the user gave the sidebar in `tab`.
@@ -162,22 +164,5 @@ impl WindowController {
         if let Some(panels) = self.ivars().panels.borrow().as_ref() {
             panels.set_accessory(panel, view);
         }
-    }
-
-    /// The context menu of `panel`'s symbol in the activity bar.
-    #[cfg(feature = "selftest")]
-    pub fn activity_menu(&self, panel: Panel) -> Option<Retained<objc2_app_kit::NSMenu>> {
-        self.ivars().activity.borrow().as_ref()?.menu_of(panel)
-    }
-
-    /// The panels whose symbol the activity bar shows.
-    #[cfg(feature = "selftest")]
-    pub fn shown_symbols(&self) -> Vec<Panel> {
-        self.ivars()
-            .activity
-            .borrow()
-            .as_ref()
-            .map(ActivityBar::shown)
-            .unwrap_or_default()
     }
 }

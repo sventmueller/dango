@@ -8,10 +8,10 @@ use std::time::Duration;
 use objc2::MainThreadMarker;
 
 use super::{check, finish};
-use crate::util::main_after;
 use crate::window::{self, WindowController};
 
-/// How long the worker takes for its answer; the window closes right away.
+/// How long the worker takes for its answer; the window closes right away. Once the open window's answer came, the
+/// closed window's answer gets this long again, since a dropped answer leaves nothing to wait for.
 const WORK: Duration = Duration::from_millis(300);
 
 pub fn run() {
@@ -29,25 +29,31 @@ pub fn run() {
         window.close();
     }
     drop(closing);
-    main_after(WORK * 3, move || {
-        let gone = crate::context::app().windows.get(closed_id).is_none();
-        check(
-            "a window that closed leaves the open ones",
-            gone,
-            format!("window {closed_id}"),
-        );
-        check(
-            "a worker's answer for a window that closed before it came is dropped",
-            !reached_closed.load(Ordering::SeqCst),
-            "",
-        );
-        check(
-            "a worker's answer for an open window reaches it",
-            reached_open.load(Ordering::SeqCst),
-            "",
-        );
-        finish("app-context");
-    });
+    let open_flag = Arc::clone(&reached_open);
+    super::helpers::wait_until(
+        move || open_flag.load(Ordering::SeqCst),
+        move |_| {
+            super::helpers::after(WORK, move || {
+                let gone = crate::context::app().windows.get(closed_id).is_none();
+                check(
+                    "a window that closed leaves the open ones",
+                    gone,
+                    format!("window {closed_id}"),
+                );
+                check(
+                    "a worker's answer for a window that closed before it came is dropped",
+                    !reached_closed.load(Ordering::SeqCst),
+                    "",
+                );
+                check(
+                    "a worker's answer for an open window reaches it",
+                    reached_open.load(Ordering::SeqCst),
+                    "",
+                );
+                finish("app-context");
+            })
+        },
+    );
 }
 
 /// Starts a worker whose answer goes to the window `id` after `WORK`; the flag says whether it got there.

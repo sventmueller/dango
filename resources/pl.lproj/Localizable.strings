@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Ostatni komunikat: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Program zakończył się bez komunikatu.";
 "Das Programm hat sich beim Start beendet: {}" = "Program zakończył się podczas uruchamiania: {}";
+"Konnte keinen Thread starten: {}" = "Nie można uruchomić wątku: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Nie udało się wykonać zmiany obszaru roboczego.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "„{}” to biblioteka bez programu, a ten plik nie ma testów. Debuguj plik z main lub testami albo określ w .vscode/launch.json, który program ma się uruchomić.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Jeśli macOS nie pyta o hasło, zezwól raz na debugery w Terminalu poleceniem „sudo DevToolsSecurity -enable” lub anuluj przyciskiem Zatrzymaj. Po dziesięciu minutach uruchamianie samo się podda.";
+"Haltepunkt, nicht gesetzt" = "Punkt przerwania, nieustawiony";
+"nicht gesetzt" = "nieustawiony";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Debuger nie mógł ustawić tutaj punktu przerwania: {}";

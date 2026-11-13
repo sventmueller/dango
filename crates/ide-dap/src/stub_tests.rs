@@ -1,18 +1,9 @@
 //! Stand-ins for the programs the crate runs, such as `cargo`, `go` or `python3`: shell scripts in a folder of
 //! their own that print what a test wants and log how they were called.
 
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::Path;
 
-/// A fresh folder for one test, without symbolic links in its path.
-pub(crate) fn folder(name: &str) -> PathBuf {
-    static NEXT: AtomicUsize = AtomicUsize::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("ide-dap-{name}-{}-{n}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    std::fs::canonicalize(&dir).unwrap()
-}
+pub(crate) use ide_core::testing::scratch as folder;
 
 /// Writes `body` as the executable shell script `path`.
 pub(crate) fn script(path: &Path, body: &str) {

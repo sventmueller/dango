@@ -3,7 +3,6 @@
 
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use ide_ci::log::{LineKind, LogLine};
 use ide_ci::{Client, Job, State};
@@ -20,6 +19,7 @@ use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRange, NSRect,
 use splat_i18n::{t, tf};
 
 use super::{text, work};
+use crate::context::Registry;
 use crate::util::{constant, guarded, label, ns, pin_edges, set_action};
 use crate::window::{TabKind, WindowController};
 
@@ -81,26 +81,15 @@ define_class!(
 /// The CI log tabs of every window by id.
 #[derive(Default)]
 pub struct LogTabs {
-    tabs: RefCell<Vec<(u64, Weak<LogTab>)>>,
-}
-
-fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<(u64, Weak<LogTab>)>>) -> R) -> R {
-    f(&crate::context::app().ci_log_tabs.tabs)
+    tabs: Registry<Weak<LogTab>>,
 }
 
 fn with_tab(id: u64, f: impl FnOnce(&LogTab)) {
-    let tab = with_tabs(|tabs| tabs.borrow().iter().find(|(i, _)| *i == id).and_then(|(_, t)| t.load()));
-    if let Some(tab) = tab {
-        f(&tab);
-    }
+    crate::context::app().ci_log_tabs.tabs.with(id, f);
 }
 
 fn live_tabs() -> Vec<Retained<LogTab>> {
-    with_tabs(|tabs| {
-        let mut tabs = tabs.borrow_mut();
-        tabs.retain(|(_, tab)| tab.load().is_some());
-        tabs.iter().filter_map(|(_, tab)| tab.load()).collect()
-    })
+    crate::context::app().ci_log_tabs.tabs.live()
 }
 
 /// The key of the log tab of `job` on `host`.
@@ -116,7 +105,11 @@ pub fn show(controller: &WindowController, window_root: &Path, client: Client, j
     }
     let title = tf("Log: {}", &[&job.name]);
     let tab = LogTab::new(controller, window_root.to_path_buf(), client, job, run);
-    with_tabs(|tabs| tabs.borrow_mut().push((tab.ivars().id, Weak::from(&*tab))));
+    controller
+        .context()
+        .ci_log_tabs
+        .tabs
+        .insert(tab.ivars().id, Weak::from(&*tab));
     tab.reload();
     let text = tab.ui().text.clone();
     controller.add_tab(TabKind::Log, Some(key), &title, tab.into_super());
@@ -126,7 +119,7 @@ pub fn show(controller: &WindowController, window_root: &Path, client: Client, j
 }
 
 /// Takes the jobs of a read of the window that shows `window_root`; a tab whose job runs reads its log again.
-pub fn refresh_for(window_root: &Path, runs: &[super::load::RunRow]) {
+pub fn refresh_for(window_root: &Path, runs: &[ide_ci::panel::RunRow]) {
     for tab in live_tabs() {
         if tab.ivars().window_root != window_root {
             continue;
@@ -152,10 +145,9 @@ impl LogTab {
         job: Job,
         run: String,
     ) -> Retained<LogTab> {
-        static NEXT: AtomicU64 = AtomicU64::new(1);
         let mtm: MainThreadMarker = controller.mtm();
         let ivars = LogIvars {
-            id: NEXT.fetch_add(1, Ordering::Relaxed),
+            id: controller.context().ci_log_tabs.tabs.next_id(),
             controller: Weak::from(controller),
             window_root,
             client,
@@ -287,7 +279,7 @@ impl LogUi {
             set_action(&button, tab, action);
             button.setBezelStyle(NSBezelStyle::Push);
             button.setControlSize(NSControlSize::Small);
-            button.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+            button.setFont(Some(&ide_ui_common::style::small_system()));
             button
         };
         let reload = button(t("Neu laden"), sel!(ideCiLogReload:));
@@ -295,7 +287,7 @@ impl LogUi {
         let web = button(t("Im Browser öffnen"), sel!(ideCiLogWeb:));
         let header = NSStackView::new(mtm);
         header.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        header.setSpacing(8.0);
+        header.setSpacing(ide_ui_common::style::space::M);
         header.setEdgeInsets(NSEdgeInsets {
             top: 8.0,
             left: 12.0,
@@ -313,7 +305,7 @@ impl LogUi {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::Leading);
-        stack.setSpacing(0.0);
+        stack.setSpacing(ide_ui_common::style::space::NONE);
         for view in [&*header as &NSView, &line, &scroll] {
             stack.addArrangedSubview(view);
             view.leadingAnchor()

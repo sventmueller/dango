@@ -2,7 +2,7 @@
 //! draws, the controller carries out (E98).
 
 mod controller;
-mod model;
+use ide_project::files_panel as model;
 mod view;
 
 use std::path::PathBuf;
@@ -19,9 +19,8 @@ use super::WindowController;
 use crate::project::Project;
 use crate::util::{ns, set_action};
 use view::FileTreeSource;
-
-/// The height of every row, a folder's as a file's.
-const ROW_HEIGHT: f64 = 22.0;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// The tree view with what feeds it.
 pub struct FileTree {
@@ -45,7 +44,7 @@ impl FileTree {
         view.setStyle(NSTableViewStyle::SourceList);
         view.setIndentationPerLevel(12.0);
         view.setUsesAutomaticRowHeights(false);
-        view.setRowHeight(ROW_HEIGHT);
+        view.setRowHeight(ide_ui_common::style::ROW_HEIGHT);
         view.setAutoresizesOutlineColumn(false);
         view.setColumnAutoresizingStyle(
             objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
@@ -99,30 +98,6 @@ impl FileTree {
                 // SAFETY: The item is one the data source handed to this view, kept alive by the source.
                 unsafe { self.view.reloadItem_reloadChildren(Some(&item), true) };
             }
-        }
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn row_count(&self) -> isize {
-        self.view.numberOfRows()
-    }
-
-    /// Selects the row of `path`, as a click on it does.
-    #[cfg(feature = "selftest")]
-    pub fn select(&self, path: &std::path::Path) {
-        if let Ok(row) = usize::try_from(self.source.row_of(&self.view, path)) {
-            self.view
-                .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
-        }
-    }
-
-    /// Clicks the row of `path`, twice for a double click, as the mouse does.
-    #[cfg(feature = "selftest")]
-    pub fn click(&self, path: &std::path::Path, double: bool) {
-        let row = self.source.row_of(&self.view, path);
-        self.source.row_clicked(&self.view, row);
-        if double {
-            self.source.row_double_clicked(&self.view, row);
         }
     }
 }

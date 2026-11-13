@@ -342,8 +342,7 @@ mod tests {
 
     #[test]
     fn rules_are_read_from_both_files_and_removed_on_disk() {
-        let project = std::env::temp_dir().join(format!("ide-claude-rules-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&project);
+        let project = ide_core::testing::scratch("claude-rules");
         std::fs::create_dir_all(project.join(".claude")).unwrap();
         std::fs::write(Scope::Local.file(&project), FILE).unwrap();
         std::fs::write(
@@ -364,6 +363,5 @@ mod tests {
         assert!(!remove_allow_rule(&project, Scope::Local, "Bash(git log:*)").unwrap());
         assert_eq!(allow_rules(&project).len(), 3);
         assert!(allow_rules(&project.join("missing")).is_empty());
-        std::fs::remove_dir_all(&project).unwrap();
     }
 }

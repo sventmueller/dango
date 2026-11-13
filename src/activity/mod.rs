@@ -25,7 +25,11 @@ use crate::window::toolbar::kind_name;
 
 mod session;
 
-pub use session::{Part, Tally, tally};
+pub use session::Part;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 const ID: &str = "ide.activity";
 const WIDTH: f64 = 420.0;
@@ -596,7 +600,7 @@ impl Activity {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::Leading);
-        stack.setSpacing(4.0);
+        stack.setSpacing(ide_ui_common::style::space::XS);
         stack.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 12.0,
             left: 12.0,
@@ -616,7 +620,7 @@ impl Activity {
                     .setActive(true);
             }
             if let Some(last) = stack.arrangedSubviews().lastObject() {
-                stack.setCustomSpacing_afterView(12.0, &last);
+                stack.setCustomSpacing_afterView(ide_ui_common::style::space::XL, &last);
             }
         }
         if shape.is_empty() {
@@ -704,7 +708,9 @@ impl Activity {
         icon.setContentHuggingPriority_forOrientation(750.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
         let title = objc2_app_kit::NSTextField::labelWithString(&ns(&line.title), mtm);
         title.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
-        title.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(12.0)));
+        title.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
+            ide_ui_common::style::LABEL,
+        )));
         let detail = objc2_app_kit::NSTextField::labelWithString(&ns(&line.detail), mtm);
         detail.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
         detail.setFont(Some(&crate::agent::style::small()));
@@ -718,13 +724,13 @@ impl Activity {
         let texts = NSStackView::new(mtm);
         texts.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
         texts.setAlignment(NSLayoutAttribute::Leading);
-        texts.setSpacing(1.0);
+        texts.setSpacing(ide_ui_common::style::space::HAIR);
         texts.addArrangedSubview(&title);
         texts.addArrangedSubview(&detail);
         let row = NSStackView::new(mtm);
         row.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
         row.setAlignment(NSLayoutAttribute::CenterY);
-        row.setSpacing(6.0);
+        row.setSpacing(ide_ui_common::style::space::S);
         row.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 2.0,
             left: if line.indent { 18.0 } else { 0.0 },
@@ -805,77 +811,6 @@ pub fn show_tab(controller: &WindowController, key: u64, part: Part, anchor: &NS
         activity.ivars().only.set(Some((key, part)));
         activity.open(Some(anchor));
     }
-}
-
-/// What the self-test reads from the popover and the toolbar item: the popover's lines and the item's tooltip.
-#[cfg(feature = "selftest")]
-pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
-    let Some(activity) = of(controller) else {
-        return (Vec::new(), String::new());
-    };
-    activity.show();
-    let tabs = crate::agent::of_window(controller);
-    let lines: Vec<String> = agent_lines(&tabs, SystemTime::now(), false)
-        .into_iter()
-        .chain(process_lines(controller, &processes(), SystemTime::now()))
-        .map(|l| {
-            let buttons: Vec<&str> = l.buttons.iter().map(|(title, _)| *title).collect();
-            format!("{} — {} [{}]", l.title, l.detail, buttons.join(", "))
-        })
-        .collect();
-    let tooltip = activity
-        .items()
-        .first()
-        .and_then(|i| i.toolTip())
-        .map(|t| t.to_string())
-        .unwrap_or_default();
-    (lines, tooltip)
-}
-
-/// Closes the popover, for the self-test's later pictures.
-#[cfg(feature = "selftest")]
-pub fn close(controller: &WindowController) {
-    if let Some(activity) = of(controller)
-        && let Some(popover) = activity.ivars().popover.borrow().as_ref()
-    {
-        // SAFETY: Closing takes any sender; none is given.
-        unsafe { popover.performClose(None) };
-    }
-}
-
-/// The lines of the open popover, as the session overview shows them.
-#[cfg(feature = "selftest")]
-pub fn overview_lines(controller: &WindowController) -> Vec<String> {
-    let Some(activity) = of(controller) else {
-        return Vec::new();
-    };
-    let tabs = crate::agent::of_window(controller);
-    let now = SystemTime::now();
-    match activity.ivars().only.get() {
-        Some((key, part)) => session_lines(&tabs, key, part, now),
-        None => agent_lines(&tabs, now, false),
-    }
-    .into_iter()
-    .map(|l| format!("{} — {}", l.title, l.detail))
-    .collect()
-}
-
-/// How often a popover changed the texts of its rows in place.
-#[cfg(feature = "selftest")]
-static UPDATED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-
-/// How often a popover changed the texts of its rows in place, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn updated_in_place() -> usize {
-    UPDATED.load(std::sync::atomic::Ordering::Relaxed)
-}
-
-/// The popover's content, for the self-test's picture.
-#[cfg(feature = "selftest")]
-pub fn popover_view(controller: &WindowController) -> Option<Retained<NSView>> {
-    let activity = of(controller)?;
-    let popover = activity.ivars().popover.borrow().clone()?;
-    Some(popover.contentViewController()?.view())
 }
 
 /// Links the buttons of a shown popover into its key view loop: AppKit makes the loop once, when the popover opens,

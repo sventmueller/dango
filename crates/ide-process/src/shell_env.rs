@@ -140,8 +140,7 @@ mod tests {
     #[test]
     fn a_shell_that_hangs_is_given_up_on() {
         let supervisor = Supervisor::new();
-        let script_dir = std::env::temp_dir().join(format!("ide-hang-{}", std::process::id()));
-        std::fs::create_dir_all(&script_dir).unwrap();
+        let script_dir = ide_core::testing::scratch("hang");
         let shell = script_dir.join("hang.sh");
         std::fs::write(&shell, "#!/bin/sh\nsleep 30\n").unwrap();
         std::fs::set_permissions(&shell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();

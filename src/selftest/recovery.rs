@@ -16,10 +16,9 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::helpers::{
-    answer_alert_after, answer_alert_saying, editor, tab, text_of, type_at, utf16_len, wait_until, window_of,
+    self, answer_alert_after, answer_alert_saying, editor, tab, text_of, type_at, utf16_len, wait_until, window_of,
 };
 use super::{check, finish, snapshot, write_report};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "recovery";
@@ -47,28 +46,35 @@ pub fn run() {
         before_crash();
     } else {
         wait_until(bars_shown, |shown| {
-            main_after(Duration::from_millis(500), move || after_crash(shown));
+            wait_until(tabs_back, move |_| after_crash(shown));
         });
     }
 }
 
 fn folder() -> PathBuf {
-    ide_core::paths::home().join("recovery-project")
+    helpers::folder("recovery-project")
+}
+
+/// Whether every tab of the window came back, the untitled one with its text.
+fn tabs_back() -> bool {
+    window_of(&folder()).is_some_and(|controller| {
+        controller.tab_titles().len() >= 6
+            && editor(&controller, t("Ohne Titel")).is_some_and(|view| text_of(&view) == UNTITLED_TYPED)
+    })
 }
 
 fn before_crash() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let folder = folder();
-    for (path, text) in [
-        (MAIN, "fn main() {}\n"),
-        (NOTES, "eins\nzwei\ndrei\n"),
-        (MERGED, "a\nb\nc\nd\ne\n"),
-        (KEPT, "unverändert\n"),
-    ] {
-        let file = folder.join(path);
-        let _ = std::fs::create_dir_all(file.parent().unwrap_or(&folder));
-        let _ = std::fs::write(file, text);
-    }
+    let _ = helpers::make_project(
+        "recovery-project",
+        &[
+            (MAIN, "fn main() {}\n"),
+            (NOTES, "eins\nzwei\ndrei\n"),
+            (MERGED, "a\nb\nc\nd\ne\n"),
+            (KEPT, "unverändert\n"),
+        ],
+    );
     crate::project::trust(&folder);
     crate::app::open_project(mtm, folder.clone());
     let Some(controller) = window_of(&folder) else {

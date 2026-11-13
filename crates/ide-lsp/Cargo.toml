@@ -22,11 +22,18 @@ doc = false
 
 [dependencies]
 ide-core = { path = "../ide-core" }
+ide-document = { path = "../ide-document" }
+ide-net = { path = "../ide-net" }
 ide-process = { path = "../ide-process" }
+ide-rpc = { path = "../ide-rpc" }
 ide-product = { path = "../ide-product" }
+ide-project = { path = "../ide-project" }
 flate2 = "1.1.11"
 lsp-types = "0.97.0"
+splat-i18n.workspace = true
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }
 sha2 = "0.11.1"
-ureq = { version = "3.5.1", default-features = false, features = ["rustls", "platform-verifier"] }

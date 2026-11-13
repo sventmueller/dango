@@ -1,9 +1,10 @@
 //! The folders the user trusts to run what they control, such as git hooks, language servers from the project and
 //! agent hooks: a folder is trusted when it or a folder above it is.
 
+use ide_core::LockIgnoringPoison;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, PoisonError};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
@@ -103,7 +104,7 @@ impl TrustStore {
 
     /// Applies `edit` to the stored folders and writes them if it reports a change.
     fn change(&self, edit: impl FnOnce(&mut Vec<PathBuf>) -> bool) -> io::Result<()> {
-        let _writing = WRITING.lock().unwrap_or_else(PoisonError::into_inner);
+        let _writing = WRITING.lock_ignoring_poison();
         let mut stored = match self.read() {
             Read::Found(stored) if stored.version > VERSION => {
                 return Err(io::Error::other(format!(
@@ -165,17 +166,17 @@ mod tests {
     use super::*;
     use crate::testing::scratch;
 
-    fn setup(name: &str) -> (TrustStore, PathBuf) {
+    fn setup(name: &str) -> (TrustStore, PathBuf, ide_core::testing::Scratch) {
         let base = scratch(name);
         let projects = base.join("Projects");
         std::fs::create_dir_all(projects.join("app/src")).unwrap();
         std::fs::create_dir_all(projects.join("other")).unwrap();
-        (TrustStore::in_dir(&base.join("data")), projects)
+        (TrustStore::in_dir(&base.join("data")), projects, base)
     }
 
     #[test]
     fn a_trusted_folder_trusts_everything_below_it_and_nothing_beside_it() {
-        let (store, projects) = setup("trust-below");
+        let (store, projects, _base) = setup("trust-below");
         assert!(!store.is_trusted(&projects.join("app")));
         store.trust(&projects.join("app")).unwrap();
         assert!(store.is_trusted(&projects.join("app")));
@@ -189,7 +190,7 @@ mod tests {
 
     #[test]
     fn links_and_other_spellings_of_a_trusted_folder_are_trusted() {
-        let (store, projects) = setup("trust-spelling");
+        let (store, projects, _base) = setup("trust-spelling");
         store.trust(&projects.join("app")).unwrap();
         symlink(projects.join("app"), projects.join("alias")).unwrap();
         assert!(store.is_trusted(&projects.join("alias/src")));
@@ -207,7 +208,7 @@ mod tests {
 
     #[test]
     fn revoking_a_folder_ends_its_trust_but_not_that_of_a_folder_above() {
-        let (store, projects) = setup("trust-revoke");
+        let (store, projects, _base) = setup("trust-revoke");
         store.trust(&projects).unwrap();
         store.trust(&projects.join("app")).unwrap();
         assert!(store.revoke(&projects.join("app")).unwrap());
@@ -220,7 +221,7 @@ mod tests {
 
     #[test]
     fn a_damaged_file_trusts_nothing_and_is_set_aside_on_the_next_change() {
-        let (store, projects) = setup("trust-damaged");
+        let (store, projects, _base) = setup("trust-damaged");
         std::fs::create_dir_all(store.file.parent().unwrap()).unwrap();
         std::fs::write(&store.file, "{ not json").unwrap();
         assert!(!store.is_trusted(&projects));
@@ -232,7 +233,7 @@ mod tests {
 
     #[test]
     fn a_file_from_a_newer_version_is_read_but_never_overwritten() {
-        let (store, projects) = setup("trust-newer");
+        let (store, projects, _base) = setup("trust-newer");
         std::fs::create_dir_all(store.file.parent().unwrap()).unwrap();
         let original = format!(
             r#"{{"version": 9, "roots": [{:?}], "future": true}}"#,

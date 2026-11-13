@@ -11,7 +11,7 @@ mod sheets;
 pub(super) mod stash;
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_git::{CommitOptions, Git};
 use ide_process::Supervisor;
@@ -21,13 +21,12 @@ use objc2_app_kit::{NSAppearance, NSApplication, NSButton, NSModalResponse, NSTe
 
 use super::{check, finish, snapshot};
 use crate::git_panel::selftest as panel;
-use crate::util::{main_after, main_soon, ns};
+use crate::util::{main_soon, ns};
 use crate::window::{self, Panel, WindowController};
 
 const SCENARIO: &str = "git";
 const WAIT: Duration = Duration::from_secs(25);
-const POLL: Duration = Duration::from_millis(200);
-/// Long enough for every view to draw itself again in the other appearance.
+/// Long enough for every view to draw itself again in the other appearance, or for a sheet to slide in.
 const APPEARANCE_SETTLE: Duration = Duration::from_millis(500);
 
 const README: &str = "README.md";
@@ -35,7 +34,7 @@ const LIBRARY: &str = "src/lib.rs";
 const NOTES: &str = "notes.txt";
 
 pub fn run() {
-    let folder = ide_core::paths::home().join("git-project");
+    let folder = crate::selftest::helpers::folder("git-project");
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
@@ -130,14 +129,20 @@ pub(super) fn append(file: &Path, text: &str) -> Result<(), String> {
 }
 
 /// Runs `job` on the repository at `root` on a thread of its own, then `then` on the main thread.
-pub(super) fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>, then: fn(PathBuf)) {
+pub(super) fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>, then: impl FnOnce(PathBuf) + 'static) {
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let then = dispatch2::MainThreadBound::new(then, mtm);
     std::thread::spawn(move || {
         let done = job(&root);
-        main_soon(move || match done {
-            Ok(()) => then(root),
-            Err(error) => {
-                check("a step of the test repository works", false, error);
-                finish(SCENARIO);
+        main_soon(move || {
+            let Some(mtm) = MainThreadMarker::new() else { return };
+            let then = then.into_inner(mtm);
+            match done {
+                Ok(()) => then(root),
+                Err(error) => {
+                    check("a step of the test repository works", false, error);
+                    finish(SCENARIO);
+                }
             }
         });
     });
@@ -158,7 +163,7 @@ fn open(folder: PathBuf) {
         return;
     };
     controller.activate_panel(Panel::Git);
-    poll(root, Instant::now() + WAIT, lists_changes, listed);
+    wait_for(root, lists_changes, listed);
 }
 
 pub(super) fn window_of(root: &Path) -> Option<Retained<WindowController>> {
@@ -167,19 +172,30 @@ pub(super) fn window_of(root: &Path) -> Option<Retained<WindowController>> {
         .find(|w| w.project().as_deref() == Some(root))
 }
 
-/// Calls `then` once `ready` holds for the window of `root`, or with false when time is up.
-pub(super) fn poll(root: PathBuf, until: Instant, ready: fn(&WindowController) -> bool, then: fn(PathBuf, bool)) {
-    let done = window_of(&root).is_some_and(|c| ready(&c));
-    if done || Instant::now() >= until {
-        then(root, done);
-        return;
-    }
-    main_after(POLL, move || poll(root, until, ready, then));
+/// Calls `then` once `ready` holds for the window of `root`, or with false once `limit` passed.
+pub(super) fn wait_within(
+    root: PathBuf,
+    limit: Duration,
+    ready: fn(&WindowController) -> bool,
+    then: impl FnOnce(PathBuf, bool) + 'static,
+) {
+    let folder = root.clone();
+    super::helpers::wait_within(
+        limit,
+        move || window_of(&folder).is_some_and(|c| ready(&c)),
+        move |ok| {
+            then(root, ok);
+        },
+    );
 }
 
-/// `poll` with the usual time limit.
-pub(super) fn wait_for(root: PathBuf, ready: fn(&WindowController) -> bool, then: fn(PathBuf, bool)) {
-    poll(root, Instant::now() + WAIT, ready, then);
+/// `wait_within` with the usual time limit.
+pub(super) fn wait_for(
+    root: PathBuf,
+    ready: fn(&WindowController) -> bool,
+    then: impl FnOnce(PathBuf, bool) + 'static,
+) {
+    wait_within(root, WAIT, ready, then);
 }
 
 /// Takes the picture `name` of the window of `root` in light, then in dark appearance, then goes on with `then`.
@@ -191,21 +207,21 @@ pub(super) fn pictures(root: PathBuf, name: &'static str, then: fn(PathBuf)) {
     let app = NSApplication::sharedApplication(mtm);
     let dark = NSAppearance::appearanceNamed(crate::util::constant!(objc2_app_kit::NSAppearanceNameDarkAqua));
     app.setAppearance(dark.as_deref());
-    main_after(APPEARANCE_SETTLE, move || {
+    super::helpers::after(APPEARANCE_SETTLE, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, &format!("{name}-dark"));
         }
         if let Some(mtm) = MainThreadMarker::new() {
             NSApplication::sharedApplication(mtm).setAppearance(None);
         }
-        main_after(APPEARANCE_SETTLE, move || then(root));
+        super::helpers::after(APPEARANCE_SETTLE, move || then(root));
     });
 }
 
 /// `pictures` once the sheet on the window of `root` has slid in; macOS 27 draws a sheet into its window, and a
 /// capture of the sheet's own window comes out blank.
 pub(super) fn sheet_pictures(root: PathBuf, name: &'static str, then: fn(PathBuf)) {
-    main_after(APPEARANCE_SETTLE, move || pictures(root, name, then));
+    super::helpers::after(APPEARANCE_SETTLE, move || pictures(root, name, then));
 }
 
 /// Ends the sheet on the window of `root` as a click on the button that gives `response` would, after typing `text`
@@ -636,7 +652,7 @@ fn fetched(root: PathBuf, ok: bool) {
 /// Opens a folder without git that the user does not trust yet.
 pub(super) fn open_plain_folder() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let plain = ide_core::paths::home().join("plain-folder");
+    let plain = crate::selftest::helpers::folder("plain-folder");
     let _ = std::fs::create_dir_all(&plain);
     crate::app::open_project(mtm, plain.clone());
     let plain = plain.canonicalize().unwrap_or(plain);

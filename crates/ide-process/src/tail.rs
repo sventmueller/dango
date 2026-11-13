@@ -1,9 +1,11 @@
 //! The latest output of a process, kept within a limit however much it writes.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::VecDeque;
 use std::io::Read;
+use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 /// The last `limit` bytes a process wrote.
 #[derive(Debug, Clone)]
@@ -54,17 +56,41 @@ impl Tail {
     }
 }
 
+/// A reader being collected into a tail on its own thread.
+pub struct Collecting {
+    done: Receiver<()>,
+}
+
+impl Collecting {
+    /// Waits until the reader reached its end or `limit` passed; whether it reached its end. A grandchild that
+    /// keeps the pipe open must not hold its owner, so the wait is always bounded.
+    pub fn wait(&self, limit: Duration) -> bool {
+        !matches!(self.done.recv_timeout(limit), Err(RecvTimeoutError::Timeout))
+    }
+
+    /// Waits for all of `readers` together, up to `limit` in all; whether every one reached its end.
+    pub fn wait_all<'a>(readers: impl IntoIterator<Item = &'a Collecting>, limit: Duration) -> bool {
+        let deadline = Instant::now() + limit;
+        readers
+            .into_iter()
+            .all(|reader| reader.wait(deadline.saturating_duration_since(Instant::now())))
+    }
+}
+
 /// Reads `reader` to its end into `tail` on a thread of its own.
-pub fn collect(mut reader: impl Read + Send + 'static, tail: Arc<Mutex<Tail>>) -> std::io::Result<JoinHandle<()>> {
+pub fn collect(mut reader: impl Read + Send + 'static, tail: Arc<Mutex<Tail>>) -> std::io::Result<Collecting> {
+    let (finished, done) = channel();
     std::thread::Builder::new().name("tail".into()).spawn(move || {
         let mut buffer = [0u8; 8192];
         while let Ok(n) = reader.read(&mut buffer) {
             if n == 0 {
                 break;
             }
-            tail.lock().unwrap_or_else(|e| e.into_inner()).push(&buffer[..n]);
+            tail.lock_ignoring_poison().push(&buffer[..n]);
         }
-    })
+        let _ = finished.send(());
+    })?;
+    Ok(Collecting { done })
 }
 
 #[cfg(test)]
@@ -87,7 +113,21 @@ mod tests {
     #[test]
     fn a_reader_is_collected_to_its_end() {
         let tail = Arc::new(Mutex::new(Tail::new(4)));
-        collect(&b"0123456789"[..], tail.clone()).unwrap().join().unwrap();
+        assert!(
+            collect(&b"0123456789"[..], tail.clone())
+                .unwrap()
+                .wait(Duration::from_secs(5))
+        );
         assert_eq!(tail.lock().unwrap().dropped(), 6);
+    }
+
+    #[test]
+    fn waiting_for_a_reader_that_stays_open_ends_at_the_limit() {
+        let (reader, _writer) = std::io::pipe().unwrap();
+        let tail = Arc::new(Mutex::new(Tail::new(4)));
+        let collecting = collect(reader, tail).unwrap();
+        let start = Instant::now();
+        assert!(!Collecting::wait_all([&collecting], Duration::from_millis(50)));
+        assert!(start.elapsed() < Duration::from_secs(2));
     }
 }

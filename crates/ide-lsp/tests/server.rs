@@ -1,6 +1,6 @@
 //! The client against the fake server in `support/fake_server.rs`, a real process under a real supervisor.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -34,14 +34,11 @@ struct Fixture {
     supervisor: Supervisor,
     server: Server,
     seen: Receiver<Seen>,
-    root: PathBuf,
+    root: ide_core::testing::Scratch,
 }
 
-fn root(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-lsp-it-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
+fn root(name: &str) -> ide_core::testing::Scratch {
+    ide_core::testing::scratch(&format!("lsp-it-{name}"))
 }
 
 fn start(name: &str, env: &[(&str, &str)], tweak: impl FnOnce(&mut ServerConfig)) -> Fixture {
@@ -371,7 +368,8 @@ fn a_server_that_keeps_crashing_is_given_up_on_until_restarted_by_hand() {
 
 #[test]
 fn stopping_asks_for_shutdown_then_exit_and_the_server_ends_by_itself() {
-    let log = root("stoplog").join("log");
+    let scratch_dir = root("stoplog");
+    let log = scratch_dir.join("log");
     let f = start("stop", &[("FAKE_LOG", log.to_str().unwrap())], |_| {});
     let (tx, rx) = channel();
     let tx = Mutex::new(tx);
@@ -641,7 +639,7 @@ fn a_projects_typescript_compiler_that_answers_initialize_serves_the_project() {
 #[test]
 fn a_server_asking_for_whole_texts_gets_them_and_saves_without_text() {
     let f = start("full", &[("FAKE_SYNC", "1")], |_| {});
-    assert_eq!((f.server.label(), f.server.root()), ("fake", f.root.as_path()));
+    assert_eq!((f.server.label(), f.server.root()), ("fake", f.root.path()));
     assert!(f.server.process().is_some());
     let doc = f.uri("a.go");
     f.server.open(&doc, "go", 1, "one\ntwo\n");

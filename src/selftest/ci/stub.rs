@@ -3,6 +3,7 @@
 //! Their OAuth endpoints sign in without a token: GitHub's device flow says "pending" once, GitLab's token endpoint
 //! hands out the token the API wants.
 
+use ide_core::LockIgnoringPoison;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
@@ -87,7 +88,7 @@ impl Stub {
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
-        self.inner.lock().unwrap_or_else(|e| e.into_inner())
+        self.inner.lock_ignoring_poison()
     }
 
     fn serve(&self, stream: TcpStream) -> std::io::Result<()> {

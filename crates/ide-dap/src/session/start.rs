@@ -16,6 +16,7 @@ use super::{Event, Inner, LONG, Reach, SHORT, handler, requests, stop};
 use crate::adapter::{Adapter, Transport};
 use crate::connection::Connection;
 use crate::error::Error;
+#[cfg(any(test, feature = "testing"))]
 use crate::fake;
 use crate::types::{Capabilities, EndReason, Request, State};
 
@@ -50,6 +51,7 @@ pub(super) fn connect(inner: &Arc<Inner>, adapter: Adapter) -> io::Result<()> {
             Connection::start(reader, writer, handler, &name, record)?
         }
         Transport::Streams(reader, writer) => Connection::start(reader, writer, handler, &name, record)?,
+        #[cfg(any(test, feature = "testing"))]
         Transport::Fake(script) => {
             let (reader, writer) = fake::start(*script)?;
             Connection::start(reader, writer, handler, &name, record)?
@@ -221,6 +223,7 @@ pub(super) fn configure(inner: &Arc<Inner>) {
             .map(|f| f.filter.clone())
             .collect()
     });
+    let (filters, functions) = crate::filters::split(&filters, &capabilities);
     if !capabilities.exception_filters.is_empty() || !filters.is_empty() {
         requests::send(
             inner,
@@ -229,6 +232,9 @@ pub(super) fn configure(inner: &Arc<Inner>) {
             |_| (),
             Box::new(|_| {}),
         );
+    }
+    if !functions.is_empty() {
+        requests::set_functions(inner, &functions);
     }
     if !capabilities.configuration_done {
         configured(inner);

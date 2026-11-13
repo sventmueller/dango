@@ -7,6 +7,7 @@ mod lifecycle;
 mod positions;
 mod sync;
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
@@ -36,7 +37,7 @@ const STDERR_KEPT: usize = 64 * 1024;
 #[derive(Debug, Clone)]
 pub struct Ticket {
     connection: Weak<Connection>,
-    id: i32,
+    id: i64,
 }
 
 impl Ticket {
@@ -241,11 +242,7 @@ impl Server {
             if now >= deadline {
                 return false;
             }
-            state = inner
-                .changed
-                .wait_timeout(state, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            state = inner.changed.wait_timeout(state, deadline - now).ignoring_poison().0;
         }
     }
 
@@ -435,7 +432,7 @@ impl Server {
 
 impl Inner {
     pub(crate) fn lock(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+        self.state.lock_ignoring_poison()
     }
 
     pub(crate) fn emit(&self, event: Event) {

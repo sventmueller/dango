@@ -2,12 +2,10 @@
 //! removing one takes exactly that entry out of the project's `.claude/settings.local.json`.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use objc2::MainThreadMarker;
 
 use super::{check, finish, helpers, snapshot};
-use crate::util::main_after;
 
 const NAME: &str = "stored-rules";
 
@@ -24,19 +22,21 @@ const SETTINGS: &str = r#"{
 "#;
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("rules-project");
-    std::fs::create_dir_all(root.join(".claude")).expect("scratch project");
-    std::fs::write(root.join(".claude/settings.local.json"), SETTINGS).expect("Claude's settings");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&root) else {
-            check("the project's window opens", false, "");
-            return finish(NAME);
-        };
+    let files = [(".claude/settings.local.json", SETTINGS)];
+    helpers::open_project(NAME, "rules-project", &files, |controller| {
         crate::settings::show_agents(MainThreadMarker::from(&*controller));
-        main_after(Duration::from_millis(500), move || listed(root));
+        let root = helpers::root("rules-project");
+        helpers::wait_until(
+            || {
+                crate::settings::stored_rules().is_some_and(|rules| {
+                    rules
+                        .cells()
+                        .iter()
+                        .any(|row| row.first().is_some_and(|p| p.ends_with("rules-project")))
+                })
+            },
+            move |_| listed(root),
+        );
     });
 }
 

@@ -304,7 +304,8 @@ impl CiPanel {
                 let client = Client::new(forge.clone(), Some(token.clone()), work::network());
                 let account = client.account()?;
                 let auth = work::auth().ok_or(ide_ci::Error::Network("no environment".into()))?;
-                auth.save(&forge, &account, &token).map_err(ide_ci::Error::Network)
+                auth.save(&forge, &account, &token)
+                    .map_err(|e| ide_ci::Error::Network(e.to_string()))
             },
             move |result| {
                 with_panel(id, |panel| {

@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use ide_lsp::Cancel;
+use ide_net::Cancel;
 use ide_process::Supervisor;
 use serde_json::{Map, Value, json};
 
@@ -14,7 +14,7 @@ use crate::stub_tests::{env, folder, printed, script};
 
 /// A Cargo package in a folder of its own, with stand-ins for its tools in `bin`.
 struct Package {
-    dir: PathBuf,
+    dir: ide_core::testing::Scratch,
     bin: PathBuf,
     log: PathBuf,
 }
@@ -133,7 +133,7 @@ fn a_binary_is_built_with_full_debug_information_and_launched_with_the_toolchain
 
     assert_eq!((config.name.as_str(), config.kind), ("app", AdapterKind::Lldb));
     assert_eq!(config.arguments["program"], json!(program));
-    assert_eq!(config.arguments["cwd"], json!(package.dir));
+    assert_eq!(config.arguments["cwd"], json!(package.dir.path()));
     assert_eq!(config.arguments["args"], json!([]));
     assert_eq!(
         config.arguments["initCommands"],
@@ -234,7 +234,8 @@ fn a_build_without_a_program_a_file_outside_the_package_and_a_failing_metadata_e
         Err(CurrentError::NoProgram)
     );
 
-    let outside = folder("outside").join("main.rs");
+    let scratch_dir = folder("outside");
+    let outside = scratch_dir.join("main.rs");
     std::fs::write(&outside, "fn main() {}\n").unwrap();
     let result = current_program(
         &package.adapters(),
@@ -315,6 +316,10 @@ fn every_reason_reads_as_a_sentence() {
         (CurrentError::Build("boom".into()), "the build failed:\nboom"),
         (CurrentError::Cancelled, "the build was cancelled"),
         (CurrentError::NoProgram, "the build produced no program"),
+        (
+            CurrentError::LibraryOnly("lib".into()),
+            "lib is a library without a program",
+        ),
     ];
     for (error, words) in cases {
         assert_eq!(error.to_string(), words);

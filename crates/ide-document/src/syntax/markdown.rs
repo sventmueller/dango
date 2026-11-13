@@ -6,6 +6,7 @@
 //! The first parse of a long text takes longer than a frame, so it runs on a thread of its own; until it is done, the
 //! lines asked for are cut from a parse of the text's start, and edits made meanwhile are parsed into it once it is.
 
+use ide_core::LockIgnoringPoison;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -197,7 +198,7 @@ impl Markdown {
             .name("markdown-parse".into())
             .spawn(move || {
                 let parsed = parse_shared_and_color(copy);
-                *slot.lock().unwrap_or_else(|e| e.into_inner()) = Some(parsed);
+                *slot.lock_ignoring_poison() = Some(parsed);
             });
         if started.is_err() {
             self.parsed = Some(parse_shared_and_color(whole));
@@ -219,7 +220,7 @@ impl Markdown {
         let Some(opening) = &self.opening else {
             return true;
         };
-        let Some(parsed) = opening.result.lock().unwrap_or_else(|e| e.into_inner()).take() else {
+        let Some(parsed) = opening.result.lock_ignoring_poison().take() else {
             return false;
         };
         self.stale = opening.edited;

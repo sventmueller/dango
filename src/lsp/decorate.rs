@@ -302,16 +302,18 @@ impl Squiggles {
             severity.color().setStroke();
             let block = RcBlock::new(
                 |_: *mut NSTextRange, frame: NSRect, _: f64, _: NonNull<NSTextContainer>| -> Bool {
-                    let frame = NSRect::new(
-                        NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
-                        frame.size,
-                    );
-                    if frame.origin.y <= dirty.origin.y + dirty.size.height
-                        && frame.origin.y + frame.size.height >= dirty.origin.y
-                    {
-                        wave(&frame);
-                    }
-                    Bool::YES
+                    crate::util::guarded(Bool::NO, || {
+                        let frame = NSRect::new(
+                            NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
+                            frame.size,
+                        );
+                        if frame.origin.y <= dirty.origin.y + dirty.size.height
+                            && frame.origin.y + frame.size.height >= dirty.origin.y
+                        {
+                            wave(&frame);
+                        }
+                        Bool::YES
+                    })
                 },
             );
             layout.enumerateTextSegmentsInRange_type_options_usingBlock(

@@ -11,14 +11,14 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSMenu, NSMenuItem};
 use objc2_foundation::{NSPoint, NSRange};
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "inlay-hints";
-const POLL: Duration = Duration::from_millis(250);
+/// How often hints are asked for again while a server that has just started answers with none.
+const ASK_AGAIN: Duration = Duration::from_secs(2);
 /// The longest a server may take to start and answer with hints.
 const WAIT: Duration = Duration::from_secs(150);
 /// The whole scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`.
@@ -29,18 +29,15 @@ static END: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
 const RUST_MAIN: &str = "mod big;\n\nfn scale(value: u32, factor: u32) -> u32 {\n    value * factor\n}\n\nfn main() {\n    let total = scale(21, 2);\n    let words = vec![\"a\", \"b\"];\n    println!(\"{total} {words:?} {}\", big::f0(1));\n}\n";
 const GO_MAIN: &str = "package main\n\nimport \"fmt\"\n\nfunc add(left, right int) int {\n\treturn left + right\n}\n\nfunc main() {\n\ttotal := add(1, 2)\n\tfmt.Println(total)\n}\n";
 
-fn home(name: &str) -> PathBuf {
-    let folder = ide_core::paths::home().join(name);
-    let _ = std::fs::create_dir_all(&folder);
-    folder.canonicalize().unwrap_or(folder)
-}
+const RUST_PROJECT: &str = "inlay-rust";
+const GO_PROJECT: &str = "inlay-go";
 
 fn rust_root() -> PathBuf {
-    home("inlay-rust")
+    helpers::root(RUST_PROJECT)
 }
 
 fn go_root() -> PathBuf {
-    home("inlay-go")
+    helpers::root(GO_PROJECT)
 }
 
 /// Ten thousand lines of small functions, each with a `let` whose type rust-analyzer shows.
@@ -95,53 +92,39 @@ fn picture(root: &Path, name: &str) {
 }
 
 /// Calls `then` with whether `ready` held, as soon as it does or once `within` or the scenario's budget passed; asks
-/// the editor `again` for hints every two seconds meanwhile, as a server that has just started answers with none.
+/// the editor `again` for hints every `ASK_AGAIN` meanwhile, as a server that has just started answers with none.
 fn poll(
     within: Duration,
     again: Option<(PathBuf, &'static str)>,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce(bool, Duration) + Send + 'static,
+    ready: impl Fn() -> bool + 'static,
+    then: impl FnOnce(bool, Duration) + 'static,
 ) {
-    fn step(
-        started: Instant,
-        deadline: Instant,
-        again: Option<(PathBuf, &'static str)>,
-        ready: impl Fn() -> bool + Send + 'static,
-        then: impl FnOnce(bool, Duration) + Send + 'static,
-    ) {
-        let ok = ready();
-        if ok || Instant::now() >= deadline {
-            then(ok, started.elapsed());
-            return;
+    let started = Instant::now();
+    let limit = END
+        .get()
+        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
+    let asked = std::cell::Cell::new(started);
+    let ready = move || {
+        if ready() {
+            return true;
         }
         if let Some((root, file)) = &again
-            && started.elapsed().as_millis() % 2000 < POLL.as_millis()
+            && asked.get().elapsed() >= ASK_AGAIN
             && let Some(view) = view(root, file)
         {
             crate::lsp::inlay::request(&view);
+            asked.set(Instant::now());
         }
-        main_after(POLL, move || step(started, deadline, again, ready, then));
-    }
-    let now = Instant::now();
-    let deadline = (now + within).min(END.get().copied().unwrap_or(now + within));
-    step(now, deadline, again, ready, then);
-}
-
-fn write(root: &Path, files: &[(&str, &str)]) -> std::io::Result<()> {
-    for (path, text) in files {
-        let file = root.join(path);
-        std::fs::create_dir_all(file.parent().unwrap_or(root))?;
-        std::fs::write(file, text)?;
-    }
-    Ok(())
+        false
+    };
+    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
 }
 
 pub fn run() {
     let _ = END.set(Instant::now() + BUDGET);
-    let root = rust_root();
     let big = big_rust();
-    let written = write(
-        &root,
+    let written = helpers::make_project(
+        RUST_PROJECT,
         &[
             (
                 "Cargo.toml",
@@ -151,10 +134,13 @@ pub fn run() {
             ("src/big.rs", &big),
         ],
     );
-    if let Err(error) = written {
-        check("a cargo project is made", false, error.to_string());
-        return finish(SCENARIO);
-    }
+    let root = match written {
+        Ok(root) => root,
+        Err(error) => {
+            check("a cargo project is made", false, error.to_string());
+            return finish(SCENARIO);
+        }
+    };
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::project::trust(&root);
     crate::app::open_project(mtm, root.clone());
@@ -547,11 +533,16 @@ fn scroll_frames(view: &EditorTextView) -> (Duration, Duration) {
 
 /// The same with gopls in a Go module.
 fn go() {
-    let root = go_root();
-    if let Err(error) = write(&root, &[("go.mod", "module inlay\n\ngo 1.21\n"), ("main.go", GO_MAIN)]) {
-        check("a Go module is made", false, error.to_string());
-        return done();
-    }
+    let root = match helpers::make_project(
+        GO_PROJECT,
+        &[("go.mod", "module inlay\n\ngo 1.21\n"), ("main.go", GO_MAIN)],
+    ) {
+        Ok(root) => root,
+        Err(error) => {
+            check("a Go module is made", false, error.to_string());
+            return done();
+        }
+    };
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::project::trust(&root);
     super::helpers::open_beside(mtm, &root);
@@ -587,13 +578,19 @@ fn go() {
                     .any(|(at, text, _)| Some(*at) == total && text.contains("int")),
                 format!("after {:.1} s: {found:?}", waited.as_secs_f64()),
             );
-            check(
-                "gopls's hints show in gaps",
-                insets::shown(&view).iter().any(|s| s.layer == Layer::Inlay && s.in_gap),
-                format!("{:?}", insets::kerns(&view)),
+            let in_gap = |v: &EditorTextView| insets::shown(v).iter().any(|s| s.layer == Layer::Inlay && s.in_gap);
+            let probe = root.clone();
+            helpers::wait_until(
+                move || self::view(&probe, "main.go").is_some_and(|v| in_gap(&v)),
+                move |shown| {
+                    let kerns = self::view(&root, "main.go")
+                        .map(|v| insets::kerns(&v))
+                        .unwrap_or_default();
+                    check("gopls's hints show in gaps", shown, format!("{kerns:?}"));
+                    picture(&root, "inlay-go");
+                    done();
+                },
             );
-            picture(&root, "inlay-go");
-            done();
         },
     );
 }

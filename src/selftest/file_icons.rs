@@ -5,18 +5,22 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use objc2_app_kit::{
     NSAppearanceNameAccessibilityHighContrastAqua, NSAppearanceNameAccessibilityHighContrastDarkAqua,
     NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
 };
 
 use super::agent::{appearance, controller_of, picture};
-use super::{check, finish, snapshot};
-use crate::util::{constant, main_after};
+use super::{check, finish, helpers, snapshot};
+use crate::util::constant;
 use crate::window::Panel;
 
 const NAME: &str = "file-icons";
+const PROJECT: &str = "icons-project";
+/// How long the tree may take to list the folder.
+const LISTING: Duration = Duration::from_secs(10);
+/// A turn for the window to redraw in a new appearance before its picture, which no state tells of.
+const APPEARANCE_REDRAW: Duration = Duration::from_millis(400);
 
 /// A file of each kind, as the Files panel sorts them after the one folder.
 const FILES: &[&str] = &[
@@ -73,32 +77,34 @@ const FILES: &[&str] = &[
 ];
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("icons-project");
-    let _ = std::fs::create_dir_all(root.join("src"));
-    for file in FILES {
-        let _ = std::fs::write(root.join(file), "x\n");
-    }
-    let root = root.canonicalize().unwrap_or(root);
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    if let Some(controller) = controller_of(&root).filter(|c| c.inspect().panel != Some(Panel::Files)) {
-        controller.activate_panel(Panel::Files);
-    }
-    main_after(Duration::from_millis(800), move || listed(root, 0));
+    let _ = std::fs::create_dir_all(helpers::folder(PROJECT).join("src"));
+    let files: Vec<(&str, &str)> = FILES.iter().map(|file| (*file, "x\n")).collect();
+    helpers::open_project(NAME, PROJECT, &files, |controller| {
+        if controller.inspect().panel != Some(Panel::Files) {
+            controller.activate_panel(Panel::Files);
+        }
+        let root = helpers::root(PROJECT);
+        let probe = root.clone();
+        helpers::wait_within(
+            LISTING,
+            move || controller_of(&probe).is_some_and(|c| c.tree_rows() == expected_rows()),
+            move |_| listed(root),
+        );
+    });
 }
 
-/// Waits up to ten seconds for the tree to list the folder, then pictures it.
-fn listed(root: PathBuf, waited: u32) {
+/// The folder and every file.
+fn expected_rows() -> isize {
+    isize::try_from(FILES.len() + 1).unwrap_or(isize::MAX)
+}
+
+/// Pictures the tree once it lists the folder.
+fn listed(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
     let rows = controller.tree_rows();
-    let expected = isize::try_from(FILES.len() + 1).unwrap_or(isize::MAX);
-    if rows < expected && waited < 50 {
-        main_after(Duration::from_millis(200), move || listed(root, waited + 1));
-        return;
-    }
+    let expected = expected_rows();
     check(
         "the Files panel lists a file of every kind",
         rows == expected,
@@ -122,7 +128,7 @@ fn listed(root: PathBuf, waited: u32) {
     );
     picture(&controller, "file-icons");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
-    main_after(Duration::from_millis(400), move || dark(root));
+    helpers::after(APPEARANCE_REDRAW, move || dark(root));
 }
 
 fn dark(root: PathBuf) {
@@ -134,7 +140,7 @@ fn dark(root: PathBuf) {
         &controller,
         constant!(NSAppearanceNameAccessibilityHighContrastDarkAqua),
     );
-    main_after(Duration::from_millis(400), move || contrast_dark(root));
+    helpers::after(APPEARANCE_REDRAW, move || contrast_dark(root));
 }
 
 fn contrast_dark(root: PathBuf) {
@@ -143,7 +149,7 @@ fn contrast_dark(root: PathBuf) {
     };
     picture(&controller, "file-icons-contrast-dark");
     appearance(&controller, constant!(NSAppearanceNameAccessibilityHighContrastAqua));
-    main_after(Duration::from_millis(400), move || contrast(root));
+    helpers::after(APPEARANCE_REDRAW, move || contrast(root));
 }
 
 fn contrast(root: PathBuf) {
@@ -153,7 +159,11 @@ fn contrast(root: PathBuf) {
     picture(&controller, "file-icons-contrast");
     appearance(&controller, constant!(NSAppearanceNameAqua));
     controller.quick_open_with("a");
-    main_after(Duration::from_secs(1), move || quick_open(root));
+    let probe = root.clone();
+    helpers::wait_until(
+        move || controller_of(&probe).is_some_and(|c| c.quick_open_hits().len() > 5),
+        move |_| quick_open(root),
+    );
 }
 
 fn quick_open(root: PathBuf) {

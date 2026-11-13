@@ -162,6 +162,8 @@ pub fn moved(view: &EditorTextView) {
     let revision = view.document().revision();
     let (serial, asked, gone) = {
         let Ok(mut state) = view.ivars().lsp.try_borrow_mut() else {
+            // Moved from inside code that holds the state: the move counts once that code is done.
+            view.later(objc2::sel!(ideActionsMoved), 0.0);
             return;
         };
         let serial = state.serial;
@@ -434,18 +436,25 @@ fn perform(view: &EditorTextView, revision: u64, action: &CodeAction) {
         failed(t("Die Datei hat sich inzwischen geändert").to_string());
         return;
     }
-    if let Some(edit) = &action.edit {
-        let Some(folder) = view.controller().and_then(|c| c.project_root()) else {
-            return;
-        };
-        if let Err(failure) = super::edits::apply_workspace_edit(&folder, edit) {
-            failed(failure.message);
-            return;
+    let Some(edit) = &action.edit else {
+        if let Some(command) = &action.command {
+            execute(view, command);
         }
-    }
-    if let Some(command) = &action.command {
-        execute(view, command);
-    }
+        return;
+    };
+    let Some(folder) = view.controller().and_then(|c| c.project_root()) else {
+        return;
+    };
+    let serial = view.ivars().lsp.borrow().serial;
+    let command = action.command.clone();
+    super::edits::apply_workspace_edit(&folder, edit, move |applied| match applied {
+        Err(failure) => failed(failure.message),
+        Ok(()) => {
+            if let (Some(command), Some(view)) = (command, editor::find_editor(serial)) {
+                execute(&view, &command);
+            }
+        }
+    });
 }
 
 /// Runs `command` on the server; edits it makes come back as `workspace/applyEdit`.
@@ -530,7 +539,14 @@ fn make_bulb(view: &EditorTextView) -> Retained<NSButton> {
     let mtm = view.mtm();
     let target = chooser(mtm);
     let label = t("Aktionen für diese Stelle");
-    let bulb = crate::util::symbol_button(mtm, "lightbulb", label, 11.0, Some(&target), sel!(ideBulb:));
+    let bulb = crate::util::symbol_button(
+        mtm,
+        "lightbulb",
+        label,
+        ide_ui_common::style::symbol::INLINE,
+        Some(&target),
+        sel!(ideBulb:),
+    );
     crate::util::set_label(&bulb, Some(label));
     bulb.setContentTintColor(Some(&NSColor::systemYellowColor()));
     bulb.setTag(isize::try_from(view.ivars().lsp.borrow().serial).unwrap_or(0));

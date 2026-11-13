@@ -5,8 +5,10 @@ use std::time::Duration;
 
 use super::agent::{NAME, QUESTION, controller_of, picture};
 use super::agent_rows::squeezed;
-use super::{check, finish};
-use crate::util::main_after;
+use super::{check, finish, helpers};
+
+/// A moment for the timeline to draw the rewound rows before their picture, which shows no state to wait for.
+const PICTURE_SETTLE: Duration = Duration::from_millis(400);
 
 /// Rewinding the conversation to just before the second prompt of a recorded session.
 pub(super) fn rewind(root: PathBuf) {
@@ -44,7 +46,7 @@ pub(super) fn rewind(root: PathBuf) {
         tab.composer_text(),
     );
     check("the rewind waits for the agent to accept it", tab.rewind_pending(), "");
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(PICTURE_SETTLE, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-rewind");
         }

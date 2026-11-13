@@ -2,12 +2,13 @@
 //! answering an alert as a person would.
 
 use std::cell::Cell;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use block2::RcBlock;
+use dispatch2::MainThreadBound;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSModalResponse, NSTextField, NSView};
@@ -17,21 +18,128 @@ use crate::editor::EditorTextView;
 use crate::util::main_after;
 use crate::window::{self, WindowController};
 
-const WAIT: Duration = Duration::from_secs(20);
-const POLL: Duration = Duration::from_millis(200);
+/// How long a condition wait gives up after.
+pub const WAIT: Duration = Duration::from_secs(20);
+const POLL: Duration = Duration::from_millis(50);
 
-/// Calls `then` with whether `ready` held, as soon as it does or once twenty seconds passed.
-pub fn wait_until(ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    poll(Instant::now() + WAIT, ready, then);
+/// Runs `then` on the main thread `delay` from now, from the main dispatch queue like `main_after`, but it may hold
+/// what only the main thread can touch. Only for something that has to elapse; a step that waits for a state uses
+/// `wait_until` or `wait_for`.
+pub fn after(delay: Duration, then: impl FnOnce() + 'static) {
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let then = MainThreadBound::new(then, mtm);
+    main_after(delay, move || {
+        if let Some(mtm) = MainThreadMarker::new() {
+            (then.into_inner(mtm))();
+        }
+    });
 }
 
-fn poll(deadline: Instant, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    main_after(POLL, move || {
-        let ok = ready();
-        if ok || Instant::now() > deadline {
-            then(ok);
-        } else {
-            poll(deadline, ready, then);
+/// Calls `then` with whether `ready` held, as soon as it does or once `WAIT` passed.
+pub fn wait_until(ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+    wait_within(WAIT, ready, then);
+}
+
+/// `wait_until` with a limit of its own, for a condition that takes longer than `WAIT` or one whose failure should
+/// end the scenario sooner.
+pub fn wait_within(limit: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+    wait_for_within(limit, move || ready().then_some(()), move |found| then(found.is_some()));
+}
+
+/// Calls `then` with what `find` found, as soon as it finds something or with none once `WAIT` passed.
+pub fn wait_for<T: 'static>(find: impl Fn() -> Option<T> + 'static, then: impl FnOnce(Option<T>) + 'static) {
+    wait_for_within(WAIT, find, then);
+}
+
+/// `wait_for` with a limit of its own.
+pub fn wait_for_within<T: 'static>(
+    limit: Duration,
+    find: impl Fn() -> Option<T> + 'static,
+    then: impl FnOnce(Option<T>) + 'static,
+) {
+    poll(Instant::now() + limit, find, then);
+}
+
+fn poll<T: 'static>(deadline: Instant, find: impl Fn() -> Option<T> + 'static, then: impl FnOnce(Option<T>) + 'static) {
+    after(POLL, move || match find() {
+        Some(found) => then(Some(found)),
+        None if Instant::now() > deadline => then(None),
+        None => poll(deadline, find, then),
+    });
+}
+
+/// Calls `then` with the window of `folder` once it shows, or with none once `WAIT` passed.
+pub fn wait_for_window(folder: &Path, then: impl FnOnce(Option<Retained<WindowController>>) + 'static) {
+    let folder = folder.to_path_buf();
+    wait_for(move || window_of(&folder), then);
+}
+
+/// Calls `then` with the editor of `file` in `folder`'s window, opening it there, once it shows, or with none once
+/// `WAIT` passed.
+pub fn wait_for_editor(folder: &Path, file: &Path, then: impl FnOnce(Option<Retained<EditorTextView>>) + 'static) {
+    let (folder, file) = (folder.to_path_buf(), file.to_path_buf());
+    wait_for(
+        move || {
+            let controller = window_of(&folder)?;
+            crate::editor::editor_for(&controller, &file).or_else(|| {
+                controller.open_file(&file);
+                crate::editor::editor_for(&controller, &file)
+            })
+        },
+        then,
+    );
+}
+
+/// The folder `name` in the run's home, which a scenario fills and opens.
+pub fn folder(name: &str) -> PathBuf {
+    ide_core::paths::home().join(name)
+}
+
+/// `folder(name)` as the app knows it, with links resolved; the folder itself when it does not exist yet.
+pub fn root(name: &str) -> PathBuf {
+    let folder = folder(name);
+    folder.canonicalize().unwrap_or(folder)
+}
+
+/// Makes the folder `name` with `files`, given by path within it and text, and returns its root.
+pub fn make_project(name: &str, files: &[(&str, &str)]) -> std::io::Result<PathBuf> {
+    let folder = folder(name);
+    std::fs::create_dir_all(&folder)?;
+    for (path, text) in files {
+        let file = folder.join(path);
+        std::fs::create_dir_all(file.parent().unwrap_or(&folder))?;
+        std::fs::write(file, text)?;
+    }
+    Ok(root(name))
+}
+
+/// Makes the folder `name` with `files`, trusts it, opens it as the user does and calls `then` with its window once it
+/// shows; when it does not, that is a failed check and the end of `scenario`.
+pub fn open_project(
+    scenario: &'static str,
+    name: &str,
+    files: &[(&str, &str)],
+    then: impl FnOnce(Retained<WindowController>) + 'static,
+) {
+    let root = match make_project(name, files) {
+        Ok(root) => root,
+        Err(error) => {
+            super::check("the scenario's folder is made", false, error.to_string());
+            return super::finish(scenario);
+        }
+    };
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    crate::project::trust(&root);
+    crate::app::open_project(mtm, root.clone());
+    wait_for_window(&root.clone(), move |controller| match controller {
+        Some(controller) => then(controller),
+        None => {
+            super::check(
+                "the scenario's folder opens in a window",
+                false,
+                root.display().to_string(),
+            );
+            super::finish(scenario);
         }
     });
 }

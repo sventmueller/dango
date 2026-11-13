@@ -6,7 +6,12 @@
 mod load;
 mod log_tab;
 mod login;
-mod model;
+mod model {
+    pub use ide_ci::panel::*;
+
+    /// The panel's state, with a sign-in through the browser while one waits.
+    pub type State = ide_ci::panel::State<super::login::Login>;
+}
 mod ops;
 mod panel;
 mod refresh;
@@ -21,7 +26,7 @@ pub use log_tab::LogTabs;
 pub use login::CI_OAUTH_CLIENTS;
 pub use ops::sheet;
 pub use panel::CiPanels;
-pub use work::CI_HOSTS;
+pub use work::{CI_HOSTS, use_secrets};
 
 use crate::window::WindowController;
 

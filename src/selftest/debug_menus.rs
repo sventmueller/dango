@@ -22,12 +22,12 @@ use super::a11y::keys::press;
 use super::debug::{project, script};
 use super::helpers::{editor, wait_until, window_of};
 use super::{check, finish};
-use crate::debug::selftest::{self as debug, Command};
-use crate::util::main_after;
+use crate::debug::probe::{self as debug, Command};
 use crate::window::{Panel, WindowController};
 
 const SCENARIO: &str = "debug-menus";
-const PAUSE: Duration = Duration::from_millis(500);
+/// How long a command that should start nothing is given to show that it did not.
+const NOTHING_STARTS: Duration = Duration::from_millis(500);
 
 const LAUNCH_JSON: &str = r#"{
     "version": "0.2.0",
@@ -42,13 +42,12 @@ const LAUNCH_JSON: &str = r#"{
 pub(super) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let root = project("debug-menus");
-    let _ = std::fs::create_dir_all(root.join(".vscode"));
-    let _ = std::fs::write(root.join(".vscode/launch.json"), LAUNCH_JSON);
+    let _ = super::helpers::make_project("debug-menus", &[(".vscode/launch.json", LAUNCH_JSON)]);
     crate::app::open_project(mtm, root.clone());
     let probe = root.clone();
     wait_until(
-        move || window_of(&probe).is_some(),
-        move |_| main_after(PAUSE, move || configurations(root)),
+        move || front(&probe).is_some_and(|c| !debug::configuration_items(&c).is_empty()),
+        move |_| configurations(root),
     );
 }
 
@@ -196,7 +195,7 @@ fn configurations(root: PathBuf) {
                     && text.contains(&ended),
                 format!("started {started}, chosen {chosen:?}, console {text:?}"),
             );
-            main_after(PAUSE, move || attach_picked(root));
+            attach_picked(root);
         },
     );
 }
@@ -269,7 +268,7 @@ fn detach(root: PathBuf) {
                     .any(|(name, phase)| name == "Scripted attach" && phase.starts_with(t("Beendet"))),
                 format!("{phases:?}"),
             );
-            main_after(PAUSE, move || attach_cancelled(root));
+            attach_cancelled(root);
         },
     );
 }
@@ -287,18 +286,22 @@ fn attach_cancelled(root: PathBuf) {
         move || has_sheet(&probe),
         move |shown| {
             answer_sheet(&root, NSAlertSecondButtonReturn);
-            main_after(PAUSE, move || {
-                let Some(controller) = front(&root) else {
-                    return finish(SCENARIO);
-                };
-                let after = seen(&root).sessions.len();
-                check(
-                    "the Debug menu's attaching asks for a process, and cancelling starts nothing",
-                    asked && shown && !has_sheet(&root) && !debug::is_picking(&controller) && after == before,
-                    format!("sheet {shown}, {before} sessions before, {after} after"),
-                );
-                missing_adapter(root);
-            });
+            let probe = root.clone();
+            wait_until(
+                move || !has_sheet(&probe),
+                move |_| {
+                    let Some(controller) = front(&root) else {
+                        return finish(SCENARIO);
+                    };
+                    let after = seen(&root).sessions.len();
+                    check(
+                        "the Debug menu's attaching asks for a process, and cancelling starts nothing",
+                        asked && shown && !has_sheet(&root) && !debug::is_picking(&controller) && after == before,
+                        format!("sheet {shown}, {before} sessions before, {after} after"),
+                    );
+                    missing_adapter(root);
+                },
+            );
         },
     );
 }
@@ -314,7 +317,13 @@ fn missing_adapter(root: PathBuf) {
     wait_until(
         move || console(&probe, "Node app").is_some_and(|(_, input)| !input),
         move |ended| {
-            main_after(PAUSE, move || {
+            let probe = root.clone();
+            let offer_settled = move || {
+                let text = console(&probe, "Node app").map(|(text, _)| text).unwrap_or_default();
+                let needs_node = text.contains(&splat_i18n::tf("{} fehlt; es braucht {}.", &["js-debug", "node"]));
+                has_sheet(&probe) != needs_node
+            };
+            wait_until(offer_settled, move |_| {
                 let text = console(&root, "Node app").map(|(text, _)| text).unwrap_or_default();
                 let needs_node = text.contains(&splat_i18n::tf("{} fehlt; es braucht {}.", &["js-debug", "node"]));
                 let (texts, _) = read_sheet(&root, None);
@@ -325,7 +334,8 @@ fn missing_adapter(root: PathBuf) {
                     format!("console {text:?}, sheet {texts:?}"),
                 );
                 answer_sheet(&root, NSAlertSecondButtonReturn);
-                main_after(PAUSE, move || current_program(root));
+                let probe = root.clone();
+                wait_until(move || !has_sheet(&probe), move |_| current_program(root));
             });
         },
     );
@@ -345,9 +355,6 @@ fn current_program(root: PathBuf) {
     wait_until(
         move || console(&probe, "notes.md").is_some_and(|(_, input)| !input),
         move |ok| {
-            let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
-            };
             let text = console(&root, "notes.md").map(|(text, _)| text).unwrap_or_default();
             let words = t("Für {}-Dateien gibt es keinen Debugger ohne Startkonfiguration.");
             let (start, end) = words.split_once("{}").unwrap_or((words, ""));
@@ -356,10 +363,55 @@ fn current_program(root: PathBuf) {
                 chosen && ok && text.contains(start) && text.contains(end),
                 format!("{text:?}"),
             );
+            library_file(root);
+        },
+    );
+}
+
+/// A file of a library without a program or tests of its own starts no session, and the console says why.
+fn library_file(root: PathBuf) {
+    let Some(controller) = front(&root) else {
+        return finish(SCENARIO);
+    };
+    let package = root.join("shapes");
+    let _ = std::fs::create_dir_all(package.join("src"));
+    let _ = std::fs::write(
+        package.join("Cargo.toml"),
+        "[package]\nname = \"shapes\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[workspace]\n",
+    );
+    let _ = std::fs::write(package.join("src/lib.rs"), "pub mod shape;\n");
+    let shape = package.join("src/shape.rs");
+    let _ = std::fs::write(&shape, "use std::fmt;\n\npub struct Shape {\n    pub sides: u8,\n}\n");
+    controller.open_file(&shape);
+    let chosen = choose_in_menu(t("Aktuelles Programm debuggen"));
+    let probe = root.clone();
+    wait_until(
+        move || console(&probe, "shape.rs").is_some_and(|(_, input)| !input),
+        move |ok| {
+            let Some(controller) = front(&root) else {
+                return finish(SCENARIO);
+            };
+            let text = console(&root, "shape.rs").map(|(text, _)| text).unwrap_or_default();
+            let words = t(
+                "„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet.",
+            );
+            let (start, end) = words.split_once("{}").unwrap_or((words, ""));
+            let sessions = seen(&root).sessions;
+            check(
+                "debugging a library's file without tests starts nothing, says the library has no program and not \
+                 that macOS is asked",
+                chosen
+                    && ok
+                    && text.contains(start)
+                    && text.contains(end)
+                    && text.contains("shapes")
+                    && !text.contains(t("Wartet auf Freigabe durch macOS …")),
+                format!("{text:?}, sessions {sessions:?}"),
+            );
             controller.open_welcome();
             let before = seen(&root).sessions;
             let chosen = choose_in_menu(t("Aktuelles Programm debuggen"));
-            main_after(PAUSE, move || {
+            super::helpers::after(NOTHING_STARTS, move || {
                 let after = seen(&root).sessions;
                 check(
                     "without a file in front, debugging the current program starts nothing",
@@ -459,7 +511,13 @@ fn gutter_menu(root: PathBuf) {
     let hits = through_sheet(&root, 1, t("Trefferzahl …"), ">= 3", NSAlertFirstButtonReturn);
     let cancelled = through_sheet(&root, 1, t("Logmeldung …"), "ignored", NSAlertSecondButtonReturn);
     let log = through_sheet(&root, 2, t("Logmeldung …"), "at {hits}", NSAlertFirstButtonReturn);
-    main_after(PAUSE, move || sheets_answered(root, [condition, hits, cancelled, log]));
+    let probe = root.clone();
+    wait_until(
+        move || !has_sheet(&probe),
+        move |_| {
+            sheets_answered(root, [condition, hits, cancelled, log]);
+        },
+    );
 }
 
 fn sheets_answered(root: PathBuf, asked: [bool; 4]) {
@@ -488,7 +546,7 @@ fn sheets_answered(root: PathBuf, asked: [bool; 4]) {
         removed && gone,
         format!("chosen {removed}, gone {gone}"),
     );
-    main_after(PAUSE, move || rows(root));
+    rows(root);
 }
 
 /// A breakpoint's checkbox in the panel switches it, Return on its row shows its line and on the section folds it.
@@ -546,7 +604,7 @@ fn rows(root: PathBuf) {
         open && folded && reopened,
         format!("open {open}, folded {folded}, open again {reopened}"),
     );
-    main_after(PAUSE, move || row_menus(root));
+    row_menus(root);
 }
 
 /// A breakpoint row's context menu offers what the gutter's does, Delete removes the breakpoint, and the Debug menu
@@ -608,7 +666,7 @@ fn row_menus(root: PathBuf) {
                 ok,
                 format!("{:?}", seen(&root).paused),
             );
-            main_after(PAUSE, move || paused(root));
+            paused(root);
         },
     );
 }
@@ -801,7 +859,7 @@ fn restarted(root: PathBuf, ok: bool) {
                 cleared && seen(&root).breakpoints.is_empty(),
                 format!("{:?}", seen(&root).breakpoints),
             );
-            main_after(PAUSE, move || terminal(root));
+            terminal(root);
         },
     );
 }
@@ -835,7 +893,7 @@ fn terminal(root: PathBuf) {
                 ok,
                 format!("{titles:?}, console {:?}", console(&root, "run.sh")),
             );
-            main_after(PAUSE, untrusted);
+            untrusted();
         },
     );
 }
@@ -844,19 +902,20 @@ fn terminal(root: PathBuf) {
 /// again, and once trusted the configurations come.
 fn untrusted() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("debug-untrusted");
-    let _ = std::fs::create_dir_all(folder.join(".vscode"));
-    let _ = std::fs::create_dir_all(folder.join("src"));
-    let _ = std::fs::write(folder.join(".vscode/launch.json"), LAUNCH_JSON);
-    let _ = std::fs::write(folder.join("src/main.rs"), super::debug::PROGRAM);
-    let folder = folder.canonicalize().unwrap_or(folder);
+    let files = [
+        (".vscode/launch.json", LAUNCH_JSON),
+        ("src/main.rs", super::debug::PROGRAM),
+    ];
+    let folder = super::helpers::make_project("debug-untrusted", &files)
+        .unwrap_or_else(|_| super::helpers::root("debug-untrusted"));
     super::helpers::open_beside(mtm, &folder);
     let probe = folder.clone();
     wait_until(
         move || has_sheet(&probe),
         move |asked| {
             answer_sheet(&folder, NSAlertSecondButtonReturn);
-            main_after(PAUSE, move || restricted(folder, asked));
+            let probe = folder.clone();
+            wait_until(move || !has_sheet(&probe), move |_| restricted(folder, asked));
         },
     );
 }
@@ -891,13 +950,18 @@ fn restricted(folder: PathBuf, asked: bool) {
         move || has_sheet(&probe),
         move |shown| {
             answer_sheet(&folder, NSAlertFirstButtonReturn);
-            main_after(PAUSE, move || {
+            let probe = folder.clone();
+            let configured = move || {
+                front(&probe).is_some_and(|c| {
+                    debug::configuration_items(&c)
+                        .iter()
+                        .any(|(title, _)| title == "Scripted run")
+                })
+            };
+            wait_until(configured, move |_| {
                 let controller = front(&folder);
-                let items = controller
-                    .as_ref()
-                    .map(|c| debug::configuration_items(c))
-                    .unwrap_or_default();
-                let state = controller.as_ref().and_then(|c| debug::trust_state(c));
+                let items = controller.as_ref().map(debug::configuration_items).unwrap_or_default();
+                let state = controller.as_ref().and_then(debug::trust_state);
                 check(
                     "the panel's trust button asks again, and once trusted launch.json's configurations come",
                     pressed

@@ -6,7 +6,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Sender, channel};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use alacritty_terminal::event::{Event as TermEvent, EventListener, WindowSize};
@@ -17,6 +17,7 @@ use alacritty_terminal::sync::FairMutex;
 use alacritty_terminal::term::{Config, Osc52, Term};
 use alacritty_terminal::tty;
 use alacritty_terminal::vte::ansi::Handler;
+use ide_core::LockIgnoringPoison;
 use ide_process::{Kind, ProcessId, Supervisor};
 use polling::Poller;
 
@@ -240,10 +241,6 @@ impl Shared {
     }
 }
 
-pub(crate) fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
-}
-
 /// Collects what the emulator reports while it parses, for the reader thread to act on once the lock is released.
 #[derive(Clone, Default)]
 pub(crate) struct TermEvents(pub(crate) Arc<Mutex<Vec<TermEvent>>>);
@@ -251,7 +248,7 @@ pub(crate) struct TermEvents(pub(crate) Arc<Mutex<Vec<TermEvent>>>);
 impl EventListener for TermEvents {
     fn send_event(&self, event: TermEvent) {
         if !matches!(event, TermEvent::MouseCursorDirty) {
-            locked(&self.0).push(event);
+            self.0.lock_ignoring_poison().push(event);
         }
     }
 }
@@ -420,7 +417,7 @@ impl Session {
 
     /// Changes the size; the program hears of it through SIGWINCH.
     pub fn resize(&self, size: Size) {
-        *locked(&self.shared.size) = size;
+        *self.shared.size.lock_ignoring_poison() = size;
         self.shared.term.lock().resize(size.grid());
         let _ = sys::set_window_size(&self.master, &size.winsize());
         self.shared.full_redraw.store(true, Ordering::Release);
@@ -429,7 +426,7 @@ impl Session {
     /// The visible screen; also re-arms `Event::Redraw`.
     pub fn snapshot(&self) -> Snapshot {
         self.shared.redraw_pending.store(false, Ordering::Release);
-        let palette = locked(&self.shared.palette).clone();
+        let palette = self.shared.palette.lock_ignoring_poison().clone();
         let mut snapshot = snapshot::take(&mut *self.shared.term.lock(), &palette);
         if self.shared.full_redraw.swap(false, Ordering::AcqRel) {
             snapshot.damage = snapshot::Damage::Full;
@@ -520,7 +517,7 @@ impl Session {
 
     /// Changes the colours.
     pub fn set_palette(&self, palette: Palette) {
-        *locked(&self.shared.palette) = palette;
+        *self.shared.palette.lock_ignoring_poison() = palette;
         self.shared.full_redraw.store(true, Ordering::Release);
     }
 
@@ -563,7 +560,7 @@ impl Session {
 
     /// Answers the program's last request to read the clipboard (`Event::ClipboardLoad`) with `text`.
     pub fn answer_clipboard(&self, text: &str) {
-        let reply = locked(&self.shared.clipboard_reply).take();
+        let reply = self.shared.clipboard_reply.lock_ignoring_poison().take();
         if let Some(reply) = reply {
             self.write(reply(text));
         }
@@ -647,16 +644,14 @@ fn hang_up(master: &File, shell: i32, grace: Duration) {
     sys::signal_group(shell, libc::SIGHUP);
     let Some(front) = front else { return };
     sys::signal_group(front, libc::SIGHUP);
-    let _ = std::thread::Builder::new()
-        .name("terminal-hang-up".into())
-        .spawn(move || {
-            for signal in [libc::SIGTERM, libc::SIGKILL] {
-                if group_ends_within(front, grace) {
-                    return;
-                }
-                sys::signal_group(front, signal);
+    ide_core::thread::detach_or_run("terminal-hang-up", move || {
+        for signal in [libc::SIGTERM, libc::SIGKILL] {
+            if group_ends_within(front, grace) {
+                return;
             }
-        });
+            sys::signal_group(front, signal);
+        }
+    });
 }
 
 fn group_ends_within(group: i32, grace: Duration) -> bool {

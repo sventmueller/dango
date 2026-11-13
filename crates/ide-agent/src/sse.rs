@@ -1,4 +1,5 @@
-//! Server-sent events as the providers stream them: `event:` and `data:` lines up to a blank line.
+//! Server-sent events as the providers stream them: `event:` and `data:` lines up to a blank line. An event the
+//! stream ends in before its blank line is dropped, as the HTML standard's event-stream parsing says.
 
 use std::io::BufRead;
 
@@ -36,9 +37,7 @@ impl<R: BufRead> Iterator for Events<R> {
             self.line.clear();
             match self.reader.read_line(&mut self.line) {
                 Err(e) => return Some(Err(e)),
-                Ok(0) => {
-                    return data.map(|data| Ok(Event { event, data }));
-                }
+                Ok(0) => return None,
                 Ok(_) => {}
             }
             let line = self.line.trim_end_matches(['\n', '\r']);
@@ -79,7 +78,7 @@ mod tests {
 
     #[test]
     fn events_end_at_blank_lines_and_keep_their_type() {
-        let got = events("event: ping\ndata: {}\n\n: comment\ndata: a\r\ndata: b\r\n\r\ndata:[DONE]");
+        let got = events("event: ping\ndata: {}\n\n: comment\ndata: a\r\ndata: b\r\n\r\ndata:[DONE]\n\n");
         assert_eq!(
             got,
             [
@@ -97,6 +96,18 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn an_event_cut_off_by_the_end_of_the_stream_is_dropped() {
+        assert_eq!(
+            events("data: whole\n\ndata: half"),
+            [Event {
+                event: None,
+                data: "whole".into()
+            }]
+        );
+        assert!(events("event: x\ndata: half\n").is_empty());
     }
 
     #[test]

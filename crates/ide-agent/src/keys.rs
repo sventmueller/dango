@@ -1,97 +1,12 @@
 //! API keys, kept in the login keychain under the app's service and one account per endpoint; never in settings.
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+pub use ide_secrets::{Keychain, Memory, SecretError, SecretStore};
 
 use crate::provider::Endpoint;
-
-/// errSecItemNotFound.
-const NOT_FOUND: i32 = -25300;
-
-/// Where the keys are kept.
-pub trait SecretStore: Send + Sync {
-    /// The secret saved for `account`.
-    fn get(&self, account: &str) -> Result<Option<String>, String>;
-    /// Saves `secret` for `account`, in place of what was there.
-    fn set(&self, account: &str, secret: &str) -> Result<(), String>;
-    /// Forgets the secret of `account`.
-    fn delete(&self, account: &str) -> Result<(), String>;
-}
 
 /// The keychain account of `endpoint`'s key.
 pub fn account(endpoint: &Endpoint) -> String {
     format!("agent.{}", endpoint.id)
-}
-
-/// The login keychain under one service name.
-pub struct Keychain {
-    service: String,
-}
-
-impl Keychain {
-    /// The keychain items of `service`.
-    pub fn new(service: &str) -> Keychain {
-        Keychain {
-            service: service.to_string(),
-        }
-    }
-
-    /// The keychain items of this build of the app, named like its data folders.
-    pub fn of_app() -> Keychain {
-        Keychain::new(ide_core::paths::identity())
-    }
-}
-
-impl SecretStore for Keychain {
-    fn get(&self, account: &str) -> Result<Option<String>, String> {
-        match security_framework::passwords::get_generic_password(&self.service, account) {
-            Ok(bytes) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
-            Err(e) if e.code() == NOT_FOUND => Ok(None),
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
-    fn set(&self, account: &str, secret: &str) -> Result<(), String> {
-        security_framework::passwords::set_generic_password(&self.service, account, secret.as_bytes())
-            .map_err(|e| e.to_string())
-    }
-
-    fn delete(&self, account: &str) -> Result<(), String> {
-        match security_framework::passwords::delete_generic_password(&self.service, account) {
-            Err(e) if e.code() != NOT_FOUND => Err(e.to_string()),
-            _ => Ok(()),
-        }
-    }
-}
-
-/// Secrets in memory, for tests and the self-test, which leave the keychain alone.
-#[derive(Default)]
-pub struct Memory {
-    secrets: Mutex<HashMap<String, String>>,
-}
-
-impl SecretStore for Memory {
-    fn get(&self, account: &str) -> Result<Option<String>, String> {
-        Ok(self
-            .secrets
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(account)
-            .cloned())
-    }
-
-    fn set(&self, account: &str, secret: &str) -> Result<(), String> {
-        self.secrets
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(account.to_string(), secret.to_string());
-        Ok(())
-    }
-
-    fn delete(&self, account: &str) -> Result<(), String> {
-        self.secrets.lock().unwrap_or_else(|e| e.into_inner()).remove(account);
-        Ok(())
-    }
 }
 
 /// A key as it is passed around: its text never shows in debug output or logs.
@@ -118,7 +33,7 @@ impl std::fmt::Debug for ApiKey {
 }
 
 /// The key `store` keeps for `endpoint`.
-pub fn key_for(store: &dyn SecretStore, endpoint: &Endpoint) -> Result<Option<ApiKey>, String> {
+pub fn key_for(store: &dyn SecretStore, endpoint: &Endpoint) -> Result<Option<ApiKey>, SecretError> {
     Ok(store.get(&account(endpoint))?.as_deref().and_then(ApiKey::new))
 }
 

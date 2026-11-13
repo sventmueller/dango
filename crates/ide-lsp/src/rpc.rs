@@ -1,23 +1,15 @@
-//! JSON-RPC 2.0 over a pair of byte streams: requests with deadlines and cancellation, notifications, and requests
-//! from the other side.
-//!
-//! Three threads per connection: one reads and dispatches, one writes from a bounded queue so a caller never waits
-//! on a full pipe, one fails requests whose deadline passed.
+//! JSON-RPC 2.0 on the shared transport (`ide-rpc`): requests with deadlines and cancellation, notifications, and
+//! requests from the other side.
 
-use std::collections::HashMap;
-use std::io::{self, BufReader, Read, Write};
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::mpsc::{Receiver, SyncSender, TrySendError, sync_channel};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard, Weak};
-use std::time::{Duration, Instant};
+use std::io::{self, Read, Write};
+use std::sync::{Arc, Weak};
+use std::time::Duration;
 
+use ide_process::framing;
+use ide_rpc::{Call, SendError, Transport, contained};
 use serde_json::{Map, Value, json};
 
 use crate::error::Error;
-use ide_process::framing;
-
-/// Messages that may wait for the writer; more means the server stopped reading.
-const QUEUE: usize = 4096;
 
 /// Called once with the answer to a request.
 pub(crate) type Reply = Box<dyn FnOnce(Result<Value, Error>) + Send>;
@@ -30,28 +22,23 @@ pub(crate) trait Handler: Send + Sync {
     fn closed(&self);
 }
 
-struct Call {
-    reply: Reply,
-    deadline: Instant,
-}
+/// A request waiting for its answer.
+struct Waiting(Reply);
 
-#[derive(Default)]
-struct Pending {
-    calls: HashMap<i32, Call>,
-    closed: bool,
-}
+impl Call for Waiting {
+    fn closed(self) {
+        (self.0)(Err(Error::ServerGone));
+    }
 
-enum Out {
-    Message(Vec<u8>),
-    EndOfInput,
+    fn expired(self, id: i64, transport: &Transport<Self>) {
+        let _ = send(transport, &cancel_request(id));
+        (self.0)(Err(Error::Timeout));
+    }
 }
 
 /// One JSON-RPC connection.
 pub(crate) struct Connection {
-    out: SyncSender<Out>,
-    pending: Mutex<Pending>,
-    wake: Condvar,
-    next: AtomicI32,
+    transport: Arc<Transport<Waiting>>,
 }
 
 impl Connection {
@@ -62,255 +49,168 @@ impl Connection {
         handler: Arc<dyn Handler>,
         name: &str,
     ) -> io::Result<Arc<Connection>> {
-        let (out, queue) = sync_channel(QUEUE);
-        let connection = Arc::new(Connection {
-            out,
-            pending: Mutex::default(),
-            wake: Condvar::new(),
-            next: AtomicI32::new(1),
-        });
-        std::thread::Builder::new()
-            .name(format!("lsp-write-{name}"))
-            .spawn(move || write_all(output, &queue))?;
-        let timer = connection.clone();
-        std::thread::Builder::new()
-            .name(format!("lsp-timer-{name}"))
-            .spawn(move || timer.expire())?;
-        let reader = Arc::downgrade(&connection);
-        if let Err(error) = std::thread::Builder::new()
-            .name(format!("lsp-read-{name}"))
-            .spawn(move || read_all(input, &reader, &*handler))
-        {
-            connection.close();
-            return Err(error);
-        }
-        Ok(connection)
+        let transport = Transport::start(input, output, Arc::new(Dispatch(handler)), "lsp", name)?;
+        Ok(Arc::new(Connection { transport }))
     }
 
     /// Sends a request; `reply` hears the answer, an error, the timeout or the cancellation exactly once. When this
     /// returns an error, `reply` is dropped without a call.
-    pub(crate) fn request(&self, method: &str, params: Value, timeout: Duration, reply: Reply) -> Result<i32, Error> {
-        let id = self.next.fetch_add(1, Ordering::Relaxed);
+    pub(crate) fn request(&self, method: &str, params: Value, timeout: Duration, reply: Reply) -> Result<i64, Error> {
+        let id = self.transport.next_id();
         let mut message = json!({"jsonrpc": "2.0", "id": id, "method": method});
         if !params.is_null() {
             message["params"] = params;
         }
-        {
-            let mut pending = self.lock();
-            if pending.closed {
-                return Err(Error::ServerGone);
-            }
-            let deadline = Instant::now()
-                .checked_add(timeout)
-                .unwrap_or_else(|| Instant::now() + Duration::from_secs(365 * 24 * 3600));
-            pending.calls.insert(id, Call { reply, deadline });
-        }
-        self.wake.notify_all();
-        if let Err(error) = self.send(&message)
-            && self.lock().calls.remove(&id).is_some()
-        {
-            return Err(error);
-        }
+        self.transport
+            .call(id, encode(&message)?, timeout, Waiting(reply))
+            .map_err(error_of)?;
         Ok(id)
     }
 
     /// Sends a notification.
     pub(crate) fn notify(&self, method: &str, params: Value) -> Result<(), Error> {
-        let mut message = json!({"jsonrpc": "2.0", "method": method});
-        if !params.is_null() {
-            message["params"] = params;
-        }
-        self.send(&message)
+        send(&self.transport, &notification(method, params))
     }
 
     /// Ends request `id` with `why` and asks the other side to stop working on it.
-    pub(crate) fn cancel(&self, id: i32, why: Error) {
-        let call = self.lock().calls.remove(&id);
-        if let Some(call) = call {
-            let _ = self.notify("$/cancelRequest", json!({"id": id}));
-            contained(|| (call.reply)(Err(why)));
+    pub(crate) fn cancel(&self, id: i64, why: Error) {
+        if let Some(waiting) = self.transport.take(id) {
+            let _ = send(&self.transport, &cancel_request(id));
+            contained(|| (waiting.0)(Err(why)));
         }
     }
 
     /// Closes the other side's input once everything queued is written.
     pub(crate) fn end_input(&self) {
-        let _ = self.out.try_send(Out::EndOfInput);
+        self.transport.end_input();
     }
+}
 
-    fn send(&self, message: &Value) -> Result<(), Error> {
-        let body = serde_json::to_vec(message).map_err(|e| Error::Malformed(e.to_string()))?;
-        match self.out.try_send(Out::Message(framing::frame(&body))) {
-            Ok(()) => Ok(()),
-            Err(TrySendError::Full(_)) => Err(Error::Congested),
-            Err(TrySendError::Disconnected(_)) => Err(Error::ServerGone),
-        }
+fn notification(method: &str, params: Value) -> Value {
+    let mut message = json!({"jsonrpc": "2.0", "method": method});
+    if !params.is_null() {
+        message["params"] = params;
     }
+    message
+}
 
-    fn respond(&self, id: Value, answer: Result<Value, (i64, String)>) {
-        let message = match answer {
-            Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
-            Err((code, message)) => json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}}),
-        };
-        let _ = self.send(&message);
+fn cancel_request(id: i64) -> Value {
+    notification("$/cancelRequest", json!({"id": id}))
+}
+
+fn encode(message: &Value) -> Result<Vec<u8>, Error> {
+    let body = serde_json::to_vec(message).map_err(|e| Error::Malformed(e.to_string()))?;
+    Ok(framing::frame(&body))
+}
+
+fn send(transport: &Transport<Waiting>, message: &Value) -> Result<(), Error> {
+    transport.send(encode(message)?).map_err(error_of)
+}
+
+fn error_of(error: SendError) -> Error {
+    match error {
+        SendError::Congested => Error::Congested,
+        SendError::Closed => Error::ServerGone,
     }
+}
 
-    fn dispatch(self: &Arc<Self>, body: &[u8], handler: &dyn Handler) {
-        let Ok(Value::Object(mut message)) = serde_json::from_slice::<Value>(body) else {
-            return;
+/// Hands what arrives to the handler or to the request it answers.
+struct Dispatch(Arc<dyn Handler>);
+
+impl ide_rpc::Receiver<Waiting> for Dispatch {
+    fn receive(&self, transport: &Arc<Transport<Waiting>>, body: &[u8]) {
+        let mut message = match serde_json::from_slice::<Value>(body) {
+            Ok(Value::Object(message)) => message,
+            Ok(other) => return ide_core::diag::report("lsp: message is not an object", kind_of(&other)),
+            Err(error) => return ide_core::diag::report("lsp: undecodable message", error),
         };
         let params = message.remove("params").unwrap_or(Value::Null);
         match (message.remove("method"), message.remove("id")) {
             (Some(Value::String(method)), Some(id)) => {
-                let responder = Responder {
-                    id: Some(id),
-                    connection: Arc::downgrade(self),
-                };
-                contained(|| handler.request(&method, params, responder));
+                let responder = Responder::new(Arc::downgrade(transport), id);
+                contained(|| self.0.request(&method, params, responder));
             }
-            (Some(Value::String(method)), None) => contained(|| handler.notification(&method, params)),
-            (None, Some(id)) => self.complete(&id, message),
-            _ => {}
+            (Some(Value::String(method)), None) => contained(|| self.0.notification(&method, params)),
+            (None, Some(id)) => complete(transport, &id, message),
+            _ => ide_core::diag::report("lsp: message neither request, notification nor response", ""),
         }
     }
 
-    fn complete(&self, id: &Value, mut message: Map<String, Value>) {
-        let Some(id) = id.as_i64().and_then(|id| i32::try_from(id).ok()) else {
-            return;
-        };
-        let Some(call) = self.lock().calls.remove(&id) else {
-            return;
-        };
-        let answer = match message.remove("error") {
-            Some(error) => Err(Error::Server {
-                code: error.get("code").and_then(Value::as_i64).unwrap_or(0),
-                message: error
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_string(),
-            }),
-            None => Ok(message.remove("result").unwrap_or(Value::Null)),
-        };
-        contained(|| (call.reply)(answer));
+    fn ended(&self) {
+        self.0.closed();
     }
+}
 
-    /// Fails every waiting request; nothing more can be sent.
-    fn close(&self) {
-        let calls: Vec<Call> = {
-            let mut pending = self.lock();
-            pending.closed = true;
-            pending.calls.drain().map(|(_, call)| call).collect()
-        };
-        self.wake.notify_all();
-        let _ = self.out.try_send(Out::EndOfInput);
-        for call in calls {
-            contained(|| (call.reply)(Err(Error::ServerGone)));
-        }
+fn kind_of(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "a boolean",
+        Value::Number(_) => "a number",
+        Value::String(_) => "a string",
+        Value::Array(_) => "an array",
+        Value::Object(_) => "an object",
     }
+}
 
-    /// Fails requests whose deadline passed, until the connection closes.
-    fn expire(&self) {
-        let mut pending = self.lock();
-        loop {
-            if pending.closed {
-                return;
-            }
-            let now = Instant::now();
-            let due: Vec<i32> = pending
-                .calls
-                .iter()
-                .filter(|(_, call)| call.deadline <= now)
-                .map(|(id, _)| *id)
-                .collect();
-            if !due.is_empty() {
-                let calls: Vec<(i32, Call)> = due
-                    .into_iter()
-                    .filter_map(|id| pending.calls.remove(&id).map(|call| (id, call)))
-                    .collect();
-                drop(pending);
-                for (id, call) in calls {
-                    let _ = self.notify("$/cancelRequest", json!({"id": id}));
-                    contained(|| (call.reply)(Err(Error::Timeout)));
-                }
-                pending = self.lock();
-                continue;
-            }
-            pending = match pending.calls.values().map(|call| call.deadline).min() {
-                Some(deadline) => {
-                    self.wake
-                        .wait_timeout(pending, deadline.saturating_duration_since(now))
-                        .unwrap_or_else(|e| e.into_inner())
-                        .0
-                }
-                None => self.wake.wait(pending).unwrap_or_else(|e| e.into_inner()),
-            };
-        }
-    }
-
-    fn lock(&self) -> MutexGuard<'_, Pending> {
-        self.pending.lock().unwrap_or_else(|e| e.into_inner())
-    }
+fn complete(transport: &Transport<Waiting>, id: &Value, mut message: Map<String, Value>) {
+    let Some(id) = id.as_i64() else {
+        return ide_core::diag::report("lsp: response to an id never sent", id);
+    };
+    let Some(waiting) = transport.take(id) else {
+        return;
+    };
+    let answer = match message.remove("error") {
+        Some(error) => Err(Error::Server {
+            code: error.get("code").and_then(Value::as_i64).unwrap_or(0),
+            message: error
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+        }),
+        None => Ok(message.remove("result").unwrap_or(Value::Null)),
+    };
+    contained(|| (waiting.0)(answer));
 }
 
 /// Answers one request from the other side; dropped unanswered, it answers with an internal error.
-pub(crate) struct Responder {
-    id: Option<Value>,
-    connection: Weak<Connection>,
-}
+pub(crate) struct Responder(ide_rpc::Responder<(i64, String)>);
 
 impl Responder {
-    pub(crate) fn ok(mut self, result: Value) {
-        self.answer(Ok(result));
-    }
-
-    pub(crate) fn fail(mut self, code: i64, message: &str) {
-        self.answer(Err((code, message.to_string())));
-    }
-
-    fn answer(&mut self, answer: Result<Value, (i64, String)>) {
-        if let (Some(id), Some(connection)) = (self.id.take(), self.connection.upgrade()) {
-            connection.respond(id, answer);
-        }
-    }
-}
-
-impl Drop for Responder {
-    fn drop(&mut self) {
-        self.answer(Err((-32603, "the request was not answered".to_string())));
-    }
-}
-
-fn read_all(input: impl Read, connection: &Weak<Connection>, handler: &dyn Handler) {
-    let mut input = BufReader::with_capacity(64 * 1024, input);
-    while let Ok(Some(body)) = framing::read(&mut input) {
-        let Some(connection) = connection.upgrade() else {
-            return;
+    fn new(transport: Weak<Transport<Waiting>>, id: Value) -> Responder {
+        let answer = move |answer: Result<Value, (i64, String)>| {
+            let Some(transport) = transport.upgrade() else {
+                return;
+            };
+            let message = match answer {
+                Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
+                Err((code, message)) => {
+                    json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
+                }
+            };
+            let _ = send(&transport, &message);
         };
-        connection.dispatch(&body, handler);
+        Responder(ide_rpc::Responder::new(
+            answer,
+            (-32603, "the request was not answered".to_string()),
+        ))
     }
-    if let Some(connection) = connection.upgrade() {
-        connection.close();
-    }
-    contained(|| handler.closed());
-}
 
-fn write_all(mut output: impl Write, queue: &Receiver<Out>) {
-    while let Ok(Out::Message(bytes)) = queue.recv() {
-        if output.write_all(&bytes).and_then(|()| output.flush()).is_err() {
-            return;
-        }
+    pub(crate) fn ok(self, result: Value) {
+        self.0.ok(result);
     }
-}
 
-/// Runs `f`; a panic in a caller's callback costs that callback, not the connection.
-fn contained(f: impl FnOnce()) {
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    pub(crate) fn fail(self, code: i64, message: &str) {
+        self.0.fail((code, message.to_string()));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::{BufRead, PipeReader, PipeWriter};
+    use std::io::{BufRead, BufReader, PipeReader, PipeWriter};
+    use std::sync::Mutex;
     use std::sync::mpsc::{Sender, channel};
+    use std::time::Instant;
 
     use super::*;
 

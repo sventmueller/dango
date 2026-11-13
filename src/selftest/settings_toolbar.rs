@@ -7,8 +7,8 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSTabViewController;
 
+use super::helpers::after;
 use super::{check, finish, snapshot};
-use crate::util::main_after;
 
 /// How long the window takes to resize to a tab it switched to.
 const SETTLE: Duration = Duration::from_millis(700);
@@ -24,7 +24,7 @@ fn name() -> &'static str {
 pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show(mtm);
-    main_after(SETTLE, || step(0, Vec::new()));
+    after(SETTLE, || step(0, Vec::new()));
 }
 
 /// Shows the tab at `index` and counts the toolbar items it shows; `crowded` names the tabs that hid some.
@@ -43,7 +43,7 @@ fn step(index: usize, crowded: Vec<String>) {
         return finish(name());
     };
     tabs.setSelectedTabViewItemIndex(isize::try_from(index).unwrap_or(0));
-    main_after(SETTLE, move || counted(index, label, crowded));
+    after(SETTLE, move || counted(index, label, crowded));
 }
 
 fn counted(index: usize, label: String, mut crowded: Vec<String>) {

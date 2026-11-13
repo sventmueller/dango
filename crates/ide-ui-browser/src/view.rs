@@ -31,6 +31,8 @@ use super::notice::Notice;
 use super::{autofill, dialogs, downloads, host, tabs, trust, web};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, item, ns, set_target};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// The longest tab title, in characters.
 const TITLE_LIMIT: usize = 32;
@@ -788,25 +790,6 @@ impl BrowserView {
         }
         if host::host().set_tab_title(self.window_id(), self.tab(), &title) {
             *self.ivars().title.borrow_mut() = title;
-        }
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn address_field(&self) -> Retained<objc2_app_kit::NSTextField> {
-        self.parts().controls.field.clone()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn seen(&self) -> tabs::Seen {
-        let parts = self.parts();
-        tabs::Seen {
-            url: self.current_url(),
-            address: parts.controls.field.stringValue().to_string(),
-            editing: parts.controls.field.currentEditor().is_some(),
-            inspector: web::has_inspector(&parts.web),
-            failure: parts.failure.is_shown().then(|| parts.failure.heading()),
-            proceed: parts.failure.offers_proceed(),
-            notice: parts.notice.text(),
         }
     }
 }

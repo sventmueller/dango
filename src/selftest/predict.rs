@@ -18,28 +18,25 @@ use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{NSStandardKeyBindingResponding, NSTextView, NSWindow};
 use objc2_foundation::NSRange;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::predict::{self, model::Kind};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "edit-prediction";
 const MAIN: &str = "fn main() {\n    let total = sc\n    let other = 1;\n}\n";
-/// Long enough for the pause before asking and the stub's answer.
-const SETTLE: Duration = Duration::from_millis(450);
+const PROJECT: &str = "predict-project";
+/// A turn of the event loop after taking a proposal, so that AppKit closes its undo group before the undo.
+const EVENT_TURN: Duration = Duration::from_millis(50);
+/// Longer than the late stub's delay of 300 ms, so that its answer would have shown by then.
+const LATE_ANSWER: Duration = Duration::from_millis(600);
 
 /// The stub answering now.
 static STUB: Mutex<Option<Arc<Stub>>> = Mutex::new(None);
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("predict-project")
-}
-
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn open(file: &str) -> Option<Retained<EditorTextView>> {
@@ -64,8 +61,13 @@ fn picture(view: &EditorTextView, name: &str) {
     }
 }
 
-fn after(delay: Duration, next: fn()) {
-    main_after(delay, next);
+/// Runs `next` once the file's editor holds what `ready` asks for, or once the wait gave up, for `next` to check.
+fn when(ready: fn(&EditorTextView) -> bool, next: fn()) {
+    helpers::wait_until(move || main_view().is_some_and(|view| ready(&view)), move |_| next());
+}
+
+fn proposed(view: &EditorTextView) -> bool {
+    kind(view).is_some()
 }
 
 /// The stub's counts of questions and of proposals taken.
@@ -129,23 +131,15 @@ fn ask(view: &EditorTextView) {
 }
 
 pub fn run() {
-    let folder = folder();
-    let written = std::fs::create_dir_all(folder.join("src"))
-        .and_then(|()| std::fs::write(folder.join("src/main.rs"), MAIN))
-        .and_then(|()| std::fs::write(folder.join(".env.local"), "TOKEN=1\n"))
-        .and_then(|()| {
-            let secret = format!("fn token() -> &'static str {{\n    \"{}\"\n}}\n", token());
-            std::fs::write(folder.join("src/secret.rs"), secret)
-        })
-        .and_then(|()| std::fs::write(folder.join("big.rs"), big()));
-    if let Err(error) = written {
-        check("the project is made", false, error.to_string());
-        return finish(SCENARIO);
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    after(Duration::from_millis(400), ghost);
+    let secret = format!("fn token() -> &'static str {{\n    \"{}\"\n}}\n", token());
+    let big = big();
+    let files = [
+        ("src/main.rs", MAIN),
+        (".env.local", "TOKEN=1\n"),
+        ("src/secret.rs", secret.as_str()),
+        ("big.rs", big.as_str()),
+    ];
+    helpers::open_project(SCENARIO, PROJECT, &files, |_| when(|_| true, ghost));
 }
 
 fn big() -> String {
@@ -164,7 +158,15 @@ fn ghost() {
     caret_at_byte(&view, caret);
     answer(caret + 1..caret + 1, "le(21, 2);", Duration::from_millis(10));
     editor::type_text(&view, "a");
-    after(SETTLE, ghost_shown);
+    when(
+        |view| proposed(view) && counts().0 >= 1 && drawn(view, Layer::Prediction),
+        ghost_shown,
+    );
+}
+
+/// Whether the overlay drew an inset of `layer`, which happens with the next display after the model has it.
+fn drawn(view: &EditorTextView, layer: Layer) -> bool {
+    insets::shown(view).iter().any(|s| s.layer == layer)
 }
 
 fn ghost_shown() {
@@ -224,7 +226,7 @@ fn ghost_shown() {
         text(&view).contains("total = scale(21, 2);\n") && counts().1 == 1 && kind(&view).is_none(),
         format!("{:?}, {:?}", text(&view), counts()),
     );
-    after(Duration::from_millis(50), undo_take);
+    helpers::after(EVENT_TURN, undo_take);
 }
 
 /// The menu item of edit prediction with `tag`: whether it is enabled for `view`.
@@ -264,7 +266,7 @@ fn undo_take() {
     caret_at_byte(&view, caret);
     answer(caret..caret, "2 * ", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), escape);
+    when(proposed, escape);
 }
 
 fn escape() {
@@ -305,7 +307,7 @@ fn escape() {
     answer(caret..caret, "le", Duration::from_millis(300));
     ask(&view);
     editor::type_text(&view, "l");
-    after(Duration::from_millis(600), late);
+    helpers::after(LATE_ANSWER, late);
 }
 
 fn late() {
@@ -324,7 +326,7 @@ fn late() {
     caret_at_byte(&view, caret);
     answer(caret..caret, "le", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), list_first);
+    when(proposed, list_first);
 }
 
 fn list_first() {
@@ -349,7 +351,7 @@ fn list_first() {
     caret_at_byte(&view, caret);
     answer(caret..caret, "le", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), snippet_first);
+    when(proposed, snippet_first);
 }
 
 fn snippet_first() {
@@ -372,7 +374,7 @@ fn snippet_first() {
     let start = text(&view)[start..].find("other").map_or(0, |i| start + i);
     answer(start..start + 5, "rest", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), replace);
+    when(proposed, replace);
 }
 
 fn replace() {
@@ -404,7 +406,7 @@ fn replace() {
     let from = after_text(&view, "let other");
     answer(from..from + 4, "", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), delete);
+    when(proposed, delete);
 }
 
 fn delete() {
@@ -428,7 +430,7 @@ fn delete() {
     let main = text(&view).find("main").unwrap_or(0);
     answer(main..main + 4, "start", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), jump);
+    when(proposed, jump);
 }
 
 fn jump() {
@@ -462,7 +464,7 @@ fn jump() {
     caret_at_byte(&view, caret);
     answer(caret..caret, " // one\n    let more = 2;", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), lines);
+    when(proposed, lines);
 }
 
 fn lines() {
@@ -482,7 +484,7 @@ fn lines() {
     caret_at_byte(&view, start);
     answer(start..start, "// note", Duration::from_millis(10));
     ask(&view);
-    after(Duration::from_millis(150), line_start);
+    when(proposed, line_start);
 }
 
 fn line_start() {
@@ -516,7 +518,7 @@ fn line_start() {
         format!("{:?}", predict::status_shown(&env)),
     );
     consent();
-    after(Duration::from_millis(100), secrets);
+    helpers::wait_until(|| open("big.rs").is_some(), |_| secrets());
 }
 
 /// A token of the shape gitleaks' rule `github-pat` finds, put together here so that this file holds none.
@@ -570,10 +572,11 @@ fn secrets_timed(times: &[Duration], verdicts: &[predict::guard::Verdict]) {
     }
     predict::provider::force_outside(stub);
     ask(&view);
-    after(
-        Duration::from_millis(1500),
-        if missing { secrets_unchecked } else { secret_found },
-    );
+    if missing {
+        helpers::wait_until(|| counts().0 >= 1, |_| secrets_unchecked());
+    } else {
+        when(|view| status_says_secret(view, true), secret_found);
+    }
 }
 
 /// Without gitleaks the text goes out, and the status bar says so once.
@@ -612,7 +615,7 @@ fn secret_found() {
     let end = after_text(&view, "\"\n");
     caret_at_byte(&view, end);
     ask(&view);
-    after(Duration::from_millis(1500), secret_gone);
+    when(|view| counts().0 >= 1 && status_says_secret(view, false), secret_gone);
 }
 
 fn secret_gone() {
@@ -627,6 +630,10 @@ fn secret_gone() {
     );
     predict::provider::force(None);
     budget();
+}
+
+fn status_says_secret(view: &EditorTextView, says: bool) -> bool {
+    predict::status_shown(view).is_some_and(|(title, _)| title.contains("Secret") == says)
 }
 
 /// A local server outside the Mac waits for consent, which the settings take back.

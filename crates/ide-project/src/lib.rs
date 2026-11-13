@@ -3,25 +3,26 @@
 //!
 //! The watcher and quick open run threads of their own and answer through callbacks; everything else blocks and
 //! belongs on a background thread. Long work takes a [`Cancel`] and has a limit.
+//!
+//! [`search_panel`] and [`files_panel`] are what the app's search and files panels decide without AppKit.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs, unreachable_pub)]
 
 pub mod editorconfig;
+pub mod files_panel;
 pub mod fuzzy;
 pub mod index;
 pub mod order;
 pub mod replace;
 pub mod search;
+pub mod search_panel;
 pub mod tree;
 pub mod trust;
 pub mod watch;
 
 mod rules;
 mod text;
-
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use index::{FileIndex, Hit, Indexed, QuickOpen};
 pub use replace::{Replacement, replacements};
@@ -30,38 +31,13 @@ pub use tree::{Entry, Kind, Link, Tree, TreeOptions};
 pub use trust::TrustStore;
 pub use watch::{Changes, FileChange, RescanReason, WatchEvent, Watcher};
 
-/// A flag that asks long work to stop; clones share it.
-#[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<AtomicBool>);
-
-impl Cancel {
-    /// A token nobody has cancelled yet.
-    pub fn new() -> Cancel {
-        Cancel::default()
-    }
-
-    /// Asks every holder of this token to stop.
-    pub fn cancel(&self) {
-        self.0.store(true, Ordering::Relaxed);
-    }
-
-    /// Whether `cancel` was called on this token or a clone of it.
-    pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::Relaxed)
-    }
-}
+pub use ide_core::Cancel;
 
 #[cfg(test)]
 pub(crate) mod testing {
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
-    /// An empty folder of its own for one test, with symlinks resolved so it compares equal to what the crate reports.
-    pub(crate) fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-project-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir.canonicalize().unwrap()
-    }
+    pub(crate) use ide_core::testing::scratch;
 
     /// Writes `content` to `root/relative`, creating the folders on the way.
     pub(crate) fn write(root: &Path, relative: &str, content: &str) {

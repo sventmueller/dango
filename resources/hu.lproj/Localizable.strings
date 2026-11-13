@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Utolsó üzenet: {}";
 "Das Programm hat sich ohne Meldung beendet." = "A program üzenet nélkül leállt.";
 "Das Programm hat sich beim Start beendet: {}" = "A program indítás közben leállt: {}";
+"Konnte keinen Thread starten: {}" = "Nem sikerült szálat indítani: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "A munkaterület módosítását nem sikerült végrehajtani.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "A(z) „{}” program nélküli könyvtár, és ebben a fájlban nincsenek tesztek. Hibakeressen main függvényt vagy teszteket tartalmazó fájlt, vagy adja meg a .vscode/launch.json fájlban, melyik program induljon.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Ha a macOS nem kér jelszót, engedélyezze egyszer a hibakeresőket a Terminálban a „sudo DevToolsSecurity -enable” paranccsal, vagy szakítsa meg a Leállítás gombbal. Tíz perc után az indítás magától feladja.";
+"Haltepunkt, nicht gesetzt" = "Töréspont, nincs beállítva";
+"nicht gesetzt" = "nincs beállítva";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "A hibakereső nem tudott ide töréspontot állítani: {}";

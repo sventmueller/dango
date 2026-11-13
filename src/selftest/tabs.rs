@@ -6,12 +6,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_core::settings::{Settings, keys};
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use splat_i18n::t;
 
-use super::{check, finish, snapshot, type_into};
-use crate::util::main_after;
+use super::{check, finish, helpers, snapshot, type_into};
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "tabs";
@@ -35,23 +33,23 @@ fn tabs_of(controller: &WindowController) -> String {
 }
 
 pub(super) fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("tabs-project");
-    let _ = std::fs::create_dir_all(&folder);
-    for name in FILES {
-        let _ = std::fs::write(folder.join(name), format!("// {name}\nfn main() {{}}\n"));
-    }
-    crate::project::trust(&folder);
     if let Err(error) = Settings::load_user().set(&keys::PREVIEW_TABS, &true) {
         check("preview tabs can be turned on", false, error.to_string());
     }
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    main_after(PAUSE, move || first_preview(root));
+    let texts: Vec<String> = FILES
+        .iter()
+        .map(|name| format!("// {name}\nfn main() {{}}\n"))
+        .collect();
+    let files: Vec<(&str, &str)> = FILES.iter().copied().zip(texts.iter().map(String::as_str)).collect();
+    helpers::open_project(SCENARIO, "tabs-project", &files, |controller| {
+        let root = helpers::root("tabs-project");
+        let rows = isize::try_from(FILES.len()).unwrap_or(0);
+        helpers::wait_until(move || controller.tree_rows() >= rows, move |_| first_preview(root));
+    });
 }
 
-/// A pause for the window to draw before a picture.
-const PAUSE: Duration = Duration::from_millis(500);
+/// Long enough for the window to draw what changed before a picture, which has no state of its own to wait for.
+const DRAWN: Duration = Duration::from_millis(500);
 
 fn window_of(root: &Path) -> Option<Retained<WindowController>> {
     let controller = window::open_windows()
@@ -87,7 +85,7 @@ fn first_preview(root: PathBuf) {
             ),
         spoken,
     );
-    main_after(PAUSE, move || replaced(root));
+    helpers::after(DRAWN, move || replaced(root));
 }
 
 fn replaced(root: PathBuf) {
@@ -110,7 +108,7 @@ fn replaced(root: PathBuf) {
     );
     keeping(&controller, &root);
     turned_off(&controller, &root);
-    main_after(PAUSE, move || {
+    helpers::after(DRAWN, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, "tabs-kept");
         }
@@ -147,7 +145,7 @@ fn variety(root: PathBuf) {
                 .is_some_and(|window| !window.isExcludedFromWindowsMenu()),
         format!("{listed:?}"),
     );
-    main_after(PAUSE, move || plus(root));
+    plus(root);
 }
 
 /// The tab bar's "+" and ⌘T: a click opens the menu of what a tab can show below the "+", and no tab before the user
@@ -157,9 +155,10 @@ fn plus(root: PathBuf) {
     controller.record_new_tab_menu();
     let before = controller.tab_count();
     let clicked = controller.click_plus();
-    main_after(PAUSE, move || {
+    let probe = root.clone();
+    let recorded = move || helpers::window_of(&probe).and_then(|c| c.new_tab_menu_recorded());
+    helpers::wait_for(recorded, move |shown| {
         let Some(controller) = window_of(&root) else { return };
-        let shown = controller.new_tab_menu_recorded();
         check(
             "a click on the tab bar's + opens the menu of new tabs below it, without a tab",
             clicked && shown == Some(true) && controller.tab_count() == before,

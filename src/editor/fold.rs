@@ -11,6 +11,10 @@ use objc2_app_kit::{NSTextContentManager, NSTextElement, NSTextElementProvider, 
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize};
 
 use super::view::EditorTextView;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// The width of a fold's placeholder after its first line.
 pub const PLACEHOLDER_WIDTH: f64 = 26.0;
@@ -39,14 +43,10 @@ fn available(view: &EditorTextView) -> Vec<(usize, usize)> {
     {
         return ranges.clone();
     }
-    let tab_width = if view.ivars().indent.borrow().as_str() == "\t" {
-        4
-    } else {
-        view.ivars().indent.borrow().len()
-    };
+    let tab_width = tab_width(view.ivars().indent.borrow().as_str());
     let ranges: Vec<(usize, usize)> = view
         .document()
-        .folds(tab_width.max(1))
+        .folds(tab_width)
         .into_iter()
         .filter(|f| f.end > f.start)
         .map(|f| (f.start, f.end))
@@ -55,13 +55,21 @@ fn available(view: &EditorTextView) -> Vec<(usize, usize)> {
     ranges
 }
 
+/// How many columns one level of `indent` takes when folding by indentation.
+fn tab_width(indent: &str) -> usize {
+    if indent == "\t" { 4 } else { indent.len().max(1) }
+}
+
+/// A server's folding ranges without the empty ones, ordered by first line.
+fn usable(mut ranges: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    ranges.retain(|(start, end)| end > start);
+    ranges.sort_unstable();
+    ranges
+}
+
 /// Takes the language server's folding ranges, or `None` to go back to the indentation.
 pub fn set_server_ranges(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
-    view.ivars().folds.borrow_mut().server = ranges.map(|mut r| {
-        r.retain(|(start, end)| end > start);
-        r.sort_unstable();
-        r
-    });
+    view.ivars().folds.borrow_mut().server = ranges.map(usable);
     super::redraw_gutter(view);
 }
 
@@ -104,10 +112,15 @@ fn fold(view: &EditorTextView, start: usize, end: usize) {
 /// The length of the line break that ends just before UTF-16 offset `at`.
 fn newline_before(view: &EditorTextView, at: usize) -> usize {
     let string = view.string();
-    match (
+    break_length(
         at.checked_sub(2).map(|i| string.characterAtIndex(i)),
         at.checked_sub(1).map(|i| string.characterAtIndex(i)),
-    ) {
+    )
+}
+
+/// The length of the line break that the two UTF-16 units before a place end with.
+fn break_length(second_last: Option<u16>, last: Option<u16>) -> usize {
+    match (second_last, last) {
         (Some(0x0D), Some(0x0A)) => 2,
         (_, Some(0x0A | 0x0D)) => 1,
         _ => 0,
@@ -198,17 +211,20 @@ pub fn shift(view: &EditorTextView, change: &Change) {
     let touched = {
         let mut folds = view.ivars().folds.borrow_mut();
         let before = folds.hidden.len();
-        folds.hidden.retain_mut(|r| {
-            let inside = change.utf16.start > r.start && change.utf16.start < r.end
-                || change.utf16.end > r.start && change.utf16.start < r.end;
-            !inside && crate::lsp::follow(r, change)
-        });
+        folds
+            .hidden
+            .retain_mut(|r| !reaches_into(&change.utf16, r) && crate::lsp::follow(r, change));
         folds.hidden.len() != before
     };
     if touched {
         // The storage is still processing the edit, and TextKit must not enumerate its paragraphs meanwhile.
         view.later(objc2::sel!(ideRelayoutFolds), 0.0);
     }
+}
+
+/// Whether an edit of `edited` changes text that the fold `hidden` hides.
+fn reaches_into(edited: &Range<usize>, hidden: &Range<usize>) -> bool {
+    edited.start > hidden.start && edited.start < hidden.end || edited.end > hidden.start && edited.start < hidden.end
 }
 
 /// Whether TextKit should lay out `element`: not when a fold hides it. A view that is busy shows everything.
@@ -239,9 +255,13 @@ pub fn hidden_by_fold(view: &EditorTextView, offset: usize) -> bool {
 
 /// The folds that are not inside another fold, as their hidden ranges.
 fn outermost(view: &EditorTextView) -> Vec<Range<usize>> {
-    let folds = view.ivars().folds.borrow();
+    outermost_of(&view.ivars().folds.borrow().hidden)
+}
+
+/// The ranges of `hidden`, sorted by start and longest first, that no earlier one contains.
+fn outermost_of(hidden: &[Range<usize>]) -> Vec<Range<usize>> {
     let mut out: Vec<Range<usize>> = vec![];
-    for r in &folds.hidden {
+    for r in hidden {
         if !out.iter().any(|o| o.start <= r.start && r.end <= o.end) {
             out.push(r.clone());
         }
@@ -291,43 +311,48 @@ pub fn gutter(view: &EditorTextView) -> BTreeMap<usize, bool> {
     lines
 }
 
-/// Whether the folds come from the language server, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn from_server(view: &EditorTextView) -> bool {
-    view.ivars().folds.borrow().server.is_some()
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// The lines TextKit lays out, in order, for the self-test: folded ones are missing.
-#[cfg(feature = "selftest")]
-pub fn laid_out_lines(view: &EditorTextView) -> Vec<usize> {
-    use objc2_app_kit::{NSTextLayoutFragment, NSTextLayoutFragmentEnumerationOptions};
-    let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
-        return vec![];
-    };
-    let start = content.documentRange().location();
-    let lines = std::cell::RefCell::new(vec![]);
-    let block = block2::RcBlock::new(
-        |fragment: std::ptr::NonNull<NSTextLayoutFragment>| -> objc2::runtime::Bool {
-            // SAFETY: TextKit keeps the fragment alive for the call.
-            let fragment = unsafe { fragment.as_ref() };
-            let offset = content.offsetFromLocation_toLocation(&start, &fragment.rangeInElement().location());
-            if let Ok(offset) = usize::try_from(offset) {
-                lines.borrow_mut().push(line_of(view, offset));
-            }
-            objc2::runtime::Bool::YES
-        },
-    );
-    let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
-        Some(&start),
-        NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
-        &block,
-    );
-    drop(block);
-    lines.into_inner()
-}
+    #[test]
+    fn a_tab_counts_as_four_columns_and_spaces_as_themselves() {
+        assert_eq!(tab_width("\t"), 4);
+        assert_eq!(tab_width("  "), 2);
+        assert_eq!(tab_width(""), 1, "an unknown indent still folds");
+    }
 
-/// How many folds are folded, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn folded(view: &EditorTextView) -> usize {
-    view.ivars().folds.borrow().hidden.len()
+    #[test]
+    fn server_ranges_lose_single_lines_and_come_in_order() {
+        assert_eq!(usable(vec![(9, 12), (3, 3), (1, 4), (5, 2)]), [(1, 4), (9, 12)]);
+    }
+
+    #[test]
+    fn line_breaks_before_a_place_are_measured() {
+        assert_eq!(break_length(Some(0x0D), Some(0x0A)), 2);
+        assert_eq!(break_length(Some(u16::from(b'a')), Some(0x0A)), 1);
+        assert_eq!(break_length(None, Some(0x0D)), 1);
+        assert_eq!(break_length(Some(0x0A), Some(u16::from(b'a'))), 0);
+        assert_eq!(break_length(None, None), 0);
+    }
+
+    #[test]
+    fn edits_inside_a_fold_reach_into_it_and_edits_at_its_edges_do_not() {
+        let hidden = 10..20;
+        assert!(reaches_into(&(12..12), &hidden));
+        assert!(reaches_into(&(5..11), &hidden));
+        assert!(reaches_into(&(15..30), &hidden));
+        assert!(
+            !reaches_into(&(10..10), &hidden),
+            "typing at the fold's start, the end of its first line"
+        );
+        assert!(!reaches_into(&(20..25), &hidden));
+        assert!(!reaches_into(&(0..10), &hidden));
+    }
+
+    #[test]
+    fn nested_folds_draw_only_the_outer_placeholder() {
+        let hidden = [0..50, 10..20, 30..40, 60..70, 65..68];
+        assert_eq!(outermost_of(&hidden), [0..50, 60..70]);
+    }
 }

@@ -25,6 +25,10 @@ use super::model::{Kind, Proposal};
 use crate::editor::EditorTextView;
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::util::{constant, guarded, main_soon, ns, set_action, symbol};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// Room between the box's edge and its text.
 const PADDING: f64 = 6.0;
@@ -251,7 +255,7 @@ pub fn status_item(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStack
     // SAFETY: A nil target until `set_action` below, which checks that the view answers the action.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     button.setBordered(false);
-    button.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    button.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     button.setImage(symbol("text.cursor", t("Vorschläge beim Tippen")).as_deref());
     button.setImagePosition(NSCellImagePosition::ImageLeading);
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
@@ -353,28 +357,4 @@ fn device_code(
         unsafe { pasteboard.setString_forType(&NSString::from_str(&user_code), NSPasteboardTypeString) };
         copilot.finish_sign_in(ide_predict::Cancel::new());
     });
-}
-
-/// The text of the box under the line, if one shows, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn boxed_text(view: &EditorTextView) -> Option<String> {
-    let state = view.ivars().predict.borrow();
-    state.parts.field.as_ref().map(|field| field.stringValue().to_string())
-}
-
-/// The range of the text marked as changing, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn marked(view: &EditorTextView) -> Option<Range<usize>> {
-    view.ivars().predict.borrow().parts.marked.clone()
-}
-
-/// The status bar's switch: its title and whether it is enabled, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn status_shown(view: &EditorTextView) -> Option<(String, bool)> {
-    let state = view.ivars().predict.borrow();
-    state
-        .parts
-        .button
-        .as_ref()
-        .map(|button| (button.title().to_string(), button.isEnabled()))
 }

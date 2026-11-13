@@ -3,19 +3,17 @@
 //! only once the CLI answered (E21); the AI panel's session row shows the cost. Pictures in light and dark.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
 use splat_i18n::t;
 
-use super::agent::{appearance, controller_of, picture, view_picture};
-use super::{check, finish};
-use crate::util::{constant, main_after};
+use super::agent::{DRAWN, appearance, controller_of, picture, view_picture};
+use super::{check, finish, helpers};
+use crate::util::constant;
 use crate::window::Panel;
 
 const NAME: &str = "agent";
 const CONTEXT: &str = include_str!("../../crates/ide-claude/tests/fixtures/context_cost.ndjson");
-const SETTLE: Duration = Duration::from_millis(500);
 
 /// Plays the recording up to its first turn's end, before any context answer, then goes on with `then`.
 pub fn run(root: PathBuf, then: fn(PathBuf)) {
@@ -49,7 +47,10 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     let seen = crate::agent::context_seen(key);
     check("the CLI's answer lets the gauge open the breakdown", seen.offered, "");
     let clicked = crate::agent::click_context(key);
-    main_after(SETTLE, move || opened(root, key, clicked, then));
+    helpers::wait_until(
+        move || crate::agent::context_seen(key).rows.len() == 8,
+        move |_| opened(root, key, clicked, then),
+    );
 }
 
 fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
@@ -80,7 +81,7 @@ fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
         details.join(" | "),
     );
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
-    main_after(SETTLE, move || dark(root, key, then));
+    helpers::after(DRAWN, move || dark(root, key, then));
 }
 
 fn dark(root: PathBuf, key: u64, then: fn(PathBuf)) {
@@ -89,18 +90,21 @@ fn dark(root: PathBuf, key: u64, then: fn(PathBuf)) {
     };
     controller.activate_panel(Panel::Files);
     let clicked = crate::agent::click_context(key);
-    main_after(SETTLE, move || {
-        if let Some(controller) = controller_of(&root) {
-            picture(&controller, "agent-context-dark");
-            let seen = crate::agent::context_seen(key);
-            check(
-                "the breakdown opens in dark appearance too",
-                clicked && seen.view.is_some(),
-                "",
-            );
-            crate::agent::close_context();
-            appearance(&controller, constant!(NSAppearanceNameAqua));
-        }
-        then(root);
-    });
+    helpers::wait_until(
+        move || crate::agent::context_seen(key).view.is_some(),
+        move |_| {
+            if let Some(controller) = controller_of(&root) {
+                picture(&controller, "agent-context-dark");
+                let seen = crate::agent::context_seen(key);
+                check(
+                    "the breakdown opens in dark appearance too",
+                    clicked && seen.view.is_some(),
+                    "",
+                );
+                crate::agent::close_context();
+                appearance(&controller, constant!(NSAppearanceNameAqua));
+            }
+            then(root);
+        },
+    );
 }

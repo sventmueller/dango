@@ -24,15 +24,14 @@ use objc2_app_kit::{
 };
 use serde_json::json;
 
-use super::helpers::{answer_alert, answer_alert_saying, in_any_mode_after, wait_until};
+use super::helpers::{self, answer_alert, answer_alert_saying, in_any_mode_after, wait_until};
 use super::{check, finish};
 use crate::editor::predict::model::{self as predict, Choice, Local};
 use crate::own_agent;
 use crate::settings::{AgentList as List, agent_selftest as agent};
-use crate::util::{main_after, ns};
+use crate::util::ns;
 
 const NAME: &str = "settings-pages";
-const STEP: Duration = Duration::from_millis(300);
 const MODEL: &str = "stub-coder";
 const OLLAMA_MODEL: &str = "qwen2.5-coder:1.5b";
 /// The agent preset whose installation the scenario fakes, the first of the Agents tab.
@@ -88,11 +87,11 @@ pub fn run() {
     prepare(&root, &elsewhere, &url);
     crate::app::open_project(mtm, root.clone());
     let fixture = Fixture { root, url, elsewhere };
-    main_after(Duration::from_millis(600), move || {
+    helpers::wait_for_window(&fixture.root.clone(), move |_| {
         if let Some(mtm) = MainThreadMarker::new() {
             crate::settings::show_agent(mtm);
         }
-        main_after(STEP, move || add_endpoint(fixture));
+        wait_until(|| agent_tab().is_some(), move |_| add_endpoint(fixture));
     });
 }
 
@@ -224,6 +223,11 @@ fn sheet() -> Option<Retained<NSWindow>> {
     window()?.attachedSheet()
 }
 
+/// Calls `then` once no sheet is in front of the settings window.
+fn sheet_gone(then: impl FnOnce() + 'static) {
+    wait_until(|| sheet().is_none(), move |_| then());
+}
+
 /// The texts the sheet in front shows, labels and fields alike.
 fn sheet_texts(sheet: &NSWindow) -> Vec<String> {
     all_in::<NSTextField>(sheet)
@@ -239,7 +243,7 @@ fn through_sheet(
     values: Vec<String>,
     kind: Option<isize>,
     response: NSModalResponse,
-    then: impl FnOnce(Option<Vec<String>>) + Send + 'static,
+    then: impl FnOnce(Option<Vec<String>>) + 'static,
 ) {
     if !press(action) {
         return then(None);
@@ -264,7 +268,7 @@ fn through_sheet(
             if let Some(window) = window() {
                 window.endSheet_returnCode(&sheet, response);
             }
-            main_after(STEP, move || then(Some(shown)));
+            sheet_gone(move || then(Some(shown)));
         },
     );
 }
@@ -478,7 +482,7 @@ fn defaults(f: Fixture) {
                 high && usual,
                 "",
             );
-            main_after(STEP, move || prices(f));
+            sheet_gone(move || prices(f));
         },
     );
 }
@@ -561,7 +565,7 @@ fn rules_and_folders(f: Fixture) {
         asked && prompt == Some(("Erlauben".to_string(), true, false)) && rows(List::Folders).is_empty(),
         format!("{prompt:?}"),
     );
-    main_after(STEP, move || commit_messages(f));
+    sheet_gone(move || commit_messages(f));
 }
 
 fn commit_messages(f: Fixture) {
@@ -615,33 +619,36 @@ fn agents_line_of(name: &str) -> String {
 fn agents(f: Fixture) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_agents(mtm);
-    main_after(STEP, move || {
-        let before = agents_line_of("Codex");
-        let rolled = control(sel!(ideAgentsRollback:), Some(0)).is_some_and(|c| act(&c));
-        let after = agents_line_of("Codex");
-        check(
-            "an installed agent offers its update and the version before, and goes back to it",
-            before.contains("Version 2.5.0")
-                && before.contains("Auf 2.6.0 aktualisieren")
-                && before.contains("Zurück zu 2.4.0")
-                && rolled
-                && after.contains("Version 2.4.0")
-                && after.contains("Zurück zu 2.5.0"),
-            format!("{before} → {after}"),
-        );
-        let asked = answer_alert_saying(
-            Duration::from_millis(600),
-            "Codex installieren?".to_string(),
-            NSAlertSecondButtonReturn,
-        );
-        let pressed = control(sel!(ideAgentsInstall:), Some(0)).is_some_and(|c| act(&c));
-        check(
-            "an update asks first, and Abbrechen installs nothing",
-            pressed && asked.get() && agents_line_of("Codex").contains("Version 2.4.0"),
-            agents_line_of("Codex"),
-        );
-        stored_rule(f);
-    });
+    wait_until(
+        || agents_line_of("Codex").contains("Version"),
+        move |_| {
+            let before = agents_line_of("Codex");
+            let rolled = control(sel!(ideAgentsRollback:), Some(0)).is_some_and(|c| act(&c));
+            let after = agents_line_of("Codex");
+            check(
+                "an installed agent offers its update and the version before, and goes back to it",
+                before.contains("Version 2.5.0")
+                    && before.contains("Auf 2.6.0 aktualisieren")
+                    && before.contains("Zurück zu 2.4.0")
+                    && rolled
+                    && after.contains("Version 2.4.0")
+                    && after.contains("Zurück zu 2.5.0"),
+                format!("{before} → {after}"),
+            );
+            let asked = answer_alert_saying(
+                Duration::from_millis(600),
+                "Codex installieren?".to_string(),
+                NSAlertSecondButtonReturn,
+            );
+            let pressed = control(sel!(ideAgentsInstall:), Some(0)).is_some_and(|c| act(&c));
+            check(
+                "an update asks first, and Abbrechen installs nothing",
+                pressed && asked.get() && agents_line_of("Codex").contains("Version 2.4.0"),
+                agents_line_of("Codex"),
+            );
+            stored_rule(f);
+        },
+    );
 }
 
 fn stored_rule(f: Fixture) {
@@ -673,12 +680,14 @@ fn stored_rule(f: Fixture) {
         led && tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 3),
         "",
     );
-    main_after(STEP, move || general(f));
+    sheet_gone(move || general(f));
 }
 
 fn general(f: Fixture) {
     select_tab(0);
-    main_after(STEP, move || {
+    let general_shown =
+        || tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 0) && crate::settings::editor_switches().is_some();
+    wait_until(general_shown, move |_| {
         let hints = crate::lsp::inlay::enabled();
         let flipped = press(sel!(ideToggleInlayHints:));
         let switched = crate::settings::editor_switches();
@@ -794,7 +803,7 @@ fn unreachable_server(f: Fixture) {
                 lm && local().is_some_and(|l| l.model == "weird-model" && l.note.contains("keiner bekannten")),
                 local().map(|l| l.note).unwrap_or_default(),
             );
-            main_after(STEP, move || copilot(f));
+            sheet_gone(move || copilot(f));
         },
     );
 }
@@ -843,7 +852,7 @@ fn copilot(f: Fixture) {
                         off && local().is_some_and(|l| l.about.starts_with("Ohne Anbieter")),
                         "",
                     );
-                    main_after(STEP, move || plus_sheets(f));
+                    sheet_gone(move || plus_sheets(f));
                 },
             );
         },
@@ -862,33 +871,39 @@ fn index_of(choice: Choice) -> isize {
 fn plus_sheets(_f: Fixture) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_ci(mtm);
-    main_after(STEP, move || {
-        through_sheet(
-            sel!(ideAddCiHost:),
-            Vec::new(),
-            None,
-            NSAlertSecondButtonReturn,
-            move |ci| {
-                if let Some(mtm) = MainThreadMarker::new() {
-                    crate::settings::show_servers(mtm);
-                }
-                main_after(STEP, move || {
-                    through_sheet(
-                        sel!(ideAddLanguageServer:),
-                        Vec::new(),
-                        None,
-                        NSAlertSecondButtonReturn,
-                        move |servers| {
-                            check(
-                                "\"+\" of the CI hosts and of the language servers asks in a sheet",
-                                ci.is_some() && servers.is_some(),
-                                format!("{ci:?} {servers:?}"),
+    wait_until(
+        || crate::settings::ci_tab().is_some(),
+        move |_| {
+            through_sheet(
+                sel!(ideAddCiHost:),
+                Vec::new(),
+                None,
+                NSAlertSecondButtonReturn,
+                move |ci| {
+                    if let Some(mtm) = MainThreadMarker::new() {
+                        crate::settings::show_servers(mtm);
+                    }
+                    wait_until(
+                        || crate::settings::servers_tab().is_some(),
+                        move |_| {
+                            through_sheet(
+                                sel!(ideAddLanguageServer:),
+                                Vec::new(),
+                                None,
+                                NSAlertSecondButtonReturn,
+                                move |servers| {
+                                    check(
+                                        "\"+\" of the CI hosts and of the language servers asks in a sheet",
+                                        ci.is_some() && servers.is_some(),
+                                        format!("{ci:?} {servers:?}"),
+                                    );
+                                    finish(NAME);
+                                },
                             );
-                            finish(NAME);
                         },
                     );
-                });
-            },
-        );
-    });
+                },
+            );
+        },
+    );
 }

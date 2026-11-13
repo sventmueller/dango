@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "ข้อความล่าสุด: {}";
 "Das Programm hat sich ohne Meldung beendet." = "โปรแกรมสิ้นสุดการทำงานโดยไม่มีข้อความ";
 "Das Programm hat sich beim Start beendet: {}" = "โปรแกรมสิ้นสุดการทำงานขณะเริ่มต้น: {}";
+"Konnte keinen Thread starten: {}" = "ไม่สามารถเริ่มเธรดได้: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "ไม่สามารถดำเนินการแก้ไขพื้นที่ทำงานได้";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” เป็นไลบรารีที่ไม่มีโปรแกรม และไฟล์นี้ไม่มีการทดสอบ ให้ดีบั๊กไฟล์ที่มี main หรือการทดสอบ หรือกำหนดใน .vscode/launch.json ว่าโปรแกรมใดจะเริ่ม";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "หาก macOS ไม่ถามรหัสผ่าน ให้อนุญาตดีบั๊กเกอร์หนึ่งครั้งใน Terminal ด้วย “sudo DevToolsSecurity -enable” หรือยกเลิกด้วย หยุด หลังจากสิบนาที การเริ่มจะยกเลิกเอง";
+"Haltepunkt, nicht gesetzt" = "เบรกพอยต์ ยังไม่ได้ตั้ง";
+"nicht gesetzt" = "ยังไม่ได้ตั้ง";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "ดีบั๊กเกอร์ไม่สามารถตั้งเบรกพอยต์ที่นี่ได้: {}";

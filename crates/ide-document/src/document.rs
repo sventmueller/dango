@@ -166,7 +166,14 @@ impl std::fmt::Display for SaveError {
     }
 }
 
-impl std::error::Error for SaveError {}
+impl std::error::Error for SaveError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SaveError::Io(error) => Some(error),
+            SaveError::NoPath | SaveError::ReadOnly(_) | SaveError::ChangedOnDisk => None,
+        }
+    }
+}
 
 /// A save under way, with the text it writes, so the writing can happen on another thread while editing goes on.
 #[derive(Debug, Clone)]

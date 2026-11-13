@@ -1,14 +1,14 @@
 //! One git process per call, through the supervisor, with the user's environment, limits on what it may print, and an
 //! end that can be waited for, cancelled or timed out.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::{HashMap, HashSet};
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, RecvTimeoutError, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Condvar, Mutex, Weak};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -69,26 +69,7 @@ const OWN_VARIABLES: [&str; 10] = [
     "GIT_PAGER",
 ];
 
-/// A request to stop a running operation; clones share it.
-#[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<AtomicBool>);
-
-impl Cancel {
-    /// A request not yet made.
-    pub fn new() -> Cancel {
-        Cancel::default()
-    }
-
-    /// Stops the operations that watch this request.
-    pub fn cancel(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-
-    /// Whether the request was made.
-    pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
-    }
-}
+pub use ide_core::Cancel;
 
 /// The app's way of running git: the program from the login shell's PATH, that shell's environment, and the
 /// supervisor every process goes through. Clones share one listener on the supervisor, so make one and clone it.
@@ -205,34 +186,15 @@ impl Git {
 
     fn collect(&self, spawned: Spawned, mut call: Call<'_>, command: String) -> Result<Output> {
         let id = spawned.id;
-        let (tx, rx) = mpsc::channel::<Message>();
-        let mut streams = 0;
-        if let (Some(mut stdin), Some(input)) = (spawned.stdin, call.input.take()) {
-            std::thread::Builder::new()
-                .name("git-stdin".into())
-                .spawn(move || drop(stdin.write_all(&input)))?;
-        }
-        let stdout: Option<JoinHandle<(Vec<u8>, bool)>> = match spawned.stdout {
-            Some(out) => {
-                streams += 1;
-                let tx = tx.clone();
-                Some(std::thread::Builder::new().name("git-stdout".into()).spawn(move || {
-                    let read = read_limited(out, STDOUT_LIMIT);
-                    let _ = tx.send(Message::Done);
-                    read
-                })?)
+        let (rx, mut streams, stdout, tail) = match readers(spawned, &mut call) {
+            Ok(readers) => readers,
+            Err(error) => {
+                // The process already runs; without its readers nobody would end it or collect its end.
+                self.inner.supervisor.stop(id, Duration::from_millis(200));
+                self.inner.endings.forget(id);
+                return Err(Error::Io(error));
             }
-            None => None,
         };
-        let tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
-        if let Some(err) = spawned.stderr {
-            streams += 1;
-            let (tail, tx, segments) = (tail.clone(), tx.clone(), call.progress.is_some());
-            std::thread::Builder::new()
-                .name("git-stderr".into())
-                .spawn(move || read_stderr(err, &tail, &tx, segments))?;
-        }
-        drop(tx);
         let deadline = call.timeout.map(|t| Instant::now() + t);
         let mut stopped = None;
         while streams > 0 {
@@ -258,7 +220,7 @@ impl Git {
         if let Some(error) = stopped {
             return Err(error);
         }
-        let stderr = tail.lock().unwrap_or_else(|e| e.into_inner()).text();
+        let stderr = tail.lock_ignoring_poison().text();
         let code = match ending {
             Ending::Code(code) => code,
             Ending::Signal(signal) if STOP_SIGNALS.contains(&signal) => {
@@ -466,6 +428,46 @@ enum Message {
     Done,
 }
 
+/// What the process's streams arrive on, how many there are, the stdout reader and the stderr tail.
+type Readers = (
+    Receiver<Message>,
+    usize,
+    Option<JoinHandle<(Vec<u8>, bool)>>,
+    Arc<Mutex<Tail>>,
+);
+
+/// Starts a thread for each of the process's streams.
+fn readers(spawned: Spawned, call: &mut Call<'_>) -> io::Result<Readers> {
+    let (tx, rx) = mpsc::channel::<Message>();
+    let mut streams = 0;
+    if let (Some(mut stdin), Some(input)) = (spawned.stdin, call.input.take()) {
+        std::thread::Builder::new()
+            .name("git-stdin".into())
+            .spawn(move || drop(stdin.write_all(&input)))?;
+    }
+    let stdout = match spawned.stdout {
+        Some(out) => {
+            streams += 1;
+            let tx = tx.clone();
+            Some(std::thread::Builder::new().name("git-stdout".into()).spawn(move || {
+                let read = read_limited(out, STDOUT_LIMIT);
+                let _ = tx.send(Message::Done);
+                read
+            })?)
+        }
+        None => None,
+    };
+    let tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
+    if let Some(err) = spawned.stderr {
+        streams += 1;
+        let (tail, tx, segments) = (tail.clone(), tx.clone(), call.progress.is_some());
+        std::thread::Builder::new()
+            .name("git-stderr".into())
+            .spawn(move || read_stderr(err, &tail, &tx, segments))?;
+    }
+    Ok((rx, streams, stdout, tail))
+}
+
 /// The ends of processes as the supervisor reports them, kept until their caller takes them.
 #[derive(Default)]
 struct Endings {
@@ -482,12 +484,12 @@ struct EndingState {
 impl Endings {
     /// Notes that a caller will wait for `id`, so its end is kept however long it takes.
     fn expect(&self, id: ProcessId) {
-        self.state.lock().unwrap_or_else(|e| e.into_inner()).expected.insert(id);
+        self.state.lock_ignoring_poison().expected.insert(id);
     }
 
     fn record(&self, id: ProcessId, ending: Ending) {
         let now = Instant::now();
-        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut state = self.state.lock_ignoring_poison();
         let EndingState { ended, expected } = &mut *state;
         ended.retain(|id, (_, at)| expected.contains(id) || now.duration_since(*at) < KEEP_ENDINGS);
         ended.insert(id, (ending, now));
@@ -495,10 +497,17 @@ impl Endings {
         self.changed.notify_all();
     }
 
+    /// Stops keeping the end of `id`, which nobody waits for any more.
+    fn forget(&self, id: ProcessId) {
+        let mut state = self.state.lock_ignoring_poison();
+        state.expected.remove(&id);
+        state.ended.remove(&id);
+    }
+
     /// The end of `id`, waiting up to `limit` for it.
     fn wait(&self, id: ProcessId, limit: Duration) -> Option<Ending> {
         let deadline = Instant::now() + limit;
-        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut state = self.state.lock_ignoring_poison();
         loop {
             if let Some((ending, _)) = state.ended.remove(&id) {
                 state.expected.remove(&id);
@@ -508,11 +517,7 @@ impl Endings {
             if now >= deadline {
                 return None;
             }
-            state = self
-                .changed
-                .wait_timeout(state, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            state = self.changed.wait_timeout(state, deadline - now).ignoring_poison().0;
         }
     }
 }
@@ -595,7 +600,7 @@ fn read_stderr(mut reader: impl Read, tail: &Mutex<Tail>, tx: &Sender<Message>, 
         if n == 0 {
             break;
         }
-        tail.lock().unwrap_or_else(|e| e.into_inner()).push(&buffer[..n]);
+        tail.lock_ignoring_poison().push(&buffer[..n]);
         if !segments {
             continue;
         }

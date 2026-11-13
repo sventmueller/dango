@@ -2,7 +2,8 @@
 //! authorization code with PKCE that comes back to a listener on the loopback address. The token goes into the
 //! keychain for its host and account.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use ide_core::LockIgnoringPoison;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -42,9 +43,8 @@ pub struct Ticket {
 
 impl Ticket {
     fn new() -> Ticket {
-        static NEXT: AtomicU64 = AtomicU64::new(1);
         Ticket {
-            serial: NEXT.fetch_add(1, Ordering::Relaxed),
+            serial: crate::context::app().ci_panels.logins.next(),
             cancel: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -114,15 +114,16 @@ fn message(error: &LoginError) -> Option<String> {
     })
 }
 
-/// What the self-test would have opened in the browser or put on the pasteboard, which belong to the user.
-static NOTED: Mutex<Vec<String>> = Mutex::new(Vec::new());
-
 fn under_selftest() -> bool {
     cfg!(feature = "selftest") && std::env::var_os("IDE_SELFTEST").is_some()
 }
 
 fn note(text: &str) {
-    NOTED.lock().unwrap_or_else(|e| e.into_inner()).push(text.to_string());
+    crate::context::app()
+        .ci_panels
+        .noted
+        .borrow_mut()
+        .push(text.to_string());
 }
 
 /// Opens `url` in the browser.
@@ -148,7 +149,7 @@ fn copy(text: &str) {
 /// What the self-test would have opened or copied, in order.
 #[cfg(feature = "selftest")]
 pub fn opened() -> Vec<String> {
-    NOTED.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    crate::context::app().ci_panels.noted.borrow().clone()
 }
 
 /// Waits `duration` in small steps; false once `cancel` is set.
@@ -170,7 +171,7 @@ fn keep(forge: &Forge, client: &str, grant: &oauth::Grant) -> Result<(), LoginEr
     let account = Client::new(forge.clone(), Some(grant.token.clone()), work::network()).account()?;
     let auth = work::auth().ok_or(LoginError::Api(ide_ci::Error::Network("no environment".into())))?;
     auth.save_grant(forge, &account, grant, client)
-        .map_err(|e| LoginError::Api(ide_ci::Error::Network(e)))
+        .map_err(|e| LoginError::Api(ide_ci::Error::Network(e.to_string())))
 }
 
 impl CiPanel {
@@ -302,7 +303,7 @@ impl CiPanel {
         )));
         let shown = NSTextField::labelWithString(&ns(&code.user_code), mtm);
         shown.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
-            24.0,
+            ide_ui_common::style::LOGIN_CODE,
             // SAFETY: AppKit sets its font weight constants when it loads.
             unsafe { objc2_app_kit::NSFontWeightSemibold },
         )));
@@ -357,7 +358,7 @@ impl CiPanel {
                 let pkce = oauth::Pkce::new()?;
                 let redirect = oauth::redirect_uri(oauth::CALLBACK_PORT);
                 let code = {
-                    let _port = CALLBACK_PORT.lock().unwrap_or_else(|e| e.into_inner());
+                    let _port = CALLBACK_PORT.lock_ignoring_poison();
                     if waiting.stopped() {
                         return Err(LoginError::Cancelled);
                     }

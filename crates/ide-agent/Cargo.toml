@@ -11,9 +11,13 @@ workspace = true
 
 # Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
 [features]
+# The scripted provider `stub`, for tests and the self-test; not in the shipped app.
+testing = []
 fuzzing = []
 
 [dependencies]
+ide-secrets = { path = "../ide-secrets" }
+ide-net = { path = "../ide-net" }
 base64 = "0.23.1"
 globset = "0.4.21"
 ide-core = { path = "../ide-core" }
@@ -22,8 +26,11 @@ ide-product = { path = "../ide-product" }
 ide-project = { path = "../ide-project" }
 ide-thread = { path = "../ide-thread" }
 ignore = "0.4.34"
-security-framework = "3.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 similar = "3.2.1"
-ureq = { version = "3.5.1", default-features = false, features = ["rustls", "platform-verifier"] }
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }
+# Itself with the scripted provider, for the integration tests and doctests.
+ide-agent = { path = ".", features = ["testing"] }

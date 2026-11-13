@@ -274,8 +274,10 @@ fn draw_pages(
         NSGraphicsContext::saveGraphicsState_class();
         NSGraphicsContext::setCurrentContext(Some(&graphics));
         let page = StackBlock::new(|| {
-            layout.drawBackgroundForGlyphRange_atPoint(*glyphs, origin);
-            layout.drawGlyphsForGlyphRange_atPoint(*glyphs, origin);
+            ide_ui_common::util::guarded((), || {
+                layout.drawBackgroundForGlyphRange_atPoint(*glyphs, origin);
+                layout.drawGlyphsForGlyphRange_atPoint(*glyphs, origin);
+            })
         });
         // The colours of the text follow the light appearance, whatever the app shows.
         aqua.performAsCurrentDrawingAppearance(&page);

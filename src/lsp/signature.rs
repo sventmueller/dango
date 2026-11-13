@@ -396,9 +396,10 @@ fn styled(
     let start = append(&signature.label, &code, &NSColor::labelColor());
     if let Some(range) = highlighted.filter(|r| start + r.end <= string.length()) {
         let at = NSRange::new(start + range.start, range.end - range.start);
-        let bold = NSFont::monospacedSystemFontOfSize_weight(12.0, constant!(NSFontWeightSemibold));
+        let bold =
+            NSFont::monospacedSystemFontOfSize_weight(ide_ui_common::style::LABEL, constant!(NSFontWeightSemibold));
         let underline = constant!(NSUnderlineStyleAttributeName);
-        // SAFETY: As above, and the underline style as a number.
+        // SAFETY: The font, colour and underline keys get a font, a colour and an NSNumber, over a range inside the string.
         unsafe {
             string.addAttribute_value_range(font_key, &bold, at);
             string.addAttribute_value_range(color_key, &NSColor::controlAccentColor(), at);
@@ -407,7 +408,11 @@ fn styled(
     }
     if let Some(note) = note {
         append("\n", &code, &NSColor::labelColor());
-        append(&note, &NSFont::systemFontOfSize(11.0), &NSColor::secondaryLabelColor());
+        append(
+            &note,
+            &NSFont::systemFontOfSize(ide_ui_common::style::SMALL),
+            &NSColor::secondaryLabelColor(),
+        );
     }
     string
 }

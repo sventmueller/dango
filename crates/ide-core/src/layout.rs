@@ -221,7 +221,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_layout_comes_back_as_it_was_saved() {
-        let file = crate::store::tests::scratch("layout").join("layouts/shop.json");
+        let scratch_dir = crate::store::tests::scratch("layout");
+        let file = scratch_dir.join("layouts/shop.json");
         assert_eq!(load_from(file.clone()), None);
         save_to(file.clone(), &sample()).unwrap();
         assert_eq!(load_from(file.clone()), Some(sample()));
@@ -235,7 +236,8 @@ pub(crate) mod tests {
 
     #[test]
     fn the_panels_of_version_one_become_window_tabs_in_reading_order() {
-        let file = crate::store::tests::scratch("layout-panels").join("layouts/shop.json");
+        let scratch_dir = crate::store::tests::scratch("layout-panels");
+        let file = scratch_dir.join("layouts/shop.json");
         let old = r#"{
           "version": 1,
           "panels": {"split": {"side_by_side": true, "shares": [0.6, 0.4], "children": [

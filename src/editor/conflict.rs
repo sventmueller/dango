@@ -9,9 +9,8 @@ use objc2::runtime::Sel;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSBezelStyle, NSBox, NSBoxType,
-    NSButton, NSColor, NSControlSize, NSFont, NSImageView, NSLayoutConstraint, NSLayoutConstraintOrientation,
-    NSLineBreakMode, NSStackView, NSStackViewGravity, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation,
-    NSView,
+    NSButton, NSColor, NSControlSize, NSImageView, NSLayoutConstraint, NSLayoutConstraintOrientation, NSLineBreakMode,
+    NSStackView, NSStackViewGravity, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSEdgeInsets, NSRange, NSSize};
 use splat_i18n::{t, tf};
@@ -19,6 +18,10 @@ use splat_i18n::{t, tf};
 use super::view::EditorTextView;
 use super::{display_name, update_dirty};
 use crate::util::{label, ns, set_action, symbol};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// What the bar is about.
 pub enum State {
@@ -53,10 +56,10 @@ impl Bar {
             .setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
         let buttons = NSStackView::new(mtm);
         buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        buttons.setSpacing(6.0);
+        buttons.setSpacing(ide_ui_common::style::space::S);
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        row.setSpacing(8.0);
+        row.setSpacing(ide_ui_common::style::space::M);
         row.setEdgeInsets(NSEdgeInsets {
             top: 0.0,
             left: 0.0,
@@ -118,7 +121,7 @@ fn button(target: &EditorTextView, title: &str, action: Sel) -> Retained<NSButto
     set_action(&button, target, action);
     button.setBezelStyle(NSBezelStyle::Push);
     button.setControlSize(NSControlSize::Small);
-    button.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    button.setFont(Some(&ide_ui_common::style::small_system()));
     button
 }
 
@@ -350,23 +353,6 @@ fn discard_question(view: &EditorTextView) -> Retained<NSAlert> {
     alert
 }
 
-/// The message and informative text of the question before the text of `view` goes, and its buttons, each with the
-/// key that presses it.
-#[cfg(feature = "selftest")]
-pub fn inspect_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
-    let alert = discard_question(view);
-    let buttons = alert
-        .buttons()
-        .iter()
-        .map(|button| (button.title().to_string(), button.keyEquivalent().to_string()))
-        .collect();
-    (
-        alert.messageText().to_string(),
-        alert.informativeText().to_string(),
-        buttons,
-    )
-}
-
 /// The file now holds the editor's text: the bar about its change or its loss goes.
 pub fn saved(view: &EditorTextView) {
     if matches!(
@@ -418,41 +404,4 @@ pub fn go_to_conflict(view: &EditorTextView, forward: bool) {
     if let Some(window) = view.window() {
         window.makeFirstResponder(Some(view));
     }
-}
-
-/// What the bar says and offers, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn inspect(view: &EditorTextView) -> Option<(String, Vec<String>)> {
-    let bar = view.ivars().bar.borrow();
-    let bar = bar.as_ref()?;
-    if bar.view.isHidden() {
-        return None;
-    }
-    let titles = bar
-        .buttons
-        .arrangedSubviews()
-        .iter()
-        .filter_map(|view| view.downcast::<NSButton>().ok())
-        .map(|button| button.title().to_string())
-        .collect();
-    Some((bar.message.stringValue().to_string(), titles))
-}
-
-/// Clicks the bar's button titled `title`, for the self-test; whether there was one.
-#[cfg(feature = "selftest")]
-pub fn press(view: &EditorTextView, title: &str) -> bool {
-    let button = {
-        let bar = view.ivars().bar.borrow();
-        let Some(bar) = bar.as_ref() else { return false };
-        bar.buttons
-            .arrangedSubviews()
-            .iter()
-            .filter_map(|view| view.downcast::<NSButton>().ok())
-            .find(|button| button.title().to_string() == title)
-    };
-    button.is_some_and(|button| {
-        // SAFETY: A click on a button of the bar, whose target is the editor, as a person's click would be.
-        unsafe { button.performClick(None) };
-        true
-    })
 }

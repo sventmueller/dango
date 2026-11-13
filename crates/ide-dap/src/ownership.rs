@@ -16,22 +16,20 @@ pub(crate) fn end_program(pid: u32, grace: Duration) {
         return;
     }
     signal(pid, libc::SIGTERM);
-    let _ = std::thread::Builder::new()
-        .name("dap-end-program".into())
-        .spawn(move || {
-            let step = Duration::from_millis(50);
-            let mut waited = Duration::ZERO;
-            while waited < grace {
-                if !alive(pid) {
-                    return;
-                }
-                std::thread::sleep(step);
-                waited += step;
+    ide_core::thread::detach_or_run("dap-end-program", move || {
+        let step = Duration::from_millis(50);
+        let mut waited = Duration::ZERO;
+        while waited < grace {
+            if !alive(pid) {
+                return;
             }
-            if alive(pid) {
-                signal(pid, libc::SIGKILL);
-            }
-        });
+            std::thread::sleep(step);
+            waited += step;
+        }
+        if alive(pid) {
+            signal(pid, libc::SIGKILL);
+        }
+    });
 }
 
 fn signal(pid: u32, signal: i32) {

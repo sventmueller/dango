@@ -2,7 +2,7 @@
 //! paused frame's variables at the ends of the lines that use them (E81), values when the mouse rests on a name, and
 //! breakpoints following the edits of their file.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ide_document::{Change, Unit};
 use objc2::DefinedClass;
@@ -11,9 +11,13 @@ use objc2_app_kit::{NSColor, NSTextElementProvider};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::tf;
 
-use super::panel::{self, DebugPanel};
+use ide_ui_debug::DebugPanel;
+use ide_ui_debug::model::breakpoints::Look;
+use objc2_app_kit::NSMenu;
+
 use crate::editor::EditorTextView;
 use crate::editor::insets::{self, Inset, Layer, Place};
+use crate::window::WindowController;
 
 /// How many lines above the paused one get the values of the variables they use.
 const INLINE_LINES: usize = 30;
@@ -24,34 +28,58 @@ const INLINE_LENGTH: usize = 60;
 pub fn panel_and_path(editor: &EditorTextView) -> Option<(Retained<DebugPanel>, PathBuf)> {
     let controller = editor.controller()?;
     let path = editor.document().path()?.to_path_buf();
-    Some((panel::of(&controller)?, path))
+    Some((ide_ui_debug::of(controller.handle())?, path))
 }
 
-/// The editors of the panel's window.
-fn editors_of(panel: &DebugPanel) -> Vec<Retained<EditorTextView>> {
-    let Some(controller) = panel.controller() else {
-        return Vec::new();
-    };
+/// The editors of `controller`'s window.
+fn editors_of(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
     crate::editor::all_editors()
         .into_iter()
-        .filter(|editor| editor.controller().is_some_and(|c| std::ptr::eq(&*c, &*controller)))
+        .filter(|editor| editor.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
         .collect()
 }
 
-/// Shows the panel's breakpoints, paused line and values in every editor of its window.
-pub fn refresh(panel: &DebugPanel) {
-    for editor in editors_of(panel) {
-        show_values(panel, &editor);
+/// Shows the debugger's breakpoints, paused line and values in every editor of `controller`'s window.
+pub fn refresh_editors(controller: &WindowController) {
+    let Some(panel) = ide_ui_debug::of(controller.handle()) else {
+        return;
+    };
+    for editor in editors_of(controller) {
+        show_values(&panel, &editor);
         crate::editor::redraw_gutter(&editor);
         crate::editor::follow_overlay(&editor);
     }
 }
 
-/// Closes the value popovers of the panel's editors, which speak of a frame that is gone once the program runs on.
-pub fn forget_values(panel: &DebugPanel) {
-    for editor in editors_of(panel) {
+/// Closes the value popovers of `controller`'s editors, which speak of a frame that is gone once the program runs on.
+pub fn forget_values(controller: &WindowController) {
+    for editor in editors_of(controller) {
         crate::lsp::dismiss_hover(&editor);
     }
+}
+
+/// A click on the line numbers of `editor` at `line`: sets or clears a breakpoint there; whether the editor has a
+/// file and a debugger to keep it.
+pub fn gutter_click(editor: &EditorTextView, line: usize) -> bool {
+    let (Some(controller), Some(path)) = (editor.controller(), editor.document().path().map(Path::to_path_buf)) else {
+        return false;
+    };
+    ide_ui_debug::gutter::click(controller.handle(), &path, line)
+}
+
+/// The context menu of the line numbers of `editor` at `line`.
+pub fn gutter_menu(editor: &EditorTextView, line: usize) -> Option<Retained<NSMenu>> {
+    let controller = editor.controller()?;
+    let path = editor.document().path()?.to_path_buf();
+    ide_ui_debug::gutter::menu(controller.handle(), &path, line)
+}
+
+/// How the line `line` of `editor` is marked in the gutter: its breakpoint, and whether the program is paused there.
+pub fn gutter_mark(editor: &EditorTextView, line: usize) -> (Option<Look>, bool) {
+    let (Some(controller), Some(path)) = (editor.controller(), editor.document().path().map(Path::to_path_buf)) else {
+        return (None, false);
+    };
+    ide_ui_debug::gutter::mark(controller.handle(), &path, line)
 }
 
 /// An edit of `editor`'s text moves the breakpoints of its file.

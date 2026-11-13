@@ -435,9 +435,9 @@ pub fn live() {
     if let Some(controller) = window_of(&root) {
         controller.activate_panel(Panel::Ci);
     }
-    super::git::poll(
+    super::git::wait_within(
         root,
-        std::time::Instant::now() + Duration::from_secs(60),
+        Duration::from_secs(60),
         |c| panel::seen(c).is_some_and(|s| s.phase != "Loading"),
         live_read,
     );

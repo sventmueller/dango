@@ -307,7 +307,7 @@ mod tests {
     use super::*;
     use crate::testing::{scratch, write};
 
-    fn project(name: &str) -> PathBuf {
+    fn project(name: &str) -> ide_core::testing::Scratch {
         let root = scratch(name);
         write(&root, ".git/info/exclude", "excluded.txt\n");
         write(&root, ".gitignore", "target/\n*.log\n");
@@ -446,10 +446,10 @@ mod tests {
 
         fs::remove_dir_all(root.join("docs")).unwrap();
         let changes = Changes {
-            dirs: BTreeSet::from([root.clone(), root.join("docs")]),
+            dirs: BTreeSet::from([root.to_path_buf(), root.join("docs")]),
             ..Changes::default()
         };
-        assert!(tree.apply(&WatchEvent::Changed(changes)).contains(&root));
+        assert!(tree.apply(&WatchEvent::Changed(changes)).contains(&root.to_path_buf()));
         assert!(tree.children(&root.join("docs")).is_none());
         assert!(!names(tree.children(&root).unwrap()).contains(&"docs"));
     }

@@ -6,7 +6,7 @@
 //! word of an insertion, Esc drops it; an open completion list and a snippet's tab stops come first. Only in trusted
 //! folders, never for files on the exclusion list, and off per language from the status bar.
 
-pub mod guard;
+pub use ide_predict::guard;
 pub mod model;
 pub mod provider;
 mod shown;
@@ -30,6 +30,10 @@ use provider::Blocked;
 
 pub use provider::{Predictions, chosen, settings_changed};
 pub use shown::{ask_consent, sign_in_sheet};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// How long typing pauses before the provider is asked.
 const PAUSE: f64 = 0.25;
@@ -621,43 +625,4 @@ fn status(view: &EditorTextView) -> (String, String, bool) {
 fn refresh_status(view: &EditorTextView) {
     let (title, tip, enabled) = status(view);
     shown::set_status(view, &title, &tip, enabled);
-}
-
-/// The proposal `view` shows, as the range it replaces in bytes and its text, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown_proposal(view: &EditorTextView) -> Option<(Range<usize>, String, Kind)> {
-    let state = view.ivars().predict.borrow();
-    state
-        .shown
-        .as_ref()
-        .map(|(p, _)| (p.range.clone(), p.text.clone(), p.kind.clone()))
-}
-
-/// What the box below the line and the status bar show, for the self-test.
-#[cfg(feature = "selftest")]
-pub use shown::{boxed_text, marked, status_shown};
-
-/// Takes away what a dropped proposal left on view now, which a keystroke otherwise leaves for the run loop's next
-/// turn; for the self-test's keystroke budget.
-#[cfg(feature = "selftest")]
-pub fn settle_now(view: &EditorTextView) {
-    if view.ivars().predict.borrow().shown.is_none() {
-        shown::clear(view);
-    }
-}
-
-/// The view's state for a proposal shown at once, as an answer would, for the self-test's keystroke budget.
-#[cfg(feature = "selftest")]
-pub fn show_now(view: &EditorTextView, provider: Arc<dyn Provider>, prediction: Prediction) -> bool {
-    let (text, revision) = {
-        let document = view.document();
-        (document.text().to_string(), document.revision())
-    };
-    match Proposal::first(&text, revision, selection(view), vec![prediction]) {
-        Some(proposal) => {
-            show(view, proposal, provider);
-            true
-        }
-        None => false,
-    }
 }

@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "آخر رسالة: {}";
 "Das Programm hat sich ohne Meldung beendet." = "انتهى البرنامج دون رسالة.";
 "Das Programm hat sich beim Start beendet: {}" = "انتهى البرنامج أثناء بدء التشغيل: {}";
+"Konnte keinen Thread starten: {}" = "تعذّر بدء سلسلة تنفيذ: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "تعذّر تنفيذ تعديل مساحة العمل.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "„{}“ مكتبة بلا برنامج، وهذا الملف لا يحتوي على اختبارات. صحّح ملفًا فيه main أو اختبارات، أو حدّد في .vscode/launch.json البرنامج الذي يبدأ.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "إذا لم يطلب macOS كلمة سر، فاسمح لمصححات الأخطاء مرة واحدة في Terminal باستخدام „sudo DevToolsSecurity -enable“، أو ألغِ بـ إيقاف. بعد عشر دقائق يتوقف البدء من تلقاء نفسه.";
+"Haltepunkt, nicht gesetzt" = "نقطة توقف، غير معيّنة";
+"nicht gesetzt" = "غير معيّنة";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "تعذّر على مصحح الأخطاء تعيين نقطة توقف هنا: {}";

@@ -1,6 +1,7 @@
 //! A provider that answers from a script over HTTP on the loopback interface, for the tests and the self-test, which
 //! make no paid requests. It keeps every request it got, so a test can check what was sent.
 
+use ide_core::LockIgnoringPoison;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -134,8 +135,7 @@ impl Stub {
         let answers = Mutex::new(answers.into_iter());
         Stub::start(move |_| {
             answers
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
+                .lock_ignoring_poison()
                 .next()
                 .unwrap_or_else(|| Answer::json(500, &serde_json::json!({"error": {"message": "the script ended"}})))
         })
@@ -148,7 +148,7 @@ impl Stub {
 
     /// The requests it got so far.
     pub fn seen(&self) -> Vec<Seen> {
-        self.seen.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.seen.lock_ignoring_poison().clone()
     }
 }
 
@@ -169,7 +169,7 @@ fn serve(connection: TcpStream, seen: &Mutex<Vec<Seen>>, script: &Script) {
         return;
     };
     let answer = script(&request);
-    seen.lock().unwrap_or_else(|e| e.into_inner()).push(request);
+    seen.lock_ignoring_poison().push(request);
     let _ = write_answer(writer, &answer);
 }
 

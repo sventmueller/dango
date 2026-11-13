@@ -8,18 +8,17 @@ mod picture;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use objc2::MainThreadOnly;
 use objc2::rc::Retained;
-use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSEvent, NSScreen};
 use objc2_core_graphics::{CGEvent, CGEventField, CGScrollEventUnit};
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize};
 
 use self::picture::Picture;
-use super::helpers::wait_until;
+use super::helpers::{self, wait_until};
 use super::{check, finish};
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::editor::{self, EditorTextView, selftest as edit};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "editor-scroll";
@@ -27,14 +26,16 @@ const FILE: &str = "long.txt";
 const BLOCKS: usize = 600;
 /// A block's lines: its header, three indented lines the fold hides, the closing brace and an empty line.
 const LINES: usize = 6;
-
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("scroll-project")
-}
+const PROJECT: &str = "scroll-project";
+/// One frame of the display, the pace at which a wheel or trackpad sends its events.
+const FRAME: Duration = Duration::from_millis(16);
+/// Long enough for the window server to show what the editor drew after a move, before the capture.
+const SHOWN: Duration = Duration::from_millis(60);
+/// Long enough for the window server to show the folds and carets placed all at once, before the first capture.
+const PLACED_SHOWN: Duration = Duration::from_millis(500);
 
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn view() -> Option<Retained<EditorTextView>> {
@@ -76,19 +77,9 @@ fn gamma(view: &EditorTextView, block: usize) -> Option<std::ops::Range<usize>> 
 }
 
 pub fn run() {
-    let folder = folder();
-    let written = std::fs::create_dir_all(&folder).and_then(|()| std::fs::write(folder.join(FILE), text()));
-    if let Err(error) = written {
-        check("the file is made", false, error.to_string());
-        return finish(SCENARIO);
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    main_after(Duration::from_millis(500), || {
-        if let Some(controller) = window::for_project(&root()) {
-            controller.open_file(&root().join(FILE));
-        }
+    let text = text();
+    helpers::open_project(SCENARIO, PROJECT, &[(FILE, text.as_str())], |controller| {
+        controller.open_file(&root().join(FILE));
         wait_until(
             || view().is_some_and(|v| v.line_start(BLOCKS * LINES - 1).is_some()),
             |ok| {
@@ -112,7 +103,10 @@ fn prepare() {
         .filter_map(|b| Some(Inset::new(view.line_start(b * LINES)?, "hint", Place::LineEnd)))
         .collect();
     insets::set(&view, Layer::Inlay, hints);
-    main_after(Duration::from_millis(300), fold_and_place);
+    wait_until(
+        || self::view().is_some_and(|v| insets::shown(&v).iter().any(|s| s.layer == Layer::Inlay)),
+        |_| fold_and_place(),
+    );
 }
 
 fn fold_and_place() {
@@ -141,7 +135,7 @@ fn fold_and_place() {
         edit::folded(&view) == BLOCKS / 3 && edit::carets(&view).len() == BLOCKS / 3 * 2 + 1,
         format!("{} folded, {} carets", edit::folded(&view), edit::carets(&view).len()),
     );
-    main_after(Duration::from_millis(500), || step(0, Tally::default()));
+    helpers::after(PLACED_SHOWN, || step(0, Tally::default()));
 }
 
 #[derive(Clone, Copy)]
@@ -242,7 +236,7 @@ fn step(index: usize, tally: Tally) {
         draw_ahead(&view);
     }
     play(movement, count, move || {
-        main_after(Duration::from_millis(60), move || look(index, before, tally));
+        helpers::after(SHOWN, move || look(index, before, tally));
     });
 }
 
@@ -262,7 +256,7 @@ fn draw_ahead(view: &EditorTextView) {
 }
 
 /// Sends `count` events of `movement`, one per frame, then calls `then`.
-fn play(movement: Move, count: usize, then: impl FnOnce() + Send + 'static) {
+fn play(movement: Move, count: usize, then: impl FnOnce() + 'static) {
     let Some(view) = view() else { return then() };
     match movement {
         Move::Jump(percent) => {
@@ -284,7 +278,7 @@ fn play(movement: Move, count: usize, then: impl FnOnce() + Send + 'static) {
         Move::Swipe(points) => wheel(&view, CGScrollEventUnit::Pixel, points),
     }
     if count > 1 {
-        main_after(Duration::from_millis(16), move || play(movement, count - 1, then));
+        helpers::after(FRAME, move || play(movement, count - 1, then));
     } else {
         then();
     }
@@ -360,7 +354,7 @@ fn look(index: usize, before: f64, mut tally: Tally) {
         }
         Err(error) => tally.note(CAPTURED, Some(format!("{label}: {error}"))),
     }
-    main_after(Duration::from_millis(50), move || step(index + 1, tally));
+    helpers::after(FRAME, move || step(index + 1, tally));
 }
 
 /// The part of `view` on screen, less a margin at the top and bottom where a line shows only in part.

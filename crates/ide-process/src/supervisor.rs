@@ -1,5 +1,6 @@
 //! The register of running processes: who started them, how to end them, and who wants to hear when that changes.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::{BTreeMap, VecDeque};
 use std::io;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
@@ -151,12 +152,17 @@ impl Supervisor {
         command.process_group(0);
         let mut child = command.spawn()?;
         let (stdin, stdout, stderr) = (child.stdin.take(), child.stdout.take(), child.stderr.take());
-        let info = self.add(child.id(), kind, label.into(), Origin::Started);
+        let pid = child.id();
+        let info = self.add(pid, kind, label.into(), Origin::Started);
         let id = info.id;
         let supervisor = self.clone();
-        std::thread::Builder::new()
-            .name(format!("wait-{}", child.id()))
-            .spawn(move || supervisor.wait_for(id, child))?;
+        if let Err(error) = std::thread::Builder::new()
+            .name(format!("wait-{pid}"))
+            .spawn(move || supervisor.wait_for(id, child))
+        {
+            self.abandon(id, pid);
+            return Err(error);
+        }
         self.announce(&Event::Started(info));
         Ok(Spawned {
             id,
@@ -182,7 +188,7 @@ impl Supervisor {
     /// What `stop` does first for `id`, such as closing its input or asking a language server to shut down.
     pub fn on_stop(&self, id: ProcessId, graceful: impl FnOnce() + Send + 'static) {
         let (lock, _) = &*self.register;
-        if let Some(entry) = lock.lock().unwrap_or_else(|e| e.into_inner()).entries.get_mut(&id) {
+        if let Some(entry) = lock.lock_ignoring_poison().entries.get_mut(&id) {
             entry.graceful = Some(Box::new(graceful));
         }
     }
@@ -190,17 +196,14 @@ impl Supervisor {
     /// Calls `listener` with every change from now on, on whichever thread makes it.
     pub fn subscribe(&self, listener: impl Fn(&Event) + Send + Sync + 'static) {
         let (lock, _) = &*self.register;
-        lock.lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .listeners
-            .push(Arc::new(listener));
+        lock.lock_ignoring_poison().listeners.push(Arc::new(listener));
     }
 
     /// How `id` ended, waiting up to `timeout` for it; `None` while it still runs.
     pub fn wait(&self, id: ProcessId, timeout: Duration) -> Option<Ending> {
         let deadline = Instant::now() + timeout;
         let (lock, changed) = &*self.register;
-        let mut register = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut register = lock.lock_ignoring_poison();
         loop {
             if let Some((_, ending)) = register.ended.iter().find(|(ended, _)| *ended == id) {
                 return Some(*ending);
@@ -212,18 +215,14 @@ impl Supervisor {
             if now >= deadline {
                 return None;
             }
-            register = changed
-                .wait_timeout(register, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            register = changed.wait_timeout(register, deadline - now).ignoring_poison().0;
         }
     }
 
     /// The processes that run now, oldest first.
     pub fn running(&self) -> Vec<ProcessInfo> {
         let (lock, _) = &*self.register;
-        lock.lock()
-            .unwrap_or_else(|e| e.into_inner())
+        lock.lock_ignoring_poison()
             .entries
             .values()
             .map(|e| e.info.clone())
@@ -234,9 +233,7 @@ impl Supervisor {
     /// `grace` SIGKILL.
     pub fn stop(&self, id: ProcessId, grace: Duration) {
         let supervisor = self.clone();
-        let _ = std::thread::Builder::new()
-            .name("stop".into())
-            .spawn(move || supervisor.end(&[id], grace));
+        ide_core::thread::detach_or_run("stop", move || supervisor.end(&[id], grace));
     }
 
     /// Ends every process as `stop` does and returns once all are gone or `grace` has passed three times.
@@ -247,12 +244,14 @@ impl Supervisor {
 
     fn end(&self, ids: &[ProcessId], grace: Duration) {
         let mut graceful = vec![];
+        let mut groups = vec![];
         {
             let (lock, _) = &*self.register;
-            let mut register = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let mut register = lock.lock_ignoring_poison();
             for id in ids {
-                if let Some(step) = register.entries.get_mut(id).and_then(|e| e.graceful.take()) {
-                    graceful.push(step);
+                if let Some(entry) = register.entries.get_mut(id) {
+                    groups.extend(libc::pid_t::try_from(entry.info.pid).ok());
+                    graceful.extend(entry.graceful.take());
                 }
             }
         }
@@ -260,15 +259,15 @@ impl Supervisor {
         for step in graceful {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(step));
         }
-        if had_graceful && self.wait_until_gone(ids, grace) {
+        if had_graceful && self.wait_until_gone(ids, &groups, grace) {
             return;
         }
-        self.signal(ids, libc::SIGTERM);
-        if self.wait_until_gone(ids, grace) {
+        signal_groups(&groups, libc::SIGTERM);
+        if self.wait_until_gone(ids, &groups, grace) {
             return;
         }
-        self.signal(ids, libc::SIGKILL);
-        if !self.wait_until_gone(ids, grace) {
+        signal_groups(&groups, libc::SIGKILL);
+        if !self.wait_until_gone(ids, &groups, grace) {
             // A registered process whose owner never reports its end would otherwise stay listed for good.
             for id in ids {
                 if self.origin(*id) == Some(Origin::Registered) {
@@ -280,44 +279,25 @@ impl Supervisor {
 
     fn origin(&self, id: ProcessId) -> Option<Origin> {
         let (lock, _) = &*self.register;
-        lock.lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .entries
-            .get(&id)
-            .map(|e| e.info.origin)
+        lock.lock_ignoring_poison().entries.get(&id).map(|e| e.info.origin)
     }
 
-    fn signal(&self, ids: &[ProcessId], signal: i32) {
-        let (lock, _) = &*self.register;
-        let register = lock.lock().unwrap_or_else(|e| e.into_inner());
-        for id in ids {
-            let Some(entry) = register.entries.get(id) else {
-                continue;
-            };
-            let Ok(group) = libc::pid_t::try_from(entry.info.pid) else {
-                continue;
-            };
-            // SAFETY: kill only sends a signal; the group is the one the process leads, still listed and so not yet
-            // reaped, which keeps its number from being reused.
-            unsafe { libc::kill(-group, signal) };
-        }
-    }
-
-    /// Whether all of `ids` ended within `timeout`.
-    fn wait_until_gone(&self, ids: &[ProcessId], timeout: Duration) -> bool {
+    /// Whether all of `ids` ended and nothing is left in `groups` within `timeout`.
+    fn wait_until_gone(&self, ids: &[ProcessId], groups: &[libc::pid_t], timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         let (lock, changed) = &*self.register;
         loop {
             self.prune_registered();
-            let register = lock.lock().unwrap_or_else(|e| e.into_inner());
-            if ids.iter().all(|id| !register.entries.contains_key(id)) {
+            let register = lock.lock_ignoring_poison();
+            if ids.iter().all(|id| !register.entries.contains_key(id)) && !groups.iter().any(|g| group_exists(*g)) {
                 return true;
             }
             let now = Instant::now();
             if now >= deadline {
                 return false;
             }
-            // Registered processes end without a notice to the supervisor, so it looks again now and then.
+            // Registered processes and the rest of a group end without a notice to the supervisor, so it looks again
+            // now and then.
             let wait = (deadline - now).min(Duration::from_millis(50));
             drop(changed.wait_timeout(register, wait));
         }
@@ -327,7 +307,7 @@ impl Supervisor {
     fn prune_registered(&self) {
         let (lock, changed) = &*self.register;
         let gone: Vec<ProcessId> = {
-            let mut register = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let mut register = lock.lock_ignoring_poison();
             let gone: Vec<ProcessId> = register
                 .entries
                 .values()
@@ -352,7 +332,7 @@ impl Supervisor {
 
     fn add(&self, pid: u32, kind: Kind, label: String, origin: Origin) -> ProcessInfo {
         let (lock, _) = &*self.register;
-        let mut register = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut register = lock.lock_ignoring_poison();
         register.next += 1;
         let info = ProcessInfo {
             id: ProcessId(register.next),
@@ -372,6 +352,21 @@ impl Supervisor {
         info
     }
 
+    /// Kills and reaps a started process nobody can wait for, and takes it off the list unannounced.
+    fn abandon(&self, id: ProcessId, pid: u32) {
+        if let Ok(group) = libc::pid_t::try_from(pid) {
+            // SAFETY: kill and waitpid act on the child just started and not yet reaped, so its number is still its
+            // own; the status pointer may be null.
+            unsafe {
+                libc::kill(-group, libc::SIGKILL);
+                libc::waitpid(group, std::ptr::null_mut(), 0);
+            }
+        }
+        let (lock, changed) = &*self.register;
+        lock.lock_ignoring_poison().entries.remove(&id);
+        changed.notify_all();
+    }
+
     fn wait_for(&self, id: ProcessId, mut child: Child) {
         let ending = match child.wait() {
             Ok(status) => match (status.code(), status.signal()) {
@@ -387,7 +382,7 @@ impl Supervisor {
     fn remove(&self, id: ProcessId, ending: Ending) {
         let (lock, changed) = &*self.register;
         let removed = {
-            let mut register = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let mut register = lock.lock_ignoring_poison();
             let removed = register.entries.remove(&id).is_some();
             if removed {
                 if register.ended.len() == ENDINGS_KEPT {
@@ -405,7 +400,7 @@ impl Supervisor {
 
     fn announce(&self, event: &Event) {
         let (lock, _) = &*self.register;
-        let listeners = lock.lock().unwrap_or_else(|e| e.into_inner()).listeners.clone();
+        let listeners = lock.lock_ignoring_poison().listeners.clone();
         for listener in listeners {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| listener(event)));
         }
@@ -416,6 +411,24 @@ impl Supervisor {
 fn exists(pid: u32) -> bool {
     // SAFETY: Signal 0 only asks whether the process exists; nothing is delivered.
     libc::pid_t::try_from(pid).is_ok_and(|pid| unsafe { libc::kill(pid, 0) } == 0)
+}
+
+/// Whether any process is left in the group numbered `group`.
+fn group_exists(group: libc::pid_t) -> bool {
+    // SAFETY: Signal 0 to a group only asks whether it has members; nothing is delivered.
+    group > 0 && unsafe { libc::kill(-group, 0) } == 0
+}
+
+/// Sends `signal` to each of `groups` that still has members, whether or not its leader is still there.
+fn signal_groups(groups: &[libc::pid_t], signal: i32) {
+    for &group in groups {
+        if group_exists(group) {
+            // SAFETY: kill only sends a signal. The system reuses no number while a group of that number has members,
+            // so a group found just now is the one the process led, unless it emptied and its number was taken
+            // again in the moment since, which needs the whole range of process numbers to wrap around.
+            unsafe { libc::kill(-group, signal) };
+        }
+    }
 }
 
 #[cfg(test)]
@@ -505,6 +518,86 @@ mod tests {
             Ending::Code(0),
             "cat ended by itself at the end of its input"
         );
+    }
+
+    /// Starts a shell that prints the number of a background `sleep` in its group, then waits for its input to end.
+    fn leader_with_a_member(supervisor: &Supervisor, member: &str) -> (Spawned, u32) {
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", &format!("{member} & echo $!; read line")])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped());
+        let mut spawned = supervisor.spawn(command, Kind::Agent, "leader").unwrap();
+        let mut line = String::new();
+        BufReader::new(spawned.stdout.take().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        (spawned, line.trim().parse().unwrap())
+    }
+
+    fn gone_within(pid: u32, timeout: Duration) -> bool {
+        let deadline = Instant::now() + timeout;
+        while exists(pid) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        !exists(pid)
+    }
+
+    #[test]
+    fn a_member_outliving_a_leader_that_ended_gracefully_is_ended_too() {
+        let supervisor = Supervisor::new();
+        let (spawned, member) = leader_with_a_member(&supervisor, "sleep 30");
+        let stdin = Mutex::new(spawned.stdin);
+        supervisor.on_stop(spawned.id, move || drop(stdin.lock_ignoring_poison().take()));
+        let grace = Duration::from_millis(300);
+        supervisor.shutdown(grace);
+        assert!(
+            matches!(supervisor.wait(spawned.id, Duration::ZERO), Some(Ending::Code(_))),
+            "the leader ended by itself"
+        );
+        assert!(gone_within(member, GRACE), "the member outlived its leader");
+    }
+
+    #[test]
+    fn a_member_that_ignores_sigterm_is_killed_after_its_leader_is_gone() {
+        let supervisor = Supervisor::new();
+        let (spawned, member) = leader_with_a_member(&supervisor, "trap '' TERM; while true; do sleep 1; done");
+        let started = Instant::now();
+        supervisor.shutdown(Duration::from_millis(300));
+        assert!(supervisor.running().is_empty());
+        assert!(gone_within(member, GRACE), "the member survived SIGKILL");
+        assert!(started.elapsed() < Duration::from_secs(3));
+        drop(spawned);
+    }
+
+    #[test]
+    fn a_registered_leader_already_reaped_leaves_its_members_to_be_ended() {
+        let supervisor = Supervisor::new();
+        let mut leader = Command::new("/bin/sh")
+            .args(["-c", "sleep 30 & echo $!"])
+            .stdout(Stdio::piped())
+            .process_group(0)
+            .spawn()
+            .unwrap();
+        let mut line = String::new();
+        BufReader::new(leader.stdout.take().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        let member: u32 = line.trim().parse().unwrap();
+        let id = supervisor.register(leader.id(), Kind::Terminal, "sh");
+        leader.wait().unwrap();
+        supervisor.shutdown(Duration::from_millis(200));
+        assert_eq!(supervisor.wait(id, Duration::ZERO), Some(Ending::Unknown));
+        assert!(gone_within(member, GRACE), "the member of a reaped leader survived");
+    }
+
+    #[test]
+    fn signalling_a_group_that_is_gone_does_nothing() {
+        let mut child = sleeper(0).process_group(0).spawn().unwrap();
+        let group = libc::pid_t::try_from(child.id()).unwrap();
+        child.wait().unwrap();
+        assert!(!group_exists(group));
+        signal_groups(&[group, 0, -1], libc::SIGKILL);
     }
 
     #[test]

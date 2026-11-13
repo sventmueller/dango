@@ -38,6 +38,7 @@ mod replay;
 pub mod session;
 mod sse;
 pub mod store;
+#[cfg(any(test, feature = "testing"))]
 pub mod stub;
 mod tools;
 mod turn;
@@ -46,8 +47,8 @@ pub mod workspace;
 pub use chat::{Cancel, Delta, ErrorKind, ProviderError, Reply, Request, Stop, ToolSpec, TurnUsage};
 pub use conversation::{Block, Message, Role};
 pub use http::Http;
-pub use keys::{ApiKey, Keychain, Memory, SecretStore};
-pub use models::ModelInfo;
+pub use keys::{ApiKey, Keychain, Memory, SecretError, SecretStore};
+pub use models::{ModelChoice, ModelInfo};
 pub use notes::{Note, Plain, Problem, ToolNote, Wording};
 pub use policy::{Approval, Destructive, Policy, Profile, Reason, Refusal, Rule};
 pub use prices::{Price, PriceTable};

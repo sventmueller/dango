@@ -4,6 +4,7 @@
 use std::io::BufReader;
 use std::time::Duration;
 
+use ide_net::ureq;
 use serde_json::Value;
 
 use crate::chat::{ErrorKind, ProviderError};
@@ -21,17 +22,12 @@ impl Http {
     /// A client that gives up connecting after 20 seconds, and on a stream that is silent for five minutes, which a
     /// local server loading a large model can be.
     pub fn new() -> Http {
-        let tls = ureq::tls::TlsConfig::builder()
-            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
-        let agent = ureq::Agent::config_builder()
-            .tls_config(tls)
-            .http_status_as_error(false)
-            .user_agent(format!("{} (agent)", ide_product::NAME))
-            .timeout_connect(Some(Duration::from_secs(20)))
-            .timeout_per_read(Some(Duration::from_secs(300)))
-            .build()
-            .new_agent();
+        let agent = ide_net::client(ide_net::Client {
+            purpose: "agent",
+            connect: Duration::from_secs(20),
+            read: Duration::from_secs(300),
+            status_as_error: false,
+        });
         Http { agent }
     }
 

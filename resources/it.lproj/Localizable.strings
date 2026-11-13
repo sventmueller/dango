@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Ultimo messaggio: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Il programma è terminato senza messaggi.";
 "Das Programm hat sich beim Start beendet: {}" = "Il programma è terminato durante l’avvio: {}";
+"Konnte keinen Thread starten: {}" = "Impossibile avviare un thread: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Impossibile eseguire la modifica dello spazio di lavoro.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "«{}» è una libreria senza programma, e questo file non ha test. Esegui il debug di un file con main o test, oppure indica in .vscode/launch.json quale programma avviare.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Se macOS non chiede alcuna password, consenti i debugger una volta in Terminale con «sudo DevToolsSecurity -enable», oppure annulla con Interrompi. Dopo dieci minuti l’avvio rinuncia da solo.";
+"Haltepunkt, nicht gesetzt" = "Punto di interruzione, non impostato";
+"nicht gesetzt" = "non impostato";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Il debugger non ha potuto impostare qui un punto di interruzione: {}";

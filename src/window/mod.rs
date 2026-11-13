@@ -12,6 +12,7 @@ mod frame;
 mod full_screen;
 mod inspector;
 pub mod layout;
+mod lifecycle;
 mod new_tab_button;
 mod notice;
 pub mod panels;
@@ -70,82 +71,12 @@ pub const SIDEBAR_RAISE: f64 = 11.0;
 /// the symbols keep from the window's edge.
 const PANEL_UNDER_ACTIVITY: f64 = 8.5;
 /// The width of the activity bar, which stays when the panel beside it is closed.
-const ACTIVITY_WIDTH: f64 = 44.0;
+pub(crate) const ACTIVITY_WIDTH: f64 = 44.0;
 const PANEL_MIN_WIDTH: f64 = 200.0;
 const PANEL_MAX_WIDTH: f64 = 560.0;
-const PANEL_DEFAULT_WIDTH: f64 = 260.0;
+pub(crate) const PANEL_DEFAULT_WIDTH: f64 = 260.0;
 
-/// What the panel beside the activity bar shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Panel {
-    Files,
-    Search,
-    Agents,
-    Git,
-    Ci,
-    Debug,
-}
-
-impl Panel {
-    pub const ALL: [Panel; 6] = [
-        Panel::Files,
-        Panel::Search,
-        Panel::Agents,
-        Panel::Git,
-        Panel::Debug,
-        Panel::Ci,
-    ];
-
-    /// The tag of the menu items and buttons that show it; windows save it, so it stays when the order changes.
-    pub fn tag(self) -> isize {
-        match self {
-            Panel::Files => 1,
-            Panel::Search => 2,
-            Panel::Agents => 3,
-            Panel::Git => 4,
-            Panel::Ci => 5,
-            Panel::Debug => 6,
-        }
-    }
-
-    pub fn from_tag(tag: isize) -> Option<Panel> {
-        Panel::ALL.into_iter().find(|p| p.tag() == tag)
-    }
-
-    pub fn title(self) -> &'static str {
-        match self {
-            Panel::Files => t("Dateien"),
-            Panel::Search => t("Suche"),
-            Panel::Agents => t("Agenten"),
-            Panel::Git => t("Git"),
-            Panel::Ci => t("CI"),
-            Panel::Debug => t("Debuggen"),
-        }
-    }
-
-    /// Its name in the settings, which no language translates.
-    pub fn id(self) -> &'static str {
-        match self {
-            Panel::Files => "files",
-            Panel::Search => "search",
-            Panel::Agents => "agents",
-            Panel::Git => "git",
-            Panel::Ci => "ci",
-            Panel::Debug => "debug",
-        }
-    }
-
-    pub fn symbol(self) -> &'static str {
-        match self {
-            Panel::Files => "doc.on.doc",
-            Panel::Search => "magnifyingglass",
-            Panel::Agents => "sparkles",
-            Panel::Git => "arrow.triangle.branch",
-            Panel::Ci => "checkmark.seal",
-            Panel::Debug => "ladybug",
-        }
-    }
-}
+pub use ide_ui_common::window::Panel;
 
 pub struct Ivars {
     context: Rc<AppContext>,
@@ -298,6 +229,11 @@ define_class!(
                     toggle_activity_symbol(panel);
                 }
             });
+        }
+
+        #[unsafe(method(ideToggleInspector:))]
+        fn toggle_inspector_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.toggle_inspector());
         }
 
         #[unsafe(method(ideNewTab:))]
@@ -517,6 +453,11 @@ impl WindowController {
         self.ivars().id
     }
 
+    /// The window as the feature crates know it.
+    pub fn handle(&self) -> ide_ui_common::window::Window {
+        ide_ui_common::window::Window::new(self.id())
+    }
+
     pub fn context(&self) -> &Rc<AppContext> {
         &self.ivars().context
     }
@@ -586,7 +527,6 @@ impl WindowController {
             controller.fit_sidebar(&tab, controller.saved_sidebar().collapsed);
             show_tab_bar(&tab.window);
         }
-        controller.context().windows.insert(controller.id(), controller.clone());
         crate::session::changed();
         controller
     }
@@ -630,6 +570,8 @@ impl WindowController {
             this.set_panel_open(false);
         }
         this.open_welcome();
+        // The window's parts reach it by id from the moment they attach to its folder, which `load_project` starts.
+        this.context().windows.insert(this.id(), this.clone());
         this.load_project();
         this
     }
@@ -722,10 +664,7 @@ impl WindowController {
         *ivars.files.borrow_mut() = Some(tree);
         *ivars.search.borrow_mut() = Some(search);
         *ivars.workspace.borrow_mut() = Some(project);
-        crate::git_panel::attach(self);
-        crate::ci_panel::attach(self);
-        crate::agent_panel::attach(self);
-        crate::debug::attach(self);
+        self.folder_attached();
         if !crate::project::is_trusted(&root) {
             self.ask_trust(root);
         }
@@ -764,10 +703,7 @@ impl WindowController {
             guarded((), || {
                 if response == objc2_app_kit::NSAlertFirstButtonReturn {
                     crate::project::trust(&root);
-                    crate::git_panel::trust_changed(&root);
-                    crate::ci_panel::trust_changed(&root);
-                    crate::lsp::trust_changed(&root);
-                    crate::debug::trust_changed(&root);
+                    lifecycle::trust_changed(&root);
                 }
             });
         });
@@ -881,15 +817,7 @@ impl WindowController {
         layout::save(self);
         self.save_frame();
         self.ivars().closed.set(true);
-        if let Some(search) = self.ivars().search.borrow().as_ref() {
-            search.stop();
-        }
-        if let Some(root) = self.project_root() {
-            crate::lsp::window_closed(&root);
-        }
-        crate::agent::window_closed(self);
-        crate::ci_panel::window_closed(self);
-        crate::debug::window_closed(self);
+        self.folder_closes();
         main_soon_unregister(self.id());
     }
 
@@ -957,14 +885,7 @@ impl WindowController {
     }
 }
 
-/// Whether `window` is on screen and the tab in front of its tab group; the tabs behind count as visible to AppKit.
-pub fn in_front(window: &NSWindow) -> bool {
-    window.isVisible()
-        && window
-            .tabGroup()
-            .and_then(|group| group.selectedWindow())
-            .is_none_or(|selected| std::ptr::eq(&*selected, window))
-}
+pub use ide_ui_common::panel::in_front;
 
 /// Shows the tab bar of `window` also while it has one tab: a folder's documents always show as tabs (E60).
 fn show_tab_bar(window: &NSWindow) {
@@ -978,4 +899,17 @@ fn folder_name(path: &Path) -> String {
         || path.display().to_string(),
         |name| name.to_string_lossy().into_owned(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::folder_name;
+
+    #[test]
+    fn a_window_is_named_after_its_folder_and_the_root_after_itself() {
+        assert_eq!(folder_name(Path::new("/Users/a/dango")), "dango");
+        assert_eq!(folder_name(Path::new("/")), "/");
+    }
 }

@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Darrer missatge: {}";
 "Das Programm hat sich ohne Meldung beendet." = "El programa s’ha aturat sense cap missatge.";
 "Das Programm hat sich beim Start beendet: {}" = "El programa s’ha aturat en iniciar-se: {}";
+"Konnte keinen Thread starten: {}" = "No s’ha pogut iniciar un fil: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "No s’ha pogut executar el canvi a l’espai de treball.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "«{}» és una biblioteca sense programa, i aquest fitxer no té proves. Depura un fitxer amb main o proves, o indica a .vscode/launch.json quin programa s’inicia.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Si el macOS no demana cap contrasenya, permet els depuradors un cop al Terminal amb «sudo DevToolsSecurity -enable», o cancel·la amb Atura. Al cap de deu minuts l’inici s’atura sol.";
+"Haltepunkt, nicht gesetzt" = "Punt d’interrupció, no establert";
+"nicht gesetzt" = "no establert";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "El depurador no ha pogut establir aquí un punt d’interrupció: {}";

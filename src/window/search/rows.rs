@@ -109,7 +109,14 @@ impl ResultCell {
     fn offer(&self, replacing: &Replacing, name: &str, covered: Option<&NSView>) {
         let mtm = self.mtm();
         let action: Sel = objc2::sel!(ideSearchReplaceRow:);
-        let button = crate::util::symbol_button(mtm, "arrow.2.squarepath", name, 11.0, Some(replacing.panel), action);
+        let button = crate::util::symbol_button(
+            mtm,
+            "arrow.2.squarepath",
+            name,
+            ide_ui_common::style::symbol::INLINE,
+            Some(replacing.panel),
+            action,
+        );
         button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         button.setHidden(true);
         self.addSubview(&button);
@@ -151,9 +158,10 @@ pub(super) fn file_row(
         .map_or_else(String::new, |p| p.to_string_lossy().into_owned());
     let title = label(mtm, &name);
     // SAFETY: AppKit sets its font weight constants when it loads.
-    title.setFont(Some(&NSFont::systemFontOfSize_weight(12.0, unsafe {
-        objc2_app_kit::NSFontWeightSemibold
-    })));
+    title.setFont(Some(&NSFont::systemFontOfSize_weight(
+        ide_ui_common::style::LABEL,
+        unsafe { objc2_app_kit::NSFontWeightSemibold },
+    )));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     let place = label(mtm, &folder);
     place.setFont(Some(&NSFont::systemFontOfSize(FONT_SIZE)));

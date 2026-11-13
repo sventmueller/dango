@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Seneste meddelelse: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Programmet afsluttede uden en meddelelse.";
 "Das Programm hat sich beim Start beendet: {}" = "Programmet afsluttede under start: {}";
+"Konnte keinen Thread starten: {}" = "Kunne ikke starte en tråd: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Ændringen af arbejdsområdet kunne ikke udføres.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” er et bibliotek uden program, og denne fil har ingen tests. Fejlfind en fil med main eller tests, eller angiv i .vscode/launch.json, hvilket program der starter.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Hvis macOS ikke beder om en adgangskode, så tillad fejlfindere én gang i Terminal med “sudo DevToolsSecurity -enable”, eller annuller med Stop. Efter ti minutter giver starten selv op.";
+"Haltepunkt, nicht gesetzt" = "Brudpunkt, ikke sat";
+"nicht gesetzt" = "ikke sat";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Fejlfinderen kunne ikke sætte et brudpunkt her: {}";

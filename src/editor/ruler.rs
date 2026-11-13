@@ -12,9 +12,7 @@ use objc2_app_kit::{
     NSTextElementProvider, NSTextLayoutFragment, NSTextLayoutFragmentEnumerationOptions, NSView,
     NSViewBoundsDidChangeNotification, NSViewFrameDidChangeNotification,
 };
-use objc2_foundation::{
-    NSDictionary, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
-};
+use objc2_foundation::{NSDictionary, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
 use super::view::EditorTextView;
 use crate::util::{constant, guarded, ns};
@@ -74,6 +72,8 @@ pub struct GutterIvars {
     hovered: std::cell::Cell<bool>,
     /// The constraint that holds the column's width, which follows the number of lines.
     width: std::cell::RefCell<Option<Retained<objc2_app_kit::NSLayoutConstraint>>>,
+    /// The scrolling and resizing it redraws for, which end with the column.
+    watches: std::cell::RefCell<Vec<crate::util::Observation>>,
 }
 
 define_class!(
@@ -315,6 +315,7 @@ impl LineNumbers {
             tips: std::cell::RefCell::new(vec![]),
             hovered: std::cell::Cell::new(false),
             width: std::cell::RefCell::new(None),
+            watches: std::cell::RefCell::new(Vec::new()),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -323,22 +324,17 @@ impl LineNumbers {
         let clip = scroll.contentView();
         clip.setPostsBoundsChangedNotifications(true);
         editor.setPostsFrameChangedNotifications(true);
-        let center = NSNotificationCenter::defaultCenter();
         for (name, object) in [
             (constant!(NSViewBoundsDidChangeNotification), &*clip as &NSView),
             (constant!(NSViewFrameDidChangeNotification), editor as &NSView),
         ] {
             let gutter = Weak::from(&*this);
-            let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+            let watch = crate::util::observe(mtm, name, Some(object), move |_| {
                 if let Some(gutter) = gutter.load() {
                     gutter.setNeedsDisplay(true);
                 }
             });
-            // SAFETY: The block only marks the view for redrawing; the weak reference makes it do nothing once the
-            // column is gone.
-            let observer =
-                unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), Some(object), None, &block) };
-            std::mem::forget(observer);
+            this.ivars().watches.borrow_mut().push(watch);
         }
         this
     }
@@ -369,67 +365,71 @@ impl LineNumbers {
         let bulb_row = std::cell::Cell::new(None);
         let bottom = visible.origin.y + visible.size.height;
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
-            // SAFETY: TextKit keeps the fragment alive for the call.
-            let fragment = unsafe { fragment.as_ref() };
-            let y = fragment.layoutFragmentFrame().origin.y + origin.y;
-            if y > bottom {
-                return Bool::NO;
-            }
-            let offset = content.offsetFromLocation_toLocation(&document_start, &fragment.rangeInElement().location());
-            let document = editor.document();
-            let line = usize::try_from(offset)
-                .ok()
-                .and_then(|o| document.text().utf16_to_byte(o).ok())
-                .map(|byte| document.text().line_of(byte) + 1);
-            if let Some(line) = line {
-                let label = ns(&line.to_string());
-                // SAFETY: The attributes hold a font and a colour, as the method expects.
-                let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
-                let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
-                let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
-                let height = fragment.layoutFragmentFrame().size.height;
-                let (look, paused) = crate::debug::gutter_mark(&editor, line - 1);
-                let fold_strip = NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
-                let mut tagged = false;
-                if bulb == Some(line - 1) && bulb_row.get().is_none() {
-                    let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
-                    bulb_row.set(Some(NSRect::new(
-                        NSPoint::new(NUMBERS_LEFT, point.y),
-                        NSSize::new(numbers, height),
-                    )));
-                } else {
-                    let gutter = NSRect::new(
-                        NSPoint::new(2.0, point.y),
-                        NSSize::new(self.fold_left() + FOLD_WIDTH - 2.0, height),
-                    );
-                    tagged = crate::debug::draw_gutter_mark(look, gutter);
-                    if paused {
-                        crate::debug::draw_paused_arrow(gutter);
-                        tagged = true;
+            crate::util::guarded(Bool::NO, || {
+                // SAFETY: TextKit keeps the fragment alive for the call.
+                let fragment = unsafe { fragment.as_ref() };
+                let y = fragment.layoutFragmentFrame().origin.y + origin.y;
+                if y > bottom {
+                    return Bool::NO;
+                }
+                let offset =
+                    content.offsetFromLocation_toLocation(&document_start, &fragment.rangeInElement().location());
+                let document = editor.document();
+                let line = usize::try_from(offset)
+                    .ok()
+                    .and_then(|o| document.text().utf16_to_byte(o).ok())
+                    .map(|byte| document.text().line_of(byte) + 1);
+                if let Some(line) = line {
+                    let label = ns(&line.to_string());
+                    // SAFETY: The attributes hold a font and a colour, as the method expects.
+                    let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
+                    let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
+                    let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
+                    let height = fragment.layoutFragmentFrame().size.height;
+                    let (look, paused) = crate::debug::gutter_mark(&editor, line - 1);
+                    let fold_strip =
+                        NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
+                    let mut tagged = false;
+                    if bulb == Some(line - 1) && bulb_row.get().is_none() {
+                        let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
+                        bulb_row.set(Some(NSRect::new(
+                            NSPoint::new(NUMBERS_LEFT, point.y),
+                            NSSize::new(numbers, height),
+                        )));
+                    } else {
+                        let gutter = NSRect::new(
+                            NSPoint::new(2.0, point.y),
+                            NSSize::new(self.fold_left() + FOLD_WIDTH - 2.0, height),
+                        );
+                        tagged = crate::debug::draw_gutter_mark(look, gutter);
+                        if paused {
+                            crate::debug::draw_paused_arrow(gutter);
+                            tagged = true;
+                        }
+                        let shown = if tagged { &light_attributes } else { &attributes };
+                        // SAFETY: Both attribute dictionaries hold only a font and a colour under AppKit's keys.
+                        unsafe { label.drawAtPoint_withAttributes(at, Some(shown)) };
                     }
-                    let shown = if tagged { &light_attributes } else { &attributes };
-                    // SAFETY: As above.
-                    unsafe { label.drawAtPoint_withAttributes(at, Some(shown)) };
-                }
-                if paused && !tagged {
-                    crate::debug::draw_paused_arrow(fold_strip);
-                } else if let Some(folded) = folds.get(&(line - 1)) {
-                    self.fold_mark(fold_strip, *folded, tagged);
-                }
-                if let Some((severity, message)) = marks.get(&(line - 1)) {
-                    self.mark(
-                        NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height)),
-                        *severity,
-                        message,
+                    if paused && !tagged {
+                        crate::debug::draw_paused_arrow(fold_strip);
+                    } else if let Some(folded) = folds.get(&(line - 1)) {
+                        self.fold_mark(fold_strip, *folded, tagged);
+                    }
+                    if let Some((severity, message)) = marks.get(&(line - 1)) {
+                        self.mark(
+                            NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height)),
+                            *severity,
+                            message,
+                        );
+                    }
+                    self.change_mark(
+                        &editor,
+                        line - 1,
+                        NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(width, height)),
                     );
                 }
-                self.change_mark(
-                    &editor,
-                    line - 1,
-                    NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(width, height)),
-                );
-            }
-            Bool::YES
+                Bool::YES
+            })
         });
         let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
             start.as_deref(),

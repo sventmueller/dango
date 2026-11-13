@@ -156,7 +156,7 @@ pub fn attach(view: &EditorTextView) {
 /// The rotor "Hinweise" of `view` and the entry it finds from `current` onward, as VoiceOver asks, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn rotor_step(view: &EditorTextView, current: Option<usize>, forward: bool) -> (Option<String>, Option<RotorItem>) {
-    // SAFETY: As in `attach`.
+    // SAFETY: The getter takes no arguments and may answer nil, which the `Option` result type allows for.
     let rotors: Option<Retained<NSArray<NSAccessibilityCustomRotor>>> =
         unsafe { msg_send![view, accessibilityCustomRotors] };
     let ours = rotors

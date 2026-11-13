@@ -1,15 +1,16 @@
 //! The register read from a copy of the ACP registry, what installing an entry would do, and installing, checking,
 //! updating and going back with a stand-in for the network.
 
+use ide_core::testing::scratch;
 use std::collections::HashMap;
-use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::io;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use ide_acp::install::{InstallError, Refusal, Runtime, Source};
-use ide_acp::net::Net;
 use ide_acp::register::{self, Distribution, PRESETS};
 use ide_acp::{Installer, Installs, Launch, Plan, Register};
+use ide_net::{Download, Net};
 use ide_process::Supervisor;
 use sha2::{Digest, Sha256};
 
@@ -21,21 +22,17 @@ struct FakeNet {
 }
 
 impl Net for FakeNet {
-    fn get(&self, url: &str) -> io::Result<Box<dyn Read + Send>> {
+    fn get(&self, url: &str, _: &str) -> io::Result<Download> {
         let files = self.files.lock().unwrap();
         let bytes = files
             .get(url)
             .cloned()
             .ok_or_else(|| io::Error::other(format!("404 {url}")))?;
-        Ok(Box::new(io::Cursor::new(bytes)))
+        Ok(Download {
+            length: None,
+            body: Box::new(io::Cursor::new(bytes)),
+        })
     }
-}
-
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-acp-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
 }
 
 /// A zip holding an executable script `agent` that prints `version`.

@@ -230,24 +230,29 @@ impl<'a> Anchors<'a> {
     /// The other side's y for `top` on the leading side, which `lead` puts first in each anchor; the search starts
     /// at anchor `guess`.
     fn follow(&self, guess: usize, top: f64, lead: fn((f64, f64)) -> (f64, f64)) -> Option<f64> {
-        let at = |k| self.get(k).map(lead);
-        let mut k = guess.min(self.last());
-        let mut lower = at(k)?;
-        while k > 0 && lower.0 > top {
-            k -= 1;
-            lower = at(k)?;
-        }
-        while k < self.last() {
-            let upper = at(k + 1)?;
-            if upper.0 > top {
-                let part = ((top - lower.0) / (upper.0 - lower.0)).clamp(0.0, 1.0);
-                return Some(lower.1 + part * (upper.1 - lower.1));
-            }
-            k += 1;
-            lower = upper;
-        }
-        Some(lower.1)
+        interpolate(self.last(), guess, top, |k| self.get(k).map(lead))
     }
+}
+
+/// The other side's y for `top` on the leading side, interpolated between anchors `0..=last` that `at` gives as
+/// (leading y, following y); the search starts at anchor `guess`.
+fn interpolate(last: usize, guess: usize, top: f64, at: impl Fn(usize) -> Option<(f64, f64)>) -> Option<f64> {
+    let mut k = guess.min(last);
+    let mut lower = at(k)?;
+    while k > 0 && lower.0 > top {
+        k -= 1;
+        lower = at(k)?;
+    }
+    while k < last {
+        let upper = at(k + 1)?;
+        if upper.0 > top {
+            let part = ((top - lower.0) / (upper.0 - lower.0)).clamp(0.0, 1.0);
+            return Some(lower.1 + part * (upper.1 - lower.1));
+        }
+        k += 1;
+        lower = upper;
+    }
+    Some(lower.1)
 }
 
 /// The source offset where paragraph `place` starts.
@@ -303,4 +308,38 @@ pub(super) fn char_at_top(views: &Views) -> Option<usize> {
     let point = NSPoint::new(1.0, (visible.origin.y - origin.y).max(0.0) + 1.0);
     let glyph = views.layout.glyphIndexForPoint_inTextContainer(point, &views.container);
     Some(views.layout.characterIndexForGlyphAtIndex(glyph))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::interpolate as follow;
+
+    const ANCHORS: [(f64, f64); 4] = [(0.0, 0.0), (100.0, 300.0), (200.0, 400.0), (400.0, 1000.0)];
+
+    fn at(k: usize) -> Option<(f64, f64)> {
+        ANCHORS.get(k).copied()
+    }
+
+    #[test]
+    fn a_top_between_anchors_lands_in_proportion_between_them() {
+        assert_eq!(follow(3, 0, 50.0, at), Some(150.0));
+        assert_eq!(follow(3, 0, 300.0, at), Some(700.0));
+    }
+
+    #[test]
+    fn the_answer_does_not_depend_on_the_guess() {
+        for guess in 0..=5 {
+            assert_eq!(follow(3, guess, 150.0, at), Some(350.0), "guess {guess}");
+        }
+    }
+
+    #[test]
+    fn past_the_last_anchor_the_other_side_stays_at_its_end() {
+        assert_eq!(follow(3, 1, 900.0, at), Some(1000.0));
+    }
+
+    #[test]
+    fn a_missing_anchor_gives_no_place() {
+        assert_eq!(follow(3, 0, 300.0, |k| if k == 2 { None } else { at(k) }), None);
+    }
 }

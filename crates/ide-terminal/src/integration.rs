@@ -115,12 +115,7 @@ pub(crate) fn launch(shell: &Path, scripts: Option<&Path>, env: &[(String, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn temporary(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-terminal-{name}-{}-{}", std::process::id(), unique()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
+    use ide_core::testing::scratch as temporary;
 
     #[test]
     fn zsh_gets_the_scripts_through_zdotdir_and_keeps_the_users_one_for_later() {
@@ -197,6 +192,5 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&zshenv).unwrap(), ZSHENV);
         let leftovers = std::fs::read_dir(dir.join("zsh")).unwrap().count();
         assert_eq!(leftovers, 2, "no temporary files stay behind");
-        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

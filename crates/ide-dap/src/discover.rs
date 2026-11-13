@@ -61,7 +61,7 @@ pub struct Adapters {
 impl Adapters {
     /// Adapters found with `env`, the login shell's environment, and the app's tools folder.
     pub fn new(supervisor: &Supervisor, env: Vec<(String, String)>) -> Adapters {
-        Adapters::with_tools(supervisor, env, ide_lsp::default_tools())
+        Adapters::with_tools(supervisor, env, ide_core::paths::tools_dir())
     }
 
     /// Adapters with another tools folder, for tests.
@@ -96,6 +96,7 @@ impl Adapters {
             AdapterKind::Go => self.delve(root),
             AdapterKind::JsDebug => self.js_debug(root),
             AdapterKind::Python => self.debugpy(root),
+            #[cfg(any(test, feature = "testing"))]
             AdapterKind::Fake => Ok(Adapter::fake(crate::fake::Script::default())),
         }
     }
@@ -105,10 +106,10 @@ impl Adapters {
     pub fn install(
         &self,
         what: Install,
-        net: &dyn ide_lsp::Net,
-        cancel: &ide_lsp::Cancel,
-        progress: &mut dyn FnMut(ide_lsp::Progress),
-    ) -> Result<PathBuf, ide_lsp::InstallError> {
+        net: &dyn ide_net::Net,
+        cancel: &ide_net::Cancel,
+        progress: &mut dyn FnMut(ide_net::install::Progress),
+    ) -> Result<PathBuf, ide_net::install::InstallError> {
         match what {
             Install::JsDebug => install::js_debug(self, net, cancel, progress),
         }
@@ -284,11 +285,8 @@ fn is_stub(program: &Path) -> bool {
 mod tests {
     use super::*;
 
-    fn tools(files: &[&str]) -> PathBuf {
-        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-        let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("ide-dap-tools-{}-{n}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+    fn tools(files: &[&str]) -> ide_core::testing::Scratch {
+        let dir = ide_core::testing::scratch("dap-tools");
         for file in files {
             let path = dir.join(file);
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -301,12 +299,16 @@ mod tests {
     #[test]
     fn js_debug_needs_node_and_is_offered_for_installation() {
         let empty = tools(&[]);
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), String::new())], empty.clone());
+        let adapters = Adapters::with_tools(
+            &Supervisor::new(),
+            vec![("PATH".into(), String::new())],
+            empty.to_path_buf(),
+        );
         let missing = adapters.find(AdapterKind::JsDebug, &empty).unwrap_err();
         assert_eq!((missing.needs, missing.install), (Some("node"), Some(Install::JsDebug)));
         let with_node = tools(&["bin/node"]);
         let path = with_node.join("bin").display().to_string();
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], with_node.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], with_node.to_path_buf());
         let missing = adapters.find(AdapterKind::JsDebug, &with_node).unwrap_err();
         assert_eq!((missing.needs, missing.install), (None, Some(Install::JsDebug)));
     }
@@ -315,11 +317,15 @@ mod tests {
     fn dlv_on_the_path_listens_on_a_port_and_a_missing_one_names_its_install_command() {
         let dir = tools(&["bin/dlv", "bin/go"]);
         let path = dir.join("bin").display().to_string();
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.to_path_buf());
         let adapter = adapters.find(AdapterKind::Go, &dir).unwrap();
         assert_eq!(adapter.program(), Some(dir.join("bin/dlv").as_path()));
         assert!(adapter.args()[1].starts_with("--listen=127.0.0.1:"));
-        let none = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), String::new())], dir.clone());
+        let none = Adapters::with_tools(
+            &Supervisor::new(),
+            vec![("PATH".into(), String::new())],
+            dir.to_path_buf(),
+        );
         let missing = none.find(AdapterKind::Go, &dir).unwrap_err();
         assert_eq!(missing.needs, Some("go"));
         assert!(missing.command.unwrap().contains("go-delve/delve/cmd/dlv"));
@@ -329,7 +335,7 @@ mod tests {
     fn the_projects_virtual_environment_comes_before_the_path() {
         let dir = tools(&[".venv/bin/python", "bin/python3"]);
         let path = dir.join("bin").display().to_string();
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.to_path_buf());
         assert_eq!(adapters.python(&dir), Some(dir.join(".venv/bin/python")));
     }
 
@@ -339,13 +345,13 @@ mod tests {
         let active = dir.join("active").display().to_string();
         let path = dir.join("bin").display().to_string();
         let env = vec![("PATH".into(), path), ("VIRTUAL_ENV".into(), active)];
-        let adapters = Adapters::with_tools(&Supervisor::new(), env, dir.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), env, dir.to_path_buf());
         assert_eq!(adapters.python(&dir), Some(dir.join("active/bin/python")));
 
         let system = Adapters::with_tools(
             &Supervisor::new(),
             vec![("PATH".into(), "/usr/bin".into())],
-            dir.clone(),
+            dir.to_path_buf(),
         );
         let tools_installed = std::process::Command::new("/usr/bin/xcode-select")
             .arg("-p")
@@ -364,7 +370,7 @@ mod tests {
         std::fs::write(&go, format!("#!/bin/sh\necho '{gopath}:/elsewhere'\n")).unwrap();
         std::fs::set_permissions(&go, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
         let path = dir.join("bin").display().to_string();
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.to_path_buf());
         let adapter = adapters.find(AdapterKind::Go, &dir).unwrap();
         assert_eq!(adapter.program(), Some(dir.join("gopath/bin/dlv").as_path()));
         assert_eq!(adapter.args()[0], "dap");
@@ -375,7 +381,11 @@ mod tests {
         let dir = tools(&[]);
         let python = dir.join(".venv/bin/python");
         crate::stub_tests::script(&python, "[ \"$2\" = 'import debugpy' ] && [ -f \"${0%/*}/debugpy\" ]\n");
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), String::new())], dir.clone());
+        let adapters = Adapters::with_tools(
+            &Supervisor::new(),
+            vec![("PATH".into(), String::new())],
+            dir.to_path_buf(),
+        );
         let missing = adapters.find(AdapterKind::Python, &dir).unwrap_err();
         assert_eq!(
             missing.command,
@@ -408,13 +418,17 @@ mod tests {
         std::fs::create_dir_all(server.parent().unwrap()).unwrap();
         std::fs::write(&server, "").unwrap();
         let path = dir.join("bin").display().to_string();
-        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path.clone())], dir.clone());
+        let adapters = Adapters::with_tools(
+            &Supervisor::new(),
+            vec![("PATH".into(), path.clone())],
+            dir.to_path_buf(),
+        );
         let adapter = adapters.find(AdapterKind::JsDebug, &dir).unwrap();
         assert_eq!(adapter.program(), Some(dir.join("bin/node").as_path()));
         assert_eq!(adapter.args()[0], server.display().to_string());
         assert_eq!(adapter.args()[2], "127.0.0.1");
         assert_eq!(adapter.label, format!("js-debug {}", JS_DEBUG.version));
-        assert_eq!(adapters.tools(), dir.as_path());
+        assert_eq!(adapters.tools(), dir.path());
         assert_eq!(adapters.env(), [("PATH".to_string(), path)]);
     }
 

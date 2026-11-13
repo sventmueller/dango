@@ -47,24 +47,24 @@ needs a row here first, and a reason from the list above.
 | `crates/ide-ui-terminal/src/gpu.rs` | `SHARED` | Metal device, queue and pipeline of every terminal | app | stays: once per process |
 | `crates/ide-ui-terminal/src/host.rs` | `VIEWS` | the terminal views of every window by id | from opening to closing | AppContext: `terminal_views` (`ide_ui_terminal::State`, reached through its `Host`) |
 | `src/activity/mod.rs` | `ACTIVITIES` | the activity items of every window's toolbar | from a window's first toolbar on | AppContext: `activities` |
-| `src/agent/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
-| `src/agent/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
-| `src/agent/context.rs` | `WAITING` | callbacks waiting for a page to say what is selected, by id | until the page answers | AppContext: `agent.page_selections` |
-| `src/agent/context_view.rs` | `GAUGES` | the context gauge of each AI tab by tab key | while the tab is open | AppContext: `agent.context_gauges` |
-| `src/agent/context_view.rs` | `OPENER` | action target of the context gauges, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
-| `src/agent/context_view.rs` | `SHOWN` | the breakdown popover on view | while it shows | AppContext: `agent.context_gauges` |
-| `src/agent/enlarge.rs` | `OPENER` | action target of the enlarge buttons, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
-| `src/agent/enlarge.rs` | `SHOWN` | the picture shown large | while it shows | AppContext: `agent.enlarged_picture` |
-| `src/agent/figures.rs` | `ASKED` | the formulas and diagrams asked of the renderer, with their receiver | until the answers came | AppContext: `agent.figures` |
-| `src/agent/figures.rs` | `ASKING` | whether a request is out | until the answer | AppContext: `agent.figures` |
-| `src/agent/figures.rs` | `COLLECT` | the figures a card uses while it is built | one call of `collect` | AppContext: `agent.figures` |
-| `src/agent/mod.rs` | `TABS` | every open AI tab | from opening to closing | AppContext: `agent.agent_tabs` |
-| `src/agent/plan/ask.rs` | `ASK` | the question about a plan on view | while it shows | AppContext: `agent.plan.ask` |
-| `src/agent/plan/doc.rs` | `DOCS` | the open plan documents | from opening to closing | AppContext: `agent.plan.docs` |
-| `src/agent/plan/mod.rs` | `LAST_NOTE` | the id the last plan comment got | app | AppContext: `agent.plan.notes` |
-| `src/agent/usage.rs` | `REPORT` | the last answer to `get_usage` with its time | until it is stale (2 min) | AppContext: `agent.usage`; the `ASKING` flag (a static `AtomicBool`) moves along |
-| `src/agent_panel/agents.rs` | `OFFERED` | the agents the "new session" menu offers, by tag | until the menu is filled again | AppContext: `agent_panels.offered_agents` |
-| `src/agent_panel/mod.rs` | `PANELS` | the agent panels of every window | from creation until replaced | AppContext: `agent_panels`; callbacks now carry an id instead of the address |
+| `crates/ide-ui-agent/src/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
+| `crates/ide-ui-agent/src/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
+| `crates/ide-ui-agent/src/context.rs` | `WAITING` | callbacks waiting for a page to say what is selected, by id | until the page answers | AppContext: `agent.page_selections` |
+| `crates/ide-ui-agent/src/context_view.rs` | `GAUGES` | the context gauge of each AI tab by tab key | while the tab is open | AppContext: `agent.context_gauges` |
+| `crates/ide-ui-agent/src/context_view.rs` | `OPENER` | action target of the context gauges, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
+| `crates/ide-ui-agent/src/context_view.rs` | `SHOWN` | the breakdown popover on view | while it shows | AppContext: `agent.context_gauges` |
+| `crates/ide-ui-agent/src/enlarge.rs` | `OPENER` | action target of the enlarge buttons, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
+| `crates/ide-ui-agent/src/enlarge.rs` | `SHOWN` | the picture shown large | while it shows | AppContext: `agent.enlarged_picture` |
+| `crates/ide-ui-agent/src/figures.rs` | `ASKED` | the formulas and diagrams asked of the renderer, with their receiver | until the answers came | AppContext: `agent.figures` |
+| `crates/ide-ui-agent/src/figures.rs` | `ASKING` | whether a request is out | until the answer | AppContext: `agent.figures` |
+| `crates/ide-ui-agent/src/figures.rs` | `COLLECT` | the figures a card uses while it is built | one call of `collect` | AppContext: `agent.figures` |
+| `crates/ide-ui-agent/src/mod.rs` | `TABS` | every open AI tab | from opening to closing | AppContext: `agent.agent_tabs` |
+| `crates/ide-ui-agent/src/plan/ask.rs` | `ASK` | the question about a plan on view | while it shows | AppContext: `agent.plan.ask` |
+| `crates/ide-ui-agent/src/plan/doc.rs` | `DOCS` | the open plan documents | from opening to closing | AppContext: `agent.plan.docs` |
+| `crates/ide-ui-agent/src/plan/mod.rs` | `LAST_NOTE` | the id the last plan comment got | app | AppContext: `agent.plan.notes` |
+| `crates/ide-ui-agent/src/usage.rs` | `REPORT` | the last answer to `get_usage` with its time | until it is stale (2 min) | AppContext: `agent.usage`; the `ASKING` flag (a static `AtomicBool`) moves along |
+| `crates/ide-ui-agent/src/agent_panel/agents.rs` | `OFFERED` | the agents the "new session" menu offers, by tag | until the menu is filled again | AppContext: `agent_panels.offered_agents` |
+| `crates/ide-ui-agent/src/agent_panel/mod.rs` | `PANELS` | the agent panels of every window | from creation until replaced | AppContext: `agent_panels`; callbacks now carry an id instead of the address |
 | `src/ci_panel/log_tab.rs` | `TABS` | the CI log tabs of every window by id | from opening to closing | AppContext: `ci_log_tabs` |
 | `src/ci_panel/panel.rs` | `PANELS` | the CI panels of every window | from creation until replaced | AppContext: `ci_panels` |
 | `src/editor/blame.rs` | `AT_LINE_END` | the setting "blame at the line end" as last chosen | app | stays: cache (of the setting) |
@@ -77,10 +77,10 @@ needs a row here first, and a reason from the list above.
 | `src/editor/style.rs` | `STYLED_FONTS` | fonts by size and style | app | stays: cache |
 | `src/editor/style.rs` | `TOKEN_COLORS` | colours by token kind | app | stays: cache |
 | `src/editor/whitespace.rs` | `SHOWN` | the setting "show whitespace" as last chosen | app | stays: cache (of the setting) |
-| `src/git_panel/commands.rs` | `COMMANDS` | action target of the Git menu, without state; acts on the window in front | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no particular window) |
-| `src/git_panel/diff.rs` | `TABS` | the diff tabs of every window by id | from opening to closing | AppContext: `git.diff_tabs` |
-| `src/git_panel/panel.rs` | `PANELS` | the Git panels of every window | from creation until replaced | AppContext: `git.panels` |
-| `src/git_panel/toolbar.rs` | `SHOWN` | the toolbars' branch items with their window | while the toolbar exists | AppContext: `git.toolbar_items` |
+| `crates/ide-ui-git/src/commands.rs` | `COMMANDS` | action target of the Git menu, without state; acts on the window in front | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no particular window) |
+| `crates/ide-ui-git/src/diff.rs` | `TABS` | the diff tabs of every window by id | from opening to closing | AppContext: `git.diff_tabs` |
+| `crates/ide-ui-git/src/panel.rs` | `PANELS` | the Git panels of every window | from creation until replaced | AppContext: `git.panels` |
+| `crates/ide-ui-git/src/toolbar.rs` | `SHOWN` | the toolbars' branch items with their window | while the toolbar exists | AppContext: `git.toolbar_items` |
 | `src/lsp/actions.rs` | `CHOOSER` | the menu that offers them | while it is open | AppContext: `code_actions` |
 | `src/lsp/actions.rs` | `SHOWN` | the code actions on view | while the menu is open | AppContext: `code_actions` |
 | `src/lsp/complete.rs` | `LIST` | the completion list on view | while it shows | AppContext: `completion` |
@@ -103,19 +103,9 @@ needs a row here first, and a reason from the list above.
 | `src/preview/mod.rs` | `NEXT_KEY` | the next key for them | app | AppContext: `previews` |
 | `src/preview/mod.rs` | `OPEN` | the open Markdown previews of every window | from opening to closing | AppContext: `previews` |
 | `src/selftest.rs` | `CHECKS` | the self-test's checks | self-test run, from before the app delegate exists (`prepare`) | stays: self-test |
-| `src/selftest/a11y.rs` | `LEFT_OUT` | the controls Tab leaves out on purpose | self-test run | stays: self-test |
-| `src/selftest/a11y.rs` | `REPORTED` | the accessibility findings reported so far | self-test run | stays: self-test |
-| `src/selftest/a11y/states.rs` | `AI_TAB` | the AI tab that plays the recording | self-test run | stays: self-test |
-| `src/selftest/agent_perf.rs` | `BENCH` | the running benchmark | self-test run | stays: self-test |
-| `src/selftest/blame.rs` | `HEAD` | the commit at the scenario's start | self-test run | stays: self-test |
-| `src/selftest/browser_dev.rs` | `TLS_SERVER` | the TLS test server and its input | self-test run | stays: self-test |
-| `src/selftest/git/flows.rs` | `FETCH_STARTED` | when the fetch began | self-test run | stays: self-test |
-| `src/selftest/git/message.rs` | `STUB` | the stub provider for commit messages | self-test run | stays: self-test |
-| `src/selftest/git/sheets.rs` | `TOP_BEFORE` | the newest commit's subject before the refused ones | self-test run | stays: self-test |
-| `src/selftest/insets.rs` | `CLICKED` | how often an inset was clicked | self-test run | stays: self-test |
-| `src/selftest/markdown.rs` | `EXPORTED` | how each export ended | self-test run | stays: self-test |
-| `src/selftest/markdown.rs` | `LAST` | how the last export ended | self-test run | stays: self-test |
-| `src/selftest/markdown.rs` | `TICKS` | turns of the main thread during an export | self-test run | stays: self-test |
+| `src/selftest/a11y.rs` | `LEFT_OUT` | the controls Tab leaves out on purpose | self-test run | stays: self-test (written from every step of the scenario's walk, which chains plain function steps) |
+| `src/selftest/a11y.rs` | `REPORTED` | the accessibility findings reported so far | self-test run | stays: self-test (written from every step of the scenario's walk, which chains plain function steps) |
+| `src/selftest/git/message.rs` | `STUB` | the stub provider for commit messages | self-test run | stays: self-test (the stub server lives for the whole scenario and many plain function steps read it) |
 | `src/session.rs` | `QUITTING` | whether the app quits | from the quit on | AppContext: `session` |
 | `src/session.rs` | `WRITE_PENDING` | whether writing down the windows is scheduled | until it is written | AppContext: `session` |
 | `src/settings.rs` | `WINDOW` | the settings window with its controller | from the first opening on | AppContext: `settings.settings_window` |
@@ -134,3 +124,54 @@ needs a row here first, and a reason from the list above.
 | `src/window/search.rs` | `PANELS` | the search panels of every window | while their window is open | AppContext: `search_panels` |
 | `src/window/search/hierarchy.rs` | `NEXT_ID` | the next id for them | app | AppContext: `hierarchy_panels` |
 | `src/window/search/hierarchy.rs` | `PANELS` | the call and type hierarchy panels of every window | while their window is open | AppContext: `hierarchy_panels` |
+
+## Statics
+
+Process-wide statics whose type keeps state that changes (a mutex, a once-cell, an atomic, a lane and the like) in
+`src/` and `crates/ide-ui-*`. They bypass the app context like a thread-local, so the same rule holds: what the app
+decides on lives in `AppContext`; a static may stay only for one of these reasons:
+
+- **install-once hook**: a UI crate's `Host`, as described above.
+- **once per process**: something the app has exactly once, such as the login shell's environment or the git program,
+  which worker threads read and the main thread's context cannot hand them.
+- **worker threads**: a lane of worker threads, or what code on them shares, which an `Rc` context cannot reach.
+- **cache**: as above, only what could be made again.
+- **serial**: a counter that hands out unique numbers off the main thread and holds nothing else.
+
+Code built only for tests or the self-test (`#[cfg(test)]`, `#[cfg(feature = "selftest")]`, `src/selftest/`, a file's
+`selftest_probe.rs`) is not listed. `make lint` runs `cargo xtask rules`, which fails for a stateful static this table does not list and for a row
+whose static is gone.
+
+| File | Static | Holds | Reason |
+|---|---|---|---|
+
+| `crates/ide-ui-agent/src/host.rs` | `HOST` | the AI tab's `Host` | install-once hook |
+| `crates/ide-ui-agent/src/notify.rs` | `ASKED` | whether macOS was asked to allow notifications | once per process |
+| `crates/ide-ui-agent/src/notify.rs` | `NOTIFIED` | how many notifications were posted, which the self-test reads | serial |
+| `crates/ide-ui-agent/src/own_agent/mod.rs` | `CACHE` | the models each endpoint offered last | cache |
+| `crates/ide-ui-agent/src/own_agent/mod.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the keys are | once per process |
+| `crates/ide-ui-browser/src/host.rs` | `HOST` | the browser's `Host` | install-once hook |
+| `crates/ide-ui-browser/src/web.rs` | `NAME` | Safari's part of the user agent | cache |
+| `crates/ide-ui-common/src/window.rs` | `HOST` | the `WindowHost` the feature crates reach windows through | install-once hook |
+| `crates/ide-ui-debug/src/host.rs` | `HOST` | the debugger's `Host` | install-once hook |
+| `crates/ide-ui-dictation/src/hub.rs` | `HOST` | the dictation's `Host` | install-once hook |
+| `crates/ide-ui-export/src/lib.rs` | `HOST` | the export's `Host` | install-once hook |
+| `crates/ide-ui-git/src/host.rs` | `HOST` | the Git panel's `Host` | install-once hook |
+| `crates/ide-ui-git/src/message/claude.rs` | `NEXT` | the number of the next empty folder `claude` runs in | serial |
+| `crates/ide-ui-git/src/work.rs` | `GIT` | the git program and its environment | once per process |
+| `crates/ide-ui-git/src/work.rs` | `LOCAL` | the thread of local git work | worker threads |
+| `crates/ide-ui-git/src/worktrees/read.rs` | `CACHE` | worktree readings and how often each was marked changed, shared with the Git panel's thread | cache |
+| `crates/ide-ui-terminal/src/host.rs` | `HOST` | the terminal's `Host` | install-once hook |
+| `crates/ide-ui-terminal/src/host.rs` | `NEXT_ID` | the next terminal view id | serial |
+| `crates/ide-ui-terminal/src/host.rs` | `OPTION_AS_META` | the setting ⌥ as Meta as last chosen | cache (of the setting) |
+| `crates/ide-ui-terminal/src/render.rs` | `MADE` | the next id of a set of terminal fonts | serial |
+| `src/activity/mod.rs` | `WATCH` | whether the supervisor is watched already | once per process |
+| `src/ci_panel/login.rs` | `CALLBACK_PORT` | the login's local callback port while one listens on it | worker threads |
+| `src/ci_panel/work.rs` | `AUTH` | the CI tokens' source | once per process |
+| `src/ci_panel/work.rs` | `LANE` | the CI panel's worker threads | worker threads |
+| `src/ci_panel/work.rs` | `NETWORK` | the CI panel's HTTP transport | once per process |
+| `src/ci_panel/work.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the tokens are | once per process |
+| `src/editor/recovery.rs` | `COPIES` | the thread that writes copies of unsaved text | worker threads |
+| `src/environment.rs` | `ENVIRONMENT` | the login shell's environment | once per process |
+| `src/environment.rs` | `READY` | whether that environment is read, for threads that wait for it | once per process |
+| `src/lsp/mod.rs` | `REGISTRY` | the language server registry, built once the environment is known | once per process |

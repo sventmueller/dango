@@ -208,3 +208,32 @@ fn show_error(mtm: MainThreadMarker, message: &str, detail: &str) {
     alert.setInformativeText(&ns(detail));
     alert.runModal();
 }
+
+#[cfg(test)]
+mod tests {
+    use ide_core::testing::Scratch;
+
+    use super::*;
+
+    #[test]
+    fn a_new_file_or_folder_is_made_and_then_known_as_such() {
+        let scratch = Scratch::new("files-create");
+        let file = scratch.path().join("a.txt");
+        let folder = scratch.path().join("sub");
+        assert_eq!(kind_of(&file), None);
+        create(&file, false).unwrap();
+        create(&folder, true).unwrap();
+        assert_eq!(kind_of(&file), Some(Kind::File));
+        assert_eq!(kind_of(&folder), Some(Kind::Folder));
+    }
+
+    #[test]
+    fn creating_never_overwrites_what_is_there() {
+        let scratch = Scratch::new("files-exists");
+        let file = scratch.path().join("a.txt");
+        std::fs::write(&file, "kept").unwrap();
+        assert!(create(&file, false).is_err());
+        assert!(create(scratch.path(), true).is_err());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "kept");
+    }
+}

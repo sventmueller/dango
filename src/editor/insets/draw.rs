@@ -296,7 +296,7 @@ fn draw_box(rect: NSRect, inset: &Inset, attributes: &NSDictionary<NSString, Any
     // SAFETY: The attributes hold a font and a colour, as the method expects.
     let size = unsafe { text.sizeWithAttributes(Some(attributes)) };
     let at = NSPoint::new(left + MARGIN, top + (height - size.height) / 2.0);
-    // SAFETY: As above.
+    // SAFETY: These attributes too hold only a font and a colour under AppKit's keys.
     unsafe { text.drawAtPoint_withAttributes(at, Some(attributes)) };
 }
 

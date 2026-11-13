@@ -6,13 +6,12 @@
 //! trusted folder (E22). A new query cancels what the previous one still waits for.
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::Arc;
 use std::time::Instant;
 
-use ide_lsp::{CustomServer, Language, ProjectSymbol, Server, Status, Ticket, uri};
+use ide_lsp::{Language, ProjectSymbol, Server, Status, Ticket, uri};
 
 use super::lease::IDLE_STOP;
 use super::{State, custom_servers, end_later, slot, slot_at, workspace, workspace_or_new};
@@ -130,12 +129,14 @@ pub fn search_symbols(folder: &Path, query: &str, answer: impl Fn(SymbolAnswer) 
 fn start_survey(folder: &Path) {
     let custom = custom_servers();
     let folder = folder.to_path_buf();
-    let _ = std::thread::Builder::new()
-        .name("lsp-symbol-survey".into())
-        .spawn(move || {
-            let plan = survey(&folder, &custom);
-            main_soon(move || surveyed(&folder, plan));
-        });
+    let failed = folder.clone();
+    if let Err(why) = crate::util::spawn("lsp-symbol-survey", move || {
+        let plan = ide_lsp::symbol_search::survey(&folder, &custom);
+        main_soon(move || surveyed(&folder, plan));
+    }) {
+        crate::diag::report("surveying a folder for symbol search", why);
+        surveyed(&failed, Vec::new());
+    }
 }
 
 fn surveyed(folder: &Path, plan: Vec<(Language, PathBuf)>) {
@@ -147,36 +148,6 @@ fn surveyed(folder: &Path, plan: Vec<(Language, PathBuf)>) {
     renew(folder, Instant::now());
     pump(folder);
     ask(folder);
-}
-
-/// The servers a symbol search needs in `folder`: one per language that has files there that ignore rules do not hide
-/// and whose servers search symbols, and per project root of those files.
-fn survey(folder: &Path, custom: &[Arc<CustomServer>]) -> Vec<(Language, PathBuf)> {
-    let Ok(index) = ide_project::FileIndex::build(folder, &ide_project::Cancel::new()) else {
-        return vec![];
-    };
-    let mut directories: HashSet<(Language, PathBuf)> = HashSet::new();
-    for file in index.files() {
-        let path = folder.join(file);
-        let Some((language, _)) = Language::detect(&path, custom) else {
-            continue;
-        };
-        if language.searches_project() {
-            let directory = path.parent().unwrap_or(folder).to_path_buf();
-            directories.insert((language, directory));
-        }
-    }
-    let mut plan: Vec<(Language, PathBuf)> = directories
-        .into_iter()
-        .map(|(language, directory)| {
-            let root = ide_lsp::root(&language, &directory, folder);
-            (language, root)
-        })
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect();
-    plan.sort_by(|a, b| (a.0.name(), &a.1).cmp(&(b.0.name(), &b.1)));
-    plan
 }
 
 /// Renews the lease of every slot the search of `folder` holds and queues the planned servers that do not run.
@@ -346,7 +317,12 @@ fn deliver(folder: &Path) {
         let lease = leases.get(folder)?;
         let mut symbols = lease.found.clone();
         let query = lease.query.to_lowercase();
-        symbols.sort_by_cached_key(|found| (rank(&found.symbol.name, &lease.query, &query), found.symbol.name.len()));
+        symbols.sort_by_cached_key(|found| {
+            (
+                ide_lsp::symbol_search::rank(&found.symbol.name, &lease.query, &query),
+                found.symbol.name.len(),
+            )
+        });
         symbols.truncate(LIMIT);
         let waiting = lease.waiting > 0 && symbols.is_empty();
         let answer = SymbolAnswer {
@@ -358,23 +334,6 @@ fn deliver(folder: &Path) {
     });
     if let Some((listener, answer)) = delivered {
         listener(answer);
-    }
-}
-
-/// How well `name` matches `query`: the exact name first, then without case, then names that start with it, then
-/// those that contain it, then whatever else the server found.
-fn rank(name: &str, query: &str, lowered: &str) -> u8 {
-    let name_lowered = name.to_lowercase();
-    if name == query {
-        0
-    } else if name_lowered == lowered {
-        1
-    } else if name_lowered.starts_with(lowered) {
-        2
-    } else if name_lowered.contains(lowered) {
-        3
-    } else {
-        4
     }
 }
 
@@ -426,48 +385,4 @@ pub fn held(folder: &Path) -> Vec<(String, bool, usize)> {
             )
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn write(root: &Path, relative: &str, text: &str) {
-        let path = root.join(relative);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, text).unwrap();
-    }
-
-    #[test]
-    fn a_folder_with_three_languages_gets_a_server_per_language_and_root() {
-        let folder = std::env::temp_dir().join(format!("ide-symbol-survey-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&folder);
-        write(&folder, "Cargo.toml", "[package]\nname = \"a\"\n");
-        write(&folder, "src/main.rs", "fn main() {}\n");
-        write(&folder, "src/deep/more.rs", "fn more() {}\n");
-        write(&folder, "go/go.mod", "module example.com/go\n");
-        write(&folder, "go/cmd/main.go", "package main\n");
-        write(&folder, "web/package.json", "{}\n");
-        write(&folder, "web/src/index.ts", "export {};\n");
-        write(&folder, ".gitignore", "build/\n");
-        write(&folder, "build/generated.py", "x = 1\n");
-        let plan = survey(&folder, &[]);
-        let _ = std::fs::remove_dir_all(&folder);
-        assert_eq!(
-            plan,
-            vec![
-                (Language::Go, folder.join("go")),
-                (Language::Rust, folder.clone()),
-                (Language::TypeScript, folder.join("web")),
-            ],
-            "no Python from the ignored folder, no servers for TOML and JSON"
-        );
-    }
-
-    #[test]
-    fn exact_names_come_before_prefixes_and_other_matches() {
-        let mut names = vec!["parse_all", "Parse", "reparse", "parse", "other"];
-        names.sort_by_key(|n| (rank(n, "parse", "parse"), n.len()));
-        assert_eq!(names, ["parse", "Parse", "parse_all", "reparse", "other"]);
-    }
 }

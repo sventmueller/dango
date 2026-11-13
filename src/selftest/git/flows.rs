@@ -3,7 +3,6 @@
 //! on, a conflicting rebase abandoned, and a hanging fetch cancelled. The remote's branch moves through commits made
 //! in the remote repository itself.
 
-use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -21,10 +20,6 @@ use crate::window::WindowController;
 const BRANCH: &str = "feature/selftest";
 /// The most a cancelled fetch may take to end.
 const CANCEL_LIMIT: Duration = Duration::from_secs(10);
-
-thread_local! {
-    static FETCH_STARTED: Cell<Option<Instant>> = const { Cell::new(None) };
-}
 
 pub fn start(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
@@ -315,7 +310,7 @@ fn resolved(root: PathBuf, ok: bool) {
     let width = controller.inspect().sidebar_width;
     check(
         "the banner's text wraps instead of widening the sidebar",
-        (width - 304.0).abs() < 2.0,
+        (width - crate::selftest::DEFAULT_SIDEBAR).abs() < 2.0,
         format!("{width} pt"),
     );
     if let Some(window) = controller.window() {
@@ -424,24 +419,32 @@ fn fetch_hanging(root: PathBuf) {
         return finish(SCENARIO);
     };
     panel::click(&controller, Control::Fetch);
-    FETCH_STARTED.with(|started| started.set(Some(Instant::now())));
-    wait_for(root, |c| seen(c).is_some_and(|s| s.busy), fetching);
+    let started = Instant::now();
+    wait_for(
+        root,
+        |c| seen(c).is_some_and(|s| s.busy),
+        move |root, ok| fetching(root, ok, started),
+    );
 }
 
-fn fetching(root: PathBuf, ok: bool) {
+fn fetching(root: PathBuf, ok: bool, started: Instant) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
     };
     check("a fetch runs until it is cancelled", ok, "");
     panel::click(&controller, Control::Cancel);
-    wait_for(root, |c| seen(c).is_some_and(|s| !s.busy), cancelled);
+    wait_for(
+        root,
+        |c| seen(c).is_some_and(|s| !s.busy),
+        move |root, ok| cancelled(root, ok, started),
+    );
 }
 
-fn cancelled(root: PathBuf, ok: bool) {
+fn cancelled(root: PathBuf, ok: bool, started: Instant) {
     let Some(controller) = window_of(&root) else {
         return finish(SCENARIO);
     };
-    let took = FETCH_STARTED.with(Cell::get).map(|started| started.elapsed());
+    let took = Some(started.elapsed());
     let problem = seen(&controller).and_then(|s| s.problem);
     check(
         "cancelling stops the fetch quietly",

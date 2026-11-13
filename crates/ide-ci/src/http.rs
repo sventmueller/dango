@@ -1,5 +1,6 @@
 //! Calls to a service's API: the transport, status codes as typed errors, rate limits and paging.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -70,23 +71,18 @@ pub trait Transport: Send + Sync {
 /// The network over HTTPS checked against the system's certificates. Redirects keep no `Authorization` header, so a
 /// log's download from blob storage gets no token.
 pub struct Network {
-    agent: ureq::Agent,
+    agent: ide_net::ureq::Agent,
 }
 
 impl Network {
     /// A client with time limits for connecting and reading.
     pub fn new() -> Network {
-        let tls = ureq::tls::TlsConfig::builder()
-            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
-        let agent = ureq::Agent::config_builder()
-            .tls_config(tls)
-            .http_status_as_error(false)
-            .user_agent(format!("{} (CI)", ide_product::NAME))
-            .timeout_connect(Some(Duration::from_secs(20)))
-            .timeout_per_read(Some(Duration::from_secs(60)))
-            .build()
-            .new_agent();
+        let agent = ide_net::client(ide_net::Client {
+            purpose: "CI",
+            connect: Duration::from_secs(20),
+            read: Duration::from_secs(60),
+            status_as_error: false,
+        });
         Network { agent }
     }
 }
@@ -162,24 +158,21 @@ impl Recorded {
         };
         self.answers
             .get_mut()
-            .unwrap_or_else(|e| e.into_inner())
+            .ignoring_poison()
             .push((method, url.to_string(), response));
         self
     }
 
     /// The requests so far.
     pub fn asked(&self) -> Vec<Request> {
-        self.asked.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.asked.lock_ignoring_poison().clone()
     }
 }
 
 impl Transport for Recorded {
     fn send(&self, request: &Request) -> Result<Response> {
-        self.asked
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .push(request.clone());
-        let mut answers = self.answers.lock().unwrap_or_else(|e| e.into_inner());
+        self.asked.lock_ignoring_poison().push(request.clone());
+        let mut answers = self.answers.lock_ignoring_poison();
         let fits = |(m, url, _): &(Method, String, Response)| *m == request.method && *url == request.url;
         let first = answers
             .iter()

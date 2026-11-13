@@ -4,10 +4,10 @@
 use std::fmt;
 use std::path::Path;
 
-use ide_lsp::Cancel;
+use ide_net::Cancel;
 use serde_json::json;
 
-use crate::adapter::AdapterKind;
+use crate::adapter::{Adapter, AdapterKind};
 use crate::current::{self, CurrentError};
 use crate::discover::{Adapters, Missing};
 use crate::launch::LaunchConfig;
@@ -41,7 +41,15 @@ impl fmt::Display for StartError {
     }
 }
 
-impl std::error::Error for StartError {}
+impl std::error::Error for StartError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            StartError::Build(error) => Some(error),
+            StartError::Io(error) => Some(error),
+            StartError::Untrusted | StartError::NeedsProcess | StartError::Missing(_) => None,
+        }
+    }
+}
 
 /// Starts a session for `config` in the project at `root`, only when the folder is `trusted`: builds what the
 /// configuration asks Cargo for, finds the adapter and starts it through the supervisor with the login shell's
@@ -51,12 +59,26 @@ pub fn start(
     adapters: &Adapters,
     root: &Path,
     trusted: bool,
-    mut config: LaunchConfig,
+    config: LaunchConfig,
     setup: Setup,
     cancel: &Cancel,
     line: &mut dyn FnMut(&str),
     events: impl Fn(SessionId, Event) + Send + Sync + 'static,
 ) -> Result<Session, StartError> {
+    let (adapter, config) = prepare(adapters, root, trusted, config, cancel, line)?;
+    Session::start(adapters.supervisor(), adapter, config, setup, events).map_err(StartError::Io)
+}
+
+/// What `start` does before it asks the adapter: builds the program a configuration names through Cargo, finds the
+/// adapter and completes the configuration. Blocks while it builds, so call it off the main thread.
+pub fn prepare(
+    adapters: &Adapters,
+    root: &Path,
+    trusted: bool,
+    mut config: LaunchConfig,
+    cancel: &Cancel,
+    line: &mut dyn FnMut(&str),
+) -> Result<(Adapter, LaunchConfig), StartError> {
     if !trusted {
         return Err(StartError::Untrusted);
     }
@@ -68,7 +90,7 @@ pub fn start(
     }
     let adapter = adapters.find(config.kind, root).map_err(StartError::Missing)?;
     fill_in(adapters, root, &mut config);
-    Session::start(adapters.supervisor(), adapter, config, setup, events).map_err(StartError::Io)
+    Ok((adapter, config))
 }
 
 /// The settings each adapter needs and a configuration may leave out.
@@ -90,6 +112,7 @@ fn fill_in(adapters: &Adapters, root: &Path, config: &mut LaunchConfig) {
             arguments.entry("cwd").or_insert(json!(root));
             arguments.entry("console").or_insert(json!("internalConsole"));
         }
+        #[cfg(any(test, feature = "testing"))]
         AdapterKind::Fake => {}
     }
 }
@@ -119,7 +142,7 @@ fn keep_paths(arguments: &mut serde_json::Map<String, serde_json::Value>) {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use ide_lsp::Cancel;
+    use ide_net::Cancel;
     use ide_process::Supervisor;
     use serde_json::{Map, json};
 
@@ -202,7 +225,7 @@ mod tests {
     fn each_adapter_gets_the_settings_a_configuration_may_leave_out() {
         let root = folder("fill");
         script(&root.join(".venv/bin/python"), "exit 0\n");
-        let adapters = Adapters::with_tools(&Supervisor::new(), env(&root.join("bin"), &[]), root.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), env(&root.join("bin"), &[]), root.to_path_buf());
         let filled = |kind, request, arguments| {
             let mut config = config(kind, request, arguments);
             fill_in(&adapters, &root, &mut config);
@@ -214,11 +237,11 @@ mod tests {
                 Request::Launch,
                 json!({"console": "integratedTerminal"})
             ),
-            json!({"python": root.join(".venv/bin/python"), "cwd": root, "console": "integratedTerminal"})
+            json!({"python": root.join(".venv/bin/python"), "cwd": root.path(), "console": "integratedTerminal"})
         );
         assert_eq!(
             filled(AdapterKind::Lldb, Request::Launch, json!({})),
-            json!({"cwd": root})
+            json!({"cwd": root.path()})
         );
         assert_eq!(
             filled(AdapterKind::JsDebug, Request::Launch, json!({"cwd": "/w"})),
@@ -230,7 +253,7 @@ mod tests {
         );
         assert_eq!(
             filled(AdapterKind::Go, Request::Launch, json!({})),
-            json!({"cwd": root, "buildFlags": "-trimpath=false"})
+            json!({"cwd": root.path(), "buildFlags": "-trimpath=false"})
         );
         assert_eq!(
             filled(AdapterKind::Go, Request::Attach, json!({"processId": 7})),

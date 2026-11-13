@@ -6,16 +6,14 @@
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{MainThreadMarker, MainThreadOnly, Message, sel};
+use objc2::{MainThreadOnly, Message, sel};
 use objc2_app_kit::{NSAccessibility, NSApplication, NSButton, NSToolbarItem, NSView};
 
 use super::agent::tab_of;
 use super::{check, finish, helpers};
-use crate::util::main_after;
 use crate::window::WindowController;
 
 const NAME: &str = "activity-actions";
@@ -31,16 +29,8 @@ const CHILD: &str = "child:";
 static SHELL: AtomicU32 = AtomicU32::new(0);
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("activity-project");
-    std::fs::create_dir_all(&root).expect("scratch project");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&root) else {
-            check("the project's window opens", false, "");
-            return finish(NAME);
-        };
+    helpers::open_project(NAME, "activity-project", &[], move |controller| {
+        let root = helpers::root("activity-project");
         let Some(tab) = crate::agent::open_replay(&controller) else {
             check("an AI tab opens", false, "");
             return finish(NAME);
@@ -151,7 +141,11 @@ fn popover(root: PathBuf, key: u64, terminal: Option<isize>) {
         controller.selected_tab() == Some(ai),
         format!("{:?}, AI tab {ai}", controller.selected_tab()),
     );
-    main_after(Duration::from_millis(500), move || stop(root, shell));
+    let (probe, wanted) = (root.clone(), format!("{}: {shell}", splat_i18n::t("Stopp")));
+    helpers::wait_until(
+        move || helpers::window_of(&probe).is_some_and(|c| buttons(&c).iter().any(|(label, _)| *label == wanted)),
+        move |_| stop(root, shell),
+    );
 }
 
 fn stop(root: PathBuf, shell: String) {
@@ -174,8 +168,9 @@ fn stop(root: PathBuf, shell: String) {
                 return finish(NAME);
             };
             click_activity_item(&controller);
-            main_after(Duration::from_millis(600), move || {
-                let closed = helpers::window_of(&root).is_some_and(|c| !popover_shown(&c));
+            let probe = root.clone();
+            let closing = move || helpers::window_of(&probe).is_some_and(|c| !popover_shown(&c));
+            helpers::wait_until(closing, move |closed| {
                 check("the activity item closes its open popover", closed, "");
                 second_terminal(root);
             });

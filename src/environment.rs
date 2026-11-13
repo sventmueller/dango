@@ -1,5 +1,6 @@
 //! The environment processes get: the user's login shell's, read once in the background at launch.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::sync::{Condvar, Mutex, OnceLock};
 use std::time::Duration;
 
@@ -24,7 +25,7 @@ static READY: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
 
 /// Reads the login shell's environment on a thread of its own.
 pub fn start() {
-    let _ = std::thread::Builder::new().name("login-env".into()).spawn(|| {
+    let started = crate::util::spawn("login-env", || {
         let home = ide_core::paths::home();
         let environment =
             match shell_env::capture(Supervisor::global(), &shell_env::user_shell(), &home, CAPTURE_TIMEOUT) {
@@ -34,11 +35,19 @@ pub fn start() {
                     fallback()
                 }
             };
-        let _ = ENVIRONMENT.set(environment);
-        let (lock, ready) = &READY;
-        *lock.lock().unwrap_or_else(|e| e.into_inner()) = true;
-        ready.notify_all();
+        publish(environment);
     });
+    if let Err(why) = started {
+        crate::diag::report("login shell environment", why);
+        publish(fallback());
+    }
+}
+
+fn publish(environment: Vec<(String, String)>) {
+    let _ = ENVIRONMENT.set(environment);
+    let (lock, ready) = &READY;
+    *lock.lock_ignoring_poison() = true;
+    ready.notify_all();
 }
 
 /// The environment, once it is known.
@@ -49,10 +58,10 @@ pub fn get() -> Option<&'static [(String, String)]> {
 /// The environment, waiting up to `timeout` for it.
 pub fn wait(timeout: Duration) -> Option<&'static [(String, String)]> {
     let (lock, ready) = &READY;
-    let guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+    let guard = lock.lock_ignoring_poison();
     let _ = ready
         .wait_timeout_while(guard, timeout, |done| !*done)
-        .unwrap_or_else(|e| e.into_inner());
+        .ignoring_poison();
     get()
 }
 

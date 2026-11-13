@@ -1,6 +1,7 @@
 //! The files of a project for quick open: found by a parallel walk that honours the ignore files, patched from the
 //! watcher, matched fuzzily on several threads.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::cmp::Reverse;
 use std::collections::{BTreeSet, BinaryHeap, HashSet};
 use std::fs;
@@ -8,7 +9,7 @@ use std::io;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError, RwLock};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkState};
@@ -366,7 +367,7 @@ fn walk_parallel(root: &Path, cancel: &Cancel) -> io::Result<Vec<Arc<str>>> {
     if cancel.is_cancelled() {
         return Err(io::ErrorKind::Interrupted.into());
     }
-    let mut files = found.into_inner().unwrap_or_else(PoisonError::into_inner).concat();
+    let mut files = found.into_inner().ignoring_poison().concat();
     files.sort_unstable();
     Ok(files)
 }
@@ -409,7 +410,7 @@ impl ParallelVisitor for Visitor<'_> {
 impl Drop for Visitor<'_> {
     fn drop(&mut self) {
         let mine = std::mem::take(&mut self.mine);
-        self.found.lock().unwrap_or_else(PoisonError::into_inner).push(mine);
+        self.found.lock_ignoring_poison().push(mine);
     }
 }
 
@@ -489,7 +490,7 @@ impl QuickOpen {
 
     /// Passes a report of the watcher on to the index.
     pub fn changed(&self, event: &WatchEvent) {
-        let mut pending = lock(&self.shared.pending);
+        let mut pending = self.shared.pending.lock_ignoring_poison();
         match event {
             WatchEvent::Changed(changes) if !changes.rules_changed => {
                 pending.changes.dirs.extend(changes.dirs.iter().cloned());
@@ -507,7 +508,7 @@ impl QuickOpen {
     /// Answers `query` with up to `limit` hits on the query thread, once the first walk is done. A query that a newer
     /// one replaces before it is answered gets no answer.
     pub fn query(&self, query: &str, limit: usize, answer: impl FnOnce(Vec<Hit>) + Send + 'static) {
-        let mut asked = lock(&self.shared.asked);
+        let mut asked = self.shared.asked.lock_ignoring_poison();
         if let Some(earlier) = asked.take() {
             earlier.cancel.cancel();
         }
@@ -525,11 +526,11 @@ impl QuickOpen {
 impl Drop for QuickOpen {
     fn drop(&mut self) {
         self.shared.closed.cancel();
-        if let Some(asked) = lock(&self.shared.asked).take() {
+        if let Some(asked) = self.shared.asked.lock_ignoring_poison().take() {
             asked.cancel.cancel();
         }
         self.shared.queries.notify_all();
-        drop(lock(&self.shared.pending));
+        drop(self.shared.pending.lock_ignoring_poison());
         self.shared.work.notify_all();
     }
 }
@@ -537,14 +538,14 @@ impl Drop for QuickOpen {
 impl Shared {
     fn keep_index(&self, on_indexed: &dyn Fn(Indexed)) {
         while let Some(work) = self.next_work() {
-            let plan = match read(&self.index).as_ref() {
+            let plan = match self.index.read().ignoring_poison().as_ref() {
                 Some(index) if !work.rescan => index.plan(&WatchEvent::Changed(work.changes), &self.closed),
                 _ => Ok(Plan::Rebuild),
             };
             match plan {
                 Ok(Plan::Rebuild) => self.rebuild(on_indexed),
                 Ok(Plan::Edit(edit)) => {
-                    if let Some(index) = write(&self.index).as_mut() {
+                    if let Some(index) = self.index.write().ignoring_poison().as_mut() {
                         index.commit(edit);
                     }
                 }
@@ -555,9 +556,9 @@ impl Shared {
 
     /// Waits for changes to apply; `None` once quick open is dropped.
     fn next_work(&self) -> Option<Pending> {
-        let mut pending = lock(&self.pending);
+        let mut pending = self.pending.lock_ignoring_poison();
         while !pending.rescan && pending.changes == Changes::default() && !self.closed.is_cancelled() {
-            pending = self.work.wait(pending).unwrap_or_else(PoisonError::into_inner);
+            pending = self.work.wait(pending).ignoring_poison();
         }
         (!self.closed.is_cancelled()).then(|| std::mem::take(&mut *pending))
     }
@@ -571,19 +572,19 @@ impl Shared {
             files: index.len(),
             took: started.elapsed(),
         };
-        *write(&self.index) = Some(index);
+        *self.index.write().ignoring_poison() = Some(index);
         self.ready.store(true, Ordering::Release);
         // Taking the lock first means the query thread is either before its check or waiting.
-        drop(lock(&self.asked));
+        drop(self.asked.lock_ignoring_poison());
         self.queries.notify_all();
         ide_core::lane::contained(|| on_indexed(indexed));
     }
 
     fn answer_queries(&self) {
         loop {
-            let mut asked = lock(&self.asked);
+            let mut asked = self.asked.lock_ignoring_poison();
             while (asked.is_none() || !self.ready.load(Ordering::Acquire)) && !self.closed.is_cancelled() {
-                asked = self.queries.wait(asked).unwrap_or_else(PoisonError::into_inner);
+                asked = self.queries.wait(asked).ignoring_poison();
             }
             if self.closed.is_cancelled() {
                 return;
@@ -598,7 +599,7 @@ impl Shared {
                 continue;
             };
             drop(asked);
-            let hits = match read(&self.index).as_ref() {
+            let hits = match self.index.read().ignoring_poison().as_ref() {
                 Some(index) => index.query(&query, limit, &cancel),
                 None => continue,
             };
@@ -609,18 +610,6 @@ impl Shared {
     }
 }
 
-fn read<T>(lock: &RwLock<T>) -> std::sync::RwLockReadGuard<'_, T> {
-    lock.read().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn write<T>(lock: &RwLock<T>) -> std::sync::RwLockWriteGuard<'_, T> {
-    lock.write().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::mpsc::channel;
@@ -629,7 +618,7 @@ mod tests {
     use crate::testing::{compute_factor, one, scratch, walk_factor, write};
 
     /// `dirs` folders of `per_dir` files each, plus as many again below an ignored folder.
-    fn generate(name: &str, dirs: usize, per_dir: usize) -> PathBuf {
+    fn generate(name: &str, dirs: usize, per_dir: usize) -> ide_core::testing::Scratch {
         let root = scratch(name);
         write(&root, ".gitignore", "build/\n");
         for d in 0..dirs {

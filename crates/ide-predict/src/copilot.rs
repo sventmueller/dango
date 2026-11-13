@@ -9,13 +9,14 @@ mod account;
 pub(crate) mod answer;
 mod position;
 
+use ide_core::LockIgnoringPoison;
 use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Sender, channel};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ide_lsp::lsp_types::{ShowDocumentResult, Uri};
@@ -79,12 +80,12 @@ struct Shared {
 
 impl Shared {
     fn account(&self) -> Account {
-        lock(&self.account).clone()
+        self.account.lock_ignoring_poison().clone()
     }
 
     fn set(&self, account: Account) {
         let changed = {
-            let mut current = lock(&self.account);
+            let mut current = self.account.lock_ignoring_poison();
             let changed = *current != account;
             *current = account.clone();
             changed
@@ -124,10 +125,6 @@ impl Shared {
             .stderr(Stdio::null());
         self.supervisor.spawn(command, Kind::Tool, "open").is_ok()
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Copilot for one project root, which must be trusted (E22); dropping it stops the server.
@@ -179,12 +176,15 @@ impl Copilot {
             .name("copilot-predict".into())
             .spawn(move || queue.into_iter().for_each(|job| job()))?;
         let starting = (server.clone(), shared.clone());
-        let _ = std::thread::Builder::new().name("copilot-start".into()).spawn(move || {
+        let started = ide_core::thread::detach("copilot-start", move || {
             let (server, shared) = starting;
             if server.wait_until_running(Duration::from_secs(60)) {
                 check(&server, &shared);
             }
         });
+        if let Err(unstarted) = started {
+            ide_core::diag::report("thread copilot-start", &unstarted.error);
+        }
         let core = Arc::new(Core {
             server,
             shared,
@@ -234,24 +234,27 @@ impl Core {
             let outcome = outcome.map(|(sign_in, command)| {
                 match &sign_in {
                     SignIn::Already { user } => shared.set(Account::SignedIn { user: user.clone() }),
-                    SignIn::Device(_) => *lock(&shared.finish) = command,
+                    SignIn::Device(_) => *shared.finish.lock_ignoring_poison() = command,
                 }
                 sign_in
             });
-            if let Some(reply) = lock(&answer).take() {
+            if let Some(reply) = answer.lock_ignoring_poison().take() {
                 reply(outcome);
             }
         });
         if let Err(error) = sent {
             let error = error_of(error, self.is_down());
-            if let Some(reply) = lock(&reply).take() {
+            if let Some(reply) = reply.lock_ignoring_poison().take() {
                 on_own_thread(move || reply(Err(error)));
             }
         }
     }
 
     fn finish_sign_in(&self, cancel: Cancel) {
-        let command = lock(&self.shared.finish)
+        let command = self
+            .shared
+            .finish
+            .lock_ignoring_poison()
             .take()
             .unwrap_or_else(|| json!({"command": FINISH_DEVICE_FLOW}));
         let params = json!({
@@ -270,9 +273,9 @@ impl Core {
             });
         let server = self.server.clone();
         let shared = self.shared.clone();
-        let _ = std::thread::Builder::new()
-            .name("copilot-sign-in".into())
-            .spawn(move || poll(&server, &shared, &cancel));
+        if let Err(unstarted) = ide_core::thread::detach("copilot-sign-in", move || poll(&server, &shared, &cancel)) {
+            ide_core::diag::report("thread copilot-sign-in", &unstarted.error);
+        }
     }
 
     fn sign_out(&self) {
@@ -294,7 +297,7 @@ impl Core {
     /// Tells the server the request's text, opening or changing the document, and returns its version.
     fn sync(&self, request: &Request, uri: &Uri) -> i32 {
         let version = i32::try_from(request.revision).unwrap_or(i32::MAX);
-        let mut documents = lock(&self.documents);
+        let mut documents = self.documents.lock_ignoring_poison();
         let known = documents
             .iter()
             .position(|(u, _)| u == uri)
@@ -393,8 +396,7 @@ mod tests {
 
     #[test]
     fn the_installed_server_comes_before_one_on_the_path_and_only_programs_count() {
-        let dir = std::env::temp_dir().join(format!("ide-predict-find-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let dir = ide_core::testing::scratch("predict-find");
         let (tools, plain, bin) = (dir.join("tools"), dir.join("plain"), dir.join("bin"));
         program(&plain.join(PROGRAM), 0o644);
         program(&bin.join(PROGRAM), 0o755);
@@ -407,7 +409,6 @@ mod tests {
         assert_eq!(find(&tools, &[]), None);
         program(&tools.join("node_modules/.bin").join(PROGRAM), 0o755);
         assert_eq!(find(&tools, &path), Some(tools.join("node_modules/.bin").join(PROGRAM)));
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

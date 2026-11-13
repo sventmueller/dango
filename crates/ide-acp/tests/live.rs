@@ -6,14 +6,15 @@
 //! `cargo test -p ide-acp --test live -- --ignored --exact <name> --nocapture`. A test that finds no program, runtime
 //! or sign-in prints `integration skip: <why>` and passes, which the runner reports as skipped.
 
+use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ide_acp::launch::Origin;
-use ide_acp::net::Http;
 use ide_acp::register::PRESETS;
 use ide_acp::{Event, Installer, Installs, Launch, Plan, Preset, Session, SessionError};
+use ide_net::Http;
 use ide_process::Supervisor;
 use ide_process::shell_env::{capture, user_shell};
 use ide_thread::{EntryKind, Lane, Status, Thread, ThreadId, UserMessage};
@@ -66,13 +67,6 @@ fn codex_as_pinned_answers_a_tiny_prompt() {
 
 fn skip(why: &str) {
     eprintln!("integration skip: {why}");
-}
-
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-acp-live-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir.canonicalize().unwrap()
 }
 
 fn answers(id: &str, from: From) {
@@ -135,7 +129,7 @@ fn launch(
 ) -> Option<Launch> {
     match from {
         From::Path => {
-            let none = Installs::new(scratch(&format!("{}-none", preset.id)));
+            let none = Installs::new(scratch(&format!("{}-none", preset.id)).keep());
             let launch = Launch::of_preset(preset, &none, env, project).filter(|l| l.origin == Origin::OnPath);
             if launch.is_none() {
                 let command = preset.on_path.map_or(preset.id, |(name, _)| name);
@@ -144,8 +138,13 @@ fn launch(
             launch
         }
         From::Pinned => {
-            let installs = Installs::new(scratch(&format!("{}-agents", preset.id)));
-            let installer = Installer::new(supervisor, env.to_vec(), installs.clone(), Arc::new(Http::new()));
+            let installs = Installs::new(scratch(&format!("{}-agents", preset.id)).keep());
+            let installer = Installer::new(
+                supervisor,
+                env.to_vec(),
+                installs.clone(),
+                Arc::new(Http::new("agent register")),
+            );
             let plan = Plan::of_preset(preset);
             if let Some(problem) = installer.missing(&plan) {
                 skip(&format!("{} {}: {problem}", preset.name, plan.version));

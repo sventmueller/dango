@@ -3,7 +3,7 @@
 //! nothing, and the registry is a fixture.
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_thread::{EntryKind, Lane, Notice, Status, ToolOutput, ToolStatus};
 use objc2::MainThreadMarker;
@@ -12,11 +12,12 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSAppearanceNameAqua, NSAppearance
 use splat_i18n::t;
 
 use super::agent::{appearance, controller_of, picture, tab_of, view_picture};
-use super::{check, finish};
-use crate::util::{constant, main_after};
+use super::{check, finish, helpers};
+use crate::util::constant;
 use crate::window::Panel;
 
 const NAME: &str = "acp";
+const PROJECT: &str = "acp-project";
 const REGISTRY: &str = include_str!("../../crates/ide-acp/tests/fixtures/registry.json");
 
 /// The places of the agents in the "+" menu.
@@ -39,46 +40,33 @@ fn test_launch(scenario: &str, root: &PathBuf) -> Option<ide_acp::Launch> {
     ))
 }
 
-/// Calls `then` once `ready` holds, checking every 100 ms; after `limit` it fails `what` and ends the scenario.
-fn wait(
-    what: &'static str,
-    started: Instant,
-    limit: Duration,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    if ready() {
-        return then();
-    }
-    if started.elapsed() > limit {
-        check(what, false, "waited in vain");
-        return finish(NAME);
-    }
-    main_after(Duration::from_millis(100), move || {
-        wait(what, started, limit, ready, then)
+/// A moment for the timeline to lay out and draw what changed before a picture, which shows no state to wait for.
+const SETTLE: Duration = Duration::from_millis(300);
+
+/// Calls `then` once `ready` holds; after `limit` it fails `what` and ends the scenario.
+fn wait(what: &'static str, limit: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    helpers::wait_within(limit, ready, move |ok| {
+        if ok {
+            then();
+        } else {
+            check(what, false, "waited in vain");
+            finish(NAME);
+        }
     });
 }
 
-fn soon(what: &'static str, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce() + Send + 'static) {
-    wait(what, Instant::now(), Duration::from_secs(15), ready, then);
+fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    wait(what, Duration::from_secs(15), ready, then);
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("acp-project");
-    let _ = std::fs::create_dir_all(&root);
-    let _ = std::fs::write(root.join("README.md"), "# ACP project\n");
-    let root = root.canonicalize().unwrap_or(root);
-    crate::project::trust(&root);
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
         crate::agent::set_test_register(register);
     }
-    crate::agent::set_test_launch(test_launch("basic", &root));
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || {
-        let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
-        };
+    let made = helpers::make_project(PROJECT, &[("README.md", "# ACP project\n")]);
+    crate::agent::set_test_launch(made.ok().and_then(|root| test_launch("basic", &root)));
+    helpers::open_project(NAME, PROJECT, &[], |controller| {
+        let root = helpers::root(PROJECT);
         let names: Vec<String> = crate::agent::preset_menu().into_iter().map(|(n, _)| n).collect();
         check(
             "the new tab menu offers the ACP agents",
@@ -164,7 +152,7 @@ fn permission(root: PathBuf, key: u64) {
         asked.options.len() == 3 && asked.tool_name == "ls -la",
         format!("{:?} for {}", asked.options, asked.tool_name),
     );
-    main_after(Duration::from_millis(300), move || {
+    helpers::after(SETTLE, move || {
         let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
             return finish(NAME);
         };
@@ -222,13 +210,13 @@ fn done(root: PathBuf, key: u64) {
         activity.join(" | "),
     );
     tab.timeline().scroll_to_end();
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(SETTLE, move || {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
         picture(&controller, "acp-done");
         appearance(&controller, constant!(NSAppearanceNameDarkAqua));
-        main_after(Duration::from_millis(400), move || {
+        helpers::after(SETTLE, move || {
             let Some(controller) = controller_of(&root) else {
                 return finish(NAME);
             };
@@ -409,7 +397,7 @@ fn panel(root: PathBuf) {
             && offered.last().map(String::as_str) == Some(t("Agenten verwalten …")),
         offered.join(" | "),
     );
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(SETTLE, move || {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
@@ -424,7 +412,10 @@ fn panel(root: PathBuf) {
                 && lines.iter().any(|l| l.starts_with("ACP-Register 9 Agenten")),
             lines.join(" | "),
         );
-        main_after(Duration::from_millis(400), move || registry(root));
+        helpers::wait_until(
+            || crate::settings::window().is_some_and(|w| w.isVisible()),
+            move |_| registry(root),
+        );
     });
 }
 
@@ -440,21 +431,24 @@ fn registry(root: PathBuf) {
         listed == 9,
         format!("{listed}"),
     );
-    main_after(Duration::from_millis(400), move || {
-        if let Some((window, _)) = crate::settings::register_window()
-            && let Some(view) = window.contentView()
-        {
-            view_picture(&view, "acp-register");
-            window.orderOut(None);
-        }
-        if let Some(window) = crate::settings::window() {
-            window.orderOut(None);
-        }
-        if let Some(controller) = controller_of(&root) {
-            controller.activate_panel(Panel::Files);
-        }
-        sign_in(root);
-    });
+    helpers::wait_until(
+        || crate::settings::register_window().is_some_and(|(w, _)| w.isVisible()),
+        move |_| {
+            if let Some((window, _)) = crate::settings::register_window()
+                && let Some(view) = window.contentView()
+            {
+                view_picture(&view, "acp-register");
+                window.orderOut(None);
+            }
+            if let Some(window) = crate::settings::window() {
+                window.orderOut(None);
+            }
+            if let Some(controller) = controller_of(&root) {
+                controller.activate_panel(Panel::Files);
+            }
+            sign_in(root);
+        },
+    );
 }
 
 /// An agent that wants a sign-in first opens its session after it.
@@ -568,33 +562,38 @@ fn missing(root: PathBuf) {
                 sandbox.contains("keine Sandbox"),
                 sandbox,
             );
-            main_after(Duration::from_millis(300), move || {
+            helpers::after(SETTLE, move || {
                 let Some(controller) = controller_of(&root) else {
                     return finish(NAME);
                 };
                 picture(&controller, "acp-missing");
                 crate::agent::window_closed(&controller);
-                end(Instant::now());
+                end();
             });
         },
     );
 }
 
 /// Finishes once no agent process is left.
-fn end(since: Instant) {
-    let agents = ide_process::Supervisor::global()
-        .running()
-        .into_iter()
-        .filter(|p| p.kind == ide_process::Kind::Agent)
-        .count();
-    if agents == 0 || since.elapsed() > Duration::from_secs(8) {
-        check(
-            "closing the tabs ends the agents",
-            agents == 0,
-            format!("{agents} left"),
-        );
-        finish(NAME);
-    } else {
-        main_after(Duration::from_millis(200), move || end(since));
-    }
+fn end() {
+    let running = || {
+        ide_process::Supervisor::global()
+            .running()
+            .into_iter()
+            .filter(|p| p.kind == ide_process::Kind::Agent)
+            .count()
+    };
+    helpers::wait_within(
+        Duration::from_secs(8),
+        move || running() == 0,
+        move |_| {
+            let agents = running();
+            check(
+                "closing the tabs ends the agents",
+                agents == 0,
+                format!("{agents} left"),
+            );
+            finish(NAME);
+        },
+    );
 }

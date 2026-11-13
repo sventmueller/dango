@@ -8,7 +8,7 @@ is refused (E27).
 
 ```mermaid
 flowchart TB
-    app["the app: own_agent.rs"] -->|"Keychain: ApiKey per endpoint"| provider["Provider: Endpoint, key, Http"]
+    app["the app: ide-ui-agent own_agent"] -->|"Keychain: ApiKey per endpoint"| provider["Provider: Endpoint, key, Http"]
     app -->|"Session::start or resume(Config)"| session["Session: conversation, Thread, Policy"]
     app -->|"send, compact"| turn["thread own-agent-turn or own-agent-compact"]
     turn -->|"compact::run when the context is full"| provider

@@ -38,7 +38,7 @@ impl Banner {
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         row.setAlignment(NSLayoutAttribute::CenterY);
-        row.setSpacing(8.0);
+        row.setSpacing(ide_ui_common::style::space::M);
         row.setEdgeInsets(NSEdgeInsets {
             top: 5.0,
             left: 10.0,

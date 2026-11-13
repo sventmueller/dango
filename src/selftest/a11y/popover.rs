@@ -3,7 +3,6 @@
 
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2::Message;
 use objc2::rc::Retained;
@@ -13,10 +12,8 @@ use splat_i18n::t;
 use super::states::SUBAGENT;
 use super::window_of;
 use crate::selftest::check;
-use crate::util::main_after;
+use crate::selftest::helpers::wait_until;
 
-/// How long the popover takes to hear of a change and show it.
-const WAIT: Duration = Duration::from_millis(1200);
 /// The lines of the recording after which its subagent ends, and after which its background shell stops.
 const SUBAGENT_ENDS: Range<usize> = 180..182;
 const SHELL_STOPS: Range<usize> = 174..176;
@@ -98,27 +95,35 @@ pub fn rows_change(root: PathBuf, key: u64, then: fn(PathBuf)) {
     }
     let (_, before) = focus(&root);
     feed(key, SUBAGENT_ENDS);
-    main_after(WAIT, move || {
-        let (label, after) = focus(&root);
-        check(
-            "the activity popover keeps the focus on its row as rows above it go",
-            after < before && label.contains("countdown"),
-            format!("{before} then {after} buttons, focus on {label:?}"),
-        );
-        let title = crate::agent::all()
-            .into_iter()
-            .find(|tab| tab.key == key)
-            .map(|tab| tab.title());
-        feed(key, SHELL_STOPS);
-        main_after(WAIT, move || {
-            let (label, left) = focus(&root);
-            let session = title.as_deref().is_some_and(|title| label.contains(title));
+    let probe = root.clone();
+    wait_until(
+        move || focus(&probe).1 < before,
+        move |_| {
+            let (label, after) = focus(&root);
             check(
-                "the activity popover moves the focus to the nearest row left when its row goes",
-                left < after && session,
-                format!("{after} then {left} buttons, focus on {label:?}"),
+                "the activity popover keeps the focus on its row as rows above it go",
+                after < before && label.contains("countdown"),
+                format!("{before} then {after} buttons, focus on {label:?}"),
             );
-            then(root);
-        });
-    });
+            let title = crate::agent::all()
+                .into_iter()
+                .find(|tab| tab.key == key)
+                .map(|tab| tab.title());
+            feed(key, SHELL_STOPS);
+            let probe = root.clone();
+            wait_until(
+                move || focus(&probe).1 < after,
+                move |_| {
+                    let (label, left) = focus(&root);
+                    let session = title.as_deref().is_some_and(|title| label.contains(title));
+                    check(
+                        "the activity popover moves the focus to the nearest row left when its row goes",
+                        left < after && session,
+                        format!("{after} then {left} buttons, focus on {label:?}"),
+                    );
+                    then(root);
+                },
+            );
+        },
+    );
 }

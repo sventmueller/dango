@@ -4,7 +4,7 @@
 //! tidies, the line break of a new file and the warning about another charset.
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_git::CommitOptions;
 use objc2::rc::Retained;
@@ -14,16 +14,16 @@ use objc2_app_kit::{NSAlertSecondButtonReturn, NSApplication, NSMenu, NSMenuItem
 use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
+use super::helpers::{self, wait_until};
 use super::{check, finish, snapshot};
 use crate::editor::{self, ChangeMark as Mark, EditorTextView};
-use crate::util::{main_after, main_soon};
+use crate::util::main_soon;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "editor-extras";
-const POLL: Duration = Duration::from_millis(200);
-const WAIT: Duration = Duration::from_secs(20);
-/// Long enough for the window to draw what changed before a picture.
-const SETTLE: Duration = Duration::from_millis(400);
+/// Long enough for the window to draw what changed before a picture, which has no state of its own to wait for.
+const DRAWN: Duration = Duration::from_millis(400);
+const PROJECT: &str = "extras-project";
 
 const LIB: &str = "src/lib.rs";
 const LIB_TEXT: &str = "pub fn one() -> u32 {\n    1\n}\n\npub fn two() -> u32 {\n    2\n}\n\n\
@@ -34,13 +34,8 @@ const CONFIG: &str = "root = true\n\n[*.py]\nindent_style = space\nindent_size =
                       trim_trailing_whitespace = true\ninsert_final_newline = true\ncharset = utf-8-bom\n\n\
                       [fresh.txt]\nend_of_line = crlf\n";
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("extras-project")
-}
-
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn project_window() -> Option<Retained<WindowController>> {
@@ -59,21 +54,6 @@ fn picture(name: &str) {
     if let Some(window) = project_window().and_then(|c| c.window()) {
         snapshot(&window, name);
     }
-}
-
-/// Calls `then` with whether `ready` held, as soon as it does or once `within` passed.
-fn poll(within: Duration, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    fn again(deadline: Instant, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-        main_after(POLL, move || {
-            let ok = ready();
-            if ok || Instant::now() >= deadline {
-                then(ok);
-            } else {
-                again(deadline, ready, then);
-            }
-        });
-    }
-    again(Instant::now() + within, ready, then);
 }
 
 fn marks(file: &str) -> Option<editor::ChangesSeen> {
@@ -126,7 +106,7 @@ fn commit_again(folder: &Path) -> Result<(), String> {
 }
 
 pub fn run() {
-    let folder = folder();
+    let folder = helpers::folder(PROJECT);
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
@@ -157,8 +137,7 @@ fn open(folder: PathBuf) {
         window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
     }
     controller.open_file(&root().join(LIB));
-    poll(
-        WAIT,
+    wait_until(
         || marks(LIB).is_some_and(|m| m.head),
         move |ok| unchanged(ok, untrusted),
     );
@@ -184,8 +163,7 @@ fn unchanged(ok: bool, untrusted: bool) {
             (three..three + 6, String::new()),
         ],
     );
-    poll(
-        WAIT,
+    wait_until(
         || {
             marks(LIB).is_some_and(|m| {
                 m.hunks
@@ -208,7 +186,10 @@ fn marked(ok: bool) {
     );
     picture("extras-marks");
     let clicked = view(LIB).is_some_and(|v| editor::click_change(&v, 1));
-    main_after(SETTLE, move || popover(clicked));
+    wait_until(
+        || marks(LIB).is_some_and(|m| m.popover.is_some()),
+        move |_| popover(clicked),
+    );
 }
 
 fn popover(clicked: bool) {
@@ -236,8 +217,7 @@ fn popover(clicked: bool) {
         unsafe { button.performClick(None) };
     }
     let reverted = EDITED.replacen("    10\n", "    1\n", 1);
-    poll(
-        WAIT,
+    wait_until(
         move || text_of(LIB) == reverted && marks(LIB).is_some_and(|m| m.hunks.len() == 2 && m.popover.is_none()),
         reverted_hunk,
     );
@@ -305,7 +285,7 @@ fn whitespace(view: &EditorTextView) {
             editor::whitespace_visible(view)
         ),
     );
-    main_after(SETTLE, || {
+    helpers::after(DRAWN, || {
         picture("extras-whitespace");
         save_and_commit();
     });
@@ -318,8 +298,7 @@ fn save_and_commit() {
     std::thread::spawn(move || {
         let committed = commit_again(&folder);
         main_soon(move || match committed {
-            Ok(()) => poll(
-                WAIT,
+            Ok(()) => wait_until(
                 || marks(LIB).is_some_and(|m| m.head && m.hunks.is_empty()),
                 committed_marks,
             ),
@@ -343,7 +322,14 @@ fn committed_marks(ok: bool) {
     for file in ["tabs.go", "two.yaml", "script.py"] {
         controller.open_file(&root().join(file));
     }
-    main_after(SETTLE, indentation);
+    wait_until(
+        || {
+            ["tabs.go", "two.yaml", "script.py"]
+                .iter()
+                .all(|file| view(file).is_some())
+        },
+        |_| indentation(),
+    );
 }
 
 fn shown(file: &str) -> (String, Option<String>) {
@@ -394,7 +380,7 @@ fn indentation() {
         after.0 == tf("Tabs: {}", &["8"]) && view.ivars().indent.borrow().as_str() == "\t" && wide > narrow * 2.4,
         format!("{after:?}, tab {narrow:.1} → {wide:.1}"),
     );
-    main_after(SETTLE, || {
+    helpers::after(DRAWN, || {
         picture("extras-indentation");
         tidy();
     });
@@ -460,7 +446,7 @@ fn tidy() {
         text == "a\r\nb",
         format!("{text:?}"),
     );
-    main_after(SETTLE, done);
+    done();
 }
 
 fn done() {

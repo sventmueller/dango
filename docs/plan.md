@@ -185,6 +185,9 @@ vibeedit/
     ide-product        Anzeigename, Kennungen, URL-Schema, Cask-Name (E18)
     ide-core           Einstellungen (2 Ebenen), Pfade, Login-Shell-Umgebung, Kürzeltabelle, Hintergrund-Threads
     ide-process        Supervisor (E23): Prozessgruppen, Ausgabegrenzen, Beenden, Aktivitätsquelle
+    ide-rpc            Transport unter ide-lsp und ide-dap: Frames, Anfragen mit Frist, Antwortpflicht
+    ide-net            einziger Weg ins Netz: HTTPS, Downloads mit Prüfsumme, Fortschritt, Abbruch
+    ide-secrets        Schlüsselbund für CI-Token, Anbieter- und Diktatschlüssel
     ide-document       Dokumentmodell (E24), Zeilen-Lexerzustand (E7)
     ide-project        Ordnerbaum, .gitignore, Beobachtung, Schnellöffnen, Projektsuche, Projektvertrauen (E22)
     ide-terminal       alacritty_terminal-Hülle, Tastaturkodierung, Shell-Integration, Paste-Regeln, Prozessbaum
@@ -196,12 +199,14 @@ vibeedit/
     ide-acp            ACP-Anschluss, Register, Installation
     ide-agent          eigener Agent: Anbieter-Clients, Werkzeuge, Regeln, Sandbox-Profil
     ide-predict, ide-dap  Vorhersage-Anbieter (B4), Debug Adapter Protocol (B1)
-    ide-ui-common      AppKit-Helfer, Diagnose, Farbregeln (E66); Grundlage der UI-Crates (E99)
-    ide-ui-icons, ide-ui-export, ide-ui-browser, ide-ui-terminal, ide-ui-dictation
-                       vom App-Crate abgetrennte Oberflächenteile (E99); Zustand und Fenster nur über ihren `Host`
-  src/                  AppKit: main, app, menu, settings/, window/, sidebar/, editor/, preview/, agent/, activity/,
-                        diff/, debug/; `host.rs` setzt die `Host`s der UI-Crates um; terminal/, browser.rs,
-                        dictation.rs und util/ sind dünne Fassaden über ihnen
+    ide-ui-common      AppKit-Helfer, Diagnose, Farbregeln (E66), Fenster-Handle und Register; Grundlage der UI-Crates (E99)
+    ide-ui-icons, ide-ui-export, ide-ui-browser, ide-ui-terminal, ide-ui-dictation, ide-ui-debug, ide-ui-git,
+    ide-ui-agent       vom App-Crate abgetrennte Oberflächenteile (E99); Zustand nur über ihren `Host`, Fenster nur
+                       über `ide_ui_common::window` (Handle nach Id, `WindowHost`)
+  src/                  AppKit: main, app, menu, settings/, window/, sidebar/, editor/, preview/, activity/, diff/;
+                        `host.rs` setzt `WindowHost` und die `Host`s der UI-Crates um; agent.rs, agent_panel.rs,
+                        own_agent.rs, git_panel.rs, worktrees/, debug/ (mit den Teilen im Editor), terminal/,
+                        browser.rs, dictation.rs und util/ sind dünne Fassaden über ihnen
   resources/<35>.lproj  Localizable.strings, InfoPlist.strings
   xtask/                bundle, sign, universal, dmg, notarize, Sparkle, Cask, Acknowledgements
   docs/development.md  ACCESSIBILITY.md  README.md

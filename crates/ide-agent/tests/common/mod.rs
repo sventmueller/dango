@@ -13,12 +13,11 @@ use ide_thread::{Entry, EntryKind, Lane, Notice, Status, Thread, ThreadId, UserM
 use serde_json::{Value, json};
 
 /// A scratch project with a file to work on, removed when dropped.
-pub struct Project(pub PathBuf);
+pub struct Project(pub ide_core::testing::Scratch);
 
 impl Project {
     pub fn new(name: &str) -> Project {
-        let dir = std::env::temp_dir().join(format!("ide-agent-session-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let dir = ide_core::testing::scratch(&format!("agent-session-{name}"));
         std::fs::create_dir_all(dir.join("project/src")).unwrap();
         std::fs::write(
             dir.join("project/src/main.rs"),
@@ -30,12 +29,6 @@ impl Project {
 
     pub fn root(&self) -> PathBuf {
         self.0.join("project").canonicalize().unwrap()
-    }
-}
-
-impl Drop for Project {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
     }
 }
 

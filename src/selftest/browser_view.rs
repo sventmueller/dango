@@ -6,7 +6,7 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{MainThreadOnly, sel};
@@ -17,13 +17,18 @@ use objc2_app_kit::{
 use objc2_foundation::NSString;
 use splat_i18n::t;
 
-use super::{check, finish, first_window};
-use crate::util::main_after;
+use super::{check, finish, first_window, helpers};
 
 const NAME: &str = "browser-view";
 static PORT: AtomicU16 = AtomicU16::new(0);
 /// How many times the server sent `/b`.
 static B_SENT: AtomicUsize = AtomicUsize::new(0);
+/// How often the server was asked for `/slow`.
+static SLOW_ASKED: AtomicUsize = AtomicUsize::new(0);
+/// How long the server takes to answer `/slow`.
+const SLOW_PAGE: Duration = Duration::from_secs(6);
+/// How long a page without a history is watched for leaving after Back and Forward.
+const LEAVES_PAGE: Duration = Duration::from_secs(1);
 const FILE_BODY: &str = "tv-file-body";
 
 /// Serves the scenario's pages on 127.0.0.1, each request on a thread of its own so a slow page holds up no other.
@@ -62,7 +67,8 @@ fn answer(mut stream: TcpStream) -> std::io::Result<()> {
             ("text/html", "", page("tv-b", "<p>No form here.</p>"))
         }
         "/slow" => {
-            std::thread::sleep(Duration::from_secs(6));
+            SLOW_ASKED.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(SLOW_PAGE);
             ("text/html", "", page("tv-slow", ""))
         }
         "/alert" => (
@@ -148,16 +154,8 @@ fn url(path: &str) -> String {
     format!("http://127.0.0.1:{}{path}", PORT.load(Ordering::SeqCst))
 }
 
-fn poll(deadline: Instant, done: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    let held = done();
-    if held || Instant::now() >= deadline {
-        return then(held);
-    }
-    main_after(Duration::from_millis(100), move || poll(deadline, done, then));
-}
-
-fn wait(seconds: u64, done: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    poll(Instant::now() + Duration::from_secs(seconds), done, then);
+fn wait(seconds: u64, done: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+    helpers::wait_within(Duration::from_secs(seconds), done, then);
 }
 
 fn window_id() -> u64 {
@@ -274,7 +272,7 @@ fn history() {
     press(sel!(ideBrowserForward:));
     ide_ui_browser::perform(window, sel!(ideBrowserBack:));
     ide_ui_browser::perform(window, sel!(ideBrowserForward:));
-    main_after(Duration::from_secs(1), move || {
+    helpers::after(LEAVES_PAGE, move || {
         check(
             "without a history Back and Forward are greyed out and leave the page",
             offered == [false, false] && front_url() == url("/b"),
@@ -285,7 +283,7 @@ fn history() {
 }
 
 /// Calls `then` once the server sent `/b` again after `ask` asked for it.
-fn reloaded(ask: impl FnOnce(), then: impl FnOnce(bool) + Send + 'static) {
+fn reloaded(ask: impl FnOnce(), then: impl FnOnce(bool) + 'static) {
     let before = B_SENT.load(Ordering::SeqCst);
     ask();
     wait(10, move || B_SENT.load(Ordering::SeqCst) > before, then);
@@ -323,19 +321,24 @@ fn reloads() {
 
 /// The reload button stops a page that is still loading, and the page before stays.
 fn stop_slow() {
+    let asked = SLOW_ASKED.load(Ordering::SeqCst);
     enter(&url("/slow"));
-    main_after(Duration::from_millis(600), || {
-        press(sel!(ideBrowserReloadOrStop:));
-        main_after(Duration::from_secs(7), || {
-            let titles = first_window().map(|c| c.tab_titles()).unwrap_or_default();
-            check(
-                "the reload button stops a page while it loads, and the page before stays",
-                front_url() == url("/b") && !titles.iter().any(|title| title == "tv-slow"),
-                format!("{} | {}", front_url(), titles.join(", ")),
-            );
-            unsupported();
-        });
-    });
+    wait(
+        10,
+        move || SLOW_ASKED.load(Ordering::SeqCst) > asked,
+        |_| {
+            press(sel!(ideBrowserReloadOrStop:));
+            helpers::after(SLOW_PAGE + Duration::from_secs(1), || {
+                let titles = first_window().map(|c| c.tab_titles()).unwrap_or_default();
+                check(
+                    "the reload button stops a page while it loads, and the page before stays",
+                    front_url() == url("/b") && !titles.iter().any(|title| title == "tv-slow"),
+                    format!("{} | {}", front_url(), titles.join(", ")),
+                );
+                unsupported();
+            });
+        },
+    );
 }
 
 fn unsupported() {

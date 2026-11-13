@@ -241,12 +241,7 @@ mod millis {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-thread-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
+    use ide_core::testing::scratch;
 
     fn entry(id: &str, title: &str, seconds: u64) -> IndexEntry {
         IndexEntry {

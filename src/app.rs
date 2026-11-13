@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -163,7 +163,10 @@ define_class!(
 
 impl AppDelegate {
     pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(Rc::new(AppContext::default()));
+        let context = Rc::new(AppContext::default());
+        crate::own_agent::use_secrets(context.secrets.store());
+        crate::ci_panel::use_secrets(context.secrets.store());
+        let this = Self::alloc(mtm).set_ivars(context);
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
     }
@@ -245,25 +248,4 @@ fn fill_recent_menu(delegate: &AppDelegate, menu: &NSMenu) {
     menu.addItem(&clear);
 }
 
-/// `path` with the home folder written as `~`.
-pub fn display_path(path: &Path) -> String {
-    let home = ide_core::paths::home();
-    match path.strip_prefix(&home) {
-        Ok(rest) if rest.as_os_str().is_empty() => "~".into(),
-        Ok(rest) => format!("~/{}", rest.display()),
-        Err(_) => path.display().to_string(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn paths_in_the_home_folder_start_with_a_tilde() {
-        let home = ide_core::paths::home();
-        assert_eq!(display_path(&home.join("Repos/x")), "~/Repos/x");
-        assert_eq!(display_path(&home), "~");
-        assert_eq!(display_path(Path::new("/opt/x")), "/opt/x");
-    }
-}
+pub use ide_ui_common::panel::display_path;

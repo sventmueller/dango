@@ -4,6 +4,7 @@
 #[allow(dead_code, reason = "each test binary uses its own part of the shared helpers")]
 mod common;
 
+use ide_core::LockIgnoringPoison;
 use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
@@ -48,7 +49,7 @@ struct Run {
 fn run(draw_at_60_hz: bool) -> Run {
     // The runs would slow each other down.
     static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
-    let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _turn = ONE_AT_A_TIME.lock_ignoring_poison();
     let dir = temporary("throughput");
     let sample = dir.join("sample.txt");
     let bytes = write_sample(&sample);

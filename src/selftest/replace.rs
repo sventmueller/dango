@@ -16,14 +16,12 @@ use objc2_app_kit::{
 use objc2_foundation::NSRange;
 use splat_i18n::t;
 
-use super::helpers::{editor, type_at, wait_until, window_of};
+use super::helpers::{self, editor, type_at, wait_until, window_of};
 use super::{check, finish, snapshot};
 use crate::terminal::inspect;
-use crate::util::main_after;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "replace-folder";
-const PAUSE: Duration = Duration::from_millis(500);
 /// How long a sheet takes to slide into its window before a picture shows it.
 const SHEET_SETTLE: Duration = Duration::from_millis(800);
 const EDIT: &str = "// unsaved\n";
@@ -36,14 +34,14 @@ struct Folders {
     untrusted: PathBuf,
 }
 
+/// The folder `name` with the one file `file`, trusted or not.
 fn folder(name: &str, file: &str, trusted: bool) -> PathBuf {
-    let folder = ide_core::paths::home().join(name);
-    let _ = std::fs::create_dir_all(&folder);
-    let _ = std::fs::write(folder.join(file), format!("// {file}\nfn main() {{}}\n"));
+    let text = format!("// {file}\nfn main() {{}}\n");
+    let root = helpers::make_project(name, &[(file, &text)]).unwrap_or_else(|_| helpers::root(name));
     if trusted {
-        crate::project::trust(&folder);
+        crate::project::trust(&root);
     }
-    folder.canonicalize().unwrap_or(folder)
+    root
 }
 
 pub(super) fn run() {
@@ -59,7 +57,11 @@ pub(super) fn run() {
     if let Some(controller) = window_of(&folders.a) {
         controller.open_file(&folders.a.join("a.rs"));
     }
-    main_after(PAUSE, move || replace_clean(folders));
+    let a = folders.a.clone();
+    wait_until(
+        move || window_of(&a).is_some_and(|c| editor(&c, "a.rs").is_some()),
+        move |_| replace_clean(folders),
+    );
 }
 
 fn projects() -> String {
@@ -124,12 +126,16 @@ fn edit_b(f: Folders) {
     if let Some(view) = editor(&controller, "b.rs") {
         type_at(&view, NSRange::new(0, 0), EDIT);
     }
-    main_after(PAUSE, move || {
-        if let Some(window) = window_of(&f.b).and_then(|c| c.window()) {
-            snapshot(&window, "replace-folder-clean");
-        }
-        ask(f, sheet_shown);
-    });
+    let b = f.b.clone();
+    wait_until(
+        move || window_of(&b).is_some_and(|c| crate::editor::unsaved_in(&c) == ["b.rs"]),
+        move |_| {
+            if let Some(window) = window_of(&f.b).and_then(|c| c.window()) {
+                snapshot(&window, "replace-folder-clean");
+            }
+            ask(f, sheet_shown);
+        },
+    );
 }
 
 /// Opens folder C as the user does while the window in front shows B with unsaved text, and goes on with `then` once
@@ -223,12 +229,13 @@ fn sheet_shown(f: Folders, ok: bool) {
             && cancel.is_some_and(|(_, key, _)| key == "\u{1b}"),
         format!("default {default:?}, {buttons:?}"),
     );
-    main_after(SHEET_SETTLE, move || {
+    helpers::after(SHEET_SETTLE, move || {
         if let Some(window) = window_of(&f.b).and_then(|c| c.window()) {
             snapshot(&window, "replace-folder-sheet");
         }
         answer(&f.b, NSAlertThirdButtonReturn);
-        main_after(PAUSE, move || cancelled(f));
+        let b = f.b.clone();
+        wait_until(move || sheet_of(&b).is_none(), move |_| cancelled(f));
     });
 }
 
@@ -247,7 +254,8 @@ fn cancelled(f: Folders) {
 fn new_window(f: Folders, ok: bool) {
     let windows = window::open_windows().len();
     answer(&f.b, NSAlertFirstButtonReturn);
-    main_after(PAUSE, move || opened_beside(f, ok, windows));
+    let c = f.c.clone();
+    wait_until(move || window_of(&c).is_some(), move |_| opened_beside(f, ok, windows));
 }
 
 fn opened_beside(f: Folders, asked: bool, windows: usize) {
@@ -334,7 +342,8 @@ fn close_all(f: Folders, asked: bool) {
     );
     let before = window_of(&f.b).map(|c| frame_of(&c)).unwrap_or_default();
     answer(&f.b, NSAlertSecondButtonReturn);
-    main_after(PAUSE, move || closed_all(f, asked, before));
+    let c = f.c.clone();
+    wait_until(move || window_of(&c).is_some(), move |_| closed_all(f, asked, before));
 }
 
 fn closed_all(f: Folders, asked: bool, before: String) {

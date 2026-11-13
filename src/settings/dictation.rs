@@ -591,7 +591,7 @@ fn download_column(mtm: MainThreadMarker, views: &Views) -> Retained<NSView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
-    stack.setSpacing(6.0);
+    stack.setSpacing(ide_ui_common::style::space::S);
     stack.addArrangedSubview(&views.model);
     stack.addArrangedSubview(&form::line(mtm, &[&views.progress, &views.download]));
     stack.into_super()

@@ -2,7 +2,8 @@
 //! signing in, loading a session, modes and options, an agent that speaks another protocol version, and recording a
 //! session for replay.
 
-use std::path::PathBuf;
+use ide_core::testing::scratch;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -32,20 +33,14 @@ impl Events {
     }
 }
 
-fn folder() -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-acp-session-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
-}
-
-fn launch(scenario: &str) -> Launch {
+fn launch(scenario: &str, cwd: &Path) -> Launch {
     Launch::new(
         "acp-test-agent",
         "Test Agent",
         env!("CARGO_BIN_EXE_acp-test-agent"),
         vec![scenario.into()],
         vec![("PATH".into(), "/usr/bin:/bin".into())],
-        folder(),
+        cwd,
     )
 }
 
@@ -73,14 +68,14 @@ fn message(text: &str) -> UserMessage {
     }
 }
 
-fn ready(scenario: &str) -> (Session, Arc<Events>, Supervisor) {
-    let (session, events, supervisor) = start(launch(scenario));
+fn ready(scenario: &str, cwd: &Path) -> (Session, Arc<Events>, Supervisor) {
+    let (session, events, supervisor) = start(launch(scenario, cwd));
     wait("a session", || session.is_ready());
     (session, events, supervisor)
 }
 
-fn answered_turn(choice: Choice) -> Thread {
-    let (session, _, _) = ready("basic");
+fn answered_turn(choice: Choice, cwd: &Path) -> Thread {
+    let (session, _, _) = ready("basic", cwd);
     session.send(message("list the files")).unwrap();
     wait("a permission request", || {
         session.snapshot().pending_requests().len() == 1
@@ -114,7 +109,8 @@ fn tool(thread: &Thread, id: &str) -> ide_thread::ToolCall {
 
 #[test]
 fn the_session_offers_what_the_agent_reported() {
-    let (session, _, _) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, _, _) = ready("basic", &dir);
     wait("the commands", || !session.capabilities().commands.is_empty());
     let caps = session.capabilities();
     assert_eq!(caps.protocol_version, Some(1));
@@ -138,8 +134,9 @@ fn the_session_offers_what_the_agent_reported() {
 
 #[test]
 fn prompt_usage_reaches_the_thread_with_and_without_standard_usage() {
+    let dir = scratch("acp-session");
     for scenario in ["usage-tokens", "usage-metadata", "usage-credits"] {
-        let (session, _, _) = ready(scenario);
+        let (session, _, _) = ready(scenario, &dir);
         for _ in 0..2 {
             session.send(message("usage please")).unwrap();
             wait("the usage response", || {
@@ -164,7 +161,8 @@ fn prompt_usage_reaches_the_thread_with_and_without_standard_usage() {
 
 #[test]
 fn a_turn_fills_the_thread_with_every_kind_of_entry() {
-    let thread = answered_turn(Choice::Option(0));
+    let dir = scratch("acp-session");
+    let thread = answered_turn(Choice::Option(0), &dir);
     let kinds: Vec<&EntryKind> = thread.entries(&Lane::Main).iter().map(|e| &e.kind).collect();
     assert!(matches!(kinds[0], EntryKind::UserMessage(m) if m.text == "list the files"));
     assert!(matches!(kinds[1], EntryKind::Thought(t) if t.text == "Thinking about it." && !t.streaming));
@@ -178,10 +176,10 @@ fn a_turn_fills_the_thread_with_every_kind_of_entry() {
     let Some(ToolOutput::Diff { path, hunks }) = &edit.output else {
         panic!("{:?}", edit.output)
     };
-    let edited = folder().canonicalize().unwrap().join("a.txt");
+    let edited = dir.canonicalize().unwrap().join("a.txt");
     assert_eq!(std::path::Path::new(path).canonicalize().unwrap(), edited);
     assert_eq!(
-        std::fs::read_to_string(folder().join("a.txt")).unwrap(),
+        std::fs::read_to_string(dir.join("a.txt")).unwrap(),
         ide_acp::test_agent::EDITED.2
     );
     assert_eq!(hunks[0].lines, [" one", "-two", "+2"]);
@@ -215,7 +213,8 @@ fn a_turn_fills_the_thread_with_every_kind_of_entry() {
 
 #[test]
 fn a_refused_command_fails_its_tool_call() {
-    let thread = answered_turn(Choice::Option(2));
+    let dir = scratch("acp-session");
+    let thread = answered_turn(Choice::Option(2), &dir);
     assert_eq!(tool(&thread, "call-1").status, ToolStatus::Failed);
     let denied = thread.entries(&Lane::Main).iter().any(|e| {
         matches!(&e.kind, EntryKind::PermissionRequest(r)
@@ -226,7 +225,8 @@ fn a_refused_command_fails_its_tool_call() {
 
 #[test]
 fn cancelling_ends_the_turn_and_says_so() {
-    let (session, _, _) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, _, _) = ready("basic", &dir);
     session.send(message("go slow")).unwrap();
     wait("the first chunk", || {
         session
@@ -245,7 +245,8 @@ fn cancelling_ends_the_turn_and_says_so() {
 
 #[test]
 fn an_agent_that_wants_a_sign_in_opens_the_session_after_it() {
-    let (session, events, _) = start(launch("auth"));
+    let dir = scratch("acp-session");
+    let (session, events, _) = start(launch("auth", &dir));
     wait("the request to sign in", || {
         events.has(|e| *e == Event::Failed(SessionError::SignIn))
     });
@@ -260,7 +261,8 @@ fn an_agent_that_wants_a_sign_in_opens_the_session_after_it() {
 
 #[test]
 fn an_agent_of_another_protocol_version_is_refused() {
-    let (session, events, _) = start(launch("v2"));
+    let dir = scratch("acp-session");
+    let (session, events, _) = start(launch("v2", &dir));
     wait("the refusal", || {
         events.has(|e| *e == Event::Failed(SessionError::Version(2)))
     });
@@ -270,7 +272,8 @@ fn an_agent_of_another_protocol_version_is_refused() {
 
 #[test]
 fn a_loaded_session_replays_its_conversation() {
-    let mut launch = launch("basic");
+    let dir = scratch("acp-session");
+    let mut launch = launch("basic", &dir);
     launch.resume = Some("earlier-session".into());
     let (session, _, _) = start(launch);
     wait("the replayed answer", || {
@@ -289,14 +292,15 @@ fn a_loaded_session_replays_its_conversation() {
 
 #[test]
 fn a_session_continued_on_a_filled_thread_replaces_its_conversation() {
-    let (first, _, _) = ready("basic");
+    let dir = scratch("acp-session");
+    let (first, _, _) = ready("basic", &dir);
     first.send(message("go slow")).unwrap();
     wait("the first answer", || first.snapshot().entries(&Lane::Main).len() >= 2);
     first.cancel();
     wait("the end of the turn", || first.snapshot().status() == Status::Idle);
     let thread = first.snapshot();
     first.stop(Duration::from_millis(500));
-    let mut launch = launch("basic");
+    let mut launch = launch("basic", &dir);
     launch.resume = Some(SESSION.into());
     let supervisor = Supervisor::new();
     let second = Session::start(&supervisor, launch, thread, |_| {}).unwrap();
@@ -317,7 +321,8 @@ fn a_session_continued_on_a_filled_thread_replaces_its_conversation() {
 
 #[test]
 fn modes_and_options_change_on_request() {
-    let (session, _, _) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, _, _) = ready("basic", &dir);
     session.set_mode("code").unwrap();
     wait("the new mode", || {
         session.capabilities().mode.as_deref() == Some("code")
@@ -335,7 +340,8 @@ fn modes_and_options_change_on_request() {
 
 #[test]
 fn stopping_ends_the_process_and_says_so() {
-    let (session, events, supervisor) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, events, supervisor) = ready("basic", &dir);
     session.stop(Duration::from_millis(500));
     wait("the end", || {
         session.is_ended() && events.has(|e| matches!(e, Event::Ended { .. }))
@@ -346,9 +352,10 @@ fn stopping_ends_the_process_and_says_so() {
 
 #[test]
 fn a_session_through_the_recorder_works_and_leaves_both_sides_in_the_recording() {
-    let file = folder().join("recorded.ndjson");
+    let dir = scratch("acp-session");
+    let file = dir.join("recorded.ndjson");
     let _ = std::fs::remove_file(&file);
-    let mut recorded = launch("basic");
+    let mut recorded = launch("basic", &dir);
     let mut args = vec![
         file.to_string_lossy().into_owned(),
         recorded.program.to_string_lossy().into_owned(),
@@ -388,7 +395,8 @@ fn permission(thread: &Thread) -> ide_thread::PermissionRequest {
 
 #[test]
 fn allowing_always_and_dismissing_are_told_apart() {
-    let always = answered_turn(Choice::Option(1));
+    let dir = scratch("acp-session");
+    let always = answered_turn(Choice::Option(1), &dir);
     assert_eq!(
         permission(&always).state,
         RequestState::Decided(Decision::Allowed {
@@ -397,7 +405,7 @@ fn allowing_always_and_dismissing_are_told_apart() {
         })
     );
     assert_eq!(tool(&always, "call-1").status, ToolStatus::Completed);
-    let dismissed = answered_turn(Choice::Dismiss);
+    let dismissed = answered_turn(Choice::Dismiss, &dir);
     assert_eq!(
         permission(&dismissed).state,
         RequestState::Decided(Decision::Denied { message: None })
@@ -407,7 +415,8 @@ fn allowing_always_and_dismissing_are_told_apart() {
 
 #[test]
 fn cancelling_while_the_agent_asks_withdraws_the_request() {
-    let (session, _, _) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, _, _) = ready("basic", &dir);
     session.send(message("list the files")).unwrap();
     wait("a permission request", || {
         session.with_thread(|t| t.pending_requests().len() == 1)
@@ -426,7 +435,8 @@ fn cancelling_while_the_agent_asks_withdraws_the_request() {
 
 #[test]
 fn an_agent_that_dies_at_start_is_reported_and_its_last_words_come_with_the_end() {
-    let mut launch = launch("basic");
+    let dir = scratch("acp-session");
+    let mut launch = launch("basic", &dir);
     launch.program = "/bin/sh".into();
     launch.args = vec!["-c".into(), "echo 'no API key set' >&2; exit 3".into()];
     let (session, events, _) = start(launch);
@@ -446,7 +456,8 @@ fn an_agent_that_dies_at_start_is_reported_and_its_last_words_come_with_the_end(
 
 #[test]
 fn a_missing_program_is_reported_before_anything_starts_and_errors_read_plainly() {
-    let mut launch = launch("basic");
+    let dir = scratch("acp-session");
+    let mut launch = launch("basic", &dir);
     launch.program = "/nonexistent/agent".into();
     let thread = Thread::new(ThreadId::from("t"), "x", "/tmp");
     let result = Session::start(&Supervisor::new(), launch, thread, |_| {});
@@ -485,7 +496,8 @@ fn ended_once(session: &Session, events: &Events, supervisor: &Supervisor) {
 
 #[test]
 fn an_agent_that_exits_mid_turn_ends_the_session_with_its_reason() {
-    let (session, events, supervisor) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, events, supervisor) = ready("basic", &dir);
     session.send(message("crash now")).unwrap();
     ended_once(&session, &events, &supervisor);
     assert!(events.has(|e| matches!(e, Event::Ended { stderr } if stderr.trim() == CRASH)));
@@ -508,7 +520,8 @@ fn an_agent_that_exits_mid_turn_ends_the_session_with_its_reason() {
 
 #[test]
 fn an_agent_whose_output_outlives_it_still_ends_the_session() {
-    let mut launch = launch("basic");
+    let dir = scratch("acp-session");
+    let mut launch = launch("basic", &dir);
     let script = format!("sleep 10 & exec '{}' basic", launch.program.display());
     launch.program = "/bin/sh".into();
     launch.args = vec!["-c".into(), script];
@@ -528,7 +541,8 @@ fn an_agent_whose_output_outlives_it_still_ends_the_session() {
 
 #[test]
 fn an_agent_that_exits_while_idle_ends_the_session() {
-    let (session, events, supervisor) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, events, supervisor) = ready("basic", &dir);
     session.send(message("quit")).unwrap();
     ended_once(&session, &events, &supervisor);
     let thread = session.snapshot();
@@ -544,7 +558,8 @@ fn an_agent_that_exits_while_idle_ends_the_session() {
 
 #[test]
 fn stopping_a_live_agent_ends_it_once() {
-    let (session, events, supervisor) = ready("basic");
+    let dir = scratch("acp-session");
+    let (session, events, supervisor) = ready("basic", &dir);
     session.stop(Duration::from_millis(500));
     session.stop(Duration::from_millis(500));
     wait("the end", || session.is_ended() && events.ends() == 1);

@@ -1,14 +1,15 @@
 //! Short-lived helper processes, such as `go env` or an installer, run through the supervisor with a time limit.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
+use ide_net::Cancel;
 use ide_process::{Ending, Event, Kind, ProcessId, Supervisor};
 
 /// How many endings are remembered; a process is looked up right after it ends.
@@ -31,7 +32,7 @@ impl Exits {
                 return;
             };
             let (lock, changed) = &*board;
-            let mut endings = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let mut endings = lock.lock_ignoring_poison();
             if endings.len() == REMEMBERED {
                 endings.pop_front();
             }
@@ -45,7 +46,7 @@ impl Exits {
     pub(crate) fn wait(&self, id: ProcessId, timeout: Duration) -> Option<Ending> {
         let deadline = Instant::now() + timeout;
         let (lock, changed) = &*self.board;
-        let mut endings = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut endings = lock.lock_ignoring_poison();
         loop {
             if let Some((_, ending)) = endings.iter().find(|(i, _)| *i == id) {
                 return Some(*ending);
@@ -54,32 +55,8 @@ impl Exits {
             if now >= deadline {
                 return None;
             }
-            endings = changed
-                .wait_timeout(endings, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            endings = changed.wait_timeout(endings, deadline - now).ignoring_poison().0;
         }
-    }
-}
-
-/// A request to stop a long task, such as an installation, shared between the asker and the task.
-#[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<AtomicBool>);
-
-impl Cancel {
-    /// A request that has not been made yet.
-    pub fn new() -> Cancel {
-        Cancel::default()
-    }
-
-    /// Asks the task to stop as soon as it can.
-    pub fn cancel(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-
-    /// Whether stopping was asked for.
-    pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
     }
 }
 

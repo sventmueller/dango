@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "הודעה אחרונה: {}";
 "Das Programm hat sich ohne Meldung beendet." = "התוכנה הסתיימה ללא הודעה.";
 "Das Programm hat sich beim Start beendet: {}" = "התוכנה הסתיימה בזמן ההפעלה: {}";
+"Konnte keinen Thread starten: {}" = "לא ניתן להפעיל תהליכון: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "לא ניתן היה לבצע את השינוי בסביבת העבודה.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "„{}” היא ספרייה ללא תוכנית, ובקובץ הזה אין בדיקות. נפה באגים בקובץ עם main או בדיקות, או הגדר ב-.vscode/launch.json איזו תוכנית מופעלת.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "אם macOS לא מבקש סיסמה, אפשר מנפי באגים פעם אחת ב-Terminal עם „sudo DevToolsSecurity -enable”, או בטל עם עצירה. אחרי עשר דקות ההפעלה מוותרת מעצמה.";
+"Haltepunkt, nicht gesetzt" = "נקודת עצירה, לא הוגדרה";
+"nicht gesetzt" = "לא הוגדרה";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "מנפה הבאגים לא הצליח להגדיר כאן נקודת עצירה: {}";

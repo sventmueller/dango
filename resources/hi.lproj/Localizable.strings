@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "अंतिम संदेश: {}";
 "Das Programm hat sich ohne Meldung beendet." = "प्रोग्राम बिना किसी संदेश के बंद हो गया।";
 "Das Programm hat sich beim Start beendet: {}" = "प्रोग्राम शुरू होते समय बंद हो गया: {}";
+"Konnte keinen Thread starten: {}" = "थ्रेड शुरू नहीं हो सका: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "वर्कस्पेस में बदलाव नहीं किया जा सका।";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” बिना प्रोग्राम वाली लाइब्रेरी है, और इस फ़ाइल में कोई टेस्ट नहीं है। main या टेस्ट वाली फ़ाइल डीबग करें, या .vscode/launch.json में तय करें कि कौन-सा प्रोग्राम शुरू हो।";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "अगर macOS पासवर्ड नहीं माँगता, तो Terminal में “sudo DevToolsSecurity -enable” से डीबगर को एक बार अनुमति दें, या रोकें से रद्द करें। दस मिनट बाद शुरुआत अपने-आप रुक जाती है।";
+"Haltepunkt, nicht gesetzt" = "ब्रेकपॉइंट, सेट नहीं";
+"nicht gesetzt" = "सेट नहीं";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "डीबगर यहाँ ब्रेकपॉइंट सेट नहीं कर सका: {}";

@@ -1,8 +1,11 @@
 # ide-core
 
 What the app knows and keeps without a window: its data folders, settings in a user and a project layer, the
-shortcut table, each project's window tabs, and the lanes that move blocking work off the main thread. Nothing here
-starts a process; the only threads are a lane's workers, which start with its first job.
+shortcut table, each project's window tabs, and the lanes that move blocking work off the main thread. It also holds
+what every crate shares: locks that survive a panic, a request to cancel, threads started for one piece of work that
+hand it back when no thread starts, one timer thread for every deadline, and the diagnostics hook the app installs,
+limited to a few reports of a kind per minute. Nothing here starts a process; the only threads are a lane's workers and
+the timer, which start with their first job.
 
 ```mermaid
 flowchart LR
@@ -15,6 +18,10 @@ flowchart LR
     main -->|"layout::load, layout::save"| store
     store -->|"write beside, then rename"| files[("settings.json, state.json, layouts in paths::data_dir, settings.json in paths::project_dir")]
     main -->|"Keymap::load"| keys[("keybindings.json")]
+    crates["the crates"] -->|"diag::report"| limit["at most BURST a minute per kind"]
+    limit -->|"the hook diag::install set, else stderr"| log[("the system log, through the app")]
+    crates -->|"timer::after(deadline, fire)"| timer["thread timer"]
+    crates -->|"thread::detach, detach_answering"| own["a thread of its own, or the work back to answer"]
 ```
 
 The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

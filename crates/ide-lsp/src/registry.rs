@@ -6,6 +6,7 @@
 //! the project's own `node_modules/.bin/tsc`. The caller decides about trust before it calls anything here; for an
 //! untrusted folder it must not.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -438,23 +439,20 @@ impl Registry {
     fn speaks_lsp(&self, tsc: &Path, root: &Path) -> bool {
         let key = fs::canonicalize(tsc).unwrap_or_else(|_| tsc.to_path_buf());
         let stamp = fs::metadata(&key).and_then(|m| m.modified()).ok();
-        if let Some((seen, answer)) = self.probes.lock().unwrap_or_else(|e| e.into_inner()).get(&key)
+        if let Some((seen, answer)) = self.probes.lock_ignoring_poison().get(&key)
             && *seen == stamp
         {
             return *answer;
         }
         let answer = probe(&self.supervisor, &self.env, tsc, root);
-        self.probes
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(key, (stamp, answer));
+        self.probes.lock_ignoring_poison().insert(key, (stamp, answer));
         answer
     }
 }
 
 /// The app's tools folder: `<data folder>/tools`.
 pub fn default_tools() -> PathBuf {
-    ide_core::paths::data_dir().join("tools")
+    ide_core::paths::tools_dir()
 }
 
 /// Where a single-file server lives in the tools folder.
@@ -539,13 +537,8 @@ fn ask(connection: &Connection, method: &str, params: Value, timeout: Duration) 
 mod tests {
     use super::*;
 
-    fn tools(files: &[&str]) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "ide-lsp-registry-{}-{}",
-            std::process::id(),
-            files.join("+").replace('/', "_")
-        ));
-        let _ = fs::remove_dir_all(&dir);
+    fn tools(files: &[&str]) -> ide_core::testing::Scratch {
+        let dir = ide_core::testing::scratch("lsp-registry");
         for file in files {
             let path = dir.join(file);
             fs::create_dir_all(path.parent().unwrap()).unwrap();

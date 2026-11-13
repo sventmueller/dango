@@ -1,23 +1,19 @@
 //! The session against a stand-in for `claude`: a shell script that waits for `initialize`, prints canned frames
 //! and keeps everything the session writes. One ignored test runs the real CLI.
 
+use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-use ide_claude::{ControlError, Event, Launch, PermissionAnswer, RemoteControl, Session, SessionError};
+use ide_claude::{
+    ControlError, Effort, Event, Launch, PermissionAnswer, PermissionMode, RemoteControl, Session, SessionError,
+};
 use ide_process::Supervisor;
 use ide_thread::{Decision, EntryKind, ErrorKind, Lane, Notice, RequestState, Status, Thread, ThreadId, UserMessage};
 use serde_json::{Value, json};
 
 const WAIT: Duration = Duration::from_secs(10);
-
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-claude-session-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
-}
 
 /// A stand-in CLI in `dir` that answers `initialize` with `account` and then prints `frames`.
 fn stand_in(dir: &Path, account: Value, frames: &[Value]) -> Launch {
@@ -699,9 +695,9 @@ fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_t
     let (session, rx) = start(&launch, &supervisor);
     wait_for(&rx, |_| session.with_thread(|t| !t.background().is_empty()));
 
-    assert_eq!(session.set_permission_mode("plan").wait(), Ok(()));
+    assert_eq!(session.set_permission_mode(PermissionMode::Plan).wait(), Ok(()));
     assert_eq!(session.set_model(Some("claude-opus-5-5")).wait(), Ok(()));
-    assert_eq!(session.set_effort("high").wait(), Ok(()));
+    assert_eq!(session.set_effort(Effort::High).wait(), Ok(()));
     session.with_thread(|t| {
         assert_eq!(t.mode(), Some("plan"));
         assert_eq!(t.model(), Some("claude-opus-5-5"));
@@ -746,7 +742,7 @@ fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_t
 
     session.close_input();
     wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
-    assert_eq!(session.set_effort("low").wait(), Err(ControlError::Closed));
+    assert_eq!(session.set_effort(Effort::Low).wait(), Err(ControlError::Closed));
     let frames = written(&dir);
     let sent = |subtype: &str| {
         frames
@@ -778,12 +774,21 @@ fn questions_and_plans_are_answered_with_the_users_choice() {
             json!({"type": "control_request", "request_id": "cli-p", "request": {"subtype": "can_use_tool", "tool_name": "ExitPlanMode", "input": plan, "tool_use_id": "toolu_p"}}),
             json!({"type": "control_request", "request_id": "cli-gone", "request": {"subtype": "can_use_tool", "tool_name": "Bash", "input": {"command": "ls"}, "tool_use_id": "toolu_g"}}),
             json!({"type": "control_cancel_request", "request_id": "cli-gone"}),
+            json!({"type": "assistant", "message": {"id": "m3", "content": [{"type": "text", "text": "after-cancel"}]}, "parent_tool_use_id": null}),
         ],
         &[],
     );
     let supervisor = Supervisor::new();
     let (session, rx) = start(&launch, &supervisor);
-    wait_for(&rx, |_| session.with_thread(|t| t.pending_requests().len() == 2));
+    // Frames arrive in order, so once the text after the cancel shows, the cancelled request is gone.
+    wait_for(&rx, |_| {
+        session.with_thread(|t| {
+            t.pending_requests().len() == 2
+                && t.entries(&Lane::Main)
+                    .iter()
+                    .any(|e| format!("{:?}", e.kind).contains("after-cancel"))
+        })
+    });
     session
         .answer_questions(
             "cli-q",

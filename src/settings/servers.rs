@@ -241,7 +241,7 @@ impl ServersSettings {
         let accessory = NSStackView::new(mtm);
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         accessory.setAlignment(NSLayoutAttribute::Leading);
-        accessory.setSpacing(8.0);
+        accessory.setSpacing(ide_ui_common::style::space::M);
         for view in [&name, &extensions, &command] {
             accessory.addArrangedSubview(view);
         }

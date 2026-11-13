@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Laatste melding: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Het programma is gestopt zonder melding.";
 "Das Programm hat sich beim Start beendet: {}" = "Het programma is gestopt tijdens het starten: {}";
+"Konnte keinen Thread starten: {}" = "Kon geen thread starten: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "De wijziging van de werkruimte kon niet worden uitgevoerd.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "‘{}’ is een bibliotheek zonder programma, en dit bestand heeft geen tests. Debug een bestand met main of tests, of leg in .vscode/launch.json vast welk programma start.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Als macOS niet om een wachtwoord vraagt, sta debuggers dan eenmalig toe in Terminal met ‘sudo DevToolsSecurity -enable’, of annuleer met Stop. Na tien minuten geeft het starten vanzelf op.";
+"Haltepunkt, nicht gesetzt" = "Breakpoint, niet ingesteld";
+"nicht gesetzt" = "niet ingesteld";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "De debugger kon hier geen breakpoint instellen: {}";

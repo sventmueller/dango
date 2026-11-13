@@ -3,18 +3,19 @@
 //! over and lets the port go when it closes, the authorization with PKCE whose return the test plays as the browser
 //! would, and signing out. GitHub: the device code sheet, stopping it, and the flow through to a token.
 
+use ide_core::LockIgnoringPoison;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_ci::oauth;
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::t;
 
-use super::super::git::{answer_sheet, pictures, poll, sheet_pictures, wait_for, window_of};
+use super::super::git::{answer_sheet, pictures, sheet_pictures, wait_for, wait_within, window_of};
 use super::super::{check, finish};
 use super::stub::{DEVICE_TOKEN, USER_CODE};
 use super::{TOKEN, describe, stubs};
@@ -46,7 +47,7 @@ pub(super) fn start(root: PathBuf, ok: bool) {
         format!("{:?}", panel::browser_button(&controller)),
     );
     match TcpListener::bind(("127.0.0.1", oauth::CALLBACK_PORT)) {
-        Ok(listener) => *BLOCKER.lock().unwrap_or_else(|e| e.into_inner()) = Some(listener),
+        Ok(listener) => *BLOCKER.lock_ignoring_poison() = Some(listener),
         Err(error) => check("the browser's port is free for the test", false, error.to_string()),
     }
     panel::browser_login(&controller);
@@ -79,7 +80,7 @@ fn port_taken(root: PathBuf, ok: bool) {
         describe(&controller),
     );
     pictures(root, "ci-login-port", |root| {
-        BLOCKER.lock().unwrap_or_else(|e| e.into_inner()).take();
+        BLOCKER.lock_ignoring_poison().take();
         if let Some(controller) = window_of(&root) {
             panel::browser_login(&controller);
         }
@@ -127,7 +128,7 @@ fn authorize_opened(root: PathBuf, ok: bool) {
         format!("{account:?}"),
     );
     pictures(root, "ci-login-wait", |root| {
-        let twin = ide_core::paths::home().join("ci-gitlab-twin");
+        let twin = crate::selftest::helpers::folder("ci-gitlab-twin");
         match copy_tree(&root, &twin).and_then(|()| twin.canonicalize()) {
             Ok(twin) => open_beside(twin),
             Err(error) => {
@@ -203,12 +204,7 @@ fn taken_over(twin: PathBuf, ok: bool) {
     if let Some(window) = window_of(&twin).and_then(|c| c.window()) {
         window.performClose(None);
     }
-    poll(
-        stubs().gitlab_root.clone(),
-        Instant::now() + RELEASE,
-        |_| port_free(),
-        port_released,
-    );
+    wait_within(stubs().gitlab_root.clone(), RELEASE, |_| port_free(), port_released);
 }
 
 fn port_free() -> bool {

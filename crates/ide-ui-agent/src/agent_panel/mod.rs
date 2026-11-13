@@ -1,0 +1,277 @@
+//! The AI panel of the sidebar: under its title, which offers a new session, one list of the folder's sessions, those
+//! of AI tabs and of CLIs, with an archive behind the list's context menu (E68).
+
+mod agents;
+mod rows;
+mod sessions;
+
+use std::cell::{Cell, RefCell};
+use std::collections::BTreeSet;
+use std::path::Path;
+use std::rc::Rc;
+use std::time::{Duration, SystemTime};
+
+use ide_thread::{ThreadId, ThreadIndex};
+use objc2::rc::Retained;
+#[cfg(feature = "selftest")]
+use objc2_app_kit::NSView;
+use objc2_app_kit::{NSAccessibility, NSLayoutAttribute, NSOutlineView, NSScrollView, NSStackView};
+use splat_i18n::t;
+
+use crate::Resume;
+use ide_ui_common::panel::ACCESSORY_INSET;
+use ide_ui_common::util::{main_after, ns};
+use ide_ui_common::window::{AsWindow, Panel, Window};
+pub use rows::{flipped, section_label, small_label, spacer};
+use sessions::Source;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
+
+/// How far the panel's content keeps from the sidebar's leading edge: as far as the panel's title; at the trailing
+/// edge it ends with the title's button.
+const SIDE: f64 = 8.0;
+
+/// The panel of one window.
+pub struct AgentPanel {
+    /// The panel's id among the open ones, which callbacks carry.
+    id: usize,
+    controller: Window,
+    root: std::path::PathBuf,
+    view: Retained<NSStackView>,
+    sessions: Retained<NSOutlineView>,
+    sessions_source: Retained<Source>,
+    show_archived: Cell<bool>,
+    scheduled: Cell<bool>,
+    agents: agents::Agents,
+}
+
+/// The agent panels of every window.
+#[derive(Default)]
+pub struct AgentPanels {
+    panels: RefCell<Vec<Rc<AgentPanel>>>,
+    last_id: Cell<usize>,
+    offered_agents: agents::OfferedAgents,
+}
+
+fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentPanel>>>) -> R) -> R {
+    f(&crate::host::state().agent_panels.panels)
+}
+
+fn panel_of(controller: &Window) -> Option<Rc<AgentPanel>> {
+    with_panels(|panels| {
+        panels
+            .borrow()
+            .iter()
+            .find(|p| p.controller.is_open() && p.controller == *controller)
+            .cloned()
+    })
+}
+
+fn panel_by_key(key: usize) -> Option<Rc<AgentPanel>> {
+    with_panels(|panels| panels.borrow().iter().find(|p| p.id == key).cloned())
+}
+
+/// Puts the AI panel of the window's folder in place of the Agents page.
+pub fn attach(controller: &(impl AsWindow + ?Sized)) {
+    let controller = &controller.as_window();
+    with_panels(|panels| {
+        panels
+            .borrow_mut()
+            .retain(|p| p.controller.is_open() && p.controller != *controller)
+    });
+    let Some(root) = controller.project_root() else { return };
+    let panel = AgentPanel::new(controller, root);
+    controller.set_panel_page(Panel::Agents, &panel.view);
+    with_panels(|panels| panels.borrow_mut().push(panel.clone()));
+    panel.reload();
+}
+
+/// Shows what changed in the window's sessions, at most a few times a second.
+pub fn refresh(controller: &(impl AsWindow + ?Sized)) {
+    let controller = &controller.as_window();
+    let Some(panel) = panel_of(controller) else { return };
+    if panel.scheduled.replace(true) {
+        return;
+    }
+    let key = panel.id;
+    main_after(Duration::from_millis(400), move || {
+        if let Some(panel) = panel_by_key(key) {
+            panel.scheduled.set(false);
+            panel.reload();
+        }
+    });
+}
+
+fn bookmarks_file() -> std::path::PathBuf {
+    ThreadIndex::default_dir().join("bookmarks.json")
+}
+
+fn bookmarks() -> BTreeSet<String> {
+    std::fs::read(bookmarks_file())
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
+}
+
+/// Whether the user bookmarked the thread `id`.
+pub fn is_bookmarked(id: &ThreadId) -> bool {
+    bookmarks().contains(id.as_str())
+}
+
+/// Bookmarks the thread `id` or takes the bookmark away.
+pub fn set_bookmarked(id: &ThreadId, on: bool) {
+    let mut marks = bookmarks();
+    if on {
+        marks.insert(id.as_str().to_string());
+    } else {
+        marks.remove(id.as_str());
+    }
+    let file = bookmarks_file();
+    let written = file
+        .parent()
+        .map(std::fs::create_dir_all)
+        .transpose()
+        .and_then(|_| std::fs::write(&file, serde_json::to_vec(&marks).unwrap_or_default()));
+    if let Err(error) = written {
+        ide_ui_common::diag::report("bookmarks", error);
+    }
+}
+
+/// The sessions of `cwd` that can be resumed, newest first: the index's, then — experimental — those the CLI saved
+/// from a terminal.
+pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
+    let index = ThreadIndex::open(&ThreadIndex::default_dir());
+    let mut past: Vec<(Resume, SystemTime)> = index
+        .list(&ide_thread::Filter::default())
+        .into_iter()
+        .filter(|e| e.cwd.as_deref() == Some(cwd))
+        .filter_map(|e| {
+            let session = e.session.clone()?;
+            Some((
+                Resume {
+                    transcript: transcript(cwd, &session),
+                    session,
+                    thread: Some(e.id.clone()),
+                    title: Some(e.title.clone()).filter(|t| !t.is_empty()),
+                },
+                e.last_activity,
+            ))
+        })
+        .collect();
+    let known: BTreeSet<String> = past.iter().map(|(r, _)| r.session.clone()).collect();
+    for session in terminal_sessions(cwd) {
+        if known.contains(&session.id) {
+            continue;
+        }
+        let title = session.heading();
+        past.push((
+            Resume {
+                session: session.id.clone(),
+                thread: None,
+                title,
+                transcript: Some(session.path.clone()),
+            },
+            session.modified,
+        ));
+    }
+    past.sort_by_key(|(_, when)| std::cmp::Reverse(*when));
+    past.truncate(limit);
+    past
+}
+
+fn config_dir() -> std::path::PathBuf {
+    ide_claude::history::config_dir(&ide_ui_common::window::environment(std::time::Duration::ZERO))
+}
+
+/// The sessions the CLI saved for `cwd`, as its own session list shows them; experimental.
+fn terminal_sessions(cwd: &Path) -> Vec<ide_claude::history::PastSession> {
+    ide_claude::history::list(&config_dir(), cwd)
+}
+
+fn transcript(cwd: &Path, session: &str) -> Option<std::path::PathBuf> {
+    let path = config_dir()
+        .join("projects")
+        .join(ide_claude::history::project_folder(cwd))
+        .join(format!("{session}.jsonl"));
+    path.is_file().then_some(path)
+}
+
+impl AgentPanel {
+    fn new(controller: &Window, root: std::path::PathBuf) -> Rc<AgentPanel> {
+        let mtm = controller.mtm();
+        let agents = agents::Agents::new(controller);
+        let (sessions, sessions_source) = sessions::outline(mtm);
+        let view = NSStackView::new(mtm);
+        view.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
+        view.setAlignment(NSLayoutAttribute::Leading);
+        view.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+            top: 0.0,
+            left: SIDE,
+            bottom: 8.0,
+            right: ACCESSORY_INSET,
+        });
+        let state = crate::host::state();
+        let ids = &state.agent_panels.last_id;
+        ids.set(ids.get() + 1);
+        let panel = Rc::new(AgentPanel {
+            id: ids.get(),
+            controller: *controller,
+            root,
+            view,
+            sessions,
+            sessions_source,
+            show_archived: Cell::new(false),
+            scheduled: Cell::new(false),
+            agents,
+        });
+        panel.sessions_source.set_panel(panel.id);
+        let scroll = scroll(mtm, &panel.sessions);
+        panel.view.addArrangedSubview(&scroll);
+        scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
+        scroll
+            .widthAnchor()
+            .constraintEqualToAnchor_constant(&panel.view.widthAnchor(), -SIDE - ACCESSORY_INSET)
+            .setActive(true);
+        panel.sessions.setAccessibilityLabel(Some(&ns(t("Sitzungen"))));
+        controller.set_panel_accessory(Panel::Agents, &panel.agents.new_session_button());
+        panel
+    }
+
+    /// Reads the index and the open tabs again and shows them.
+    fn reload(&self) {
+        let Some(controller) = self.controller.load() else {
+            return;
+        };
+        let tabs = crate::of_window(&controller);
+        let index = ThreadIndex::open(&ThreadIndex::default_dir());
+        let archived = self.show_archived.get();
+        let model = sessions::Model::build(&sessions::Inputs {
+            index: &index,
+            root: &self.root,
+            tabs: &tabs,
+            archived,
+            terminal: if archived {
+                Vec::new()
+            } else {
+                terminal_sessions(&self.root)
+            },
+            bookmarks: &bookmarks(),
+        });
+        self.sessions_source.show(&self.sessions, model);
+    }
+
+    fn controller(&self) -> Option<Window> {
+        self.controller.load()
+    }
+}
+
+fn scroll(mtm: objc2::MainThreadMarker, outline: &NSOutlineView) -> Retained<NSScrollView> {
+    let scroll = NSScrollView::new(mtm);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    scroll.setDrawsBackground(false);
+    scroll.setDocumentView(Some(outline));
+    scroll
+}

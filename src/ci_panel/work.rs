@@ -4,7 +4,7 @@
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use ide_ci::{Auth, HostRule, Keychain, Memory, Network, SecretStore, Supervised, Transport};
+use ide_ci::{Auth, HostRule, Memory, Network, SecretStore, Supervised, Transport};
 use ide_core::lane::Lane;
 use ide_core::settings::{Key, Settings};
 use ide_process::Supervisor;
@@ -40,15 +40,16 @@ pub fn auth() -> Option<Auth> {
     Some(AUTH.get_or_init(|| Auth::new(store(), commands, environment)).clone())
 }
 
-/// The keychain under the app's bundle identifier; the self-test keeps tokens in memory instead.
+static STORE: OnceLock<Arc<dyn SecretStore>> = OnceLock::new();
+
+/// Keeps the tokens in `store`, the app's one store of secrets; once, before the first token is read.
+pub fn use_secrets(store: Arc<dyn SecretStore>) {
+    let _ = STORE.set(store);
+}
+
+/// The store the app handed over, or memory where it handed none.
 fn store() -> Arc<dyn SecretStore> {
-    if cfg!(feature = "selftest") && std::env::var_os("IDE_SELFTEST").is_some() {
-        return Arc::new(Memory::default());
-    }
-    let service = objc2_foundation::NSBundle::mainBundle()
-        .bundleIdentifier()
-        .map_or_else(|| ide_product::BUNDLE_ID.to_string(), |id| id.to_string());
-    Arc::new(Keychain::new(&service))
+    STORE.get_or_init(|| Arc::new(Memory::default())).clone()
 }
 
 /// The host rules of the user's settings.

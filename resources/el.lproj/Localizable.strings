@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Τελευταίο μήνυμα: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Το πρόγραμμα τερματίστηκε χωρίς μήνυμα.";
 "Das Programm hat sich beim Start beendet: {}" = "Το πρόγραμμα τερματίστηκε κατά την εκκίνηση: {}";
+"Konnte keinen Thread starten: {}" = "Δεν ήταν δυνατή η εκκίνηση νήματος: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Δεν ήταν δυνατή η εκτέλεση της αλλαγής στον χώρο εργασίας.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "Το «{}» είναι βιβλιοθήκη χωρίς πρόγραμμα, και αυτό το αρχείο δεν έχει δοκιμές. Κάντε αποσφαλμάτωση σε αρχείο με main ή δοκιμές, ή ορίστε στο .vscode/launch.json ποιο πρόγραμμα ξεκινά.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Αν το macOS δεν ζητήσει συνθηματικό, επιτρέψτε τους αποσφαλματωτές μία φορά στο Τερματικό με «sudo DevToolsSecurity -enable», ή ακυρώστε με Διακοπή. Μετά από δέκα λεπτά η εκκίνηση σταματά από μόνη της.";
+"Haltepunkt, nicht gesetzt" = "Σημείο διακοπής, δεν ορίστηκε";
+"nicht gesetzt" = "δεν ορίστηκε";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Ο αποσφαλματωτής δεν μπόρεσε να ορίσει σημείο διακοπής εδώ: {}";

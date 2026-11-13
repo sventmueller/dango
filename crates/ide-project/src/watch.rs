@@ -306,7 +306,7 @@ mod tests {
         let Some(WatchEvent::Changed(changes)) = batch.finish() else {
             panic!()
         };
-        assert_eq!(changes.dirs, BTreeSet::from([root.clone(), root.join("src")]));
+        assert_eq!(changes.dirs, BTreeSet::from([root.to_path_buf(), root.join("src")]));
         assert_eq!(changes.subtrees, BTreeSet::from([root.join("src/moved")]));
         assert!(changes.git_changed);
         assert!(!changes.rules_changed);
@@ -410,7 +410,7 @@ mod tests {
             let _ = sender.send(event);
         })
         .unwrap();
-        assert_eq!(watcher.root(), root);
+        assert_eq!(watcher.root(), root.path());
 
         write(&root, "src/new.rs", "");
         wait_for(&received, |seen| seen.dirs.contains(&root.join("src")));

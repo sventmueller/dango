@@ -21,4 +21,7 @@ flowchart TB
     main -->|"TrustStore::is_trusted, trust, revoke"| trust[("trusted folders in the data folder")]
 ```
 
+`search_panel` and `files_panel` hold what the app's search and files panels decide without AppKit (E98): the current
+search with its matches per file and status line, and what a click, the context menu and a new name mean in the tree.
+
 The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

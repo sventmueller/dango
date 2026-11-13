@@ -12,6 +12,7 @@ pub mod hooks;
 pub mod input;
 pub mod launch;
 pub mod mapping;
+pub mod modes;
 pub mod protocol;
 pub mod replay;
 pub mod rules;
@@ -22,6 +23,7 @@ pub use capabilities::{Capabilities, Feature, Tier};
 pub use control::{ControlError, PermissionAnswer, PlanAnswer};
 pub use launch::{Launch, Thinking};
 pub use mapping::Mapper;
+pub use modes::{Effort, PermissionMode};
 pub use protocol::Message;
 pub use session::{Event, RemoteControl, Reply, Session, SessionError};
 

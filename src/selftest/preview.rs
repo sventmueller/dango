@@ -9,15 +9,16 @@ use std::time::{Duration, Instant};
 use objc2::MainThreadMarker;
 use objc2_foundation::NSRange;
 
-use super::helpers::{editor, type_at, utf16_len, window_of};
+use super::helpers::{self, editor, type_at, utf16_len, window_of};
 use super::{check, finish, snapshot};
 use crate::preview::seen;
-use crate::util::main_after;
 
 const SCENARIO: &str = "preview";
 
 /// How long the first formulas and diagrams may take: the renderer's page loads its libraries with the first one.
 const FIGURES: Duration = Duration::from_secs(45);
+/// How long Quick Look takes to draw a picture and the window to lay it out, which no state tells.
+const QUICK_LOOK: Duration = Duration::from_millis(1500);
 
 /// A picture of 4 × 4 pixels.
 const PNG: [u8; 73] = [
@@ -67,9 +68,7 @@ fn pdf() -> Vec<u8> {
 }
 
 fn folder(name: &str) -> PathBuf {
-    let folder = ide_core::paths::home().join(name);
-    let _ = std::fs::create_dir_all(&folder);
-    folder.canonicalize().unwrap_or(folder)
+    helpers::make_project(name, &[]).unwrap_or_else(|_| helpers::root(name))
 }
 
 pub(super) fn run() {
@@ -92,7 +91,7 @@ pub(super) fn run() {
     let _ = std::fs::write(root.join("seite.html"), "<html><body><h1>Seite</h1></body></html>\n");
     crate::project::trust(&root);
     crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || open_preview(root));
+    helpers::wait_for_window(&root.clone(), move |_| open_preview(root));
 }
 
 fn open_preview(root: PathBuf) {
@@ -114,7 +113,7 @@ fn open_preview(root: PathBuf) {
     );
     let path = root.join("doc.md");
     let shown = path.clone();
-    super::helpers::wait_until(
+    helpers::wait_until(
         move || seen::text(&shown).is_some_and(|(text, _)| text.contains("Absatz 80")),
         move |ok| {
             let text = seen::text(&path).map(|(text, _)| text).unwrap_or_default();
@@ -123,19 +122,21 @@ fn open_preview(root: PathBuf) {
                 ok && text.starts_with("Vorschau") && text.contains("Formel") && text.contains("1\n2"),
                 text.chars().take(80).collect::<String>(),
             );
-            wait_for_figures(root, Instant::now());
+            wait_for_figures(root);
         },
     );
 }
 
 /// Waits until the two formulas, the diagram and the picture of the folder are pictures in the preview.
-fn wait_for_figures(root: PathBuf, since: Instant) {
+fn wait_for_figures(root: PathBuf) {
+    let since = Instant::now();
     let path = root.join("doc.md");
-    let pictures = seen::text(&path).map_or(0, |(_, attachments)| attachments);
-    if pictures < 4 && since.elapsed() < FIGURES {
-        main_after(Duration::from_millis(250), move || wait_for_figures(root, since));
-        return;
-    }
+    let drawn = move || seen::text(&path).map_or(0, |(_, attachments)| attachments);
+    helpers::wait_within(FIGURES, move || drawn() >= 4, move |_| figures(root, since));
+}
+
+fn figures(root: PathBuf, since: Instant) {
+    let pictures = seen::text(&root.join("doc.md")).map_or(0, |(_, attachments)| attachments);
     check(
         "formulas, the diagram and the picture of the folder show as pictures",
         pictures >= 4,
@@ -158,7 +159,7 @@ fn typing(root: PathBuf) {
     type_at(&view, NSRange::new(end_of_heading, 0), " neu");
     let path = root.join("doc.md");
     let shown = path.clone();
-    super::helpers::wait_until(
+    helpers::wait_until(
         move || seen::text(&shown).is_some_and(|(text, _)| text.starts_with("Vorschau neu")),
         move |ok| {
             let text = seen::text(&path).map(|(text, _)| text).unwrap_or_default();
@@ -190,7 +191,7 @@ fn scrolling(root: PathBuf) {
     }
     let path = root.join("doc.md");
     let shown = path.clone();
-    super::helpers::wait_until(
+    helpers::wait_until(
         move || seen::top_line(&shown).is_some_and(|line| line.starts_with("Absatz 40 ")),
         move |ok| {
             check(
@@ -260,14 +261,17 @@ fn answers(root: PathBuf) {
         crate::agent::is_dark(mtm),
         &std::sync::Arc::from(""),
     );
-    main_after(Duration::from_millis(100), move || {
-        check(
-            "an AI answer shows a formula as code until it is drawn, and asks for it",
-            fresh.contains("a^2 + b^2") && crate::agent::asked_for_figure(&key),
-            fresh,
-        );
-        pdf_and_html(root);
-    });
+    helpers::wait_until(
+        move || crate::agent::asked_for_figure(&key),
+        move |asked| {
+            check(
+                "an AI answer shows a formula as code until it is drawn, and asks for it",
+                fresh.contains("a^2 + b^2") && asked,
+                fresh,
+            );
+            pdf_and_html(root);
+        },
+    );
 }
 
 fn pdf_and_html(root: PathBuf) {
@@ -291,7 +295,7 @@ fn pdf_and_html(root: PathBuf) {
         controller.tab_titles().contains(&"bild.png".to_string()) && quick_look,
         format!("{:?}, Quick Look {quick_look}", controller.tab_titles()),
     );
-    main_after(Duration::from_millis(1500), move || {
+    helpers::after(QUICK_LOOK, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, "preview-picture");
         }
@@ -313,7 +317,7 @@ fn documents_again(controller: &crate::window::WindowController, root: &Path) {
     let broken = root.join("kaputt.pdf");
     let _ = std::fs::write(&broken, "no PDF at all");
     let message = splat_i18n::tf("„{}“ lässt sich nicht öffnen.", &["kaputt.pdf"]);
-    let said = super::helpers::answer_alert_saying(
+    let said = helpers::answer_alert_saying(
         Duration::from_millis(400),
         message,
         objc2_app_kit::NSAlertFirstButtonReturn,
@@ -333,7 +337,7 @@ fn screenshot(root: PathBuf) {
     };
     let before = controller.inspect().sidebar_width;
     controller.open_file(&root.join("bildschirmfoto.png"));
-    main_after(Duration::from_millis(1500), move || {
+    helpers::after(QUICK_LOOK, move || {
         let Some(controller) = window_of(&root) else {
             return finish(SCENARIO);
         };
@@ -367,7 +371,7 @@ fn svg(root: PathBuf) {
         editor(&controller, "logo.svg").is_some() && titles.contains(&"Vorschau: logo.svg".to_string()) && quick_look,
         format!("{titles:?}, Quick Look {quick_look}"),
     );
-    main_after(Duration::from_millis(1500), move || {
+    helpers::after(QUICK_LOOK, move || {
         if let Some(window) = window_of(&root).and_then(|c| c.window()) {
             snapshot(&window, "preview-svg");
         }
@@ -422,7 +426,7 @@ fn untrusted() {
         return finish(SCENARIO);
     }
     let shown = path.clone();
-    super::helpers::wait_until(
+    helpers::wait_until(
         move || seen::text(&shown).is_some_and(|(text, _)| text.starts_with("Fremd")),
         move |ok| web_pictures(&path, ok),
     );

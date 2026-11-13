@@ -1,11 +1,12 @@
 //! A prediction from Copilot: an inline completion and next edits asked for together, answered once both are in.
 
+use ide_core::LockIgnoringPoison;
 use std::sync::{Arc, Mutex};
 
 use ide_lsp::Ticket;
 use serde_json::{Value, json};
 
-use super::{Account, Copilot, Core, Job, answer, error_of, lock, position};
+use super::{Account, Copilot, Core, Job, answer, error_of, position};
 use crate::{Cancel, Error, Indent, Prediction, Provider, Reply, Request, on_own_thread, texts};
 
 /// The two answers of one prediction, gathered until both are in.
@@ -23,14 +24,14 @@ struct Gathered {
 
 impl Join {
     fn completions(&self, answer: Result<Vec<Prediction>, Error>) {
-        let mut state = lock(&self.state);
+        let mut state = self.state.lock_ignoring_poison();
         state.completions = Some(answer);
         self.done(state);
     }
 
     /// Next edits are a bonus: a server that does not offer them, or fails at them, still gives completions.
     fn edits(&self, answer: Result<Vec<Prediction>, Error>) {
-        let mut state = lock(&self.state);
+        let mut state = self.state.lock_ignoring_poison();
         if let Ok(edits) = answer {
             state.edits = edits;
         }

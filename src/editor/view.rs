@@ -63,6 +63,8 @@ pub struct ViewIvars {
     pub(super) blame: RefCell<super::blame::State>,
     /// What edit prediction proposes and asks (E92).
     pub(super) predict: RefCell<super::predict::State>,
+    /// The notifications the editor follows, its scroll view's size and scrolling, which end with it.
+    pub(crate) watches: RefCell<Vec<crate::util::Observation>>,
 }
 
 define_class!(
@@ -529,6 +531,11 @@ define_class!(
             guarded((), || crate::lsp::paint(self));
         }
 
+        #[unsafe(method(ideActionsMoved))]
+        fn actions_moved(&self) {
+            guarded((), || crate::lsp::actions_moved(self));
+        }
+
         #[unsafe(method(ideLspRefresh))]
         fn lsp_refresh(&self) {
             guarded((), || crate::lsp::refresh(self));
@@ -694,6 +701,7 @@ impl EditorTextView {
             insets: RefCell::new(super::insets::Insets::default()),
             blame: RefCell::new(super::blame::State::default()),
             predict: RefCell::new(super::predict::State::default()),
+            watches: RefCell::new(Vec::new()),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
@@ -903,6 +911,8 @@ impl EditorTextView {
         );
         if self.ivars().lsp.try_borrow_mut().is_ok() {
             crate::lsp::paint(self);
+        } else {
+            self.later(objc2::sel!(ideDecorate), 0.0);
         }
     }
 

@@ -4,7 +4,6 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Duration;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -12,12 +11,11 @@ use objc2_app_kit::NSPasteboard;
 use objc2_foundation::{NSPoint, NSRange};
 use splat_i18n::t;
 
-use super::helpers::wait_until;
+use super::helpers::{self, wait_until};
 use super::{check, finish, snapshot};
 use crate::editor::blame_probe as blame;
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "editor-blame";
@@ -32,9 +30,7 @@ fn send(view: &EditorTextView, action: objc2::runtime::Sel) {
 const FILE: &str = "notes.txt";
 
 fn root() -> PathBuf {
-    let folder = ide_core::paths::home().join("blame-project");
-    let _ = std::fs::create_dir_all(&folder);
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root("blame-project")
 }
 
 fn blamed() -> Option<Retained<EditorTextView>> {
@@ -87,12 +83,9 @@ fn make(dir: &Path) -> Result<String, String> {
     git(dir, "Bea", 3, &["rev-parse", "HEAD"])
 }
 
-thread_local! {
-    static HEAD: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
-}
-
+/// The repository's last commit, Bea's; the scenario commits nothing after it.
 fn head() -> String {
-    HEAD.with(|h| h.borrow().clone())
+    git(&root(), "Bea", 3, &["rev-parse", "HEAD"]).unwrap_or_default()
 }
 
 fn picture(name: &str) {
@@ -110,9 +103,15 @@ fn column(view: &EditorTextView) -> Vec<(usize, String)> {
 }
 
 pub fn run() {
-    let dir = root();
+    let dir = match helpers::make_project("blame-project", &[]) {
+        Ok(dir) => dir,
+        Err(error) => {
+            check("the repository's folder is made", false, error.to_string());
+            return finish(SCENARIO);
+        }
+    };
     match make(&dir) {
-        Ok(hash) => HEAD.with(|h| *h.borrow_mut() = hash),
+        Ok(_) => {}
         Err(error) => {
             check("a repository with two commits is made", false, error);
             return finish(SCENARIO);
@@ -163,7 +162,7 @@ fn line_end() {
             );
             picture("blame-line-end");
             send(&view, objc2::sel!(ideToggleBlameColumn:));
-            main_after(Duration::from_millis(300), column_blocks);
+            wait_until(|| blamed().is_some_and(|v| !column(&v).is_empty()), |_| column_blocks());
         },
     );
 }
@@ -322,7 +321,15 @@ fn clicks(ok: bool) {
         return finish(SCENARIO);
     };
     controller.open_file(&root().join(FILE));
-    main_after(Duration::from_millis(900), || {
+    let shown = || {
+        blamed().is_some_and(|view| {
+            if let Some(window) = view.window() {
+                window.displayIfNeeded();
+            }
+            insets::shown(&view).iter().any(|s| s.layer == Layer::Blame)
+        })
+    };
+    wait_until(shown, |_| {
         let Some(view) = blamed() else { return finish(SCENARIO) };
         if let Some(window) = view.window() {
             window.displayIfNeeded();
@@ -361,7 +368,7 @@ fn clicks(ok: bool) {
                 view.mouseMoved(&moved);
             }
         }
-        main_after(Duration::from_millis(1200), || {
+        wait_until(blamed_popover, |_| {
             let Some(view) = blamed() else { return finish(SCENARIO) };
             check(
                 "resting the mouse on the blame at the line's end opens its popover",
@@ -371,6 +378,10 @@ fn clicks(ok: bool) {
             untrusted(&view);
         });
     });
+}
+
+fn blamed_popover() -> bool {
+    blamed().is_some_and(|view| blame::popover_texts(&view).is_some())
 }
 
 fn untrusted(view: &EditorTextView) {

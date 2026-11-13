@@ -1,0 +1,28 @@
+[package]
+name = "ide-ui-debug"
+version = "0.0.0"
+description = "The debugger's panel, inspector, Debug menu and console, and the breakpoints the editors draw"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-dap.workspace = true
+ide-document.workspace = true
+ide-lsp.workspace = true
+ide-net.workspace = true
+ide-process.workspace = true
+ide-ui-common.workspace = true
+splat-i18n.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+
+[features]
+# What the self-test reads of the panel and does with it, and the fake adapter it debugs.
+selftest = ["ide-dap/testing"]

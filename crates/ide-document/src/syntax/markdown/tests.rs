@@ -198,11 +198,12 @@ fn a_long_text_is_parsed_on_a_thread_and_its_start_meanwhile() {
     assert!(tokens(&document, 0).contains(&Token::Heading));
     let far = document.text().line_count() - 10;
     insert(&mut document, 2, 0, "Edited while parsing. ");
-    document.highlight(far..far + 5);
     assert!(
-        document.styles(far).is_empty() || document.is_highlighted(),
+        document.styles(far).is_empty(),
         "beyond the start nothing is known before the parse is done"
     );
+    assert!(!document.is_highlighted());
+    document.highlight(far..far + 5);
     let deadline = std::time::Instant::now() + Duration::from_secs(20);
     while !document.is_highlighted() {
         assert!(std::time::Instant::now() < deadline, "the parse never arrived");

@@ -429,7 +429,7 @@ mod tests {
     use super::*;
     use crate::testing::{one, scratch, write};
 
-    fn project(name: &str) -> PathBuf {
+    fn project(name: &str) -> ide_core::testing::Scratch {
         let root = scratch(name);
         write(&root, ".gitignore", "target/\n");
         write(

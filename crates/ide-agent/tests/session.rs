@@ -445,7 +445,7 @@ fn a_read_only_thread_is_not_offered_the_writing_tools() {
         "{names:?}"
     );
     assert!(body["system"][0]["text"].as_str().unwrap().contains("may only read"));
-    let path: &Path = project.0.as_path();
+    let path: &Path = project.0.path();
     assert!(path.exists());
 }
 

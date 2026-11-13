@@ -1,17 +1,29 @@
 //! Installing npm and uv packages and archives with stand-ins for npm, node, uv and the network: what each helper
 //! must leave behind before the installation counts, and what the user is told when it does not.
 
-use std::io::{self, Read};
+use ide_core::testing::scratch;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use ide_acp::install::{InstallError, Progress, Runtime, Source};
-use ide_acp::net::{Http, Net};
 use ide_acp::{Installer, Installs, Plan};
+use ide_net::{Download, Http, Net};
 use ide_process::Supervisor;
 
+/// Logs each call with whether it may run package scripts to `$NPM_LOG`; `rebuild` is where scripts run.
 const NPM: &str = r#"#!/bin/sh
-prefix="$3"; spec="$7"; package="${spec%@*}"; version="${spec##*@}"; short="${package##*/}"
+command="$1"; shift; prefix=""; spec=""; scripts=yes
+while [ $# -gt 0 ]; do
+  case "$1" in --prefix) prefix="$2"; shift ;; --ignore-scripts) scripts=no ;; --*) ;; *) spec="$1" ;; esac
+  shift
+done
+[ -n "$NPM_LOG" ] && echo "$command scripts=$scripts" >> "$NPM_LOG"
+if [ "$command" = rebuild ]; then
+  if [ -n "$NPM_SCRIPT_FAIL" ]; then echo "postinstall failed" >&2; exit 1; fi
+  exit 0
+fi
+package="${spec%@*}"; version="${spec##*@}"; short="${package##*/}"
 if [ -n "$NPM_FAIL" ]; then echo "npm error 404 $spec" >&2; exit 1; fi
 mkdir -p "$prefix/node_modules/$package" "$prefix/node_modules/.bin"
 printf '{"name":"%s","bin":%s}' "$package" "${NPM_BIN:-\"cli.js\"}" > "$prefix/node_modules/$package/package.json"
@@ -35,22 +47,18 @@ struct FakeNet {
 }
 
 impl Net for FakeNet {
-    fn get(&self, url: &str) -> io::Result<Box<dyn Read + Send>> {
+    fn get(&self, url: &str, _: &str) -> io::Result<Download> {
         let files = self.files.lock().unwrap();
         let bytes = files
             .iter()
             .find(|(u, _)| u == url)
             .map(|(_, b)| b.clone())
             .ok_or_else(|| io::Error::other(format!("404 {url}")))?;
-        Ok(Box::new(io::Cursor::new(bytes)))
+        Ok(Download {
+            length: None,
+            body: Box::new(io::Cursor::new(bytes)),
+        })
     }
-}
-
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-acp-install-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
 }
 
 fn script(path: &Path, text: &str) {
@@ -175,6 +183,38 @@ fn npm_counts_only_with_the_named_version_integrity_and_program() {
         InstallError::Unusable(why) => assert_eq!(why, "node-agent names no single program"),
         other => panic!("{other:?}"),
     }
+}
+
+#[test]
+fn package_scripts_run_only_after_the_integrity_is_checked() {
+    let dir = scratch("npm-scripts");
+    let bin = helpers(&dir, Some("v22.3.0"));
+    let log = dir.join("npm.log");
+    let log_text = log.to_string_lossy().into_owned();
+    let net: Arc<dyn Net> = Arc::new(FakeNet::default());
+    let calls = |vars: &[(&str, &str)], plan: &Plan| {
+        let _ = std::fs::remove_file(&log);
+        let mut vars = vars.to_vec();
+        vars.push(("NPM_LOG", &log_text));
+        let (installer, _) = installer(&dir, &bin, &vars, net.clone());
+        let result = installer.install(plan, true, &|_| {});
+        (result, std::fs::read_to_string(&log).unwrap_or_default())
+    };
+    let (result, log_after) = calls(&[], &npm_plan("node-agent", Some("sha512-good"), None));
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(log_after, "install scripts=no\nrebuild scripts=yes\n");
+    let (result, log_after) = calls(&[], &npm_plan("node-agent", Some("sha512-pinned"), None));
+    assert!(matches!(result, Err(InstallError::Checksum { .. })), "{result:?}");
+    assert_eq!(
+        log_after, "install scripts=no\n",
+        "no script ran for a package that failed its check"
+    );
+    let (result, _) = calls(&[("NPM_SCRIPT_FAIL", "1")], &npm_plan("node-agent", None, None));
+    match result {
+        Err(InstallError::Tool(stderr)) => assert_eq!(stderr.trim(), "postinstall failed"),
+        other => panic!("{other:?}"),
+    }
+    assert!(!dir.join("agents/node-agent/1.4.2").exists());
 }
 
 #[test]
@@ -386,12 +426,12 @@ fn text_from_the_network_is_read_up_to_its_limit() {
 
 #[test]
 fn the_http_client_fetches_only_https() {
-    let http = Http::default();
-    let error = http.get("http://example.test/registry.json").err().unwrap();
+    let http = Http::new("agent register");
+    let error = http.get("http://example.test/registry.json", "*/*").err().unwrap();
     assert_eq!(
         error.to_string(),
         "http://example.test/registry.json is not an HTTPS address"
     );
     // Port 1 on the loopback refuses at once, so the request fails without reaching any network.
-    assert!(http.get("https://127.0.0.1:1/registry.json").is_err());
+    assert!(http.get("https://127.0.0.1:1/registry.json", "*/*").is_err());
 }

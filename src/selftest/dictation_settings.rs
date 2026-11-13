@@ -2,8 +2,6 @@
 //! over once, each control writes the app's settings and the engine starts with them, and a missing local model is
 //! downloaded from the tab.
 
-use std::time::Duration;
-
 use lowspeak::models::{Language, LocalModel, PostProcessingMode, TranscriptionMode};
 use objc2::runtime::Sel;
 use objc2::sel;
@@ -16,7 +14,7 @@ use super::settings_pages::{act, control};
 use crate::dictation::choices;
 use crate::dictation::selftest as dictation;
 use crate::settings::dictation::LOCAL;
-use crate::util::{main_after, ns};
+use crate::util::ns;
 
 const MODEL: LocalModel = LocalModel::Tiny;
 const LANGUAGE: Language = Language::Fr;
@@ -97,7 +95,8 @@ fn download() {
     let (_, shown) = crate::settings::dictation_rows();
     let started =
         !crate::dictation::installed(MODEL) && control(sel!(ideDictationDownload:), None).is_some_and(|b| act(&b));
-    main_after(Duration::from_millis(250), move || {
+    let shows = || crate::dictation::downloading().is_some() || crate::dictation::installed(MODEL);
+    super::helpers::wait_until(shows, move |_| {
         if let Some(window) = crate::settings::window() {
             super::snapshot(&window, "dictation-settings-download");
         }

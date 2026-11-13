@@ -20,14 +20,16 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSNotificationCenter, NSObject, NSPoint, NSRect, NSSize, NSString};
 
-use super::helpers::{alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, wait_until, window_of};
+use super::helpers::{
+    self, alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, open_project, wait_until, window_of,
+};
 use super::settings_pages::all_in;
 use super::{check, finish};
-use crate::util::{constant, main_after, ns};
+use crate::util::{constant, ns};
 use crate::window::{Panel, WindowController, search_selftest as search};
 
 const NAME: &str = "window-commands";
-const STEP: Duration = Duration::from_millis(300);
+const PROJECT: &str = "commands-project";
 const MAIN: &str = "fn main() {\n    let needle = 1;\n    println!(\"Needle {needle}\");\n}\n";
 const LIB: &str = "pub fn needle() {}\n";
 const SVG: &str =
@@ -36,31 +38,33 @@ const RETURN: u16 = 36;
 const ESCAPE: u16 = 53;
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("commands-project");
-    for (path, text) in [
+    let files = [
         ("src/main.rs", MAIN),
         ("src/lib.rs", LIB),
         ("src/other.rs", "pub fn other() {}\n"),
         ("notes.md", "# Notes\n"),
         ("pic.svg", SVG),
-    ] {
-        let file = root.join(path);
-        let _ = std::fs::create_dir_all(file.parent().unwrap_or(&root));
-        let _ = std::fs::write(file, text);
-    }
-    let root = root.canonicalize().unwrap_or(root);
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(800), move || {
-        let Some(controller) = window_of(&root) else {
-            check("the folder opens in a window", false, "");
-            return finish(NAME);
-        };
+    ];
+    open_project(NAME, PROJECT, &files, |controller| {
+        let root = helpers::root(PROJECT);
         controller.open_file(&root.join("src/main.rs"));
         controller.open_file(&root.join("src/lib.rs"));
-        main_after(STEP, move || tabs(root));
+        let probe = root.clone();
+        wait_until(
+            move || controller_front(&probe).as_deref() == Some("lib.rs"),
+            move |_| tabs(root),
+        );
     });
+}
+
+/// Whether no alert runs modal, so the next one a step opens is the only one.
+fn no_alert() -> bool {
+    MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none())
+}
+
+/// The title of the tab in front of `root`'s window.
+fn controller_front(root: &Path) -> Option<String> {
+    controller(root)?.front_title()
 }
 
 fn controller(root: &Path) -> Option<Retained<WindowController>> {
@@ -128,7 +132,10 @@ fn tabs(root: PathBuf) {
     if let Some(window) = crate::settings::window() {
         window.orderOut(None);
     }
-    main_after(STEP, move || symbols(root));
+    wait_until(
+        || crate::settings::window().is_none_or(|w| !w.isVisible()),
+        move |_| symbols(root),
+    );
 }
 
 /// Whether a panel shows with `query` typed into its field.
@@ -157,7 +164,7 @@ fn symbols(root: PathBuf) {
         shown && !panel_with_query("#"),
         "",
     );
-    main_after(STEP, move || files_menu(root));
+    wait_until(|| !panel_with_query("#"), move |_| files_menu(root));
 }
 
 /// The row of `path` in `outline`, whose items are the paths.
@@ -277,7 +284,9 @@ fn files_menu(root: PathBuf) {
     );
     let svg = root.join("pic.svg");
     let preview = tree_command(&c, &svg, "Als Vorschau öffnen");
-    main_after(STEP, move || {
+    let probe = root.clone();
+    let opened = move || controller(&probe).is_some_and(|c| c.tab_titles().iter().any(|t| t.contains("pic.svg")));
+    wait_until(opened, move |_| {
         let Some(c) = controller(&root) else {
             return finish(NAME);
         };
@@ -288,7 +297,16 @@ fn files_menu(root: PathBuf) {
         );
         name_in_alert("Umbenennen", "other2.rs");
         let renamed = tree_command(&c, &root.join("src/other.rs"), "Umbenennen …").is_some();
-        main_after(STEP, move || rename_taken(root, renamed));
+        let probe = root.clone();
+        wait_until(
+            move || {
+                no_alert()
+                    && controller(&probe)
+                        .and_then(|c| c.file_tree_outline())
+                        .is_some_and(|outline| row_of(&outline, &probe.join("src/other2.rs")).is_some())
+            },
+            move |_| rename_taken(root, renamed),
+        );
     });
 }
 
@@ -319,7 +337,9 @@ fn rename_taken(root: PathBuf, renamed: bool) {
     let folder = tree_command(&c, &src, "Neuer Ordner …").is_some();
     name_in_alert("Neue Datei", "a.txt");
     let file = tree_command(&c, &src, "Neue Datei …").is_some();
-    main_after(STEP, move || {
+    let probe = root.clone();
+    let made = move || probe.join("src/a.txt").is_file() && controller_front(&probe).as_deref() == Some("a.txt");
+    wait_until(made, move |_| {
         let Some(c) = controller(&root) else {
             return finish(NAME);
         };
@@ -359,7 +379,9 @@ fn tree_click(root: PathBuf) {
         });
         clicked && doubled
     });
-    main_after(STEP, move || {
+    let probe = root.clone();
+    let shown = move || controller_front(&probe).is_some_and(|t| t.contains("notes"));
+    wait_until(shown, move |_| {
         let Some(c) = controller(&root) else {
             return finish(NAME);
         };
@@ -639,15 +661,19 @@ fn fold_and_replace_all(root: PathBuf) {
             {
                 window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
             }
-            main_after(STEP, move || {
-                let after = std::fs::read_to_string(root.join("src/main.rs")).unwrap_or_default();
-                check(
-                    "\"Alle ersetzen\" asks first, and Abbrechen replaces nothing",
-                    pressed && asked && before == after,
-                    "",
-                );
-                full_screen(root);
-            });
+            let probe = root.clone();
+            wait_until(
+                move || controller(&probe).is_some_and(|c| !c.has_sheet()),
+                move |_| {
+                    let after = std::fs::read_to_string(root.join("src/main.rs")).unwrap_or_default();
+                    check(
+                        "\"Alle ersetzen\" asks first, and Abbrechen replaces nothing",
+                        pressed && asked && before == after,
+                        "",
+                    );
+                    full_screen(root);
+                },
+            );
         },
     );
 }

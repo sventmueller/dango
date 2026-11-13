@@ -16,8 +16,6 @@ use splat_i18n::t;
 use super::view::BrowserView;
 use ide_ui_common::util::{ns, symbol, symbol_button};
 
-const SYMBOL_POINTS: f64 = 14.0;
-
 pub struct Controls {
     pub row: Retained<NSStackView>,
     pub back: Retained<NSButton>,
@@ -32,7 +30,14 @@ pub struct Controls {
 impl Controls {
     pub fn new(mtm: MainThreadMarker, target: &BrowserView) -> Controls {
         let button = |name: &str, description: &str, action: Sel| {
-            let button = symbol_button(mtm, name, description, SYMBOL_POINTS, Some(target), action);
+            let button = symbol_button(
+                mtm,
+                name,
+                description,
+                ide_ui_common::style::symbol::MEDIUM,
+                Some(target),
+                action,
+            );
             ide_ui_common::util::set_label(&button, Some(description));
             button.widthAnchor().constraintEqualToConstant(26.0).setActive(true);
             button
@@ -55,7 +60,7 @@ impl Controls {
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         row.setAlignment(NSLayoutAttribute::CenterY);
-        row.setSpacing(2.0);
+        row.setSpacing(ide_ui_common::style::space::XXS);
         row.setEdgeInsets(NSEdgeInsets {
             top: 5.0,
             left: 8.0,
@@ -74,9 +79,9 @@ impl Controls {
         ] {
             row.addArrangedSubview(view);
         }
-        row.setCustomSpacing_afterView(8.0, &reload);
-        row.setCustomSpacing_afterView(6.0, &field);
-        row.setCustomSpacing_afterView(6.0, &spinner);
+        row.setCustomSpacing_afterView(ide_ui_common::style::space::M, &reload);
+        row.setCustomSpacing_afterView(ide_ui_common::style::space::S, &field);
+        row.setCustomSpacing_afterView(ide_ui_common::style::space::S, &spinner);
         Controls {
             row,
             back,

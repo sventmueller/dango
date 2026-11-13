@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Останнє повідомлення: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Програма завершилася без повідомлення.";
 "Das Programm hat sich beim Start beendet: {}" = "Програма завершилася під час запуску: {}";
+"Konnte keinen Thread starten: {}" = "Не вдалося запустити потік: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Не вдалося виконати зміну робочої області.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "«{}» — бібліотека без програми, і в цьому файлі немає тестів. Налагоджуйте файл з main або тестами чи вкажіть у .vscode/launch.json, яка програма запускається.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Якщо macOS не запитує пароль, один раз дозвольте зневаджувачі в Терміналі командою «sudo DevToolsSecurity -enable» або скасуйте кнопкою «Зупинити». Через десять хвилин запуск припиниться сам.";
+"Haltepunkt, nicht gesetzt" = "Точка зупину, не встановлена";
+"nicht gesetzt" = "не встановлена";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Зневаджувачу не вдалося встановити тут точку зупину: {}";

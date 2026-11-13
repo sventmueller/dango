@@ -4,8 +4,6 @@
 //! settings from elsewhere reaches the open window; the own agent keeps and forgets its rules, endpoints and keys and
 //! starts on the service that has a key.
 
-use std::time::Duration;
-
 use ide_core::settings::{Key, SearchEngine, Settings, keys};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
@@ -15,8 +13,8 @@ use objc2_app_kit::{
     NSTextField, NSView,
 };
 
+use super::helpers::wait_until;
 use super::{check, finish};
-use crate::util::main_after;
 
 const NAME: &str = "settings-general";
 
@@ -34,7 +32,7 @@ pub fn run() {
     let _ = std::fs::write(&file, DAMAGED);
     crate::settings::show(mtm);
     damaged(before);
-    main_after(Duration::from_millis(400), general);
+    wait_until(|| general_view().is_some(), |_| general());
 }
 
 /// The General tab of a damaged settings file says so, and its switches leave the file as it is.
@@ -162,7 +160,10 @@ fn general() {
         wrong.join("; "),
     );
     font_and_engine(&view);
-    main_after(Duration::from_millis(300), agents);
+    wait_until(
+        || crate::settings::window().is_some_and(|w| w.isVisible()),
+        |_| agents(),
+    );
 }
 
 fn font_and_engine(view: &NSView) {
@@ -225,7 +226,8 @@ fn agents() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_agents(mtm);
     crate::settings::agents_changed();
-    main_after(Duration::from_millis(600), || {
+    let listed = || fits().0 && !crate::settings::agents_lines().is_empty();
+    wait_until(listed, |_| {
         let (same, detail) = fits();
         check(
             "the agents changing while their tab is open list them again, in a window as large as the list",

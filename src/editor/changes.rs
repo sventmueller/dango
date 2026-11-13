@@ -20,6 +20,10 @@ use splat_i18n::t;
 
 use super::view::EditorTextView;
 use crate::util::{label, main_soon, ns, set_action};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// How long typing pauses before the marks follow it.
 const DELAY: f64 = 0.3;
@@ -380,11 +384,11 @@ fn show(view: &EditorTextView, mark: Mark, committed: &str, column: &NSView, at:
 /// What the popover holds: what happened, the committed lines and the button that puts them back.
 fn content(mtm: MainThreadMarker, view: &EditorTextView, mark: Mark, committed: &str) -> Retained<NSView> {
     let title = label(mtm, mark.description());
-    title.setFont(Some(&NSFont::boldSystemFontOfSize(12.0)));
+    title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::LABEL)));
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
-    stack.setSpacing(8.0);
+    stack.setSpacing(ide_ui_common::style::space::M);
     stack.addArrangedSubview(&title);
     if mark != Mark::Added {
         stack.addArrangedSubview(&committed_view(mtm, view, committed));
@@ -509,62 +513,6 @@ pub fn git_changed(root: &Path) {
             schedule_head(&view);
         }
     }
-}
-
-/// The hunks of `view` as kinds and line ranges, and the text of the popover's hunk, for the self-test.
-/// What the self-test reads of an editor's change marks.
-#[cfg(feature = "selftest")]
-pub struct Seen {
-    /// The file's last commit is known.
-    pub head: bool,
-    /// Each hunk's mark, with removals as `RemovedAbove`, and its lines.
-    pub hunks: Vec<(Mark, Range<usize>)>,
-    /// The committed lines the popover shows, while it is shown.
-    pub popover: Option<String>,
-}
-
-#[cfg(feature = "selftest")]
-pub fn seen(view: &EditorTextView) -> Seen {
-    let marks = view.ivars().marks.borrow();
-    let hunks = marks
-        .hunks
-        .iter()
-        .map(|h| {
-            let mark = match h.change.kind {
-                ChangeKind::Added => Mark::Added,
-                ChangeKind::Modified => Mark::Modified,
-                ChangeKind::Removed => Mark::RemovedAbove,
-            };
-            (mark, h.change.lines.clone())
-        })
-        .collect();
-    let popover = marks
-        .popover
-        .as_ref()
-        .filter(|p| p.isShown())
-        .and(marks.shown.as_ref())
-        .zip(marks.head.as_ref())
-        .map(|((hunk, _), head)| committed_lines(&head.text, &hunk.old_lines));
-    Seen {
-        head: marks.head.is_some(),
-        hunks,
-        popover,
-    }
-}
-
-/// The popover's window, for a picture, and its button, for a click.
-#[cfg(feature = "selftest")]
-pub fn popover_parts(
-    view: &EditorTextView,
-) -> Option<(Retained<objc2_app_kit::NSWindow>, Retained<objc2_app_kit::NSButton>)> {
-    let marks = view.ivars().marks.borrow();
-    let content = marks.popover.as_ref()?.contentViewController()?.view();
-    let stack = content.subviews().firstObject()?.downcast::<NSStackView>().ok()?;
-    let button = stack
-        .arrangedSubviews()
-        .iter()
-        .find_map(|v| v.downcast::<objc2_app_kit::NSButton>().ok())?;
-    Some((stack.window()?, button))
 }
 
 #[cfg(test)]

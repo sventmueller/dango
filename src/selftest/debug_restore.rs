@@ -4,19 +4,16 @@
 //! finished history that takes no input, and that no session started by itself.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use objc2::MainThreadMarker;
 
 use super::debug::{project, script};
 use super::helpers::{wait_until, window_of};
 use super::{check, finish};
-use crate::debug::selftest::{self as debug, Command};
-use crate::util::main_after;
+use crate::debug::probe::{self as debug, Command};
 use crate::window::Panel;
 
 const SCENARIO: &str = "debug-restore";
-const PAUSE: Duration = Duration::from_millis(600);
 const CONDITION: &str = "hits > 1";
 
 pub(super) fn run() {
@@ -26,8 +23,8 @@ pub(super) fn run() {
         crate::app::open_project(mtm, root.clone());
         let probe = root.clone();
         wait_until(
-            move || window_of(&probe).is_some(),
-            move |_| main_after(PAUSE, move || arrange(root)),
+            move || window_of(&probe).and_then(|c| debug::seen(&c)).is_some(),
+            move |_| arrange(root),
         );
     } else {
         let probe = root.clone();
@@ -35,9 +32,10 @@ pub(super) fn run() {
             move || {
                 window_of(&probe)
                     .and_then(|c| debug::seen(&c))
-                    .is_some_and(|s| !s.consoles.is_empty())
+                    .is_some_and(|s| !s.consoles.is_empty() && s.breakpoints.len() == 2 && !s.watches.is_empty())
+                    && window_of(&probe).is_some_and(|c| c.inspect().panel == Some(Panel::Debug))
             },
-            move |_| main_after(PAUSE, move || came_back(root)),
+            move |_| came_back(root),
         );
     }
 }

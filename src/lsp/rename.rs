@@ -112,14 +112,18 @@ pub fn rename_to(view: &EditorTextView, index: usize, name: &str) {
             let Some(folder) = view.controller().and_then(|c| c.project_root()) else {
                 return;
             };
-            let result = match answer {
-                Ok(Some(edit)) => super::edits::apply_workspace_edit(&folder, &edit).map_err(|f| f.message),
-                Ok(None) => Err(t("Der Sprachserver nennt nichts umzubenennen.").to_string()),
-                Err(error) => Err(error.to_string()),
+            let problem = match answer {
+                Ok(Some(edit)) => {
+                    return super::edits::apply_workspace_edit(&folder, &edit, |applied| {
+                        if let (Err(failure), Some(mtm)) = (applied, objc2::MainThreadMarker::new()) {
+                            editor::show_alert(mtm, t("Umbenennen fehlgeschlagen"), &failure.message);
+                        }
+                    });
+                }
+                Ok(None) => t("Der Sprachserver nennt nichts umzubenennen.").to_string(),
+                Err(error) => error.to_string(),
             };
-            if let Err(problem) = result {
-                editor::show_alert(view.mtm(), t("Umbenennen fehlgeschlagen"), &problem);
-            }
+            editor::show_alert(view.mtm(), t("Umbenennen fehlgeschlagen"), &problem);
         });
     });
 }

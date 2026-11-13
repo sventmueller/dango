@@ -216,7 +216,7 @@ impl Overlay {
             // SAFETY: The attributes hold a font and a colour, as the method expects.
             let width = unsafe { dots.sizeWithAttributes(Some(&attributes)) }.width;
             let at = NSPoint::new(rect.origin.x + (rect.size.width - width) / 2.0, rect.origin.y - 1.0);
-            // SAFETY: As above.
+            // SAFETY: These attributes too hold only a font and a colour under AppKit's keys.
             unsafe { dots.drawAtPoint_withAttributes(at, Some(&attributes)) };
         }
     }

@@ -23,9 +23,9 @@ use objc2_foundation::{NSRange, NSRunLoop, NSRunLoopCommonModes, NSTimer};
 use splat_i18n::t;
 
 use super::helpers::wait_until;
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::dictation::selftest::{self as dictation, Answer};
-use crate::util::{constant, main_after, main_on_run_loop};
+use crate::util::{constant, main_on_run_loop};
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "dictation";
@@ -35,11 +35,16 @@ const TEXT: &str = "Notiz: \n";
 const SLOW: Duration = Duration::from_millis(1500);
 const QUICK: Duration = Duration::from_millis(200);
 
+const PROJECT: &str = "dictation-project";
+/// How long a changed field or window takes to draw before its picture, which it does without a state to wait for.
+const DRAW: Duration = Duration::from_millis(300);
+/// How long the recording Esc ended takes to wind down, which the field no longer shows.
+const WIND_DOWN: Duration = Duration::from_millis(600);
+/// How long the dropped transcription would take to arrive, with a margin.
+const DROPPED_TEXT: Duration = SLOW.saturating_add(Duration::from_millis(800));
+
 fn root() -> PathBuf {
-    let folder = ide_core::paths::home().join("dictation-project");
-    let _ = std::fs::create_dir_all(&folder);
-    let _ = std::fs::write(folder.join(NOTES), TEXT);
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn controller() -> Option<Retained<WindowController>> {
@@ -107,19 +112,13 @@ fn answer_alert(delay: Duration, picture: &'static str, response: NSModalRespons
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = root();
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    let Some(controller) = controller() else {
-        check(
-            "the folder opens in a window",
-            false,
-            format!("{:?}", window::open_projects()),
-        );
-        return finish(SCENARIO);
-    };
-    controller.open_file(&root.join(NOTES));
+    helpers::open_project(SCENARIO, PROJECT, &[(NOTES, TEXT)], |controller| {
+        controller.open_file(&root().join(NOTES));
+        wait_for_editor_target();
+    });
+}
+
+fn wait_for_editor_target() {
     wait_until(
         || editor_target().is_some(),
         |ok| {
@@ -172,7 +171,7 @@ fn editor_listening(ok: bool, target: Target) {
         ok && seen.line == t("Höre zu …") && seen.label == t("Diktat beenden") && seen.value == seen.line,
         format!("{seen:?}"),
     );
-    main_after(Duration::from_millis(300), move || {
+    helpers::after(DRAW, move || {
         picture("dictation-editor-listening");
         if let Some(window) = controller().and_then(|c| c.window()) {
             window.makeFirstResponder(None);
@@ -288,7 +287,7 @@ fn escape_recording(target: Target, key: u64) {
                 ok && !seen.recording && seen.line.is_empty(),
                 format!("{seen:?}"),
             );
-            main_after(Duration::from_millis(600), move || escape_transcription(target, key));
+            helpers::after(WIND_DOWN, move || escape_transcription(target, key));
         },
     );
 }
@@ -310,7 +309,7 @@ fn escape_transcription(target: Target, key: u64) {
                 move || dictation::seen(target).transcribing,
                 move |_| {
                     escape();
-                    main_after(SLOW + Duration::from_millis(800), move || {
+                    helpers::after(DROPPED_TEXT, move || {
                         let text = super::agent::tab_of(key).map(|t| t.composer_text()).unwrap_or_default();
                         let seen = dictation::seen(target);
                         check(
@@ -378,11 +377,11 @@ fn settings() {
         lines == ["OpenAI: im Schlüsselbund", "Groq: in Lowspeak"],
         lines.join(" | "),
     );
-    main_after(Duration::from_millis(400), move || {
-        if let Some(window) = crate::settings::window() {
+    helpers::wait_for(crate::settings::window, move |window| {
+        if let Some(window) = window {
             snapshot(&window, "dictation-settings");
             window.setAppearance(NSAppearance::appearanceNamed(constant!(NSAppearanceNameDarkAqua)).as_deref());
-            main_after(Duration::from_millis(300), move || {
+            helpers::after(DRAW, move || {
                 if let Some(window) = crate::settings::window() {
                     snapshot(&window, "dictation-settings-dark");
                 }

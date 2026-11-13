@@ -66,8 +66,8 @@ pub fn items(editor: &EditorTextView) -> Vec<(usize, String)> {
         .into_iter()
         .filter(|line| *line < lines)
         .filter_map(|line| {
-            let (look, paused) = super::gutter::mark(editor, line);
-            let words = super::gutter::words(look, paused, line)?;
+            let (look, paused) = super::editor::gutter_mark(editor, line);
+            let words = ide_ui_debug::gutter::words(look, paused, line)?;
             let document = editor.document();
             let byte = document.text().offset(line, 0, ide_document::Unit::Utf16).ok()?;
             Some((document.text().byte_to_utf16(byte).ok()?, words))
@@ -104,7 +104,7 @@ impl BreakpointRotor {
 }
 
 /// Gives `editor` the rotor "Haltepunkte", beside the rotors it has.
-pub fn attach(editor: &EditorTextView) {
+pub fn attach(editor: &EditorTextView, state: &Rotors) {
     let delegate = BreakpointRotor::alloc(editor.mtm()).set_ivars(RotorIvars {
         editor: Weak::from(editor),
     });
@@ -122,21 +122,7 @@ pub fn attach(editor: &EditorTextView) {
     let mut rotors: Vec<Retained<NSAccessibilityCustomRotor>> = own.map(|r| r.to_vec()).unwrap_or_default();
     rotors.push(rotor);
     editor.setAccessibilityCustomRotors(&NSArray::from_retained_slice(&rotors));
-    let state = &crate::context::app().debug.rotors;
     let mut delegates = state.delegates.borrow_mut();
     delegates.retain(|d| d.ivars().editor.load().is_some());
     delegates.push(delegate);
-}
-
-/// The labels of `editor`'s rotors, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn labels(editor: &EditorTextView) -> Vec<String> {
-    // SAFETY: As in `attach`.
-    let rotors: Option<Retained<NSArray<NSAccessibilityCustomRotor>>> =
-        unsafe { msg_send![editor, accessibilityCustomRotors] };
-    rotors
-        .iter()
-        .flat_map(|r| r.to_vec())
-        .map(|r| r.label().to_string())
-        .collect()
 }

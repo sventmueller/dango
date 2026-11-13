@@ -193,7 +193,8 @@ mod tests {
 
     #[test]
     fn debugging_comes_back_as_it_was_kept_beside_the_tabs() {
-        let file = crate::store::tests::scratch("debugging").join("layouts/shop.json");
+        let scratch_dir = crate::store::tests::scratch("debugging");
+        let file = scratch_dir.join("layouts/shop.json");
         assert_eq!(load_from(file.clone()), Debugging::default());
         let layout = Layout {
             tabs: vec![WindowTab::single(Tab::Debug {
@@ -217,7 +218,8 @@ mod tests {
 
     #[test]
     fn a_layout_of_version_two_gets_the_field_and_keeps_its_tabs() {
-        let file = crate::store::tests::scratch("debugging-migration").join("layouts/shop.json");
+        let scratch_dir = crate::store::tests::scratch("debugging-migration");
+        let file = scratch_dir.join("layouts/shop.json");
         std::fs::create_dir_all(file.parent().unwrap()).unwrap();
         std::fs::write(
             &file,
@@ -238,7 +240,8 @@ mod tests {
 
     #[test]
     fn a_newer_layout_is_never_overwritten_by_this_version() {
-        let file = crate::store::tests::scratch("debugging-newer").join("layouts/shop.json");
+        let scratch_dir = crate::store::tests::scratch("debugging-newer");
+        let file = scratch_dir.join("layouts/shop.json");
         std::fs::create_dir_all(file.parent().unwrap()).unwrap();
         let newer = r#"{"version": 99, "debugging": {"breakpoints": []}}"#;
         std::fs::write(&file, newer).unwrap();

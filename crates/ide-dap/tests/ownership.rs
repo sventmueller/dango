@@ -2,17 +2,21 @@
 //! ends with its session and with a crashed adapter, an attached program and foreign processes keep running.
 
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Child, Command};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
+use ide_core::testing::{Scratch, scratch};
 use ide_dap::fake::Script;
 use ide_dap::{Adapter, AdapterKind, EndReason, Event, LaunchConfig, Session, Setup, State};
 use ide_process::Supervisor;
 use serde_json::json;
 
 const WAIT: Duration = Duration::from_secs(10);
+
+/// How long a process that should keep running is watched after its session ended, for a stray signal to show.
+const SETTLE: Duration = Duration::from_millis(300);
 
 fn alive(pid: u32) -> bool {
     let pid = libc::pid_t::try_from(pid).unwrap();
@@ -48,6 +52,18 @@ impl Foreign {
     fn running(&mut self) -> bool {
         self.0.try_wait().unwrap().is_none()
     }
+
+    /// Whether it is still running at the end of `window`; a signal sent before the window ends it within it.
+    fn stays_running(&mut self, window: Duration) -> bool {
+        let deadline = Instant::now() + window;
+        while Instant::now() < deadline {
+            if !self.running() {
+                return false;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        self.running()
+    }
 }
 
 impl Drop for Foreign {
@@ -57,22 +73,25 @@ impl Drop for Foreign {
     }
 }
 
-fn script_file(script: &Script, name: &str) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("ide-dap-ownership-{}-{name}.json", std::process::id()));
-    std::fs::write(&path, serde_json::to_vec(script).unwrap()).unwrap();
-    path
+fn script_file(script: &Script, name: &str) -> Scratch {
+    let dir = scratch(&format!("dap-ownership-{name}"));
+    std::fs::write(dir.join("script.json"), serde_json::to_vec(script).unwrap()).unwrap();
+    dir
 }
 
-fn adapter(script: &Script, name: &str) -> Adapter {
-    let file = script_file(script, name);
+/// The fake adapter as a process, reading `script` from a file in the folder that comes with it.
+fn adapter(script: &Script, name: &str) -> (Adapter, Scratch) {
+    let dir = script_file(script, name);
+    let file = dir.join("script.json");
     let env: Vec<(String, String)> = std::env::vars().collect();
-    Adapter::command(
+    let adapter = Adapter::command(
         AdapterKind::Fake,
         Path::new(env!("CARGO_BIN_EXE_ide-dap-fake-adapter")),
         &[file.display().to_string()],
         env,
         &std::env::temp_dir(),
-    )
+    );
+    (adapter, dir)
 }
 
 /// A session that stops at line 3 and stays there.
@@ -82,7 +101,9 @@ fn start(supervisor: &Supervisor, script: &Script, name: &str, config: LaunchCon
         .breakpoints
         .insert(script.path.clone(), vec![script.breakpoint(3)]);
     let (tx, rx) = channel();
-    let session = Session::start(supervisor, adapter(script, name), config, setup, move |_, event| {
+    // The adapter reads its script while it starts, so the folder may go once the session stopped at the breakpoint.
+    let (adapter, _script) = adapter(script, name);
+    let session = Session::start(supervisor, adapter, config, setup, move |_, event| {
         let _ = tx.send(event);
     })
     .unwrap();
@@ -125,9 +146,8 @@ fn detaching_leaves_the_attached_program_and_foreign_processes_running() {
     assert!(session.wait_until_ended(WAIT));
     assert_eq!(session.end().unwrap().reason, EndReason::Stopped);
     assert!(gone_within(adapter, WAIT), "the adapter belongs to the app and ends");
-    std::thread::sleep(Duration::from_millis(300));
-    assert!(attached.running(), "the attached program was signalled");
-    assert!(bystander.running(), "a foreign process was signalled");
+    assert!(attached.stays_running(SETTLE), "the attached program was signalled");
+    assert!(bystander.stays_running(SETTLE), "a foreign process was signalled");
 }
 
 #[test]
@@ -140,8 +160,7 @@ fn quitting_the_app_detaches_attached_sessions_through_the_supervisor() {
     supervisor.shutdown(Duration::from_secs(2));
     assert!(supervisor.running().is_empty());
     assert!(session.wait_until_ended(WAIT));
-    std::thread::sleep(Duration::from_millis(300));
-    assert!(attached.running(), "the attached program was signalled");
+    assert!(attached.stays_running(SETTLE), "the attached program was signalled");
 }
 
 #[test]

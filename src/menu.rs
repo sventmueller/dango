@@ -23,6 +23,7 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
     for problem in problems {
         crate::diag::report("keybindings", problem);
     }
+    *delegate.context().keymap.borrow_mut() = keymap.clone();
     let keys = Keys(keymap);
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);
@@ -36,7 +37,7 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
         go_menu(mtm, &keys),
         crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
         crate::git_panel::menu(mtm),
-        crate::debug::menu(mtm, &|command| keys.get(command), &delegate.context()),
+        crate::debug::menu(mtm, &|command| keys.get(command)),
         window_item,
         help_item,
     ] {
@@ -261,7 +262,7 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             item(
                 mtm,
                 t("Inspektor ein-/ausblenden"),
-                Some(sel!(toggleInspector:)),
+                Some(sel!(ideToggleInspector:)),
                 &keys.get("view.inspector"),
             ),
             separator(mtm),

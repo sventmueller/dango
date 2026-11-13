@@ -6,7 +6,7 @@
 use std::cell::Cell;
 use std::path::PathBuf;
 use std::ptr::NonNull;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use block2::RcBlock;
 use ide_process::Supervisor;
@@ -16,11 +16,10 @@ use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSSavePanel, NSView, NS
 use objc2_foundation::{NSRunLoop, NSRunLoopCommonModes, NSTimer};
 
 use super::super::git::sheet_ready;
-use super::super::helpers::wait_until;
+use super::super::helpers::{wait_until, wait_within};
 use super::{end, keys, walk, window_of};
 use crate::git_panel::selftest as git;
 use crate::selftest::check;
-use crate::util::main_after;
 use crate::window::{Panel, WindowController};
 
 pub const CREDENTIALS: &str = "credentials.txt";
@@ -513,7 +512,7 @@ fn open_folder(root: PathBuf) {
         .find(|w| !before.iter().any(|b| std::ptr::eq(&**b, &**w)));
     let Some(window) = opened.and_then(|c| c.window()) else {
         check("⇧⌘N opens a new window", false, format!("to {went}"));
-        return wind_down(Instant::now());
+        return wind_down();
     };
     welcome(root, &window, recent);
 }
@@ -576,30 +575,32 @@ fn close_all(root: PathBuf) {
             controller.close_tab(id);
         }
     }
-    main_after(Duration::from_millis(500), || {
+    let closed = move || super::super::helpers::window_of(&root).is_none_or(|c| c.tab_ids().is_empty());
+    wait_until(closed, |_| {
         for controller in crate::window::open_windows() {
             if let Some(window) = controller.window() {
                 window.performClose(None);
             }
         }
-        wind_down(Instant::now());
+        wind_down();
     });
 }
 
-fn wind_down(since: Instant) {
-    let running = Supervisor::global().running();
-    if running.is_empty() || since.elapsed() > Duration::from_secs(10) {
-        let left: Vec<String> = running
-            .iter()
-            .map(|process| format!("{:?} {}", process.kind, process.label))
-            .collect();
-        check(
-            "closing the windows ends their processes",
-            running.is_empty(),
-            left.join(", "),
-        );
-        end();
-    } else {
-        main_after(Duration::from_millis(200), move || wind_down(since));
-    }
+/// How long the windows' processes may take to end once they closed.
+const WIND_DOWN: Duration = Duration::from_secs(10);
+
+fn wind_down() {
+    wait_within(
+        WIND_DOWN,
+        || Supervisor::global().running().is_empty(),
+        |ended| {
+            let left: Vec<String> = Supervisor::global()
+                .running()
+                .iter()
+                .map(|process| format!("{:?} {}", process.kind, process.label))
+                .collect();
+            check("closing the windows ends their processes", ended, left.join(", "));
+            end();
+        },
+    );
 }

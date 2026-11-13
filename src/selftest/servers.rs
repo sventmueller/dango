@@ -2,21 +2,17 @@
 //! server is or what is missing; a server added through the sheet takes the files of its extensions, one without a
 //! command is refused with a reason, and removing it gives the files back.
 
-use std::path::Path;
-use std::time::Duration;
-
 use ide_core::settings::Settings;
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
+use std::path::Path;
 
 use super::helpers::wait_until;
 use super::{check, finish, snapshot};
 use crate::lsp::{LANGUAGE_SERVERS, language_name};
 use crate::settings::servers_selftest as tab;
-use crate::util::main_after;
 
 const NAME: &str = "language-servers";
-const SETTLE: Duration = Duration::from_millis(600);
 
 pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
@@ -45,7 +41,7 @@ fn listed(ok: bool) {
         snapshot(&window, "settings-servers");
     }
     tab::click_add(&owner);
-    main_after(SETTLE, refuse);
+    wait_until(sheet_shown, |_| refuse());
 }
 
 fn refuse() {
@@ -60,7 +56,7 @@ fn refuse() {
         format!("{problem:?}"),
     );
     tab::click_add(&owner);
-    main_after(SETTLE, add);
+    wait_until(sheet_shown, |_| add());
 }
 
 fn add() {
@@ -92,17 +88,29 @@ fn add() {
         snapshot(&window, "settings-servers-custom");
     }
     tab::remove(&owner, 0);
-    main_after(SETTLE, removed);
+    wait_until(given_back, |_| removed());
+}
+
+/// The settings window shows the sheet of a server to add.
+fn sheet_shown() -> bool {
+    crate::settings::window().is_some_and(|w| w.attachedSheet().is_some())
+}
+
+fn shown_custom() -> isize {
+    crate::settings::servers_tab().map_or(-1, |owner| tab::rows(&owner, true).1)
+}
+
+fn given_back() -> bool {
+    shown_custom() == 0
+        && Settings::load_user().get(&LANGUAGE_SERVERS).is_empty()
+        && language_name(Path::new("lib/app.exs")).is_none()
 }
 
 fn removed() {
-    let shown = crate::settings::servers_tab().map_or(-1, |owner| tab::rows(&owner, true).1);
     check(
         "removing the server gives its files back",
-        shown == 0
-            && Settings::load_user().get(&LANGUAGE_SERVERS).is_empty()
-            && language_name(Path::new("lib/app.exs")).is_none(),
-        format!("{shown}"),
+        given_back(),
+        format!("{}", shown_custom()),
     );
     finish(NAME);
 }

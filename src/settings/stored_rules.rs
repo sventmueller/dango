@@ -19,6 +19,8 @@ use splat_i18n::t;
 
 use super::{form, list_bar};
 use crate::util::{guarded, ns};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// The folders in which the user let Claude store a rule from the app, besides the recent and open ones.
 const FOLDERS: Key<Vec<PathBuf>> = Key::user("claudeRuleFolders", Vec::new);
@@ -42,19 +44,23 @@ pub fn remember(folder: &Path) {
 /// The folders whose rules the section lists: those noted, the open and the recent ones, each once.
 fn folders() -> Vec<PathBuf> {
     let state = State::load_user();
-    let mut folders: Vec<PathBuf> = Vec::new();
-    let open = crate::window::open_projects();
-    let known = state
-        .get(&FOLDERS)
-        .into_iter()
-        .chain(open)
-        .chain(state.get(&remembered::RECENT_PROJECTS));
-    for folder in known {
-        if !folders.contains(&folder) {
-            folders.push(folder);
+    once_each(
+        state
+            .get(&FOLDERS)
+            .into_iter()
+            .chain(crate::window::open_projects())
+            .chain(state.get(&remembered::RECENT_PROJECTS)),
+    )
+}
+
+fn once_each(folders: impl IntoIterator<Item = PathBuf>) -> Vec<PathBuf> {
+    let mut distinct: Vec<PathBuf> = Vec::new();
+    for folder in folders {
+        if !distinct.contains(&folder) {
+            distinct.push(folder);
         }
     }
-    folders
+    distinct
 }
 
 /// One rule of the list.
@@ -205,23 +211,6 @@ impl StoredRules {
             .collect()
     }
 
-    /// Selects the row `row` and removes its rule, as the user does, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn remove_row(&self, row: usize) {
-        if let Some(table) = self.ivars().table.get() {
-            table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
-        }
-        self.remove_selected();
-    }
-
-    /// Scrolls the Agents tab to the section's last line, for the self-test's picture.
-    #[cfg(feature = "selftest")]
-    pub fn reveal_end(&self) {
-        if let Some(end) = self.ivars().end.get() {
-            end.scrollRectToVisible(end.bounds());
-        }
-    }
-
     fn selected(&self) -> Option<Row> {
         let row = usize::try_from(self.ivars().table.get()?.selectedRow()).ok()?;
         self.ivars().rows.borrow().get(row).cloned()
@@ -245,5 +234,16 @@ impl StoredRules {
             alert.runModal();
         }
         self.reload();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_folder_is_listed_once_where_it_first_appears() {
+        let folders = ["/b", "/a", "/b", "/c", "/a"].map(PathBuf::from);
+        assert_eq!(once_each(folders), ["/b", "/a", "/c"].map(PathBuf::from));
     }
 }

@@ -7,6 +7,7 @@
 //! keeps its branch with its work when the worktree goes. No agent installed on the Mac starts: ACP launches are the
 //! test agent.
 
+use ide_core::LockIgnoringPoison;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -41,22 +42,19 @@ static TREE: Mutex<Option<PathBuf>> = Mutex::new(None);
 static COUNTS: Mutex<(usize, usize)> = Mutex::new((0, 0));
 
 fn counts_before() -> (usize, usize) {
-    *COUNTS.lock().unwrap_or_else(|e| e.into_inner())
+    *COUNTS.lock_ignoring_poison()
 }
 
 fn note_counts() {
-    *COUNTS.lock().unwrap_or_else(|e| e.into_inner()) = crate::worktrees::read_counts();
+    *COUNTS.lock_ignoring_poison() = crate::worktrees::read_counts();
 }
 
 fn tree() -> PathBuf {
-    TREE.lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
-        .unwrap_or_default()
+    TREE.lock_ignoring_poison().clone().unwrap_or_default()
 }
 
 pub fn run() {
-    let folder = ide_core::paths::home().join("worktree-project");
+    let folder = crate::selftest::helpers::folder("worktree-project");
     let launch = std::env::current_exe().ok().map(|program| {
         ide_acp::Launch::new(
             "test",
@@ -158,7 +156,7 @@ fn made(root: PathBuf, ok: bool) {
         check("the worktree and its thread start", false, format!("{trees:?}"));
         return finish(SCENARIO);
     };
-    *TREE.lock().unwrap_or_else(|e| e.into_inner()) = Some(path.clone());
+    *TREE.lock_ignoring_poison() = Some(path.clone());
     let data = crate::worktrees::folder(&root);
     let data = data.canonicalize().unwrap_or(data);
     check(
@@ -490,7 +488,7 @@ fn second_made(root: PathBuf, ok: bool) {
         check("a second thread starts in a worktree of its own", false, "");
         return finish(SCENARIO);
     };
-    *TREE.lock().unwrap_or_else(|e| e.into_inner()) = Some(path.clone());
+    *TREE.lock_ignoring_poison() = Some(path.clone());
     wait_for(
         root,
         |_| {

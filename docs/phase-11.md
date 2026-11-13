@@ -56,7 +56,7 @@ Jede Stufe endet wie die Phasen in plan.md: `make check` grün, `cargo xtask sel
   gehören nicht in ein Popover.
 - **Steuerelemente.** Systemsteuerelemente statt eigener: Listen von Aktionen als `NSMenu`, Rückfragen als Sheet mit
   `NSAlert`, zerstörerische Knöpfe mit `hasDestructiveAction` und nie als Standardknopf (wie schon im Git-Panel,
-  `src/git_panel/sheets.rs`), Symbole aus SF Symbols mit Beschriftung für VoiceOver.
+  `crates/ide-ui-git/src/sheets.rs`), Symbole aus SF Symbols mit Beschriftung für VoiceOver.
 - **Materialien.** Seitenleiste und Inspektor bekommen ihr Material vom System (ab macOS 26 Liquid Glass); keine
   eigenen Hintergründe darin, kein Glas auf Glas. Schwebende Fenster (Signaturhilfe, Vorschlags-Kasten) nutzen das
   Systemmaterial für Popovers.
@@ -144,7 +144,7 @@ deren Liste mit Laufzeit, letzter Ausgabe und Stopp, ohne `/tasks` zu tippen.
 Befund: Die Daten gibt es schon. Das Thread-Modell führt je Sitzung Subagents und Hintergrundarbeit
 (`ide-thread`, Claude füllt beides aus `task_started/progress/updated` und `background_tasks_changed`,
 `ide-claude/src/mapping.rs`). Der Kopf hat dafür heute einen einzigen Knopf „Aufgaben dieser Sitzung“
-(`list.bullet.indent`, `src/agent/header.rs`), der das Aktivitäts-Popover auf diese Sitzung beschränkt
+(`list.bullet.indent`, `crates/ide-ui-agent/src/header.rs`), der das Aktivitäts-Popover auf diese Sitzung beschränkt
 (`activity::show_tab`). ACP-Agenten (Codex, Gemini) melden weder Subagents noch Hintergrundarbeit.
 
 - **E102 Zwei Knöpfe statt „Aufgaben dieser Sitzung“** *(Wunsch des Owners, Symbol nach seiner Wahl; ändert die Kopfzeile aus E4/AI-Tab)*.
@@ -172,7 +172,7 @@ Befund: Die Daten gibt es schon. Das Thread-Modell führt je Sitzung Subagents u
     ihres Prozesses noch laufen hatte, steht als „Gestoppt“ da); je Zeile Befehl, Status, Laufzeit, letzte Ausgabezeile; „Ausgabe zeigen“ (ganze
     Ausgabe im Tab), „Stopp“. Was der Agent als Nebensache meldet (`ambient`), steht gedämpft.
   - Die Liste aktualisiert sich offen weiter; Anlass ist die vorhandene Meldung `refresh.overview`
-    (`src/agent/refresh.rs`), die auch die Knöpfe neu einfärbt.
+    (`crates/ide-ui-agent/src/refresh.rs`), die auch die Knöpfe neu einfärbt.
 - **Menü und Tastatur** (E101): „Subagenten dieser Sitzung“ und „Hintergrundprozesse dieser Sitzung“ im Menü „Darstellung“,
   ohne eigenes Kürzel, ausgegraut außerhalb eines AI-Tabs. `/tasks` öffnet weiter die gemeinsame Übersicht beider
   Arten.
@@ -387,7 +387,7 @@ Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
   - *Rückweg aus Hintergrund-Threads* *(Review C11)*. Ivars reichen dafür nicht: Ergebnisse aus Worker-Threads
     kommen über `main_soon`, das nur `Send`-Closures annimmt (`src/util/lanes.rs`), und `Rc<AppContext>` ist nicht
     `Send`. Heute lösen solche Antworten ihr Ziel über Kennungen und die globalen Register auf (z. B. der Start des
-    eigenen Agenten in `src/agent/own.rs`, Start und Ereignisse der Language Server in `src/lsp/mod.rs`).
+    eigenen Agenten in `crates/ide-ui-agent/src/own.rs`, Start und Ereignisse der Language Server in `src/lsp/mod.rs`).
     Künftig trägt die Closure nur Kennungen und das Ergebnis; auf dem Hauptthread löst ein einziger Zugang die
     Kennung im Kontext auf. Der Kontext hält seine Objekte stark, Antworten finden sie nur über die Kennung; ist das
     Objekt inzwischen geschlossen, wird die Antwort verworfen. Test: Fenster schließen, bevor die Antwort eines
@@ -396,16 +396,16 @@ Zustand gezielt aufbauen, ohne über alle offenen Fenster zu filtern.
 ### B21 Model und View trennen
 *Umgesetzt am 2026-11-12.* Je Panel und Tab ein Model ohne `objc2` mit eigenen Unit-Tests: Dateien
 (`window/files/`: `model.rs`, `view.rs`, `controller.rs`; Klick, Kontextmenü, Anlegen und Umbenennen als Effekte),
-Git-Panel (`git_panel/model/`: Phase, laufende Aufgabe, Refresh und offene Zeilen; `panel.rs` reicht nur noch die
+Git-Panel (`crates/ide-ui-git/src/model.rs`: Phase, laufende Aufgabe, Refresh und offene Zeilen; das Zeilen-Model liegt
+in `ide_git::panel`; `panel.rs` reicht nur noch die
 AppKit-Rückrufe weiter, `refresh.rs` liest git), Suche (`window/search/`: `model.rs`, `panel.rs`, `controller.rs`),
-AI-Tab (`agent/model.rs`: Warteschlange, Senden, Pillen, Titel), Terminal-View (`terminal/model.rs`: Frames, Glocke,
+AI-Tab (`crates/ide-ui-agent/src/model.rs`: Warteschlange, Senden, Pillen, Titel), Terminal-View (`terminal/model.rs`: Frames, Glocke,
 VoiceOver, Hinweise, Kontextmenü) und CI-Panel (`ci_panel/model.rs`: Phase, Reiter, Lesen und Warten, Zeilen;
 `refresh.rs` als Controller). Die elf Dateien in `src/` über 1 000 Zeilen (gemessen am Start, die Crates waren schon
 zerlegt) sind an ihren Nähten zerlegt, `window/files.rs` und `git_panel/panel.rs` ebenso. `make lint` ruft `cargo xtask structure` auf: keine `.rs`-Datei im Workspace über 1 000
 Zeilen, kein `objc2` in einem Model. Abweichungen:
-- Model ist eine Datei `model.rs` oder ein Ordner `model/`; das Git-Panel hat den Ordner, weil sein bisheriges
-  Zeilen-Model (`model/rows.rs`) neben Zustand und Übergängen (`model/mod.rs`) bleibt. Die Prüfung nimmt jede Datei
-  darin.
+- Model ist eine Datei `model.rs` oder ein Ordner `model/`; die Prüfung nimmt jede Datei darin. Das Git-Panel hatte
+  den Ordner; heute ist es `crates/ide-ui-git/src/model.rs`, das Zeilen-Model liegt in `ide_git::panel`.
 - „Ohne `objc2`" heißt ohne `objc2`-Import im Model. Ein paar Models rufen reine Funktionen aus Modulen mit AppKit
   (`preview::is_svg`, `ci_panel::text::problem`, `git_panel::graph::layout`), statt sie zu verdoppeln.
 - Nur das Dateien-Panel gibt eine Effekt-Liste zurück, weil es mehrere Dinge nacheinander auslöst (fragen, anlegen,

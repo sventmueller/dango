@@ -4,7 +4,7 @@
 //! Signing in through the browser (GitHub's device flow, GitLab's OAuth with PKCE) needs an OAuth app registered for
 //! the product, which waits for the owner's approval (E12); `browser_login` says whether it is there.
 
-use std::collections::HashMap;
+use ide_core::LockIgnoringPoison;
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -12,15 +12,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ide_process::{Kind as ProcessKind, Supervisor};
+pub use ide_secrets::{Keychain, Memory, SecretError, SecretStore};
 
 use serde::{Deserialize, Serialize};
 
 use crate::forge::{Forge, Kind};
 use crate::http::{Transport, now};
 use crate::oauth::Grant;
-
-/// errSecItemNotFound.
-const NOT_FOUND: i32 = -25300;
 
 /// Where a token came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,79 +71,36 @@ impl std::fmt::Debug for Credential {
     }
 }
 
-/// Where the app keeps tokens the user gave it.
-pub trait SecretStore: Send + Sync {
-    /// The secret saved for `account`.
-    fn get(&self, account: &str) -> Result<Option<String>, String>;
-    /// Saves `secret` for `account`, in place of what was there.
-    fn set(&self, account: &str, secret: &str) -> Result<(), String>;
-    /// Forgets the secret of `account`.
-    fn delete(&self, account: &str) -> Result<(), String>;
+/// Why a token was not kept.
+#[derive(Debug)]
+pub enum SaveError {
+    /// The keychain refused it.
+    Store(SecretError),
+    /// It could not be written as JSON.
+    Encode(serde_json::Error),
 }
 
-/// The login keychain, under the app's service name.
-pub struct Keychain {
-    service: String,
-}
-
-impl Keychain {
-    /// The keychain items of `service`, which is the app's bundle identifier.
-    pub fn new(service: &str) -> Keychain {
-        Keychain {
-            service: service.to_string(),
+impl std::fmt::Display for SaveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SaveError::Store(error) => write!(f, "{error}"),
+            SaveError::Encode(error) => write!(f, "the token could not be written: {error}"),
         }
     }
 }
 
-impl SecretStore for Keychain {
-    fn get(&self, account: &str) -> Result<Option<String>, String> {
-        match security_framework::passwords::get_generic_password(&self.service, account) {
-            Ok(bytes) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
-            Err(e) if e.code() == NOT_FOUND => Ok(None),
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
-    fn set(&self, account: &str, secret: &str) -> Result<(), String> {
-        security_framework::passwords::set_generic_password(&self.service, account, secret.as_bytes())
-            .map_err(|e| e.to_string())
-    }
-
-    fn delete(&self, account: &str) -> Result<(), String> {
-        match security_framework::passwords::delete_generic_password(&self.service, account) {
-            Err(e) if e.code() != NOT_FOUND => Err(e.to_string()),
-            _ => Ok(()),
+impl std::error::Error for SaveError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SaveError::Store(error) => Some(error),
+            SaveError::Encode(error) => Some(error),
         }
     }
 }
 
-/// Secrets kept in memory, for tests and the self-test, which leave the keychain alone.
-#[derive(Default)]
-pub struct Memory {
-    secrets: Mutex<HashMap<String, String>>,
-}
-
-impl SecretStore for Memory {
-    fn get(&self, account: &str) -> Result<Option<String>, String> {
-        Ok(self
-            .secrets
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(account)
-            .cloned())
-    }
-
-    fn set(&self, account: &str, secret: &str) -> Result<(), String> {
-        self.secrets
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(account.to_string(), secret.to_string());
-        Ok(())
-    }
-
-    fn delete(&self, account: &str) -> Result<(), String> {
-        self.secrets.lock().unwrap_or_else(|e| e.into_inner()).remove(account);
-        Ok(())
+impl From<SecretError> for SaveError {
+    fn from(error: SecretError) -> SaveError {
+        SaveError::Store(error)
     }
 }
 
@@ -305,14 +260,14 @@ impl Auth {
     /// The token for the host of `forge` as `find` gives it, renewed first when the app keeps it with a refresh token
     /// and it expires soon; a renewal that fails leaves the old one, which the service then refuses.
     pub fn fresh(&self, forge: &Forge, transport: &dyn Transport) -> Option<Credential> {
-        let _renewing = self.renewing.lock().unwrap_or_else(|e| e.into_inner());
+        let _renewing = self.renewing.lock_ignoring_poison();
         self.renewed(forge, transport, false)
     }
 
     /// The app's own token for the host of `forge` in place of `refused`, which the service turned down; `None` when
     /// there is nothing to renew it with or the service refuses that too.
     pub fn renew(&self, forge: &Forge, transport: &dyn Transport, refused: &str) -> Option<Credential> {
-        let _renewing = self.renewing.lock().unwrap_or_else(|e| e.into_inner());
+        let _renewing = self.renewing.lock_ignoring_poison();
         let found = self.find(forge)?;
         if found.token != refused {
             return Some(found);
@@ -344,7 +299,7 @@ impl Auth {
     }
 
     /// Keeps `token`, which `account` typed in, as the app's own for the host of `forge`.
-    pub fn save(&self, forge: &Forge, account: &str, token: &str) -> Result<(), String> {
+    pub fn save(&self, forge: &Forge, account: &str, token: &str) -> Result<(), SaveError> {
         self.keep(
             forge,
             account,
@@ -358,7 +313,7 @@ impl Auth {
     }
 
     /// Keeps what signing in as `account` through the OAuth client `client` gave, for the host of `forge`.
-    pub fn save_grant(&self, forge: &Forge, account: &str, grant: &Grant, client: &str) -> Result<(), String> {
+    pub fn save_grant(&self, forge: &Forge, account: &str, grant: &Grant, client: &str) -> Result<(), SaveError> {
         self.keep(
             forge,
             account,
@@ -372,7 +327,7 @@ impl Auth {
     }
 
     /// Forgets the app's own token for the host of `forge`; tokens of the tools and the environment stay theirs.
-    pub fn forget(&self, forge: &Forge) -> Result<(), String> {
+    pub fn forget(&self, forge: &Forge) -> Result<(), SecretError> {
         if let Ok(Some(name)) = self.store.get(&host_account(forge)) {
             self.store.delete(&secret_account(forge, &name))?;
         }
@@ -396,10 +351,10 @@ impl Auth {
         Some((Some(name), kept))
     }
 
-    fn keep(&self, forge: &Forge, account: &str, kept: &Kept) -> Result<(), String> {
-        let text = serde_json::to_string(kept).map_err(|e| e.to_string())?;
+    fn keep(&self, forge: &Forge, account: &str, kept: &Kept) -> Result<(), SaveError> {
+        let text = serde_json::to_string(kept).map_err(SaveError::Encode)?;
         self.store.set(&secret_account(forge, account), &text)?;
-        self.store.set(&host_account(forge), account)
+        Ok(self.store.set(&host_account(forge), account)?)
     }
 
     /// The variables the services' tools read, each only for the host it is meant for.
@@ -486,6 +441,8 @@ fn usable(token: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
     use crate::forge::candidates;
 
     /// Answers each program with what it printed, and keeps what ran.
@@ -596,11 +553,10 @@ mod tests {
     }
 
     /// A folder with the program `fake-tool`, whose shell `body` runs, and a home folder.
-    fn tool_folder(name: &str, body: &str) -> (PathBuf, Vec<(String, String)>) {
+    fn tool_folder(name: &str, body: &str) -> (ide_core::testing::Scratch, Vec<(String, String)>) {
         use std::os::unix::fs::PermissionsExt;
-        let dir = std::env::temp_dir().join(format!("ide-ci-tool-{name}-{}", std::process::id()));
+        let dir = ide_core::testing::scratch(&format!("ci-tool-{name}"));
         std::fs::create_dir_all(dir.join("home")).unwrap();
-        let dir = dir.canonicalize().unwrap();
         let program = dir.join("fake-tool");
         std::fs::write(&program, format!("#!/bin/sh\n{body}\n")).unwrap();
         std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();

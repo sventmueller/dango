@@ -3,7 +3,6 @@
 //! it quotes, and the revised plan rejected. Pictures in light and dark.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use ide_claude::replay::SENT;
 use ide_thread::{Decision, EntryKind, RequestState};
@@ -12,14 +11,13 @@ use objc2_foundation::NSRange;
 use serde_json::json;
 use splat_i18n::t;
 
-use super::agent::{appearance, controller_of, picture, tab_of, view_picture};
-use super::{check, finish};
+use super::agent::{DRAWN, appearance, controller_of, picture, tab_of, view_picture};
+use super::{check, finish, helpers};
 use crate::agent::AgentTab;
 use crate::agent::plan::{self, PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
-use crate::util::{constant, main_after};
+use crate::util::constant;
 
 const NAME: &str = "agent";
-const SETTLE: Duration = Duration::from_millis(300);
 const SESSION: &str = "22222222-2222-4222-8222-222222222222";
 
 const PLAN: &str = "## Fix the dropped last line\n\nThe parser loses the last line of a file that does not end in \
@@ -124,7 +122,8 @@ pub fn run(root: PathBuf, requests: u64, first: u64, then: fn(PathBuf, u64, u64)
         return finish(NAME);
     };
     let key = tab.key;
-    main_after(SETTLE, move || in_card(root, key, id, (requests, first, then)));
+    let shown = move || tab_of(key).is_some_and(|tab| plan::card_marks(&tab, id).is_some());
+    helpers::wait_until(shown, move |_| in_card(root, key, id, (requests, first, then)));
 }
 
 /// A comment on a passage marked in the plan's card.
@@ -143,7 +142,10 @@ fn in_card(root: PathBuf, key: u64, id: u64, next: Next) {
         format!("{:?}", comments(&tab, id)),
     );
     tab.open_plan(id);
-    main_after(SETTLE, move || in_doc(root, key, id, next));
+    let opened = move || {
+        tab_of(key).is_some_and(|tab| plan::card_marks(&tab, id) == Some(1)) && plan::text_of(key, id).is_some()
+    };
+    helpers::wait_until(opened, move |_| in_doc(root, key, id, next));
 }
 
 /// Comments in the plan's document: on two passages and on the whole plan.
@@ -156,32 +158,38 @@ fn in_doc(root: PathBuf, key: u64, id: u64, next: Next) {
     );
     let selected = plan::select(&tab, id, PLAN_IN_DOC, "Lexer::next_line");
     tab.plan_comment(id, PLAN_IN_DOC);
-    main_after(SETTLE, move || {
-        if let Some((view, _)) = plan::comment_view() {
-            view_picture(&view, "agent-plan-comment");
-        }
-        let Some(tab) = tab_of(key) else { return finish(NAME) };
-        plan::type_comment("Is the lexer the right place?");
-        tab.plan_commit(id);
-        if let Some(text) = plan::text_of(key, id) {
-            text.setSelectedRange(NSRange::new(0, 0));
-        }
-        let general = comment_on(&tab, id, PLAN_IN_DOC, "Keep the change small");
-        let third = plan::select(&tab, id, PLAN_IN_DOC, "about ten minutes")
-            && comment_on(&tab, id, PLAN_IN_DOC, "Run only the parser's fuzz target");
-        let seen = plan::inspect(key, id);
-        check(
-            "the document lists the comments beside the plan and marks their passages",
-            selected
-                && general
-                && third
-                && seen.as_ref().is_some_and(|s| {
-                    s.notes == 4 && s.marked == 3 && s.waiting && s.revise == t("Mit Kommentaren überarbeiten lassen")
-                }),
-            format!("{seen:?}; {:?}", comments(&tab, id)),
-        );
-        edit(root, key, id, next);
-    });
+    helpers::wait_until(
+        || plan::comment_view().is_some(),
+        move |_| {
+            if let Some((view, _)) = plan::comment_view() {
+                view_picture(&view, "agent-plan-comment");
+            }
+            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            plan::type_comment("Is the lexer the right place?");
+            tab.plan_commit(id);
+            if let Some(text) = plan::text_of(key, id) {
+                text.setSelectedRange(NSRange::new(0, 0));
+            }
+            let general = comment_on(&tab, id, PLAN_IN_DOC, "Keep the change small");
+            let third = plan::select(&tab, id, PLAN_IN_DOC, "about ten minutes")
+                && comment_on(&tab, id, PLAN_IN_DOC, "Run only the parser's fuzz target");
+            let seen = plan::inspect(key, id);
+            check(
+                "the document lists the comments beside the plan and marks their passages",
+                selected
+                    && general
+                    && third
+                    && seen.as_ref().is_some_and(|s| {
+                        s.notes == 4
+                            && s.marked == 3
+                            && s.waiting
+                            && s.revise == t("Mit Kommentaren überarbeiten lassen")
+                    }),
+                format!("{seen:?}; {:?}", comments(&tab, id)),
+            );
+            edit(root, key, id, next);
+        },
+    );
 }
 
 /// Editing a comment starts from its text; removing one unmarks its passage.
@@ -222,7 +230,7 @@ fn pictures(root: PathBuf, key: u64, id: u64, next: Next) {
     };
     picture(&controller, "agent-plan-doc");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
-    main_after(SETTLE, move || {
+    helpers::after(DRAWN, move || {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
@@ -231,7 +239,8 @@ fn pictures(root: PathBuf, key: u64, id: u64, next: Next) {
             tab.select();
             tab.timeline().scroll_to_end();
         }
-        main_after(SETTLE, move || {
+        let marked = move || tab_of(key).and_then(|tab| plan::card_marks(&tab, id)) == Some(2);
+        helpers::wait_until(marked, move |_| {
             let Some(controller) = controller_of(&root) else {
                 return finish(NAME);
             };
@@ -242,7 +251,7 @@ fn pictures(root: PathBuf, key: u64, id: u64, next: Next) {
             );
             picture(&controller, "agent-plan-card-dark");
             appearance(&controller, constant!(NSAppearanceNameAqua));
-            main_after(SETTLE, move || {
+            helpers::after(DRAWN, move || {
                 if let Some(controller) = controller_of(&root) {
                     picture(&controller, "agent-plan-card");
                 }
@@ -281,7 +290,10 @@ fn revise(root: PathBuf, key: u64, id: u64, next: Next) {
         plan_state(&tab, "toolu_plan_1").as_ref() == Some(&back),
         format!("{:?}", plan_state(&tab, "toolu_plan_1")),
     );
-    main_after(SETTLE, move || reject(root, key, id, next));
+    helpers::wait_until(
+        move || shows(key, t("Plan mit Kommentaren zurückgegeben")),
+        move |_| reject(root, key, id, next),
+    );
 }
 
 /// "Ablehnen" on the revised plan.
@@ -306,23 +318,32 @@ fn reject(root: PathBuf, key: u64, id: u64, (requests, first, then): Next) {
             })),
         format!("{state:?}"),
     );
-    main_after(SETTLE, move || {
-        let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
-        };
-        picture(&controller, "agent-plan-answered");
-        let visible = tab_of(key).map(|tab| tab.inspect().visible).unwrap_or_default();
-        check(
-            "a rejected plan's card says so",
-            visible.iter().any(|v| v == t("Plan abgelehnt")),
-            visible.join(" | "),
-        );
-        let ai_tab = tab_of(key).and_then(|tab| controller.tab_with_key(&tab.tab_key()));
-        if let Some(ai_tab) = ai_tab {
-            controller.close_tab(ai_tab);
-        }
-        main_after(SETTLE, move || closed(root, key, id, (requests, first, then)));
-    });
+    helpers::wait_until(
+        move || shows(key, t("Plan abgelehnt")),
+        move |_| {
+            let Some(controller) = controller_of(&root) else {
+                return finish(NAME);
+            };
+            picture(&controller, "agent-plan-answered");
+            let visible = tab_of(key).map(|tab| tab.inspect().visible).unwrap_or_default();
+            check(
+                "a rejected plan's card says so",
+                visible.iter().any(|v| v == t("Plan abgelehnt")),
+                visible.join(" | "),
+            );
+            let ai_tab = tab_of(key).and_then(|tab| controller.tab_with_key(&tab.tab_key()));
+            if let Some(ai_tab) = ai_tab {
+                controller.close_tab(ai_tab);
+            }
+            let gone = move || tab_of(key).is_none() && plan::inspect(key, id).is_none();
+            helpers::wait_until(gone, move |_| closed(root, key, id, (requests, first, then)));
+        },
+    );
+}
+
+/// Whether the tab `key` shows a row that reads `text`.
+fn shows(key: u64, text: &str) -> bool {
+    tab_of(key).is_some_and(|tab| tab.inspect().visible.iter().any(|v| v == text))
 }
 
 /// Closing the plan's AI tab takes its document with it, whose answers would go nowhere.

@@ -479,7 +479,7 @@ impl HierarchyPanel {
         // SAFETY: The key is one the data source hands out, kept alive by its node.
         unsafe { views.outline.reloadItem_reloadChildren(Some(&key), true) };
         if open {
-            // SAFETY: As above.
+            // SAFETY: The key is the data source's own object for that node, which the node keeps alive.
             unsafe { views.outline.expandItem(Some(&key)) };
         }
     }
@@ -549,7 +549,7 @@ impl HierarchyPanel {
 fn row(mtm: MainThreadMarker, name: &str, kind: SymbolKind, place: &str) -> Retained<NSView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(5.0);
+    stack.setSpacing(ide_ui_common::style::space::SNUG);
     if let Some(image) = symbol(crate::lsp::kind_symbol(kind), "") {
         let icon = NSImageView::imageViewWithImage(&image, mtm);
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
@@ -587,14 +587,14 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
     direction.setTrackingMode(NSSegmentSwitchTracking::SelectOne);
     direction.setSegmentDistribution(objc2_app_kit::NSSegmentDistribution::FillEqually);
     direction.setControlSize(NSControlSize::Small);
-    direction.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    direction.setFont(Some(&ide_ui_common::style::small_system()));
     direction.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     set_label(&direction, Some(t("Was die Liste zeigt")));
     set_action(&direction, panel, sel!(ideHierarchyDirection:));
     let bar = NSStackView::new(mtm);
     bar.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     bar.setAlignment(NSLayoutAttribute::Leading);
-    bar.setSpacing(6.0);
+    bar.setSpacing(ide_ui_common::style::space::S);
     bar.setEdgeInsets(NSEdgeInsets {
         top: 0.0,
         left: 8.0,

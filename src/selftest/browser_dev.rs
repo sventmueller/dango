@@ -1,18 +1,18 @@
 //! The `browser-dev` scenario: what a dev server asks of a browser tab. A self-signed certificate on this Mac, served by
 //! `openssl s_server`; an HTTP login, a JavaScript `prompt` and a download, served by a thread.
 
-use std::cell::RefCell;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU16, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_process::{Kind, ProcessId, Supervisor};
 use splat_i18n::{t, tf};
 
-use super::{check, finish, first_window, poll, snapshot};
+use super::helpers::wait_within;
+use super::{check, finish, first_window, snapshot};
 
 const SCENARIO: &str = "browser-dev";
 const TLS_TITLE: &str = "TLS Page";
@@ -25,10 +25,8 @@ const DOWNLOAD: &str = "report.txt";
 static PORT: AtomicU16 = AtomicU16::new(0);
 static TLS_PORT: AtomicU16 = AtomicU16::new(0);
 
-thread_local! {
-    /// The TLS server and its input, which it reads commands from and must keep open.
-    static TLS_SERVER: RefCell<Option<(ProcessId, Option<ChildStdin>)>> = const { RefCell::new(None) };
-}
+/// The TLS server and its input, which it reads commands from and must keep open.
+type TlsServer = (ProcessId, Option<ChildStdin>);
 
 fn url(path: &str) -> String {
     format!("http://127.0.0.1:{}{path}", PORT.load(Ordering::SeqCst))
@@ -96,8 +94,8 @@ pub(super) fn run() {
         finish(SCENARIO);
         return;
     }
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || std::fs::metadata(tls_folder().join("cert.pem")).is_ok_and(|m| m.len() > 0),
         start_tls_server,
     );
@@ -166,21 +164,22 @@ fn start_tls_server(made: bool) {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     match Supervisor::global().spawn(command, Kind::Tool, "openssl s_server") {
-        Ok(spawned) => TLS_SERVER.with(|server| *server.borrow_mut() = Some((spawned.id, spawned.stdin))),
+        Ok(spawned) => {
+            let server = (spawned.id, spawned.stdin);
+            wait_within(
+                Duration::from_secs(10),
+                || TcpStream::connect(("127.0.0.1", TLS_PORT.load(Ordering::SeqCst))).is_ok(),
+                move |listening| open_tls_page(listening, server),
+            );
+        }
         Err(error) => {
             check("the TLS server starts", false, error.to_string());
             finish(SCENARIO);
-            return;
         }
     }
-    poll(
-        Instant::now() + Duration::from_secs(10),
-        || TcpStream::connect(("127.0.0.1", TLS_PORT.load(Ordering::SeqCst))).is_ok(),
-        open_tls_page,
-    );
 }
 
-fn open_tls_page(listening: bool) {
+fn open_tls_page(listening: bool, server: TlsServer) {
     check(
         "the TLS server listens",
         listening,
@@ -188,14 +187,14 @@ fn open_tls_page(listening: bool) {
     );
     let Some(controller) = first_window() else { return };
     crate::browser::open_tab(&controller, Some(&tls_url()));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| crate::browser::inspect(&c).iter().any(|seen| seen.proceed)),
-        tls_refused,
+        move |offered| tls_refused(offered, server),
     );
 }
 
-fn tls_refused(offered: bool) {
+fn tls_refused(offered: bool, server: TlsServer) {
     let Some(controller) = first_window() else { return };
     let failure = crate::browser::inspect(&controller)
         .iter()
@@ -211,26 +210,24 @@ fn tls_refused(offered: bool) {
     }
     let pressed = crate::browser::proceed(&controller);
     check("“Trotzdem öffnen” is pressed", pressed, "");
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == TLS_TITLE)),
-        tls_accepted,
+        move |loaded| tls_accepted(loaded, server),
     );
 }
 
-fn tls_accepted(loaded: bool) {
+fn tls_accepted(loaded: bool, (id, _input): TlsServer) {
     let Some(controller) = first_window() else { return };
     check(
         "the accepted certificate opens the page",
         loaded,
         controller.tab_titles().join(", "),
     );
-    if let Some((id, _)) = TLS_SERVER.with(|server| server.borrow_mut().take()) {
-        Supervisor::global().stop(id, Duration::from_millis(500));
-    }
+    Supervisor::global().stop(id, Duration::from_millis(500));
     crate::browser::open_tab(&controller, Some(&url("/private")));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.has_sheet()),
         login_asked,
     );
@@ -244,8 +241,8 @@ fn login_asked(asked: bool) {
     }
     let answered = crate::browser::answer_asking(&["dev", "secret"]);
     check("the login sheet takes a user name and password", answered, "");
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == PRIVATE_TITLE)),
         logged_in,
     );
@@ -255,8 +252,8 @@ fn logged_in(ok: bool) {
     let Some(controller) = first_window() else { return };
     check("the login opens the page", ok, controller.tab_titles().join(", "));
     crate::browser::open_tab(&controller, Some(&url("/prompt")));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.has_sheet()),
         prompt_asked,
     );
@@ -269,8 +266,8 @@ fn prompt_asked(asked: bool) {
         snapshot(&window, "browser-prompt");
     }
     crate::browser::answer_asking(&[ANSWER]);
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == ANSWER)),
         prompt_answered,
     );
@@ -280,8 +277,8 @@ fn prompt_answered(ok: bool) {
     let Some(controller) = first_window() else { return };
     check("the page gets the typed answer", ok, controller.tab_titles().join(", "));
     crate::browser::open_tab(&controller, Some(&url("/report.txt")));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| crate::browser::inspect(&c).iter().any(|seen| seen.notice.is_some())),
         downloaded,
     );

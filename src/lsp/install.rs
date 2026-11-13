@@ -129,14 +129,15 @@ fn install(folder: &Path, slot: &Slot) {
     let cancel = Cancel::new();
     *slot.state.borrow_mut() = State::Installing(cancel.clone(), t("Installiere …").to_string());
     let (folder, id) = (folder.to_path_buf(), slot.id);
-    let _ = std::thread::Builder::new().name("lsp-install".into()).spawn(move || {
+    let failed = folder.clone();
+    if let Err(why) = crate::util::spawn("lsp-install", move || {
         let registry = registry();
         let environment = crate::environment::get().map(<[_]>::to_vec).unwrap_or_default();
         let installer = ide_lsp::Installer::new(
             Supervisor::global(),
             environment,
             registry.tools().to_path_buf(),
-            Arc::new(ide_lsp::Http::new()),
+            Arc::new(ide_net::Http::new("language server installer")),
         );
         let report = {
             let folder = folder.clone();
@@ -148,7 +149,9 @@ fn install(folder: &Path, slot: &Slot) {
         let mut report = report;
         let result = installer.install(what, &cancel, &mut report);
         main_soon(move || installed(&folder, id, result.map(|_| ()).map_err(|e| e.to_string())));
-    });
+    }) {
+        installed(&failed, id, Err(why));
+    }
 }
 
 fn install_progress(folder: &Path, id: u64, progress: &ide_lsp::Progress) {

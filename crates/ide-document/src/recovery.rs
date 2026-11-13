@@ -406,7 +406,8 @@ mod tests {
 
     #[test]
     fn an_untitled_document_comes_back_with_its_text_and_title() {
-        let recovery = Recovery::new(scratch("recovery-untitled").join("recovery"));
+        let dir = scratch("recovery-untitled");
+        let recovery = Recovery::new(dir.join("recovery"));
         let id = RecoveryId::new();
         let document = Document::untitled("Entwurf\r\nzwei");
         recovery
@@ -433,7 +434,8 @@ mod tests {
 
     #[test]
     fn a_text_without_its_description_comes_back_untitled_if_it_decodes() {
-        let recovery = Recovery::new(scratch("recovery-partial"));
+        let dir = scratch("recovery-partial");
+        let recovery = Recovery::new(dir.to_path_buf());
         let id = RecoveryId::new();
         let path = recovery.dir().join("x.txt");
         let mut document = Document::untitled("Text der Datei");
@@ -467,7 +469,8 @@ mod tests {
 
     #[test]
     fn damaged_copies_are_set_aside_and_kept_and_newer_ones_left_alone() {
-        let recovery = Recovery::new(scratch("recovery-damaged"));
+        let dir = scratch("recovery-damaged");
+        let recovery = Recovery::new(dir.to_path_buf());
         let store = |text: &str| {
             let id = RecoveryId::new();
             recovery

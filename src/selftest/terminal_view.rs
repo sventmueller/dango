@@ -4,11 +4,11 @@
 //! server banner's buttons; and a terminal opened beside.
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
-use objc2::{MainThreadMarker, MainThreadOnly, msg_send, sel};
+use objc2::{MainThreadOnly, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSMenu, NSPasteboard, NSPasteboardTypePNG,
     NSPasteboardTypeString, NSPasteboardWriting, NSScreen,
@@ -18,12 +18,13 @@ use objc2_core_graphics::{CGEvent, CGEventField, CGEventType, CGMouseButton, CGS
 use objc2_foundation::{NSArray, NSData, NSPoint, NSRange, NSRect, NSString, NSURL};
 use splat_i18n::t;
 
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::terminal::{TerminalView, inspect};
-use crate::util::{constant, main_after};
-use crate::window::{self, WindowController};
+use crate::util::constant;
+use crate::window::WindowController;
 
 const NAME: &str = "terminal-view";
+const PROJECT: &str = "terminal-view-project";
 /// A program that asks for every button press, release and drag, and shows what it gets until ⌃C.
 const MOUSE_SCRIPT: &str =
     "trap 'printf \"\\033[?1002l\"; exit 0' INT\nprintf '\\033[?1002h'\necho tv-mouse-ready\ncat -v\n";
@@ -33,19 +34,17 @@ const COPIED: &str = "tv-copied";
 type Next = fn(u64, PathBuf);
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("terminal-view-project");
-    let _ = std::fs::create_dir_all(&folder);
-    let _ = std::fs::write(folder.join("README.md"), "# Terminal view\n");
-    let _ = std::fs::write(folder.join("mouse.sh"), MOUSE_SCRIPT);
     let _ = std::fs::write(ide_core::paths::home().join("tv-note.txt"), "a note\n");
-    let root = folder.canonicalize().unwrap_or(folder);
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    let Some(controller) = controller_of(&root) else {
-        check("the folder opens", false, root.display().to_string());
-        return finish(NAME);
-    };
+    helpers::open_project(
+        NAME,
+        PROJECT,
+        &[("README.md", "# Terminal view\n"), ("mouse.sh", MOUSE_SCRIPT)],
+        opened,
+    );
+}
+
+fn opened(controller: Retained<WindowController>) {
+    let root = helpers::root(PROJECT);
     crate::terminal::open_tab(&controller, None);
     let Some((id, _)) = inspect::latest() else {
         check("a terminal opens", false, "");
@@ -63,9 +62,7 @@ pub fn run() {
 }
 
 fn controller_of(root: &Path) -> Option<Retained<WindowController>> {
-    window::open_windows()
-        .into_iter()
-        .find(|controller| controller.project().as_deref() == Some(root))
+    helpers::window_of(root)
 }
 
 fn screen(id: u64) -> String {
@@ -82,24 +79,10 @@ fn has_line(view: &TerminalView, line: &str) -> bool {
     view.visible_lines().iter().any(|shown| shown == line)
 }
 
-fn poll(deadline: Instant, done: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    let held = done();
-    if held || Instant::now() >= deadline {
-        return then(held);
-    }
-    main_after(Duration::from_millis(100), move || poll(deadline, done, then));
-}
-
 /// Calls `then` with whether `done` came true for the view `id` within `seconds`.
-fn wait(
-    id: u64,
-    seconds: u64,
-    done: impl Fn(&TerminalView) -> bool + Send + 'static,
-    then: impl FnOnce(bool) + Send + 'static,
-) {
-    let deadline = Instant::now() + Duration::from_secs(seconds);
-    poll(
-        deadline,
+fn wait(id: u64, seconds: u64, done: impl Fn(&TerminalView) -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+    helpers::wait_within(
+        Duration::from_secs(seconds),
         move || inspect::view(id).is_some_and(|view| done(&view)),
         then,
     );
@@ -135,7 +118,7 @@ fn program_reports(id: u64, root: PathBuf) {
         controller_of(&window).is_some_and(|c| c.tab_titles().iter().any(|title| title == "tv-title"))
             && general_text().as_deref() == Some(COPIED)
     };
-    poll(Instant::now() + Duration::from_secs(10), titled, move |titled| {
+    helpers::wait_within(Duration::from_secs(10), titled, move |titled| {
         let titles = controller_of(&root).map(|c| c.tab_titles()).unwrap_or_default();
         check(
             "a title the program sets names the terminal's tab",

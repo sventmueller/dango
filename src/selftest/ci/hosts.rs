@@ -10,14 +10,15 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::super::git::wait_for;
+use super::super::helpers;
 use super::super::{check, finish, snapshot};
 use super::stubs;
 use crate::ci_panel::{CI_HOSTS, CI_OAUTH_CLIENTS, selftest as panel};
 use crate::settings::{CiList, ci_selftest as tab};
-use crate::util::main_after;
 use crate::window::WindowController;
 
 pub(super) const SCENARIO: &str = "ci-settings";
+/// Long enough for the settings window to draw itself again in the other appearance.
 const SETTLE: Duration = Duration::from_millis(600);
 
 fn gitlab_place() -> String {
@@ -33,7 +34,7 @@ pub(super) fn start(root: PathBuf, ok: bool) {
     }
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_ci(mtm);
-    main_after(SETTLE, move || listed(root));
+    helpers::wait_until(|| crate::settings::ci_tab().is_some(), move |_| listed(root));
 }
 
 fn listed(root: PathBuf) {
@@ -170,7 +171,7 @@ pub(crate) fn native_bar(gap: f64, names: &[String]) -> bool {
 }
 
 /// Pictures of the settings window in light and dark appearance, then `then`.
-fn settings_pictures(name: &'static str, then: impl FnOnce() + Send + 'static) {
+fn settings_pictures(name: &'static str, then: impl FnOnce() + 'static) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     if let Some(window) = crate::settings::window() {
         snapshot(&window, name);
@@ -179,13 +180,13 @@ fn settings_pictures(name: &'static str, then: impl FnOnce() + Send + 'static) {
     let dark =
         objc2_app_kit::NSAppearance::appearanceNamed(crate::util::constant!(objc2_app_kit::NSAppearanceNameDarkAqua));
     app.setAppearance(dark.as_deref());
-    main_after(SETTLE, move || {
+    helpers::after(SETTLE, move || {
         if let Some(window) = crate::settings::window() {
             snapshot(&window, &format!("{name}-dark"));
         }
         if let Some(mtm) = MainThreadMarker::new() {
             objc2_app_kit::NSApplication::sharedApplication(mtm).setAppearance(None);
         }
-        main_after(SETTLE, then);
+        helpers::after(SETTLE, then);
     });
 }

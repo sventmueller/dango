@@ -99,8 +99,10 @@ pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String
 #[cfg(feature = "selftest")]
 pub mod fake {
     use std::collections::{HashSet, VecDeque};
+
+    use ide_core::LockIgnoringPoison;
     use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-    use std::sync::{Arc, Mutex, PoisonError};
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
     use lowspeak::audio::recorder::{Microphone as Device, OnLive, StartError};
@@ -134,12 +136,12 @@ pub mod fake {
 
     /// Queues what the next transcriptions answer.
     pub fn answer(answers: impl IntoIterator<Item = Answer>) {
-        ANSWERS.lock().unwrap_or_else(PoisonError::into_inner).extend(answers);
+        ANSWERS.lock_ignoring_poison().extend(answers);
     }
 
     /// Queues how the microphone opens for the next recordings.
     pub fn open(openings: impl IntoIterator<Item = Opening>) {
-        OPENINGS.lock().unwrap_or_else(PoisonError::into_inner).extend(openings);
+        OPENINGS.lock_ignoring_poison().extend(openings);
     }
 
     /// The next recording is too short to transcribe.
@@ -197,8 +199,7 @@ pub mod fake {
 
     pub fn installed_models() -> HashSet<LocalModel> {
         INSTALLED
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
+            .lock_ignoring_poison()
             .get_or_insert_with(|| HashSet::from([LocalModel::ParakeetUltra]))
             .clone()
     }
@@ -213,8 +214,7 @@ pub mod fake {
             progress(f64::from(step) / 5.0);
         }
         INSTALLED
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
+            .lock_ignoring_poison()
             .get_or_insert_with(HashSet::new)
             .insert(model);
         Ok(())
@@ -240,7 +240,7 @@ pub mod fake {
             on_live: OnLive,
             started: Box<dyn FnOnce(Result<(), StartError>) + Send>,
         ) {
-            let opening = OPENINGS.lock().unwrap_or_else(PoisonError::into_inner).pop_front();
+            let opening = OPENINGS.lock_ignoring_poison().pop_front();
             match opening {
                 None => {
                     started(Ok(()));
@@ -269,7 +269,7 @@ pub mod fake {
             if TOO_SHORT.swap(false, Ordering::SeqCst) {
                 return Ok(Outcome::TooShort);
             }
-            let answer = ANSWERS.lock().unwrap_or_else(PoisonError::into_inner).pop_front();
+            let answer = ANSWERS.lock_ignoring_poison().pop_front();
             let Some(answer) = answer else {
                 return Ok(Outcome::NoSpeech);
             };

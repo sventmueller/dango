@@ -338,13 +338,8 @@ fn is_workspace(path: &Path) -> bool {
 mod tests {
     use super::*;
 
-    fn tree(files: &[&str]) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "ide-lsp-root-{}-{}",
-            std::process::id(),
-            files.join("+").replace('/', "_")
-        ));
-        let _ = fs::remove_dir_all(&dir);
+    fn tree(files: &[&str]) -> ide_core::testing::Scratch {
+        let dir = ide_core::testing::scratch("lsp-root");
         for file in files {
             let path = dir.join(file);
             fs::create_dir_all(path.parent().unwrap()).unwrap();

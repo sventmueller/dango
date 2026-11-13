@@ -4,7 +4,7 @@
 
 mod actions;
 mod agent;
-mod apply;
+use ide_lsp::workspace_edit as apply;
 mod complete;
 mod decorate;
 mod edits;
@@ -22,8 +22,7 @@ mod project_symbols;
 mod rename;
 mod signature;
 pub mod status;
-mod text;
-mod watch;
+use ide_lsp::offsets as text;
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
@@ -45,13 +44,11 @@ use crate::editor::{self, EditorTextView};
 use crate::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
-pub use agent::agent_diagnostics;
+pub use agent::{AgentDiagnostics, agent_diagnostics};
 pub use decorate::{Severity, follow, line_marks, paint, text_range};
 pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
 pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_moved, rect_of, show as show_hover};
 pub use navigate::{Goto, definition, go_to, jump_to, next_problem, references, symbols};
-#[cfg(feature = "selftest")]
-pub use project_symbols::held as symbol_servers;
 pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
 pub use {
@@ -170,7 +167,7 @@ fn language_of(path: &Path) -> Option<(Language, String)> {
 /// Looks off the main thread for the server of every built-in language, as for a file in the home folder, and hands
 /// `done` each language's name with where its server is or what is missing, on the main thread.
 pub fn survey(done: fn(Vec<(String, String)>)) {
-    let _ = std::thread::Builder::new().name("lsp-survey".into()).spawn(move || {
+    if let Err(why) = crate::util::spawn("lsp-survey", move || {
         let registry = registry();
         let home = ide_core::paths::home();
         let found: Vec<(Language, Result<PathBuf, NotFound>)> = ide_lsp::BUILT_IN
@@ -187,7 +184,14 @@ pub fn survey(done: fn(Vec<(String, String)>)) {
                 .collect();
             done(lines);
         });
-    });
+    }) {
+        done(
+            ide_lsp::BUILT_IN
+                .iter()
+                .map(|l| (l.name().to_string(), why.clone()))
+                .collect(),
+        );
+    }
 }
 
 fn survey_text(found: Result<PathBuf, NotFound>) -> String {
@@ -299,6 +303,11 @@ pub fn selection_moved(view: &EditorTextView) {
     signature::moved(view);
 }
 
+/// The cursor of `view` moved earlier, while its state was in use: the code actions follow now.
+pub fn actions_moved(view: &EditorTextView) {
+    actions::moved(view);
+}
+
 /// Lists the code actions of `kind` at the cursor of `view` in a menu there (E82).
 pub fn code_actions(view: &EditorTextView, kind: ActionKind) {
     actions::open(view, kind);
@@ -326,18 +335,15 @@ pub fn command_click(view: &EditorTextView, event: &objc2_app_kit::NSEvent) -> b
 /// Puts the diagnostics' overlay over `view` and paints the server's decorations again when `scroll` shows other
 /// lines.
 pub fn follow_scrolling(scroll: &objc2_app_kit::NSScrollView, view: &EditorTextView) {
-    use std::ptr::NonNull;
-
-    use block2::RcBlock;
+    use objc2::MainThreadOnly;
     use objc2_app_kit::NSViewBoundsDidChangeNotification;
-    use objc2_foundation::{NSNotification, NSNotificationCenter};
 
     decorate::Squiggles::attach(view);
     let clip = scroll.contentView();
     clip.setPostsBoundsChangedNotifications(true);
     let editor = objc2::rc::Weak::from(view);
     let name = crate::util::constant!(NSViewBoundsDidChangeNotification);
-    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+    let watch = crate::util::observe(view.mtm(), name, Some(&clip), move |_| {
         if let Some(editor) = editor.load() {
             let busy = {
                 let state = editor.ivars().lsp.borrow();
@@ -352,16 +358,7 @@ pub fn follow_scrolling(scroll: &objc2_app_kit::NSScrollView, view: &EditorTextV
             crate::editor::follow_overlay(&editor);
         }
     });
-    // SAFETY: The block only asks the editor to paint later; the weak reference makes it do nothing once it is gone.
-    let observer = unsafe {
-        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-            Some(name),
-            Some(&clip),
-            None,
-            &block,
-        )
-    };
-    std::mem::forget(observer);
+    view.ivars().watches.borrow_mut().push(watch);
 }
 
 /// The registry, built once the login shell's environment is known; blocks until then, so only off the main thread.
@@ -500,13 +497,15 @@ fn slot_at(workspace: &Rc<Workspace>, language: &Language, root: PathBuf) -> (Rc
 /// Looks for the slot's server off the main thread and starts it when found.
 fn find(folder: &Path, slot: &Slot) {
     let (folder, id, language, root) = (folder.to_path_buf(), slot.id, slot.language.clone(), slot.root.clone());
-    let _ = std::thread::Builder::new().name("lsp-find".into()).spawn(move || {
+    if let Err(why) = crate::util::spawn("lsp-find", move || {
         let registry = registry();
         let found = registry
             .find(&language, &root, &folder)
             .map(|launch| registry.config(&launch, &root));
         main_soon(move || found_server(&folder, id, found));
-    });
+    }) {
+        *slot.state.borrow_mut() = State::Failed(why);
+    }
 }
 
 fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
@@ -590,7 +589,7 @@ pub fn files_changed(folder: &Path, files: &std::collections::BTreeMap<PathBuf, 
     let Some(workspace) = workspace(folder) else { return };
     for slot in workspace.slots.borrow().iter() {
         if let State::Running(server) = &*slot.state.borrow() {
-            let events = watch::events(&server.watchers(), files);
+            let events = ide_lsp::file_watch::events(&server.watchers(), files);
             if events.is_empty() {
                 continue;
             }
@@ -786,8 +785,7 @@ fn event_arrived(folder: &Path, id: u64, event: Event) {
                 inlay::request(&view);
             }
         }
-        Event::ApplyEdit { edit, reply, .. } => {
-            let applied = edits::apply_workspace_edit(folder, &edit);
+        Event::ApplyEdit { edit, reply, .. } => edits::apply_workspace_edit(folder, &edit, move |applied| {
             reply.send(ide_lsp::lsp_types::ApplyWorkspaceEditResponse {
                 applied: applied.is_ok(),
                 failed_change: applied
@@ -800,7 +798,7 @@ fn event_arrived(folder: &Path, id: u64, event: Event) {
             if let Err(failure) = applied {
                 actions::failed(failure.message);
             }
-        }
+        }),
         Event::MessageRequest {
             message,
             actions,
@@ -857,26 +855,14 @@ pub(crate) fn problem_counts(view: &EditorTextView) -> Option<(usize, usize)> {
     Some((errors, warnings))
 }
 
-#[cfg(feature = "selftest")]
-pub use actions::selftest as code_action_menu;
-#[cfg(feature = "selftest")]
-pub use complete::selftest as completion;
 pub use edits::apply_text_edits;
-#[cfg(feature = "selftest")]
-pub use edits::{apply_workspace_edit, question as server_question};
-#[cfg(feature = "selftest")]
-pub use hover::shown_text as hover_text;
 use install::missing_text;
 pub(crate) use install::server_status;
 pub use install::status_action;
 #[cfg(feature = "selftest")]
-pub use probe::{language_name, marks_of, quiet_for, server_running, token_count};
+mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use rename::rename_to;
-#[cfg(feature = "selftest")]
-pub use signature::selftest as signatures;
-#[cfg(feature = "selftest")]
-pub use {navigate::close_list, navigate::listed, navigate::shown_symbols};
+pub use selftest_probe::*;
 
 #[cfg(test)]
 mod tests {

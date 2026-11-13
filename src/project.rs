@@ -1,5 +1,6 @@
 //! A window's folder: its tree, kept current by the file system watcher, quick open and whether the user trusts it.
 
+use ide_core::LockIgnoringPoison;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -42,7 +43,7 @@ impl Project {
                 if let Some(quick_open) = &quick_open {
                     quick_open.changed(&event);
                 }
-                let changed = tree.lock().unwrap_or_else(|e| e.into_inner()).apply(&event);
+                let changed = tree.lock_ignoring_poison().apply(&event);
                 if !changed.is_empty() {
                     let root = window_root.clone();
                     main_soon(move || crate::window::tree_changed(&root, &changed));
@@ -91,7 +92,7 @@ impl Project {
     }
 
     pub fn tree(&self) -> MutexGuard<'_, Tree> {
-        self.tree.lock().unwrap_or_else(|e| e.into_inner())
+        self.tree.lock_ignoring_poison()
     }
 
     pub fn quick_open(&self) -> Option<&QuickOpen> {

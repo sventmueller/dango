@@ -13,6 +13,8 @@ use splat_i18n::{t, tf};
 
 use super::address;
 use ide_ui_common::util::{label, ns, set_action, symbol};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// What keeps a tab from showing a web page.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -157,7 +159,7 @@ impl FailurePage {
         )));
         image.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
         let heading = label(mtm, "");
-        heading.setFont(Some(&NSFont::boldSystemFontOfSize(15.0)));
+        heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::PAGE_HEADING)));
         heading.setAlignment(NSTextAlignment::Center);
         let detail = NSTextField::wrappingLabelWithString(&ns(""), mtm);
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -175,17 +177,17 @@ impl FailurePage {
         let proceed = button(t("Trotzdem öffnen"), sel!(ideBrowserProceed:));
         let buttons = NSStackView::new(mtm);
         buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        buttons.setSpacing(10.0);
+        buttons.setSpacing(ide_ui_common::style::space::L);
         buttons.addArrangedSubview(&retry);
         buttons.addArrangedSubview(&proceed);
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::CenterX);
-        stack.setSpacing(10.0);
+        stack.setSpacing(ide_ui_common::style::space::L);
         for view in [&*image as &NSView, &heading, &detail, &buttons] {
             stack.addArrangedSubview(view);
         }
-        stack.setCustomSpacing_afterView(16.0, &detail);
+        stack.setCustomSpacing_afterView(ide_ui_common::style::space::SECTION, &detail);
         let view = NSView::new(mtm);
         view.addSubview(&stack);
         stack.setTranslatesAutoresizingMaskIntoConstraints(false);
@@ -238,21 +240,6 @@ impl FailurePage {
 
     pub fn hide(&self) {
         self.view.setHidden(true);
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn offers_proceed(&self) -> bool {
-        !self.view.isHidden() && !self.proceed.isHidden()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn is_shown(&self) -> bool {
-        !self.view.isHidden()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn heading(&self) -> String {
-        self.heading.stringValue().to_string()
     }
 }
 

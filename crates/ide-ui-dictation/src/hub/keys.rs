@@ -2,10 +2,11 @@
 //! agreed to take a key over, since every read of another app's item makes macOS ask and "Always Allow" would change
 //! that item.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 
-use ide_ci::SecretStore;
+use ide_secrets::SecretStore;
 use lowspeak::config::api_keys::KeyStore;
 use lowspeak::models::ApiProvider;
 
@@ -35,7 +36,7 @@ impl Keys {
     }
 
     pub fn get(&self, provider: ApiProvider) -> Option<String> {
-        let mut known = self.known.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut known = self.known.lock_ignoring_poison();
         known
             .entry(provider)
             .or_insert_with(|| match self.store.get(account(provider)) {
@@ -59,20 +60,16 @@ impl Keys {
     pub fn save(&self, key: &str) -> Result<ApiProvider, String> {
         let key = key.trim();
         let provider = ApiProvider::from_api_key(key).ok_or_else(|| "unknown key format".to_string())?;
-        self.store.set(account(provider), key)?;
+        self.store.set(account(provider), key).map_err(|e| e.to_string())?;
         self.known
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
+            .lock_ignoring_poison()
             .insert(provider, Some(key.to_string()));
         Ok(provider)
     }
 
     pub fn remove(&self, provider: ApiProvider) -> Result<(), String> {
-        self.store.delete(account(provider))?;
-        self.known
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(provider, None);
+        self.store.delete(account(provider)).map_err(|e| e.to_string())?;
+        self.known.lock_ignoring_poison().insert(provider, None);
         Ok(())
     }
 }
@@ -141,7 +138,7 @@ pub fn take_over(
 mod tests {
     use std::cell::Cell;
 
-    use ide_ci::Memory;
+    use ide_secrets::Memory;
 
     use super::*;
 

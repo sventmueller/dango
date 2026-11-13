@@ -118,3 +118,64 @@ fn in_file(path: &Path, options: &SearchOptions, with: &str, only: &Only) -> Res
     document.save().map_err(|e| format!("{e:?}"))?;
     Ok(found.len())
 }
+
+#[cfg(test)]
+mod tests {
+    use ide_core::testing::Scratch;
+
+    use super::*;
+
+    fn file(scratch: &Scratch, text: &str) -> PathBuf {
+        let path = scratch.path().join("a.txt");
+        std::fs::write(&path, text).unwrap();
+        path
+    }
+
+    #[test]
+    fn a_closed_file_gets_every_match_replaced_and_saved() {
+        let scratch = Scratch::new("replace-all");
+        let path = file(&scratch, "cat\r\nCat cat\r\n");
+        let count = in_file(&path, &SearchOptions::new("cat"), "dog", &Only::All).unwrap();
+        assert_eq!(count, 3);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "dog\r\ndog dog\r\n");
+    }
+
+    #[test]
+    fn replacing_one_line_leaves_the_other_matches() {
+        let scratch = Scratch::new("replace-line");
+        let path = file(&scratch, "cat\ncat cat\n");
+        let match_columns = 4..7;
+        let only = Only::Line(2, vec![match_columns]);
+        assert_eq!(in_file(&path, &SearchOptions::new("cat"), "dog", &only).unwrap(), 1);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "cat\ncat dog\n");
+    }
+
+    #[test]
+    fn a_file_without_matches_is_not_written() {
+        let scratch = Scratch::new("replace-none");
+        let path = file(&scratch, "nothing\n");
+        let before = std::fs::metadata(&path).unwrap().modified().unwrap();
+        assert_eq!(
+            in_file(&path, &SearchOptions::new("cat"), "dog", &Only::All).unwrap(),
+            0
+        );
+        assert_eq!(std::fs::metadata(&path).unwrap().modified().unwrap(), before);
+    }
+
+    #[test]
+    fn the_tally_counts_files_that_changed_and_names_those_that_failed() {
+        let mut done = Done::default();
+        done.count(Path::new("/a"), Ok(2));
+        done.count(Path::new("/b"), Ok(0));
+        done.count(Path::new("/c"), Err("locked".into()));
+        assert_eq!((done.replaced, done.files), (2, 1));
+        assert_eq!(done.problems, ["/c: locked"]);
+    }
+
+    #[test]
+    fn a_missing_file_is_a_problem_not_a_panic() {
+        let scratch = Scratch::new("replace-missing");
+        let path = scratch.path().join("gone.txt");
+        assert!(in_file(&path, &SearchOptions::new("cat"), "dog", &Only::All).is_err());
+    }
+}

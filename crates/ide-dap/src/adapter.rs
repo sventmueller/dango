@@ -5,6 +5,7 @@ use std::fmt;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+#[cfg(any(test, feature = "testing"))]
 use crate::fake;
 
 /// A debug adapter the app knows (E93).
@@ -19,6 +20,7 @@ pub enum AdapterKind {
     /// debugpy: Python.
     Python,
     /// The scripted adapter of `fake`, for tests and the self-test.
+    #[cfg(any(test, feature = "testing"))]
     Fake,
 }
 
@@ -31,6 +33,7 @@ impl AdapterKind {
             "go" | "dlv" | "delve" => Some(AdapterKind::Go),
             "node" | "pwa-node" | "node-terminal" | "js-debug" => Some(AdapterKind::JsDebug),
             "python" | "debugpy" => Some(AdapterKind::Python),
+            #[cfg(any(test, feature = "testing"))]
             "fake" => Some(AdapterKind::Fake),
             _ => None,
         }
@@ -54,6 +57,7 @@ impl AdapterKind {
             AdapterKind::Go => "Delve",
             AdapterKind::JsDebug => "js-debug",
             AdapterKind::Python => "debugpy",
+            #[cfg(any(test, feature = "testing"))]
             AdapterKind::Fake => "fake",
         }
     }
@@ -65,6 +69,7 @@ impl AdapterKind {
             AdapterKind::Go => "go",
             AdapterKind::JsDebug => "pwa-node",
             AdapterKind::Python => "debugpy",
+            #[cfg(any(test, feature = "testing"))]
             AdapterKind::Fake => "fake",
         }
     }
@@ -83,6 +88,7 @@ pub(crate) enum Transport {
     /// Streams the caller connected.
     Streams(Box<dyn Read + Send>, Box<dyn Write + Send>),
     /// The scripted adapter, on threads of its own.
+    #[cfg(any(test, feature = "testing"))]
     Fake(Box<fake::Script>),
 }
 
@@ -152,6 +158,7 @@ impl Adapter {
     }
 
     /// The scripted adapter, which runs on threads of the app and starts no process.
+    #[cfg(any(test, feature = "testing"))]
     pub fn fake(script: fake::Script) -> Adapter {
         Adapter {
             kind: AdapterKind::Fake,

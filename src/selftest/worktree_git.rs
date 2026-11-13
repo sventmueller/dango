@@ -20,7 +20,7 @@ const TITLE: &str = "Pick me";
 type Seen = (&'static str, bool, String);
 
 pub fn run() {
-    let root = ide_core::paths::home().join("worktree-git");
+    let root = crate::selftest::helpers::folder("worktree-git");
     std::thread::spawn(move || {
         let seen = steps(&root).unwrap_or_else(|error| vec![("the worktree steps run", false, error)]);
         main_soon(move || {

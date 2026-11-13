@@ -84,11 +84,13 @@ pub(super) fn asked() -> bool {
 /// and NSWorkspace post these on the main thread, and without a queue the call is synchronous, which quitting needs.
 pub fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>, then: fn(&NSNotification)) {
     let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
-        // SAFETY: The center passes a valid notification for the duration of the call.
-        let notification = unsafe { notification.as_ref() };
-        if MainThreadMarker::new().is_some() {
-            ide_ui_common::util::guarded((), || then(notification));
-        }
+        ide_ui_common::util::guarded((), || {
+            // SAFETY: The center passes a valid notification for the duration of the call.
+            let notification = unsafe { notification.as_ref() };
+            if MainThreadMarker::new().is_some() {
+                then(notification);
+            }
+        });
     });
     let default = NSNotificationCenter::defaultCenter();
     let center = center.unwrap_or(&default);

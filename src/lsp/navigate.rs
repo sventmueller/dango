@@ -22,6 +22,10 @@ use super::{server_of, text};
 use crate::editor::{self, EditorTextView};
 use crate::util::{guarded, item, label, main_soon, ns, set_action};
 use crate::window::WindowController;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// Goes to the definition of the symbol at the cursor.
 pub fn definition(view: &EditorTextView) {
@@ -360,26 +364,46 @@ fn with_sheet<R>(f: impl FnOnce(&RefCell<Option<Retained<LocationSheet>>>) -> R)
     f(&crate::context::app().location_sheet.sheet)
 }
 
-/// The line `range` starts on, from the open editor of `path` or else from the file, read once per file.
-fn line_text(path: &Path, line: u32, files: &mut HashMap<PathBuf, Option<String>>) -> String {
-    let text = files.entry(path.to_path_buf()).or_insert_with(|| {
-        editor::all_editors()
-            .into_iter()
-            .find(|v| v.document().path() == Some(path))
-            .map(|v| v.document().text().to_string())
-            .or_else(|| std::fs::read_to_string(path).ok())
-    });
+/// The line `line` of `path`, from `files`, which holds the texts of the open editors; another file is read once,
+/// when `read` allows it.
+fn line_text(path: &Path, line: u32, files: &mut HashMap<PathBuf, Option<String>>, read: bool) -> String {
+    let text = files
+        .entry(path.to_path_buf())
+        .or_insert_with(|| read.then(|| std::fs::read_to_string(path).ok()).flatten());
     text.as_deref()
         .and_then(|t| t.lines().nth(usize::try_from(line).unwrap_or(usize::MAX)))
         .map(|l| l.trim().chars().take(140).collect())
         .unwrap_or_default()
 }
 
-/// Lists `locations` in a sheet of `view`'s window; Return or a double click goes to one.
+/// The rows of the sheet for `locations`, each with its line's text; files no editor shows are read when `read`
+/// allows it, so only off the main thread.
+fn entries(
+    root: &Path,
+    locations: Vec<Location>,
+    mut files: HashMap<PathBuf, Option<String>>,
+    read: bool,
+) -> Vec<Entry> {
+    locations
+        .into_iter()
+        .filter_map(|location| {
+            let path = ide_lsp::uri::to_path(&location.uri)?;
+            let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string();
+            let line = location.range.start.line;
+            let title = format!("{shown}:{}   {}", line + 1, line_text(&path, line, &mut files, read));
+            Some(Entry {
+                path,
+                range: location.range,
+                title,
+            })
+        })
+        .collect()
+}
+
+/// Lists `locations` in a sheet of `view`'s window; Return or a double click goes to one. The lines of files no
+/// editor shows are read on the disk lane first.
 fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
-    let (Some(controller), Some(window)) = (view.controller(), view.window()) else {
-        return;
-    };
+    let Some(controller) = view.controller() else { return };
     locations.sort_by(|a, b| {
         (a.uri.as_str(), a.range.start.line, a.range.start.character).cmp(&(
             b.uri.as_str(),
@@ -388,21 +412,37 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
         ))
     });
     let root = controller.project_root().unwrap_or_default();
-    let mut files = HashMap::new();
-    let entries: Vec<Entry> = locations
-        .into_iter()
-        .filter_map(|location| {
-            let path = ide_lsp::uri::to_path(&location.uri)?;
-            let shown = path.strip_prefix(&root).unwrap_or(&path).display().to_string();
-            let line = location.range.start.line;
-            let title = format!("{shown}:{}   {}", line + 1, line_text(&path, line, &mut files));
-            Some(Entry {
-                path,
-                range: location.range,
-                title,
-            })
-        })
-        .collect();
+    let mut open = HashMap::new();
+    for path in locations.iter().filter_map(|l| ide_lsp::uri::to_path(&l.uri)) {
+        if let Some(editor) = editor::all_editors()
+            .into_iter()
+            .find(|v| v.document().path() == Some(&*path))
+        {
+            open.insert(path, Some(editor.document().text().to_string()));
+        }
+    }
+    let serial = view.ivars().lsp.borrow().serial;
+    let shown_title = title.to_string();
+    let read = {
+        let (root, locations, open) = (root.clone(), locations.clone(), open.clone());
+        move || entries(&root, locations, open, true)
+    };
+    let queued = ide_core::lane::DISK.ask(read, move |found| {
+        main_soon(move || {
+            if let (Some(view), Some(found)) = (editor::find_editor(serial), found) {
+                show_sheet(&view, &shown_title, found);
+            }
+        });
+    });
+    if queued.is_err() {
+        show_sheet(view, title, entries(&root, locations, open, false));
+    }
+}
+
+fn show_sheet(view: &EditorTextView, title: &str, entries: Vec<Entry>) {
+    let (Some(controller), Some(window)) = (view.controller(), view.window()) else {
+        return;
+    };
     let mtm = view.mtm();
     let sheet = LocationSheet::alloc(mtm).set_ivars(SheetIvars {
         controller: Weak::from(&*controller),
@@ -432,7 +472,7 @@ impl LocationSheet {
         // SAFETY: Switching it off keeps AppKit from releasing the panel behind Rust's back; the ivars own it.
         unsafe { panel.setReleasedWhenClosed(false) };
         let heading = label(mtm, title);
-        heading.setFont(Some(&NSFont::boldSystemFontOfSize(13.0)));
+        heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING)));
         let table = NSTableView::new(mtm);
         let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("location"));
         column.setWidth(600.0);
@@ -456,7 +496,7 @@ impl LocationSheet {
         let open = unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Öffnen")), None, None, mtm) };
         set_action(&open, self, sel!(ideOpenLocation:));
         open.setKeyEquivalent(&ns("\r"));
-        // SAFETY: As above.
+        // SAFETY: A nil target and action until `set_action` below aims the button at this object, which answers it.
         let close = unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Schließen")), None, None, mtm) };
         set_action(&close, self, sel!(ideCloseLocations:));
         close.setKeyEquivalent(&ns("\u{1b}"));
@@ -521,32 +561,6 @@ impl LocationSheet {
         }
         with_sheet(|cell| cell.borrow_mut().take());
     }
-}
-
-/// The titles the open location sheet lists, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn listed() -> Vec<String> {
-    with_sheet(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|s| s.ivars().entries.borrow().iter().map(|e| e.title.clone()).collect())
-            .unwrap_or_default()
-    })
-}
-
-/// Closes the open location sheet, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn close_list() {
-    let sheet = with_sheet(|cell| cell.borrow().clone());
-    if let Some(sheet) = sheet {
-        sheet.close();
-    }
-}
-
-/// The menu of symbols the last "Symbole" command built, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown_symbols() -> Option<Retained<NSMenu>> {
-    crate::context::app().location_sheet.symbols.borrow().clone()
 }
 
 #[cfg(test)]

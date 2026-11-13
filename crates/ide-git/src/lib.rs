@@ -4,6 +4,9 @@
 //! and of any text before it leaves the Mac ([`Git::scan_text`]), and the checked text a model gets to write a commit
 //! message.
 //!
+//! [`panel`] is what the app's Git panel decides without AppKit: its rows, the commit graph and its words for git's
+//! errors; [`ThreadTree`] and [`TreeState`] describe the worktree of an AI thread.
+//!
 //! git runs code a repository controls — hooks, `core.fsmonitor`, filters from its configuration — so callers use this
 //! crate only in folders the user trusts (E22). The crate does not check that itself; the project's trust decision
 //! belongs to the app.
@@ -30,6 +33,7 @@ mod hooks;
 mod integrate;
 mod message;
 mod operation;
+pub mod panel;
 mod path;
 mod remote;
 mod repo;
@@ -38,6 +42,7 @@ mod secrets;
 mod staging;
 mod stash;
 mod status;
+mod thread_tree;
 mod worktree;
 
 pub use blame::{Blame, BlameCommit};
@@ -61,4 +66,5 @@ pub use stash::{Applied, Stash, StashApply, StashOptions};
 pub use status::{
     BranchStatus, Conflict, EntryKind, FileState, Status, StatusEntry, StatusOptions, Submodule, Untracked,
 };
+pub use thread_tree::{ThreadTree, TreeState};
 pub use worktree::Worktree;

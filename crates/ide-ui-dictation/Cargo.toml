@@ -10,9 +10,9 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-ide-ci.workspace = true
 ide-core.workspace = true
 ide-product.workspace = true
+ide-secrets.workspace = true
 ide-ui-common.workspace = true
 splat-i18n.workspace = true
 serde = { workspace = true, optional = true }

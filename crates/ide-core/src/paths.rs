@@ -34,6 +34,11 @@ pub fn data_dir() -> PathBuf {
     home().join("Library/Application Support").join(identity())
 }
 
+/// Where the app installs language servers and debug adapters: `tools` in the data folder.
+pub fn tools_dir() -> PathBuf {
+    data_dir().join("tools")
+}
+
 /// What can be rebuilt, such as pasted images and downloaded tools' archives: `~/Library/Caches/<identity>`.
 pub fn cache_dir() -> PathBuf {
     home().join("Library/Caches").join(identity())

@@ -9,15 +9,16 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
-use objc2::{MainThreadMarker, sel};
+use objc2::sel;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window::{self, WindowController};
 
-const POLL: Duration = Duration::from_millis(250);
+/// A turn of the run loop after the undo and redo of the quick fix, so that typing the call starts an undo step of
+/// its own; there is no state to wait for.
+const UNDO_TURN: Duration = Duration::from_millis(300);
 /// The longest the server may take to start, to index the project or to settle before a request.
 const WAIT: Duration = Duration::from_secs(180);
 /// The longest an answer may take once the server settled.
@@ -103,13 +104,8 @@ fn case() -> &'static Case {
     CASE.get().copied().unwrap_or(&RUST)
 }
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join(case().folder)
-}
-
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(case().folder)
 }
 
 fn project_window() -> Option<Retained<WindowController>> {
@@ -139,29 +135,12 @@ fn picture(name: &str) {
 
 /// Calls `then` with whether `ready` held and how long it waited, as soon as it holds or once `within` or the
 /// scenario's budget passed.
-fn poll(
-    within: Duration,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce(bool, Duration) + Send + 'static,
-) {
-    fn again(
-        started: Instant,
-        deadline: Instant,
-        ready: impl Fn() -> bool + Send + 'static,
-        then: impl FnOnce(bool, Duration) + Send + 'static,
-    ) {
-        main_after(POLL, move || {
-            let ok = ready();
-            if ok || Instant::now() >= deadline {
-                then(ok, started.elapsed());
-            } else {
-                again(started, deadline, ready, then);
-            }
-        });
-    }
-    let now = Instant::now();
-    let deadline = (now + within).min(END.get().copied().unwrap_or(now + within));
-    again(now, deadline, ready, then);
+fn poll(within: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool, Duration) + 'static) {
+    let started = Instant::now();
+    let limit = END
+        .get()
+        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
+    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
 }
 
 fn quiet() -> bool {
@@ -192,25 +171,11 @@ pub fn run_go() {
 fn run(chosen: &'static Case) {
     let _ = CASE.set(chosen);
     let _ = END.set(Instant::now() + BUDGET);
-    let folder = folder();
-    let written = chosen.files.iter().try_for_each(|(path, text)| {
-        let file = folder.join(path);
-        std::fs::create_dir_all(file.parent().unwrap_or(&folder))?;
-        std::fs::write(file, text)
-    });
-    if let Err(error) = written {
-        check("the project is made", false, error.to_string());
-        finish(chosen.scenario);
-        return;
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    let Some(controller) = project_window() else {
-        check("the project opens in a window", false, "");
-        finish(chosen.scenario);
-        return;
-    };
+    helpers::open_project(chosen.scenario, chosen.folder, chosen.files, opened);
+}
+
+fn opened(controller: Retained<WindowController>) {
+    let chosen = case();
     controller.open_file(&root().join(chosen.main));
     poll(
         WAIT,
@@ -354,7 +319,7 @@ fn listed(ok: bool, took: Duration) {
                 check("one undo takes the quick fix back", undone, "");
             }
             picture(&format!("{}-fixed", case().scenario));
-            main_after(Duration::from_millis(300), call);
+            helpers::after(UNDO_TURN, call);
         },
     );
 }

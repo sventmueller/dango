@@ -15,7 +15,7 @@ use objc2_app_kit::{
     NSTextLayoutFragmentEnumerationOptions, NSTextLineFragment, NSView, NSViewBoundsDidChangeNotification,
     NSWindowOrderingMode,
 };
-use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use super::view::EditorTextView;
 use crate::util::{constant, guarded};
@@ -50,6 +50,8 @@ pub fn toggle() {
 
 pub struct OverlayIvars {
     editor: Weak<EditorTextView>,
+    /// The scrolling it redraws for, which ends with the overlay.
+    scrolled: std::cell::OnceCell<crate::util::Observation>,
 }
 
 define_class!(
@@ -84,6 +86,7 @@ define_class!(
 pub fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
+        scrolled: std::cell::OnceCell::new(),
     });
     // SAFETY: NSView's initializer, called once on the newly allocated object.
     let this: Retained<Overlay> = unsafe { msg_send![super(this), initWithFrame: editor.bounds()] };
@@ -96,26 +99,17 @@ pub fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
     *editor.ivars().whitespace.borrow_mut() = Some(Weak::from(&*this));
     let clip = scroll.contentView();
     clip.setPostsBoundsChangedNotifications(true);
+    let mtm = editor.mtm();
     let editor = Weak::from(editor);
-    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+    let name = constant!(NSViewBoundsDidChangeNotification);
+    let watch = crate::util::observe(mtm, name, Some(&clip), move |_| {
         if let Some(editor) = editor.load()
             && shown()
         {
             redraw(&editor);
         }
     });
-    let name = constant!(NSViewBoundsDidChangeNotification);
-    // SAFETY: The block only marks the overlay for drawing; the weak reference makes it do nothing once the editor is
-    // gone.
-    let observer = unsafe {
-        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-            Some(name),
-            Some(&clip),
-            None,
-            &block,
-        )
-    };
-    std::mem::forget(observer);
+    let _ = this.ivars().scrolled.set(watch);
 }
 
 /// Whether `item` is the menu item that shows whitespace, which then gets its check mark.
@@ -176,17 +170,19 @@ impl Overlay {
             .textLayoutFragmentForPosition(NSPoint::new(0.0, top - origin.y))
             .map(|fragment| fragment.rangeInElement().location());
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
-            // SAFETY: TextKit keeps the fragment alive for the call.
-            let fragment = unsafe { fragment.as_ref() };
-            let frame = fragment.layoutFragmentFrame();
-            if frame.origin.y + origin.y > bottom {
-                return Bool::NO;
-            }
-            draw_fragment(
-                fragment,
-                NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
-            );
-            Bool::YES
+            crate::util::guarded(Bool::NO, || {
+                // SAFETY: TextKit keeps the fragment alive for the call.
+                let fragment = unsafe { fragment.as_ref() };
+                let frame = fragment.layoutFragmentFrame();
+                if frame.origin.y + origin.y > bottom {
+                    return Bool::NO;
+                }
+                draw_fragment(
+                    fragment,
+                    NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
+                );
+                Bool::YES
+            })
         });
         let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
             start.as_deref(),

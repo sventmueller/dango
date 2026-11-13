@@ -166,17 +166,12 @@ fn escape_c(text: &str, special: &str) -> String {
 mod tests {
     use super::*;
     use crate::foreground::Agent;
-
-    fn temporary(name: &str) -> PathBuf {
-        use std::sync::atomic::{AtomicU32, Ordering};
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        std::env::temp_dir().join(format!("ide-terminal-paste-{name}-{}-{n}", std::process::id()))
-    }
+    use ide_core::testing::scratch as temporary;
 
     #[test]
     fn an_agent_gets_ctrl_v_a_shell_gets_a_path_and_a_remote_session_nothing() {
-        let dir = temporary("decide");
+        let scratch_dir = temporary("decide");
+        let dir = scratch_dir.join("images");
         let png = b"\x89PNG\r\n\x1a\n";
         assert_eq!(
             paste_image(&Foreground::Agent(Agent::Claude), png, &dir).unwrap(),
@@ -198,12 +193,12 @@ mod tests {
             assert_eq!(std::fs::read(&path).unwrap(), png);
             assert!(path.starts_with(&dir));
         }
-        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn stored_images_get_new_names_and_old_ones_are_cleaned_up() {
-        let dir = temporary("store");
+        let scratch_dir = temporary("store");
+        let dir = scratch_dir.join("images");
         let first = store_png(b"one", &dir).unwrap();
         let second = store_png(b"two", &dir).unwrap();
         assert_ne!(first, second);
@@ -215,7 +210,6 @@ mod tests {
         remove_old_images(&dir, later);
         assert!(!stale.exists() && !first.exists());
         assert!(unrelated.exists());
-        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

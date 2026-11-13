@@ -2,28 +2,18 @@
 //! when it comes back, twice in a row, and keeps following the answer after.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use serde_json::{Value, json};
 
 use super::agent::tab_of;
 use super::{check, finish, helpers, snapshot};
 use crate::agent::AgentTab;
-use crate::util::main_after;
 
 const NAME: &str = "agent-background";
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("background-project");
-    std::fs::create_dir_all(&root).expect("scratch project");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&root) else {
-            return finish(NAME);
-        };
+    helpers::open_project(NAME, "background-project", &[], |controller| {
+        let root = helpers::root("background-project");
         let Some(tab) = crate::agent::open_replay(&controller) else {
             check("an AI tab opens", false, "");
             return finish(NAME);
@@ -31,7 +21,8 @@ pub fn run() {
         tab.feed(&history(40));
         begin(&tab);
         let key = tab.key;
-        main_after(Duration::from_millis(300), move || to_background(root, key, 0));
+        let following = move || tab_of(key).is_some_and(|tab| tab.timeline().is_at_bottom());
+        helpers::wait_until(following, move |_| to_background(root, key, 0));
     });
 }
 
@@ -64,7 +55,8 @@ fn to_background(root: PathBuf, key: u64, round: u32) {
         format!("{height} → {}", table_height(&tab)),
     );
     controller.select_tab_by_id(ai);
-    main_after(Duration::from_millis(500), move || returned(root, key, round, height));
+    let back = move || followed(key, height + 100.0);
+    helpers::wait_until(back, move |_| returned(root, key, round, height));
 }
 
 fn returned(root: PathBuf, key: u64, round: u32, before: f64) {
@@ -91,31 +83,39 @@ fn returned(root: PathBuf, key: u64, round: u32, before: f64) {
             &format!("Visible line {round}.{n}, long enough to wrap a little in the timeline.\n\n"),
         );
     }
-    main_after(Duration::from_millis(500), move || {
-        let Some(tab) = tab_of(key) else {
-            return finish(NAME);
-        };
-        check(
+    helpers::wait_until(
+        move || followed(key, height + 50.0),
+        move |_| {
+            let Some(tab) = tab_of(key) else {
+                return finish(NAME);
+            };
+            check(
+                if round == 0 {
+                    "back in front, the AI tab keeps following its answer"
+                } else {
+                    "back in front again, the AI tab keeps following its answer"
+                },
+                tab.timeline().is_at_bottom() && table_height(&tab) > height + 50.0,
+                format!(
+                    "at bottom {}, height {height} → {}",
+                    tab.timeline().is_at_bottom(),
+                    table_height(&tab)
+                ),
+            );
             if round == 0 {
-                "back in front, the AI tab keeps following its answer"
-            } else {
-                "back in front again, the AI tab keeps following its answer"
-            },
-            tab.timeline().is_at_bottom() && table_height(&tab) > height + 50.0,
-            format!(
-                "at bottom {}, height {height} → {}",
-                tab.timeline().is_at_bottom(),
-                table_height(&tab)
-            ),
-        );
-        if round == 0 {
-            return to_background(root, key, 1);
-        }
-        if let Some(window) = tab.root().window() {
-            snapshot(&window, NAME);
-        }
-        finish(NAME);
-    });
+                return to_background(root, key, 1);
+            }
+            if let Some(window) = tab.root().window() {
+                snapshot(&window, NAME);
+            }
+            finish(NAME);
+        },
+    );
+}
+
+/// Whether the tab `key` shows the end of its timeline, grown taller than `above`.
+fn followed(key: u64, above: f64) -> bool {
+    tab_of(key).is_some_and(|tab| tab.timeline().is_at_bottom() && table_height(&tab) > above)
 }
 
 fn table_height(tab: &AgentTab) -> f64 {

@@ -3,7 +3,6 @@
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use ide_ci::State as RunState;
 use objc2::rc::{Retained, Weak};
@@ -17,6 +16,7 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSString};
 
 use super::model::{Key, State, Tab};
 use super::ui::Ui;
+use crate::context::{Registry, WindowPart};
 use crate::util::{guarded, ns};
 use crate::window::WindowController;
 
@@ -73,12 +73,12 @@ define_class!(
             _column: Option<&NSTableColumn>,
             item: &AnyObject,
         ) -> Option<Retained<NSView>> {
-            guarded(None, || self.row_view(&Key::of(item)?))
+            guarded(None, || self.row_view(&super::rows::key_of(item)?))
         }
 
         #[unsafe(method(outlineView:heightOfRowByItem:))]
         fn row_height(&self, _view: &NSOutlineView, item: &AnyObject) -> f64 {
-            guarded(24.0, || super::rows::height(Key::of(item).as_ref()))
+            guarded(24.0, || super::rows::height(super::rows::key_of(item).as_ref()))
         }
 
         #[unsafe(method(outlineViewItemDidCollapse:))]
@@ -235,56 +235,46 @@ define_class!(
 /// The CI panels of every window.
 #[derive(Default)]
 pub struct CiPanels {
-    panels: RefCell<Vec<Retained<CiPanel>>>,
-}
-
-pub(super) fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Retained<CiPanel>>>) -> R) -> R {
-    f(&crate::context::app().ci_panels.panels)
+    pub(super) panels: Registry<Retained<CiPanel>>,
+    /// What the self-test would have opened in the browser or put on the pasteboard, which belong to the user.
+    pub(super) noted: RefCell<Vec<String>>,
+    pub(super) logins: crate::context::Serial,
 }
 
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
-    let panel = with_panels(|panels| panels.borrow().iter().find(|p| p.ivars().id == id).cloned());
-    if let Some(panel) = panel {
-        f(&panel);
-    }
+    crate::context::app().ci_panels.panels.with(id, f);
 }
 
 /// The panels of windows that show `root`.
 pub fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
-    let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-    with_panels(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.ivars().controller.load().is_some());
-        panels.iter().filter(|p| p.ivars().root == root).cloned().collect()
-    })
+    crate::context::app().ci_panels.panels.for_root(root)
 }
 
 /// The panels of all open windows.
 pub fn all() -> Vec<Retained<CiPanel>> {
-    with_panels(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.ivars().controller.load().is_some());
-        panels.clone()
-    })
+    crate::context::app().ci_panels.panels.live()
 }
 
 /// The panel of `controller`'s window.
 pub fn of(controller: &WindowController) -> Option<Retained<CiPanel>> {
-    with_panels(|panels| {
-        panels
-            .borrow()
-            .iter()
-            .find(|p| p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-            .cloned()
-    })
+    controller.context().ci_panels.panels.of(controller.handle())
+}
+
+impl WindowPart for CiPanel {
+    fn window(&self) -> Option<ide_ui_common::window::Window> {
+        self.controller().map(|c| c.handle())
+    }
+
+    fn root(&self) -> &Path {
+        CiPanel::root(self)
+    }
 }
 
 impl CiPanel {
     pub(super) fn new(mtm: MainThreadMarker, controller: &WindowController, root: PathBuf) -> Retained<CiPanel> {
-        static NEXT: AtomicU64 = AtomicU64::new(1);
         let ivars = PanelIvars {
-            id: NEXT.fetch_add(1, Ordering::Relaxed),
+            id: controller.context().ci_panels.panels.next_id(),
             controller: Weak::from(controller),
             root,
             ui: OnceCell::new(),
@@ -325,7 +315,7 @@ impl CiPanel {
     /// The rows below `item`: runs at the top, then GitLab's stages, then jobs, then steps; or the open merge requests
     /// or issues.
     pub fn children(&self, item: Option<&AnyObject>) -> Vec<Key> {
-        match item.map(Key::of) {
+        match item.map(super::rows::key_of) {
             None => self.read().children(None),
             Some(Some(key)) => self.read().children(Some(key)),
             Some(None) => vec![],

@@ -140,17 +140,19 @@ pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
     );
     // SAFETY: The index lies inside the text; no effective range is asked for.
     let color = unsafe { storage.attribute_atIndex_effectiveRange(color_key, at, std::ptr::null_mut()) }?;
-    // SAFETY: As above.
+    // SAFETY: The same index inside the text, and a null pointer for the effective range, which the method allows.
     let font = unsafe { storage.attribute_atIndex_effectiveRange(font_key, at, std::ptr::null_mut()) }?;
     let color = color.downcast::<NSColor>().ok()?;
     let rgb = std::cell::Cell::new(None);
     view.effectiveAppearance()
         .performAsCurrentDrawingAppearance(&block2::RcBlock::new(|| {
-            rgb.set(
-                color
-                    .colorUsingColorSpace(&NSColorSpace::sRGBColorSpace())
-                    .map(|c| [c.redComponent(), c.greenComponent(), c.blueComponent()]),
-            );
+            crate::util::guarded((), || {
+                rgb.set(
+                    color
+                        .colorUsingColorSpace(&NSColorSpace::sRGBColorSpace())
+                        .map(|c| [c.redComponent(), c.greenComponent(), c.blueComponent()]),
+                );
+            })
         }));
     let bold = font
         .downcast::<NSFont>()
@@ -201,9 +203,9 @@ pub fn gutter_mouse(
         }
         // SAFETY: The column's own handlers of these events, each given a mouse event in its window.
         NSEventType::MouseEntered => unsafe { objc2::msg_send![&*gutter, mouseEntered: &*event] },
-        // SAFETY: As above.
+        // SAFETY: `mouseExited:` of the column itself, given a mouse event of its own window.
         NSEventType::MouseExited => unsafe { objc2::msg_send![&*gutter, mouseExited: &*event] },
-        // SAFETY: As above.
+        // SAFETY: `mouseDown:` of the column itself, given a mouse event of its own window.
         _ => unsafe { objc2::msg_send![&*gutter, mouseDown: &*event] },
     }
     gutter.displayIfNeeded();

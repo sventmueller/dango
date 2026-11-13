@@ -95,7 +95,8 @@ impl StandIn {
         stand_in.frames("after-3.ndjson", &after_always())?;
         stand_in.frames("after-4.ndjson", &after_deny())?;
         stand_in.frames("after-5.ndjson", &after_question())?;
-        stand_in.frames("after-6.ndjson", &after_plan())?;
+        stand_in.frames("after-6.ndjson", &after_words())?;
+        stand_in.frames("after-7.ndjson", &after_plan())?;
         stand_in.frames("on-interrupt.ndjson", &[result(9)])?;
         stand_in.frames("turn-2.ndjson", &second_turn())?;
         stand_in.frames("turn-3.ndjson", &[text(22, "Ich sehe die Anhänge."), result(23)])?;
@@ -237,6 +238,10 @@ fn result(n: u32) -> Value {
 pub const COLOUR: &str = "Welche Farbe?";
 pub const TESTS: &str = "Welche Tests?";
 
+/// The second request: two multiple-choice questions the user answers only in words, sent with one button.
+pub const AREAS: &str = "Welche Bereiche?";
+pub const EXTRAS: &str = "Welche Extras?";
+
 /// Write asks with two rules to store.
 fn first_turn(cwd: &Path) -> Vec<Value> {
     let input = json!({"file_path": cwd.join("hello.txt"), "content": "hello there\n"});
@@ -312,11 +317,26 @@ fn after_deny() -> Vec<Value> {
     ]
 }
 
-/// A plan to revise, then a background command and a subagent that run on.
+/// Two multiple-choice questions in one request.
 fn after_question() -> Vec<Value> {
-    let plan = json!({"plan": "## Plan\n1. Tests schreiben\n2. Parser reparieren"});
+    let input = json!({"questions": [
+        {"question": AREAS, "header": "Bereiche", "multiSelect": true,
+         "options": [{"label": "api", "description": "API"}, {"label": "ui", "description": "UI"}]},
+        {"question": EXTRAS, "header": "Extras", "multiSelect": true,
+         "options": [{"label": "docs", "description": "Doku"}, {"label": "perf", "description": "Leistung"}]}
+    ]});
     vec![
         tool_result(12, "toolu_ask", "answered"),
+        tool_use(40, "toolu_ask2", "AskUserQuestion", &input),
+        ask("q2", "toolu_ask2", "AskUserQuestion", &input, &json!([])),
+    ]
+}
+
+/// A plan to revise, then a background command and a subagent that run on.
+fn after_words() -> Vec<Value> {
+    let plan = json!({"plan": "## Plan\n1. Tests schreiben\n2. Parser reparieren"});
+    vec![
+        tool_result(41, "toolu_ask2", "answered"),
         tool_use(13, "toolu_plan", "ExitPlanMode", &plan),
         ask("x1", "toolu_plan", "ExitPlanMode", &plan, &json!([])),
     ]

@@ -195,8 +195,8 @@ fn real(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
-    fn workspace(name: &str) -> (PathBuf, Workspace) {
-        let dir = std::env::temp_dir().join(format!("ide-agent-ws-{name}-{}", std::process::id()));
+    fn workspace(name: &str) -> (ide_core::testing::Scratch, Workspace) {
+        let dir = ide_core::testing::scratch(&format!("agent-ws-{name}"));
         std::fs::create_dir_all(dir.join("project/src")).unwrap();
         std::fs::create_dir_all(dir.join("other")).unwrap();
         let ws = Workspace::new(

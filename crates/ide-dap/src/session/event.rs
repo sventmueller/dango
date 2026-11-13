@@ -40,6 +40,8 @@ pub enum Event {
     BreakpointsSet {
         /// The file.
         path: PathBuf,
+        /// The lines asked for, from 1.
+        lines: Vec<u32>,
         /// What the adapter made of each.
         breakpoints: Vec<Breakpoint>,
     },

@@ -1,18 +1,14 @@
 //! The header of the files panel, part of the `search` scenario: its folder name, a new file and a new folder in the
 //! selected folder, each named in the question the context menu's "Neu" asks too, and folding every folder.
 
-use std::cell::Cell;
 use std::path::{Path, PathBuf};
-use std::ptr::NonNull;
 use std::time::Duration;
 
-use block2::RcBlock;
 use objc2::MainThreadMarker;
 use objc2::runtime::Sel;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSApplication, NSTextField, NSView};
-use objc2_foundation::{NSRunLoop, NSRunLoopCommonModes, NSTimer};
 
-use super::helpers::wait_until;
+use super::helpers::{in_any_mode_after, wait_until};
 use super::{check, snapshot};
 use crate::util::{main_on_run_loop, ns};
 use crate::window::{self, WindowController};
@@ -26,11 +22,8 @@ fn controller(root: &Path) -> Option<objc2::rc::Retained<WindowController>> {
 
 /// Types `name` into the question in front and confirms it, from a timer of the run loop, which runs while it shows.
 fn answer_name(name: &'static str) {
-    let once = Cell::new(true);
-    let block = RcBlock::new(move |_timer: NonNull<NSTimer>| {
-        let Some(mtm) = MainThreadMarker::new().filter(|_| once.replace(false)) else {
-            return;
-        };
+    in_any_mode_after(ANSWER_AFTER, move || {
+        let Some(mtm) = MainThreadMarker::new() else { return };
         let app = NSApplication::sharedApplication(mtm);
         let Some(content) = app.modalWindow().and_then(|w| w.contentView()) else {
             return;
@@ -40,10 +33,6 @@ fn answer_name(name: &'static str) {
         }
         app.stopModalWithCode(NSAlertFirstButtonReturn);
     });
-    // SAFETY: The block holds only a flag and a name, which may go to any thread; the main run loop calls it.
-    let timer = unsafe { NSTimer::timerWithTimeInterval_repeats_block(ANSWER_AFTER.as_secs_f64(), false, &block) };
-    // SAFETY: The main run loop takes the timer in its common modes, which include the one modal alerts run in.
-    unsafe { NSRunLoop::mainRunLoop().addTimer_forMode(&timer, NSRunLoopCommonModes) };
 }
 
 fn editable_field(view: &NSView) -> Option<objc2::rc::Retained<NSTextField>> {
@@ -237,5 +226,14 @@ fn collapse(root: PathBuf, then: fn(PathBuf)) {
         pressed && after < before && usize::try_from(after).is_ok_and(|a| a <= top),
         format!("{before} rows, then {after}; {top} entries at the top"),
     );
-    then(root);
+    // The search scenario measures the folded rows later, behind the search panel, where they no longer lay out.
+    let probe = root.clone();
+    wait_until(move || first_row_laid_out(&probe), move |_| then(root));
+}
+
+fn first_row_laid_out(root: &Path) -> bool {
+    controller(root)
+        .and_then(|c| c.file_tree_outline())
+        .and_then(|outline| outline.viewAtColumn_row_makeIfNecessary(0, 0, false))
+        .is_some_and(|cell| cell.frame().size.width > 0.0)
 }

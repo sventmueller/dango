@@ -224,13 +224,13 @@ fn set_tab_width(view: &EditorTextView, columns: usize) {
 /// The controls this module adds to the status bar of `view`: a warning about the charset and the indentation menu.
 pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStackView) {
     let warning = label(mtm, "");
-    warning.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    warning.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     warning.setTextColor(Some(&NSColor::systemOrangeColor()));
     warning.setHidden(true);
     // SAFETY: A nil target until `set_action` below, which checks that the view answers the action.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     button.setBordered(false);
-    button.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    button.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     button.setToolTip(Some(&ns(t("Einrückung für diese Datei ändern"))));
     set_action(&button, view, sel!(ideIndentMenu:));

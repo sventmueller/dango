@@ -16,12 +16,12 @@ use splat_i18n::t;
 use super::a11y::keys::{Went, press};
 use super::helpers::{editor, text_of, type_at, wait_until, window_of};
 use super::{check, finish, snapshot};
-use crate::debug::selftest::{self as debug, Command};
-use crate::util::main_after;
+use crate::debug::probe::{self as debug, Command};
 use crate::window::{Panel, WindowController};
 
 const SCENARIO: &str = "debug";
-const PAUSE: Duration = Duration::from_millis(500);
+/// How long the inspector takes to fold, which the session's start waits out as a user's next step would.
+const INSPECTOR_FOLD: Duration = Duration::from_millis(1500);
 
 /// The program the scripted adapter walks through, line by line.
 pub const PROGRAM: &str = "fn main() {\n    let mut hits = 0;\n    let point = (1, 2);\n    hits += 1;\n    \
@@ -31,12 +31,10 @@ pub const PROGRAM: &str = "fn main() {\n    let mut hits = 0;\n    let point = (
 
 /// A folder of its own under the run's home, with `src/main.rs`, trusted.
 pub fn project(name: &str) -> PathBuf {
-    let folder = ide_core::paths::home().join(name);
-    let _ = std::fs::create_dir_all(folder.join("src"));
-    let _ = std::fs::write(folder.join("src/main.rs"), PROGRAM);
-    let folder = folder.canonicalize().unwrap_or(folder);
-    crate::project::trust(&folder);
-    folder
+    let _ = super::helpers::make_project(name, &[("src/main.rs", PROGRAM)]);
+    let root = super::helpers::root(name);
+    crate::project::trust(&root);
+    root
 }
 
 /// The scripted adapter for the folder's program: every line takes breakpoints, it cannot restart.
@@ -54,11 +52,7 @@ pub(super) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let root = project("debug-project");
     crate::app::open_project(mtm, root.clone());
-    let probe = root.clone();
-    wait_until(
-        move || window_of(&probe).is_some(),
-        move |_| main_after(PAUSE, move || focus(root)),
-    );
+    super::helpers::wait_for_window(&root.clone(), move |_| focus(root));
 }
 
 fn front(root: &Path) -> Option<Retained<WindowController>> {
@@ -110,7 +104,7 @@ fn focus(root: PathBuf) {
     };
     check(
         "the activity bar has six panels and settings",
-        controller.inspect().activity_buttons == 7,
+        controller.inspect().activity_buttons == Panel::ALL.len() + super::SETTINGS_BUTTON,
         format!("{} buttons", controller.inspect().activity_buttons),
     );
     let Some(window) = controller.window() else {
@@ -159,7 +153,11 @@ fn focus(root: PathBuf) {
     );
     layout(&controller);
     controller.open_file(&root.join("src/main.rs"));
-    main_after(PAUSE, move || breakpoints(root));
+    let probe = root.clone();
+    wait_until(
+        move || front(&probe).and_then(|c| editor(&c, "main.rs")).is_some(),
+        move |_| breakpoints(root),
+    );
 }
 
 /// The panel in the sidebar's layout: Debug above CI, which comes last; the controls as large and as far apart as
@@ -276,7 +274,15 @@ fn breakpoints(root: PathBuf) {
     }
     delete(&view, NSRange::new(0, 5));
     crate::editor::save(&view, false);
-    main_after(PAUSE, move || inspector(root));
+    let probe = root.clone();
+    wait_until(
+        move || {
+            front(&probe)
+                .and_then(|c| editor(&c, "main.rs"))
+                .is_some_and(|v| !v.document().is_dirty())
+        },
+        move |_| inspector(root),
+    );
 }
 
 /// ⌥⌘I shows the inspector; it comes along to another tab with its width, and ⌥⌘I folds it again.
@@ -301,15 +307,21 @@ fn inspector(root: PathBuf) {
         matches!(went, Went::Menu(_)) && shown,
         format!("{went}, shown {shown}, {width:.0} pt"),
     );
-    main_after(PAUSE, move || inspector_seen(root, width));
+    let probe = root.clone();
+    // The split view slides the inspector in, so its frame lies past the window's edge until the animation ends.
+    wait_until(
+        move || {
+            front(&probe)
+                .and_then(|c| inspector_inside(&c))
+                .is_some_and(|(ok, _)| ok)
+        },
+        move |_| inspector_seen(root, width),
+    );
 }
 
-/// The inspector ⌥⌘I unfolded lies inside the window once the tab has been laid out.
-fn inspector_seen(root: PathBuf, width: f64) {
-    let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
-    };
-    let inside = debug::inspector_page(&controller)
+/// Whether the inspector page of `controller`'s window lies inside the window, with its frame in the window.
+fn inspector_inside(controller: &WindowController) -> Option<(bool, objc2_foundation::NSRect)> {
+    debug::inspector_page(controller)
         .zip(controller.window())
         .map(|(page, window)| {
             let frame = page.convertRect_toView(page.bounds(), None);
@@ -319,7 +331,15 @@ fn inspector_seen(root: PathBuf, width: f64) {
                 page.window().is_some() && frame.size.width >= 100.0 && right <= content.size.width + 1.0,
                 frame,
             )
-        });
+        })
+}
+
+/// The inspector ⌥⌘I unfolded lies inside the window once the tab has been laid out.
+fn inspector_seen(root: PathBuf, width: f64) {
+    let Some(controller) = front(&root) else {
+        return finish(SCENARIO);
+    };
+    let inside = inspector_inside(&controller);
     check(
         "the inspector ⌥⌘I unfolded lies inside the window",
         inside.is_some_and(|(ok, _)| ok),
@@ -364,9 +384,8 @@ fn inspector_seen(root: PathBuf, width: f64) {
         !controller.inspector_shown(),
         folded.map(|w| w.to_string()).unwrap_or_default(),
     );
-    // The fold animates; the session starts once it is done, as a user's next step would.
     let starting = root.clone();
-    main_after(Duration::from_millis(1500), move || {
+    super::helpers::after(INSPECTOR_FOLD, move || {
         if let Some(controller) = front(&starting) {
             debug::start_fake(&controller, script(&starting));
         }
@@ -380,7 +399,7 @@ fn inspector_seen(root: PathBuf, width: f64) {
                 ok,
                 "",
             );
-            main_after(PAUSE, move || paused(root));
+            paused(root);
         },
     );
 }
@@ -510,7 +529,7 @@ fn inspected(root: PathBuf, ok: bool) {
         },
         move |ok| {
             check("Step Over stops on the next line", ok, "");
-            main_after(PAUSE, move || continue_and_stop(root));
+            continue_and_stop(root);
         },
     );
 }
@@ -627,10 +646,14 @@ fn waiting(root: PathBuf) {
                 return finish(SCENARIO);
             };
             let seen = debug::seen(&controller).unwrap_or_default();
+            let explained = seen
+                .consoles
+                .iter()
+                .any(|(_, text, _)| text.contains("DevToolsSecurity -enable"));
             check(
-                "a start without an answer says it waits for macOS, with Stop at hand",
-                ok && seen.controls.last() == Some(&true),
-                format!("{:?}, {:?}", seen.sessions, seen.controls),
+                "a start without an answer says it waits for macOS, how to allow it, with Stop at hand",
+                ok && explained && seen.controls.last() == Some(&true),
+                format!("{:?}, {:?}, {:?}", seen.sessions, seen.controls, seen.consoles),
             );
             if let Some(window) = controller.window() {
                 snapshot(&window, "debug-waiting");
@@ -645,6 +668,58 @@ fn waiting(root: PathBuf) {
                 },
                 move |ok| {
                     check("Stop ends a start that waits", ok, "");
+                    unverified(root);
+                },
+            );
+        },
+    );
+}
+
+/// A breakpoint on a line the adapter has no code for shows as not set while the session runs, and as an ordinary
+/// breakpoint again once it ended.
+fn unverified(root: PathBuf) {
+    let Some(controller) = front(&root) else {
+        return finish(SCENARIO);
+    };
+    let file = root.join("src/main.rs");
+    let without_six = ide_dap::fake::Script {
+        lines: (1..=13).filter(|line| *line != 6).collect(),
+        ..script(&root)
+    };
+    debug::start_fake(&controller, without_six);
+    let probe = root.clone();
+    wait_until(
+        move || controller_paused(&probe),
+        move |ok| {
+            let Some(controller) = front(&root) else {
+                return finish(SCENARIO);
+            };
+            let seen = debug::seen(&controller).unwrap_or_default();
+            let look = editor(&controller, "main.rs").map(|view| debug::gutter(&view, 5).0);
+            check(
+                "a breakpoint the adapter could not set shows as not set, the one it set as set",
+                ok && seen.unverified == [(file.clone(), 5)]
+                    && look == Some(Some(ide_ui_debug::model::breakpoints::Look::Unverified)),
+                format!("{:?}, gutter {look:?}", seen.unverified),
+            );
+            if let Some(window) = controller.window() {
+                snapshot(&window, "debug-unverified");
+            }
+            debug::run(&controller, Command::Stop);
+            let probe = root.clone();
+            wait_until(
+                move || {
+                    front(&probe)
+                        .and_then(|c| debug::seen(&c))
+                        .is_some_and(|s| s.controls.iter().all(|on| !on))
+                },
+                move |ok| {
+                    let seen = front(&root).and_then(|c| debug::seen(&c)).unwrap_or_default();
+                    check(
+                        "once the session ended no breakpoint shows as not set",
+                        ok && seen.unverified.is_empty() && seen.breakpoints.len() == 2,
+                        format!("{:?}, {:?}", seen.unverified, seen.breakpoints),
+                    );
                     finish(SCENARIO);
                 },
             );

@@ -140,8 +140,7 @@ mod tests {
 
     #[test]
     fn attachments_are_embedded_only_where_the_agent_takes_them() {
-        let dir = std::env::temp_dir().join(format!("ide-acp-prompt-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("acp-prompt");
         std::fs::write(dir.join("a.rs"), "one\ntwo\nthree\n").unwrap();
         let message = UserMessage {
             text: "look".into(),

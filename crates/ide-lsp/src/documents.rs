@@ -1,5 +1,6 @@
 //! Open documents and the servers each is open on, so one call reaches every server of a document.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
@@ -79,6 +80,6 @@ impl Documents {
     }
 
     fn lock(&self) -> MutexGuard<'_, HashMap<Uri, Vec<Server>>> {
-        self.open.lock().unwrap_or_else(|e| e.into_inner())
+        self.open.lock_ignoring_poison()
     }
 }

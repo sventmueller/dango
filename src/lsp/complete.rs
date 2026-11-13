@@ -580,7 +580,7 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
         .or_else(|| item.detail.clone())
         .unwrap_or_default();
     let detail = label(mtm, detail_text.lines().next().unwrap_or_default());
-    detail.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    detail.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
     detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     let cell = NSView::new(mtm);

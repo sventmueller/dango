@@ -197,11 +197,11 @@ impl Hub {
 }
 
 /// The keychain under the app's identity; the self-test keeps keys in memory instead.
-fn secret_store() -> Arc<dyn ide_ci::SecretStore> {
+fn secret_store() -> Arc<dyn ide_secrets::SecretStore> {
     if cfg!(feature = "selftest") && std::env::var_os("IDE_SELFTEST").is_some() {
-        return Arc::new(ide_ci::Memory::default());
+        return Arc::new(ide_secrets::Memory::default());
     }
-    Arc::new(ide_ci::Keychain::new(ide_core::paths::identity()))
+    Arc::new(ide_secrets::Keychain::of_app())
 }
 
 define_class!(

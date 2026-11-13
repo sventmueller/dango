@@ -3,19 +3,18 @@
 //! is declined, so nothing is downloaded, and it starts once it is there. No agent installed on the Mac starts.
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_thread::Status;
-use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAlertSecondButtonReturn, NSControlStateValueOn};
 
 use super::agent::{controller_of, tab_of};
 use super::agent_actions::{answer_when_shown, answered, index_of, titles};
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::agent::TabMenu;
-use crate::util::main_after;
 
 const NAME: &str = "acp-actions";
+const PROJECT: &str = "acp-actions-project";
 const REGISTRY: &str = include_str!("../../crates/ide-acp/tests/fixtures/registry.json");
 /// The places of the agents in the "+" menu.
 const GEMINI: usize = 1;
@@ -36,42 +35,29 @@ fn test_launch(root: &std::path::Path) -> Option<ide_acp::Launch> {
     ))
 }
 
-fn wait(
-    what: &'static str,
-    started: Instant,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    if ready() {
-        return then();
-    }
-    if started.elapsed() > Duration::from_secs(15) {
-        check(what, false, "waited in vain");
-        return finish(NAME);
-    }
-    main_after(Duration::from_millis(100), move || wait(what, started, ready, then));
-}
+/// A moment for the timeline to lay out the cards it scrolled to, whose buttons a press needs; it shows no state to
+/// wait for.
+const SCROLL_SETTLE: Duration = Duration::from_millis(300);
 
-fn soon(what: &'static str, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce() + Send + 'static) {
-    wait(what, Instant::now(), ready, then);
+fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    helpers::wait_within(Duration::from_secs(15), ready, move |ok| {
+        if ok {
+            then();
+        } else {
+            check(what, false, "waited in vain");
+            finish(NAME);
+        }
+    });
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("acp-actions-project");
-    let _ = std::fs::create_dir_all(&root);
-    let _ = std::fs::write(root.join("README.md"), "# ACP actions\n");
-    let root = root.canonicalize().unwrap_or(root);
-    crate::project::trust(&root);
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
         crate::agent::set_test_register(register);
     }
-    crate::agent::set_test_launch(test_launch(&root));
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || {
-        let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
-        };
+    let made = helpers::make_project(PROJECT, &[("README.md", "# ACP actions\n")]);
+    crate::agent::set_test_launch(made.ok().and_then(|root| test_launch(&root)));
+    helpers::open_project(NAME, PROJECT, &[], |controller| {
+        let root = helpers::root(PROJECT);
         let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
             return finish(NAME);
         };
@@ -142,7 +128,7 @@ fn permission(root: PathBuf, key: u64) {
         move || {
             let Some(tab) = tab_of(key) else { return finish(NAME) };
             tab.timeline().scroll_to_end();
-            main_after(Duration::from_millis(300), move || {
+            helpers::after(SCROLL_SETTLE, move || {
                 let Some(tab) = tab_of(key) else { return finish(NAME) };
                 let pressed = tab.timeline().press_last("Immer erlauben", 0);
                 soon(
@@ -304,7 +290,15 @@ fn dead_start(root: PathBuf) {
             if let Some(controller) = controller_of(&root) {
                 crate::agent::window_closed(&controller);
             }
-            main_after(Duration::from_millis(500), || finish(NAME));
+            helpers::wait_until(
+                || {
+                    !ide_process::Supervisor::global()
+                        .running()
+                        .iter()
+                        .any(|p| p.kind == ide_process::Kind::Agent)
+                },
+                |_| finish(NAME),
+            );
         },
     );
 }

@@ -15,6 +15,7 @@ pub struct Stub {
 }
 
 impl Stub {
+    /// A provider that gives `answers` in order, each after `delay`.
     pub fn new(answers: Vec<Result<Vec<Prediction>, Error>>, delay: Duration) -> Stub {
         Stub {
             answers: Mutex::new(answers.into_iter().rev().collect()),

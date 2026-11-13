@@ -6,7 +6,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use ide_lsp::Cancel;
+use ide_net::Cancel;
 use serde_json::{Map, Value, json};
 
 use crate::adapter::AdapterKind;
@@ -37,6 +37,8 @@ pub enum CurrentError {
     Cancelled,
     /// The build succeeded but named no program to run.
     NoProgram,
+    /// The file belongs to this library package, which has no program and whose file has no tests to run.
+    LibraryOnly(String),
 }
 
 impl fmt::Display for CurrentError {
@@ -52,6 +54,7 @@ impl fmt::Display for CurrentError {
             CurrentError::Build(errors) => write!(f, "the build failed:\n{errors}"),
             CurrentError::Cancelled => f.write_str("the build was cancelled"),
             CurrentError::NoProgram => f.write_str("the build produced no program"),
+            CurrentError::LibraryOnly(package) => write!(f, "{package} is a library without a program"),
         }
     }
 }
@@ -270,7 +273,7 @@ fn target(value: &Value) -> Option<Target> {
 }
 
 /// What to build for `file`: its own target if it is a target's root, the unit tests if it has tests, otherwise
-/// the package's binary.
+/// the package's binary; a library's file without tests has nothing to run.
 fn plan(package: &str, targets: &[Target], file: &Path, source: &str) -> Result<Plan, CurrentError> {
     let make = |command, selector, target: &str, kind| Plan {
         package: package.to_string(),
@@ -303,7 +306,7 @@ fn plan(package: &str, targets: &[Target], file: &Path, source: &str) -> Result<
     let bins: Vec<&Target> = targets.iter().filter(|t| has(t, "bin")).collect();
     match bins.as_slice() {
         [only] => Ok(make("build", "--bin", &only.name, "bin")),
-        [] if lib => Ok(make("test", "--lib", "", "lib")),
+        [] if lib => Err(CurrentError::LibraryOnly(package.to_string())),
         [] => Err(CurrentError::NoProgram),
         many => match many.iter().find(|t| t.name == package) {
             Some(main) => Ok(make("build", "--bin", &main.name, "bin")),
@@ -499,6 +502,18 @@ mod tests {
             result,
             Err(CurrentError::WhichBinary(vec!["tool".into(), "other".into()]))
         );
+    }
+
+    #[test]
+    fn a_library_file_without_tests_has_no_program_and_one_with_tests_runs_them() {
+        let lib: Vec<Target> = targets().into_iter().filter(|t| t.kinds == ["lib"]).collect();
+        let file = Path::new("/p/src/capabilities.rs");
+        assert_eq!(
+            plan("app", &lib, file, "use std::fmt;\npub struct Caps {}\n"),
+            Err(CurrentError::LibraryOnly("app".into()))
+        );
+        let tests = plan("app", &lib, file, "#[test]\nfn t() {}").map(|p| (p.command, p.selector));
+        assert_eq!(tests, Ok(("test", "--lib")));
     }
 
     #[test]

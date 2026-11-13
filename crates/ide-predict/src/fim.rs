@@ -224,16 +224,21 @@ struct Ask {
 impl Ask {
     /// Sends the request on a thread of its own and replies there.
     fn send(self, gap: Gap, cancel: Cancel, reply: Reply) {
-        let _ = std::thread::Builder::new()
-            .name(format!("predict-{}", self.service))
-            .spawn(move || {
+        let name = format!("predict-{}", self.service);
+        let service = self.service;
+        ide_core::thread::detach_answering(
+            &name,
+            reply,
+            move |reply| {
                 let answer = self.run(&gap, &cancel);
                 reply(if cancel.is_cancelled() {
                     Err(Error::Cancelled)
                 } else {
                     answer
                 });
-            });
+            },
+            |reply, error| reply(Err(Error::Unavailable(texts::failed(service, &error.to_string())))),
+        );
     }
 
     fn run(&self, gap: &Gap, cancel: &Cancel) -> Result<Vec<Prediction>, Error> {

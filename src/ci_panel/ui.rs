@@ -7,7 +7,7 @@ use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
+    NSAccessibility, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
     NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView, NSStackViewDistribution,
     NSStackViewGravity, NSTableColumn, NSTableViewStyle, NSTextAlignment, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView,
@@ -19,6 +19,8 @@ use super::model::{Phase, Tab};
 use super::panel::CiPanel;
 use super::text;
 use crate::util::{borderless_button, item, ns, pin_edges, set_action, set_target, symbol, symbol_button};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
@@ -55,7 +57,7 @@ impl Ui {
         content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         content.setAlignment(NSLayoutAttribute::Leading);
         content.setDistribution(NSStackViewDistribution::Fill);
-        content.setSpacing(6.0);
+        content.setSpacing(ide_ui_common::style::space::S);
         for view in [&*empty, &content as &NSView] {
             page.addSubview(view);
             pin_edges(view, &page);
@@ -66,7 +68,7 @@ impl Ui {
         let (list, outline) = outline(mtm, panel);
         let no_runs = NSTextField::wrappingLabelWithString(&ns(t("Für diesen Commit gibt es keine Läufe.")), mtm);
         no_runs.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        no_runs.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+        no_runs.setFont(Some(&ide_ui_common::style::small_system()));
         for (view, inset) in [
             (&*tabs as &NSView, MARGIN),
             (&problem_row, MARGIN),
@@ -99,12 +101,6 @@ impl Ui {
             no_runs,
             browser: Cell::new(None),
         }
-    }
-
-    /// Whether the empty state offers the browser login, and whether it can be pressed.
-    #[cfg(feature = "selftest")]
-    pub fn browser_button(&self) -> Option<bool> {
-        self.browser.get()
     }
 
     /// Shows the runs when the service answered, else why not and what helps.
@@ -253,14 +249,14 @@ impl Ui {
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         row.setAlignment(NSLayoutAttribute::Top);
-        row.setSpacing(4.0);
+        row.setSpacing(ide_ui_common::style::space::XS);
         let icon = NSImageView::new(mtm);
         if let Some(image) = symbol("exclamationmark.triangle.fill", t("Fehler")) {
             icon.setImage(Some(&image));
         }
         icon.setContentTintColor(Some(&NSColor::systemOrangeColor()));
         let text = NSTextField::wrappingLabelWithString(&ns(problem), mtm);
-        text.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+        text.setFont(Some(&ide_ui_common::style::small_system()));
         text.setSelectable(true);
         text.setPreferredMaxLayoutWidth(200.0);
         row.addArrangedSubview(&icon);
@@ -383,12 +379,6 @@ impl Ui {
         add.setEnabled(add_ok && state.client.is_some());
     }
 
-    /// The note below the list, when it shows.
-    #[cfg(feature = "selftest")]
-    pub fn note(&self) -> Option<String> {
-        (!self.no_runs.isHidden()).then(|| self.no_runs.stringValue().to_string())
-    }
-
     /// Says why the list is empty, or hides the note when it is not.
     pub fn show_empty_list(&self, panel: &CiPanel) {
         let state = panel.read();
@@ -421,7 +411,7 @@ impl Ui {
 /// A small centred note in tertiary colour.
 fn small_note(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    note.setFont(Some(&ide_ui_common::style::small_system()));
     note.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     note.setAlignment(NSTextAlignment::Center);
     note.setPreferredMaxLayoutWidth(200.0);
@@ -467,7 +457,7 @@ fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> 
     control.setTrackingMode(NSSegmentSwitchTracking::SelectOne);
     control.setSegmentDistribution(objc2_app_kit::NSSegmentDistribution::FillEqually);
     control.setControlSize(objc2_app_kit::NSControlSize::Small);
-    control.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    control.setFont(Some(&ide_ui_common::style::small_system()));
     control.setSelectedSegment(0);
     // Equal segments make the control three times its longest label wide, which would hold the sidebar wider.
     control.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
@@ -483,7 +473,7 @@ fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>
     }
     icon.setContentTintColor(Some(&NSColor::systemOrangeColor()));
     let text = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-    text.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+    text.setFont(Some(&ide_ui_common::style::small_system()));
     text.setSelectable(true);
     text.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     let dismiss = symbol_button(
@@ -498,7 +488,7 @@ fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setAlignment(NSLayoutAttribute::Top);
-    row.setSpacing(6.0);
+    row.setSpacing(ide_ui_common::style::space::S);
     row.addView_inGravity(&icon, NSStackViewGravity::Leading);
     row.addView_inGravity(&text, NSStackViewGravity::Leading);
     row.addView_inGravity(&dismiss, NSStackViewGravity::Trailing);

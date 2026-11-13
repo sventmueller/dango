@@ -32,11 +32,13 @@ pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<
     };
     let document = document?;
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
-    // SAFETY: PDFView is an NSView, made on the main thread, which `_mtm` proves, with NSView's initializer.
-    let view: Retained<NSView> = unsafe {
+    // SAFETY: PDFView is an NSView, made on the main thread, which `_mtm` proves, with NSView's initializer; the
+    // optional result covers an initializer that answers nil.
+    let view: Option<Retained<NSView>> = unsafe {
         let allocated: Allocated<NSView> = msg_send![view_class, alloc];
         msg_send![allocated, initWithFrame: frame]
     };
+    let view = view?;
     // SAFETY: PDFView's own setters, with a flag and a PDFDocument.
     unsafe {
         let _: () = msg_send![&*view, setAutoScales: true];

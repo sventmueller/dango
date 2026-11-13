@@ -3,8 +3,9 @@
 //! never loaded and a picture from outside the folder stay out; an export cancelled while it waits for its formulas
 //! writes nothing; the save panel names the file after the document.
 
+use ide_core::LockIgnoringPoison;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use ide_ui_export::{Kind, Outcome, Source};
@@ -12,11 +13,12 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::{NSApplication, NSModalResponseOK, NSSavePanel};
 use splat_i18n::t;
 
-use super::helpers::{answer_alert, in_any_mode_after, wait_until};
+use super::helpers::{self, answer_alert, in_any_mode_after, wait_until, wait_within};
 use super::{check, finish};
-use crate::util::main_after;
 
 const SCENARIO: &str = "export";
+/// How long the renderer may take to deliver the formula of a cancelled export, which must then write nothing.
+const LATE_FORMULA: Duration = Duration::from_secs(3);
 
 const TEXT: &str = "# Formeln\n\n$$x^2 + y^2$$\n\nInline $a_1$ im Satz.\n\n```mermaid\ngraph TD\n  A --> B\n```\n\n\
 ![punkt](punkt.gif)\n\n![raster](raster.bmp)\n\n![kreis](kreis.svg)\n\n![netz](https://example.invalid/bild.png)\n\n\
@@ -57,14 +59,13 @@ fn bmp() -> Vec<u8> {
 }
 
 fn root() -> PathBuf {
-    let home = ide_core::paths::home();
-    let folder = home.join("export-project");
+    let folder = helpers::folder("export-project");
     let _ = std::fs::create_dir_all(&folder);
     let _ = std::fs::write(folder.join("punkt.gif"), GIF);
     let _ = std::fs::write(folder.join("raster.bmp"), bmp());
     let _ = std::fs::write(folder.join("kreis.svg"), SVG);
-    let _ = std::fs::write(home.join("aussen.gif"), GIF);
-    folder.canonicalize().unwrap_or(folder)
+    let _ = std::fs::write(ide_core::paths::home().join("aussen.gif"), GIF);
+    helpers::root("export-project")
 }
 
 fn source(root: &Path, title: &str, text: &str) -> Source {
@@ -91,18 +92,13 @@ pub fn run() {
             (Kind::Pdf, "formeln.pdf"),
         ],
     );
-    let all = move |outcomes: &Outcomes| outcomes.lock().unwrap_or_else(PoisonError::into_inner).len() == 3;
+    let all = move |outcomes: &Outcomes| outcomes.lock_ignoring_poison().len() == 3;
     let waiting = Arc::clone(&outcomes);
     // The renderer may take a while to load the first time, so the wait is twice the usual one.
-    wait_until(
+    wait_within(
+        helpers::WAIT * 2,
         move || all(&waiting),
-        move |ok| {
-            if ok {
-                return exported(&root, &out, &outcomes);
-            }
-            let waiting = Arc::clone(&outcomes);
-            wait_until(move || all(&waiting), move |_| exported(&root, &out, &outcomes));
-        },
+        move |_| exported(&root, &out, &outcomes),
     );
 }
 
@@ -114,10 +110,7 @@ fn in_turn(root: PathBuf, out: PathBuf, outcomes: Outcomes, mut kinds: Vec<(Kind
     let (kind, name) = kinds.remove(0);
     let path = out.join(name);
     ide_ui_export::start(source(&root, "formeln", TEXT), kind, path, None, move |outcome| {
-        outcomes
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push((kind, outcome));
+        outcomes.lock_ignoring_poison().push((kind, outcome));
         in_turn(root, out, outcomes, kinds);
     });
 }
@@ -170,7 +163,7 @@ fn word_pictures(docx: &[u8]) -> Vec<String> {
 }
 
 fn exported(root: &Path, out: &Path, outcomes: &Outcomes) {
-    let outcomes = outcomes.lock().unwrap_or_else(PoisonError::into_inner).clone();
+    let outcomes = outcomes.lock_ignoring_poison().clone();
     check(
         "a document with formulas and a diagram exports to HTML, Word and PDF",
         outcomes.len() == 3 && outcomes.iter().all(|(_, outcome)| *outcome == Outcome::Written),
@@ -224,18 +217,21 @@ fn cancelled(root: PathBuf, out: PathBuf) {
         Kind::Html,
         path.clone(),
         None,
-        move |ended| *seen.lock().unwrap_or_else(PoisonError::into_inner) = Some(ended),
+        move |ended| *seen.lock_ignoring_poison() = Some(ended),
     );
     ide_ui_export::cancel(number);
-    // Long enough for the renderer to deliver the formula to an export that is gone.
-    main_after(Duration::from_secs(3), move || {
-        let ended = outcome.lock().unwrap_or_else(PoisonError::into_inner).clone();
-        check(
-            "an export cancelled while its formula is drawn ends as cancelled and writes no file",
-            ended == Some(Outcome::Cancelled) && !path.exists(),
-            format!("{ended:?}, file {}", path.exists()),
-        );
-        save_panel(root);
+    let ending = Arc::clone(&outcome);
+    let ended = move || ending.lock_ignoring_poison().is_some();
+    wait_until(ended, move |_| {
+        helpers::after(LATE_FORMULA, move || {
+            let ended = outcome.lock_ignoring_poison().clone();
+            check(
+                "an export cancelled while its formula is drawn ends as cancelled and writes no file",
+                ended == Some(Outcome::Cancelled) && !path.exists(),
+                format!("{ended:?}, file {}", path.exists()),
+            );
+            save_panel(root);
+        })
     });
 }
 
@@ -251,7 +247,7 @@ fn save_panel(root: PathBuf) {
     wait_until(
         move || written.exists(),
         move |ok| {
-            let offered = offered.lock().unwrap_or_else(PoisonError::into_inner).clone();
+            let offered = offered.lock_ignoring_poison().clone();
             let page = std::fs::read_to_string(&target).unwrap_or_default();
             check(
                 "the save panel offers the document's name in its folder, and the export goes where it says",
@@ -283,7 +279,7 @@ fn answer_save_panel(offered: Arc<Mutex<String>>, tries: u32) {
             .and_then(|url| url.path())
             .map(|p| p.to_string())
             .unwrap_or_default();
-        *offered.lock().unwrap_or_else(PoisonError::into_inner) = format!("{dir}/{name}");
+        *offered.lock_ignoring_poison() = format!("{dir}/{name}");
         answer_alert(NSModalResponseOK);
     });
 }

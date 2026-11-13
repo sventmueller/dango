@@ -2,35 +2,24 @@
 //! effort levels, the profile and the approval modes, as picking from them changes the pills.
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use super::agent::tab_of;
 use super::agent_actions::{index_of, titles};
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::agent::TabMenu;
-use crate::util::main_after;
 
 const NAME: &str = "own-agent";
 
-fn soon(what: &'static str, ready: impl Fn() -> bool + Send + 'static, then: impl FnOnce() + Send + 'static) {
-    let started = Instant::now();
-    poll(what, started, ready, then);
-}
-
-fn poll(
-    what: &'static str,
-    started: Instant,
-    ready: impl Fn() -> bool + Send + 'static,
-    then: impl FnOnce() + Send + 'static,
-) {
-    if ready() {
-        return then();
-    }
-    if started.elapsed() > Duration::from_secs(10) {
-        check(what, false, "waited in vain");
-        return finish(NAME);
-    }
-    main_after(Duration::from_millis(100), move || poll(what, started, ready, then));
+fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
+    helpers::wait_within(Duration::from_secs(10), ready, move |ok| {
+        if ok {
+            then();
+        } else {
+            check(what, false, "waited in vain");
+            finish(NAME);
+        }
+    });
 }
 
 /// Picks from the menus of the tab `key`, whose model is `model`, then ends the scenario.

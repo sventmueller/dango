@@ -1,5 +1,4 @@
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::path::Path;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
@@ -97,34 +96,7 @@ pub fn environment(home: &Path) -> Vec<(String, String)> {
     .collect()
 }
 
-/// An empty folder of its own for one test, removed with it.
-pub struct TempDir(PathBuf);
-
-impl std::ops::Deref for TempDir {
-    type Target = Path;
-
-    fn deref(&self) -> &Path {
-        &self.0
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-pub fn temporary(name: &str) -> TempDir {
-    static NEXT: AtomicU32 = AtomicU32::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir()
-        .canonicalize()
-        .unwrap()
-        .join(format!("ide-terminal-{name}-{}-{n}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    TempDir(dir)
-}
+pub use ide_core::testing::scratch as temporary;
 
 pub fn command(program: &str, args: &[&str], cwd: &Path) -> Options {
     Options {

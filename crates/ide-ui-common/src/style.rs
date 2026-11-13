@@ -1,5 +1,6 @@
-//! Sizes, fonts and colours of the AI tab. System colours throughout, as Apple's guidelines ask; an agent's own colour
-//! only tells its tabs apart in the tab bar, made to keep its contrast in every appearance.
+//! Sizes, spacing, fonts and colours of the app's views, and those of the AI tab. System colours throughout, as Apple's
+//! guidelines ask; an agent's own colour only tells its tabs apart in the tab bar, made to keep its contrast in every
+//! appearance.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -25,6 +26,58 @@ pub const BODY: f64 = 13.0;
 pub const CODE: f64 = 12.0;
 /// The size of secondary lines: timestamps, status, hints.
 pub const SMALL: f64 = 11.0;
+
+/// The size of headings of panels, sheets and popovers.
+pub const HEADING: f64 = 13.0;
+/// The size of titles of rows and small popovers.
+pub const LABEL: f64 = 12.0;
+/// The size of a page's heading in the browser tab.
+pub const PAGE_HEADING: f64 = 15.0;
+/// The size of the quick open field.
+pub const FIELD_LARGE: f64 = 17.0;
+/// The size of the code a device login asks to type in.
+pub const LOGIN_CODE: f64 = 24.0;
+/// The size of the welcome tab's title.
+pub const DISPLAY: f64 = 28.0;
+
+/// Point sizes of SF Symbols in buttons.
+pub mod symbol {
+    /// The close button of a tab.
+    pub const TAB_CLOSE: f64 = 9.0;
+    /// Buttons inside a row or beside a line of text.
+    pub const INLINE: f64 = 11.0;
+    /// Buttons in panel headers and the AI tab's header.
+    pub const SMALL: f64 = 13.0;
+    /// Buttons of the browser tab's bar.
+    pub const MEDIUM: f64 = 14.0;
+    /// Buttons of the activity bar.
+    pub const LARGE: f64 = 16.0;
+}
+
+/// The height of a row in the file tree and the Git panel's lists.
+pub const ROW_HEIGHT: f64 = 22.0;
+
+/// The spacing scale for stack views and gaps between controls.
+pub mod space {
+    pub const NONE: f64 = 0.0;
+    pub const HAIR: f64 = 1.0;
+    pub const XXS: f64 = 2.0;
+    pub const TIGHT: f64 = 3.0;
+    pub const XS: f64 = 4.0;
+    pub const SNUG: f64 = 5.0;
+    pub const S: f64 = 6.0;
+    pub const M: f64 = 8.0;
+    pub const L: f64 = 10.0;
+    pub const XL: f64 = 12.0;
+    pub const XXL: f64 = 14.0;
+    pub const SECTION: f64 = 16.0;
+    pub const GROUP: f64 = 24.0;
+}
+
+/// The system's small control font, which follows the user's text size.
+pub fn small_system() -> Retained<NSFont> {
+    NSFont::systemFontOfSize(NSFont::smallSystemFontSize())
+}
 
 pub fn body() -> Retained<NSFont> {
     NSFont::systemFontOfSize(BODY)

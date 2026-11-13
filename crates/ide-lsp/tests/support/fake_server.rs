@@ -6,6 +6,7 @@
 //! `textDocumentSync` capability it announces in place of incremental changes with saved texts. `FAKE_SHAPES` makes
 //! it also format and give inlay hints, and answer completion and document symbols in their other, plain shapes.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::sync::mpsc::{Sender, channel};
@@ -74,7 +75,7 @@ fn read_all(tx: &Sender<Value>) {
 
 fn send(out: &Out, message: &Value) {
     let body = serde_json::to_vec(message).unwrap_or_default();
-    let mut out = out.lock().unwrap_or_else(|e| e.into_inner());
+    let mut out = out.lock_ignoring_poison();
     let _ = write!(out, "Content-Length: {}\r\n\r\n", body.len());
     let _ = out.write_all(&body);
     let _ = out.flush();
@@ -187,10 +188,7 @@ impl Fake {
             }
             "textDocument/didSave" => self.saved.push(params.get("text").cloned().unwrap_or(Value::Null)),
             "$/cancelRequest" => {
-                self.cancelled
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .insert(params["id"].to_string());
+                self.cancelled.lock_ignoring_poison().insert(params["id"].to_string());
             }
             "exit" => std::process::exit(if self.shutdown { 0 } else { 1 }),
             _ => {}
@@ -376,11 +374,7 @@ impl Fake {
         std::thread::spawn(move || {
             for _ in 0..ms / 10 {
                 std::thread::sleep(Duration::from_millis(10));
-                if cancelled
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .contains(&id.to_string())
-                {
+                if cancelled.lock_ignoring_poison().contains(&id.to_string()) {
                     send(
                         &out,
                         &json!({"jsonrpc": "2.0", "id": id, "error": {"code": -32800, "message": "cancelled"}}),

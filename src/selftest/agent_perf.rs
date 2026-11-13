@@ -5,27 +5,18 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2::MainThreadOnly;
 use objc2_app_kit::{NSAttributedStringAttributeFixing, NSTextView};
 use objc2_foundation::{NSAttributedString, NSRange, NSURL};
 use serde_json::{Value, json};
 
 use super::{check, finish, helpers, snapshot};
 use crate::agent::AgentTab;
-use crate::util::main_after;
 
 const NAME: &str = "agent-perf";
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("stream-project");
-    std::fs::create_dir_all(&root).expect("scratch project");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&root) else {
-            return finish(NAME);
-        };
+    helpers::open_project(NAME, "stream-project", &[], |controller| {
         let mut tabs = Vec::new();
         for entries in [1000, 10_000, 1000, 1000] {
             let tab = crate::agent::open_replay(&controller).expect("replay tab");
@@ -48,17 +39,15 @@ pub fn run() {
                 .all(|(tab, before)| tab.timeline().built() == before),
             "three hidden tabs, 150 updates",
         );
-        BENCH.with(|bench| {
-            *bench.borrow_mut() = Some(Benchmark {
-                tabs,
-                case: 0,
-                view: None,
-                times: Vec::new(),
-                before: 0,
-                slowest: (Duration::ZERO, Duration::ZERO, Duration::ZERO, 0),
-            })
-        });
-        main_after(Duration::from_millis(50), prepare_case);
+        let bench = Rc::new(RefCell::new(Benchmark {
+            tabs,
+            case: 0,
+            view: None,
+            times: Vec::new(),
+            before: 0,
+            slowest: (Duration::ZERO, Duration::ZERO, Duration::ZERO, 0),
+        }));
+        helpers::after(TURN, move || prepare_case(bench));
     });
 }
 
@@ -185,26 +174,28 @@ struct Benchmark {
     slowest: (Duration, Duration, Duration, usize),
 }
 
-thread_local! {
-    static BENCH: RefCell<Option<Benchmark>> = const { RefCell::new(None) };
-}
+/// The running benchmark, carried from step to step.
+type Bench = Rc<RefCell<Benchmark>>;
+
+/// A turn of the event loop between the steps of the benchmark, so that each update is timed on its own and drawing
+/// in between is not counted; there is no state to wait for.
+const TURN: Duration = Duration::from_millis(50);
+/// The pause between two timed updates, about two frames, as a stream delivers them.
+const SAMPLE_GAP: Duration = Duration::from_millis(30);
 
 const CHUNK: &str = "A completed paragraph with **bold** text and `code`.\n\n";
 
-fn current() -> (Rc<AgentTab>, usize, bool) {
-    BENCH.with(|bench| {
-        let bench = bench.borrow();
-        let bench = bench.as_ref().expect("benchmark");
-        (
-            bench.tabs[bench.case / 2].clone(),
-            if bench.case % 2 == 0 { 10_000 } else { 100_000 },
-            bench.case % 2 == 0,
-        )
-    })
+fn current(bench: &Bench) -> (Rc<AgentTab>, usize, bool) {
+    let bench = bench.borrow();
+    (
+        bench.tabs[bench.case / 2].clone(),
+        if bench.case.is_multiple_of(2) { 10_000 } else { 100_000 },
+        bench.case.is_multiple_of(2),
+    )
 }
 
-fn prepare_case() {
-    let (tab, bytes, first) = current();
+fn prepare_case(bench: Bench) {
+    let (tab, bytes, first) = current(&bench);
     tab.select();
     tab.timeline().scroll_to_end();
     if first {
@@ -224,55 +215,52 @@ fn prepare_case() {
         .unwrap_or(0);
     append(&tab, &CHUNK.repeat(bytes.saturating_sub(current) / CHUNK.len()));
     tab.timeline().settle();
-    main_after(Duration::from_millis(50), begin_samples);
+    helpers::after(TURN, move || begin_samples(bench));
 }
 
-fn begin_samples() {
-    let (tab, _, _) = current();
+fn begin_samples(bench: Bench) {
+    let (tab, _, _) = current(&bench);
     tab.timeline().settle();
     let Some(view) = tab.timeline().streaming_text() else {
         check("streaming answer has a text view", false, "");
         return finish(NAME);
     };
     view.setSelectedRange(NSRange::new(0, 3));
-    BENCH.with(|bench| {
+    {
         let mut bench = bench.borrow_mut();
-        let bench = bench.as_mut().expect("benchmark");
         bench.view = Some(view);
         bench.before = tab.timeline().built();
-    });
-    main_after(Duration::from_millis(30), sample);
+    }
+    helpers::after(SAMPLE_GAP, move || sample(bench));
 }
 
-fn sample() {
-    let (tab, _, _) = current();
+fn sample(bench: Bench) {
+    let (tab, _, _) = current(&bench);
     let began = Instant::now();
     let built = tab.timeline().built();
     append(&tab, CHUNK);
     let appended = began.elapsed();
     tab.timeline().settle();
     let elapsed = began.elapsed();
-    let done = BENCH.with(|bench| {
+    let done = {
         let mut bench = bench.borrow_mut();
-        let bench = bench.as_mut().expect("benchmark");
         if elapsed > bench.slowest.0 {
             bench.slowest = (elapsed, appended, elapsed - appended, tab.timeline().built() - built);
         }
         bench.times.push(elapsed);
         bench.times.len() == 160
-    });
+    };
     if done {
-        finish_samples();
+        finish_samples(bench);
     } else {
-        main_after(Duration::from_millis(30), sample);
+        helpers::after(SAMPLE_GAP, move || sample(bench));
     }
 }
 
-fn finish_samples() {
-    let (tab, bytes, _) = current();
-    let (view, mut times, before, slowest) = BENCH.with(|bench| {
+fn finish_samples(bench: Bench) {
+    let (tab, bytes, _) = current(&bench);
+    let (view, mut times, before, slowest) = {
         let mut bench = bench.borrow_mut();
-        let bench = bench.as_mut().expect("benchmark");
         let data = (
             bench.view.take().expect("answer"),
             std::mem::take(&mut bench.times),
@@ -281,7 +269,7 @@ fn finish_samples() {
         );
         bench.slowest = (Duration::ZERO, Duration::ZERO, Duration::ZERO, 0);
         data
-    });
+    };
     let reused = tab
         .timeline()
         .streaming_text()
@@ -347,20 +335,22 @@ fn finish_samples() {
             format!("{height} / {expected}, width {}", view.frame().size.width),
         );
     }
-    let done = BENCH.with(|bench| {
+    let done = {
         let mut bench = bench.borrow_mut();
-        let bench = bench.as_mut().unwrap();
         bench.case += 1;
         bench.case == 4
+    };
+    helpers::after(TURN, move || {
+        if done {
+            finish_benchmark(&bench);
+        } else {
+            prepare_case(bench);
+        }
     });
-    main_after(
-        Duration::from_millis(50),
-        if done { finish_benchmark } else { prepare_case },
-    );
 }
 
-fn finish_benchmark() {
-    let tab = BENCH.with(|bench| bench.borrow().as_ref().unwrap().tabs[2].clone());
+fn finish_benchmark(bench: &Bench) {
+    let tab = bench.borrow().tabs[2].clone();
     tab.select();
     tab.timeline().scroll_to_end();
     tab.timeline().settle();

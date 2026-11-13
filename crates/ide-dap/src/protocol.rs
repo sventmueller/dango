@@ -41,17 +41,59 @@ pub enum Message {
     },
 }
 
+/// What is wrong with a message body.
+#[derive(Debug)]
+pub enum ParseError {
+    /// It is not JSON.
+    Json(serde_json::Error),
+    /// It is JSON, but not an object.
+    NotAnObject,
+    /// A field the message's type needs is missing, such as a request's `command`.
+    Missing {
+        /// The message's type.
+        kind: &'static str,
+        /// The field.
+        field: &'static str,
+    },
+    /// Its `type` is none the protocol knows.
+    UnknownType(String),
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::Json(error) => write!(f, "a message is not JSON: {error}"),
+            ParseError::NotAnObject => f.write_str("a message is not an object"),
+            ParseError::Missing { kind, field } => write!(f, "a {kind} without {field}"),
+            ParseError::UnknownType(kind) => write!(f, "a message of unknown type {kind:?}"),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ParseError::Json(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+fn missing(kind: &'static str, field: &'static str) -> ParseError {
+    ParseError::Missing { kind, field }
+}
+
 /// Reads one message body; an error says what is wrong with it.
-pub fn parse(body: &[u8]) -> Result<Message, String> {
-    let Value::Object(mut object) = serde_json::from_slice::<Value>(body).map_err(|e| e.to_string())? else {
-        return Err("a message is not an object".into());
+pub fn parse(body: &[u8]) -> Result<Message, ParseError> {
+    let Value::Object(mut object) = serde_json::from_slice::<Value>(body).map_err(ParseError::Json)? else {
+        return Err(ParseError::NotAnObject);
     };
     let seq = object.get("seq").and_then(Value::as_i64).unwrap_or(0);
-    let kind = take_string(&mut object, "type").ok_or("a message without a type")?;
+    let kind = take_string(&mut object, "type").ok_or(missing("message", "type"))?;
     match kind.as_str() {
         "request" => Ok(Message::Request {
             seq,
-            command: take_string(&mut object, "command").ok_or("a request without a command")?,
+            command: take_string(&mut object, "command").ok_or(missing("request", "command"))?,
             arguments: object.remove("arguments").unwrap_or(Value::Null),
         }),
         "response" => Ok(Message::Response {
@@ -59,7 +101,7 @@ pub fn parse(body: &[u8]) -> Result<Message, String> {
             request_seq: object
                 .get("request_seq")
                 .and_then(Value::as_i64)
-                .ok_or("a response without request_seq")?,
+                .ok_or(missing("response", "request_seq"))?,
             success: object.get("success").and_then(Value::as_bool).unwrap_or(false),
             command: take_string(&mut object, "command").unwrap_or_default(),
             message: error_message(&mut object),
@@ -67,10 +109,10 @@ pub fn parse(body: &[u8]) -> Result<Message, String> {
         }),
         "event" => Ok(Message::Event {
             seq,
-            event: take_string(&mut object, "event").ok_or("an event without a name")?,
+            event: take_string(&mut object, "event").ok_or(missing("event", "event"))?,
             body: object.remove("body").unwrap_or(Value::Null),
         }),
-        other => Err(format!("a message of unknown type {other:?}")),
+        other => Err(ParseError::UnknownType(other.to_string())),
     }
 }
 

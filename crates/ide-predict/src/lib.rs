@@ -9,7 +9,12 @@
 //! Providers: GitHub Copilot through its language server ([`copilot::Copilot`]), and fill-in-the-middle models under
 //! Ollama and LM Studio ([`fim::Ollama`], [`fim::LmStudio`]); [`stub::Stub`] answers from a script, for tests and the
 //! self-test. A cancelled request stops at once: Copilot is told, a local server's connection is closed.
+//!
+//! [`guard`] holds a request for a provider outside the Mac back until gitleaks found nothing in its text (R15).
 
+#![warn(missing_docs, unreachable_pub)]
+
+use ide_core::LockIgnoringPoison;
 use std::ops::Range;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,6 +25,8 @@ pub mod fim;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzzing;
+pub mod guard;
+#[cfg(any(test, feature = "testing"))]
 pub mod stub;
 mod texts;
 
@@ -43,7 +50,9 @@ pub struct Request {
 /// How the document indents.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Indent {
+    /// Spaces, this many per level.
     Spaces(u8),
+    /// One tab per level.
     Tabs,
 }
 
@@ -107,6 +116,7 @@ struct CancelState {
 }
 
 impl Cancel {
+    /// A request not cancelled yet.
     pub fn new() -> Cancel {
         Cancel::default()
     }
@@ -117,19 +127,20 @@ impl Cancel {
         if self.0.cancelled.swap(true, Ordering::SeqCst) {
             return;
         }
-        let hooks = std::mem::take(&mut *self.0.hooks.lock().unwrap_or_else(|e| e.into_inner()));
+        let hooks = std::mem::take(&mut *self.0.hooks.lock_ignoring_poison());
         for hook in hooks {
             hook();
         }
     }
 
+    /// Whether the request was cancelled.
     pub fn is_cancelled(&self) -> bool {
         self.0.cancelled.load(Ordering::SeqCst)
     }
 
     /// Runs `hook` when the request is cancelled, or now if it already was; how a provider stops work under way.
     pub fn on_cancel(&self, hook: impl FnOnce() + Send + 'static) {
-        let mut hooks = self.0.hooks.lock().unwrap_or_else(|e| e.into_inner());
+        let mut hooks = self.0.hooks.lock_ignoring_poison();
         if self.is_cancelled() {
             drop(hooks);
             hook();
@@ -162,5 +173,9 @@ pub trait Provider: Send + Sync {
 
 /// Runs `job` on a thread of its own, where a reply must not run on the caller's.
 pub(crate) fn on_own_thread(job: impl FnOnce() + Send + 'static) {
-    let _ = std::thread::Builder::new().name("predict-reply".into()).spawn(job);
+    // Without a thread of its own, the reply still must not run on the caller's, so the timer's thread takes it.
+    if let Err(unstarted) = ide_core::thread::detach("predict-reply", job) {
+        ide_core::diag::report("thread predict-reply", &unstarted.error);
+        ide_core::timer::after(std::time::Duration::ZERO, unstarted.work);
+    }
 }

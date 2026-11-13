@@ -66,7 +66,7 @@ impl Mic {
         spinner.setHidden(true);
         let view = NSStackView::new(mtm);
         view.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        view.setSpacing(4.0);
+        view.setSpacing(ide_ui_common::style::space::XS);
         view.addArrangedSubview(&spinner);
         view.addArrangedSubview(&button);
         let mic = Mic { view, button, spinner };
@@ -111,7 +111,7 @@ impl Mic {
             // SAFETY: Starting the animation takes no sender.
             unsafe { self.spinner.startAnimation(None) };
         } else {
-            // SAFETY: As above.
+            // SAFETY: Stopping the animation takes no sender, and a nil one is allowed.
             unsafe { self.spinner.stopAnimation(None) };
         }
     }
@@ -131,7 +131,9 @@ impl Mic {
 /// The line that says what dictation does, in the field's status bar.
 pub fn line(mtm: MainThreadMarker) -> Retained<NSTextField> {
     let line = NSTextField::labelWithString(&ns(""), mtm);
-    line.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(11.0)));
+    line.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
+        ide_ui_common::style::SMALL,
+    )));
     line.setTextColor(Some(&NSColor::secondaryLabelColor()));
     line.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     line.setContentCompressionResistancePriority_forOrientation(

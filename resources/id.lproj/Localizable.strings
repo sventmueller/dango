@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Pesan terakhir: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Program berhenti tanpa pesan.";
 "Das Programm hat sich beim Start beendet: {}" = "Program berhenti saat dimulai: {}";
+"Konnte keinen Thread starten: {}" = "Tidak dapat memulai thread: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Perubahan ruang kerja tidak dapat dijalankan.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” adalah pustaka tanpa program, dan file ini tidak memiliki tes. Debug file yang berisi main atau tes, atau tetapkan di .vscode/launch.json program mana yang dimulai.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Jika macOS tidak meminta kata sandi, izinkan debugger sekali di Terminal dengan “sudo DevToolsSecurity -enable”, atau batalkan dengan Hentikan. Setelah sepuluh menit, pemulaian menyerah dengan sendirinya.";
+"Haltepunkt, nicht gesetzt" = "Breakpoint, tidak terpasang";
+"nicht gesetzt" = "tidak terpasang";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Debugger tidak dapat memasang breakpoint di sini: {}";

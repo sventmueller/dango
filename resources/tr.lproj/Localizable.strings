@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Son ileti: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Program ileti vermeden sonlandı.";
 "Das Programm hat sich beim Start beendet: {}" = "Program başlatılırken sonlandı: {}";
+"Konnte keinen Thread starten: {}" = "İş parçacığı başlatılamadı: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Çalışma alanı değişikliği gerçekleştirilemedi.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}” programı olmayan bir kitaplık ve bu dosyada test yok. main veya test içeren bir dosyada hata ayıklayın ya da .vscode/launch.json içinde hangi programın başlayacağını belirleyin.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "macOS parola sormazsa hata ayıklayıcılara Terminal’de “sudo DevToolsSecurity -enable” ile bir kez izin verin veya Durdur ile iptal edin. On dakika sonra başlatma kendiliğinden vazgeçer.";
+"Haltepunkt, nicht gesetzt" = "Kesme noktası, ayarlanmadı";
+"nicht gesetzt" = "ayarlanmadı";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Hata ayıklayıcı buraya kesme noktası ayarlayamadı: {}";

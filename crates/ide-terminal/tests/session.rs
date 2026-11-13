@@ -4,7 +4,7 @@ mod common;
 
 use std::time::{Duration, Instant};
 
-use common::{Harness, alive, command, gone_within, temporary};
+use common::{Harness, command, gone_within, temporary};
 use ide_process::Ending;
 use ide_terminal::{
     Agent, CellFlags, CellSide, Clipboard, Event, Foreground, Key, NamedKey, Options, PasteAction, Point,
@@ -91,7 +91,7 @@ fn closing_a_session_returns_at_once_and_ends_the_job_in_front() {
 fn a_job_that_ignores_hang_up_and_sigterm_is_killed_after_the_grace_periods() {
     let dir = temporary("stubborn");
     let options = Options {
-        close_grace: Duration::from_millis(200),
+        close_grace: Duration::from_secs(1),
         ..command("/bin/sh", &["-i"], &dir)
     };
     let mut harness = Harness::start(options, &dir);
@@ -102,9 +102,12 @@ fn a_job_that_ignores_hang_up_and_sigterm_is_killed_after_the_grace_periods() {
     let stubborn = harness.number_after("pid=").unwrap();
     assert!(harness.wait_until(|h| h.session.foreground() == Foreground::Other("sleep".into())));
     harness.session.close();
-    std::thread::sleep(Duration::from_millis(100));
-    assert!(alive(stubborn), "hang-up alone should not have ended it");
-    assert!(gone_within(stubborn, Duration::from_secs(3)), "SIGKILL did not come");
+    // SIGHUP went out with `close`; SIGTERM follows only after the grace of a second.
+    assert!(
+        !gone_within(stubborn, Duration::from_millis(300)),
+        "hang-up alone should not have ended it"
+    );
+    assert!(gone_within(stubborn, Duration::from_secs(5)), "SIGKILL did not come");
 }
 
 #[test]

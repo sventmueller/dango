@@ -39,12 +39,12 @@ fn a_recorded_session_plays_back_as_it_happened() {
         lines: vec![1, 2, 3, 2, 3, 2, 3, 4],
         ..Script::default()
     };
-    let file = std::env::temp_dir().join(format!("ide-dap-replay-{}.ndjson", std::process::id()));
+    let dir = ide_core::testing::scratch("dap-replay");
+    let file = dir.join("recording.ndjson");
     let adapter = Adapter::fake(script.clone()).record_to(&file);
     let line = 3;
     let (live, _) = run(adapter, script.launch_config(), setup(&script.path, line), &script.path);
     let recording = std::fs::read_to_string(&file).unwrap();
-    let _ = std::fs::remove_file(&file);
     let adapter = Adapter::replay(AdapterKind::Fake, &recording).unwrap();
     let (played, session) = run(adapter, script.launch_config(), setup(&script.path, line), &script.path);
     assert_eq!(played, live);

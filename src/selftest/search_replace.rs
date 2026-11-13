@@ -2,18 +2,15 @@
 //! step, and after a question every match, which keeps a byte order mark and CRLF line endings.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSTextField, NSView};
 use splat_i18n::{t, tf};
 
 use super::helpers::wait_until;
 use super::{check, snapshot};
-use crate::util::main_after;
 use crate::window::{self, search_selftest as search};
 
 const CRLF: &[u8] = b"\xEF\xBB\xBFa needle\r\nsecond line\r\n";
-const SETTLE: Duration = Duration::from_millis(400);
 
 fn panel(root: &Path) -> Option<objc2::rc::Retained<window::SearchPanel>> {
     window::for_project(root).and_then(|c| c.search_panel())
@@ -43,7 +40,11 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
             if let Some(panel) = panel(&root) {
                 search::replace_with(&panel, "pin");
             }
-            main_after(SETTLE, move || line(root, then));
+            let probe = root.clone();
+            wait_until(
+                move || seen(&probe).is_some_and(|s| s.settled && s.can_replace_all),
+                move |_| line(root, then),
+            );
         },
     );
 }

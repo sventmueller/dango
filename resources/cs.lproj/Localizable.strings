@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Poslední zpráva: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Program se ukončil bez zprávy.";
 "Das Programm hat sich beim Start beendet: {}" = "Program se ukončil při spouštění: {}";
+"Konnte keinen Thread starten: {}" = "Nepodařilo se spustit vlákno: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Změnu pracovního prostoru se nepodařilo provést.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "„{}“ je knihovna bez programu a tento soubor nemá testy. Laďte soubor s main nebo testy, nebo v .vscode/launch.json určete, který program se spustí.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Pokud macOS nežádá heslo, povolte ladicí programy jednou v Terminálu příkazem „sudo DevToolsSecurity -enable“, nebo zrušte tlačítkem Zastavit. Po deseti minutách spuštění samo skončí.";
+"Haltepunkt, nicht gesetzt" = "Zarážka, nenastavená";
+"nicht gesetzt" = "nenastavená";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Ladicí program zde nemohl nastavit zarážku: {}";

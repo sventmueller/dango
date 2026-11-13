@@ -1,15 +1,17 @@
 //! A running ACP agent: the process the supervisor started, the protocol connection over its pipes, and the thread
 //! the connection fills.
 //!
-//! The connection runs on a thread of its own; requests go out from short-lived threads that wait for their answer,
-//! so neither the UI nor the connection's dispatch ever waits for the agent.
+//! The connection runs on a thread of its own, and every request waits for its answer as a task of that
+//! connection, so neither the UI nor the connection's dispatch ever waits for the agent. Opening a session and the
+//! settings have deadlines; a turn runs until the agent ends it or the user cancels it.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use agent_client_protocol::schema::ProtocolVersion;
@@ -33,6 +35,16 @@ const LAST_WORDS: Duration = Duration::from_millis(500);
 
 /// How long the agent's output may stay open after its process is gone; what it wrote last is still read meanwhile.
 const EXIT_GRACE: Duration = Duration::from_secs(1);
+
+/// How long the agent may take to answer `initialize`.
+const INITIALIZE: Duration = Duration::from_secs(60);
+
+/// How long the agent may take to open a session; loading one replays the whole conversation, so it gets longer.
+const NEW_SESSION: Duration = Duration::from_secs(60);
+const LOAD_SESSION: Duration = Duration::from_secs(180);
+
+/// How long the agent may take to switch a mode or an option.
+const SETTING: Duration = Duration::from_secs(30);
 
 /// What a session tells the UI, on one of the session's threads.
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +75,8 @@ pub enum SessionError {
     Version(u16),
     /// The agent answered a request with an error.
     Agent(String),
+    /// The agent did not answer this request in time.
+    Timeout(&'static str),
     /// The session has no live connection.
     Closed,
 }
@@ -75,6 +89,7 @@ impl std::fmt::Display for SessionError {
             SessionError::SignIn => write!(f, "the agent asks for a sign-in"),
             SessionError::Version(v) => write!(f, "the agent speaks protocol version {v}"),
             SessionError::Agent(why) => write!(f, "{why}"),
+            SessionError::Timeout(method) => write!(f, "the agent did not answer {method} in time"),
             SessionError::Closed => write!(f, "the session has ended"),
         }
     }
@@ -131,7 +146,7 @@ struct Shared {
     connection: Mutex<Option<ConnectionTo<Agent>>>,
     shutdown: Mutex<Option<oneshot::Sender<()>>>,
     stderr: Arc<Mutex<Tail>>,
-    stderr_reader: Mutex<Option<JoinHandle<()>>>,
+    stderr_reader: Mutex<Option<tail::Collecting>>,
     ended: AtomicBool,
     stopping: AtomicBool,
     next_ask: AtomicU64,
@@ -157,11 +172,11 @@ fn wire_name(value: &impl serde::Serialize) -> String {
 
 impl Shared {
     fn state(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+        self.state.lock_ignoring_poison()
     }
 
     fn connection(&self) -> Option<ConnectionTo<Agent>> {
-        self.connection.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.connection.lock_ignoring_poison().clone()
     }
 
     fn apply(&self, updates: Vec<Update>) {
@@ -235,17 +250,13 @@ impl Shared {
     }
 
     fn fail(&self, error: SessionError) {
-        (self.sink)(Event::Failed(error));
+        ide_core::lane::contained(|| (self.sink)(Event::Failed(error)));
     }
 
     /// Gives the stderr reader a moment to take in what the agent wrote just before it exited.
     fn await_stderr(&self) {
-        let Some(reader) = self.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()).take() else {
-            return;
-        };
-        let deadline = Instant::now() + LAST_WORDS;
-        while !reader.is_finished() && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(10));
+        if let Some(reader) = self.stderr_reader.lock_ignoring_poison().take() {
+            reader.wait(LAST_WORDS);
         }
     }
 
@@ -254,13 +265,13 @@ impl Shared {
         if self.ended.swap(true, Ordering::SeqCst) {
             return;
         }
-        *self.connection.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *self.connection.lock_ignoring_poison() = None;
         self.withdraw_asks();
         let stopping = self.stopping.load(Ordering::SeqCst);
         if !stopping {
             self.await_stderr();
         }
-        let stderr = self.stderr.lock().unwrap_or_else(|e| e.into_inner()).text();
+        let stderr = self.stderr.lock_ignoring_poison().text();
         let running = self.state().thread.status() != Status::Idle;
         if stopping && running {
             let mut updates = self.state().mapper.settle(now());
@@ -295,19 +306,60 @@ fn closed(error: &agent_client_protocol::Error) -> bool {
     agent_client_protocol::is_incoming_transport_closed(error) || agent_client_protocol::is_connection_terminated(error)
 }
 
-/// Sends `request` and waits for the answer on a thread of its own, then hands it to `then` there.
+/// `future`'s output, or `None` when `limit` passes first.
+async fn within<T>(limit: Duration, future: impl Future<Output = T>) -> Option<T> {
+    let (fire, fired) = oneshot::channel::<()>();
+    ide_core::timer::after(limit, move || {
+        let _ = fire.send(());
+    });
+    match futures::future::select(std::pin::pin!(future), fired).await {
+        futures::future::Either::Left((output, _)) => Some(output),
+        futures::future::Either::Right(_) => None,
+    }
+}
+
+/// The error a request that passed its deadline ends with.
+fn timed_out(method: &str) -> agent_client_protocol::Error {
+    agent_client_protocol::Error::new(
+        acp::ErrorCode::InternalError,
+        format!("the agent did not answer {method} in time"),
+    )
+}
+
+/// Sends `request` and waits for the answer, up to `limit` when given, as a task of the connection; hands it to
+/// `then` there. When the connection takes no more tasks, `then` hears that at once.
 fn ask<Req>(
-    connection: ConnectionTo<Agent>,
+    connection: &ConnectionTo<Agent>,
     request: Req,
+    limit: Option<Duration>,
     then: impl FnOnce(Result<Req::Response, agent_client_protocol::Error>) + Send + 'static,
 ) where
     Req: JsonRpcRequest + Send + 'static,
     Req::Response: Send + 'static,
 {
+    let method = request.method().to_string();
     let sent = connection.send_request(request);
-    let _ = std::thread::Builder::new()
-        .name("acp-request".into())
-        .spawn(move || then(futures::executor::block_on(sent.block_task())));
+    let slot = Arc::new(Mutex::new(Some(then)));
+    let theirs = slot.clone();
+    let task = async move {
+        let answer = match limit {
+            Some(limit) => within(limit, sent.block_task())
+                .await
+                .unwrap_or_else(|| Err(timed_out(&method))),
+            None => sent.block_task().await,
+        };
+        let then = theirs.lock_ignoring_poison().take();
+        if let Some(then) = then {
+            ide_core::lane::contained(|| then(answer));
+        }
+        Ok(())
+    };
+    if let Err(error) = connection.spawn(task) {
+        let then = slot.lock_ignoring_poison().take();
+        if let Some(then) = then {
+            ide_core::lane::contained(|| then(Err(error)));
+        }
+    }
 }
 
 impl Session {
@@ -373,20 +425,26 @@ impl Session {
         supervisor.on_stop(spawned.id, move || {
             if let Some(shared) = weak.upgrade() {
                 shared.stopping.store(true, Ordering::SeqCst);
-                if let Some(shutdown) = shared.shutdown.lock().unwrap_or_else(|e| e.into_inner()).take() {
+                if let Some(shutdown) = shared.shutdown.lock_ignoring_poison().take() {
                     let _ = shutdown.send(());
                 }
             }
         });
         let (watcher, watched) = (supervisor.clone(), Arc::downgrade(&shared));
-        let _ = std::thread::Builder::new()
-            .name("acp-exit".into())
-            .spawn(move || watch(&watcher, spawned.id, &watched));
         let runner = shared.clone();
-        std::thread::Builder::new()
-            .name(format!("acp-{}", runner.launch.agent))
-            .spawn(move || connect(runner, stdin, stdout, closed))
-            .map_err(|e| SessionError::Start(e.to_string()))?;
+        let started = ide_core::thread::detach("acp-exit", move || watch(&watcher, spawned.id, &watched))
+            .map_err(|unstarted| unstarted.error)
+            .and_then(|()| {
+                ide_core::thread::detach(&format!("acp-{}", runner.launch.agent), move || {
+                    connect(runner, stdin, stdout, closed);
+                })
+                .map_err(|unstarted| unstarted.error)
+            });
+        if let Err(error) = started {
+            shared.stopping.store(true, Ordering::SeqCst);
+            supervisor.stop(spawned.id, Duration::from_millis(500));
+            return Err(SessionError::Start(error.to_string()));
+        }
         Ok(Session { shared })
     }
 
@@ -436,28 +494,33 @@ impl Session {
         };
         self.shared.apply(updates);
         let shared = self.shared.clone();
-        ask(connection, acp::PromptRequest::new(session, blocks), move |result| {
-            if result.as_ref().is_err_and(closed) {
-                return;
-            }
-            let updates = {
-                let mut state = shared.state();
-                match &result {
-                    Ok(response) => {
-                        let mut updates = state.mapper.end_turn(&wire_name(&response.stop_reason), now());
-                        updates.extend(crate::usage::response(response));
-                        updates
-                    }
-                    Err(error) => {
-                        let mut updates = state.mapper.error(ErrorKind::Api, error.message.clone(), now());
-                        updates.push(Update::Status(Status::Idle));
-                        updates
-                    }
+        ask(
+            &connection,
+            acp::PromptRequest::new(session, blocks),
+            None,
+            move |result| {
+                if result.as_ref().is_err_and(closed) {
+                    return;
                 }
-            };
-            shared.withdraw_asks();
-            shared.apply(updates);
-        });
+                let updates = {
+                    let mut state = shared.state();
+                    match &result {
+                        Ok(response) => {
+                            let mut updates = state.mapper.end_turn(&wire_name(&response.stop_reason), now());
+                            updates.extend(crate::usage::response(response));
+                            updates
+                        }
+                        Err(error) => {
+                            let mut updates = state.mapper.error(ErrorKind::Api, error.message.clone(), now());
+                            updates.push(Update::Status(Status::Idle));
+                            updates
+                        }
+                    }
+                };
+                shared.withdraw_asks();
+                shared.apply(updates);
+            },
+        );
         Ok(())
     }
 
@@ -516,8 +579,9 @@ impl Session {
         let shared = self.shared.clone();
         let mode = id.to_string();
         ask(
-            connection,
+            &connection,
             acp::SetSessionModeRequest::new(session, id.to_string()),
+            Some(SETTING),
             move |result| match result {
                 Ok(_) => {
                     shared.state().caps.mode = Some(mode.clone());
@@ -549,7 +613,7 @@ impl Session {
         let (connection, session) = self.ready()?;
         let shared = self.shared.clone();
         let request = acp::SetSessionConfigOptionRequest::new(session, option.to_string(), value);
-        ask(connection, request, move |result| match result {
+        ask(&connection, request, Some(SETTING), move |result| match result {
             Ok(response) => {
                 let updates = {
                     let mut state = shared.state();
@@ -569,16 +633,25 @@ impl Session {
         let connection = self.shared.connection().ok_or(SessionError::Closed)?;
         let shared = self.shared.clone();
         let later = connection.clone();
+        // Signing in may wait for the user in a browser, so it has no deadline; opening the session after it has.
         ask(
-            connection,
+            &connection,
             acp::AuthenticateRequest::new(method.to_string()),
+            None,
             move |result| match result {
                 Ok(_) => {
-                    let _ = std::thread::Builder::new().name("acp-open".into()).spawn(move || {
-                        if let Err(error) = futures::executor::block_on(open(&shared, &later)) {
-                            shared.fail(error);
+                    let opening = shared.clone();
+                    let task = async move {
+                        if let Err(error) = open(&opening, &later).await {
+                            opening.fail(error);
                         }
-                    });
+                        Ok(())
+                    };
+                    if let Err(error) = shared.connection().map_or(Err(SessionError::Closed), |c| {
+                        c.spawn(task).map_err(|e| SessionError::Agent(e.message))
+                    }) {
+                        shared.fail(error);
+                    }
                 }
                 Err(error) => shared.fail(SessionError::Agent(error.message)),
             },
@@ -589,7 +662,7 @@ impl Session {
     /// Ends the session: the connection closes, then the supervisor stops the process after `grace`.
     pub fn stop(&self, grace: Duration) {
         self.shared.stopping.store(true, Ordering::SeqCst);
-        if let Some(shutdown) = self.shared.shutdown.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(shutdown) = self.shared.shutdown.lock_ignoring_poison().take() {
             let _ = shutdown.send(());
         }
         self.shared.supervisor.stop(self.shared.process, grace);
@@ -613,7 +686,7 @@ fn watch(supervisor: &Supervisor, process: ProcessId, shared: &Weak<Shared>) {
         std::thread::sleep(Duration::from_millis(20));
     }
     if let Some(shared) = shared.upgrade()
-        && let Some(shutdown) = shared.shutdown.lock().unwrap_or_else(|e| e.into_inner()).take()
+        && let Some(shutdown) = shared.shutdown.lock_ignoring_poison().take()
     {
         let _ = shutdown.send(());
     }
@@ -645,7 +718,7 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
                 agent_client_protocol::on_receive_request!(),
             )
             .connect_with(transport, async move |connection: ConnectionTo<Agent>| {
-                *main.connection.lock().unwrap_or_else(|e| e.into_inner()) = Some(connection.clone());
+                *main.connection.lock_ignoring_poison() = Some(connection.clone());
                 let serve = async {
                     match initialize(&main, &connection).await {
                         Ok(()) => match open(&main, &connection).await {
@@ -667,10 +740,9 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
 async fn initialize(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), SessionError> {
     let request = acp::InitializeRequest::new(ProtocolVersion::V1)
         .client_info(acp::Implementation::new(ide_product::NAME, env!("CARGO_PKG_VERSION")));
-    let response = connection
-        .send_request(request)
-        .block_task()
+    let response = within(INITIALIZE, connection.send_request(request).block_task())
         .await
+        .ok_or(SessionError::Timeout("initialize"))?
         .map_err(|e| SessionError::Agent(e.message))?;
     let version = response.protocol_version.as_u16();
     shared.state().caps.learn_initialize(&response);
@@ -693,19 +765,24 @@ async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), S
             shared.state().session = Some(session.clone());
             // The agent replays the whole conversation while it loads, so what the thread showed goes first.
             shared.apply(vec![Update::Clear]);
-            connection
-                .send_request(request)
-                .block_task()
+            within(LOAD_SESSION, connection.send_request(request).block_task())
                 .await
-                .map(|r| (session, r.modes, r.config_options))
+                .map(|answer| answer.map(|r| (session, r.modes, r.config_options)))
+                .ok_or("session/load")
         }
         None => {
             let request = acp::NewSessionRequest::new(launch.cwd.clone()).meta(meta);
-            connection
-                .send_request(request)
-                .block_task()
+            within(NEW_SESSION, connection.send_request(request).block_task())
                 .await
-                .map(|r| (r.session_id, r.modes, r.config_options))
+                .map(|answer| answer.map(|r| (r.session_id, r.modes, r.config_options)))
+                .ok_or("session/new")
+        }
+    };
+    let opened = match opened {
+        Ok(answer) => answer,
+        Err(method) => {
+            shared.state().session = None;
+            return Err(SessionError::Timeout(method));
         }
     };
     let (session, modes, options) = match opened {
@@ -752,6 +829,26 @@ mod tests {
             {"optionId": "reject", "name": "Reject", "kind": "reject_once"}
         ]))
         .unwrap()
+    }
+
+    #[test]
+    fn a_request_without_an_answer_ends_at_its_deadline() {
+        let silent = futures::future::pending::<()>();
+        let start = Instant::now();
+        assert_eq!(
+            futures::executor::block_on(within(Duration::from_millis(20), silent)),
+            None
+        );
+        assert!(start.elapsed() >= Duration::from_millis(20));
+        let answered = futures::future::ready(7);
+        assert_eq!(
+            futures::executor::block_on(within(Duration::from_secs(5), answered)),
+            Some(7)
+        );
+        assert_eq!(
+            SessionError::Timeout("initialize").to_string(),
+            "the agent did not answer initialize in time"
+        );
     }
 
     #[test]

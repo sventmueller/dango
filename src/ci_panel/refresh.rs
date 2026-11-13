@@ -6,12 +6,13 @@ use std::time::Duration;
 use ide_ci::State as RunState;
 use objc2::MainThreadOnly;
 
-use super::load::{self, Loaded};
+use super::load;
 use super::model::{FIRST_WAIT, Phase, Refresh, Tab};
-use super::panel::{CiPanel, with_panel, with_panels};
+use super::panel::{CiPanel, with_panel};
 use super::{text, work};
 use crate::util::main_after;
 use crate::window::{Panel, WindowController};
+use ide_ci::panel::Loaded;
 
 /// How long changes in `.git` gather before HEAD is read again.
 const HEAD_DEBOUNCE: Duration = Duration::from_millis(1500);
@@ -21,15 +22,11 @@ impl CiPanel {
     pub fn attach(controller: &WindowController) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
-        with_panels(|panels| {
-            panels
-                .borrow_mut()
-                .retain(|p| p.controller().is_some_and(|c| !std::ptr::eq(&*c, controller)));
-        });
+        controller.context().ci_panels.panels.detach(controller.handle());
         let panel = CiPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Ci, &panel.ui().page);
         controller.set_panel_accessory(Panel::Ci, &panel.ui().header);
-        with_panels(|panels| panels.borrow_mut().push(panel.clone()));
+        controller.context().ci_panels.panels.insert(panel.id(), panel.clone());
         panel.refresh(true);
     }
 
@@ -57,7 +54,7 @@ impl CiPanel {
     fn loaded(&self, loaded: Option<Loaded>) {
         let again = self.state().refresh_finished();
         let loaded = loaded.unwrap_or(Loaded::Failed(ide_ci::Error::Decode("panic".into()), None));
-        let wait = self.state().apply(loaded);
+        let wait = self.state().apply(loaded, super::text::problem);
         self.show();
         super::log_tab::refresh_for(self.root(), &self.read().runs);
         if again {

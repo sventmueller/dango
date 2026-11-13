@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
     NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
@@ -12,10 +11,10 @@ use objc2_app_kit::{
 use objc2_foundation::{NSRect, NSSize};
 use serde_json::json;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::activity::Part;
 use crate::agent::AgentTab;
-use crate::util::{constant, main_after};
+use crate::util::constant;
 use crate::window::{self, Panel, WindowController};
 
 const SUBAGENT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_subagent_background.ndjson");
@@ -102,15 +101,8 @@ pub(super) fn long_session() -> String {
     lines.join("\n")
 }
 
-fn folder() -> PathBuf {
-    let folder = ide_core::paths::home().join("agent-project");
-    for (path, text) in [("src/main.rs", "fn main() {}\n"), ("README.md", "# Agent\n")] {
-        let file = folder.join(path);
-        let _ = std::fs::create_dir_all(file.parent().unwrap_or(&folder));
-        let _ = std::fs::write(file, text);
-    }
-    folder.canonicalize().unwrap_or(folder)
-}
+/// Time for the window to draw what changed before its picture is taken; nothing reports when drawing is done.
+pub(super) const DRAWN: Duration = Duration::from_millis(400);
 
 pub(super) fn tab_of(key: u64) -> Option<Rc<AgentTab>> {
     crate::agent::all().into_iter().find(|t| t.key == key)
@@ -187,19 +179,12 @@ pub(super) fn picture(controller: &WindowController, name: &str) {
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = folder();
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    let Some(controller) = controller_of(&root) else {
-        check(
-            "the trusted folder gets a window",
-            false,
-            format!("{:?}", window::open_projects()),
-        );
-        finish(NAME);
-        return;
-    };
+    let files = [("src/main.rs", "fn main() {}\n"), ("README.md", "# Agent\n")];
+    helpers::open_project(NAME, "agent-project", &files, opened);
+}
+
+fn opened(controller: objc2::rc::Retained<WindowController>) {
+    let root = helpers::root("agent-project");
     check("a trusted folder does not ask again", !controller.has_sheet(), "");
     let before = controller.window().map(|w| w.frame());
     let Some(tab) = crate::agent::open_replay(&controller) else {
@@ -265,19 +250,40 @@ fn sidebar_let_go(root: PathBuf, key: u64) {
         controller.select_tab_by_id(ai);
         controller.select_tab_by_id(other);
     }
-    main_after(Duration::from_millis(600), move || {
-        let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-            return finish(NAME);
-        };
-        let range = ai.and_then(|id| controller.sidebar_range_of(id));
-        check(
-            "an AI tab that was in front only for a moment leaves its sidebar free to drag",
-            other.is_some() && range.is_some_and(|(min, max)| max - min > 1.0),
-            format!("{range:?}"),
-        );
-        tab.select();
-        main_after(Duration::from_millis(300), move || permission(root, key));
-    });
+    let held = root.clone();
+    helpers::wait_until(
+        move || {
+            controller_of(&held)
+                .and_then(|c| ai.and_then(|id| c.sidebar_range_of(id)))
+                .is_some_and(|(min, max)| max - min > 1.0)
+        },
+        move |_| {
+            let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+                return finish(NAME);
+            };
+            let range = ai.and_then(|id| controller.sidebar_range_of(id));
+            check(
+                "an AI tab that was in front only for a moment leaves its sidebar free to drag",
+                other.is_some() && range.is_some_and(|(min, max)| max - min > 1.0),
+                format!("{range:?}"),
+            );
+            tab.select();
+            helpers::after(DRAWN, move || permission(root, key));
+        },
+    );
+}
+
+/// Whether the tab `key` shows one request on its last card, ready to answer, every row as tall as its card.
+fn asks_on_card(key: u64) -> bool {
+    tab_of(key).is_some_and(|tab| {
+        tab.snapshot().pending_requests().len() == 1
+            && tab
+                .timeline()
+                .last_card_buttons()
+                .iter()
+                .any(|b| b == splat_i18n::t("Einmal erlauben"))
+            && tab.timeline().misfits().is_empty()
+    })
 }
 
 /// A subagent whose tool waits for permission, its timeline folded: the request shows on its card all the same.
@@ -313,66 +319,69 @@ fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce
     ];
     tab.feed(&lines.join("\n"));
     let other = tab.key;
-    main_after(Duration::from_millis(300), move || {
-        let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(other)) else {
-            return then();
-        };
-        let buttons = tab.timeline().last_card_buttons();
-        let misfits = tab.timeline().misfits();
-        let dock = objc2::MainThreadMarker::new().and_then(|mtm| {
-            objc2_app_kit::NSApplication::sharedApplication(mtm)
-                .dockTile()
-                .badgeLabel()
-        });
-        check(
-            "the Dock icon shows no number, also while a session waits",
-            dock.is_none(),
-            format!("{dock:?}"),
-        );
-        let mark = tab.tab_mark();
-        check(
-            "an AI tab that waits for the user has a red dot",
-            mark.as_deref() == Some(&*objc2_app_kit::NSColor::systemRedColor()),
-            format!("{mark:?}"),
-        );
-        check(
-            "a subagent's request that waits shows on its folded card, ready to answer, the row as tall as the card",
-            tab.snapshot().pending_requests().len() == 1
-                && buttons.iter().any(|b| b == splat_i18n::t("Einmal erlauben"))
-                && misfits.is_empty(),
-            format!("{buttons:?}, misfits {misfits:?}"),
-        );
-        picture(&controller, "agent-subagent-asks");
-        let progress = |n: u64, summary: &str| {
-            json!({"type": "system", "subtype": "task_progress", "task_id": "task_sub", "tool_use_id": "toolu_sub",
+    helpers::wait_until(
+        move || asks_on_card(other),
+        move |_| {
+            let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(other)) else {
+                return then();
+            };
+            let buttons = tab.timeline().last_card_buttons();
+            let misfits = tab.timeline().misfits();
+            let dock = objc2::MainThreadMarker::new().and_then(|mtm| {
+                objc2_app_kit::NSApplication::sharedApplication(mtm)
+                    .dockTile()
+                    .badgeLabel()
+            });
+            check(
+                "the Dock icon shows no number, also while a session waits",
+                dock.is_none(),
+                format!("{dock:?}"),
+            );
+            let mark = tab.tab_mark();
+            check(
+                "an AI tab that waits for the user has a red dot",
+                mark.as_deref() == Some(&*objc2_app_kit::NSColor::systemRedColor()),
+                format!("{mark:?}"),
+            );
+            check(
+                "a subagent's request that waits shows on its folded card, ready to answer, the row as tall as the card",
+                tab.snapshot().pending_requests().len() == 1
+                    && buttons.iter().any(|b| b == splat_i18n::t("Einmal erlauben"))
+                    && misfits.is_empty(),
+                format!("{buttons:?}, misfits {misfits:?}"),
+            );
+            picture(&controller, "agent-subagent-asks");
+            let progress = |n: u64, summary: &str| {
+                json!({"type": "system", "subtype": "task_progress", "task_id": "task_sub", "tool_use_id": "toolu_sub",
                    "description": "Wetter holen", "usage": {"total_tokens": 1000 * n, "tool_uses": n, "duration_ms": 900 * n},
                    "last_tool_name": "WebFetch", "summary": summary, "session_id": session, "uuid": format!("progress-{n}")})
             .to_string()
-        };
-        let started = json!({"type": "system", "subtype": "task_started", "task_id": "task_sub", "tool_use_id": "toolu_sub",
+            };
+            let started = json!({"type": "system", "subtype": "task_started", "task_id": "task_sub", "tool_use_id": "toolu_sub",
                              "description": "Wetter holen", "subagent_type": "general-purpose", "task_type": "local_agent",
                              "session_id": session, "uuid": "task-started"});
-        tab.feed(&[started.to_string(), progress(1, "Reading the forecast")].join("\n"));
-        tab.timeline().settle();
-        tab.feed(&progress(
-            2,
-            &"Comparing the forecasts of three weather services for the next days. ".repeat(6),
-        ));
-        let grown = tab.timeline().misfits();
-        tab.timeline().settle();
-        tab.feed(&progress(3, "Writing the report"));
-        let shrunk = tab.timeline().misfits();
-        check(
-            "a running subagent's card that grows or shrinks with its progress has its row's height before the window \
+            tab.feed(&[started.to_string(), progress(1, "Reading the forecast")].join("\n"));
+            tab.timeline().settle();
+            tab.feed(&progress(
+                2,
+                &"Comparing the forecasts of three weather services for the next days. ".repeat(6),
+            ));
+            let grown = tab.timeline().misfits();
+            tab.timeline().settle();
+            tab.feed(&progress(3, "Writing the report"));
+            let shrunk = tab.timeline().misfits();
+            check(
+                "a running subagent's card that grows or shrinks with its progress has its row's height before the window \
              draws again",
-            grown.is_empty() && shrunk.is_empty(),
-            format!("grown {grown:?}, shrunk {shrunk:?}"),
-        );
-        if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
-            controller.close_tab(id);
-        }
-        then();
-    });
+                grown.is_empty() && shrunk.is_empty(),
+                format!("grown {grown:?}, shrunk {shrunk:?}"),
+            );
+            if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
+                controller.close_tab(id);
+            }
+            then();
+        },
+    );
 }
 
 /// A title wider than the head takes the room up to the buttons and is cut there, not after a count of characters.
@@ -463,7 +472,7 @@ fn permission(root: PathBuf, key: u64) {
     tab.timeline().scroll_to_end();
     scroller_rests_at_the_end(&tab);
     let key = tab.key;
-    main_after(Duration::from_millis(300), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-permission");
         }
@@ -534,7 +543,7 @@ fn running(root: PathBuf, key: u64) {
         seen.status.join(" | "),
     );
     let key = tab.key;
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-running");
         }
@@ -561,7 +570,7 @@ fn activity(root: PathBuf, key: u64) {
         tooltip,
     );
     let key = tab.key;
-    main_after(Duration::from_millis(500), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             if let Some(view) = crate::activity::popover_view(&controller) {
                 view_picture(&view, "agent-activity");
@@ -621,7 +630,7 @@ fn panel(root: PathBuf, key: u64) {
         ),
     );
     let key = tab.key;
-    main_after(Duration::from_millis(600), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-panel");
         }
@@ -641,7 +650,7 @@ fn dark(root: PathBuf, key: u64) {
         window.setAppearance(NSAppearance::appearanceNamed(constant!(NSAppearanceNameDarkAqua)).as_deref());
     }
     let key = tab.key;
-    main_after(Duration::from_millis(500), move || {
+    helpers::after(DRAWN, move || {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
@@ -650,13 +659,13 @@ fn dark(root: PathBuf, key: u64) {
             &controller,
             constant!(NSAppearanceNameAccessibilityHighContrastDarkAqua),
         );
-        main_after(Duration::from_millis(400), move || {
+        helpers::after(DRAWN, move || {
             let Some(controller) = controller_of(&root) else {
                 return finish(NAME);
             };
             picture(&controller, "agent-contrast-dark");
             appearance(&controller, constant!(NSAppearanceNameAccessibilityHighContrastAqua));
-            main_after(Duration::from_millis(400), move || {
+            helpers::after(DRAWN, move || {
                 let Some(controller) = controller_of(&root) else {
                     return finish(NAME);
                 };
@@ -691,7 +700,8 @@ fn requests(root: PathBuf, first: u64) {
         format!("{pending} pending"),
     );
     let key = tab.key;
-    main_after(Duration::from_millis(300), move || {
+    let fitting = move || tab_of(key).is_some_and(|tab| tab.timeline().misfits().is_empty());
+    helpers::wait_until(fitting, move |_| {
         if let Some(tab) = tab_of(key) {
             let misfits = tab.timeline().misfits();
             check(
@@ -708,7 +718,7 @@ fn requests(root: PathBuf, first: u64) {
     );
     first.feed(RETRY);
     let first = first.key;
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-requests");
         }
@@ -723,7 +733,13 @@ pub(super) fn context(root: PathBuf, key: u64, first: u64) {
     tab.feed(&edit);
     tab.feed(&hook_frames());
     tab.timeline().scroll_to_end();
-    main_after(Duration::from_millis(400), move || {
+    let shown = move || {
+        tab_of(key).is_some_and(|tab| {
+            tab.inspect().visible.iter().any(|v| v == "Hooks: 3 erfolgreich")
+                && tab.timeline().editor_texts().iter().any(|t| t == "hello world\n")
+        })
+    };
+    helpers::wait_until(shown, move |_| {
         let Some(tab) = tab_of(key) else { return finish(NAME) };
         let seen = tab.inspect();
         check(
@@ -746,7 +762,7 @@ pub(super) fn context(root: PathBuf, key: u64, first: u64) {
             focused > 0 && focused < all,
             format!("{focused} of {all} rows"),
         );
-        main_after(Duration::from_millis(300), move || {
+        helpers::after(DRAWN, move || {
             if let Some(controller) = controller_of(&root) {
                 picture(&controller, "agent-focus");
             }
@@ -754,7 +770,9 @@ pub(super) fn context(root: PathBuf, key: u64, first: u64) {
                 tab.toggle_focus_view();
                 tab.type_in_composer("schau dir @REA");
             }
-            main_after(Duration::from_millis(800), move || mentions(root, key, first));
+            let offered =
+                move || tab_of(key).is_some_and(|tab| tab.suggestion_labels().iter().any(|l| l == "README.md"));
+            helpers::wait_until(offered, move |_| mentions(root, key, first));
         });
     });
 }
@@ -796,11 +814,13 @@ fn mentions(root: PathBuf, key: u64, first: u64) {
     );
     crate::terminal::open_tab(&controller, Some(&root));
     tab.select();
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-context");
         }
-        main_after(Duration::from_millis(2500), move || terminal(root, first));
+        let shell = root.clone();
+        let output = move || controller_of(&shell).is_some_and(|c| crate::agent::terminal_context(&c));
+        helpers::wait_until(output, move |_| terminal(root, first));
     });
 }
 
@@ -849,7 +869,7 @@ fn terminal(root: PathBuf, first: u64) {
         overview.join(" | "),
     );
     let key = first.key;
-    main_after(Duration::from_millis(500), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             if let Some(view) = crate::activity::popover_view(&controller) {
                 view_picture(&view, "agent-tasks");
@@ -889,7 +909,7 @@ fn work_lists(root: PathBuf, key: u64) {
         tip == "Hintergrundprozesse: 0 laufend, 1 beendet" && enabled && !accent,
         format!("{tip:?}, enabled {enabled}, accent {accent}"),
     );
-    main_after(Duration::from_millis(500), move || {
+    helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             if let Some(view) = crate::activity::popover_view(&controller) {
                 view_picture(&view, "agent-background-list");
@@ -939,7 +959,9 @@ fn browser(root: PathBuf) {
         return super::agent_rewind::rewind(root);
     };
     crate::browser::open_tab(&controller, Some(&url));
-    main_after(Duration::from_millis(2500), move || {
+    let page = root.clone();
+    let loaded = move || controller_of(&page).is_some_and(|c| c.tab_titles().iter().any(|t| t == PAGE_TITLE));
+    helpers::wait_until(loaded, move |_| {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };

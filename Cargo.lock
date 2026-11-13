@@ -1266,14 +1266,15 @@ dependencies = [
  "agent-client-protocol",
  "blocking",
  "futures",
+ "ide-acp",
  "ide-core",
+ "ide-net",
  "ide-process",
  "ide-product",
  "ide-thread",
  "serde",
  "serde_json",
  "sha2",
- "ureq",
 ]
 
 [[package]]
@@ -1282,17 +1283,18 @@ version = "0.0.0"
 dependencies = [
  "base64 0.23.1",
  "globset",
+ "ide-agent",
  "ide-core",
+ "ide-net",
  "ide-process",
  "ide-product",
  "ide-project",
+ "ide-secrets",
  "ide-thread",
  "ignore",
- "security-framework",
  "serde",
  "serde_json",
  "similar",
- "ureq",
 ]
 
 [[package]]
@@ -1310,16 +1312,20 @@ dependencies = [
  "ide-document",
  "ide-git",
  "ide-lsp",
+ "ide-net",
  "ide-predict",
  "ide-process",
  "ide-product",
  "ide-project",
  "ide-terminal",
  "ide-thread",
+ "ide-ui-agent",
  "ide-ui-browser",
  "ide-ui-common",
+ "ide-ui-debug",
  "ide-ui-dictation",
  "ide-ui-export",
+ "ide-ui-git",
  "ide-ui-icons",
  "ide-ui-terminal",
  "image",
@@ -1351,13 +1357,15 @@ name = "ide-ci"
 version = "0.0.0"
 dependencies = [
  "base64 0.23.1",
+ "ide-core",
+ "ide-net",
  "ide-process",
  "ide-product",
+ "ide-secrets",
  "security-framework",
  "serde",
  "serde_json",
  "sha2",
- "ureq",
 ]
 
 [[package]]
@@ -1386,9 +1394,12 @@ name = "ide-dap"
 version = "0.0.0"
 dependencies = [
  "ide-core",
- "ide-lsp",
+ "ide-dap",
+ "ide-document",
+ "ide-net",
  "ide-process",
  "ide-product",
+ "ide-rpc",
  "libc",
  "serde",
  "serde_json",
@@ -1419,6 +1430,7 @@ dependencies = [
  "ide-product",
  "serde",
  "serde_json",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1427,11 +1439,26 @@ version = "0.0.0"
 dependencies = [
  "flate2",
  "ide-core",
+ "ide-document",
+ "ide-net",
  "ide-process",
  "ide-product",
+ "ide-project",
+ "ide-rpc",
  "lsp-types",
  "serde",
  "serde_json",
+ "sha2",
+ "splat-i18n",
+]
+
+[[package]]
+name = "ide-net"
+version = "0.0.0"
+dependencies = [
+ "ide-core",
+ "ide-process",
+ "ide-product",
  "sha2",
  "ureq",
 ]
@@ -1441,7 +1468,9 @@ name = "ide-predict"
 version = "0.0.0"
 dependencies = [
  "ide-agent",
+ "ide-core",
  "ide-lsp",
+ "ide-predict",
  "ide-process",
  "ide-product",
  "serde_json",
@@ -1452,6 +1481,7 @@ dependencies = [
 name = "ide-process"
 version = "0.0.0"
 dependencies = [
+ "ide-core",
  "libc",
 ]
 
@@ -1471,7 +1501,25 @@ dependencies = [
  "notify",
  "serde",
  "serde_json",
+ "splat-i18n",
  "unicode-normalization",
+]
+
+[[package]]
+name = "ide-rpc"
+version = "0.0.0"
+dependencies = [
+ "ide-core",
+ "ide-process",
+ "serde_json",
+]
+
+[[package]]
+name = "ide-secrets"
+version = "0.0.0"
+dependencies = [
+ "ide-core",
+ "security-framework",
 ]
 
 [[package]]
@@ -1494,6 +1542,39 @@ dependencies = [
  "ide-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "ide-ui-agent"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-acp",
+ "ide-agent",
+ "ide-claude",
+ "ide-core",
+ "ide-git",
+ "ide-net",
+ "ide-process",
+ "ide-product",
+ "ide-project",
+ "ide-thread",
+ "ide-ui-common",
+ "ide-ui-dictation",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-image",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "objc2-user-notifications",
+ "objc2-web-kit",
+ "serde",
+ "serde_json",
+ "splat-file-state",
+ "splat-i18n",
+ "splat-markdown",
+ "splat-preview",
+ "splat-render",
 ]
 
 [[package]]
@@ -1524,7 +1605,26 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+ "splat-i18n",
  "splat-markdown",
+]
+
+[[package]]
+name = "ide-ui-debug"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-core",
+ "ide-dap",
+ "ide-document",
+ "ide-lsp",
+ "ide-net",
+ "ide-process",
+ "ide-ui-common",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1532,9 +1632,9 @@ name = "ide-ui-dictation"
 version = "0.0.0"
 dependencies = [
  "block2",
- "ide-ci",
  "ide-core",
  "ide-product",
+ "ide-secrets",
  "ide-ui-common",
  "libc",
  "lowspeak",
@@ -1566,6 +1666,24 @@ dependencies = [
  "splat-markdown",
  "splat-preview",
  "splat-render",
+]
+
+[[package]]
+name = "ide-ui-git"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "ide-agent",
+ "ide-core",
+ "ide-git",
+ "ide-process",
+ "ide-ui-common",
+ "ide-ui-icons",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "serde_json",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -4622,6 +4740,7 @@ version = "0.1.0"
 dependencies = [
  "ide-process",
  "ide-product",
+ "image",
  "serde",
  "serde_json",
 ]

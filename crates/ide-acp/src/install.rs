@@ -5,7 +5,7 @@
 
 use std::fmt;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,11 +13,10 @@ use std::time::Duration;
 use ide_process::Supervisor;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 
-use crate::net::Net;
 use crate::register::{self, Distribution, Entry, Pinned, Preset};
 use crate::tool::Runner;
+use ide_net::{Cancel, DownloadError, Net};
 
 /// How long `npm install` or `uv tool install` may take.
 const PACKAGE_TIMEOUT: Duration = Duration::from_secs(15 * 60);
@@ -416,7 +415,14 @@ impl fmt::Display for InstallError {
     }
 }
 
-impl std::error::Error for InstallError {}
+impl std::error::Error for InstallError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            InstallError::Net(error) | InstallError::Io(error) => Some(error),
+            _ => None,
+        }
+    }
+}
 
 impl From<io::Error> for InstallError {
     fn from(e: io::Error) -> InstallError {
@@ -438,10 +444,6 @@ fn inside(folder: &Path, path: &str) -> Option<PathBuf> {
                 .collect::<PathBuf>(),
         )
     })
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// Installs agents; every helper runs through the supervisor with the login shell's environment.
@@ -613,26 +615,15 @@ impl Installer {
 
     /// Streams `url` into `file`; the SHA-256 of what arrived.
     fn download(&self, url: &str, file: &Path, progress: &dyn Fn(Progress)) -> Result<String, InstallError> {
-        let mut body = self.net.get(url).map_err(InstallError::Net)?;
-        let mut out = fs::File::create(file)?;
-        let mut hasher = Sha256::new();
-        let mut buffer = vec![0u8; 64 * 1024];
-        let mut received = 0u64;
-        loop {
-            let read = body.read(&mut buffer).map_err(InstallError::Net)?;
-            if read == 0 {
-                break;
+        let progress = &mut |done, _| progress(Progress::Downloading(done));
+        ide_net::download(&*self.net, url, file, &Cancel::new(), Some(MAX_ARCHIVE_BYTES), progress).map_err(|error| {
+            match error {
+                DownloadError::Network(error) => InstallError::Net(error),
+                DownloadError::Io(error) => InstallError::Io(error),
+                DownloadError::TooLarge(_) => InstallError::Unusable(format!("{url} is larger than expected")),
+                DownloadError::Cancelled => InstallError::Unusable(format!("{url} was cancelled")),
             }
-            received += read as u64;
-            if received > MAX_ARCHIVE_BYTES {
-                return Err(InstallError::Unusable(format!("{url} is larger than expected")));
-            }
-            hasher.update(&buffer[..read]);
-            out.write_all(&buffer[..read])?;
-            progress(Progress::Downloading(received));
-        }
-        out.sync_all()?;
-        Ok(hex(&hasher.finalize()))
+        })
     }
 
     /// Installs `package` at `version` with npm into `folder`; the program's path in the folder.
@@ -647,10 +638,12 @@ impl Installer {
         let npm = self.runner.which("npm").ok_or(InstallError::Runtime("Node.js", None))?;
         let spec = format!("{package}@{version}");
         let prefix = folder.to_string_lossy().into_owned();
+        // Install scripts run only in the rebuild below, once the package is known to be the one the plan names.
         let args = [
             "install",
             "--prefix",
             &prefix,
+            "--ignore-scripts",
             "--no-audit",
             "--no-fund",
             "--omit=dev",
@@ -676,6 +669,11 @@ impl Installer {
                     actual: actual.into(),
                 });
             }
+        }
+        let rebuild = ["rebuild", "--prefix", &prefix, "--no-audit", "--no-fund"];
+        let output = self.runner.run(&npm, &rebuild, folder, &[], PACKAGE_TIMEOUT)?;
+        if !output.succeeded() {
+            return Err(InstallError::Tool(output.stderr));
         }
         let bin = match bin {
             Some(bin) => bin.to_string(),
@@ -758,8 +756,7 @@ mod tests {
 
     #[test]
     fn a_package_names_its_program_once_or_by_its_name() {
-        let dir = std::env::temp_dir().join(format!("ide-acp-bin-{}", std::process::id()));
-        fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("acp-bin");
         fs::write(dir.join("package.json"), r#"{"bin":{"tool":"cli.js"}}"#).unwrap();
         assert_eq!(package_bin(&dir, "@scope/other").unwrap(), "tool");
         fs::write(dir.join("package.json"), r#"{"bin":{"a":"a.js","agent":"b.js"}}"#).unwrap();

@@ -81,7 +81,7 @@ impl Sheet {
         let views: [&NSView; 3] = [&label, &spinner, &button];
         let stack = NSStackView::stackViewWithViews(&NSArray::from_slice(&views), mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        stack.setSpacing(14.0);
+        stack.setSpacing(ide_ui_common::style::space::XXL);
         stack.setEdgeInsets(NSEdgeInsets {
             top: 20.0,
             left: 20.0,

@@ -1,28 +1,37 @@
 //! The app as the `ide-ui-*` crates see it: each crate's `Host`, answered from the app context (E99).
 
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::Duration;
+
+use ide_ui_common::window::{Panel, TabKind, WindowHost};
+use objc2::MainThreadMarker;
+use objc2::rc::Retained;
+use objc2_app_kit::{NSView, NSWindow};
+
+use crate::window::WindowController;
 
 /// The running app, as the crates' hooks reach it.
 pub struct AppHost;
 
 impl ide_ui_export::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_export::State> {
-        crate::context::app().exports.clone()
+        context().exports.clone()
     }
 }
 
 impl ide_ui_terminal::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_terminal::State> {
-        crate::context::app().terminal_views.clone()
+        context().terminal_views.clone()
     }
 
     fn try_state(&self) -> Option<Rc<ide_ui_terminal::State>> {
-        crate::context::try_app().map(|cx| cx.terminal_views.clone())
+        try_context().map(|cx| cx.terminal_views.clone())
     }
 
     fn opened(&self, window: u64, what: ide_ui_terminal::Opened) {
         use ide_ui_terminal::Opened;
-        let Some(controller) = crate::context::app().windows.get(window) else {
+        let Some(controller) = self::window(window) else {
             return;
         };
         match what {
@@ -33,7 +42,7 @@ impl ide_ui_terminal::Host for AppHost {
     }
 
     fn set_tab_title(&self, window: u64, tab: isize, title: &str) {
-        if let Some(controller) = crate::context::app().windows.get(window) {
+        if let Some(controller) = self::window(window) {
             controller.set_tab_title(tab, title);
         }
     }
@@ -42,6 +51,412 @@ impl ide_ui_terminal::Host for AppHost {
 #[cfg(feature = "dictation")]
 impl crate::dictation::Host for AppHost {
     fn state(&self) -> Rc<crate::dictation::State> {
-        crate::context::app().dictation.clone()
+        context().dictation.clone()
+    }
+}
+
+/// The app context the hooks answer from; with `try_context` the one place the crates' calls look it up.
+pub(crate) fn context() -> Rc<crate::context::AppContext> {
+    crate::context::app()
+}
+
+/// `context`, unless the app has none (yet).
+fn try_context() -> Option<Rc<crate::context::AppContext>> {
+    crate::context::try_app()
+}
+
+/// The window controller with `id` until it is dropped from the open windows, which happens once AppKit is done
+/// closing its window, as a weak reference to it would load until then.
+pub(crate) fn window(id: u64) -> Option<Retained<WindowController>> {
+    try_context()?.windows.get(id)
+}
+
+impl WindowHost for AppHost {
+    fn is_open(&self, window: u64) -> bool {
+        self::window(window).is_some()
+    }
+
+    fn frontmost(&self) -> Option<u64> {
+        crate::window::frontmost(MainThreadMarker::new()?).map(|c| c.id())
+    }
+
+    fn for_project(&self, root: &Path) -> Option<u64> {
+        crate::window::for_project(root).map(|c| c.id())
+    }
+
+    fn ns_window(&self, window: u64) -> Option<Retained<NSWindow>> {
+        self::window(window)?.window()
+    }
+
+    fn project_root(&self, window: u64) -> Option<PathBuf> {
+        self::window(window)?.project_root()
+    }
+
+    fn project(&self, window: u64) -> Option<PathBuf> {
+        self::window(window)?.project()
+    }
+
+    fn tab_windows(&self, window: u64) -> Vec<Retained<NSWindow>> {
+        self::window(window).map(|c| c.tab_windows()).unwrap_or_default()
+    }
+
+    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&objc2_app_kit::NSColor>) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_status(tab, color);
+        }
+    }
+
+    fn set_tab_tint(&self, window: u64, tab: isize, color: &objc2_app_kit::NSColor) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_tint(tab, color);
+        }
+    }
+
+    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<objc2_app_kit::NSColor>; 4]) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_four_colours(tab, colors);
+        }
+    }
+
+    fn is_trusted(&self, window: u64) -> bool {
+        self::window(window).is_some_and(|c| c.is_trusted())
+    }
+
+    fn ask_trust_again(&self, window: u64) {
+        if let Some(c) = self::window(window) {
+            c.ask_trust_again();
+        }
+    }
+
+    fn add_tab(
+        &self,
+        window: u64,
+        kind: TabKind,
+        key: Option<String>,
+        title: &str,
+        view: Retained<NSView>,
+    ) -> Option<isize> {
+        Some(self::window(window)?.add_tab(kind, key, title, view))
+    }
+
+    fn add_preview_tab(
+        &self,
+        window: u64,
+        kind: TabKind,
+        key: Option<String>,
+        title: &str,
+        view: Retained<NSView>,
+    ) -> Option<isize> {
+        Some(self::window(window)?.add_preview_tab(kind, key, title, view))
+    }
+
+    fn keep_tab(&self, window: u64, tab: isize) {
+        if let Some(c) = self::window(window) {
+            c.keep_tab(tab);
+        }
+    }
+
+    fn select_tab_with_key(&self, window: u64, key: &str) -> bool {
+        self::window(window).is_some_and(|c| c.select_tab(key))
+    }
+
+    fn set_tab_title(&self, window: u64, tab: isize, title: &str) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_title(tab, title);
+        }
+    }
+
+    fn select_tab(&self, window: u64, tab: isize) {
+        if let Some(c) = self::window(window) {
+            c.select_tab_by_id(tab);
+        }
+    }
+
+    fn close_tab(&self, window: u64, tab: isize) {
+        if let Some(c) = self::window(window) {
+            c.close_tab(tab);
+        }
+    }
+
+    fn selected_tab(&self, window: u64) -> Option<isize> {
+        self::window(window)?.selected_tab()
+    }
+
+    fn tab_with_key(&self, window: u64, key: &str) -> Option<isize> {
+        self::window(window)?.tab_with_key(key)
+    }
+
+    fn open_file(&self, window: u64, path: &Path) {
+        if let Some(c) = self::window(window) {
+            c.open_file(path);
+        }
+    }
+
+    fn activate_panel(&self, window: u64, panel: Panel) {
+        if let Some(c) = self::window(window) {
+            c.activate_panel(panel);
+        }
+    }
+
+    fn set_panel_page(&self, window: u64, panel: Panel, page: &NSView) {
+        if let Some(c) = self::window(window) {
+            c.set_panel_page(panel, page);
+        }
+    }
+
+    fn set_symbol_count(&self, window: u64, panel: Panel, count: usize) {
+        if let Some(c) = self::window(window) {
+            c.set_symbol_count(panel, count);
+        }
+    }
+
+    fn set_panel_accessory(&self, window: u64, panel: Panel, view: &NSView) {
+        if let Some(c) = self::window(window) {
+            c.set_panel_accessory(panel, view);
+        }
+    }
+
+    fn set_inspector_content(&self, window: u64, view: &NSView) {
+        if let Some(c) = self::window(window) {
+            c.set_inspector_content(view);
+        }
+    }
+
+    fn show_inspector(&self, window: u64, shown: bool) {
+        if let Some(c) = self::window(window) {
+            c.show_inspector(shown);
+        }
+    }
+
+    fn show_notice(&self, window: u64, text: &str) {
+        if let Some(c) = self::window(window) {
+            c.show_notice(text);
+        }
+    }
+
+    fn refresh_activity(&self, window: u64) {
+        if let Some(c) = self::window(window) {
+            crate::activity::refresh(&c);
+        }
+    }
+
+    fn keymap(&self) -> ide_core::keymap::Keymap {
+        try_context().map(|cx| cx.keymap.borrow().clone()).unwrap_or_default()
+    }
+
+    fn is_quitting(&self) -> bool {
+        crate::session::is_quitting()
+    }
+
+    fn environment(&self, wait: Duration) -> Option<Vec<(String, String)>> {
+        crate::environment::wait(wait).map(<[_]>::to_vec)
+    }
+}
+
+impl ide_ui_common::window::AsWindow for WindowController {
+    fn as_window(&self) -> ide_ui_common::window::Window {
+        self.handle()
+    }
+}
+
+impl ide_ui_debug::Host for AppHost {
+    fn state(&self) -> Rc<ide_ui_debug::State> {
+        context().debug.clone()
+    }
+
+    fn refresh_editors(&self, window: u64) {
+        if let Some(c) = self::window(window) {
+            crate::debug::refresh_editors(&c);
+        }
+    }
+
+    fn forget_values(&self, window: u64) {
+        if let Some(c) = self::window(window) {
+            crate::debug::forget_values(&c);
+        }
+    }
+
+    fn front_editor(&self, window: u64) -> Option<(Option<PathBuf>, Option<String>)> {
+        let c = self::window(window)?;
+        let editor = crate::editor::editor_of_tab(&c, c.selected_tab()?)?;
+        let document = editor.document();
+        Some((
+            document.path().map(Path::to_path_buf),
+            document.language().map(|l| l.name().to_string()),
+        ))
+    }
+
+    fn caret_line(&self, window: u64) -> Option<(PathBuf, usize)> {
+        let c = self::window(window)?;
+        let editor = crate::editor::editor_of_tab(&c, c.selected_tab()?)?;
+        let at = editor.selectedRange().location;
+        let document = editor.document();
+        let text = document.text();
+        let line = text.line_of(text.utf16_to_byte(at.min(text.len_utf16())).ok()?);
+        Some((document.path()?.to_path_buf(), line))
+    }
+
+    fn reveal_line(&self, window: u64, path: &Path, line: usize) {
+        let Some(c) = self::window(window) else { return };
+        c.open_file(path);
+        // The keyboard focus stays where it is, such as in the list of frames the user goes through.
+        let Some(editor) = crate::editor::editor_for(&c, path) else {
+            return;
+        };
+        let at = {
+            let document = editor.document();
+            let text = document.text();
+            let byte = text.offset(line, 0, ide_document::Unit::Utf16).ok();
+            byte.and_then(|byte| text.byte_to_utf16(byte).ok())
+        };
+        if let Some(at) = at {
+            editor.setSelectedRange(objc2_foundation::NSRange::new(at, 0));
+            editor.scrollRangeToVisible(objc2_foundation::NSRange::new(at, 0));
+        }
+    }
+
+    fn open_running(&self, window: u64, cwd: &Path, line: String, then: Box<dyn FnOnce(Option<u32>) + Send>) {
+        match self::window(window) {
+            Some(c) => crate::terminal::open_running(&c, cwd, line, then),
+            None => then(None),
+        }
+    }
+}
+
+impl ide_ui_git::Host for AppHost {
+    fn state(&self) -> Rc<ide_ui_git::State> {
+        context().git.clone()
+    }
+
+    fn unsaved_below(&self, root: &Path) -> Vec<PathBuf> {
+        crate::editor::unsaved_below(root)
+    }
+
+    fn save_below(&self, root: &Path) -> bool {
+        crate::editor::save_below(root)
+    }
+
+    fn check_disk_below(&self, root: &Path) {
+        crate::editor::check_disk_below(root);
+    }
+
+    fn select_thread_in(&self, folder: &Path) -> bool {
+        let Some(tab) = crate::agent::all().into_iter().find(|tab| tab.cwd() == folder) else {
+            return false;
+        };
+        tab.select();
+        true
+    }
+
+    fn thread_works_in(&self, folder: &Path) -> bool {
+        crate::agent::working_in(folder)
+    }
+
+    fn open_thread(&self, window: u64, tree: &ide_git::ThreadTree) {
+        if let Some(c) = self::window(window) {
+            crate::worktrees::open_thread(&c, tree);
+        }
+    }
+
+    fn claude_program(&self, env: &[(String, String)]) -> Option<PathBuf> {
+        crate::agent::claude_program(env)
+    }
+
+    fn endpoint(&self, id: &str) -> Option<ide_agent::Endpoint> {
+        crate::own_agent::endpoint(id)
+    }
+
+    fn key(&self, endpoint: &ide_agent::Endpoint) -> Option<ide_agent::ApiKey> {
+        crate::own_agent::key(endpoint)
+    }
+
+    fn provider_error(&self, error: &ide_agent::ProviderError) -> String {
+        crate::own_agent::provider_error(error)
+    }
+}
+
+impl ide_ui_agent::Host for AppHost {
+    fn state(&self) -> Rc<ide_ui_agent::State> {
+        context().agent.clone()
+    }
+
+    fn recent_output(&self, window: u64) -> Option<(String, String)> {
+        crate::terminal::recent_output(&*self::window(window)?)
+    }
+
+    fn editor_selection(&self, window: u64) -> Option<(PathBuf, (u32, u32), String)> {
+        let controller = self::window(window)?;
+        let mut editors: Vec<_> = crate::editor::all_editors()
+            .into_iter()
+            .filter(|e| e.controller().is_some_and(|c| std::ptr::eq(&*c, &*controller)))
+            .collect();
+        editors.sort_by_key(|e| e.isHiddenOrHasHiddenAncestor());
+        editors.into_iter().find_map(|editor| {
+            let range = editor.selectedRange();
+            if range.length == 0 {
+                return None;
+            }
+            let path = editor.document().path()?.to_path_buf();
+            let string = editor.string();
+            let text = string.substringWithRange(range).to_string();
+            let before = string.substringToIndex(range.location).to_string();
+            let first = u32::try_from(before.matches('\n').count() + 1).ok()?;
+            let last = first + u32::try_from(text.trim_end_matches('\n').matches('\n').count()).ok()?;
+            Some((path, (first, last), text))
+        })
+    }
+
+    fn agent_diagnostics(&self, root: &Path) -> std::sync::Arc<dyn ide_agent::Diagnostics> {
+        crate::lsp::agent_diagnostics(root)
+    }
+
+    fn query_files(
+        &self,
+        window: u64,
+        query: &str,
+        limit: usize,
+        answer: Box<dyn FnOnce(Vec<ide_project::Hit>) + Send>,
+    ) {
+        if let Some(c) = self::window(window) {
+            c.query_files(query, limit, answer);
+        }
+    }
+
+    fn open_terminal(&self, window: u64, cwd: &Path) {
+        if let Some(c) = self::window(window) {
+            crate::terminal::open_tab(&c, Some(cwd));
+        }
+    }
+
+    fn show_agent_settings(&self, mtm: MainThreadMarker) {
+        crate::settings::show_agent(mtm);
+    }
+
+    fn show_agents_settings(&self, mtm: MainThreadMarker) {
+        crate::settings::show_agents(mtm);
+    }
+
+    fn remember_claude_rules(&self, cwd: &Path) {
+        crate::settings::remember_claude_rules(cwd);
+    }
+
+    fn turn_ended(&self, window: u64, cwd: &Path) {
+        if let Some(c) = self::window(window) {
+            crate::worktrees::turn_ended(&c, cwd);
+        }
+    }
+
+    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str) {
+        crate::editor::show_alert(mtm, message, detail);
+    }
+
+    fn trust(&self, folder: &Path) {
+        crate::project::trust(folder);
+    }
+
+    fn show_work(&self, window: u64, key: u64, part: ide_ui_agent::work::Part, anchor: &NSView) {
+        if let Some(c) = self::window(window) {
+            crate::activity::show_tab(&c, key, part, anchor);
+        }
     }
 }

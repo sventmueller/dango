@@ -1,5 +1,6 @@
 //! A server's process: launch and `initialize`, crashes and restarts, and the graceful stop.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::io;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, Weak};
@@ -191,9 +192,9 @@ impl Inner {
             (state.process.take(), state.stderr.clone(), restart)
         };
         let inner = self.clone();
-        let _ = std::thread::Builder::new()
-            .name(format!("lsp-restart-{}", self.config.label))
-            .spawn(move || inner.recover(generation, process, &stderr, restart));
+        ide_core::thread::detach_or_run(&format!("lsp-restart-{}", self.config.label), move || {
+            inner.recover(generation, process, &stderr, restart);
+        });
     }
 
     /// Reports a crash, waits, and starts the server again unless it was stopped meanwhile.
@@ -209,7 +210,7 @@ impl Inner {
             self.supervisor.stop(id, grace);
             self.exits.wait(id, grace * 3 + Duration::from_millis(500))
         });
-        let stderr = stderr.lock().unwrap_or_else(|e| e.into_inner()).text();
+        let stderr = stderr.lock_ignoring_poison().text();
         self.emit(Event::Crashed {
             ending,
             stderr,
@@ -230,11 +231,7 @@ impl Inner {
             if now >= deadline {
                 break;
             }
-            state = self
-                .changed
-                .wait_timeout(state, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            state = self.changed.wait_timeout(state, deadline - now).ignoring_poison().0;
         }
         drop(state);
         if self.launch().is_err() {
@@ -295,28 +292,26 @@ impl Inner {
             delay: Duration::ZERO,
         }));
         let inner = self.clone();
-        let _ = std::thread::Builder::new()
-            .name(format!("lsp-restart-{}", self.config.label))
-            .spawn(move || {
-                if let Some(id) = process {
-                    inner.supervisor.stop(id, inner.config.stop_grace);
-                    inner
-                        .exits
-                        .wait(id, inner.config.stop_grace * 3 + Duration::from_millis(500));
-                }
-                let current = inner.lock();
-                if current.generation != generation || !matches!(current.status, Status::Restarting { .. }) {
-                    return;
-                }
-                drop(current);
-                if inner.launch().is_err() {
-                    let mut state = inner.lock();
-                    state.status = Status::Starting;
-                    let generation = state.generation;
-                    drop(state);
-                    inner.gone(generation);
-                }
-            });
+        ide_core::thread::detach_or_run(&format!("lsp-restart-{}", self.config.label), move || {
+            if let Some(id) = process {
+                inner.supervisor.stop(id, inner.config.stop_grace);
+                inner
+                    .exits
+                    .wait(id, inner.config.stop_grace * 3 + Duration::from_millis(500));
+            }
+            let current = inner.lock();
+            if current.generation != generation || !matches!(current.status, Status::Restarting { .. }) {
+                return;
+            }
+            drop(current);
+            if inner.launch().is_err() {
+                let mut state = inner.lock();
+                state.status = Status::Starting;
+                let generation = state.generation;
+                drop(state);
+                inner.gone(generation);
+            }
+        });
     }
 }
 

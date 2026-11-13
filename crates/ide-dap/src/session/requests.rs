@@ -1,5 +1,6 @@
 //! The requests the app sends while a session runs: inspecting a stopped program, stepping, breakpoints.
 
+use ide_core::LockIgnoringPoison;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -28,15 +29,27 @@ pub(crate) fn send<T: Send + 'static>(
     let slot = Arc::new(Mutex::new(Some(reply)));
     let answered = slot.clone();
     let answer = Box::new(move |result: Result<Value, Error>| {
-        if let Some(reply) = answered.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(reply) = answered.lock_ignoring_poison().take() {
             reply(result.map(|body| convert(&body)));
         }
     });
     if let Err(error) = connection.request(command, arguments, SHORT, answer)
-        && let Some(reply) = slot.lock().unwrap_or_else(|e| e.into_inner()).take()
+        && let Some(reply) = slot.lock_ignoring_poison().take()
     {
         reply(Err(error));
     }
+}
+
+/// Replaces the function breakpoints with `names`.
+pub(crate) fn set_functions(inner: &Inner, names: &[&str]) {
+    let breakpoints: Vec<Value> = names.iter().map(|name| json!({"name": name})).collect();
+    send(
+        inner,
+        "setFunctionBreakpoints",
+        json!({"breakpoints": breakpoints}),
+        |_| (),
+        Box::new(|_| {}),
+    );
 }
 
 /// The source argument for `path`.
@@ -198,6 +211,11 @@ impl Session {
         if !configured {
             return reply(Ok(()));
         }
+        let capabilities = self.capabilities();
+        let (filters, functions) = crate::filters::split(&filters, &capabilities);
+        if crate::filters::panics_by_function(&capabilities) {
+            set_functions(self.inner(), &functions);
+        }
         send(
             self.inner(),
             "setExceptionBreakpoints",
@@ -261,7 +279,7 @@ pub(crate) fn set_breakpoints(
     send(
         inner,
         "setBreakpoints",
-        json!({"source": source(path), "breakpoints": breakpoints, "lines": lines}),
+        json!({"source": source(path), "breakpoints": breakpoints, "lines": &lines}),
         move |body| {
             let mut set = convert::breakpoints(body);
             for breakpoint in &mut set {
@@ -269,6 +287,7 @@ pub(crate) fn set_breakpoints(
             }
             let event = Event::BreakpointsSet {
                 path: id_path,
+                lines,
                 breakpoints: set.clone(),
             };
             crate::connection::contained(|| sink(id, event));

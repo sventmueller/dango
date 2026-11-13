@@ -5,8 +5,9 @@
 //! microphone is still busy, text for a field that closed, the microphone question's answer reaching the main thread,
 //! and the dictation settings' key buttons and fn switch.
 
+use ide_core::LockIgnoringPoison;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use lowspeak::audio::recorder::StartError;
@@ -24,24 +25,36 @@ use objc2_foundation::{NSDictionary, NSNotificationCenter, NSString};
 use splat_i18n::{t, tf};
 
 use super::check;
-use super::helpers::{alert_texts, answer_alert, in_any_mode_after, open_beside, tab, wait_until, window_of};
+use super::helpers::{after, alert_texts, answer_alert, in_any_mode_after, open_beside, tab, wait_until, window_of};
 use crate::dictation::selftest::{self as dictation, Answer, Opening, Pressed};
 use crate::dictation::{FnState, fn_state};
-use crate::util::{constant, main_after, main_on_run_loop, ns};
+use crate::util::{constant, main_on_run_loop, ns};
 
 const QUICK: Duration = Duration::from_millis(200);
 /// How long a note stays under a field, with a margin.
 const NOTE: Duration = Duration::from_millis(9000);
+/// How long fn stays down for a held dictation.
+const FN_HELD: Duration = Duration::from_millis(500);
+/// How long a quick tap of fn or the gap between two taps lasts.
+const TAP: Duration = Duration::from_millis(80);
+/// Longer than the window in which a second tap of fn would make a double tap.
+const PAST_DOUBLE_TAP: Duration = Duration::from_millis(900);
+/// How long a hands-free recording must go on after fn came up.
+const STAYS_LOCKED: Duration = Duration::from_millis(600);
+/// How long fn coming up must start nothing after a recording ended.
+const NOTHING_STARTS: Duration = Duration::from_millis(700);
+/// How long a recording too short to transcribe must bring no text.
+const NO_TEXT: Duration = Duration::from_millis(1000);
+/// How long a second answer to the microphone question would take to arrive.
+const ANSWER_ONCE: Duration = Duration::from_millis(600);
+/// The gap between clicks that all fall into the microphone's 1.5 s opening.
+const CLICK_GAP: Duration = Duration::from_millis(200);
 const SECOND: &str = "zweite.md";
 
 /// Runs the second half for the editor field `target`, then `then`.
 pub fn run(target: Target, then: fn()) {
     failure_texts();
     menu_bar(target, then);
-}
-
-fn after(millis: u64, f: impl FnOnce() + Send + 'static) {
-    main_after(Duration::from_millis(millis), f);
 }
 
 fn view(target: Target) -> Option<Retained<NSTextView>> {
@@ -195,7 +208,7 @@ fn fn_held(target: Target, then: fn()) {
     wait_until(
         move || dictation::seen(target).listening,
         move |listening| {
-            after(500, move || {
+            after(FN_HELD, move || {
                 let still = dictation::seen(target).listening;
                 press(Pressed::FnUp);
                 wait_until(
@@ -217,13 +230,13 @@ fn fn_held(target: Target, then: fn()) {
 /// Two quick taps of fn lock the recording until fn goes down again.
 fn fn_double_tap(target: Target, then: fn()) {
     press(FN_DOWN);
-    after(80, move || {
+    after(TAP, move || {
         press(Pressed::FnUp);
-        after(80, move || {
+        after(TAP, move || {
             press(FN_DOWN);
-            after(80, move || {
+            after(TAP, move || {
                 press(Pressed::FnUp);
-                after(900, move || {
+                after(PAST_DOUBLE_TAP, move || {
                     let locked = dictation::seen(target).recording;
                     press(FN_DOWN);
                     press(Pressed::FnUp);
@@ -248,10 +261,10 @@ fn fn_double_tap(target: Target, then: fn()) {
 fn fn_single_tap(target: Target, then: fn()) {
     press(FN_DOWN);
     let started = dictation::seen(target).recording;
-    after(80, move || {
+    after(TAP, move || {
         press(Pressed::FnUp);
         let waits = dictation::seen(target).recording;
-        after(900, move || {
+        after(PAST_DOUBLE_TAP, move || {
             check(
                 "a single tap of fn ends its recording when no second tap follows",
                 started && waits && !dictation::seen(target).recording,
@@ -265,9 +278,9 @@ fn fn_single_tap(target: Target, then: fn()) {
 /// fn with shift records hands-free, and shift alone ends it.
 fn fn_shift(target: Target, then: fn()) {
     press(Pressed::FnDown { shift: true });
-    after(80, move || {
+    after(TAP, move || {
         press(Pressed::FnUp);
-        after(600, move || {
+        after(STAYS_LOCKED, move || {
             let locked = dictation::seen(target).recording;
             press(Pressed::ShiftDown);
             wait_until(
@@ -291,7 +304,7 @@ fn fn_then_button(target: Target, then: fn()) {
     let started = dictation::seen(target).recording;
     dictation::click(target);
     press(Pressed::FnUp);
-    after(700, move || {
+    after(NOTHING_STARTS, move || {
         check(
             "a recording fn started ends with a click, and fn coming up then starts nothing",
             started && !dictation::seen(target).recording,
@@ -337,7 +350,7 @@ fn fn_elsewhere(target: Target, then: fn()) {
                 started && ended,
                 format!("{:?}", dictation::seen(target)),
             );
-            after(600, move || fn_settings(target, then));
+            after(NOTHING_STARTS, move || fn_settings(target, then));
         },
     );
 }
@@ -410,7 +423,7 @@ fn refused(target: Target, then: fn()) {
                 ok && !dictation::seen(target).recording,
                 format!("{:?}", dictation::seen(target)),
             );
-            main_after(NOTE, move || {
+            after(NOTE, move || {
                 let seen = dictation::seen(target);
                 check(
                     "a note under the field leaves after a while",
@@ -455,7 +468,7 @@ fn too_short(target: Target, then: fn()) {
         move || dictation::seen(target).listening,
         move |_| {
             dictation::click(target);
-            after(1000, move || {
+            after(NO_TEXT, move || {
                 let seen = dictation::seen(target);
                 check(
                     "a recording too short to transcribe ends without text",
@@ -486,13 +499,13 @@ fn key_alert(millis: u64, typed: &'static str, says: String, response: NSModalRe
         if let Some(field) = alert.and_then(|a| a.contentView()).as_deref().and_then(secure_field) {
             field.setStringValue(&ns(typed));
         }
-        saw.lock().unwrap_or_else(PoisonError::into_inner).push(said);
+        saw.lock_ignoring_poison().push(said);
         answer_alert(response);
     });
 }
 
 fn seen_all(saw: &Arc<Mutex<Vec<bool>>>, count: usize) -> bool {
-    let saw = saw.lock().unwrap_or_else(PoisonError::into_inner);
+    let saw = saw.lock_ignoring_poison();
     saw.len() == count && saw.iter().all(|said| *said)
 }
 
@@ -582,13 +595,10 @@ fn microphone(then: fn(), target: Target) {
     let heard = Arc::clone(&answers);
     dictation::answer_microphone_twice(true, move |granted| {
         let on_main = MainThreadMarker::new().is_some();
-        heard
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push((granted, on_main));
+        heard.lock_ignoring_poison().push((granted, on_main));
     });
-    after(600, move || {
-        let answers = answers.lock().unwrap_or_else(PoisonError::into_inner).clone();
+    after(ANSWER_ONCE, move || {
+        let answers = answers.lock_ignoring_poison().clone();
         check(
             "the microphone question's answer reaches the main thread once",
             answers == [(true, true)],
@@ -600,16 +610,13 @@ fn microphone(then: fn(), target: Target) {
         let answers = Arc::new(Mutex::new(Vec::new()));
         let heard = Arc::clone(&answers);
         dictation::ask_microphone(move |_| {
-            heard
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push(MainThreadMarker::new().is_some());
+            heard.lock_ignoring_poison().push(MainThreadMarker::new().is_some());
         });
         let arrived = Arc::clone(&answers);
         wait_until(
-            move || !arrived.lock().unwrap_or_else(PoisonError::into_inner).is_empty(),
+            move || !arrived.lock_ignoring_poison().is_empty(),
             move |ok| {
-                let answers = answers.lock().unwrap_or_else(PoisonError::into_inner).clone();
+                let answers = answers.lock_ignoring_poison().clone();
                 check(
                     "once macOS has its answer, asking again hears it on the main thread without a question",
                     ok && answers == [true],
@@ -622,10 +629,8 @@ fn microphone(then: fn(), target: Target) {
 }
 
 fn second_root() -> PathBuf {
-    let folder = ide_core::paths::home().join("dictation-second");
-    let _ = std::fs::create_dir_all(&folder);
-    let _ = std::fs::write(folder.join(SECOND), "Zweites Feld\n");
-    folder.canonicalize().unwrap_or(folder)
+    let name = "dictation-second";
+    super::helpers::make_project(name, &[(SECOND, "Zweites Feld\n")]).unwrap_or_else(|_| super::helpers::root(name))
 }
 
 fn second_target(root: &Path) -> Option<Target> {
@@ -659,43 +664,46 @@ fn busy(then: fn(), target: Target) {
 
 /// A field that waits longer than the busy microphone's retries allow gives up, while the field that holds the
 /// microphone goes on.
-fn gives_up(target: Target, other: Target, next: impl FnOnce() + Send + 'static) {
+fn gives_up(target: Target, other: Target, next: impl FnOnce() + 'static) {
     dictation::open([Opening::After(Duration::from_secs(8))]);
     dictation::click(target);
-    after(200, move || {
-        dictation::click(other);
-        let waits = dictation::seen(other);
-        wait_until(
-            move || !dictation::seen(other).recording,
-            move |gave_up| {
-                let holder = dictation::seen(target);
-                check(
-                    "a field that waits longer than the busy microphone's retries gives up",
-                    waits.recording && !waits.listening && gave_up && holder.recording,
-                    format!("{waits:?}, {holder:?}"),
-                );
-                wait_until(
-                    move || dictation::seen(target).listening,
-                    move |_| {
-                        dictation::click(target);
-                        wait_until(move || idle(target), move |_| next());
-                    },
-                );
-            },
-        );
-    });
+    wait_until(
+        move || dictation::seen(target).recording,
+        move |_| {
+            dictation::click(other);
+            let waits = dictation::seen(other);
+            wait_until(
+                move || !dictation::seen(other).recording,
+                move |gave_up| {
+                    let holder = dictation::seen(target);
+                    check(
+                        "a field that waits longer than the busy microphone's retries gives up",
+                        waits.recording && !waits.listening && gave_up && holder.recording,
+                        format!("{waits:?}, {holder:?}"),
+                    );
+                    wait_until(
+                        move || dictation::seen(target).listening,
+                        move |_| {
+                            dictation::click(target);
+                            wait_until(move || idle(target), move |_| next());
+                        },
+                    );
+                },
+            );
+        },
+    );
 }
 
 /// The first field holds the microphone while it opens, the second waits and records once it is free.
 fn busy_then_free(then: fn(), target: Target, other: Target, root: PathBuf) {
     dictation::open([Opening::After(Duration::from_millis(1500))]);
     dictation::click(target);
-    after(200, move || {
+    after(CLICK_GAP, move || {
         dictation::click(target);
-        after(200, move || {
+        after(CLICK_GAP, move || {
             dictation::click(other);
             let waits = dictation::seen(other);
-            after(200, move || {
+            after(CLICK_GAP, move || {
                 dictation::click(other);
                 let no_longer = dictation::seen(other);
                 dictation::click(other);
@@ -752,8 +760,7 @@ fn closed_field(then: fn(), other: Target, root: PathBuf) {
 
 /// The notes as the second half left them, saved, so quitting asks nothing.
 fn save() {
-    let root = ide_core::paths::home().join("dictation-project");
-    let root = root.canonicalize().unwrap_or(root);
+    let root = super::helpers::root("dictation-project");
     let editor = crate::window::for_project(&root)
         .and_then(|controller| crate::editor::editor_for(&controller, &root.join("notes.md")));
     if let Some(editor) = editor {

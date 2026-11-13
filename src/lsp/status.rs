@@ -52,32 +52,32 @@ pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
     let problems = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     problems.setBordered(false);
     problems.setImagePosition(NSCellImagePosition::ImageLeading);
-    problems.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    problems.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     problems.setToolTip(Some(&ns(t("Zum nächsten Problem"))));
     set_action(&problems, view, sel!(ideNextProblem:));
-    // SAFETY: As above.
+    // SAFETY: A nil target and action until `set_action` aims the button at the view, which answers it.
     let crumbs = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     crumbs.setBordered(false);
-    crumbs.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    crumbs.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     crumbs.setToolTip(Some(&ns(t("Gehe zu Symbol …"))));
     crumbs.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
     crumbs.setContentCompressionResistancePriority_forOrientation(150.0, NSLayoutConstraintOrientation::Horizontal);
     set_action(&crumbs, view, sel!(ideSymbols:));
     crumbs.setHidden(true);
     let server = label(mtm, "");
-    server.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    server.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     server.setTextColor(Some(&NSColor::secondaryLabelColor()));
     server.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     server.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
-    // SAFETY: As above.
+    // SAFETY: A nil target and action until `set_action` aims the button at the view, which answers it.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     button.setControlSize(NSControlSize::Small);
-    button.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    button.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     set_action(&button, view, sel!(ideLspAction:));
     button.setHidden(true);
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(10.0);
+    stack.setSpacing(ide_ui_common::style::space::L);
     stack.setEdgeInsets(NSEdgeInsets {
         top: 0.0,
         left: 10.0,

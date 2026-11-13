@@ -89,12 +89,10 @@ impl CiOutlineView {
     }
 }
 
-impl Key {
-    /// The key `item` of the outline view stands for.
-    pub fn of(item: &AnyObject) -> Option<Key> {
-        item.downcast_ref::<NSString>()
-            .and_then(|text| Key::decode(&text.to_string()))
-    }
+/// The key `item` of the outline view stands for.
+pub fn key_of(item: &AnyObject) -> Option<Key> {
+    item.downcast_ref::<NSString>()
+        .and_then(|text| Key::decode(&text.to_string()))
 }
 
 pub fn height(key: Option<&Key>) -> f64 {
@@ -184,7 +182,7 @@ impl CiPanel {
         (0..outline.numberOfRows())
             .filter(|row| outline.isRowSelected(*row))
             .filter_map(|row| outline.itemAtRow(row))
-            .filter_map(|item| Key::of(&item))
+            .filter_map(|item| key_of(&item))
             .collect()
     }
 
@@ -238,7 +236,7 @@ impl CiPanel {
         let Some(item) = (row >= 0).then(|| outline.itemAtRow(row)).flatten() else {
             return;
         };
-        match Key::of(&item) {
+        match key_of(&item) {
             Some(Key::Job(run, job) | Key::Step(run, job, _)) => self.open_log(self.find_job(run, job)),
             Some(Key::Item(number)) => {
                 if let Some(item) = self.find_item(number) {
@@ -330,7 +328,7 @@ impl CiPanel {
         let Some(key) = notification
             .userInfo()
             .and_then(|info| info.objectForKey(&ns("NSObject")))
-            .and_then(|item| Key::of(&item))
+            .and_then(|item| key_of(&item))
         else {
             return;
         };
@@ -349,7 +347,7 @@ impl CiPanel {
         let key = (clicked >= 0)
             .then(|| outline.itemAtRow(clicked))
             .flatten()
-            .and_then(|item| Key::of(&item));
+            .and_then(|item| key_of(&item));
         let Some(key) = key else { return };
         self.state().menu_keys = vec![key];
         let mtm = self.mtm();
@@ -512,11 +510,11 @@ fn styled_cell(
     let lines = NSStackView::new(mtm);
     lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     lines.setAlignment(NSLayoutAttribute::Leading);
-    lines.setSpacing(1.0);
+    lines.setSpacing(ide_ui_common::style::space::HAIR);
     lines.addArrangedSubview(&name);
     if let Some(detail) = detail {
         let second = label(mtm, detail);
-        second.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+        second.setFont(Some(&ide_ui_common::style::small_system()));
         second.setTextColor(Some(&NSColor::secondaryLabelColor()));
         second.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         second.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
@@ -524,7 +522,7 @@ fn styled_cell(
     }
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(6.0);
+    row.setSpacing(ide_ui_common::style::space::S);
     row.addArrangedSubview(&icon);
     row.addArrangedSubview(&lines);
     cell.addSubview(&row);

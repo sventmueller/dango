@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "마지막 메시지: {}";
 "Das Programm hat sich ohne Meldung beendet." = "프로그램이 메시지 없이 종료되었습니다.";
 "Das Programm hat sich beim Start beendet: {}" = "프로그램이 시작 중에 종료되었습니다: {}";
+"Konnte keinen Thread starten: {}" = "스레드를 시작할 수 없습니다: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "작업 공간 변경을 실행할 수 없습니다.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "“{}”은(는) 프로그램이 없는 라이브러리이며 이 파일에는 테스트가 없습니다. main이나 테스트가 있는 파일을 디버그하거나 .vscode/launch.json에서 시작할 프로그램을 지정하십시오.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "macOS가 암호를 묻지 않으면 터미널에서 “sudo DevToolsSecurity -enable”로 디버거를 한 번 허용하거나 중단으로 취소하십시오. 10분이 지나면 시작이 저절로 중단됩니다.";
+"Haltepunkt, nicht gesetzt" = "중단점, 설정되지 않음";
+"nicht gesetzt" = "설정되지 않음";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "디버거가 여기에 중단점을 설정할 수 없었습니다: {}";

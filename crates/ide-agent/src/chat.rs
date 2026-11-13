@@ -1,8 +1,6 @@
 //! One request to a model and what comes back: the parts that stream while it answers, the finished message, the
 //! tokens it used, why it stopped, and why it failed.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -251,26 +249,7 @@ impl std::fmt::Display for ProviderError {
 
 impl std::error::Error for ProviderError {}
 
-/// Stops a request that is under way; clones share it.
-#[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<AtomicBool>);
-
-impl Cancel {
-    /// A request that is not cancelled yet.
-    pub fn new() -> Cancel {
-        Cancel::default()
-    }
-
-    /// Cancels it; the request ends at the next part that arrives.
-    pub fn cancel(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-
-    /// Whether it was cancelled.
-    pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
-    }
-}
+pub use ide_core::Cancel;
 
 #[cfg(test)]
 mod tests {

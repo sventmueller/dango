@@ -4,6 +4,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 use objc2::MainThreadMarker;
@@ -11,18 +12,21 @@ use objc2_app_kit::{NSApplication, NSPasteboard, NSPasteboardTypeHTML, NSPastebo
 use objc2_foundation::{NSData, NSRange};
 use splat_i18n::{t, tf};
 
-use super::helpers::{editor, text_of, utf16_len, wait_until, window_of};
+use super::helpers::{self, editor, text_of, utf16_len, wait_until, window_of};
 use super::{check, finish, snapshot};
 use crate::editor::EditorTextView;
 use crate::markdown::selftest::{
     Command, Kind, Outcome, Source, export_seen, export_to, link_with, paste_from, source_of,
 };
-use crate::util::{constant, main_after, ns};
+use crate::util::{constant, ns};
 
 const SCENARIO: &str = "markdown";
 
 const NOTE: &str = "# Notiz\n\nEin Wort hier.\n\nZweite Zeile\n\n![bild](bild.png)\n";
 
+const PROJECT: &str = "markdown-project";
+/// How often the main thread is asked for a turn while an export runs, to count that it keeps turning.
+const TICK: Duration = Duration::from_millis(10);
 /// A picture of 4 × 4 pixels.
 const PNG: [u8; 73] = [
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
@@ -32,17 +36,14 @@ const PNG: [u8; 73] = [
 ];
 
 pub(super) fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("markdown-project");
-    let _ = std::fs::create_dir_all(&folder);
-    let root = folder.canonicalize().unwrap_or(folder);
-    let _ = std::fs::write(root.join("notiz.md"), NOTE);
-    let _ = std::fs::write(root.join("zweite.md"), "# Zweite\n");
-    let _ = std::fs::write(root.join("dritte.md"), "# Dritte\n");
-    let _ = std::fs::write(root.join("bild.png"), PNG);
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || preview_beside(root));
+    let _ = std::fs::create_dir_all(helpers::folder(PROJECT));
+    let _ = std::fs::write(helpers::folder(PROJECT).join("bild.png"), PNG);
+    let files = [
+        ("notiz.md", NOTE),
+        ("zweite.md", "# Zweite\n"),
+        ("dritte.md", "# Dritte\n"),
+    ];
+    helpers::open_project(SCENARIO, PROJECT, &files, |_| preview_beside(helpers::root(PROJECT)));
 }
 
 /// The editor of `name` in the window of `root`.
@@ -226,6 +227,7 @@ fn exports(root: PathBuf) {
         return finish(SCENARIO);
     };
     let out = ide_core::paths::home().join("exports");
+    let exports = Rc::new(Exports::default());
     let _ = std::fs::create_dir_all(&out);
     for (kind, name) in [
         (Kind::Pdf, "notiz.pdf"),
@@ -233,28 +235,45 @@ fn exports(root: PathBuf) {
         (Kind::Word, "notiz.docx"),
     ] {
         let Some(source) = source_of(&view) else { continue };
+        let done = Rc::clone(&exports);
         export_to(source, kind, out.join(name), None, move |outcome| {
-            EXPORTED.with(|done| done.borrow_mut().push((kind, outcome)));
+            done.all.borrow_mut().push((kind, outcome));
         });
     }
     // Saved, so quitting asks nothing.
     crate::editor::save_view(&view);
+    let done = Rc::clone(&exports);
     wait_until(
-        || EXPORTED.with(|done| done.borrow().len() == 3),
+        move || done.all.borrow().len() == 3,
         move |ok| {
-            EXPORTED.with(|done| exported(&out, ok, &done.borrow()));
-            long_export(root, out);
+            exported(&out, ok, &exports.all.borrow());
+            long_export(root, out, exports);
         },
     );
 }
 
-thread_local! {
-    /// How each export ended, as it reports it.
-    static EXPORTED: RefCell<Vec<(Kind, Outcome)>> = const { RefCell::new(Vec::new()) };
-    /// How the last single export ended.
-    static LAST: RefCell<Option<Outcome>> = const { RefCell::new(None) };
+/// How the scenario's exports ended, as they report it.
+#[derive(Default)]
+struct Exports {
+    /// Each of the three exports of the document.
+    all: RefCell<Vec<(Kind, Outcome)>>,
+    /// The last single export.
+    last: RefCell<Option<Outcome>>,
     /// Turns of the main thread while an export ran.
-    static TICKS: Cell<usize> = const { Cell::new(0) };
+    ticks: Cell<usize>,
+}
+
+impl Exports {
+    /// Forgets the last single export and returns what the next one reports to.
+    fn next(self: &Rc<Self>) -> impl FnOnce(Outcome) + 'static {
+        self.last.replace(None);
+        let exports = Rc::clone(self);
+        move |outcome| *exports.last.borrow_mut() = Some(outcome)
+    }
+
+    fn finished(&self) -> Option<Outcome> {
+        self.last.borrow().clone()
+    }
 }
 
 fn exported(out: &Path, ok: bool, results: &[(Kind, Outcome)]) {
@@ -292,19 +311,11 @@ fn long_source(root: &Path) -> Source {
     }
 }
 
-fn last(outcome: Outcome) {
-    LAST.with(|last| *last.borrow_mut() = Some(outcome));
-}
-
-fn finished() -> Option<Outcome> {
-    LAST.with(|last| last.borrow().clone())
-}
-
 /// Counts turns of the main thread while the export `number` runs.
-fn tick(number: u64) {
+fn tick(number: u64, exports: Rc<Exports>) {
     if export_seen::running(number) {
-        TICKS.set(TICKS.get() + 1);
-        main_after(Duration::from_millis(10), move || tick(number));
+        exports.ticks.set(exports.ticks.get() + 1);
+        helpers::after(TICK, move || tick(number, exports));
     }
 }
 
@@ -314,20 +325,20 @@ fn has_sheet(root: &Path) -> bool {
         .is_some_and(|window| window.attachedSheet().is_some())
 }
 
-fn long_export(root: PathBuf, out: PathBuf) {
+fn long_export(root: PathBuf, out: PathBuf, exports: Rc<Exports>) {
     let window = window_of(&root).and_then(|c| c.window());
-    LAST.with(|last| *last.borrow_mut() = None);
     let number = export_to(
         long_source(&root),
         Kind::Pdf,
         out.join("lang.pdf"),
         window.as_deref(),
-        last,
+        exports.next(),
     );
     let returned_at_once = export_seen::running(number) && has_sheet(&root);
-    tick(number);
+    tick(number, Rc::clone(&exports));
+    let done = Rc::clone(&exports);
     wait_until(
-        || finished().is_some(),
+        move || done.finished().is_some(),
         move |ok| {
             let pdf = std::fs::read(out.join("lang.pdf")).unwrap_or_default();
             // Beside the window pictures, for a look at the pages.
@@ -337,44 +348,51 @@ fn long_export(root: PathBuf, out: PathBuf) {
             check(
                 "a long PDF export leaves the window working, with a sheet until it is done",
                 ok && returned_at_once
-                    && TICKS.get() >= 3
-                    && finished() == Some(Outcome::Written)
+                    && exports.ticks.get() >= 3
+                    && exports.finished() == Some(Outcome::Written)
                     && !has_sheet(&root)
                     && pdf.starts_with(b"%PDF"),
                 format!(
                     "at once {returned_at_once}, {} turns meanwhile, {:?}, {} bytes",
-                    TICKS.get(),
-                    finished(),
+                    exports.ticks.get(),
+                    exports.finished(),
                     pdf.len()
                 ),
             );
-            cancelling(root, out);
+            cancelling(root, out, exports);
         },
     );
 }
 
-fn cancelling(root: PathBuf, out: PathBuf) {
+fn cancelling(root: PathBuf, out: PathBuf, exports: Rc<Exports>) {
     let window = window_of(&root).and_then(|c| c.window());
-    LAST.with(|last| *last.borrow_mut() = None);
     let target = out.join("lang.docx");
-    let number = export_to(long_source(&root), Kind::Word, target.clone(), window.as_deref(), last);
+    let number = export_to(
+        long_source(&root),
+        Kind::Word,
+        target.clone(),
+        window.as_deref(),
+        exports.next(),
+    );
     let had_sheet = has_sheet(&root);
     export_seen::press_sheet_button(number);
-    main_after(Duration::from_secs(1), move || {
+    let done = Rc::clone(&exports);
+    let ended = move || done.finished().is_some() && !export_seen::running(number);
+    wait_until(ended, move |_| {
         check(
             "Abbrechen in the sheet stops an export, which writes no file",
             had_sheet
-                && finished() == Some(Outcome::Cancelled)
+                && exports.finished() == Some(Outcome::Cancelled)
                 && !export_seen::running(number)
                 && !has_sheet(&root)
                 && !target.exists(),
-            format!("{:?}, file {}", finished(), target.exists()),
+            format!("{:?}, file {}", exports.finished(), target.exists()),
         );
-        failing(root, out);
+        failing(root, out, exports);
     });
 }
 
-fn failing(root: PathBuf, out: PathBuf) {
+fn failing(root: PathBuf, out: PathBuf, exports: Rc<Exports>) {
     let Some(view) = editor_of(&root, "notiz.md") else {
         return finish(SCENARIO);
     };
@@ -382,14 +400,14 @@ fn failing(root: PathBuf, out: PathBuf) {
         return finish(SCENARIO);
     };
     let window = window_of(&root).and_then(|c| c.window());
-    LAST.with(|last| *last.borrow_mut() = None);
     let target = out.join("fehlt").join("notiz.html");
-    let number = export_to(source, Kind::Html, target, window.as_deref(), last);
+    let number = export_to(source, Kind::Html, target, window.as_deref(), exports.next());
+    let done = Rc::clone(&exports);
     wait_until(
-        || finished().is_some(),
+        move || done.finished().is_some(),
         move |ok| {
             let said = export_seen::sheet_text(number).unwrap_or_default();
-            let reason = match finished() {
+            let reason = match exports.finished() {
                 Some(Outcome::Failed(reason)) => reason,
                 _ => String::new(),
             };

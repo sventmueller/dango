@@ -45,3 +45,6 @@ flowchart LR
 The API is documented in [`src/lib.rs`](src/lib.rs). Tests run without the network: a fake Copilot server
 (`tests/support/fake_copilot.rs`), recorded answers of Ollama and LM Studio (`tests/fixtures`), and a fuzz target for
 the answers (`fuzz/`, `cargo xtask fuzz answer`); the real providers run in `make test-integration`.
+
+`guard` is the secrets check before a request leaves the Mac (R15): a provider outside the Mac is asked only after
+gitleaks found nothing in the text of that revision.

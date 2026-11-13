@@ -92,11 +92,7 @@ impl WindowController {
         layout::save(self);
         crate::editor::discard_changes(self);
         self.clear_tabs();
-        crate::agent::window_closed(self);
-        crate::ci_panel::window_closed(self);
-        if let Some(root) = self.project_root() {
-            crate::lsp::window_closed(&root);
-        }
+        self.folder_closes();
         self.set_project(Some(folder));
         self.restore_layout();
         if self.tab_ids().is_empty() {

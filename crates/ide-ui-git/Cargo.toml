@@ -1,0 +1,31 @@
+[package]
+name = "ide-ui-git"
+version = "0.0.0"
+description = "The Git panel, the diff tab, the branch toolbar item, commit messages and worktree threads"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-agent.workspace = true
+ide-core.workspace = true
+ide-git.workspace = true
+ide-process.workspace = true
+ide-ui-common.workspace = true
+ide-ui-icons.workspace = true
+splat-i18n.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+ide-agent = { workspace = true, features = ["testing"] }
+
+[features]
+# What the self-test reads of the panel and the diff tab and does with them.
+selftest = []

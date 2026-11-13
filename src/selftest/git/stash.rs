@@ -30,7 +30,7 @@ const COMMITTED_LIBRARY: &str = "pub fn one() {}\n";
 const PARKED: &str = "Parked work";
 
 pub fn run() {
-    let folder = ide_core::paths::home().join("stash-project");
+    let folder = crate::selftest::helpers::folder("stash-project");
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {

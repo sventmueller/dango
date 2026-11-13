@@ -2,6 +2,7 @@
 //! reads more, a commit shown from outside the panel that is found page by page (E86), and the commit menu's copying
 //! and new branch.
 
+use ide_core::LockIgnoringPoison;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -23,7 +24,7 @@ const BRANCH: &str = "from-the-start";
 static ROOT_COMMIT: Mutex<String> = Mutex::new(String::new());
 
 fn root_commit() -> String {
-    ROOT_COMMIT.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    ROOT_COMMIT.lock_ignoring_poison().clone()
 }
 
 pub fn start(root: PathBuf) {
@@ -83,7 +84,7 @@ fn add_commits(root: &Path) -> Result<(), String> {
         .find(|c| c.subject == OLDEST)
         .map(|c| c.hash)
         .ok_or("no first commit")?;
-    *ROOT_COMMIT.lock().unwrap_or_else(|e| e.into_inner()) = hash;
+    *ROOT_COMMIT.lock_ignoring_poison() = hash;
     Ok(())
 }
 

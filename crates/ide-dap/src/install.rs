@@ -1,13 +1,12 @@
 //! Installing vscode-js-debug into the tools folder (E93, R16): one pinned release, its archive checked against the
 //! digest written here before anything of it is unpacked.
 
-use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use ide_lsp::{Cancel, InstallError, Net, Progress, Step};
-use sha2::{Digest, Sha256};
+use ide_net::install::{InstallError, Progress, Step};
+use ide_net::{Cancel, Net};
 
 use crate::discover::Adapters;
 use crate::helper::Helper;
@@ -141,42 +140,18 @@ fn download(
     cancel: &Cancel,
     progress: &mut dyn FnMut(Progress),
 ) -> Result<String, InstallError> {
-    let mut download = net
-        .get(url, "application/octet-stream")
-        .map_err(|e| InstallError::Network(e.to_string()))?;
-    let mut file = File::create(path)?;
-    let mut hasher = Sha256::new();
-    let mut buffer = vec![0u8; 64 * 1024];
-    let mut done = 0u64;
-    loop {
-        if cancel.is_cancelled() {
-            return Err(InstallError::Cancelled);
-        }
-        let n = download
-            .body
-            .read(&mut buffer)
-            .map_err(|e| InstallError::Network(e.to_string()))?;
-        if n == 0 {
-            break;
-        }
-        hasher.update(&buffer[..n]);
-        file.write_all(&buffer[..n])?;
-        done += n as u64;
-        progress(Progress::Bytes {
-            done,
-            total: download.length,
-        });
-    }
-    file.sync_all()?;
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(ide_net::download(net, url, path, cancel, None, &mut |done, total| {
+        progress(Progress::Bytes { done, total });
+    })?)
 }
 
 #[cfg(test)]
 mod tests {
     use std::io;
 
-    use ide_lsp::Download;
+    use ide_net::Download;
     use ide_process::Supervisor;
+    use sha2::{Digest, Sha256};
 
     use super::*;
 
@@ -199,12 +174,13 @@ mod tests {
         }
     }
 
-    /// A tools folder with a stand-in for `node` on the PATH it gives.
-    fn tools_with_node() -> Adapters {
+    /// A tools folder with a stand-in for `node` on the PATH it gives, and the adapters installed into it.
+    fn tools_with_node() -> (ide_core::testing::Scratch, Adapters) {
         let tools = crate::stub_tests::folder("install");
         crate::stub_tests::script(&tools.join("bin/node"), "");
         let env = crate::stub_tests::env(&tools.join("bin"), &[]);
-        Adapters::with_tools(&Supervisor::new(), env, tools)
+        let adapters = Adapters::with_tools(&Supervisor::new(), env, tools.to_path_buf());
+        (tools, adapters)
     }
 
     /// A gzipped tar archive of `files`, made by the system's tar as js-debug's release is.
@@ -246,7 +222,7 @@ mod tests {
 
     #[test]
     fn a_release_that_matches_its_digest_is_unpacked_in_place_of_an_older_folder() {
-        let adapters = tools_with_node();
+        let (_tools, adapters) = tools_with_node();
         let bytes = archive(&["js-debug/src/dapDebugServer.js"]);
         let release = release_of(&bytes);
         let old = js_debug_dir(adapters.tools(), &release);
@@ -283,7 +259,7 @@ mod tests {
 
     #[test]
     fn an_archive_without_the_server_or_that_tar_cannot_read_is_refused_and_removed() {
-        let adapters = tools_with_node();
+        let (_tools, adapters) = tools_with_node();
         let bytes = archive(&["README.md"]);
         let result = js_debug_release(
             &adapters,
@@ -316,11 +292,11 @@ mod tests {
     #[test]
     fn without_node_the_network_or_with_a_cancel_nothing_is_installed() {
         let tools = crate::stub_tests::folder("install");
-        let bare = Adapters::with_tools(&Supervisor::new(), Vec::new(), tools);
+        let bare = Adapters::with_tools(&Supervisor::new(), Vec::new(), tools.to_path_buf());
         let result = js_debug(&bare, &Offline, &Cancel::new(), &mut |_| {});
         assert!(matches!(result, Err(InstallError::Missing("node"))), "{result:?}");
 
-        let adapters = tools_with_node();
+        let (_tools, adapters) = tools_with_node();
         let result = adapters.install(crate::discover::Install::JsDebug, &Offline, &Cancel::new(), &mut |_| {});
         assert!(
             matches!(result, Err(InstallError::Network(ref why)) if why.contains("out of reach")),
@@ -336,14 +312,13 @@ mod tests {
 
     #[test]
     fn a_download_that_does_not_match_the_pinned_digest_is_refused_and_removed() {
-        let tools = std::env::temp_dir().join(format!("ide-dap-install-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&tools);
+        let tools = ide_core::testing::scratch("dap-install");
         let node = tools.join("bin/node");
         fs::create_dir_all(node.parent().unwrap()).unwrap();
         fs::write(&node, "#!/bin/sh\n").unwrap();
         fs::set_permissions(&node, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
         let env = vec![("PATH".to_string(), tools.join("bin").display().to_string())];
-        let adapters = Adapters::with_tools(&Supervisor::new(), env, tools.clone());
+        let adapters = Adapters::with_tools(&Supervisor::new(), env, tools.to_path_buf());
         let mut steps = Vec::new();
         let result = js_debug(
             &adapters,

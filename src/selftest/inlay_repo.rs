@@ -1,6 +1,7 @@
 //! The `inlay-repo` scenario: a file of this repository under the real rust-analyzer, scrolled into its middle; every
 //! gap a hint opened in the lines on screen shows its hint, and the pointer turns into a hand over a hint with a place.
 
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -8,16 +9,21 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_foundation::NSRect;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "inlay-repo";
 const FILE: &str = "crates/ide-acp/src/capabilities.rs";
 /// The line with closure parameters whose types rust-analyzer shows.
 const LINE: usize = 146;
+/// The longest rust-analyzer may take to index this repository and answer with hints.
+const INDEXING: Duration = Duration::from_secs(240);
+/// How often hints are asked for again while the server still indexes and answers with none.
+const ASK_AGAIN: Duration = Duration::from_secs(2);
+/// How long after the checks the later picture is taken, which shows whether the hints stay drawn.
+const LATER: Duration = Duration::from_secs(2);
 
 fn root() -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -33,26 +39,45 @@ pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::project::trust(&root());
     crate::app::open_project(mtm, root());
-    main_after(Duration::from_secs(1), || {
-        let Some(controller) = window::for_project(&root()) else {
-            check("the repository opens", false, "");
+    helpers::wait_for_editor(&root(), &root().join(FILE), |opened| {
+        if opened.is_none() {
+            check("the file opens", false, "");
             return finish(SCENARIO);
+        }
+        let asked = Cell::new(Instant::now());
+        let hinted = move || {
+            let Some(view) = view() else { return false };
+            if !insets::of(&view, Layer::Inlay).is_empty() {
+                return true;
+            }
+            if asked.get().elapsed() >= ASK_AGAIN {
+                crate::lsp::inlay::request(&view);
+                asked.set(Instant::now());
+            }
+            false
         };
-        controller.open_file(&root().join(FILE));
-        wait(Instant::now());
+        helpers::wait_within(INDEXING, hinted, |_| scrolled());
     });
 }
 
-/// Waits for rust-analyzer's hints, asking again every two seconds, as a server that is still indexing has none.
-fn wait(started: Instant) {
+/// Every gap a hint opened in the lines on screen shows its hint, with the counts for the report.
+fn gaps_shown(view: &EditorTextView) -> (bool, usize, usize, usize) {
+    let seen = view.visibleRect();
+    let lines = editor::utf16_in(view, seen);
+    let kerned_here = insets::kerns(view)
+        .iter()
+        .filter(|(range, _)| lines.contains(&range.start))
+        .count();
+    let drawn = insets::drawn_in(view, seen);
+    (kerned_here > 0 && drawn >= kerned_here, kerned_here, drawn, lines.len())
+}
+
+/// Scrolls to `LINE` once rust-analyzer's hints arrived, or once it gave up on them.
+fn scrolled() {
     let Some(view) = view() else {
         check("the file opens", false, "");
         return finish(SCENARIO);
     };
-    if insets::of(&view, Layer::Inlay).is_empty() && started.elapsed() < Duration::from_secs(240) {
-        crate::lsp::inlay::request(&view);
-        return main_after(Duration::from_secs(2), move || wait(started));
-    }
     let at = view.line_start(LINE).unwrap_or(0);
     let before = editor::LAID_OUT.load(std::sync::atomic::Ordering::Relaxed);
     editor::scroll_to_byte(&view, view.document().text().utf16_to_byte(at).unwrap_or(0));
@@ -65,7 +90,7 @@ fn wait(started: Instant) {
         after > before,
         format!("{} layouts reported", after - before),
     );
-    main_after(Duration::from_secs(3), look);
+    helpers::wait_until(|| self::view().is_some_and(|v| gaps_shown(&v).0), |_| look());
 }
 
 fn look() {
@@ -116,7 +141,7 @@ fn look() {
         order.last().is_some_and(|c| c == "IDEEditorOverlay"),
         order.join(" < "),
     );
-    main_after(Duration::from_secs(2), || {
+    helpers::after(LATER, || {
         if let Some(window) = self::view().and_then(|v| v.window()) {
             window.displayIfNeeded();
             snapshot(&window, "inlay-repo-later");

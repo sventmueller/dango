@@ -2,17 +2,14 @@
 //! characters outside the BMP and all three line breaks, each one undo step; then undoing walks back through every
 //! text in reverse and redoing forward to the last, with the document always holding what the view shows.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSTextView;
 use objc2_foundation::NSRange;
 
-use super::{check, finish};
+use super::{check, finish, helpers};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window;
 
 const SCENARIO: &str = "editor-undo";
@@ -22,20 +19,15 @@ const STEPS: usize = 60;
 /// What the replacements are made of; no brackets or quotes, which the editor would pair.
 const PIECES: [&str; 8] = ["a", "xyz", "ä", "😀", "e\u{301}", "\n", "\r\n", " "];
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("undo-project")
-}
-
-fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
-}
+const PROJECT: &str = "undo-project";
+/// A turn of the event loop between two edits, so that AppKit closes the undo group of the first; there is no state
+/// to wait for.
+const EVENT_TURN: Duration = Duration::from_millis(20);
 
 fn open() -> Option<Retained<EditorTextView>> {
-    let controller = window::for_project(&root())?;
-    let path = root().join(FILE);
-    controller.open_file(&path);
-    editor::editor_for(&controller, &path)
+    let root = helpers::root(PROJECT);
+    let controller = window::for_project(&root)?;
+    editor::editor_for(&controller, &root.join(FILE))
 }
 
 /// xorshift64, so that every run makes the same edits.
@@ -71,25 +63,18 @@ fn held(view: &EditorTextView) -> String {
 }
 
 pub fn run() {
-    let folder = folder();
-    let written = std::fs::create_dir_all(&folder).and_then(|()| std::fs::write(folder.join(FILE), START));
-    if let Err(error) = written {
-        check("the file is made", false, error.to_string());
-        return finish(SCENARIO);
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    main_after(Duration::from_millis(300), edit);
-}
-
-fn edit() {
-    if open().is_none() {
-        check("the file opens", false, "");
-        return finish(SCENARIO);
-    }
-    let texts = open().map(|view| vec![held(&view)]).unwrap_or_default();
-    step(Random(0x00da_6e0d_1234_5678), texts, 0);
+    helpers::open_project(SCENARIO, PROJECT, &[(FILE, START)], |_| {
+        let root = helpers::root(PROJECT);
+        helpers::wait_for_editor(&root, &root.join(FILE), |view| {
+            let Some(view) = view else {
+                check("the file opens", false, "");
+                return finish(SCENARIO);
+            };
+            let texts = vec![held(&view)];
+            // Opening and the first edit in one turn of the event loop would share an undo group.
+            helpers::after(EVENT_TURN, move || step(Random(0x00da_6e0d_1234_5678), texts, 0));
+        });
+    });
 }
 
 /// One replacement, then the next once an event has passed: AppKit closes an undo group only after the event loop
@@ -116,7 +101,7 @@ fn step(mut random: Random, mut texts: Vec<String>, done: usize) {
         super::helpers::post_event();
         texts.push(shown(&view));
     }
-    main_after(Duration::from_millis(20), move || step(random, texts, done + 1));
+    helpers::after(EVENT_TURN, move || step(random, texts, done + 1));
 }
 
 fn walk(view: &EditorTextView, texts: &[String]) {

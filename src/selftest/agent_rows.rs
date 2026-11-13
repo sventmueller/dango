@@ -7,8 +7,11 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 
 use super::agent::{NAME, controller_of, long_session, picture, tab_of};
-use super::{check, finish};
-use crate::util::main_after;
+use super::{check, finish, helpers};
+
+/// How long the timeline gets to lay out a card and the entry after it; a card that took the wrong height stays wrong,
+/// so there is no state to wait for.
+const LAYOUT_SETTLE: Duration = Duration::from_millis(300);
 
 /// A frame of the session the `squeezed` step plays.
 fn squeezed_frame(kind: &str, id: &str, content: serde_json::Value) -> String {
@@ -34,7 +37,10 @@ pub(super) fn squeezed(root: PathBuf) {
                 "input": {"command": "rg -n pattern src | head -40", "description": "Search the sources"}}]),
     ));
     let key = tab.key;
-    main_after(Duration::from_millis(300), move || squeezed_output(root, key));
+    helpers::wait_until(
+        move || tab_of(key).is_some_and(|t| t.inspect().rows > 0),
+        move |_| squeezed_output(root, key),
+    );
 }
 
 /// The shell's output arrives, its card is built, and the next entry follows before the row took the card's height.
@@ -57,7 +63,7 @@ fn squeezed_output(root: PathBuf, key: u64) {
         "msg_sq_3",
         json!([{"type": "thinking", "thinking": "Next step.", "signature": ""}]),
     ));
-    main_after(Duration::from_millis(300), move || {
+    helpers::after(LAYOUT_SETTLE, move || {
         if let Some(tab) = tab_of(key) {
             let misfits = tab.timeline().misfits();
             check(

@@ -14,21 +14,13 @@ use splat_i18n::t;
 
 use super::helpers::{self, in_any_mode_after, picture_alert_after};
 use super::{check, finish};
-use crate::util::{main_after, main_on_run_loop};
+use crate::util::main_on_run_loop;
 
 const NAME: &str = "quit";
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("quit-project");
-    std::fs::create_dir_all(&root).expect("scratch project");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&root) else {
-            check("the project's window opens", false, "");
-            return finish(NAME);
-        };
+    helpers::open_project(NAME, "quit-project", &[], |controller| {
+        let root = helpers::root("quit-project");
         check(
             "with nothing running, quitting would stop nothing",
             crate::quit::running().is_empty(),
@@ -89,7 +81,10 @@ fn quit_while_running(root: PathBuf, title: String) {
         seen.cancelled && helpers::window_of(&root).is_some(),
         format!("cancelled {}", seen.cancelled),
     );
-    main_after(Duration::from_millis(300), move || after_the_turn(root));
+    helpers::wait_until(
+        || MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none()),
+        move |_| after_the_turn(root),
+    );
 }
 
 /// Ends the turn; then nothing runs, and quitting may go on without a question.

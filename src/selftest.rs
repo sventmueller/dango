@@ -82,6 +82,7 @@ mod quit;
 mod recovery;
 mod replace;
 mod restore;
+mod scenarios;
 mod search;
 mod search_replace;
 mod servers;
@@ -109,8 +110,16 @@ pub fn replay_agent(controller: &window::WindowController, session: &str) -> boo
     panels::replay_agent(controller, session)
 }
 
-/// Moves the app's data and its defaults under `IDE_SELFTEST_HOME`, before anything reads them.
+/// The argument that makes the app print its scenarios for the runner and end.
+const LIST_SCENARIOS: &str = "--list-scenarios";
+
+/// Prints the scenarios with `--list-scenarios` and ends; else moves the app's data and its defaults under
+/// `IDE_SELFTEST_HOME`, before anything reads them.
 pub fn prepare() {
+    if std::env::args().any(|arg| arg == LIST_SCENARIOS) {
+        println!("{}", scenarios::listing());
+        std::process::exit(0);
+    }
     let Some(home) = std::env::var_os("IDE_SELFTEST_HOME").map(PathBuf::from) else {
         return;
     };
@@ -147,80 +156,18 @@ fn own_defaults(home: &Path) -> Option<()> {
     Some(())
 }
 
+/// How long the scenario waits after launch for the app to restore its windows, which it does without a state to
+/// wait for.
+const LAUNCH_SETTLE: Duration = Duration::from_millis(400);
+
 pub fn after_launch(_mtm: MainThreadMarker) {
     let Ok(scenario) = std::env::var("IDE_SELFTEST") else {
         return;
     };
-    main_after(Duration::from_millis(400), move || match scenario.as_str() {
-        "probe" => probe(),
-        "app-context" => app_context::run(),
-        "app-menus" => app_menus::run(),
-        "activity-actions" => activity_actions::run(),
-        "settings-general" => settings_general::run(),
-        "settings-pages" => settings_pages::run(),
-        "settings-toolbar" | "settings-toolbar-long" => settings_toolbar::run(),
-        "window-commands" => window_commands::run(),
-        "markdown-commands" => markdown_commands::run(),
-        "a11y" | "a11y-rtl" => a11y::run(),
-        "acp" => acp::run(),
-        "acp-actions" => acp_actions::run(),
-        "own-agent" => own_agent::run(),
-        "agent" => agent::run(),
-        "agent-actions" => agent_actions::run(),
-        "agent-perf" => agent_perf::run(),
-        "agent-background" => agent_background::run(),
-        "file-icons" => file_icons::run(),
-        "agent-live" => agent_live::live(),
-        "browser" => browser::run(),
-        "browser-dev" => browser_dev::run(),
-        "browser-view" => browser_view::run(),
-        "editor-extras" => extras::run(),
-        "export" => export::run(),
-        "tabs" => tabs::run(),
-        "replace-folder" => replace::run(),
-        "quit" => quit::run(),
-        "stored-rules" => stored_rules::run(),
-        "preview" => preview::run(),
-        "markdown" => markdown::run(),
-        "panels" => panels::run(),
-        "git" => git::run(),
-        "git-stash" => git::stash::run(),
-        "git-message" => git::message::run(),
-        "ci" => ci::run(),
-        "ci-live" => ci::live(),
-        "ci-login" => ci::login(),
-        "ci-settings" => ci::hosts(),
-        "worktree" => worktree::run(),
-        "worktree-git" => worktree_git::run(),
-        "lsp" => lsp::run(),
-        "lsp-navigation" => lsp_navigation::run(),
-        "lsp-actions" => lsp_actions::run_rust(),
-        "lsp-actions-go" => lsp_actions::run_go(),
-        "language-servers" => servers::run(),
-        "editor-multi" => editor_multi::run(),
-        "editor-scroll" => editor_scroll::run(),
-        "editor-undo" => editor_undo::run(),
-        "editor-commands" => editor_commands::run(),
-        "edit-prediction" => predict::run(),
-        "editor-insets" => insets::run(),
-        "inlay-hints" => inlay::run(),
-        "inlay-repo" => inlay_repo::run(),
-        "editor-blame" => blame::run(),
-        "search" => search::run(),
-        "terminal" => terminal::run(),
-        "terminal-view" => terminal_view::run(),
-        "paste-cli" => paste_cli::run(),
-        "recovery" => recovery::run(),
-        "restore" => restore::run(),
-        "conflict" => conflict::run(),
-        "debug" => debug::run(),
-        "debug-restore" => debug_restore::run(),
-        "debug-menus" => debug_menus::run(),
-        #[cfg(feature = "dictation")]
-        "dictation" => dictation::run(),
-        "show" => show(),
-        other => {
-            check("the scenario exists", false, format!("unknown scenario {other}"));
+    main_after(LAUNCH_SETTLE, move || match scenarios::named(&scenario) {
+        Some(found) => (found.run)(),
+        None => {
+            check("the scenario exists", false, format!("unknown scenario {scenario}"));
             finish(&scenario);
         }
     });
@@ -297,17 +244,22 @@ fn check_sidebar_top(controller: &window::WindowController) {
     );
 }
 
+/// The sidebar's width in a new window: the activity bar and the panel beside it.
+pub(crate) const DEFAULT_SIDEBAR: f64 = window::ACTIVITY_WIDTH + window::PANEL_DEFAULT_WIDTH;
+/// The settings symbol the activity bar has below the panels' symbols.
+pub(crate) const SETTINGS_BUTTON: usize = 1;
+
 /// The panels, the sidebar and the tabs of the first window.
 fn probe_window(controller: &window::WindowController) {
     let seen = controller.inspect();
     check(
         "the sidebar starts at its default width",
-        (seen.sidebar_width - 304.0).abs() < 2.0,
+        (seen.sidebar_width - DEFAULT_SIDEBAR).abs() < 2.0,
         format!("{} pt", seen.sidebar_width),
     );
     check(
         "the activity bar has six panels and settings",
-        seen.activity_buttons == 7,
+        seen.activity_buttons == Panel::ALL.len() + SETTINGS_BUTTON,
         format!("{} buttons", seen.activity_buttons),
     );
     check(
@@ -333,7 +285,7 @@ fn probe_window(controller: &window::WindowController) {
     );
     check(
         "the panel keeps its width",
-        (width - 304.0).abs() < 2.0,
+        (width - DEFAULT_SIDEBAR).abs() < 2.0,
         format!("{width} pt"),
     );
     check("the welcome tab is open", seen.tabs == 1, format!("{} tabs", seen.tabs));
@@ -479,7 +431,14 @@ fn probe_app(mtm: MainThreadMarker) {
     );
     let _ = std::fs::write(canonical.join("added.txt"), "new\n");
     controller.quick_open_with("main");
-    main_after(Duration::from_secs(2), move || probe_project(canonical, rows));
+    let root = canonical.clone();
+    helpers::wait_until(
+        move || {
+            window::for_project(&root)
+                .is_some_and(|c| c.tree_rows() > rows && c.quick_open_hits().iter().any(|hit| hit == "src/main.rs"))
+        },
+        move |_| probe_project(canonical, rows),
+    );
 }
 
 /// Checks that no window of the app, the trust sheet and the settings window among them, catches a click, which would
@@ -554,7 +513,15 @@ fn probe_project(root: PathBuf, rows_before: isize) {
         crate::editor::type_newline(&editor);
         type_into(&editor, "let x = 1;");
     }
-    main_after(Duration::from_millis(500), move || probe_editor(root, file));
+    let (folder, typed) = (root.clone(), file.clone());
+    helpers::wait_until(
+        move || {
+            window::for_project(&folder)
+                .and_then(|c| crate::editor::editor_of(&c, &typed))
+                .is_some_and(|editor| crate::editor::keyword_coloured(&editor, &editor.document().text().to_string()))
+        },
+        move |_| probe_editor(root, file),
+    );
 }
 
 /// The editor a moment after typing: colours, indentation, the dirty mark and saving.
@@ -632,21 +599,23 @@ const MARKDOWN: &str = "# Notes\n\nA paragraph with **bold** text, `code` and a 
 /// A Markdown file in a trusted folder of its own, opened in splat's source colours.
 fn probe_markdown() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let root = ide_core::paths::home().join("markdown-project");
-    let _ = std::fs::create_dir_all(&root);
+    let root = helpers::make_project("markdown-project", &[("NOTES.md", MARKDOWN)])
+        .unwrap_or_else(|_| helpers::root("markdown-project"));
     let file = root.join("NOTES.md");
-    let _ = std::fs::write(&file, MARKDOWN);
-    let root = root.canonicalize().unwrap_or(root);
     crate::project::trust(&root);
     crate::app::open_project(mtm, root.clone());
-    main_after(Duration::from_millis(500), move || {
-        if let Some(controller) = window::open_windows()
-            .into_iter()
-            .find(|w| w.project().as_ref() == Some(&root))
-        {
-            controller.open_file(&root.join("NOTES.md"));
-        }
-        main_after(Duration::from_millis(600), move || probe_markdown_shown(&root));
+    helpers::wait_for_editor(&root.clone(), &file, move |editor| {
+        let styled = move || {
+            editor.as_ref().is_some_and(|editor| {
+                let heading = MARKDOWN
+                    .find("Notes")
+                    .map(|byte| MARKDOWN[..byte].encode_utf16().count());
+                heading
+                    .and_then(|i| crate::editor::styled_at(editor, i))
+                    .is_some_and(|(_, bold)| bold)
+            })
+        };
+        helpers::wait_until(styled, move |_| probe_markdown_shown(&root));
     });
 }
 
@@ -690,18 +659,6 @@ fn type_into(editor: &crate::editor::EditorTextView, text: &str) {
             crate::editor::type_text(editor, &c.to_string());
         }
     }
-}
-
-/// Calls `then` with whether `ready` held, as soon as it does or once `deadline` passed, asking every 200 ms.
-fn poll(deadline: Instant, ready: fn() -> bool, then: fn(bool)) {
-    main_after(Duration::from_millis(200), move || {
-        let ok = ready();
-        if ok || Instant::now() > deadline {
-            then(ok);
-        } else {
-            poll(deadline, ready, then);
-        }
-    });
 }
 
 fn first_window() -> Option<Retained<window::WindowController>> {
@@ -859,7 +816,11 @@ fn write_report(scenario: &str) {
             .collect::<Vec<_>>()
             .join(", ")
     });
-    let report = format!(r#"{{"scenario": {}, "checks": [{checks}]}}"#, quote(scenario));
+    let report = format!(
+        r#"{{"scenario": {}, "appearance": "{}", "checks": [{checks}]}}"#,
+        quote(scenario),
+        appearance()
+    );
     if let Some(path) = std::env::var_os("IDE_SELFTEST_REPORT") {
         let path = PathBuf::from(path);
         let partial = path.with_extension("partial");
@@ -867,6 +828,21 @@ fn write_report(scenario: &str) {
             crate::diag::report("selftest report", error);
         }
     }
+}
+
+/// `light` or `dark`, the app's appearance, which the runner's accepted window pictures are kept by.
+fn appearance() -> &'static str {
+    use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
+    let Some(mtm) = MainThreadMarker::new() else {
+        return "light";
+    };
+    // SAFETY: The appearance names are constants AppKit defines for the life of the process.
+    let (aqua, dark) = unsafe { (NSAppearanceNameAqua, NSAppearanceNameDarkAqua) };
+    let names = objc2_foundation::NSArray::from_slice(&[aqua, dark]);
+    let best = NSApplication::sharedApplication(mtm)
+        .effectiveAppearance()
+        .bestMatchFromAppearancesWithNames(&names);
+    if best.as_deref() == Some(dark) { "dark" } else { "light" }
 }
 
 /// `s` as a JSON string.

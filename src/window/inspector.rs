@@ -1,5 +1,5 @@
 //! The inspector at the window's trailing edge (E94, E101): an `NSSplitViewItem` of the inspector kind in every window
-//! tab, folded away until ⌥⌘I (`toggleInspector:`) shows it. Like the sidebar there is one per folder, which moves into
+//! tab, folded away until ⌥⌘I (`ideToggleInspector:`) shows it. Like the sidebar there is one per folder, which moves into
 //! the tab in front with its width and whether it shows (E60); the width is read from the item's view controller, as
 //! the split view has more subviews than items on macOS 27.
 
@@ -14,6 +14,8 @@ use splat_i18n::t;
 use super::WindowController;
 use super::tabs::TabWindow;
 use crate::util::pin_edges;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 pub const MIN_WIDTH: f64 = 220.0;
 pub const MAX_WIDTH: f64 = 520.0;
@@ -41,10 +43,9 @@ pub(super) fn split_item(mtm: MainThreadMarker) -> (Retained<NSSplitViewItem>, R
     let slot = NSView::new(mtm);
     let controller = NSViewController::new(mtm);
     controller.setView(&slot);
-    let item = NSSplitViewItem::inspectorWithViewController(&controller);
+    // A plain item: AppKit paints an inspector item's part of the title bar grey, under the window tabs' bar and its "+".
+    let item = NSSplitViewItem::splitViewItemWithViewController(&controller);
     item.setCanCollapse(true);
-    // Below the title bar: the window tabs' bar spans the whole window and would run over a full-height inspector.
-    item.setAllowsFullHeightLayout(false);
     // The documents give the inspector its room; the window keeps its size.
     item.setCollapseBehavior(objc2_app_kit::NSSplitViewItemCollapseBehavior::PreferResizingSiblingsWithFixedSplitView);
     item.setCollapsed(true);
@@ -110,35 +111,6 @@ impl WindowController {
         }
     }
 
-    /// Whether the inspector shows in the tab in front.
-    #[cfg(feature = "selftest")]
-    pub fn inspector_shown(&self) -> bool {
-        self.current_tab().is_some_and(|tab| tab.inspector_shown())
-    }
-
-    /// Whether the inspector shows in each tab, the one in front marked, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn inspector_states(&self) -> Vec<(bool, bool)> {
-        let current = self.current_tab();
-        self.ivars()
-            .tabs
-            .borrow()
-            .iter()
-            .map(|tab| {
-                (
-                    tab.inspector_shown(),
-                    current.as_ref().is_some_and(|c| std::rc::Rc::ptr_eq(c, tab)),
-                )
-            })
-            .collect()
-    }
-
-    /// The inspector's width in the tab in front.
-    #[cfg(feature = "selftest")]
-    pub fn inspector_width(&self) -> f64 {
-        self.current_tab().map_or(0.0, |tab| tab.inspector_width())
-    }
-
     /// Shows or folds the inspector, as ⌥⌘I does, in whichever tab is in front.
     pub fn show_inspector(&self, shown: bool) {
         let state = &self.ivars().inspector;
@@ -152,6 +124,12 @@ impl WindowController {
                 tab.release_inspector();
             }
         });
+    }
+
+    /// Shows the inspector if it is folded, folds it if it shows.
+    pub fn toggle_inspector(&self) {
+        let shown = self.current_tab().is_some_and(|tab| tab.inspector_shown());
+        self.show_inspector(!shown);
     }
 
     /// The width and whether it shows, as the tab `tab` had them, for the next tab and the next launch.

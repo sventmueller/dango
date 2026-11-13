@@ -15,27 +15,20 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRange, NSRect};
 use splat_i18n::t;
 
-use super::helpers::{editor, wait_until};
+use super::helpers::{self, editor, wait_until};
 use super::{check, finish, snapshot};
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::editor::{self, EditorTextView};
-use crate::util::{main_after, ns};
+use crate::util::ns;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "editor-insets";
 const FILE: &str = "gate.txt";
 
-thread_local! {
-    static CLICKED: Cell<u32> = const { Cell::new(0) };
-}
-
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("insets-project")
-}
+const PROJECT: &str = "insets-project";
 
 fn root() -> PathBuf {
-    let folder = folder();
-    folder.canonicalize().unwrap_or(folder)
+    helpers::root(PROJECT)
 }
 
 fn controller() -> Option<Retained<WindowController>> {
@@ -140,27 +133,17 @@ pub fn click_at(view: &EditorTextView, point: NSPoint) {
 }
 
 pub fn run() {
-    let folder = folder();
-    let written = std::fs::create_dir_all(&folder).and_then(|()| std::fs::write(folder.join(FILE), gate_text()));
-    if let Err(error) = written {
-        check("the gate's file is written", false, error.to_string());
-        return finish(SCENARIO);
-    }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
-    let Some(controller) = controller() else {
-        check("the folder opens", false, format!("{:?}", window::open_projects()));
-        return finish(SCENARIO);
-    };
-    editor::new_untitled(&controller, 13.0);
-    wait_until(
-        || controller_editor(t("Ohne Titel")).is_some(),
-        |ok| {
-            check("an empty document opens", ok, "");
-            empty_document();
-        },
-    );
+    let text = gate_text();
+    helpers::open_project(SCENARIO, PROJECT, &[(FILE, text.as_str())], |controller| {
+        editor::new_untitled(&controller, 13.0);
+        wait_until(
+            || controller_editor(t("Ohne Titel")).is_some(),
+            |ok| {
+                check("an empty document opens", ok, "");
+                empty_document();
+            },
+        );
+    });
 }
 
 fn controller_editor(title: &str) -> Option<Retained<EditorTextView>> {
@@ -174,7 +157,10 @@ fn empty_document() {
     };
     let undo_before = view.undoManager().is_some_and(|u| u.canUndo());
     insets::set(&view, Layer::Inlay, vec![Inset::new(0, ": i32", Place::Inline)]);
-    main_after(Duration::from_millis(300), move || empty_shown(undo_before));
+    wait_until(
+        || controller_editor(t("Ohne Titel")).is_some_and(|view| insets::shown(&view).len() == 1),
+        move |_| empty_shown(undo_before),
+    );
 }
 
 fn empty_shown(undo_before: bool) {
@@ -206,10 +192,7 @@ fn empty_shown(undo_before: bool) {
     if let Some(controller) = controller() {
         controller.open_file(&root().join(FILE));
     }
-    wait_until(
-        || gate_view().is_some(),
-        |_| main_after(Duration::from_millis(300), gate),
-    );
+    wait_until(|| gate_view().is_some(), |_| gate());
 }
 
 /// The caret positions of the gate's text before any inset, to compare with after.
@@ -247,8 +230,10 @@ fn gate() {
         carets: watched.iter().filter_map(|&at| Some((at, caret(&view, at)?))).collect(),
     };
     let undo_before = view.undoManager().is_some_and(|u| u.canUndo());
+    let clicked = Rc::new(Cell::new(0_u32));
+    let counted = Rc::clone(&clicked);
     let mut clickable = Inset::new(0, "Ada, vor 3 Tagen · Clickable", Place::LineEnd);
-    clickable.action = Some(Rc::new(|_: &EditorTextView| CLICKED.with(|c| c.set(c.get() + 1))));
+    clickable.action = Some(Rc::new(move |_: &EditorTextView| counted.set(counted.get() + 1)));
     clickable.tooltip = Some("a clickable inset".into());
     insets::set(
         &view,
@@ -273,7 +258,10 @@ fn gate() {
     redraw(&view);
     picture("insets-gate");
     line_start_and_graphemes(&view, &before, undo_before);
-    main_after(Duration::from_millis(200), clicks);
+    wait_until(
+        || gate_view().is_some_and(|view| shown_at(&view, Layer::Blame, 0).is_some()),
+        move |_| clicks(&clicked),
+    );
 }
 
 fn line_start_and_graphemes(view: &EditorTextView, before: &Before, undo_before: bool) {
@@ -394,7 +382,7 @@ fn indicator_x(view: &EditorTextView) -> Option<f64> {
 
 /// Clicks left and right of a gap land beside it in the text; a click on an inset that does something runs it and
 /// leaves the text alone.
-fn clicks() {
+fn clicks(clicked: &Cell<u32>) {
     let Some(view) = gate_view() else {
         return finish(SCENARIO);
     };
@@ -435,7 +423,7 @@ fn clicks() {
     );
     let clickable = shown_at(&view, Layer::Blame, 0);
     view.setSelectedRange(NSRange::new(3, 0));
-    let before = CLICKED.with(Cell::get);
+    let before = clicked.get();
     if let Some(s) = &clickable {
         click_at(
             &view,
@@ -447,12 +435,12 @@ fn clicks() {
         .and_then(|s| insets::tooltip(&view, NSPoint::new(s.rect.origin.x + 2.0, s.rect.origin.y + 2.0)));
     check(
         "a clickable inset: the click runs it and does not reach the text; it has its tooltip",
-        CLICKED.with(Cell::get) == before + 1
+        clicked.get() == before + 1
             && view.selectedRange().location == 3
             && tip.as_deref() == Some("a clickable inset"),
         format!(
             "{clickable:?}, clicks {}, selection {}, tooltip {tip:?}",
-            CLICKED.with(Cell::get),
+            clicked.get(),
             view.selectedRange().location
         ),
     );
@@ -524,7 +512,10 @@ fn marked_text(view: &EditorTextView) {
     picture("insets-marked");
     // SAFETY: The inserted object is an NSString, one of the two types this method accepts.
     unsafe { view.insertText_replacementRange(&ns("日本"), replace) };
-    main_after(Duration::from_millis(200), committed);
+    wait_until(
+        || gate_view().is_some_and(|view| !view.hasMarkedText() && view.document().text().to_string().contains("日本")),
+        |_| committed(),
+    );
 }
 
 fn committed() {
@@ -551,7 +542,10 @@ fn committed() {
     if let Some(undo) = view.undoManager() {
         undo.undo();
     }
-    main_after(Duration::from_millis(200), undone);
+    wait_until(
+        || gate_view().is_some_and(|view| view.document().text().to_string() == gate_text()),
+        |_| undone(),
+    );
 }
 
 fn undone() {
@@ -568,7 +562,10 @@ fn undone() {
         format!("dirty {}, kerns {kerns:?}", view.document().is_dirty()),
     );
     copy_and_save(&view);
-    main_after(Duration::from_millis(200), wrap);
+    wait_until(
+        || gate_view().is_some_and(|view| !view.document().is_dirty()),
+        |_| wrap(),
+    );
 }
 
 fn copy_and_save(view: &EditorTextView) {
@@ -612,7 +609,13 @@ fn wrap() {
         frame.size.width = 700.0;
         window.setFrame_display(frame, true);
     }
-    main_after(Duration::from_millis(300), move || {
+    let wrapped = move || {
+        gate_view().is_some_and(|view| {
+            redraw(&view);
+            editor::wraps(&view) && shown_at(&view, Layer::Inlay, 5).is_some_and(|s| s.in_gap)
+        })
+    };
+    wait_until(wrapped, move |_| {
         let Some(view) = gate_view() else {
             return finish(SCENARIO);
         };
@@ -633,7 +636,7 @@ fn wrap() {
         );
         picture("insets-wrapped");
         editor::toggle_wrap(&view);
-        main_after(Duration::from_millis(200), fold);
+        wait_until(|| gate_view().is_some_and(|view| !editor::wraps(&view)), |_| fold());
     });
 }
 
@@ -645,7 +648,8 @@ fn fold() {
     let p = places();
     view.setSelectedRange(NSRange::new(p.header, 0));
     editor::selftest::fold_at_cursor(&view);
-    main_after(Duration::from_millis(200), move || {
+    let folded = || gate_view().is_some_and(|view| editor::selftest::folded(&view) == 1);
+    wait_until(folded, move |_| {
         let Some(view) = gate_view() else {
             return finish(SCENARIO);
         };
@@ -670,7 +674,7 @@ fn fold() {
             "",
         );
         appearances(&view);
-        main_after(Duration::from_millis(100), budget);
+        budget();
     });
 }
 
@@ -785,7 +789,13 @@ fn budget() {
         return finish(SCENARIO);
     };
     window.open_file(&path);
-    main_after(Duration::from_millis(500), move || {
+    let opened = path.clone();
+    let laid_out = move || {
+        controller()
+            .and_then(|c| editor::editor_for(&c, &opened))
+            .is_some_and(|view| view.line_start(9_999).is_some())
+    };
+    wait_until(laid_out, move |_| {
         let Some(view) = controller().and_then(|c| editor::editor_for(&c, &path)) else {
             check("the big file opens", false, "");
             return finish(SCENARIO);

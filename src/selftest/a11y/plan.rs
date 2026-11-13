@@ -13,9 +13,9 @@ use super::{keys, window_of};
 use crate::agent::AgentTab;
 use crate::agent::plan;
 use crate::selftest::check;
-use crate::util::main_after;
+use crate::selftest::helpers::after;
 
-/// How long the timeline takes to build a card it was just fed.
+/// How long the timeline takes to build a card it was just fed, which it tells nothing about.
 const SETTLE: Duration = Duration::from_millis(600);
 const WHOLE: &str = "Whole plan by keyboard";
 const PASSAGE: &str = "Passage by keyboard";
@@ -31,7 +31,7 @@ pub fn start(root: PathBuf, then: fn(PathBuf)) {
     tab.feed(&start_frames());
     tab.timeline().scroll_to_end();
     let key = tab.key;
-    main_after(SETTLE, move || whole(root, key, then));
+    after(SETTLE, move || whole(root, key, then));
 }
 
 fn tab_of(key: u64) -> Option<std::rc::Rc<AgentTab>> {
@@ -82,7 +82,7 @@ fn whole(root: PathBuf, key: u64, then: fn(PathBuf)) {
         format!("to {went}; {notes:?}"),
     );
     let Some(id) = id else { return then(root) };
-    main_after(SETTLE, move || in_card(root, key, id, then));
+    after(SETTLE, move || in_card(root, key, id, then));
 }
 
 /// The view with the focus, if it is `view`.
@@ -134,7 +134,7 @@ fn in_card(root: PathBuf, key: u64, id: u64, then: fn(PathBuf)) {
         format!("{selected} characters selected, to {went}; {notes:?}"),
     );
     tab.open_plan(id);
-    main_after(SETTLE, move || passage(root, key, id, then));
+    after(SETTLE, move || passage(root, key, id, then));
 }
 
 /// In the plan's document, ⇧⌥→ twice selects the first words and ⌥⌘K comments on them.

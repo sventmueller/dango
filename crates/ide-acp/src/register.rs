@@ -7,8 +7,8 @@ use std::time::SystemTime;
 
 use serde_json::Value;
 
-use crate::net::Net;
 use crate::sandbox::{Effect, Sandbox};
+use ide_net::Net;
 
 /// Where the registry publishes all its entries in one file.
 pub const REGISTRY_URL: &str = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
@@ -105,7 +105,14 @@ impl std::fmt::Display for FetchError {
     }
 }
 
-impl std::error::Error for FetchError {}
+impl std::error::Error for FetchError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            FetchError::Net(error) => Some(error),
+            FetchError::Format(_) => None,
+        }
+    }
+}
 
 /// This Mac's target as the registry names it.
 pub fn target() -> &'static str {
@@ -482,8 +489,7 @@ mod tests {
     #[test]
     fn an_adapter_s_own_program_is_found_without_the_adapter() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = std::env::temp_dir().join(format!("ide-acp-cli-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("acp-cli");
         let codex = dir.join("codex");
         std::fs::write(&codex, "#!/bin/sh\n").unwrap();
         std::fs::set_permissions(&codex, std::fs::Permissions::from_mode(0o755)).unwrap();

@@ -2,7 +2,7 @@
 //! model and the tokens spent. The cards are rebuilt from the messages.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -68,17 +68,53 @@ pub fn load(path: &Path) -> Result<Stored, LoadError> {
     Ok(stored)
 }
 
+/// Why a thread was not written.
+#[derive(Debug)]
+pub enum SaveError {
+    /// It could not be written as JSON.
+    Encode(serde_json::Error),
+    /// Writing `path` failed.
+    Io {
+        /// The file or folder.
+        path: PathBuf,
+        /// The system's reason.
+        error: std::io::Error,
+    },
+}
+
+impl std::fmt::Display for SaveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SaveError::Encode(error) => write!(f, "the thread could not be written: {error}"),
+            SaveError::Io { path, error } => write!(f, "{}: {error}", path.display()),
+        }
+    }
+}
+
+impl std::error::Error for SaveError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SaveError::Encode(error) => Some(error),
+            SaveError::Io { error, .. } => Some(error),
+        }
+    }
+}
+
 /// Writes `stored` to `path` whole: to a temporary file beside it, then renamed over it.
-pub fn save(path: &Path, stored: &Stored) -> Result<(), String> {
+pub fn save(path: &Path, stored: &Stored) -> Result<(), SaveError> {
     let mut stored = stored.clone();
     stored.version = VERSION;
-    let text = serde_json::to_vec(&stored).map_err(|e| e.to_string())?;
+    let text = serde_json::to_vec(&stored).map_err(SaveError::Encode)?;
+    let at = |path: &Path| {
+        let path = path.to_path_buf();
+        move |error| SaveError::Io { path, error }
+    };
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
+        std::fs::create_dir_all(parent).map_err(at(parent))?;
     }
     let temporary = path.with_extension("json.part");
-    std::fs::write(&temporary, text).map_err(|e| format!("{}: {e}", temporary.display()))?;
-    std::fs::rename(&temporary, path).map_err(|e| format!("{}: {e}", path.display()))
+    std::fs::write(&temporary, text).map_err(at(&temporary))?;
+    std::fs::rename(&temporary, path).map_err(at(path))
 }
 
 #[cfg(test)]
@@ -87,7 +123,8 @@ mod tests {
 
     #[test]
     fn a_thread_is_read_back_as_it_was_written_and_a_foreign_version_is_refused() {
-        let path = std::env::temp_dir().join(format!("ide-agent-store-{}/t.json", std::process::id()));
+        let dir = ide_core::testing::scratch("agent-store");
+        let path = dir.join("t.json");
         let stored = Stored {
             title: "Fix the build".into(),
             endpoint: "anthropic".into(),
@@ -112,6 +149,5 @@ mod tests {
         )
         .unwrap();
         assert_eq!(load(&path), Err(LoadError::Version(9)));
-        let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }
 }

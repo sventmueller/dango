@@ -174,7 +174,7 @@ pub fn load(path: &Path) -> std::io::Result<Vec<Message>> {
                 && record.get("isMeta").and_then(Value::as_bool) != Some(true)
         })
         .filter_map(frame)
-        .filter(|message| !matches!(message, Message::Unknown(_)))
+        .filter(|message| !matches!(message, Message::Unknown(_) | Message::Malformed(_)))
         .collect())
 }
 
@@ -243,12 +243,7 @@ pub fn rebuild(mut thread: Thread, path: &Path) -> std::io::Result<Thread> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-claude-history-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
+    use ide_core::testing::scratch;
 
     #[test]
     fn the_project_folder_replaces_every_separator() {

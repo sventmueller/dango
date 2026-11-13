@@ -3,7 +3,6 @@
 //! panel with a log, an AI tab playing a recording with the AI panel and the activity popover, a terminal, a CLI
 //! thread, a browser tab, two panels, and the settings window.
 
-use std::cell::Cell;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -13,11 +12,10 @@ use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSButton, NSEventModifierFlags, NSTabViewController, NSView};
 
 use super::super::git::{answer_sheet, sheet_ready};
-use super::super::helpers::wait_until;
+use super::super::helpers::{after, wait_until};
 use super::{flows, keys, name, picture, walk, window_of};
 use crate::git_panel::selftest as git;
 use crate::selftest::{check, finish};
-use crate::util::main_after;
 use crate::window::{Panel, search_selftest};
 
 /// The file of the editor state, in a language whose server is not installed, so its status bar offers it.
@@ -33,8 +31,8 @@ const RUNNING: usize = 174;
 /// Calls `then` with `root` once `ready` holds for its window, or with false after the usual wait.
 fn when(
     root: PathBuf,
-    ready: impl Fn(&crate::window::WindowController) -> bool + Send + 'static,
-    then: impl FnOnce(PathBuf, bool) + Send + 'static,
+    ready: impl Fn(&crate::window::WindowController) -> bool + 'static,
+    then: impl FnOnce(PathBuf, bool) + 'static,
 ) {
     let probe = root.clone();
     wait_until(
@@ -44,8 +42,8 @@ fn when(
 }
 
 /// Goes on with `then` once the views had a moment to draw.
-fn settled(root: PathBuf, then: fn(PathBuf)) {
-    main_after(SETTLE, move || then(root));
+fn settled(root: PathBuf, then: impl FnOnce(PathBuf) + 'static) {
+    after(SETTLE, move || then(root));
 }
 
 pub fn start(root: PathBuf) {
@@ -109,8 +107,13 @@ fn quick_open(root: PathBuf, ok: bool) {
         let _ = keys::press(&panel, "\u{1b}", 53, NSEventModifierFlags::empty());
     }
     check("Esc closes Open Quickly", flows::child_panel(&controller).is_none(), "");
-    controller.open_file(&root.join(SCRIPT));
-    main_after(Duration::from_secs(2), move || editor(root));
+    let file = root.join(SCRIPT);
+    controller.open_file(&file);
+    when(
+        root,
+        move |c| crate::editor::editor_for(c, &file).is_some(),
+        |root, _| settled(root, editor),
+    );
 }
 
 fn editor(root: PathBuf) {
@@ -196,23 +199,24 @@ fn ai(root: PathBuf) {
         check("an AI tab opens", false, "");
         return finish(name());
     };
-    AI_TAB.with(|key| key.set(tab.key));
+    let key = tab.key;
     tab.feed(EDIT);
     let running: String = SUBAGENT.lines().take(RUNNING).map(|line| format!("{line}\n")).collect();
     tab.feed(&running);
     tab.timeline().scroll_to_end();
-    settled(root, ai_tab);
+    settled(root, move |root| ai_tab(root, key));
 }
 
-fn ai_tab(root: PathBuf) {
+/// `key` is the AI tab that plays the recording with a subagent and a background shell.
+fn ai_tab(root: PathBuf, key: u64) {
     walk("the AI tab misses nothing");
     picture(&root, "ai");
     let Some(controller) = window_of(&root) else { return };
     controller.activate_panel(Panel::Agents);
-    settled(root, agents_panel);
+    settled(root, move |root| agents_panel(root, key));
 }
 
-fn agents_panel(root: PathBuf) {
+fn agents_panel(root: PathBuf, key: u64) {
     walk("the AI panel misses nothing");
     let Some(controller) = window_of(&root) else { return };
     let (lines, _) = crate::activity::inspect(&controller);
@@ -221,18 +225,13 @@ fn agents_panel(root: PathBuf) {
         !lines.is_empty(),
         lines.join(" | "),
     );
-    settled(root, activity);
-}
-
-thread_local! {
-    /// The AI tab that plays the recording with a subagent and a background shell.
-    static AI_TAB: Cell<u64> = const { Cell::new(0) };
+    settled(root, move |root| activity(root, key));
 }
 
 /// How long the popover runs on while a button of it has the focus, past its updates each second.
 const TICKS: Duration = Duration::from_millis(2500);
 
-fn activity(root: PathBuf) {
+fn activity(root: PathBuf, key: u64) {
     walk("the activity popover misses nothing");
     let Some(controller) = window_of(&root) else { return };
     let button = crate::activity::popover_view(&controller).and_then(|view| first_button(&view));
@@ -247,7 +246,7 @@ fn activity(root: PathBuf) {
     let focused = window.makeFirstResponder(Some(&button));
     let address = Retained::as_ptr(&button) as usize;
     let before = crate::activity::updated_in_place();
-    main_after(TICKS, move || {
+    after(TICKS, move || {
         let Some(controller) = window_of(&root) else { return };
         let now = crate::activity::popover_view(&controller).and_then(|view| first_button(&view));
         let kept = now.as_ref().is_some_and(|button| {
@@ -261,7 +260,7 @@ fn activity(root: PathBuf) {
             focused && kept && updates > 0,
             format!("focused {focused}, kept {kept}, {updates} updates in place"),
         );
-        super::popover::rows_change(root, AI_TAB.with(Cell::get), terminal_tab);
+        super::popover::rows_change(root, key, terminal_tab);
     });
 }
 

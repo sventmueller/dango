@@ -4,7 +4,7 @@
 //!
 //! They send only the tiny made-up file below, never code of the user's.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
@@ -21,11 +21,8 @@ const PATIENCE: Duration = Duration::from_secs(180);
 
 const TEXT: &str = "/// Adds two numbers.\nfn add(a: i32, b: i32) -> i32 {\n    \n}\n";
 
-fn folder(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-predict-real-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    std::fs::canonicalize(dir).unwrap()
+fn folder(name: &str) -> ide_core::testing::Scratch {
+    ide_core::testing::scratch(&format!("predict-real-{name}"))
 }
 
 fn request(root: &Path) -> Request {
@@ -113,7 +110,12 @@ fn copilot_proposes_a_completion_for_the_signed_in_user() {
         capture(&supervisor, &user_shell(), &root, Duration::from_secs(30)).expect("the login shell's environment");
     let program = copilot::find(&default_tools(), &env).unwrap_or_else(|| {
         let tools = root.join("tools");
-        let installer = Installer::new(&supervisor, env.clone(), tools, Arc::new(Http::new()));
+        let installer = Installer::new(
+            &supervisor,
+            env.clone(),
+            tools,
+            Arc::new(Http::new("Copilot installer")),
+        );
         installer
             .install(copilot::INSTALL, &InstallCancel::new(), &mut |_| {})
             .expect("copilot-language-server installs with npm")

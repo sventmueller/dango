@@ -1,0 +1,200 @@
+//! Durations, token counts, money and times as the interface writes them.
+
+use std::path::Path;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use objc2::rc::Retained;
+use objc2_foundation::{
+    NSCalendarUnit, NSDate, NSDateComponentsFormatter, NSDateComponentsFormatterUnitsStyle, NSDateFormatter,
+    NSDateFormatterStyle, NSISO8601DateFormatter, NSNumber, NSNumberFormatter, NSNumberFormatterStyle,
+    NSRelativeDateTimeFormatter, NSRelativeDateTimeFormatterStyle, NSRelativeDateTimeFormatterUnitsStyle,
+};
+use splat_i18n::{t, tf};
+
+use ide_ui_common::util::ns;
+
+/// A running time like `< 1 s`, `12 s`, `3 min 5 s` or `2 h 4 min`.
+pub fn elapsed(duration: Duration) -> String {
+    let seconds = duration.as_secs();
+    match seconds {
+        0 => t("< 1 s").to_string(),
+        1..60 => tf("{} s", &[&seconds.to_string()]),
+        60..3600 => tf(
+            "{} min {} s",
+            &[&(seconds / 60).to_string(), &(seconds % 60).to_string()],
+        ),
+        _ => tf(
+            "{} h {} min",
+            &[&(seconds / 3600).to_string(), &((seconds % 3600) / 60).to_string()],
+        ),
+    }
+}
+
+/// A token count like `950` or `13 k`.
+pub fn tokens(count: u64) -> String {
+    match count {
+        0..1000 => count.to_string(),
+        1000..1_000_000 => tf("{} k", &[&(count.div_ceil(1000)).to_string()]),
+        _ => tf("{} M", &[&format!("{:.1}", count as f64 / 1_000_000.0)]),
+    }
+}
+
+/// A size in bytes, like `12,3 MB`, in the user's number format.
+pub fn bytes(count: u64) -> String {
+    let formatter = objc2_foundation::NSByteCountFormatter::new();
+    formatter
+        .stringFromByteCount(i64::try_from(count).unwrap_or(i64::MAX))
+        .to_string()
+}
+
+/// US dollars in the user's number format.
+pub fn dollars(amount: f64) -> String {
+    let formatter = NSNumberFormatter::new();
+    formatter.setNumberStyle(NSNumberFormatterStyle::CurrencyStyle);
+    formatter.setCurrencyCode(Some(&ns("USD")));
+    formatter.setMaximumFractionDigits(if amount < 1.0 { 3 } else { 2 });
+    formatter
+        .stringFromNumber(&NSNumber::new_f64(amount))
+        .map_or_else(|| format!("${amount:.2}"), |s| s.to_string())
+}
+
+/// A cost in the unit supplied by the agent, without currency conversion.
+pub fn reported_cost(cost: &ide_thread::ReportedCost) -> String {
+    if cost.currency == "USD" {
+        return dollars(cost.amount);
+    }
+    let formatter = NSNumberFormatter::new();
+    formatter.setNumberStyle(NSNumberFormatterStyle::DecimalStyle);
+    formatter.setMaximumFractionDigits(6);
+    let amount = formatter
+        .stringFromNumber(&NSNumber::new_f64(cost.amount))
+        .map_or_else(|| cost.amount.to_string(), |s| s.to_string());
+    format!("{amount} {}", cost.currency)
+}
+
+/// A share, `0.42` for 42 percent, in the user's number format.
+pub fn percent(share: f64) -> String {
+    let formatter = NSNumberFormatter::new();
+    formatter.setNumberStyle(NSNumberFormatterStyle::PercentStyle);
+    formatter.setMaximumFractionDigits(0);
+    formatter
+        .stringFromNumber(&NSNumber::new_f64(share))
+        .map_or_else(|| format!("{:.0} %", share * 100.0), |s| s.to_string())
+}
+
+fn date(at: SystemTime) -> Retained<NSDate> {
+    let seconds = at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs_f64();
+    NSDate::dateWithTimeIntervalSince1970(seconds)
+}
+
+/// The time of day, like `5:31 PM`, in the user's format; with the date when it is not today.
+pub fn time_of_day(at: SystemTime) -> String {
+    let formatter = NSDateFormatter::new();
+    formatter.setTimeStyle(NSDateFormatterStyle::ShortStyle);
+    let now = SystemTime::now();
+    let apart = now
+        .duration_since(at)
+        .or_else(|_| at.duration_since(now))
+        .unwrap_or_default();
+    let today = apart < Duration::from_secs(12 * 3600);
+    formatter.setDateStyle(if today {
+        NSDateFormatterStyle::NoStyle
+    } else {
+        NSDateFormatterStyle::ShortStyle
+    });
+    formatter.stringFromDate(&date(at)).to_string()
+}
+
+/// An ISO 8601 time, such as `2026-11-09T22:00:00Z`, as `time_of_day` writes it; the text as it is when it is none.
+pub fn iso_time(text: &str) -> String {
+    let parsed = NSISO8601DateFormatter::new().dateFromString(&ns(text));
+    match parsed {
+        Some(date) => {
+            let seconds = date.timeIntervalSince1970().max(0.0);
+            time_of_day(UNIX_EPOCH + Duration::from_secs_f64(seconds))
+        }
+        None => text.to_string(),
+    }
+}
+
+/// How long ago `at` was, like `5 min ago`, in the user's language.
+pub fn age(at: SystemTime) -> String {
+    let at = at.min(SystemTime::now());
+    let formatter = NSRelativeDateTimeFormatter::new();
+    // The abbreviated style mixes `vor 7 m` with `vor 2 Std.` in German; the short one abbreviates alike.
+    formatter.setUnitsStyle(NSRelativeDateTimeFormatterUnitsStyle::Short);
+    formatter.setDateTimeStyle(NSRelativeDateTimeFormatterStyle::Named);
+    formatter
+        .localizedStringForDate_relativeToDate(&date(at), &NSDate::now())
+        .to_string()
+}
+
+/// How long ago `at` was without the word for "ago", like `7 min`, for a column of times; `now` under a minute.
+pub fn short_age(at: SystemTime) -> String {
+    let at = at.min(SystemTime::now());
+    if SystemTime::now().duration_since(at).unwrap_or_default() < Duration::from_secs(60) {
+        return age(SystemTime::now());
+    }
+    let formatter = NSDateComponentsFormatter::new();
+    formatter.setUnitsStyle(NSDateComponentsFormatterUnitsStyle::Short);
+    formatter.setMaximumUnitCount(1);
+    formatter.setAllowedUnits(
+        NSCalendarUnit::Minute
+            | NSCalendarUnit::Hour
+            | NSCalendarUnit::Day
+            | NSCalendarUnit::WeekOfMonth
+            | NSCalendarUnit::Month
+            | NSCalendarUnit::Year,
+    );
+    formatter
+        .stringFromDate_toDate(&date(at), &NSDate::now())
+        .map_or_else(|| age(at), |s| s.to_string())
+}
+
+/// `path` relative to `cwd` when it lies inside, else with the home folder as `~`.
+pub fn short_path(path: &str, cwd: &Path) -> String {
+    let p = Path::new(path);
+    match p.strip_prefix(cwd) {
+        Ok(rest) if !rest.as_os_str().is_empty() => rest.display().to_string(),
+        _ => ide_ui_common::panel::display_path(p),
+    }
+}
+
+/// The first line of `text`, at most `limit` characters, with an ellipsis when cut.
+pub fn first_line(text: &str, limit: usize) -> String {
+    let line = text.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().trim();
+    let mut out: String = line.chars().take(limit).collect();
+    if line.chars().count() > limit || text.trim().lines().count() > 1 {
+        out.push('…');
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn durations_and_counts_read_short() {
+        assert_eq!(elapsed(Duration::from_millis(300)), "< 1 s");
+        assert_eq!(elapsed(Duration::from_secs(12)), "12 s");
+        assert_eq!(elapsed(Duration::from_secs(185)), "3 min 5 s");
+        assert_eq!(elapsed(Duration::from_secs(7440)), "2 h 4 min");
+        assert_eq!(tokens(950), "950");
+        assert_eq!(tokens(12_960), "13 k");
+    }
+
+    #[test]
+    fn a_first_line_is_cut_with_an_ellipsis() {
+        assert_eq!(first_line("one\ntwo", 10), "one…");
+        assert_eq!(first_line("abcdef", 3), "abc…");
+        assert_eq!(first_line("abc", 3), "abc");
+    }
+
+    #[test]
+    fn paths_inside_the_folder_are_shown_relative() {
+        let cwd = Path::new("/work/project");
+        assert_eq!(short_path("/work/project/src/a.rs", cwd), "src/a.rs");
+        assert_eq!(short_path("/elsewhere/b.rs", cwd), "/elsewhere/b.rs");
+    }
+}

@@ -3,7 +3,6 @@
 //! prompt rewound through the CLI's own file history.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use ide_thread::EntryKind;
 use objc2::MainThreadMarker;
@@ -12,8 +11,7 @@ use objc2_app_kit::NSAlertFirstButtonReturn;
 use super::agent::{controller_of, picture, tab_of};
 use super::agent_actions::{answer_when_shown, answered, soon, stand_in, titles};
 use super::agent_stand_in::SESSION;
-use super::{check, finish};
-use crate::util::main_after;
+use super::{check, finish, helpers};
 use crate::window::Panel;
 
 const NAME: &str = "agent-actions";
@@ -196,7 +194,19 @@ fn reopen(root: PathBuf, key: u64) {
         project.join(format!("{TERMINAL_SESSION}.jsonl")),
         "{\"type\":\"user\",\"uuid\":\"51e1f7e5-6000-4000-8000-0000000000a1\",\"message\":{\"role\":\"user\",\"content\":\"Aus dem Terminal\"}}\n",
     );
-    main_after(Duration::from_millis(500), move || {
+    let (folder, wanted) = (root.clone(), title.clone());
+    let listed = move || {
+        controller_of(&folder).is_some_and(|controller| {
+            controller.activate_panel(Panel::Agents);
+            let rows = crate::agent_panel::inspect(&controller)
+                .map(|seen| seen.rows)
+                .unwrap_or_default();
+            rows.iter()
+                .any(|(kind, open, t)| *kind == "AI" && !*open && *t == wanted)
+                && rows.iter().any(|(kind, _, _)| *kind == "CLI")
+        })
+    };
+    helpers::wait_until(listed, move |_| {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };

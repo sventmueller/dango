@@ -12,11 +12,11 @@ mod diff;
 pub mod install;
 pub mod launch;
 pub mod mapping;
-pub mod net;
 mod prompt;
 pub mod register;
 pub mod sandbox;
 pub mod session;
+#[cfg(any(test, feature = "testing"))]
 pub mod test_agent;
 mod tool;
 mod usage;

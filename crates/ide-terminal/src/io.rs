@@ -12,6 +12,8 @@ use std::os::unix::process::ExitStatusExt;
 use std::process::ExitStatus;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
+
+use ide_core::LockIgnoringPoison;
 use std::time::Instant;
 
 use alacritty_terminal::event::Event as TermEvent;
@@ -23,7 +25,7 @@ use polling::{Event as Interest, Events, PollMode, Poller};
 
 use crate::event::{Clipboard, Event};
 use crate::scan::Scanner;
-use crate::session::{Shared, TermEvents, locked};
+use crate::session::{Shared, TermEvents};
 use crate::sys;
 
 /// The keys alacritty's tty registers the PTY and its child-exit signal under.
@@ -222,7 +224,7 @@ impl Reader {
 
     /// Acts on what the emulator and the scanner reported while the screen was locked.
     fn dispatch(&mut self) {
-        let reported = std::mem::take(&mut *locked(&self.term_events));
+        let reported = std::mem::take(&mut *self.term_events.lock_ignoring_poison());
         for event in reported {
             self.on_term_event(event);
         }
@@ -242,7 +244,7 @@ impl Reader {
                 text,
             }),
             TermEvent::ClipboardLoad(target, reply) => {
-                *locked(&shared.clipboard_reply) = Some(reply);
+                *shared.clipboard_reply.lock_ignoring_poison() = Some(reply);
                 shared.emit(Event::ClipboardLoad(clipboard(target)));
             }
             TermEvent::ColorRequest(index, reply) => {
@@ -252,7 +254,7 @@ impl Reader {
             TermEvent::PtyWrite(text) => self.pending.push_back(text.into_bytes()),
             TermEvent::TextAreaSizeRequest(_) => {
                 // Answered here because alacritty's own answer multiplies in 16 bits.
-                let (width, height) = locked(&shared.size).pixels();
+                let (width, height) = shared.size.lock_ignoring_poison().pixels();
                 self.pending.push_back(format!("\x1b[4;{height};{width}t").into_bytes());
             }
             TermEvent::Wakeup | TermEvent::CursorBlinkingChange | TermEvent::MouseCursorDirty => shared.wake(),
@@ -264,7 +266,11 @@ impl Reader {
     fn color(&self, index: usize) -> TermRgb {
         let changed = self.shared.term.lock().colors()[index.min(COUNT - 1)];
         changed.unwrap_or_else(|| {
-            let table = locked(&self.shared.palette).table(&alacritty_terminal::term::color::Colors::default());
+            let table = self
+                .shared
+                .palette
+                .lock_ignoring_poison()
+                .table(&alacritty_terminal::term::color::Colors::default());
             let rgb = table[index.min(COUNT - 1)];
             TermRgb {
                 r: rgb.r,

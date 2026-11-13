@@ -19,8 +19,11 @@
 //! the app quits, and the supervisor's own shutdown does it too through the graceful step each session registers.
 //!
 //! Nothing a project configures runs before the user trusted the folder: [`start`], [`launch_configs`] and
-//! [`current_program`] take that decision as an argument and refuse without it. [`fake::Script`] is an adapter
-//! without a process, for tests and the self-test.
+//! [`current_program`] take that decision as an argument and refuse without it. With the feature `testing`,
+//! `fake::Script` is an adapter without a process, for tests and the self-test.
+//!
+//! [`model`] is what the app's debugger panel decides without a window (E98): its sessions, the selected frame,
+//! breakpoints, the inspector, consoles and which commands can run, with the effects the controller carries out.
 
 #![warn(missing_docs, unreachable_pub)]
 
@@ -30,7 +33,9 @@ mod convert;
 mod current;
 mod discover;
 mod error;
+#[cfg(any(test, feature = "testing"))]
 pub mod fake;
+mod filters;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzzing;
@@ -38,6 +43,7 @@ mod helper;
 mod install;
 mod jsonc;
 mod launch;
+pub mod model;
 mod ownership;
 mod prepare;
 mod processes;
@@ -52,9 +58,10 @@ pub use adapter::{Adapter, AdapterKind, free_port};
 pub use current::{CurrentError, current_program};
 pub use discover::{Adapters, Install, Missing};
 pub use error::Error;
+pub use filters::{Languages, RUST_PANIC, offered as offered_filters, rust_panic};
 pub use install::{JS_DEBUG, Pinned};
-pub use launch::{Entry, LaunchConfig, LaunchError, Variables, launch_configs, parse_launch_json};
-pub use prepare::{StartError, start};
+pub use launch::{ConfigError, Entry, LaunchConfig, LaunchError, Variables, launch_configs, parse_launch_json};
+pub use prepare::{StartError, prepare, start};
 pub use processes::{Process, processes};
 pub use session::{Event, Session, Setup, TerminalAnswer, stop_all, wait};
 pub use types::{

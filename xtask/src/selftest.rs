@@ -14,41 +14,81 @@ use crate::*;
 
 pub(crate) const DEFAULT_SCENARIO: &str = "probe";
 
-/// Scenarios that need the program built with dictation, which the others go without.
-pub(crate) const DICTATING: &[&str] = &["dictation"];
+/// The argument of `cargo xtask selftest` that stands for every scenario the app marks offline.
+pub(crate) const OFFLINE: &str = "--offline";
 
-/// How long a scenario may run before it counts as hung and is killed. The `lsp` scenarios wait for a real language
-/// server to index, which a busy Mac slows down by minutes; they end themselves before this limit.
-pub(crate) fn time_limit(scenario: &str) -> Duration {
-    match scenario {
-        "lsp" | "lsp-actions" | "lsp-actions-go" | "lsp-navigation" | "inlay-repo" => Duration::from_secs(600),
-        // Dozens of git commands, commits and pushes against local remotes; under the load of parallel builds they
-        // take several minutes.
-        "git" | "git-stash" | "git-message" | "worktree" | "ci" | "agent" => Duration::from_secs(360),
-        "a11y" | "a11y-rtl" => Duration::from_secs(300),
-        _ => Duration::from_secs(120),
-    }
+/// The argument that makes the app print its scenario table, one JSON object a line.
+const LIST_SCENARIOS: &str = "--list-scenarios";
+
+/// One scenario as the app's table lists it (`src/selftest/scenarios.rs`).
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct Listed {
+    pub(crate) name: String,
+    limit_secs: u64,
+    pub(crate) offline: bool,
+    launches: Launches,
+    arguments: Vec<String>,
+    dictation: bool,
 }
 
-/// The arguments a scenario's launch gets, which go to the app's defaults before anything reads them: `a11y-rtl` runs
-/// in Arabic, right to left. macOS turns an app right to left only with `AppleTextDirection` on, which it sets with a
-/// right-to-left language of the Mac or of the app; the language alone keeps it left to right. `settings-toolbar-long`
-/// runs in Greek, whose tab labels are the longest.
-pub(crate) fn arguments(scenario: &str) -> &'static [&'static str] {
-    match scenario {
-        "a11y-rtl" => &["-AppleLanguages", "(ar)", "-AppleTextDirection", "YES"],
-        "settings-toolbar-long" => &["-AppleLanguages", "(el)"],
-        _ => &[],
-    }
+/// How a scenario's launches end.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Launches {
+    Once,
+    /// A first launch quits as the user does, and a second one in the same home checks what came back.
+    Quit,
+    /// A first launch kills itself with `SIGKILL`, and a second one in the same home checks what survived.
+    Crash,
 }
 
-/// Scenarios that run the app twice in the same home: the first launch ends in a crash of its own making, killing
-/// itself with `SIGKILL` once it has reported, and the second launch checks what survived it.
-pub(crate) const CRASHING: &[&str] = &["recovery"];
+/// The scenario table the app at `program` prints.
+fn list(program: &Path) -> Result<Vec<Listed>, String> {
+    let out = Command::new(program)
+        .arg(LIST_SCENARIOS)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|e| format!("{}: {e}", program.display()))?;
+    if !out.status.success() {
+        return Err(format!("{} {LIST_SCENARIOS} failed: {}", program.display(), out.status));
+    }
+    parse_listing(&String::from_utf8_lossy(&out.stdout))
+}
 
-/// Scenarios that run the app twice in the same home: the first launch quits as the user does, and the second checks
-/// what it put back.
-pub(crate) const QUITTING: &[&str] = &["restore", "debug-restore"];
+pub(crate) fn parse_listing(text: &str) -> Result<Vec<Listed>, String> {
+    let listed: Vec<Listed> = text
+        .lines()
+        .filter(|line| line.starts_with('{'))
+        .map(|line| serde_json::from_str(line).map_err(|e| format!("the scenario table is unreadable: {e}: {line}")))
+        .collect::<Result<_, _>>()?;
+    if listed.is_empty() {
+        return Err("the app lists no scenarios".into());
+    }
+    Ok(listed)
+}
+
+/// The scenarios `asked` names out of `table`, with `OFFLINE` standing for every offline one.
+pub(crate) fn resolve(asked: &[String], table: &[Listed]) -> Result<Vec<Listed>, String> {
+    let mut chosen: Vec<Listed> = Vec::new();
+    for name in asked {
+        let found: Vec<&Listed> = if name == OFFLINE {
+            table.iter().filter(|s| s.offline).collect()
+        } else {
+            vec![
+                table
+                    .iter()
+                    .find(|s| &s.name == name)
+                    .ok_or_else(|| format!("the app has no scenario {name:?}"))?,
+            ]
+        };
+        for scenario in found {
+            if !chosen.iter().any(|s| s.name == scenario.name) {
+                chosen.push(scenario.clone());
+            }
+        }
+    }
+    Ok(chosen)
+}
 
 /// The signal a crashing launch ends with, which neither runs any of the app's code nor asks macOS for a crash report.
 pub(crate) const SIGKILL: i32 = 9;
@@ -62,6 +102,9 @@ const TEXTKIT_ASSERTION: &str = "Make a symbolic breakpoint at NSText";
 pub(crate) struct Report {
     pub(crate) scenario: String,
     pub(crate) checks: Vec<Check>,
+    /// `light` or `dark`, which the window pictures were taken in.
+    #[serde(default)]
+    pub(crate) appearance: Option<String>,
 }
 
 /// One thing a scenario checked.
@@ -104,21 +147,31 @@ pub(crate) fn selftest(scenarios: &[String]) -> Result<(), String> {
 
 /// `selftest`, with the variables `env` set for the app on top of this process's.
 pub(crate) fn selftest_with(scenarios: &[String], env: &[(String, String)]) -> Result<(), String> {
-    let app = bundle(Build::Selftest {
+    let mut app = bundle(Build::Selftest {
         release: true,
-        dictation: scenarios.iter().any(|s| DICTATING.contains(&s.as_str())),
+        dictation: false,
     })?;
+    let chosen = resolve(scenarios, &list(&executable(&app))?)?;
+    if chosen.iter().any(|s| s.dictation) {
+        app = bundle(Build::Selftest {
+            release: true,
+            dictation: true,
+        })?;
+    }
     let program = executable(&app);
     let reports = target_dir().join("selftest");
     files::create_dir_all(&reports)?;
     let mut failed = Vec::new();
-    for scenario in scenarios {
-        println!("selftest {scenario}");
-        match run_scenario(&program, scenario, &reports.join(format!("{scenario}.json")), env) {
-            Ok(()) => println!("selftest {scenario}: passed"),
+    for scenario in &chosen {
+        let name = scenario.name.as_str();
+        println!("selftest {name}");
+        let outcome = run_scenario(&program, scenario, &reports.join(format!("{name}.json")), env)
+            .and_then(|()| baseline::compare(name, &reports));
+        match outcome {
+            Ok(()) => println!("selftest {name}: passed"),
             Err(e) => {
-                eprintln!("selftest {scenario} failed: {e}");
-                failed.push(scenario.as_str());
+                eprintln!("selftest {name} failed: {e}");
+                failed.push(name);
             }
         }
     }
@@ -130,13 +183,14 @@ pub(crate) fn selftest_with(scenarios: &[String], env: &[(String, String)]) -> R
 }
 
 /// Runs the app on one scenario with a home of its own, twice for a crashing one, and prints the checks it reports.
-fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(String, String)]) -> Result<(), String> {
+fn run_scenario(program: &Path, listed: &Listed, report_file: &Path, env: &[(String, String)]) -> Result<(), String> {
+    let scenario = listed.name.as_str();
     let home = fresh_home(scenario)?;
     let mut problems = Vec::new();
-    if QUITTING.contains(&scenario) {
+    if listed.launches == Launches::Quit {
         let first = report_file.with_file_name(format!("{scenario}-quit.json"));
         println!("  first launch, which quits:");
-        let (quit, focus) = launch(program, scenario, &first, &home, Some("quit"), env)?;
+        let (quit, focus) = launch(program, listed, &first, &home, Some("quit"), env)?;
         problems.extend(
             focus
                 .into_iter()
@@ -147,10 +201,10 @@ fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(Stri
             println!("  second launch:");
         }
     }
-    if CRASHING.contains(&scenario) {
+    if listed.launches == Launches::Crash {
         let first = report_file.with_file_name(format!("{scenario}-crash.json"));
         println!("  first launch, which crashes:");
-        let (crashed, focus) = launch(program, scenario, &first, &home, Some("crash"), env)?;
+        let (crashed, focus) = launch(program, listed, &first, &home, Some("crash"), env)?;
         problems.extend(
             focus
                 .into_iter()
@@ -162,7 +216,7 @@ fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(Stri
         }
     }
     if problems.is_empty() {
-        let (ended, focus) = launch(program, scenario, report_file, &home, None, env)?;
+        let (ended, focus) = launch(program, listed, report_file, &home, None, env)?;
         problems = focus
             .into_iter()
             .chain(judge(ended, Ended::Exited(0), report_file, scenario))
@@ -184,18 +238,19 @@ fn run_scenario(program: &Path, scenario: &str, report_file: &Path, env: &[(Stri
 /// to end; with it, the problems if it took the keyboard or TextKit asserted.
 fn launch(
     program: &Path,
-    scenario: &str,
+    listed: &Listed,
     report: &Path,
     home: &Path,
     which: Option<&str>,
     env: &[(String, String)],
 ) -> Result<(Ended, Vec<String>), String> {
+    let scenario = listed.name.as_str();
     if report.exists() {
         files::remove_file(report)?;
     }
     let mut command = Command::new(program);
     command
-        .args(arguments(scenario))
+        .args(&listed.arguments)
         .env("IDE_SELFTEST", scenario)
         .env("IDE_SELFTEST_REPORT", report)
         .env("IDE_SELFTEST_HOME", home)
@@ -209,8 +264,8 @@ fn launch(
     let mut child = command.spawn().map_err(|e| format!("{}: {e}", program.display()))?;
     guard.guard(child.id());
     let asserted = child.stderr.take().map(watch_errors);
-    let ended =
-        wait_within_limit(&mut child, time_limit(scenario)).map_err(|e| format!("{}: {e}", program.display()))?;
+    let ended = wait_within_limit(&mut child, Duration::from_secs(listed.limit_secs))
+        .map_err(|e| format!("{}: {e}", program.display()))?;
     let mut problems: Vec<String> = guard.finish().into_iter().collect();
     // A child process the app started may hold the pipe open after the app ended.
     if let Some(Ok(line)) = asserted.map(|found| found.recv_timeout(Duration::from_secs(2))) {
@@ -438,7 +493,6 @@ mod tests {
             problems(Ended::Signalled(SIGKILL), Ended::Signalled(SIGKILL), &failing),
             ["1 of 2 checks failed"]
         );
-        assert!(CRASHING.iter().all(|scenario| is_scenario(scenario)));
     }
 
     #[test]

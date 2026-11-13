@@ -20,8 +20,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSFontAttributeName, NSPopUpButton,
-    NSStepper, NSStringDrawing, NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem, NSTextField, NSView,
+    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFontAttributeName, NSPopUpButton, NSStepper,
+    NSStringDrawing, NSTabViewController, NSTabViewControllerTabStyle, NSTabViewItem, NSTextField, NSView,
     NSViewController, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSDictionary, NSObjectProtocol, NSString};
@@ -38,9 +38,6 @@ const CI_TAB: isize = 1;
 const AGENTS_TAB: isize = 2;
 /// Where the own agent's tab sits in the toolbar.
 const AGENT_TAB: isize = 3;
-/// Where the language servers tab sits in the toolbar.
-#[cfg(feature = "selftest")]
-const SERVERS_TAB: isize = 4;
 /// Where the dictation tab sits in the toolbar.
 #[cfg(feature = "dictation")]
 const DICTATION_TAB: isize = 5;
@@ -230,9 +227,9 @@ pub fn show_prediction(mtm: MainThreadMarker) {
 
 pub use predict::prediction_changed;
 #[cfg(feature = "selftest")]
-pub use predict::shown as prediction_shown;
+mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use predict::{LocalShown, local_shown as prediction_local};
+pub use selftest_probe::*;
 
 /// Brings the settings window to the front on its CI tab.
 pub fn show_ci(mtm: MainThreadMarker) {
@@ -242,12 +239,6 @@ pub fn show_ci(mtm: MainThreadMarker) {
 /// Brings the settings window to the front on its own agent's tab.
 pub fn show_agent(mtm: MainThreadMarker) {
     show_tab(mtm, AGENT_TAB);
-}
-
-/// Brings the settings window to the front on its language servers tab, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn show_servers(mtm: MainThreadMarker) {
-    show_tab(mtm, SERVERS_TAB);
 }
 
 /// Where the built-in languages' servers are, as a survey found them; an open settings window shows it.
@@ -265,12 +256,6 @@ pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
             .map(|(_, controller)| controller.ivars().servers.clone())
     })
 }
-
-#[cfg(feature = "selftest")]
-pub use servers::selftest as servers_selftest;
-
-#[cfg(feature = "selftest")]
-pub use editor::shown as editor_switches;
 
 /// Brings the settings window to the front on its Agents tab.
 pub fn show_agents(mtm: MainThreadMarker) {
@@ -326,29 +311,6 @@ fn agents_tab_now() -> Option<Retained<agents::AgentsSettings>> {
     })
 }
 
-/// The list of Claude's stored rules in the Agents tab, once the settings window was built, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn stored_rules() -> Option<Retained<stored_rules::StoredRules>> {
-    agents_tab_now().map(|agents| agents.stored_rules())
-}
-
-/// What the Agents tab shows, line by line, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn agents_lines() -> Vec<String> {
-    agents_tab_now().map(|agents| agents.lines()).unwrap_or_default()
-}
-
-/// Opens the ACP registry's window as the Agents tab's button does; the window and the ids it lists, for the
-/// self-test.
-#[cfg(feature = "selftest")]
-pub fn open_register() -> Option<(Retained<objc2_app_kit::NSPanel>, Vec<String>)> {
-    agents::open_register(&*agents_tab_now()?);
-    agents::register_window()
-}
-
-#[cfg(feature = "selftest")]
-pub use agents::register_window;
-
 fn show_tab(mtm: MainThreadMarker, tab: isize) {
     show(mtm);
     with_window(|cell| {
@@ -377,19 +339,6 @@ pub fn window() -> Option<Retained<NSWindow>> {
     with_window(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
 }
 
-/// The CI tab of the open settings window, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn ci_tab() -> Option<Retained<ci::CiSettings>> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| controller.ivars().ci.clone())
-    })
-}
-
-#[cfg(feature = "selftest")]
-pub use ci::{List as CiList, selftest as ci_selftest};
-
 /// The Agent tab of the settings window, once it was built.
 fn agent_tab_now() -> Option<Retained<agent::AgentSettings>> {
     with_window(|cell| {
@@ -398,21 +347,6 @@ fn agent_tab_now() -> Option<Retained<agent::AgentSettings>> {
             .map(|(_, controller)| controller.ivars().agent.clone())
     })
 }
-
-/// The Agent tab of the open settings window, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn agent_tab() -> Option<Retained<agent::AgentSettings>> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| controller.ivars().agent.clone())
-    })
-}
-
-#[cfg(feature = "selftest")]
-pub use agent::{AgentSettings, List as AgentList, selftest as agent_selftest};
-#[cfg(feature = "selftest")]
-pub use commit_message::selftest as commit_message_selftest;
 
 fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsController>) {
     let controller = SettingsController::new(mtm);
@@ -473,7 +407,7 @@ const TOOLBAR_MARGIN: f64 = 12.0;
 /// The content width at which the toolbar shows an item for each of `titles` without moving any into its overflow
 /// menu.
 fn toolbar_width(titles: &[&str]) -> f64 {
-    let font = NSFont::systemFontOfSize(NSFont::smallSystemFontSize());
+    let font = ide_ui_common::style::small_system();
     let attributes = NSDictionary::<NSString, AnyObject>::from_retained_objects(
         &[crate::util::constant!(NSFontAttributeName)],
         &[font.into()],

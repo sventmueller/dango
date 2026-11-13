@@ -1,6 +1,7 @@
 //! The end of a session by who owns what (Review C7): the adapter always belongs to the app, a launched program to
 //! the session, an attached program to nobody here, and a program in a terminal tab to that terminal.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
@@ -19,7 +20,7 @@ pub(crate) const GRACE: Duration = Duration::from_secs(2);
 static LIVE: Mutex<Vec<Weak<Inner>>> = Mutex::new(Vec::new());
 
 pub(super) fn remember(inner: &Arc<Inner>) {
-    let mut live = LIVE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut live = LIVE.lock_ignoring_poison();
     live.retain(|weak| weak.strong_count() > 0);
     live.push(Arc::downgrade(inner));
 }
@@ -27,12 +28,7 @@ pub(super) fn remember(inner: &Arc<Inner>) {
 /// Stops every session that runs, as `Session::stop` does, and waits up to `timeout` for them to end: launched
 /// programs end, attached ones are detached. For quitting the app, before the supervisor's own shutdown.
 pub fn stop_all(timeout: Duration) {
-    let live: Vec<Arc<Inner>> = LIVE
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .iter()
-        .filter_map(Weak::upgrade)
-        .collect();
+    let live: Vec<Arc<Inner>> = LIVE.lock_ignoring_poison().iter().filter_map(Weak::upgrade).collect();
     for inner in &live {
         begin(inner);
     }
@@ -44,11 +40,7 @@ pub fn stop_all(timeout: Duration) {
             if now >= deadline {
                 break;
             }
-            shared = inner
-                .changed
-                .wait_timeout(shared, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            shared = inner.changed.wait_timeout(shared, deadline - now).ignoring_poison().0;
         }
     }
 }
@@ -67,9 +59,7 @@ pub(super) fn begin(inner: &Arc<Inner>) {
     inner.changed.notify_all();
     inner.emit(Event::Stopping);
     let inner = inner.clone();
-    let _ = std::thread::Builder::new()
-        .name("dap-stop".into())
-        .spawn(move || end(&inner));
+    ide_core::thread::detach_or_run("dap-stop", move || end(&inner));
 }
 
 /// Stops the children, says goodbye to the adapter, and ends its process.
@@ -138,11 +128,7 @@ fn wait_terminated(inner: &Inner, timeout: Duration) {
         if now >= deadline {
             return;
         }
-        shared = inner
-            .changed
-            .wait_timeout(shared, deadline - now)
-            .unwrap_or_else(|e| e.into_inner())
-            .0;
+        shared = inner.changed.wait_timeout(shared, deadline - now).ignoring_poison().0;
     }
 }
 
@@ -179,21 +165,26 @@ pub(super) fn watch_adapter(inner: &Arc<Inner>, process: ProcessId) {
         }
     });
     let supervisor = inner.supervisor.clone();
-    let _ = std::thread::Builder::new()
-        .name(format!("dap-wait-{}", inner.id.get()))
-        .spawn(move || {
-            let ending = loop {
-                if let Some(ending) = supervisor.wait(process, Duration::from_secs(3600)) {
-                    break ending;
-                }
-                if weak.strong_count() == 0 {
-                    return;
-                }
-            };
-            if let Some(inner) = weak.upgrade() {
-                adapter_ended(&inner, ending);
+    let name = format!("dap-wait-{}", inner.id.get());
+    let watched = ide_core::thread::detach(&name, move || {
+        let ending = loop {
+            if let Some(ending) = supervisor.wait(process, Duration::from_secs(3600)) {
+                break ending;
             }
-        });
+            if weak.strong_count() == 0 {
+                return;
+            }
+        };
+        if let Some(inner) = weak.upgrade() {
+            adapter_ended(&inner, ending);
+        }
+    });
+    // An adapter whose end nobody can wait for is ended now, so the session still ends with it.
+    if let Err(unstarted) = watched {
+        ide_core::diag::report(&format!("thread {name}"), &unstarted.error);
+        inner.supervisor.stop(process, GRACE);
+        adapter_ended(inner, Ending::Unknown);
+    }
 }
 
 fn adapter_ended(inner: &Arc<Inner>, ending: Ending) {
@@ -206,7 +197,7 @@ fn adapter_ended(inner: &Arc<Inner>, ending: Ending) {
         } else {
             EndReason::AdapterCrashed {
                 ending: Some(ending),
-                stderr: shared.stderr.lock().unwrap_or_else(|e| e.into_inner()).text(),
+                stderr: shared.stderr.lock_ignoring_poison().text(),
             }
         }
     };
@@ -233,7 +224,7 @@ pub(super) fn connection_closed(inner: &Arc<Inner>) {
         // An adapter that closed its output without ending is ended now; its end finishes the session.
         Some(id) => {
             let inner = inner.clone();
-            let _ = std::thread::Builder::new().name("dap-closed".into()).spawn(move || {
+            ide_core::thread::detach_or_run("dap-closed", move || {
                 if inner.supervisor.wait(id, GRACE).is_none() {
                     inner.supervisor.stop(id, GRACE);
                 }
@@ -258,16 +249,14 @@ pub(super) fn terminated(inner: &Arc<Inner>) {
     }
     inner.changed.notify_all();
     let inner = inner.clone();
-    let _ = std::thread::Builder::new()
-        .name("dap-terminated".into())
-        .spawn(move || {
-            let children = inner.lock().children.clone();
-            for child in &children {
-                child.stop_and_wait(GRACE * 3);
-            }
-            goodbye(&inner);
-            finish_adapter(&inner, EndReason::Finished);
-        });
+    ide_core::thread::detach_or_run("dap-terminated", move || {
+        let children = inner.lock().children.clone();
+        for child in &children {
+            child.stop_and_wait(GRACE * 3);
+        }
+        goodbye(&inner);
+        finish_adapter(&inner, EndReason::Finished);
+    });
 }
 
 /// Initializing, launching or attaching failed: the session ends with the adapter's words and its process goes.

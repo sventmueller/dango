@@ -2,6 +2,7 @@
 //! of its own while the user waits, approves or cancels. It is driven like an ACP session, so the AI tab can show
 //! both alike.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
@@ -142,7 +143,7 @@ pub(crate) struct Shared {
 
 impl Shared {
     pub(crate) fn lock(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+        self.state.lock_ignoring_poison()
     }
 
     /// Applies `updates` to the thread and tells the UI what changed.
@@ -176,7 +177,7 @@ impl Shared {
             }
         };
         if let Err(error) = store::save(path, &stored) {
-            (self.sink)(Event::Failed(error));
+            (self.sink)(Event::Failed(error.to_string()));
         }
     }
 }

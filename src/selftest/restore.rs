@@ -4,22 +4,18 @@
 //! for the first time takes the frame of the window saved last.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2::MainThreadMarker;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use serde::{Deserialize, Serialize};
 
-use super::helpers::{open_beside, wait_until, window_of};
+use super::helpers::{self, open_beside, wait_until, window_of};
 use super::{check, finish};
-use crate::util::main_after;
 use crate::window::Panel;
 
 const SCENARIO: &str = "restore";
 /// The session of the AI tab, which comes back by its id.
 const SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000cc";
-/// A pause for the windows to settle before the next step.
-const PAUSE: Duration = Duration::from_millis(800);
 const FRAME: NSRect = NSRect::new(NSPoint::new(120.0, 140.0), NSSize::new(1100.0, 720.0));
 const SIDEBAR: f64 = 380.0;
 /// The model, effort and mode picked in the AI thread before the quit.
@@ -36,13 +32,8 @@ struct Before {
 }
 
 fn folders() -> (PathBuf, PathBuf, PathBuf) {
-    let home = ide_core::paths::home();
-    let canonical = |name: &str| {
-        let folder = home.join(name);
-        let _ = std::fs::create_dir_all(&folder);
-        folder.canonicalize().unwrap_or(folder)
-    };
-    (canonical("restore-a"), canonical("restore-b"), canonical("restore-c"))
+    let made = |name: &str| helpers::make_project(name, &[]).unwrap_or_else(|_| helpers::root(name));
+    (made("restore-a"), made("restore-b"), made("restore-c"))
 }
 
 fn record() -> PathBuf {
@@ -65,13 +56,23 @@ pub(super) fn run() {
         }
         crate::app::open_project(mtm, a.clone());
         open_beside(mtm, &b);
-        main_after(PAUSE, move || arrange(a, b));
-    } else {
-        let saved = saved_frame(&a);
         let probe = (a.clone(), b.clone());
         wait_until(
             move || window_of(&probe.0).is_some() && window_of(&probe.1).is_some(),
-            move |_| main_after(PAUSE, move || came_back(a, b, c, saved)),
+            move |_| arrange(a, b),
+        );
+    } else {
+        let saved = saved_frame(&a);
+        let probe = (a.clone(), b.clone());
+        let (probe_a, probe_b) = probe.clone();
+        wait_until(
+            move || window_of(&probe.0).is_some() && window_of(&probe.1).is_some(),
+            move |_| {
+                wait_until(
+                    move || came_back_whole(&probe_a, &probe_b),
+                    move |_| came_back(a, b, c, saved),
+                )
+            },
         );
     }
 }
@@ -96,7 +97,18 @@ fn arrange(a: PathBuf, b: PathBuf) {
     second.open_file(&b.join("lib.rs"));
     second.toggle_sidebar();
     check("the AI thread plays its recording before the quit", replayed, "");
-    main_after(PAUSE, move || quit(&a, &b));
+    let probe = (a.clone(), b.clone());
+    wait_until(
+        move || {
+            let (Some(first), Some(second)) = (window_of(&probe.0), window_of(&probe.1)) else {
+                return false;
+            };
+            first.window_tabs().len() >= 4
+                && (first.inspect().sidebar_width - SIDEBAR).abs() < 2.0
+                && second.sidebar_folded()
+        },
+        move |_| quit(&a, &b),
+    );
 }
 
 fn quit(a: &Path, b: &Path) {
@@ -129,6 +141,19 @@ fn quit(a: &Path, b: &Path) {
         let _ = std::fs::write(record(), json);
     }
     finish(SCENARIO);
+}
+
+/// Whether both windows came back with their tabs and the second its sidebar folded, as the record says.
+fn came_back_whole(a: &Path, b: &Path) -> bool {
+    let before: Option<Before> = std::fs::read(record())
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok());
+    match (before, window_of(a), window_of(b)) {
+        (Some(before), Some(first), Some(second)) => {
+            first.window_tabs() == before.first && second.window_tabs() == before.second && second.sidebar_folded()
+        }
+        _ => false,
+    }
 }
 
 /// The frame the quit saved for `folder`, read before this launch saves again.

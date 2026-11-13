@@ -37,40 +37,9 @@ const SHARE_PRIORITY: f32 = 260.0;
 /// The narrowest a document gets beside another.
 const MIN_SIDE: f64 = 220.0;
 
-/// What a document shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TabKind {
-    Welcome,
-    Editor,
-    Terminal,
-    Browser,
-    Agent,
-    Diff,
-    Log,
-    /// A plan an agent asks to approve, as a document to comment on.
-    Plan,
-    /// A document as it reads, beside its editor: Markdown rendered, or a PDF file.
-    Preview,
-    /// A debug console (E94).
-    Console,
-}
-
-impl TabKind {
-    fn symbol(self) -> &'static str {
-        match self {
-            TabKind::Welcome => "house",
-            TabKind::Editor => "doc.text",
-            TabKind::Terminal => "terminal",
-            TabKind::Browser => "globe",
-            TabKind::Agent => "sparkle",
-            TabKind::Diff => "plusminus",
-            TabKind::Log => "doc.plaintext",
-            TabKind::Plan => "list.bullet.clipboard",
-            TabKind::Preview => "eye",
-            TabKind::Console => "ladybug",
-        }
-    }
-}
+pub use ide_ui_common::window::TabKind;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 /// A document of a window tab: its view and what its tab and badge say about it.
 pub struct Document {
@@ -107,7 +76,14 @@ impl Document {
     ) -> Rc<Document> {
         let mtm = controller.mtm();
         let host = NSView::new(mtm);
-        let close = symbol_button(mtm, "xmark", "", 9.0, Some(controller), sel!(ideCloseTabButton:));
+        let close = symbol_button(
+            mtm,
+            "xmark",
+            "",
+            ide_ui_common::style::symbol::TAB_CLOSE,
+            Some(controller),
+            sel!(ideCloseTabButton:),
+        );
         close.setTag(id);
         close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         let (badge, badge_title, badge_icon) = badge(mtm, &close);
@@ -155,11 +131,6 @@ impl Document {
 
     pub fn is_preview(&self) -> bool {
         self.preview.get()
-    }
-
-    #[cfg(feature = "selftest")]
-    pub fn is_dirty(&self) -> bool {
-        self.dirty.get()
     }
 
     pub fn set_title(&self, title: &str) {
@@ -277,7 +248,7 @@ impl Document {
 /// The badge of a document beside another: its icon, its name and `close`, on a rounded plate.
 fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<NSTextField>, Retained<NSImageView>) {
     let title = NSTextField::labelWithString(&ns(""), mtm);
-    title.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+    title.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     title.setContentCompressionResistancePriority_forOrientation(
         200.0,
@@ -288,7 +259,7 @@ fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<
     crate::util::hide_from_voiceover(&icon);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(5.0);
+    row.setSpacing(ide_ui_common::style::space::SNUG);
     row.addArrangedSubview(&icon);
     row.addArrangedSubview(&title);
     row.addArrangedSubview(close);
@@ -676,92 +647,6 @@ impl TabWindow {
         image.addRepresentation(&rep);
         self.picture.setImage(Some(&image));
         self.picture.setHidden(false);
-    }
-
-    /// What the documents' badges say, left to right: the name and the close button's label of those that show.
-    #[cfg(feature = "selftest")]
-    pub fn badges(&self) -> Vec<Option<(String, String)>> {
-        use objc2_app_kit::NSAccessibility;
-        self.documents
-            .borrow()
-            .iter()
-            .map(|doc| {
-                (!doc.badge.isHidden()).then(|| {
-                    let label = doc
-                        .close
-                        .accessibilityLabel()
-                        .map(|l| l.to_string())
-                        .unwrap_or_default();
-                    (doc.badge_title.stringValue().to_string(), label)
-                })
-            })
-            .collect()
-    }
-
-    /// The close button on the badge of the document `id`.
-    #[cfg(feature = "selftest")]
-    pub fn badge_close(&self, id: isize) -> Option<Retained<NSButton>> {
-        self.document(id).map(|doc| doc.close.clone())
-    }
-
-    /// Drags the divider to `share` with the mouse: the drag and the release wait in the event queue, which the split
-    /// view's tracking of the press reads.
-    #[cfg(feature = "selftest")]
-    pub fn drag_share(&self, share: f64) {
-        use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType};
-
-        let Some(left) = self.documents.borrow().first().map(|doc| doc.host.frame().size.width) else {
-            return;
-        };
-        let bounds = self.area.bounds();
-        let target = bounds.size.width * share;
-        let y = bounds.size.height / 2.0;
-        let event = |kind: NSEventType, x: f64| {
-            NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
-                kind,
-                self.area.convertPoint_toView(NSPoint::new(x, y), None),
-                NSEventModifierFlags::empty(),
-                0.0,
-                self.window.windowNumber(),
-                None,
-                0,
-                1,
-                1.0,
-            )
-        };
-        let app = NSApplication::sharedApplication(self.window.mtm());
-        for (kind, x) in [
-            (NSEventType::LeftMouseDragged, (left + target) / 2.0),
-            (NSEventType::LeftMouseDragged, target),
-            (NSEventType::LeftMouseUp, target),
-        ] {
-            if let Some(event) = event(kind, x) {
-                app.postEvent_atStart(&event, false);
-            }
-        }
-        if let Some(down) = event(NSEventType::LeftMouseDown, left + 0.5) {
-            // SAFETY: The split view takes the press, which lives for the call.
-            let () = unsafe { objc2::msg_send![&*self.area, mouseDown: &*down] };
-        }
-    }
-
-    /// The narrowest and widest the user may drag the sidebar to now.
-    #[cfg(feature = "selftest")]
-    pub fn sidebar_range(&self) -> (f64, f64) {
-        (self.sidebar.minimumThickness(), self.sidebar.maximumThickness())
-    }
-
-    /// Folds the sidebar away or back, as the menu's command does.
-    #[cfg(feature = "selftest")]
-    pub fn toggle_sidebar(&self) {
-        // SAFETY: The action takes no sender.
-        unsafe { self.split.toggleSidebar(None) };
-    }
-
-    /// Whether the tab shows the picture of the sidebar.
-    #[cfg(feature = "selftest")]
-    pub fn shows_picture(&self) -> bool {
-        !self.picture.isHidden()
     }
 
     /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.

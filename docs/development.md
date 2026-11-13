@@ -42,8 +42,10 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 `cargo xtask` directly:
 - `bundle [--release] [--selftest]` builds the package `ide-app`, lays out the bundle, signs it and prints its path.
 - `run [--release]` bundles, then opens the app with `open -n`, so it runs beside an instance already open.
-- `selftest [<scenario>…]` bundles the release with the selftest built in and runs each scenario, `probe` if none is
-  named; with the scenario `dictation` the bundle has dictation as well.
+- `selftest [<scenario>…|--offline]` bundles the release with the selftest built in and runs each scenario, `probe` if
+  none is named, every offline one with `--offline`; for a scenario that needs dictation the bundle has it as well.
+- `selftest-accept <scenario> [<picture>…]` takes pictures of the last run as accepted ones, see
+  [Accepted pictures](#accepted-pictures).
 - `release [--notarize] [--layout]`, `universal` and `acknowledgements`, see [Release](#release).
 - `integration [--list] [--paid] [--only <group>[,<group>…]]` runs the integration checks; `--list` only prints what
   would run and why the rest is skipped, and the groups that use paid accounts run only with `--paid` or by name.
@@ -75,8 +77,8 @@ is kept in `crates/ide-document/proptest-regressions/`, which is checked in.
 ## Coverage
 `make coverage` (`cargo xtask coverage`, `xtask/src/coverage.rs`) measures line coverage of `cargo test --workspace`
 (unit and integration tests, not doctests: their coverage needs a nightly compiler) together with the selftest
-scenarios that need no network, account, real agent CLI or person: every scenario of `src/selftest.rs` except
-`agent-live`, `ci-live`, `paste-cli` and `show`. The scenarios run in one selftest bundle built with
+scenarios that need no network, account, real agent CLI or person: `cargo xtask selftest --offline`, every scenario
+the table in `src/selftest/scenarios.rs` marks offline. The scenarios run in one selftest bundle built with
 dictation, so `dictation` is measured too; a failed test or check is reported and the run goes on. Homebrew's Rust has
 no llvm-tools, so it builds with rustup's toolchain of `rust-toolchain.toml` (`rustup component add llvm-tools
 --toolchain 1.99.1`) and `cargo-llvm-cov` (`brew install cargo-llvm-cov`), instrumented by `cargo llvm-cov show-env` in
@@ -226,8 +228,11 @@ needs:
 Uploading the image and the feed to the release and adding the Cask to a tap stay manual.
 
 ## Selftest
-The app built with `--features selftest` runs scenarios without a person at the Mac. `cargo xtask selftest` and the
-app agree on this:
+The app built with `--features selftest` runs scenarios without a person at the Mac. Every scenario is a row of
+`SCENARIOS` in `src/selftest/scenarios.rs`: its name, entry, time limit, whether it is offline, how its launches end,
+its launch arguments and whether it needs dictation. The runner asks the app for this table with
+`<bundle>/Contents/MacOS/Dango --list-scenarios`, which prints one JSON object a line and ends; it keeps no list of its
+own. `cargo xtask selftest` and the app agree on this:
 
 1. The runner starts `<bundle>/Contents/MacOS/Dango` directly, once per scenario, with stdin from `/dev/null`, stdout
    on the terminal and stderr passed on to the terminal line by line, and with these variables:
@@ -251,12 +256,12 @@ app agree on this:
 3. A scenario passes when the app ends by itself within its time limit with status 0 and its report is readable,
    names the scenario, lists at least one check and every check is `ok`, and its stderr holds no failed TextKit 2
    assertion: UIFoundation logs one as `Make a symbolic breakpoint at NSText…` and carries on. The runner prints
-   each check as `✓ name — detail` or `✗ name — detail`. At the limit it kills the app: 120 seconds, 300 for `a11y` and `a11y-rtl`, and 600 for
-   `lsp`, `lsp-actions`, `lsp-actions-go` and `lsp-navigation`, which wait for a real rust-analyzer or gopls to index and settle before
-   each step (up to 180 s each, the wait in the check's detail) and end themselves after 540.
+   each check as `✓ name — detail` or `✗ name — detail`. At the limit of the scenario's row it kills the app: 120 seconds by default, 300 for `a11y` and `a11y-rtl`, and 600
+   for the language server scenarios, which wait for a real rust-analyzer or gopls to index and settle before each
+   step (up to 180 s each, the wait in the check's detail) and end themselves after 540.
 4. The runner exits with an error if any scenario did not pass, and names it. A failed scenario's home folder stays
    for a look; a passed one's is removed.
-5. A scenario listed in `CRASHING` in `xtask/src/selftest.rs`, `recovery` so far, runs twice in the same home. The
+5. A scenario whose row has `Launches::Crash`, `recovery` so far, runs twice in the same home. The
    first launch gets `IDE_SELFTEST_LAUNCH=crash` and the report file `<scenario>-crash.json`; it prepares what a crash
    should leave behind, writes its report and kills itself with `SIGKILL`, so that none of its quitting code runs. It
    passes when it ends by that signal with a report whose checks all hold. Only then does the second launch run, as
@@ -292,6 +297,21 @@ seconds before it draws the picture itself.
 Alerts that a scenario answers itself, such as the question at a quit with unsaved text, are answered from a timer of
 the run loop: an alert opened inside a callback of the main dispatch queue holds up every other such callback until
 it closes, `main_after` included.
+
+A step that depends on a state waits for it with `wait_until`, `wait_for`, `wait_for_window` or `wait_for_editor` of
+`src/selftest/helpers.rs`, which check every 50 ms and give up after 20 s (`wait_within` for another limit); a fixed
+delay through `helpers::after` is only for what has to elapse, such as an animation or a check that nothing happens,
+and is a named constant that says why. `helpers::open_project` makes, trusts and opens a scenario's folder.
+
+### Accepted pictures
+Some pictures have accepted ones in `tests/snapshots/<scenario>/<light|dark>/<picture>.png`, by the appearance the
+report names. After a scenario passed, the runner compares each accepted picture with the run's: a pixel counts as
+changed when a channel strays by more than 48 of 255, and a picture differs when more than 1 % of its pixels changed,
+so font smoothing and the desktop showing through glass pass. A picture at another pixel size, from a display of
+another scale, is scaled first. A difference fails the scenario and leaves `<picture>.diff.png` beside the report: the
+accepted picture faded, changed pixels red. A scenario or appearance without accepted pictures compares nothing.
+`cargo xtask selftest-accept <scenario> <picture>…` copies pictures of the last run there; without picture names it
+renews those already accepted. Accepted so far: `probe-window`, `probe-settings` and `probe-markdown` of `probe`, light.
 
 ### Accessibility audit
 The `a11y` scenario is the VoiceOver check of each phase (E3). It opens the main states with fixtures, recordings and

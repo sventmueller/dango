@@ -3,6 +3,7 @@
 //! Everything that reads or writes the pipes runs on threads of its own; the methods only queue a line or take a
 //! short lock, so the UI never waits for the CLI.
 
+use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::marker::PhantomData;
@@ -11,7 +12,6 @@ use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use ide_process::tail::{self, Tail};
@@ -29,6 +29,7 @@ use crate::control::{
 use crate::input;
 use crate::launch::Launch;
 use crate::mapping::{self, Mapper};
+use crate::modes::{Effort, PermissionMode};
 use crate::protocol::{self, ControlResponse, Message, System};
 
 /// What the stderr tail keeps.
@@ -142,7 +143,7 @@ struct Shared {
     sink: Sink,
     next: AtomicU64,
     stderr: Arc<Mutex<Tail>>,
-    stderr_reader: Mutex<Option<JoinHandle<()>>>,
+    stderr_reader: Mutex<Option<tail::Collecting>>,
     closed: AtomicBool,
     end_expected: AtomicBool,
     sign_in_reported: AtomicBool,
@@ -182,11 +183,14 @@ impl<T: Answer> Reply<T> {
         }
     }
 
-    /// Waits on a thread of its own and hands the answer to `f` there.
+    /// Waits on a thread of its own and hands the answer to `f` there; without a thread, `f` hears that at once.
     pub fn then(self, f: impl FnOnce(Result<T, ControlError>) + Send + 'static) {
-        let _ = std::thread::Builder::new()
-            .name("claude-reply".into())
-            .spawn(move || f(self.wait()));
+        ide_core::thread::detach_answering(
+            "claude-reply",
+            f,
+            move |f| f(self.wait()),
+            |f, error| f(Err(ControlError::Unwaited(error.to_string()))),
+        );
     }
 
     /// The request's id on the wire.
@@ -381,11 +385,11 @@ impl Session {
     }
 
     /// Changes the permission mode.
-    pub fn set_permission_mode(&self, mode: &str) -> Reply<()> {
-        let mode = mode.to_string();
+    pub fn set_permission_mode(&self, mode: PermissionMode) -> Reply<()> {
+        let name = mode.as_str().to_string();
         self.request(
-            Request::SetPermissionMode(mode.clone()),
-            Some(Box::new(move |_, _| vec![Update::Mode(mode)])),
+            Request::SetPermissionMode(mode),
+            Some(Box::new(move |_, _| vec![Update::Mode(name)])),
         )
     }
 
@@ -399,11 +403,11 @@ impl Session {
     }
 
     /// Changes the reasoning effort of the running session.
-    pub fn set_effort(&self, level: &str) -> Reply<()> {
-        let level = level.to_string();
+    pub fn set_effort(&self, level: Effort) -> Reply<()> {
+        let name = level.as_str().to_string();
         self.request(
-            Request::SetEffort(level.clone()),
-            Some(Box::new(move |_, _| vec![Update::Effort(Some(level))])),
+            Request::SetEffort(level),
+            Some(Box::new(move |_, _| vec![Update::Effort(Some(name))])),
         )
     }
 
@@ -537,7 +541,7 @@ fn spawn_threads(
         .name("claude-writer".into())
         .spawn(move || write_lines(stdin, &rx))?;
     let stderr_reader = tail::collect(stderr, stderr_tail)?;
-    *shared.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()) = Some(stderr_reader);
+    *shared.stderr_reader.lock_ignoring_poison() = Some(stderr_reader);
     let reader = shared.clone();
     std::thread::Builder::new()
         .name("claude-reader".into())
@@ -551,7 +555,10 @@ fn write_lines(mut stdin: ChildStdin, rx: &Receiver<Outgoing>) {
             .write_all(line.as_bytes())
             .and_then(|()| stdin.write_all(b"\n"))
             .and_then(|()| stdin.flush());
-        if written.is_err() {
+        if let Err(error) = written {
+            if error.kind() != std::io::ErrorKind::BrokenPipe {
+                ide_core::diag::report("claude: writing to the CLI", error);
+            }
             break;
         }
     }
@@ -683,15 +690,15 @@ impl Shared {
     }
 
     fn lock_state(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+        self.state.lock_ignoring_poison()
     }
 
     fn lock_pending(&self) -> MutexGuard<'_, HashMap<String, Pending>> {
-        self.pending.lock().unwrap_or_else(|e| e.into_inner())
+        self.pending.lock_ignoring_poison()
     }
 
     fn lock_writer(&self) -> MutexGuard<'_, Option<Sender<Outgoing>>> {
-        self.writer.lock().unwrap_or_else(|e| e.into_inner())
+        self.writer.lock_ignoring_poison()
     }
 
     fn write(&self, frame: &Value) -> Result<(), SessionError> {
@@ -714,11 +721,11 @@ impl Shared {
 
     /// Queues `event` for after the state lock is released.
     fn emit_later(&self, event: Event) {
-        self.later.lock().unwrap_or_else(|e| e.into_inner()).push(event);
+        self.later.lock_ignoring_poison().push(event);
     }
 
     fn flush_later(&self) {
-        let events = std::mem::take(&mut *self.later.lock().unwrap_or_else(|e| e.into_inner()));
+        let events = std::mem::take(&mut *self.later.lock_ignoring_poison());
         for event in events {
             self.emit(event);
         }
@@ -742,11 +749,21 @@ impl Shared {
         loop {
             line.clear();
             match reader.read_until(b'\n', &mut line) {
-                Ok(0) | Err(_) => break,
+                Ok(0) => break,
+                Err(error) => {
+                    ide_core::diag::report("claude: reading from the CLI", error);
+                    break;
+                }
                 Ok(_) => {
                     let text = String::from_utf8_lossy(&line);
-                    if let Ok(message) = protocol::parse(text.trim_end()) {
-                        self.handle(message);
+                    match protocol::parse(text.trim_end()) {
+                        Ok(Message::Malformed(frame)) => {
+                            let kind = frame.get("type").and_then(Value::as_str).unwrap_or_default();
+                            ide_core::diag::report("claude: a frame that does not fit its type", kind);
+                            self.handle(Message::Malformed(frame));
+                        }
+                        Ok(message) => self.handle(message),
+                        Err(error) => ide_core::diag::report("claude: a line that is not a frame", error.0),
                     }
                     self.flush_later();
                 }
@@ -758,12 +775,8 @@ impl Shared {
     /// Waits briefly for the stderr reader, which may still drain the pipe when stdout ends; a grandchild that
     /// keeps stderr open must not hold the session's end.
     fn await_stderr(&self) {
-        let Some(reader) = self.stderr_reader.lock().unwrap_or_else(|e| e.into_inner()).take() else {
-            return;
-        };
-        let deadline = Instant::now() + Duration::from_millis(500);
-        while !reader.is_finished() && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(10));
+        if let Some(reader) = self.stderr_reader.lock_ignoring_poison().take() {
+            reader.wait(Duration::from_millis(500));
         }
     }
 
@@ -885,7 +898,7 @@ impl Shared {
             let _ = pending.reply.send(Err(ControlError::Closed));
         }
         self.await_stderr();
-        let stderr = self.stderr.lock().unwrap_or_else(|e| e.into_inner()).text();
+        let stderr = self.stderr.lock_ignoring_poison().text();
         let changes = {
             let mut state = self.lock_state();
             state.asks.clear();

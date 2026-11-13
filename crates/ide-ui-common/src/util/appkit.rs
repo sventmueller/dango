@@ -177,7 +177,7 @@ pub fn set_title_element(control: &NSControl, title: &NSTextField) {
     // SAFETY: The title element is a label, the type AppKit expects there; the control and its cell hold it weakly.
     unsafe { control.setAccessibilityTitleUIElement(Some(title)) };
     if let Some(cell) = control.cell() {
-        // SAFETY: As above.
+        // SAFETY: The cell takes the same label as title element and holds it weakly too, while the view tree keeps it.
         unsafe { cell.setAccessibilityTitleUIElement(Some(title)) };
     }
 }

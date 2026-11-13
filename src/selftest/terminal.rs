@@ -8,21 +8,30 @@ use std::time::{Duration, Instant};
 
 use ide_process::Supervisor;
 use ide_terminal::PasteAction;
+use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{MainThreadMarker, msg_send};
 use objc2_app_kit::{
     NSAccessibilityTextAreaRole, NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua,
     NSAppearanceNameDarkAqua, NSBitmapImageRep, NSEventModifierFlags, NSEventType, NSPasteboard, NSPasteboardTypeTIFF,
 };
 use objc2_foundation::{NSData, NSPoint, NSString};
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::terminal::{TerminalView, inspect};
-use crate::util::{constant, main_after};
-use crate::window::{self, WindowController};
+use crate::util::constant;
+use crate::window::WindowController;
 
 const NAME: &str = "terminal";
+const PROJECT: &str = "terminal-project";
+/// How long the view takes to draw in a new appearance, which leaves its background alike when it already had it.
+const APPEARANCE_REDRAW: Duration = Duration::from_millis(400);
+/// How often the flood asks whether the main thread answers, which is what it measures.
+const SAMPLE: Duration = Duration::from_millis(10);
+/// How long the button stays down above the lines, during which the view keeps scrolling back.
+const HELD_DRAG: Duration = Duration::from_millis(600);
+/// How long the view must stay put after the button came up.
+const AFTER_RELEASE: Duration = Duration::from_millis(300);
 
 /// A PNG of two by two orange pixels.
 pub(super) const PICTURE: [u8; 73] = [
@@ -40,18 +49,11 @@ const STYLES: &str = "printf '\\033[1mbold\\033[0m \\033[3mitalic\\033[0m \\033[
                       \\n漢字 ✓ é ü ╭──┬──╮ ╔═╦═╗ ╟─╫─╢ ┄┆╍┉ ▌▐█ ░▒▓\\n  ➜  Local:   http://localhost:5173/\\n'\r";
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("terminal-project");
-    let _ = std::fs::create_dir_all(&folder);
-    let _ = std::fs::write(folder.join("README.md"), "# Terminal\n");
-    let root = folder.canonicalize().unwrap_or(folder);
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
-    let Some(controller) = controller_of(&root) else {
-        check("the folder opens", false, root.display().to_string());
-        finish(NAME);
-        return;
-    };
+    helpers::open_project(NAME, PROJECT, &[("README.md", "# Terminal\n")], opened);
+}
+
+fn opened(controller: Retained<WindowController>) {
+    let root = helpers::root(PROJECT);
     let tabs = controller.tab_count();
     crate::terminal::open_tab(&controller, None);
     let opened = inspect::latest();
@@ -76,9 +78,7 @@ pub fn run() {
 }
 
 fn controller_of(root: &Path) -> Option<Retained<WindowController>> {
-    window::open_windows()
-        .into_iter()
-        .find(|controller| controller.project().as_deref() == Some(root))
+    helpers::window_of(root)
 }
 
 /// The visible lines of the terminal `id` that hold text, for a check's detail.
@@ -92,25 +92,9 @@ fn screen(id: u64) -> String {
         .join(" ⏎ ")
 }
 
-/// Calls `then` with whether `done` came true within `limit`, asking every 100 ms.
-fn poll(deadline: Instant, done: impl Fn() -> bool + Send + 'static, then: impl FnOnce(bool) + Send + 'static) {
-    let held = done();
-    if held || Instant::now() >= deadline {
-        then(held);
-        return;
-    }
-    main_after(Duration::from_millis(100), move || poll(deadline, done, then));
-}
-
-/// `poll` for something about the terminal view `id`.
-fn wait(
-    id: u64,
-    limit: Duration,
-    done: impl Fn(&TerminalView) -> bool + Send + 'static,
-    then: impl FnOnce(bool) + Send + 'static,
-) {
-    let done = move || inspect::view(id).is_some_and(|view| done(&view));
-    poll(Instant::now() + limit, done, then);
+/// Waits up to `limit` for something about the terminal view `id`.
+fn wait(id: u64, limit: Duration, done: impl Fn(&TerminalView) -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+    helpers::wait_within(limit, move || inspect::view(id).is_some_and(|view| done(&view)), then);
 }
 
 fn type_command(id: u64, root: PathBuf) {
@@ -336,23 +320,28 @@ fn pictures(id: u64, root: PathBuf) {
         view.background()
     };
     appear(constant!(NSAppearanceNameAqua));
-    main_after(Duration::from_millis(400), move || {
+    helpers::after(APPEARANCE_REDRAW, move || {
         let light = picture("terminal-light");
         appear(constant!(NSAppearanceNameDarkAqua));
-        main_after(Duration::from_millis(400), move || {
-            let dark = picture("terminal-dark");
-            let brightness =
-                |rgb: Option<ide_terminal::Rgb>| rgb.map_or(0, |c| u32::from(c.r) + u32::from(c.g) + u32::from(c.b));
-            check(
-                "the colours follow the light and the dark appearance",
-                light.is_some() && dark.is_some() && brightness(light) > brightness(dark),
-                format!("{light:?} then {dark:?}"),
-            );
-            accessibility(id);
-            if !hold(id) {
-                flood(id, root);
-            }
-        });
+        let background = move || inspect::view(id).and_then(|view| view.background());
+        helpers::wait_until(
+            move || background() != light,
+            move |_| {
+                let dark = picture("terminal-dark");
+                let brightness = |rgb: Option<ide_terminal::Rgb>| {
+                    rgb.map_or(0, |c| u32::from(c.r) + u32::from(c.g) + u32::from(c.b))
+                };
+                check(
+                    "the colours follow the light and the dark appearance",
+                    light.is_some() && dark.is_some() && brightness(light) > brightness(dark),
+                    format!("{light:?} then {dark:?}"),
+                );
+                accessibility(id);
+                if !hold(id) {
+                    flood(id, root);
+                }
+            },
+        );
     });
 }
 
@@ -448,7 +437,7 @@ fn measure(mut flood: Flood, root: PathBuf) {
         autoscroll(id, root);
         return;
     }
-    main_after(Duration::from_millis(10), move || measure(flood, root));
+    helpers::after(SAMPLE, move || measure(flood, root));
 }
 
 /// A selection dragged above the lines keeps scrolling back while the button is held.
@@ -460,13 +449,13 @@ fn autoscroll(id: u64, root: PathBuf) {
     let above = NSPoint::new(start.x, -60.0);
     view.mouse(NSEventType::LeftMouseDown, start, NSEventModifierFlags::empty());
     view.mouse(NSEventType::LeftMouseDragged, above, NSEventModifierFlags::empty());
-    main_after(Duration::from_millis(600), move || {
+    helpers::after(HELD_DRAG, move || {
         let Some(view) = inspect::view(id) else {
             return finish(NAME);
         };
         let back = view.scrolled_back();
         view.mouse(NSEventType::LeftMouseUp, above, NSEventModifierFlags::empty());
-        main_after(Duration::from_millis(300), move || {
+        helpers::after(AFTER_RELEASE, move || {
             let still = inspect::view(id).map_or(0, |view| view.scrolled_back());
             check(
                 "a selection dragged above the lines scrolls back until the button comes up",
@@ -508,7 +497,7 @@ fn close_tab(id: u64, root: PathBuf) {
         inspect::view(id).is_none()
             && shell.is_some_and(|pid| Supervisor::global().running().iter().all(|process| process.pid != pid))
     };
-    poll(Instant::now() + Duration::from_secs(8), gone, move |gone| {
+    helpers::wait_within(Duration::from_secs(8), gone, move |gone| {
         check(
             "closing the tab drops the view and ends the shell",
             gone && after + 1 == tabs,

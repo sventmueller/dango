@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn the_rules_files_follow_the_instructions_in_their_order() {
-        let dir = std::env::temp_dir().join(format!("ide-agent-prompt-{}", std::process::id()));
+        let dir = ide_core::testing::scratch("agent-prompt");
         std::fs::create_dir_all(dir.join(".claude")).unwrap();
         std::fs::write(dir.join("CLAUDE.md"), "Use tabs.\n").unwrap();
         std::fs::write(dir.join("AGENTS.md"), "Run make check.\n").unwrap();
@@ -78,6 +78,5 @@ mod tests {
         let prompt = system(&dir, Profile::Ask, true, &rules);
         assert!(prompt.find("Run make check.").unwrap() < prompt.find("Use tabs.").unwrap());
         assert!(prompt.contains("may only read") && prompt.contains("sandbox is on"));
-        let _ = std::fs::remove_dir_all(dir);
     }
 }

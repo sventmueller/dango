@@ -10,9 +10,9 @@ use std::time::Duration;
 
 use ide_acp::install::{Plan, Refusal};
 use ide_acp::launch::Origin;
-use ide_acp::net::Http;
 use ide_acp::register::{self, Distribution, PRESETS, Preset, Register};
 use ide_acp::{Installer, Installs};
+use ide_net::Http;
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
@@ -29,6 +29,10 @@ use crate::agent::AcpAgent;
 use crate::util::{guarded, main_soon, ns, set_action};
 
 use super::form::{self, MARGIN, WIDTH};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// The tallest the groups get before they scroll.
 const MAX_HEIGHT: f64 = 560.0;
@@ -221,11 +225,17 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
     let (id, name) = (id.to_string(), name.to_string());
     with_progress(|p| p.borrow_mut().insert(id.clone(), tf("{} wird installiert …", &[&name])));
     super::agents_changed();
-    let _ = std::thread::Builder::new().name("acp-install".into()).spawn(move || {
+    let failed = (id.clone(), name.clone());
+    if let Err(why) = crate::util::spawn("acp-install", move || {
         let env = crate::environment::wait(Duration::from_secs(15))
             .map(<[(String, String)]>::to_vec)
             .unwrap_or_default();
-        let installer = Installer::new(Supervisor::global(), env, installs(), Arc::new(Http::new()));
+        let installer = Installer::new(
+            Supervisor::global(),
+            env,
+            installs(),
+            Arc::new(Http::new("agent register")),
+        );
         let result = installer.install(&plan, true, &|_| {});
         main_soon(move || {
             with_progress(|p| p.borrow_mut().remove(&id));
@@ -237,7 +247,12 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
             super::agents_changed();
             refresh_register();
         });
-    });
+    }) {
+        let (id, name) = failed;
+        with_progress(|p| p.borrow_mut().remove(&id));
+        alert(mtm, &tf("{} wurde nicht installiert", &[&name]), &why);
+        super::agents_changed();
+    }
 }
 
 /// Fetches the registry on the user's request and keeps it.
@@ -247,8 +262,8 @@ fn fetch() {
             .insert(String::new(), t("Register wird geladen …").to_string())
     });
     super::agents_changed();
-    let _ = std::thread::Builder::new().name("acp-register".into()).spawn(|| {
-        let result = Register::fetch(&Http::new()).map(|r| r.entries.len());
+    if let Err(why) = crate::util::spawn("acp-register", || {
+        let result = Register::fetch(&Http::new("agent register")).map(|r| r.entries.len());
         main_soon(move || {
             with_progress(|p| p.borrow_mut().remove(""));
             if let Err(error) = result
@@ -259,7 +274,13 @@ fn fetch() {
             super::agents_changed();
             refresh_register();
         });
-    });
+    }) {
+        with_progress(|p| p.borrow_mut().remove(""));
+        if let Some(mtm) = MainThreadMarker::new() {
+            alert(mtm, t("Das Register wurde nicht geladen"), &why);
+        }
+        super::agents_changed();
+    }
 }
 
 /// What the tab says about `preset`, at `index` of the presets, and what it offers. An adapter whose agent's own
@@ -423,7 +444,7 @@ impl AgentsSettings {
         views.extend(groups.iter().cloned());
         views.extend(self.ivars().rules.views());
         let content = form::stack(mtm, &views);
-        content.setCustomSpacing_afterView(12.0, &groups[0]);
+        content.setCustomSpacing_afterView(ide_ui_common::style::space::XL, &groups[0]);
         content.setEdgeInsets(crate::agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
         scrolling(mtm, &content)
     }
@@ -475,10 +496,13 @@ impl AgentsSettings {
         if self.ivars().waiting.replace(true) {
             return;
         }
-        let _ = std::thread::Builder::new().name("agents-environment".into()).spawn(|| {
+        if let Err(why) = crate::util::spawn("agents-environment", || {
             let _ = crate::environment::wait(Duration::from_secs(30));
             main_soon(super::agents_changed);
-        });
+        }) {
+            self.ivars().waiting.set(false);
+            crate::diag::report("waiting for the login shell's environment", why);
+        }
     }
 
     /// A line of a group: the dot of `mark` if it has one, the name with its state below it, and its buttons.
@@ -507,7 +531,7 @@ impl AgentsSettings {
         let text = NSStackView::new(mtm);
         text.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         text.setAlignment(NSLayoutAttribute::Leading);
-        text.setSpacing(2.0);
+        text.setSpacing(ide_ui_common::style::space::XXS);
         text.addArrangedSubview(&title);
         text.addArrangedSubview(&detail);
         let text: Retained<NSView> = Retained::into_super(text);
@@ -534,25 +558,6 @@ impl AgentsSettings {
         }
         Retained::into_super(line)
     }
-
-    /// The list of Claude's stored rules, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn stored_rules(&self) -> Retained<super::stored_rules::StoredRules> {
-        self.ivars().rules.clone()
-    }
-
-    /// What the tab shows, line by line, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn lines(&self) -> Vec<String> {
-        let groups = [self.ivars().agents.get(), self.ivars().register.get()];
-        groups
-            .into_iter()
-            .flatten()
-            .flat_map(|group| group.arrangedSubviews().to_vec())
-            .filter(|line| line.downcast_ref::<NSStackView>().is_some())
-            .map(|line| texts(&line).join(" "))
-            .collect()
-    }
 }
 
 /// The room between the parts of a line.
@@ -563,7 +568,7 @@ fn group_lines(mtm: MainThreadMarker) -> Retained<NSStackView> {
     let lines = NSStackView::new(mtm);
     lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     lines.setAlignment(NSLayoutAttribute::CenterX);
-    lines.setSpacing(0.0);
+    lines.setSpacing(ide_ui_common::style::space::NONE);
     lines
 }
 
@@ -630,26 +635,18 @@ fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
     root
 }
 
-/// The texts and button titles in `view`, in order, for the self-test.
-#[cfg(feature = "selftest")]
-fn texts(view: &NSView) -> Vec<String> {
-    if let Some(label) = view.downcast_ref::<NSTextField>() {
-        return vec![label.stringValue().to_string()];
-    }
-    if let Some(button) = view.downcast_ref::<NSButton>() {
-        return vec![format!("[{}]", button.title())];
-    }
-    let children = match view.downcast_ref::<NSStackView>() {
-        Some(stack) => stack.arrangedSubviews(),
-        None => view.subviews(),
-    };
-    children.iter().flat_map(|child| texts(&child)).collect()
-}
-
 /// What a registry entry offers this Mac, as the registry window says it.
 fn offer_text(entry: &register::Entry) -> (String, bool) {
-    if let Some((installed, _)) = installs().current(&entry.id) {
-        return (tf("Installiert: Version {}", &[&installed.version]), false);
+    let installed = installs()
+        .current(&entry.id)
+        .map(|(installed, _)| installed.version.clone());
+    offer(entry, installed.as_deref())
+}
+
+/// What `entry` offers, given the version installed of it if any, and whether it can be installed.
+fn offer(entry: &register::Entry, installed: Option<&str>) -> (String, bool) {
+    if let Some(version) = installed {
+        return (tf("Installiert: Version {}", &[version]), false);
     }
     match Plan::of_entry(entry) {
         Ok(plan) => {
@@ -672,7 +669,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
     let column = NSStackView::new(mtm);
     column.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     column.setAlignment(NSLayoutAttribute::Leading);
-    column.setSpacing(10.0);
+    column.setSpacing(ide_ui_common::style::space::L);
     let mut shown = Vec::new();
     for (n, entry) in register.entries.iter().enumerate() {
         let name = NSTextField::labelWithString(&ns(&entry.name), mtm);
@@ -710,7 +707,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
         );
         block.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         block.setAlignment(NSLayoutAttribute::Leading);
-        block.setSpacing(2.0);
+        block.setSpacing(ide_ui_common::style::space::XXS);
         column.addArrangedSubview(&block);
         block
             .widthAnchor()
@@ -788,20 +785,6 @@ fn refresh_register() {
     }
 }
 
-/// The registry window and the ids it lists, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn register_window() -> Option<(Retained<NSPanel>, Vec<String>)> {
-    let panel = with_window(|w| w.borrow().clone())?;
-    let ids = with_shown(|s| s.borrow().clone());
-    Some((panel, ids))
-}
-
-/// Opens the registry window as its button does, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn open_register(target: &AgentsSettings) {
-    show_register(target);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -819,5 +802,51 @@ mod tests {
             missing(register::preset("gemini").unwrap(), true, false).0,
             "Nicht vorhanden"
         );
+    }
+
+    fn binary(sha256: Option<&str>) -> Distribution {
+        Distribution::Binary {
+            archive: "https://example.invalid/a.tar.gz".into(),
+            cmd: "./agent".into(),
+            args: Vec::new(),
+            env: Vec::new(),
+            sha256: sha256.map(str::to_string),
+        }
+    }
+
+    fn entry(distributions: Vec<Distribution>, unknown: &[&str]) -> register::Entry {
+        register::Entry {
+            id: "agent".into(),
+            name: "Agent".into(),
+            version: "1.2.0".into(),
+            distributions,
+            unknown: unknown.iter().map(|u| u.to_string()).collect(),
+            ..register::Entry::default()
+        }
+    }
+
+    #[test]
+    fn an_installed_agent_is_not_offered_again() {
+        let offered = offer(&entry(vec![binary(Some("ab"))], &[]), Some("1.1.0"));
+        assert_eq!(offered, ("Installiert: Version 1.1.0".to_string(), false));
+    }
+
+    #[test]
+    fn the_offer_says_whether_the_archive_is_checked() {
+        assert_eq!(
+            offer(&entry(vec![binary(Some("ab"))], &[]), None),
+            ("Version 1.2.0 · Archiv mit Prüfsumme".to_string(), true)
+        );
+        assert_eq!(
+            offer(&entry(vec![binary(None)], &[]), None).0,
+            "Version 1.2.0 · Archiv ohne Prüfsumme"
+        );
+    }
+
+    #[test]
+    fn an_agent_without_a_way_onto_this_mac_names_the_ways_it_has() {
+        let (text, installable) = offer(&entry(Vec::new(), &["windows"]), None);
+        assert!(!installable);
+        assert_eq!(text, "Nicht für diesen Mac (windows)");
     }
 }

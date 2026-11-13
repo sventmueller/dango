@@ -16,22 +16,11 @@ struct Setup {
     accounts: Receiver<Account>,
     log: PathBuf,
     root: PathBuf,
-    _dir: Temp,
-}
-
-/// A folder of its own, removed after the test.
-struct Temp(PathBuf);
-
-impl Drop for Temp {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
+    _dir: ide_core::testing::Scratch,
 }
 
 fn start(name: &str, vars: &[(&str, &str)]) -> Setup {
-    let dir = std::env::temp_dir().join(format!("ide-predict-copilot-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = ide_core::testing::scratch(&format!("predict-copilot-{name}"));
     let log = dir.join("log");
     let mut env: Vec<(String, String)> = std::env::vars().collect();
     env.push(("FAKE_LOG".into(), log.display().to_string()));
@@ -46,8 +35,8 @@ fn start(name: &str, vars: &[(&str, &str)]) -> Setup {
         copilot,
         accounts,
         log,
-        root: dir.clone(),
-        _dir: Temp(dir),
+        root: dir.to_path_buf(),
+        _dir: dir,
     }
 }
 

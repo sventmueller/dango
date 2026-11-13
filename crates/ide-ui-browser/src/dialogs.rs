@@ -22,28 +22,16 @@ use splat_i18n::{t, tf};
 
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// How WebKit takes the answer to a login.
 pub type LoginAnswer = RcBlock<dyn Fn(NSURLSessionAuthChallengeDisposition, *mut NSURLCredential)>;
 
 const FIELD_WIDTH: f64 = 260.0;
 const FIELD_HEIGHT: f64 = 24.0;
-
-/// A panel with its text fields.
-#[cfg(feature = "selftest")]
-type Asking = (Retained<NSAlert>, Vec<Retained<NSTextField>>);
-
-#[cfg(feature = "selftest")]
-/// The panel with text fields that shows, for the self-test to fill in.
-#[derive(Default)]
-pub struct Dialogs {
-    asking: RefCell<Option<Asking>>,
-}
-
-#[cfg(feature = "selftest")]
-fn with_asking<R>(f: impl FnOnce(&RefCell<Option<Asking>>) -> R) -> R {
-    f(&super::host::state().dialogs.asking)
-}
 
 /// The host of the frame that asks, which the panel names so a page cannot pass itself off as the app.
 fn asker(frame: &WKFrameInfo) -> String {
@@ -125,30 +113,14 @@ fn ask(
     with_asking(|asking| *asking.borrow_mut() = Some((alert.clone(), fields.clone())));
     let read = fields.clone();
     let handler = RcBlock::new(move |response: NSModalResponse| {
-        #[cfg(feature = "selftest")]
-        with_asking(|asking| asking.borrow_mut().take());
-        let texts = read.iter().map(|field| field.stringValue().to_string()).collect();
-        done(response == NSAlertFirstButtonReturn, texts);
+        ide_ui_common::util::guarded((), || {
+            #[cfg(feature = "selftest")]
+            with_asking(|asking| asking.borrow_mut().take());
+            let texts = read.iter().map(|field| field.stringValue().to_string()).collect();
+            done(response == NSAlertFirstButtonReturn, texts);
+        })
     });
     alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
-}
-
-/// Fills the fields of the panel that asks with `texts` and closes it with its first button, as the self-test's
-/// user; whether a panel was asking.
-#[cfg(feature = "selftest")]
-pub fn answer_asking(texts: &[&str]) -> bool {
-    let Some((alert, fields)) = with_asking(|asking| asking.borrow().clone()) else {
-        return false;
-    };
-    for (field, text) in fields.iter().zip(texts) {
-        field.setStringValue(&ns(text));
-    }
-    let Some(first) = alert.buttons().firstObject() else {
-        return false;
-    };
-    // SAFETY: Clicking the alert's own button ends its sheet as a person would; a nil sender is allowed.
-    unsafe { first.performClick(None) };
-    true
 }
 
 /// A JavaScript `alert`; without a window WebKit gets its answer right away.
@@ -160,7 +132,7 @@ pub fn alert(window: Option<&NSWindow>, message: &NSString, frame: &WKFrameInfo,
     let alert = page_alert(window, message, frame, false);
     alert.addButtonWithTitle(&ns(t("OK")));
     let done = done.copy();
-    let handler = RcBlock::new(move |_: NSModalResponse| done.call(()));
+    let handler = RcBlock::new(move |_: NSModalResponse| ide_ui_common::util::guarded((), || done.call(())));
     alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
 }
 
@@ -175,7 +147,9 @@ pub fn confirm(window: Option<&NSWindow>, message: &NSString, frame: &WKFrameInf
     alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let done = done.copy();
     let handler = RcBlock::new(move |response: NSModalResponse| {
-        done.call((Bool::new(response == NSAlertFirstButtonReturn),));
+        ide_ui_common::util::guarded((), || {
+            done.call((Bool::new(response == NSAlertFirstButtonReturn),));
+        })
     });
     alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
 }

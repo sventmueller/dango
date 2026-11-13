@@ -19,7 +19,7 @@ use super::helpers::{
     answer_alert_after, answer_alert_saying, editor, picture_alert_after, tab, text_of, type_at, utf16_len, wait_until,
     window_of,
 };
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::window::WindowController;
 
 const SCENARIO: &str = "conflict";
@@ -33,16 +33,19 @@ const CLOSED: &str = "closed.txt";
 const DROPPED: &str = "dropped.txt";
 const GONE: &str = "gone.txt";
 
-fn folder() -> PathBuf {
-    ide_core::paths::home().join("conflict-project")
-}
+const PROJECT: &str = "conflict-project";
+/// How long the watcher takes to start; it reports only what changes after that, and shows nothing to wait for.
+const WATCHER_STARTS: Duration = Duration::from_secs(1);
+/// How long the watcher takes to report a second change to a file whose bar already shows, which changes nothing on
+/// screen to wait for.
+const WATCHER_REPORTS: Duration = Duration::from_secs(3);
 
 fn root() -> PathBuf {
-    folder().canonicalize().unwrap_or_else(|_| folder())
+    helpers::root(PROJECT)
 }
 
 fn controller() -> Option<objc2::rc::Retained<WindowController>> {
-    window_of(&folder())
+    window_of(&root())
 }
 
 fn write(name: &str, text: &str) {
@@ -75,38 +78,31 @@ fn press(name: &str, button: &str) -> bool {
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = folder();
-    let _ = std::fs::create_dir_all(&folder);
-    for name in [CLEAN, KEPT, LOADED, SAVED, CLOSED, DROPPED, GONE] {
-        let _ = std::fs::write(folder.join(name), format!("{name}\nzweite Zeile\n"));
-    }
-    let _ = std::fs::write(folder.join(MERGED), "eins\nzwei\ndrei\nvier\nfünf\n");
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let Some(controller) = controller() else {
-        check("the folder gets its window", false, "");
-        finish(SCENARIO);
-        return;
-    };
-    for name in [CLEAN, MERGED, KEPT, LOADED, SAVED, CLOSED, DROPPED, GONE] {
-        controller.open_file(&root().join(name));
-    }
-    for name in [MERGED, KEPT, LOADED, CLOSED] {
-        if let Some(view) = editor(&controller, name) {
-            type_at(&view, NSRange::new(0, 0), ">");
+    let mut texts: Vec<(&str, String)> = [CLEAN, KEPT, LOADED, SAVED, CLOSED, DROPPED, GONE]
+        .iter()
+        .map(|name| (*name, format!("{name}\nzweite Zeile\n")))
+        .collect();
+    texts.push((MERGED, "eins\nzwei\ndrei\nvier\nfünf\n".into()));
+    let files: Vec<(&str, &str)> = texts.iter().map(|(name, text)| (*name, text.as_str())).collect();
+    helpers::open_project(SCENARIO, PROJECT, &files, |controller| {
+        for name in [CLEAN, MERGED, KEPT, LOADED, SAVED, CLOSED, DROPPED, GONE] {
+            controller.open_file(&root().join(name));
         }
-    }
-    // The watcher reports only what changes after it started.
-    crate::util::main_after(Duration::from_secs(1), || {
-        write(CLEAN, "von außen\n");
-        write(MERGED, "eins\nzwei\ndrei\nvier\nFÜNF\n");
-        write(KEPT, "von außen\n");
-        write(LOADED, "von außen\n");
-        wait_until(
-            || text(CLEAN) == "von außen\n" && [MERGED, KEPT, LOADED].iter().all(|n| bar_of(n).is_some()),
-            changed_outside,
-        );
+        for name in [MERGED, KEPT, LOADED, CLOSED] {
+            if let Some(view) = editor(&controller, name) {
+                type_at(&view, NSRange::new(0, 0), ">");
+            }
+        }
+        helpers::after(WATCHER_STARTS, || {
+            write(CLEAN, "von außen\n");
+            write(MERGED, "eins\nzwei\ndrei\nvier\nFÜNF\n");
+            write(KEPT, "von außen\n");
+            write(LOADED, "von außen\n");
+            wait_until(
+                || text(CLEAN) == "von außen\n" && [MERGED, KEPT, LOADED].iter().all(|n| bar_of(n).is_some()),
+                changed_outside,
+            );
+        });
     });
 }
 
@@ -150,7 +146,7 @@ fn changed_outside(arrived: bool) {
         text(MERGED),
     );
     write(MERGED, "eins\nzwei\ndrei\nvier\n5\n");
-    crate::util::main_after(Duration::from_secs(3), show_differences);
+    helpers::after(WATCHER_REPORTS, show_differences);
 }
 
 fn show_differences() {

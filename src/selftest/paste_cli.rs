@@ -3,7 +3,9 @@
 //! sent; folder-trust questions at start are answered with their default. The user's pasteboard is put back
 //! afterwards, also when a step fails.
 
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use ide_terminal::{Foreground, PasteAction};
@@ -15,11 +17,11 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSData};
 
-use super::{check, finish};
+use super::{check, finish, helpers};
 
 mod forget;
 use crate::terminal::inspect;
-use crate::util::{constant, main_after, main_soon, ns};
+use crate::util::{constant, main_soon, ns};
 use crate::window::{self, WindowController};
 
 const NAME: &str = "paste-cli";
@@ -33,7 +35,11 @@ const START: Duration = Duration::from_secs(45);
 const SETTLE: Duration = Duration::from_secs(2);
 /// How long a CLI gets to show a pasted image.
 const ATTACH: Duration = Duration::from_secs(8);
-const TICK: Duration = Duration::from_millis(250);
+/// How long the CLIs get to end once their tabs closed.
+const GONE: Duration = Duration::from_secs(10);
+/// The time between two cleanings of the CLIs' settings, in which another running CLI may write back an entry it read
+/// before.
+const REWRITE_GAP: Duration = Duration::from_secs(4);
 
 /// The general pasteboard's items, each as its types with their data.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,9 +128,8 @@ struct Run {
 
 pub fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("paste-cli-project");
-    let _ = std::fs::create_dir_all(&folder);
-    let root = folder.canonicalize().unwrap_or(folder);
+    let _ = helpers::make_project("paste-cli-project", &[]);
+    let root = helpers::root("paste-cli-project");
     crate::project::trust(&root);
     crate::app::open_project(mtm, root.clone());
     std::thread::spawn(move || {
@@ -182,9 +187,7 @@ fn start(root: &Path, path: &str) {
             });
         }
     }
-    let deadline = Instant::now() + START;
-    let root = root.to_path_buf();
-    main_after(TICK, move || wait_ready(runs, deadline, restore, root));
+    wait_ready(runs, restore, root.to_path_buf());
 }
 
 /// A PNG of the scenario's picture, with a TIFF of it for programs that read only that.
@@ -201,11 +204,16 @@ fn put_picture() {
 }
 
 /// Moves every CLI on until all wait for input or the time is up.
-fn wait_ready(mut runs: Vec<Run>, deadline: Instant, restore: Restore, root: PathBuf) {
-    for run in &mut runs {
-        step(run);
-    }
-    if runs.iter().all(|run| run.phase == Phase::Ready) || Instant::now() >= deadline {
+fn wait_ready(runs: Vec<Run>, restore: Restore, root: PathBuf) {
+    let runs = Rc::new(RefCell::new(runs));
+    let stepping = Rc::clone(&runs);
+    let all_ready = move || {
+        let mut runs = stepping.borrow_mut();
+        runs.iter_mut().for_each(step);
+        runs.iter().all(|run| run.phase == Phase::Ready)
+    };
+    helpers::wait_within(START, all_ready, move |_| {
+        let runs = runs.take();
         let (ready, stuck): (Vec<Run>, Vec<Run>) = runs.into_iter().partition(|run| run.phase == Phase::Ready);
         for run in &stuck {
             check(
@@ -215,9 +223,7 @@ fn wait_ready(mut runs: Vec<Run>, deadline: Instant, restore: Restore, root: Pat
             );
         }
         paste_next(ready, stuck, restore, root);
-        return;
-    }
-    main_after(TICK, move || wait_ready(runs, deadline, restore, root));
+    });
 }
 
 fn step(run: &mut Run) {
@@ -304,10 +310,9 @@ fn paste_next(mut runs: Vec<Run>, mut done: Vec<Run>, restore: Restore, root: Pa
     let before = view.visible_lines();
     put_picture();
     let action = view.paste_image_from(&NSPasteboard::generalPasteboard());
-    let started = Instant::now();
     let id = run.id;
     let name = run.name;
-    attach(id, before, started, move |shown| {
+    attach(id, before, move |shown| {
         restore.put_back();
         // Without a marker, the screen tells what the CLI showed instead.
         let seen = if shown.is_empty() {
@@ -346,36 +351,29 @@ fn screen(id: u64) -> String {
 
 /// Calls `then` with the new lines of the terminal `id` that show an image, once there are any or the time is up;
 /// halfway it pastes once more, for a CLI that was still busy starting when the first paste came.
-fn attach(id: u64, before: Vec<String>, started: Instant, then: impl FnOnce(Vec<String>) + Send + 'static) {
-    attach_again(id, before, started, false, then);
-}
-
-fn attach_again(
-    id: u64,
-    before: Vec<String>,
-    started: Instant,
-    repeated: bool,
-    then: impl FnOnce(Vec<String>) + Send + 'static,
-) {
-    let shown: Vec<String> = inspect::view(id)
-        .map(|view| view.visible_lines())
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|line| shows_image(line) && !before.contains(line))
-        .map(|line| line.trim().to_string())
-        .collect();
-    if !shown.is_empty() || started.elapsed() >= ATTACH {
-        then(shown);
-        return;
-    }
-    let repeat = !repeated && started.elapsed() >= ATTACH / 2;
-    if repeat && let Some(view) = inspect::view(id) {
-        put_picture();
-        view.paste_image_from(&NSPasteboard::generalPasteboard());
-    }
-    main_after(TICK, move || {
-        attach_again(id, before, started, repeated || repeat, then)
-    });
+fn attach(id: u64, before: Vec<String>, then: impl FnOnce(Vec<String>) + 'static) {
+    let started = Instant::now();
+    let repeated = Cell::new(false);
+    let shown = move || {
+        let shown: Vec<String> = inspect::view(id)
+            .map(|view| view.visible_lines())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|line| shows_image(line) && !before.contains(line))
+            .map(|line| line.trim().to_string())
+            .collect();
+        if shown.is_empty()
+            && !repeated.get()
+            && started.elapsed() >= ATTACH / 2
+            && let Some(view) = inspect::view(id)
+        {
+            repeated.set(true);
+            put_picture();
+            view.paste_image_from(&NSPasteboard::generalPasteboard());
+        }
+        (!shown.is_empty()).then_some(shown)
+    };
+    helpers::wait_for_within(ATTACH, shown, move |shown| then(shown.unwrap_or_default()));
 }
 
 /// Closes the CLIs' tabs, which ends them with their input unsent, and ends the scenario.
@@ -390,20 +388,22 @@ fn close(runs: &[Run], root: &Path) {
             }
         }
     }
-    let root = root.to_path_buf();
-    main_after(TICK, move || {
-        forget_when_gone(pids, Instant::now() + Duration::from_secs(10), root)
-    });
+    forget_when_gone(pids, root.to_path_buf());
 }
 
 /// Once the CLIs ended, which write their settings as they quit, takes the scenario's folders out of those settings.
-fn forget_when_gone(pids: Vec<u32>, deadline: Instant, root: PathBuf) {
-    let running = ide_process::Supervisor::global().running();
-    let alive = pids.iter().any(|pid| running.iter().any(|process| process.pid == *pid));
-    if alive && Instant::now() < deadline {
-        main_after(TICK, move || forget_when_gone(pids, deadline, root));
-        return;
-    }
+fn forget_when_gone(pids: Vec<u32>, root: PathBuf) {
+    let alive = move |pids: &[u32]| {
+        let running = ide_process::Supervisor::global().running();
+        pids.iter().any(|pid| running.iter().any(|process| process.pid == *pid))
+    };
+    let watched = pids.clone();
+    helpers::wait_within(GONE, move || !alive(&watched), move |gone| cleaned(pids, gone, root));
+}
+
+/// Takes the scenario's folders out of the CLIs' settings once they are `gone`.
+fn cleaned(pids: Vec<u32>, gone: bool, root: PathBuf) {
+    let alive = !gone;
     let home = crate::environment::get().and_then(|env| {
         env.iter()
             .find(|(name, _)| name == "HOME")
@@ -430,9 +430,7 @@ fn forget_again(home: PathBuf, root: PathBuf, mut removed: Vec<String>, round: u
             .map(|line| format!("{line} (round {round})")),
     );
     if round < 2 {
-        main_after(Duration::from_secs(4), move || {
-            forget_again(home, root, removed, round + 1)
-        });
+        helpers::after(REWRITE_GAP, move || forget_again(home, root, removed, round + 1));
         return;
     }
     let names_left = forget::named(&home, &doomed);

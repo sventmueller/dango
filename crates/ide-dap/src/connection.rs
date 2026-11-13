@@ -1,23 +1,19 @@
-//! One connection to an adapter: requests with deadlines, events, and the adapter's own requests to the client.
-//!
-//! Three threads per connection, as for language servers: one reads and dispatches, one writes from a bounded queue
-//! so a caller never waits on a full pipe, one fails requests whose deadline passed.
+//! One connection to an adapter on the shared transport (`ide-rpc`): requests with deadlines, events, and the
+//! adapter's own requests to the client.
 
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufReader, Read, Write};
-use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::mpsc::{Receiver, SyncSender, TrySendError, sync_channel};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard, Weak};
-use std::time::{Duration, Instant};
+use std::io::{self, Read, Write};
+use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
 
+use ide_core::LockIgnoringPoison;
+use ide_rpc::{SendError, Transport};
 use serde_json::{Value, json};
 
 use crate::error::Error;
 use crate::protocol::{self, Message};
 
-/// Messages that may wait for the writer; more means the adapter stopped reading.
-const QUEUE: usize = 4096;
+pub(crate) use ide_rpc::contained;
 
 /// Called once with a response's body.
 pub(crate) type Answer = Box<dyn FnOnce(Result<Value, Error>) + Send>;
@@ -30,21 +26,20 @@ pub(crate) trait Handler: Send + Sync {
     fn closed(&self);
 }
 
-struct Call {
+/// A request waiting for its response.
+struct Waiting {
     command: String,
     answer: Answer,
-    deadline: Instant,
 }
 
-#[derive(Default)]
-struct Pending {
-    calls: HashMap<i64, Call>,
-    closed: bool,
-}
+impl ide_rpc::Call for Waiting {
+    fn closed(self) {
+        (self.answer)(Err(Error::Ended));
+    }
 
-enum Out {
-    Message(Vec<u8>),
-    End,
+    fn expired(self, _: i64, _: &Transport<Self>) {
+        (self.answer)(Err(Error::Timeout));
+    }
 }
 
 /// Writes both directions of a session as lines of JSON, for fixtures replayed in tests.
@@ -53,18 +48,32 @@ struct Recorder(Mutex<File>);
 impl Recorder {
     fn write(&self, from: &str, message: &Value) {
         let line = json!({"from": from, "message": message});
-        let mut file = self.0.lock().unwrap_or_else(|e| e.into_inner());
-        let _ = writeln!(file, "{line}");
+        let mut file = self.0.lock_ignoring_poison();
+        if let Err(error) = writeln!(file, "{line}") {
+            ide_core::diag::report("dap: recording", error);
+        }
+    }
+}
+
+/// Records `message` when recording, and queues it.
+fn send(transport: &Transport<Waiting>, recorder: Option<&Recorder>, message: &Message) -> Result<(), Error> {
+    if let Some(recorder) = recorder {
+        recorder.write("client", &message.to_json());
+    }
+    transport.send(message.to_frame()).map_err(error_of)
+}
+
+fn error_of(error: SendError) -> Error {
+    match error {
+        SendError::Congested => Error::Congested,
+        SendError::Closed => Error::Ended,
     }
 }
 
 /// One connection.
 pub(crate) struct Connection {
-    out: SyncSender<Out>,
-    pending: Mutex<Pending>,
-    wake: Condvar,
-    seq: AtomicI64,
-    recorder: Option<Recorder>,
+    transport: Arc<Transport<Waiting>>,
+    recorder: Option<Arc<Recorder>>,
 }
 
 impl Connection {
@@ -76,30 +85,13 @@ impl Connection {
         name: &str,
         record: Option<File>,
     ) -> io::Result<Arc<Connection>> {
-        let (out, queue) = sync_channel(QUEUE);
-        let connection = Arc::new(Connection {
-            out,
-            pending: Mutex::default(),
-            wake: Condvar::new(),
-            seq: AtomicI64::new(1),
-            recorder: record.map(|file| Recorder(Mutex::new(file))),
-        });
-        std::thread::Builder::new()
-            .name(format!("dap-write-{name}"))
-            .spawn(move || write_all(output, &queue))?;
-        let timer = connection.clone();
-        std::thread::Builder::new()
-            .name(format!("dap-timer-{name}"))
-            .spawn(move || timer.expire())?;
-        let reader = Arc::downgrade(&connection);
-        if let Err(error) = std::thread::Builder::new()
-            .name(format!("dap-read-{name}"))
-            .spawn(move || read_all(input, &reader, &*handler))
-        {
-            connection.close();
-            return Err(error);
-        }
-        Ok(connection)
+        let recorder = record.map(|file| Arc::new(Recorder(Mutex::new(file))));
+        let dispatch = Dispatch {
+            handler,
+            recorder: recorder.clone(),
+        };
+        let transport = Transport::start(input, output, Arc::new(dispatch), "dap", name)?;
+        Ok(Arc::new(Connection { transport, recorder }))
     }
 
     /// Sends a request; `answer` hears the body, an error or the timeout exactly once. When this returns an error,
@@ -111,91 +103,61 @@ impl Connection {
         timeout: Duration,
         answer: Answer,
     ) -> Result<i64, Error> {
-        let seq = self.seq.fetch_add(1, Ordering::Relaxed);
-        {
-            let mut pending = self.lock();
-            if pending.closed {
-                return Err(Error::Ended);
-            }
-            let deadline = Instant::now()
-                .checked_add(timeout)
-                .unwrap_or_else(|| Instant::now() + Duration::from_secs(365 * 24 * 3600));
-            let command = command.to_string();
-            pending.calls.insert(
-                seq,
-                Call {
-                    command,
-                    answer,
-                    deadline,
-                },
-            );
-        }
-        self.wake.notify_all();
+        let transport = &self.transport;
+        let seq = transport.next_id();
         let message = Message::Request {
             seq,
             command: command.to_string(),
             arguments,
         };
-        if let Err(error) = self.send(&message)
-            && self.lock().calls.remove(&seq).is_some()
-        {
-            return Err(error);
+        if let Some(recorder) = &self.recorder {
+            recorder.write("client", &message.to_json());
         }
+        let waiting = Waiting {
+            command: command.to_string(),
+            answer,
+        };
+        transport
+            .call(seq, message.to_frame(), timeout, waiting)
+            .map_err(error_of)?;
         Ok(seq)
     }
 
     /// Whether the connection still carries messages.
     pub(crate) fn is_open(&self) -> bool {
-        !self.lock().closed
+        self.transport.is_open()
     }
 
-    fn send(&self, message: &Message) -> Result<(), Error> {
-        if let Some(recorder) = &self.recorder {
-            recorder.write("client", &message.to_json());
-        }
-        match self.out.try_send(Out::Message(message.to_frame())) {
-            Ok(()) => Ok(()),
-            Err(TrySendError::Full(_)) => Err(Error::Congested),
-            Err(TrySendError::Disconnected(_)) => Err(Error::Ended),
-        }
+    /// Fails every waiting request and ends the adapter's input; nothing more can be sent.
+    pub(crate) fn close(&self) {
+        self.transport.close();
     }
+}
 
-    fn respond(&self, request_seq: i64, command: String, answer: Result<Value, String>) {
-        let seq = self.seq.fetch_add(1, Ordering::Relaxed);
-        let (success, message, body) = match answer {
-            Ok(body) => (true, None, body),
-            Err(message) => (false, Some(message), Value::Null),
-        };
-        let _ = self.send(&Message::Response {
-            seq,
-            request_seq,
-            success,
-            command,
-            message,
-            body,
-        });
-    }
+/// Hands what the adapter sends to the handler or to the request it answers.
+struct Dispatch {
+    handler: Arc<dyn Handler>,
+    recorder: Option<Arc<Recorder>>,
+}
 
-    fn dispatch(self: &Arc<Self>, body: &[u8], handler: &dyn Handler) {
-        let Ok(message) = protocol::parse(body) else {
-            return;
+impl ide_rpc::Receiver<Waiting> for Dispatch {
+    fn receive(&self, transport: &Arc<Transport<Waiting>>, body: &[u8]) {
+        let message = match protocol::parse(body) {
+            Ok(message) => message,
+            Err(error) => return ide_core::diag::report("dap: undecodable message", error),
         };
         if let Some(recorder) = &self.recorder {
             recorder.write("adapter", &message.to_json());
         }
         match message {
-            Message::Event { event, body, .. } => contained(|| handler.event(&event, body)),
+            Message::Event { event, body, .. } => contained(|| self.handler.event(&event, body)),
             Message::Request {
                 seq,
                 command,
                 arguments,
             } => {
-                let responder = Responder {
-                    seq,
-                    command: Some(command.clone()),
-                    connection: Arc::downgrade(self),
-                };
-                contained(|| handler.request(&command, arguments, responder));
+                let responder = Responder::new(Arc::downgrade(transport), self.recorder.clone(), seq, command.clone());
+                contained(|| self.handler.request(&command, arguments, responder));
             }
             Message::Response {
                 request_seq,
@@ -204,135 +166,75 @@ impl Connection {
                 body,
                 ..
             } => {
-                let Some(call) = self.lock().calls.remove(&request_seq) else {
+                let Some(waiting) = transport.take(request_seq) else {
                     return;
                 };
                 let answer = if success {
                     Ok(body)
                 } else {
                     Err(Error::Adapter {
-                        command: call.command,
+                        command: waiting.command,
                         message: message.unwrap_or_default(),
                     })
                 };
-                contained(|| (call.answer)(answer));
+                contained(|| (waiting.answer)(answer));
             }
         }
     }
 
-    /// Fails every waiting request and ends the adapter's input; nothing more can be sent.
-    pub(crate) fn close(&self) {
-        let calls: Vec<Call> = {
-            let mut pending = self.lock();
-            pending.closed = true;
-            pending.calls.drain().map(|(_, call)| call).collect()
-        };
-        self.wake.notify_all();
-        let _ = self.out.try_send(Out::End);
-        for call in calls {
-            contained(|| (call.answer)(Err(Error::Ended)));
-        }
-    }
-
-    fn expire(&self) {
-        let mut pending = self.lock();
-        loop {
-            if pending.closed {
-                return;
-            }
-            let now = Instant::now();
-            let due: Vec<i64> = pending
-                .calls
-                .iter()
-                .filter(|(_, call)| call.deadline <= now)
-                .map(|(seq, _)| *seq)
-                .collect();
-            if !due.is_empty() {
-                let calls: Vec<Call> = due.iter().filter_map(|seq| pending.calls.remove(seq)).collect();
-                drop(pending);
-                for call in calls {
-                    contained(|| (call.answer)(Err(Error::Timeout)));
-                }
-                pending = self.lock();
-                continue;
-            }
-            pending = match pending.calls.values().map(|call| call.deadline).min() {
-                Some(deadline) => {
-                    self.wake
-                        .wait_timeout(pending, deadline.saturating_duration_since(now))
-                        .unwrap_or_else(|e| e.into_inner())
-                        .0
-                }
-                None => self.wake.wait(pending).unwrap_or_else(|e| e.into_inner()),
-            };
-        }
-    }
-
-    fn lock(&self) -> MutexGuard<'_, Pending> {
-        self.pending.lock().unwrap_or_else(|e| e.into_inner())
+    fn ended(&self) {
+        self.handler.closed();
     }
 }
 
 /// Answers one request from the adapter; dropped unanswered, it answers with a failure.
-pub(crate) struct Responder {
-    seq: i64,
-    command: Option<String>,
-    connection: Weak<Connection>,
-}
+pub(crate) struct Responder(ide_rpc::Responder<String>);
 
 impl Responder {
-    pub(crate) fn ok(mut self, body: Value) {
-        self.answer(Ok(body));
-    }
-
-    pub(crate) fn fail(mut self, message: &str) {
-        self.answer(Err(message.to_string()));
-    }
-
-    fn answer(&mut self, answer: Result<Value, String>) {
-        if let (Some(command), Some(connection)) = (self.command.take(), self.connection.upgrade()) {
-            connection.respond(self.seq, command, answer);
-        }
-    }
-}
-
-impl Drop for Responder {
-    fn drop(&mut self) {
-        self.answer(Err("the request was not answered".to_string()));
-    }
-}
-
-fn read_all(input: impl Read, connection: &Weak<Connection>, handler: &dyn Handler) {
-    let mut input = BufReader::with_capacity(64 * 1024, input);
-    while let Ok(Some(body)) = ide_process::framing::read(&mut input) {
-        let Some(connection) = connection.upgrade() else {
-            return;
+    fn new(
+        transport: Weak<Transport<Waiting>>,
+        recorder: Option<Arc<Recorder>>,
+        seq: i64,
+        command: String,
+    ) -> Responder {
+        let answer = move |answer: Result<Value, String>| {
+            let Some(transport) = transport.upgrade() else {
+                return;
+            };
+            let (success, message, body) = match answer {
+                Ok(body) => (true, None, body),
+                Err(message) => (false, Some(message), Value::Null),
+            };
+            let response = Message::Response {
+                seq: transport.next_id(),
+                request_seq: seq,
+                success,
+                command,
+                message,
+                body,
+            };
+            let _ = send(&transport, recorder.as_deref(), &response);
         };
-        connection.dispatch(&body, handler);
+        Responder(ide_rpc::Responder::new(
+            answer,
+            "the request was not answered".to_string(),
+        ))
     }
-    if let Some(connection) = connection.upgrade() {
-        connection.close();
-    }
-    contained(|| handler.closed());
-}
 
-fn write_all(mut output: impl Write, queue: &Receiver<Out>) {
-    while let Ok(Out::Message(bytes)) = queue.recv() {
-        if output.write_all(&bytes).and_then(|()| output.flush()).is_err() {
-            return;
-        }
+    pub(crate) fn ok(self, body: Value) {
+        self.0.ok(body);
     }
-}
 
-/// Runs `f`; a panic in a caller's callback costs that callback, not the connection.
-pub(crate) fn contained(f: impl FnOnce()) {
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    pub(crate) fn fail(self, message: &str) {
+        self.0.fail(message.to_string());
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::{PipeReader, PipeWriter};
+    use std::io::{BufReader, PipeReader, PipeWriter};
     use std::sync::mpsc::channel;
+    use std::time::Instant;
 
     use super::*;
 

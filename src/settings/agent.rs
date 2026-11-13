@@ -403,7 +403,7 @@ impl AgentSettings {
         let accessory = NSStackView::new(mtm);
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         accessory.setAlignment(NSLayoutAttribute::Leading);
-        accessory.setSpacing(8.0);
+        accessory.setSpacing(ide_ui_common::style::space::M);
         for field in fields {
             accessory.addArrangedSubview(field);
             field.widthAnchor().constraintEqualToConstant(320.0).setActive(true);

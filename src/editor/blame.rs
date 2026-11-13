@@ -543,7 +543,7 @@ fn stack(mtm: MainThreadMarker) -> Retained<NSStackView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::Leading);
-    stack.setSpacing(8.0);
+    stack.setSpacing(ide_ui_common::style::space::M);
     stack.setEdgeInsets(objc2_foundation::NSEdgeInsets {
         top: 12.0,
         left: 14.0,
@@ -556,7 +556,7 @@ fn stack(mtm: MainThreadMarker) -> Retained<NSStackView> {
 fn uncommitted_content(mtm: MainThreadMarker) -> Retained<NSView> {
     let stack = stack(mtm);
     let title = label(mtm, t("Nicht committet"));
-    title.setFont(Some(&NSFont::boldSystemFontOfSize(12.0)));
+    title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::LABEL)));
     stack.addArrangedSubview(&title);
     stack.addArrangedSubview(&label(mtm, t("Seit dem letzten Commit geändert")));
     stack.into_super()
@@ -575,7 +575,7 @@ fn commit_content(mtm: MainThreadMarker, view: &EditorTextView, commit: &BlameCo
             &[&tf("{} · {}", &[&commit.author, &age(commit.author_time)]), &short],
         ),
     );
-    title.setFont(Some(&NSFont::boldSystemFontOfSize(12.0)));
+    title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::LABEL)));
     title.setToolTip(Some(&ns(&commit.author_email)));
     stack.addArrangedSubview(&title);
     let message = NSTextField::wrappingLabelWithString(&ns(&commit.summary), mtm);
@@ -584,7 +584,7 @@ fn commit_content(mtm: MainThreadMarker, view: &EditorTextView, commit: &BlameCo
     message.setTag(MESSAGE_TAG);
     stack.addArrangedSubview(&message);
     let buttons = NSStackView::new(mtm);
-    buttons.setSpacing(8.0);
+    buttons.setSpacing(ide_ui_common::style::space::M);
     for (title, action) in [
         (t("Commit-ID kopieren"), sel!(ideBlameCopyHash:)),
         (t("Im Graph zeigen"), sel!(ideBlameShowInGraph:)),
@@ -683,4 +683,26 @@ pub fn popover_texts(view: &EditorTextView) -> Option<Vec<String>> {
     let mut out = Vec::new();
     collect(&popover.contentViewController()?.view(), &mut out);
     Some(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_line_end_names_author_age_and_subject_or_that_it_is_uncommitted() {
+        assert_eq!(summary(&Line::Uncommitted), t("Nicht committet"));
+        let commit = BlameCommit {
+            hash: "abc".into(),
+            author: "Ada".into(),
+            author_email: "ada@example.com".into(),
+            author_time: 0,
+            summary: "Fix the parser".into(),
+        };
+        let text = summary(&Line::Commit(commit));
+        assert!(
+            text.starts_with("Ada, ") && text.ends_with(" · Fix the parser"),
+            "{text}"
+        );
+    }
 }

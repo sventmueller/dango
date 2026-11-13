@@ -576,7 +576,7 @@ impl TerminalView {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setDistribution(NSStackViewDistribution::Fill);
-        stack.setSpacing(0.0);
+        stack.setSpacing(ide_ui_common::style::space::NONE);
         let target: &AnyObject = self;
         let dev_server = Banner::new(
             mtm,

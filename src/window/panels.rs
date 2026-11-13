@@ -25,28 +25,7 @@ const TREE_OUTDENT: f64 = 4.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
-/// How far a title's buttons keep from the sidebar's trailing edge.
-pub const ACCESSORY_INSET: f64 = 6.0;
-/// The size of the symbols of every panel's title buttons.
-pub const HEADER_POINTS: f64 = 14.0;
-/// The room between a panel's title buttons.
-pub const HEADER_SPACING: f64 = 2.0;
-
-/// Where the parts of a panel's title row sit, in the panel's coordinates.
-#[cfg(feature = "selftest")]
-pub struct TitleRow {
-    pub title_start: f64,
-    pub title_middle: f64,
-    pub buttons_middle: f64,
-    pub page_top: f64,
-    pub buttons_start: f64,
-    pub buttons_end: f64,
-    pub text_end: f64,
-    pub width: f64,
-    /// The symbol configuration of each button in a title row's stack of buttons, and the stack's spacing.
-    pub button_symbols: Vec<Option<Retained<objc2_app_kit::NSImageSymbolConfiguration>>>,
-    pub button_spacing: f64,
-}
+pub use ide_ui_common::panel::ACCESSORY_INSET;
 
 pub struct Panels {
     mtm: MainThreadMarker,
@@ -63,7 +42,7 @@ impl Panels {
     pub fn new(mtm: MainThreadMarker, _target: &WindowController, project: Option<&Path>) -> Panels {
         let view = NSView::new(mtm);
         let header = label(mtm, "");
-        header.setFont(Some(&NSFont::boldSystemFontOfSize(11.0)));
+        header.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::SMALL)));
         header.setTextColor(Some(&NSColor::secondaryLabelColor()));
         header.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
         header.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
@@ -218,83 +197,6 @@ impl Panels {
         }
     }
 
-    #[cfg(feature = "selftest")]
-    pub fn title(&self) -> String {
-        self.header.stringValue().to_string()
-    }
-
-    /// Whether the title row shows, and the texts and buttons of the shown page.
-    #[cfg(feature = "selftest")]
-    pub fn seen(&self) -> (bool, Vec<String>) {
-        fn texts(view: &NSView, out: &mut Vec<String>) {
-            if view.isHidden() {
-                return;
-            }
-            if let Some(field) = view.downcast_ref::<NSTextField>() {
-                out.push(field.stringValue().to_string());
-            } else if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
-                out.push(button.title().to_string());
-            }
-            for child in view.subviews().iter() {
-                texts(&child, out);
-            }
-        }
-        let mut out = Vec::new();
-        if let Some(page) = self.shown_page() {
-            texts(&page, &mut out);
-        }
-        (!self.header.isHidden(), out)
-    }
-
-    /// The geometry of the title row, in the panel's coordinates.
-    #[cfg(feature = "selftest")]
-    pub fn title_row(&self) -> TitleRow {
-        use objc2_foundation::NSRect;
-        self.view.layoutSubtreeIfNeeded();
-        let in_panel = |view: &NSView| -> NSRect { view.convertRect_toView(view.bounds(), Some(&self.view)) };
-        let middle = |rect: NSRect| rect.origin.y + rect.size.height / 2.0;
-        let title = in_panel(&self.header);
-        let buttons = self.accessory.arrangedSubviews();
-        let first = buttons.firstObject().map(|view| in_panel(&view));
-        let last = buttons.lastObject().map(|view| in_panel(&view));
-        let page = self.shown_page().map_or(f64::NAN, |page| {
-            let rect = in_panel(&page);
-            if self.view.isFlipped() {
-                rect.origin.y
-            } else {
-                rect.origin.y + rect.size.height
-            }
-        });
-        let inner = buttons
-            .firstObject()
-            .and_then(|view| view.downcast::<NSStackView>().ok());
-        TitleRow {
-            button_symbols: inner
-                .as_ref()
-                .map(|stack| {
-                    stack
-                        .arrangedSubviews()
-                        .iter()
-                        .map(|view| {
-                            view.downcast::<objc2_app_kit::NSButton>()
-                                .ok()
-                                .and_then(|button| button.symbolConfiguration())
-                        })
-                        .collect()
-                })
-                .unwrap_or_default(),
-            button_spacing: inner.map_or(f64::NAN, |stack| stack.spacing()),
-            title_start: title.origin.x,
-            title_middle: middle(title),
-            buttons_middle: first.map_or(f64::NAN, middle),
-            page_top: page,
-            buttons_start: first.map_or(f64::NAN, |rect| rect.origin.x),
-            buttons_end: last.map_or(f64::NAN, |rect| rect.origin.x + rect.size.width),
-            text_end: title.origin.x + self.header.intrinsicContentSize().width,
-            width: self.view.bounds().size.width,
-        }
-    }
-
     fn page(&self, panel: Panel, project: Option<&Path>) -> Retained<NSView> {
         let mtm = self.mtm;
         let state = match (panel, project) {
@@ -338,28 +240,11 @@ impl Panels {
     }
 }
 
-/// A row for a panel's title buttons, as close together as every panel has them.
-pub fn header_row(mtm: MainThreadMarker) -> Retained<NSStackView> {
-    let row = NSStackView::new(mtm);
-    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(HEADER_SPACING);
-    row
-}
-
-/// A title button of a panel: the SF Symbol `name` at the size every panel's has, named `title` for VoiceOver and
-/// its tooltip, sending `action` to `target`.
-pub fn header_button(
-    mtm: MainThreadMarker,
-    name: &str,
-    title: &str,
-    target: Option<&objc2::runtime::AnyObject>,
-    action: Sel,
-) -> Retained<objc2_app_kit::NSButton> {
-    let button = crate::util::symbol_button(mtm, name, title, HEADER_POINTS, target, action);
-    button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-    crate::util::set_label(&button, Some(title));
-    button
-}
+pub use ide_ui_common::panel::{header_button, header_row};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// A symbol, a title, a line of explanation and maybe a button, centred, as macOS shows a place without content.
 pub fn empty_state(
@@ -372,7 +257,7 @@ pub fn empty_state(
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::CenterX);
-    stack.setSpacing(8.0);
+    stack.setSpacing(ide_ui_common::style::space::M);
     if let Some(image) = symbol(symbol_name, title) {
         let view = NSImageView::imageViewWithImage(&image, mtm);
         view.setSymbolConfiguration(Some(
@@ -386,7 +271,7 @@ pub fn empty_state(
         stack.addArrangedSubview(&view);
     }
     let heading = label(mtm, title);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(13.0)));
+    heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING)));
     heading.setAlignment(NSTextAlignment::Center);
     stack.addArrangedSubview(&heading);
     let explanation = NSTextField::wrappingLabelWithString(&ns(detail), mtm);

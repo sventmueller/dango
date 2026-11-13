@@ -26,14 +26,12 @@ use crate::util::{constant, ns};
 use draw::fill;
 use rotor::Rotor;
 
-#[cfg(feature = "selftest")]
-pub use draw::drawn_in;
 pub use draw::{click, click_gap, draw, draw_fragment, hits, retarget, shown, tooltip, width_after_text};
 pub use rotor::attach;
 #[cfg(feature = "selftest")]
-pub use rotor::rotor_items;
+mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use rotor::rotor_step;
+pub use selftest_probe::*;
 
 /// The part of the app an inset belongs to; each sets and clears its own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -166,29 +164,6 @@ fn text_color(view: &EditorTextView) -> Retained<NSColor> {
     } else {
         NSColor::secondaryLabelColor()
     }
-}
-
-/// Whether editors draw as with increased contrast, for the self-test.
-#[cfg(feature = "selftest")]
-#[derive(Default)]
-pub struct ForcedContrast {
-    forced_contrast: std::cell::Cell<bool>,
-}
-
-#[cfg(feature = "selftest")]
-fn with_forced_contrast<R>(f: impl FnOnce(&std::cell::Cell<bool>) -> R) -> R {
-    f(&crate::context::app().editor.forced_contrast.forced_contrast)
-}
-
-/// Draws as with increased contrast, which AppKit gives a window only through the system setting, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn force_increased_contrast(on: bool) {
-    with_forced_contrast(|forced| forced.set(on));
-}
-
-#[cfg(feature = "selftest")]
-fn forced_contrast() -> bool {
-    with_forced_contrast(std::cell::Cell::get)
 }
 
 #[cfg(not(feature = "selftest"))]
@@ -522,17 +497,6 @@ fn find_kern<'a>(kerns: &'a [Kerned], range: &Range<usize>) -> Option<&'a Kerned
     kerns.get(index).filter(|k| k.range == *range)
 }
 
-#[cfg(feature = "selftest")]
-fn kern_at(storage: &NSTextStorage, at: usize) -> Option<f64> {
-    if at >= storage.length() {
-        return None;
-    }
-    let key = constant!(NSKernAttributeName);
-    // SAFETY: The index lies inside the text; no effective range is asked for.
-    let value = unsafe { storage.attribute_atIndex_effectiveRange(key, at, std::ptr::null_mut()) }?;
-    value.downcast::<NSNumber>().ok().map(|n| n.doubleValue())
-}
-
 /// The stretches inside `range` that carry a kern attribute.
 fn kerned_in(storage: &NSTextStorage, range: Range<usize>) -> Vec<Range<usize>> {
     let end = range.end.min(storage.length());
@@ -717,25 +681,28 @@ define_class!(
                       rect: NSRect,
                       baseline: f64,
                       container: std::ptr::NonNull<objc2_app_kit::NSTextContainer>| {
-                    // SAFETY: TextKit passes a valid text range or none, alive for the call.
-                    let segment = unsafe { segment.as_ref() };
-                    let rect = match (&start, segment) {
-                        (Some((content, start)), Some(segment)) if !gaps.is_empty() => {
-                            let from = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
-                                &**content,
-                                start,
-                                &segment.location(),
-                            );
-                            let to = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
-                                &**content,
-                                start,
-                                &segment.endLocation(),
-                            );
-                            caret_right_of_gap(&gaps, rect, from, to)
-                        }
-                        _ => rect,
-                    };
-                    block.call((segment.map_or(std::ptr::null_mut(), |s| std::ptr::from_ref(s).cast_mut()), rect, baseline, container))
+                    crate::util::guarded(objc2::runtime::Bool::NO, || {
+                        // SAFETY: TextKit passes a valid text range or none, alive for the call.
+                        let segment = unsafe { segment.as_ref() };
+                        let rect = match (&start, segment) {
+                            (Some((content, start)), Some(segment)) if !gaps.is_empty() => {
+                                let from = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
+                                    &**content,
+                                    start,
+                                    &segment.location(),
+                                );
+                                let to = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
+                                    &**content,
+                                    start,
+                                    &segment.endLocation(),
+                                );
+                                caret_right_of_gap(&gaps, rect, from, to)
+                            }
+                            _ => rect,
+                        };
+                        let segment = segment.map_or(std::ptr::null_mut(), |s| std::ptr::from_ref(s).cast_mut());
+                        block.call((segment, rect, baseline, container))
+                    })
                 },
             );
             // SAFETY: The superclass's implementation, with this method's signature and a block of the same type.
@@ -782,61 +749,6 @@ impl GapLayoutManager {
         // SAFETY: NSTextLayoutManager's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
     }
-}
-
-/// The contrast of an inset's text against its box on the editor's ground, in the appearance `view` has now, for the
-/// self-test.
-#[cfg(feature = "selftest")]
-pub fn contrast(view: &EditorTextView) -> Option<f64> {
-    use objc2_app_kit::{NSAppearanceCustomization, NSColorSpace};
-    let rgba = |color: &NSColor| {
-        let found = std::cell::Cell::new(None);
-        view.effectiveAppearance()
-            .performAsCurrentDrawingAppearance(&block2::RcBlock::new(|| {
-                found.set(color.colorUsingColorSpace(&NSColorSpace::sRGBColorSpace()).map(|c| {
-                    [
-                        c.redComponent(),
-                        c.greenComponent(),
-                        c.blueComponent(),
-                        c.alphaComponent(),
-                    ]
-                }));
-            }));
-        found.get()
-    };
-    let over =
-        |top: [f64; 4], below: [f64; 3]| -> [f64; 3] { [0, 1, 2].map(|i| top[i] * top[3] + below[i] * (1.0 - top[3])) };
-    let ground = rgba(&NSColor::textBackgroundColor())?;
-    let ground = [ground[0], ground[1], ground[2]];
-    let back = over(rgba(&fill())?, ground);
-    let front = over(rgba(&text_color(view))?, back);
-    let luminance = |c: [f64; 3]| {
-        let linear = |v: f64| {
-            if v <= 0.040_45 {
-                v / 12.92
-            } else {
-                ((v + 0.055) / 1.055).powf(2.4)
-            }
-        };
-        0.2126 * linear(c[0]) + 0.7152 * linear(c[1]) + 0.0722 * linear(c[2])
-    };
-    let (a, b) = (luminance(back), luminance(front));
-    Some((a.max(b) + 0.05) / (a.min(b) + 0.05))
-}
-
-/// The kern attributes in the text of `view`, as ranges with their values, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn kerns(view: &EditorTextView) -> Vec<(Range<usize>, f64)> {
-    let Some(storage) = view.storage() else {
-        return Vec::new();
-    };
-    kerned_in(&storage, 0..storage.length())
-        .into_iter()
-        .map(|range| {
-            let width = kern_at(&storage, range.start).unwrap_or(0.0);
-            (range, width)
-        })
-        .collect()
 }
 
 #[cfg(test)]

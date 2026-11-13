@@ -197,9 +197,9 @@ guarded" — also scan the two crates. The service binary stays `splat-decoder`,
 - **Pictures from the web (S4):** in a trusted folder they load as in splat. In an untrusted one the preview's `Drawn`
   never asks `remote`: the picture shows as a placeholder and a bar offers "Bilder aus dem Netz laden", which loads
   them for that document.
-- **AI answers** keep their own text builder (`src/agent/markdown.rs`) and turn `Atom::Math`/`Atom::Diagram` into
+- **AI answers** keep their own text builder (`crates/ide-ui-agent/src/markdown.rs`) and turn `Atom::Math`/`Atom::Diagram` into
   attachments once `cached(key)` has them, else code as before. All answers ask as one viewer
-  (`src/agent/figures.rs`, at most 400 keys); when more of them are drawn, the open timelines build their cards anew.
+  (`crates/ide-ui-agent/src/figures.rs`, at most 400 keys); when more of them are drawn, the open timelines build their cards anew.
   A plan for approval keeps them as code, as its comments point into its text.
 - **PDF** files open in a tab of their own with PDFKit's `PDFView`, **HTML** files beside their editor in the browser
   tab, which shows files of the window's folder only; neither uses this crate.

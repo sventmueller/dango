@@ -21,6 +21,10 @@ use super::form::{self, Row};
 use crate::editor::predict::model::{self, Choice, Local};
 use crate::editor::predict::provider::{self, CopilotState};
 use crate::util::{guarded, ns, set_action};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 pub struct Ivars {
     views: OnceCell<Views>,
@@ -386,38 +390,41 @@ impl PredictionSettings {
         let chosen = provider::chosen();
         let Some(local) = chosen.local().cloned() else { return };
         let choice = chosen.choice;
-        let _ = std::thread::Builder::new()
-            .name("prediction-models".into())
-            .spawn(move || {
-                let models = match choice {
-                    Choice::Ollama => ide_predict::fim::Ollama::models(&local.url),
-                    _ => ide_predict::fim::LmStudio::models(&local.url),
+        let started = crate::util::spawn("prediction-models", move || {
+            let models = match choice {
+                Choice::Ollama => ide_predict::fim::Ollama::models(&local.url),
+                _ => ide_predict::fim::LmStudio::models(&local.url),
+            };
+            crate::util::main_soon(move || {
+                let Some(this) = with_shown(|shown| shown.borrow().clone()) else {
+                    return;
                 };
-                crate::util::main_soon(move || {
-                    let Some(this) = with_shown(|shown| shown.borrow().clone()) else {
-                        return;
-                    };
-                    let Some(views) = this.ivars().views.get() else { return };
-                    views.model.removeAllItems();
-                    match models {
-                        Ok(models) => {
-                            for model in &models {
-                                // SAFETY: The combo box takes any object as an item; a string is what it shows.
-                                unsafe { views.model.addItemWithObjectValue(&ns(model)) };
-                            }
-                            *this.ivars().models.borrow_mut() = models;
-                            this.fill_model_note();
+                let Some(views) = this.ivars().views.get() else { return };
+                views.model.removeAllItems();
+                match models {
+                    Ok(models) => {
+                        for model in &models {
+                            // SAFETY: The combo box takes any object as an item; a string is what it shows.
+                            unsafe { views.model.addItemWithObjectValue(&ns(model)) };
                         }
-                        Err(error) => show_note(
-                            &views.model_note,
-                            &match error {
-                                ide_predict::Error::Unavailable(text) => text,
-                                other => format!("{other:?}"),
-                            },
-                        ),
+                        *this.ivars().models.borrow_mut() = models;
+                        this.fill_model_note();
                     }
-                });
+                    Err(error) => show_note(
+                        &views.model_note,
+                        &match error {
+                            ide_predict::Error::Unavailable(text) => text,
+                            other => format!("{other:?}"),
+                        },
+                    ),
+                }
             });
+        });
+        if let Err(why) = started
+            && let Some(views) = self.ivars().views.get()
+        {
+            show_note(&views.model_note, &why);
+        }
     }
 }
 
@@ -434,52 +441,4 @@ pub fn prediction_changed() {
     if let Some(this) = with_shown(|shown| shown.borrow().clone()) {
         this.fill();
     }
-}
-
-/// What the tab shows, for the self-test: the provider's title, the Copilot line and the consent line.
-#[cfg(feature = "selftest")]
-pub fn shown() -> Option<(String, String, String, bool)> {
-    let this = with_shown(|shown| shown.borrow().clone())?;
-    let views = this.ivars().views.get()?;
-    Some((
-        views.provider.titleOfSelectedItem()?.to_string(),
-        views.copilot.stringValue().to_string(),
-        views.allowed.stringValue().to_string(),
-        views.revoke.isEnabled(),
-    ))
-}
-
-/// What the tab shows of the local server, for the self-test.
-#[cfg(feature = "selftest")]
-pub struct LocalShown {
-    pub about: String,
-    pub url: String,
-    pub model: String,
-    /// The models the model field offers.
-    pub offered: Vec<String>,
-    pub note: String,
-    pub exclude: String,
-}
-
-/// What the tab shows of the local server, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn local_shown() -> Option<LocalShown> {
-    let this = with_shown(|shown| shown.borrow().clone())?;
-    let views = this.ivars().views.get()?;
-    let offered = (0..views.model.numberOfItems())
-        .filter_map(|index| {
-            let item = views.model.itemObjectValueAtIndex(index);
-            item.downcast::<objc2_foundation::NSString>()
-                .ok()
-                .map(|s| s.to_string())
-        })
-        .collect();
-    Some(LocalShown {
-        about: views.about.stringValue().to_string(),
-        url: views.url.stringValue().to_string(),
-        model: views.model.stringValue().to_string(),
-        offered,
-        note: views.model_note.stringValue().to_string(),
-        exclude: views.exclude.stringValue().to_string(),
-    })
 }

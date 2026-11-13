@@ -2,7 +2,7 @@
 //! They need installed tools or the network and take seconds to index, so they run only on request:
 //! `cargo test -p ide-lsp --test real_servers -- --ignored --test-threads 1`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -14,16 +14,14 @@ use ide_process::shell_env::{capture, user_shell};
 /// How long a server may take to index a tiny project.
 const PATIENCE: Duration = Duration::from_secs(120);
 
-fn project(name: &str, files: &[(&str, &str)]) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-lsp-real-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+fn project(name: &str, files: &[(&str, &str)]) -> ide_core::testing::Scratch {
+    let dir = ide_core::testing::scratch(&format!("lsp-real-{name}"));
     for (file, text) in files {
         let path = dir.join(file);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, text).unwrap();
     }
-    std::fs::canonicalize(dir).unwrap()
+    dir
 }
 
 fn shell_env(supervisor: &Supervisor, dir: &Path) -> Vec<(String, String)> {
@@ -203,7 +201,7 @@ fn rust_analyzer_reports_diagnostics_and_answers_hover_completion_and_definition
 const TS_MAIN: &str =
     "function greet(): string {\n  return \"hi\";\n}\n\nconst s = greet();\nconst n: number = \"no\";\ns.\n";
 
-fn ts_project(name: &str, typescript: &str, env: &[(String, String)]) -> PathBuf {
+fn ts_project(name: &str, typescript: &str, env: &[(String, String)]) -> ide_core::testing::Scratch {
     let dir = project(
         name,
         &[
@@ -274,12 +272,17 @@ fn an_older_typescript_falls_back_to_vtsls_installed_into_the_tools_folder() {
     let env = shell_env(&supervisor, &std::env::temp_dir());
     let dir = ts_project("ts5", "typescript@5", &env);
     let tools = project("tools-vtsls", &[]);
-    let installer = Installer::new(&supervisor, env.clone(), tools.clone(), Arc::new(Http::new()));
+    let installer = Installer::new(
+        &supervisor,
+        env.clone(),
+        tools.to_path_buf(),
+        Arc::new(Http::new("language server installer")),
+    );
     let program = installer
         .install(ide_lsp::VTSLS, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
         .unwrap();
     assert!(program.ends_with("node_modules/.bin/vtsls"));
-    let registry = Registry::with_tools(&supervisor, env, tools);
+    let registry = Registry::with_tools(&supervisor, env, tools.to_path_buf());
     let launch = registry.find(&Language::TypeScript, &dir, &dir).unwrap();
     assert_eq!(launch.source, Source::Tools, "TypeScript 5 does not speak the protocol");
     let (server, published) = start(&registry, &supervisor, Language::TypeScript, &dir);
@@ -293,7 +296,12 @@ fn rust_analyzer_is_installed_from_its_release_and_runs() {
     let supervisor = Supervisor::new();
     let tools = project("tools-ra", &[]);
     let env = vec![("PATH".to_string(), "/usr/bin:/bin".to_string())];
-    let installer = Installer::new(&supervisor, env, tools.clone(), Arc::new(Http::new()));
+    let installer = Installer::new(
+        &supervisor,
+        env,
+        tools.to_path_buf(),
+        Arc::new(Http::new("language server installer")),
+    );
     let mut last = None;
     let program = installer
         .install(Install::RustAnalyzer, &Cancel::new(), &mut |p| last = Some(p))
@@ -310,7 +318,12 @@ fn gopls_is_installed_with_go_install_into_the_tools_folder() {
     let supervisor = Supervisor::new();
     let tools = project("tools-gopls", &[]);
     let env = shell_env(&supervisor, &tools);
-    let installer = Installer::new(&supervisor, env, tools.clone(), Arc::new(Http::new()));
+    let installer = Installer::new(
+        &supervisor,
+        env,
+        tools.to_path_buf(),
+        Arc::new(Http::new("language server installer")),
+    );
     let program = installer
         .install(Install::Gopls, &Cancel::new(), &mut |p| eprintln!("{p:?}"))
         .unwrap();
@@ -412,8 +425,13 @@ fn the_npm_servers_install_into_the_tools_folder_and_serve_their_languages() {
             ("a.sh", "greet() {\n  echo hi\n}\n"),
         ],
     );
-    let registry = Registry::with_tools(&supervisor, env.clone(), tools.clone());
-    let installer = Installer::new(&supervisor, env, tools, Arc::new(Http::new()));
+    let registry = Registry::with_tools(&supervisor, env.clone(), tools.to_path_buf());
+    let installer = Installer::new(
+        &supervisor,
+        env,
+        tools.to_path_buf(),
+        Arc::new(Http::new("language server installer")),
+    );
     let cases = [
         (Language::Css, "a.css", "css", true),
         (Language::Python, "a.py", "python", true),

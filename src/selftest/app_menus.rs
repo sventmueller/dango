@@ -16,7 +16,7 @@ use objc2_foundation::{NSArray, NSURL};
 use splat_i18n::{t, tf};
 
 use super::{check, finish, helpers};
-use crate::util::{main_after, ns};
+use crate::util::ns;
 use crate::window::WindowController;
 
 const NAME: &str = "app-menus";
@@ -37,8 +37,8 @@ pub fn run() {
         crate::project::trust(folder);
     }
     crate::app::open_project(mtm, a.clone());
-    main_after(Duration::from_millis(400), move || {
-        let Some(controller) = helpers::window_of(&a) else {
+    helpers::wait_for_window(&a.clone(), move |controller| {
+        let Some(controller) = controller else {
             check("the project's window opens", false, "");
             return finish(NAME);
         };
@@ -168,7 +168,10 @@ fn recent(mtm: MainThreadMarker) {
         format!("{:?}", titles(&menu)),
     );
     handed(mtm, &delegate, &a, &b);
-    main_after(Duration::from_millis(300), install);
+    helpers::wait_until(
+        move || NSApplication::sharedApplication(mtm).modalWindow().is_none(),
+        |_| install(),
+    );
 }
 
 /// Folders and files handed to the app, as the Finder or the terminal command hand them, and a click on the Dock icon.

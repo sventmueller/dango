@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "最後のメッセージ: {}";
 "Das Programm hat sich ohne Meldung beendet." = "プログラムはメッセージなしで終了しました。";
 "Das Programm hat sich beim Start beendet: {}" = "プログラムは起動中に終了しました: {}";
+"Konnte keinen Thread starten: {}" = "スレッドを開始できませんでした: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "ワークスペースの変更を実行できませんでした。";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "「{}」はプログラムのないライブラリで、このファイルにはテストがありません。mainまたはテストのあるファイルをデバッグするか、.vscode/launch.jsonで起動するプログラムを指定してください。";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "macOSがパスワードを求めない場合は、ターミナルで「sudo DevToolsSecurity -enable」を一度実行してデバッガを許可するか、「停止」でキャンセルしてください。10分経つと開始は自動的に中止されます。";
+"Haltepunkt, nicht gesetzt" = "ブレークポイント、未設定";
+"nicht gesetzt" = "未設定";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "デバッガはここにブレークポイントを設定できませんでした: {}";

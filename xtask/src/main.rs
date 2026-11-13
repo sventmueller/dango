@@ -1,6 +1,7 @@
 //! Build tasks in the language of the project: the app bundle, its signature, the selftest and the release with its
 //! disk image, update feed and Homebrew Cask. The Makefile names the entry points.
 
+mod baseline;
 mod bundle;
 mod cask;
 mod ci;
@@ -12,6 +13,7 @@ mod icon;
 mod integration;
 mod licenses;
 mod release;
+mod rules;
 mod seal;
 mod selftest;
 mod shell;
@@ -39,7 +41,12 @@ pub(crate) const PROGRAM: &str = "ide";
 pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   bundle [--release] [--selftest]  build and sign target/<profile>/<name>.app; a release build raises the build number
   run [--release]                  bundle, then open the app
-  selftest [<scenario>…]           bundle the release with the selftest built in (and dictation for its scenario), then run each scenario (probe if none)
+  selftest [<scenario>…|--offline] bundle the release with the selftest built in (and dictation for its scenario), then run each scenario (probe if none,
+                                   every one without network, account or person with --offline); compares the pictures
+                                   that have accepted ones in tests/snapshots
+  selftest-accept <scenario> [<picture>…]
+                                   take the pictures of the last run of <scenario> as its accepted ones (all it already
+                                   has if none are named)
   integration [--list] [--paid] [--only <group>[,<group>…]]
                                    the checks against real servers, CLIs and services with this Mac's sign-ins;
                                    --list only says what would run and why the rest is skipped; the groups that use
@@ -56,7 +63,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
                                    the pinned nightly; needs rustup and cargo-fuzz
   coverage [--check] [--strict]    line coverage of cargo test and the offline selftest scenarios, instrumented with
-                                   rustup's toolchain and cargo-llvm-cov, into target/coverage/; --check fails below
+                                   rustup's toolchain and cargo-llvm-cov, into target/coverage/, with cargo test
+                                   alone beside it per folder and file; --check fails below
                                    90 % in total or 50 % in any file, --strict when a test or scenario failed
   ci                               cargo fmt, then check, coverage --check --strict and perf, fail-fast; a complete run
                                    seals the working tree's content in the local ref refs/ci-seals/<green|red>/<fp>;
@@ -70,6 +78,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    seal to origin
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
+  rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks and literal sizes
+                                   in the app's AppKit code, and for a discarded spawn anywhere
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
                                    Xcode";
 
@@ -100,6 +110,12 @@ fn task(args: &[String]) -> Result<(), String> {
             run(Command::new("open").arg("-n").arg(&app))
         }
         "selftest" => selftest(&scenarios(rest)?),
+        "selftest-accept" => match rest.split_first() {
+            Some((scenario, pictures)) if is_scenario(scenario) && pictures.iter().all(|p| is_scenario(p)) => {
+                baseline::accept(scenario, pictures)
+            }
+            _ => Err(format!("selftest-accept needs a scenario and picture names\n{USAGE}")),
+        },
         "integration" => integration::integration(rest),
         "claude-latest" => claude_latest::claude_latest(rest),
         "fuzz" => fuzz::fuzz(rest),
@@ -142,6 +158,10 @@ fn task(args: &[String]) -> Result<(), String> {
             flags(rest, [])?;
             structure::check()
         }
+        "rules" => {
+            flags(rest, [])?;
+            rules::check()
+        }
         _ => Err(USAGE.into()),
     }
 }
@@ -156,7 +176,7 @@ pub(crate) fn flags<const N: usize>(args: &[String], known: [&str; N]) -> Result
 
 /// The scenarios the arguments name, or the default one.
 pub(crate) fn scenarios(args: &[String]) -> Result<Vec<String>, String> {
-    if let Some(odd) = args.iter().find(|a| !is_scenario(a)) {
+    if let Some(odd) = args.iter().find(|a| !is_scenario(a) && *a != OFFLINE) {
         return Err(format!("{odd:?} is no scenario name\n{USAGE}"));
     }
     if args.is_empty() {
@@ -339,6 +359,7 @@ mod tests {
             &["icon", "x"],
             &["thread-locals", "x"],
             &["structure", "x"],
+            &["rules", "x"],
         ] {
             let refused = task(&strings(args)).unwrap_err();
             assert!(refused.starts_with("unknown argument "), "{args:?}: {refused}");
@@ -366,6 +387,7 @@ mod tests {
             ["probe", "editor-typing"]
         );
         assert!(scenarios(&strings(&["--release"])).is_err());
+        assert_eq!(scenarios(&strings(&[OFFLINE])).unwrap(), [OFFLINE]);
         assert!(scenarios(&strings(&["../escape"])).is_err());
     }
 }

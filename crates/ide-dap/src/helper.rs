@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use ide_lsp::Cancel;
+use ide_net::Cancel;
 use ide_process::{Ending, Kind, Supervisor};
 
 /// What a helper printed and how it ended.

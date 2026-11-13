@@ -4,7 +4,6 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use ide_git::{Git, Repository};
@@ -14,6 +13,7 @@ use ide_process::shell_env::{capture, user_shell};
 /// A folder of its own for one test, deleted at the end.
 pub struct Scratch {
     pub dir: PathBuf,
+    _folder: ide_core::testing::Scratch,
     /// The login shell's environment, for a test of the user's own git and configuration.
     users: Option<Vec<(String, String)>>,
     program: PathBuf,
@@ -21,13 +21,11 @@ pub struct Scratch {
 
 impl Scratch {
     pub fn new(name: &str) -> Scratch {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("ide-git-test-{name}-{}-{n}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(dir.join("home")).unwrap();
+        let folder = ide_core::testing::scratch(&format!("git-test-{name}"));
+        std::fs::create_dir_all(folder.join("home")).unwrap();
         Scratch {
-            dir: dir.canonicalize().unwrap(),
+            dir: folder.to_path_buf(),
+            _folder: folder,
             users: None,
             program: PathBuf::from("/usr/bin/git"),
         }
@@ -116,12 +114,6 @@ impl Scratch {
             .unwrap()
             .status
             .success()
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
 

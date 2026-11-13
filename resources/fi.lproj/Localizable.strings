@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Viimeisin viesti: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Ohjelma päättyi ilman viestiä.";
 "Das Programm hat sich beim Start beendet: {}" = "Ohjelma päättyi käynnistyessään: {}";
+"Konnte keinen Thread starten: {}" = "Säiettä ei voitu käynnistää: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Työtilan muutosta ei voitu tehdä.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "”{}” on kirjasto ilman ohjelmaa, eikä tässä tiedostossa ole testejä. Debuggaa tiedostoa, jossa on main tai testejä, tai määritä .vscode/launch.json-tiedostossa, mikä ohjelma käynnistyy.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Jos macOS ei kysy salasanaa, salli debuggerit kerran Päätteessä komennolla ”sudo DevToolsSecurity -enable” tai peru valitsemalla Pysäytä. Kymmenen minuutin kuluttua käynnistys luovuttaa itsestään.";
+"Haltepunkt, nicht gesetzt" = "Keskeytyskohta, ei asetettu";
+"nicht gesetzt" = "ei asetettu";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Debuggeri ei voinut asettaa keskeytyskohtaa tähän: {}";

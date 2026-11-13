@@ -18,16 +18,15 @@ use objc2_foundation::NSPoint;
 use splat_i18n::t;
 
 use super::check;
-use super::helpers::{answer_alert_saying, in_any_mode_after};
+use super::helpers::{answer_alert_saying, in_any_mode_after, wait_until};
 use super::lsp::{
     ANSWER, WAIT, Waited, ask, done, has_mark, main_view, offset_of, poll, project_window, put_cursor, root,
 };
 use crate::editor::EditorTextView;
-use crate::util::main_after;
 
 const MAIN: &str = "src/main.rs";
 const UTIL: &str = "src/util.rs";
-/// Long enough for a command's effects to show and an alert to be up.
+/// Long enough for an alert to be up, which the app shows without a state to wait for.
 const SETTLE: Duration = Duration::from_millis(400);
 
 /// Sends `action` to `view`, with `sender` if given, as the menu bar or the keyboard does.
@@ -248,7 +247,8 @@ fn format_on_save() {
     set_format_on_save(true);
     let end = view.document().text().len_utf16();
     crate::lsp::apply_text_edits(&view, vec![(end..end, "fn  late( )  { }\n".to_string())]);
-    main_after(SETTLE, || {
+    let late = || main_view().is_some_and(|v| v.document().text().to_string().contains("fn  late( )"));
+    wait_until(late, |_| {
         ask(
             || {
                 if let Some(view) = main_view() {
@@ -354,7 +354,7 @@ fn stale_action(waited: Waited) {
 }
 
 /// Puts the cursor of main.rs on `needle`, `into` code units in, and sends `action` there.
-fn at_main(needle: &'static str, into: usize, action: Sel) -> impl FnOnce() + Send + 'static {
+fn at_main(needle: &'static str, into: usize, action: Sel) -> impl FnOnce() + 'static {
     move || {
         if let Some(view) = main_view()
             && let Some(at) = offset_of(&view, needle, 0, into)

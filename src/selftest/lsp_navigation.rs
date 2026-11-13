@@ -3,6 +3,7 @@
 //! implementations of a trait in the list of places; and a call hierarchy opened three levels deep in the search
 //! panel, with its direction switch and its menu of earlier searches. Without rust-analyzer it reports itself skipped.
 
+use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -11,13 +12,11 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, snapshot};
+use super::{check, finish, helpers, snapshot};
 use crate::editor::{self, EditorTextView};
-use crate::util::main_after;
 use crate::window::{self, WindowController, search_selftest as search};
 
 const SCENARIO: &str = "lsp-navigation";
-const POLL: Duration = Duration::from_millis(250);
 /// The longest rust-analyzer may take to load this workspace and answer the first search.
 const WAIT: Duration = Duration::from_secs(300);
 /// The longest an answer may take once the server answers searches.
@@ -59,36 +58,26 @@ fn picture(name: &str) {
 /// `again` runs every `AGAIN` meanwhile.
 fn poll(
     within: Duration,
-    ready: impl Fn() -> bool + Send + 'static,
-    again: impl Fn() + Send + 'static,
-    then: impl FnOnce(bool, Duration) + Send + 'static,
+    ready: impl Fn() -> bool + 'static,
+    again: impl Fn() + 'static,
+    then: impl FnOnce(bool, Duration) + 'static,
 ) {
-    fn step(
-        started: Instant,
-        deadline: Instant,
-        last: Instant,
-        ready: impl Fn() -> bool + Send + 'static,
-        again: impl Fn() + Send + 'static,
-        then: impl FnOnce(bool, Duration) + Send + 'static,
-    ) {
-        main_after(POLL, move || {
-            let ok = ready();
-            if ok || Instant::now() >= deadline {
-                then(ok, started.elapsed());
-                return;
-            }
-            let last = if last.elapsed() >= AGAIN {
-                again();
-                Instant::now()
-            } else {
-                last
-            };
-            step(started, deadline, last, ready, again, then);
-        });
-    }
-    let now = Instant::now();
-    let deadline = (now + within).min(END.get().copied().unwrap_or(now + within));
-    step(now, deadline, now, ready, again, then);
+    let started = Instant::now();
+    let limit = END
+        .get()
+        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
+    let last = std::cell::Cell::new(started);
+    let ready = move || {
+        if ready() {
+            return true;
+        }
+        if last.get().elapsed() >= AGAIN {
+            again();
+            last.set(Instant::now());
+        }
+        false
+    };
+    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
 }
 
 fn done() {
@@ -179,7 +168,7 @@ fn hits() -> Vec<String> {
 
 fn found_symbol() -> bool {
     if let Some(said) = controller().and_then(|c| c.quick_open_status()) {
-        let mut seen = SAID.lock().unwrap_or_else(|e| e.into_inner());
+        let mut seen = SAID.lock_ignoring_poison();
         if !seen.contains(&said) {
             seen.push(said);
         }
@@ -199,7 +188,7 @@ fn search_again() {
 }
 
 fn symbol_found(ok: bool, took: Duration) {
-    let said = SAID.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    let said = SAID.lock_ignoring_poison().clone();
     let held = crate::lsp::symbol_servers(&root());
     if !ok && held.iter().any(|(language, running, _)| language == "Rust" && !running) {
         check(

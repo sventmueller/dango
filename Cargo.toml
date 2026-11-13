@@ -16,16 +16,22 @@ ide-dap = { path = "crates/ide-dap" }
 ide-document = { path = "crates/ide-document" }
 ide-git = { path = "crates/ide-git" }
 ide-lsp = { path = "crates/ide-lsp" }
+ide-net = { path = "crates/ide-net" }
 ide-predict = { path = "crates/ide-predict" }
 ide-process = { path = "crates/ide-process" }
 ide-product = { path = "crates/ide-product" }
 ide-project = { path = "crates/ide-project" }
+ide-rpc = { path = "crates/ide-rpc" }
+ide-secrets = { path = "crates/ide-secrets" }
 ide-terminal = { path = "crates/ide-terminal" }
 ide-thread = { path = "crates/ide-thread" }
+ide-ui-agent = { path = "crates/ide-ui-agent" }
 ide-ui-browser = { path = "crates/ide-ui-browser" }
 ide-ui-common = { path = "crates/ide-ui-common" }
+ide-ui-debug = { path = "crates/ide-ui-debug" }
 ide-ui-dictation = { path = "crates/ide-ui-dictation" }
 ide-ui-export = { path = "crates/ide-ui-export" }
+ide-ui-git = { path = "crates/ide-ui-git" }
 ide-ui-icons = { path = "crates/ide-ui-icons" }
 ide-ui-terminal = { path = "crates/ide-ui-terminal" }
 splat-decoder = { path = "../splat/crates/splat-decoder" }
@@ -107,16 +113,20 @@ ide-dap.workspace = true
 ide-document.workspace = true
 ide-git.workspace = true
 ide-lsp.workspace = true
+ide-net.workspace = true
 ide-predict.workspace = true
 ide-process.workspace = true
 ide-product.workspace = true
 ide-project.workspace = true
 ide-terminal.workspace = true
 ide-thread.workspace = true
+ide-ui-agent.workspace = true
 ide-ui-browser.workspace = true
 ide-ui-common.workspace = true
+ide-ui-debug.workspace = true
 ide-ui-dictation = { workspace = true, optional = true }
 ide-ui-export.workspace = true
+ide-ui-git.workspace = true
 ide-ui-icons.workspace = true
 ide-ui-terminal.workspace = true
 splat-decoder.workspace = true
@@ -145,12 +155,16 @@ serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
+# The scripted providers the app's own unit tests answer with.
+ide-agent = { workspace = true, features = ["testing"] }
+ide-predict = { workspace = true, features = ["testing"] }
+ide-core = { workspace = true, features = ["testing"] }
 splat-i18n.workspace = true
 
 [features]
-selftest = ["splat-decoder/selftest", "splat-render/selftest", "ide-ui-browser/selftest", "ide-ui-export/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
+selftest = ["ide-acp/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-git/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
 # Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
-dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak"]
+dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak", "ide-ui-agent/dictation"]
 
 # The terminal emulator, ripgrep's searcher and JSON handling are too slow to judge without optimisation.
 [profile.dev.package."*"]

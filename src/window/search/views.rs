@@ -15,6 +15,8 @@ use splat_i18n::t;
 
 use super::{SearchOutlineView, SearchPanel, Toggle};
 use crate::util::{ns, pin_edges, set_action, symbol, symbol_button};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 
 const MARGIN: f64 = 8.0;
 const SMALL_FONT: f64 = 11.0;
@@ -61,7 +63,7 @@ impl Views {
         let replace_toggle = replace_toggle(mtm, panel);
         let field_row = NSStackView::new(mtm);
         field_row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        field_row.setSpacing(2.0);
+        field_row.setSpacing(ide_ui_common::style::space::XXS);
         field_row.addArrangedSubview(&replace_toggle);
         field_row.addArrangedSubview(&field);
         field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
@@ -87,7 +89,7 @@ impl Views {
         let bar = NSStackView::new(mtm);
         bar.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         bar.setAlignment(NSLayoutAttribute::Leading);
-        bar.setSpacing(6.0);
+        bar.setSpacing(ide_ui_common::style::space::S);
         bar.setEdgeInsets(NSEdgeInsets {
             top: 0.0,
             left: MARGIN,
@@ -168,18 +170,6 @@ impl Views {
             .is_some_and(|(_, button)| button.state() == NSControlStateValueOn)
     }
 
-    #[cfg(feature = "selftest")]
-    pub(super) fn set_toggled(&self, toggle: Toggle, on: bool) {
-        if let Some((_, button)) = self.toggles.iter().find(|(t, _)| *t == toggle) {
-            button.setState(if on {
-                NSControlStateValueOn
-            } else {
-                NSControlStateValueOff
-            });
-        }
-        self.paint_toggles();
-    }
-
     /// Draws each toggle in the accent colour while it is on, as a borderless button shows no state.
     pub(super) fn paint_toggles(&self) {
         for (_, button) in &self.toggles {
@@ -197,11 +187,6 @@ impl Views {
             NSControlStateValueOff
         });
         self.disclosure.setAccessibilityExpanded(shown);
-    }
-
-    #[cfg(feature = "selftest")]
-    pub(super) fn results_shown(&self) -> bool {
-        !self.results.isHidden()
     }
 
     /// Shows the matches and the status line while the field holds a query.
@@ -329,7 +314,7 @@ fn replace_row(
     all.widthAnchor().constraintEqualToConstant(ALL_WIDTH).setActive(true);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(2.0);
+    row.setSpacing(ide_ui_common::style::space::XXS);
     // As wide as the chevron above, so the two fields line up.
     let indent = NSView::new(mtm);
     indent
@@ -373,7 +358,7 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSStackVi
     label.setAccessibilityElement(false);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(2.0);
+    row.setSpacing(ide_ui_common::style::space::XXS);
     row.addArrangedSubview(&chevron);
     row.addArrangedSubview(&label);
     (row, chevron)

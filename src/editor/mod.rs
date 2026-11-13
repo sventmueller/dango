@@ -17,11 +17,7 @@ mod overlay;
 pub mod predict;
 #[cfg(feature = "selftest")]
 mod probe;
-#[cfg(feature = "selftest")]
-pub use overlay::LAID_OUT;
 pub use overlay::follow as follow_overlay;
-#[cfg(feature = "selftest")]
-pub use probe::*;
 pub mod recovery;
 mod ruler;
 mod style;
@@ -102,14 +98,6 @@ pub fn top_byte(view: &EditorTextView) -> Option<usize> {
     view.document().text().offset(line, 0, ide_document::Unit::Utf16).ok()
 }
 
-/// Scrolls `view` so that the line holding byte `byte` is the first on screen.
-#[cfg(feature = "selftest")]
-pub fn scroll_to_byte(view: &EditorTextView, byte: usize) {
-    if let Some(y) = byte_y(view, byte) {
-        view.scrollPoint(NSPoint::new(view.visibleRect().origin.x, y));
-    }
-}
-
 /// The top of the line holding byte `byte`, in the view's coordinates.
 pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
     let at = view.document().text().byte_to_utf16(byte).ok()?;
@@ -148,6 +136,10 @@ pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_l
 pub use fold::hidden_by_fold;
 pub use ide_ui_common::util::undo_step;
 pub use style::{code_font, palette_color};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
 
 /// Takes the language server's folding ranges, as first line and last hidden line, or `None` for the indentation's.
 pub fn set_server_folds(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
@@ -393,7 +385,7 @@ fn add_tab(
     whitespace::attach(&view, &scroll);
     overlay::attach(&view);
     insets::attach(&view);
-    crate::debug::attach_rotor(&view);
+    crate::debug::attach_rotor(&view, &controller.context().debug_rotors);
     *view.ivars().gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
     let id = if preview {
         controller.add_preview_tab(TabKind::Editor, key, title, container)
@@ -653,31 +645,16 @@ fn set_wrap(view: &EditorTextView, wrap: bool) {
 
 /// Keeps a wrapping view as wide as its scroll view shows, whenever that changes size.
 fn follow_width(scroll: &NSScrollView, view: &EditorTextView) {
-    use std::ptr::NonNull;
-
-    use block2::RcBlock;
-    use objc2_app_kit::NSViewFrameDidChangeNotification;
-    use objc2_foundation::{NSNotification, NSNotificationCenter};
-
     let clip = scroll.contentView();
     clip.setPostsFrameChangedNotifications(true);
-    let name = constant!(NSViewFrameDidChangeNotification);
+    let name = constant!(objc2_app_kit::NSViewFrameDidChangeNotification);
     let editor = Weak::from(view);
-    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+    let watch = crate::util::observe(view.mtm(), name, Some(&clip), move |_| {
         if let Some(editor) = editor.load() {
             fit_width(&editor);
         }
     });
-    // SAFETY: The block only resizes the editor; the weak reference makes it do nothing once the editor is gone.
-    let observer = unsafe {
-        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-            Some(name),
-            Some(&clip),
-            None,
-            &block,
-        )
-    };
-    std::mem::forget(observer);
+    view.ivars().watches.borrow_mut().push(watch);
     fit_width(view);
 }
 

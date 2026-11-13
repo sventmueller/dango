@@ -4,13 +4,14 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use splat_i18n::t;
 
-use super::{check, finish, first_window, poll, snapshot};
+use super::helpers::{self, wait_within};
+use super::{check, finish, first_window, snapshot};
 use crate::window;
 
 /// The port of the page server of the browser scenario.
@@ -92,9 +93,8 @@ pub(super) fn run() {
         controller.tab_count() == before + 1,
         format!("{before} then {} tabs", controller.tab_count()),
     );
-    let deadline = Instant::now() + Duration::from_secs(20);
-    poll(
-        deadline,
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == PAGE_TITLE)),
         browser_loaded,
     );
@@ -118,8 +118,8 @@ fn browser_loaded(ok: bool) {
         format!("{tabs} then {} tabs", controller.tab_count()),
     );
     BEFORE_RELOAD.store(sent, Ordering::SeqCst);
-    poll(
-        Instant::now() + Duration::from_secs(10),
+    wait_within(
+        Duration::from_secs(10),
         || PAGES_SENT.load(Ordering::SeqCst) > BEFORE_RELOAD.load(Ordering::SeqCst),
         browser_reloaded,
     );
@@ -165,8 +165,8 @@ fn browser_reloaded(ok: bool) {
     );
     BEFORE_RELOAD.store(PAGES_SENT.load(Ordering::SeqCst), Ordering::SeqCst);
     press(&window, "r", 15);
-    poll(
-        Instant::now() + Duration::from_secs(10),
+    wait_within(
+        Duration::from_secs(10),
         || PAGES_SENT.load(Ordering::SeqCst) > BEFORE_RELOAD.load(Ordering::SeqCst),
         browser_shortcut_reloaded,
     );
@@ -209,8 +209,8 @@ fn browser_shortcut_reloaded(ok: bool) {
         crate::browser::answer_asking(&["selftest", "secret"]),
         "",
     );
-    poll(
-        Instant::now() + Duration::from_secs(10),
+    wait_within(
+        Duration::from_secs(10),
         || first_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == &format!("{FILLED} selftest 6"))),
         browser_filled,
     );
@@ -231,8 +231,8 @@ fn browser_filled(ok: bool) {
         .map(|address| address.port())
         .unwrap_or(9);
     crate::browser::open_tab(&controller, Some(&format!("http://127.0.0.1:{closed}/")));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    wait_within(
+        Duration::from_secs(20),
         || first_window().is_some_and(|c| crate::browser::inspect(&c).iter().any(|seen| seen.failure.is_some())),
         browser_failed,
     );
@@ -279,30 +279,33 @@ const FILE_TITLE: &str = "Project File";
 /// A page of the window's folder opens from its path, with the stylesheet beside it.
 fn browser_project_file() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("browser-project");
-    let page = folder.join("site/index.html");
-    let _ = std::fs::create_dir_all(folder.join("site"));
-    let _ = std::fs::write(
-        &page,
-        format!("<!doctype html><title>{FILE_TITLE}</title><link rel=stylesheet href=style.css><h1>{FILE_TITLE}</h1>"),
+    let page =
+        format!("<!doctype html><title>{FILE_TITLE}</title><link rel=stylesheet href=style.css><h1>{FILE_TITLE}</h1>");
+    let made = helpers::make_project(
+        "browser-project",
+        &[
+            ("site/index.html", page.as_str()),
+            ("site/style.css", "h1 { color: #b0451f; font: 600 28px -apple-system }"),
+        ],
     );
-    let _ = std::fs::write(
-        folder.join("site/style.css"),
-        "h1 { color: #b0451f; font: 600 28px -apple-system }",
-    );
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    let Some(controller) = window::open_windows()
-        .into_iter()
-        .find(|w| w.project().as_ref() == Some(&root))
-    else {
-        check("the folder gets its window", false, "");
-        finish("browser");
-        return;
+    let Ok(root) = made else {
+        check("the folder is made", false, "");
+        return finish("browser");
     };
-    crate::browser::open_tab(&controller, Some(&root.join("site/index.html").to_string_lossy()));
-    poll(
-        Instant::now() + Duration::from_secs(20),
+    crate::app::open_project(mtm, root.clone());
+    helpers::wait_for_window(&root.clone(), move |controller| {
+        let Some(controller) = controller else {
+            check("the folder gets its window", false, "");
+            return finish("browser");
+        };
+        open_project_file(&controller, &root);
+    });
+}
+
+fn open_project_file(controller: &window::WindowController, root: &std::path::Path) {
+    crate::browser::open_tab(controller, Some(&root.join("site/index.html").to_string_lossy()));
+    wait_within(
+        Duration::from_secs(20),
         || project_window().is_some_and(|c| c.tab_titles().iter().any(|t| t == FILE_TITLE)),
         browser_project_file_loaded,
     );

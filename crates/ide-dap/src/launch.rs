@@ -43,7 +43,11 @@ impl LaunchConfig {
     #[must_use]
     pub fn with_process(mut self, pid: u32) -> LaunchConfig {
         match self.kind {
-            AdapterKind::Lldb | AdapterKind::Fake => {
+            AdapterKind::Lldb => {
+                self.arguments.insert("pid".into(), json!(pid));
+            }
+            #[cfg(any(test, feature = "testing"))]
+            AdapterKind::Fake => {
                 self.arguments.insert("pid".into(), json!(pid));
             }
             AdapterKind::Go => {
@@ -90,8 +94,40 @@ pub struct Entry {
     /// Its name, also when it cannot be used.
     pub name: String,
     /// The configuration, or why it cannot be used, such as an unknown `type` or a variable without a value.
-    pub config: Result<LaunchConfig, String>,
+    pub config: Result<LaunchConfig, ConfigError>,
 }
+
+/// Why one configuration of `launch.json` cannot be used.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfigError {
+    /// Its `type` names no debugger the app knows.
+    UnknownType(String),
+    /// Its `request` is neither `launch` nor `attach`.
+    UnknownRequest(Option<String>),
+    /// It is not an object.
+    NotAnObject,
+    /// A `${` without its `}`, in this text.
+    UnclosedVariable(String),
+    /// A variable that needs an open file, and none is.
+    NeedsFile(String),
+    /// A variable the app does not fill in.
+    Unsupported(String),
+}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ConfigError::UnknownType(kind) => write!(f, "unknown debugger type {kind:?}"),
+            ConfigError::UnknownRequest(request) => write!(f, "unknown request {request:?}"),
+            ConfigError::NotAnObject => f.write_str("not an object"),
+            ConfigError::UnclosedVariable(text) => write!(f, "an unclosed variable in {text:?}"),
+            ConfigError::NeedsFile(name) => write!(f, "${{{name}}} needs an open file"),
+            ConfigError::Unsupported(name) => write!(f, "${{{name}}} is not supported"),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {}
 
 /// Why `launch.json` could not be read.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -157,7 +193,7 @@ pub fn parse_launch_json(text: &str, variables: &Variables) -> Result<Vec<Entry>
         .collect())
 }
 
-fn config(object: &Map<String, Value>, name: &str, variables: &Variables) -> Result<LaunchConfig, String> {
+fn config(object: &Map<String, Value>, name: &str, variables: &Variables) -> Result<LaunchConfig, ConfigError> {
     let mut arguments = object.clone();
     // Settings for macOS take precedence over the common ones; those for other systems do not apply.
     if let Some(Value::Object(mac)) = arguments.remove("osx") {
@@ -166,17 +202,17 @@ fn config(object: &Map<String, Value>, name: &str, variables: &Variables) -> Res
     arguments.remove("windows");
     arguments.remove("linux");
     let kind_name = arguments.get("type").and_then(Value::as_str).unwrap_or_default();
-    let kind = AdapterKind::from_type(kind_name).ok_or_else(|| format!("unknown debugger type {kind_name:?}"))?;
+    let kind = AdapterKind::from_type(kind_name).ok_or_else(|| ConfigError::UnknownType(kind_name.to_string()))?;
     let request = match arguments.get("request").and_then(Value::as_str) {
         Some("launch") => Request::Launch,
         Some("attach") => Request::Attach,
-        other => return Err(format!("unknown request {other:?}")),
+        other => return Err(ConfigError::UnknownRequest(other.map(str::to_string))),
     };
     let mut process_pick = false;
     let mut value = Value::Object(arguments);
     substitute(&mut value, variables, &mut process_pick)?;
     let Value::Object(mut arguments) = value else {
-        return Err("not an object".into());
+        return Err(ConfigError::NotAnObject);
     };
     if process_pick {
         for key in ["pid", "processId"] {
@@ -207,7 +243,7 @@ fn environment_as_list(arguments: &mut Map<String, Value>) {
 }
 
 /// Fills in every `${…}` in the strings of `value`.
-fn substitute(value: &mut Value, variables: &Variables, process_pick: &mut bool) -> Result<(), String> {
+fn substitute(value: &mut Value, variables: &Variables, process_pick: &mut bool) -> Result<(), ConfigError> {
     match value {
         Value::String(text) => {
             if text.contains("${command:pickProcess}") || text.contains("${command:PickProcess}") {
@@ -233,7 +269,7 @@ fn substitute(value: &mut Value, variables: &Variables, process_pick: &mut bool)
 }
 
 /// `text` with its variables filled in.
-pub(crate) fn expand(text: &str, variables: &Variables) -> Result<String, String> {
+pub(crate) fn expand(text: &str, variables: &Variables) -> Result<String, ConfigError> {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(start) = rest.find("${") {
@@ -241,7 +277,7 @@ pub(crate) fn expand(text: &str, variables: &Variables) -> Result<String, String
         let after = &rest[start + 2..];
         let end = after
             .find('}')
-            .ok_or_else(|| format!("an unclosed variable in {text:?}"))?;
+            .ok_or_else(|| ConfigError::UnclosedVariable(text.to_string()))?;
         out.push_str(&value_of(&after[..end], variables)?);
         rest = &after[end + 1..];
     }
@@ -249,13 +285,13 @@ pub(crate) fn expand(text: &str, variables: &Variables) -> Result<String, String
     Ok(out)
 }
 
-fn value_of(name: &str, variables: &Variables) -> Result<String, String> {
+fn value_of(name: &str, variables: &Variables) -> Result<String, ConfigError> {
     let root = &variables.workspace_folder;
     let file = || {
         variables
             .file
             .as_deref()
-            .ok_or_else(|| format!("${{{name}}} needs an open file"))
+            .ok_or_else(|| ConfigError::NeedsFile(name.to_string()))
     };
     let text = |path: &Path| path.display().to_string();
     let base = |path: &Path| {
@@ -286,7 +322,7 @@ fn value_of(name: &str, variables: &Variables) -> Result<String, String> {
         "lineNumber" => variables
             .line
             .map(|l| l.to_string())
-            .ok_or("${lineNumber} needs an open file")?,
+            .ok_or_else(|| ConfigError::NeedsFile(name.to_string()))?,
         "selectedText" => variables.selected_text.clone().unwrap_or_default(),
         "cwd" => text(root),
         "pathSeparator" | "/" => "/".into(),
@@ -304,7 +340,7 @@ fn value_of(name: &str, variables: &Variables) -> Result<String, String> {
                     .map(|(_, v)| v.clone())
                     .unwrap_or_default());
             }
-            return Err(format!("${{{name}}} is not supported"));
+            return Err(ConfigError::Unsupported(name.to_string()));
         }
     })
 }
@@ -379,8 +415,8 @@ mod tests {
         let go = entries[2].config.as_ref().unwrap();
         assert_eq!(go.arguments["env"], json!({"CGO": "0"}));
         assert!(!go.arguments.contains_key("linux"));
-        assert!(entries[3].config.as_ref().unwrap_err().contains("cppvsdbg"));
-        assert!(entries[4].config.as_ref().unwrap_err().contains("input:script"));
+        assert_eq!(entries[3].config, Err(ConfigError::UnknownType("cppvsdbg".into())));
+        assert_eq!(entries[4].config, Err(ConfigError::Unsupported("input:script".into())));
     }
 
     #[test]
@@ -425,7 +461,10 @@ mod tests {
             line: None,
             ..variables()
         };
-        assert!(expand("${lineNumber}", &without).unwrap_err().contains("lineNumber"));
+        assert_eq!(
+            expand("${lineNumber}", &without).unwrap_err().to_string(),
+            "${lineNumber} needs an open file"
+        );
     }
 
     #[test]
@@ -439,8 +478,8 @@ mod tests {
             &variables(),
         )
         .unwrap();
-        assert!(entries[0].config.as_ref().unwrap_err().contains("unknown request"));
-        let root = std::env::temp_dir().join(format!("ide-dap-launch-{}", std::process::id()));
+        assert!(matches!(entries[0].config, Err(ConfigError::UnknownRequest(_))));
+        let root = ide_core::testing::scratch("dap-launch");
         std::fs::create_dir_all(root.join(".vscode/launch.json")).unwrap();
         assert!(matches!(
             launch_configs(&root, true, &variables()),

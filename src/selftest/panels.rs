@@ -5,19 +5,23 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicIsize, AtomicU32, AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use ide_process::Supervisor;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 
-use super::{check, finish, snapshot};
-use crate::util::main_after;
+use super::{check, finish, helpers, snapshot};
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "panels";
 const FILES: [&str; 4] = ["a.rs", "b.rs", "c.rs", "d.rs"];
-/// A pause for the window to draw before a picture or a step that needs its layout.
+const PROJECT: &str = "panels-project";
+/// How long the terminal's login shell may take to start.
+const SHELL_START: Duration = Duration::from_secs(30);
+/// How long the window's processes may take to end once it closed.
+const WIND_DOWN: Duration = Duration::from_secs(8);
+/// A pause for the window to draw before a picture or a step that needs its layout, which has no state to wait for.
 const PAUSE: Duration = Duration::from_millis(600);
 /// The share of the left document that the tab of a.rs keeps.
 const SHARE: f64 = 0.35;
@@ -86,16 +90,12 @@ fn sidebar_in_front(controller: &WindowController) -> bool {
 }
 
 pub(super) fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = ide_core::paths::home().join("panels-project");
-    let _ = std::fs::create_dir_all(&folder);
-    for name in FILES {
-        let _ = std::fs::write(folder.join(name), format!("// {name}\nfn main() {{}}\n"));
-    }
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    main_after(PAUSE, move || opened(root));
+    let texts: Vec<String> = FILES
+        .iter()
+        .map(|name| format!("// {name}\nfn main() {{}}\n"))
+        .collect();
+    let files: Vec<(&str, &str)> = FILES.iter().copied().zip(texts.iter().map(String::as_str)).collect();
+    helpers::open_project(SCENARIO, PROJECT, &files, |_| opened(helpers::root(PROJECT)));
 }
 
 fn opened(root: PathBuf) {
@@ -132,17 +132,7 @@ fn shell_now() -> Option<u32> {
 }
 
 fn wait_for_shell(root: PathBuf) {
-    let deadline = Instant::now() + Duration::from_secs(30);
-    fn ask(root: PathBuf, deadline: Instant) {
-        main_after(Duration::from_millis(200), move || {
-            if shell_now().is_some() || Instant::now() > deadline {
-                switching(root);
-            } else {
-                ask(root, deadline);
-            }
-        });
-    }
-    ask(root, deadline);
+    helpers::wait_within(SHELL_START, || shell_now().is_some(), move |_| switching(root));
 }
 
 /// Bringing another tab to the front moves the sidebar along as it was.
@@ -185,7 +175,7 @@ fn switching(root: PathBuf) {
     );
     dragged_out(&controller, &root);
     controller.select_tab_by_id(tab_of(&controller, &root, "a.rs"));
-    main_after(PAUSE, move || beside(root));
+    helpers::after(PAUSE, move || beside(root));
 }
 
 /// A tab moved to a window of its own keeps the sidebar's picture while the other window has the sidebar, gets the
@@ -244,7 +234,7 @@ fn beside(root: PathBuf) {
         alive && shell_now() == Some(SHELL.load(Ordering::SeqCst)),
         format!("{:?}", shell_now()),
     );
-    main_after(PAUSE, move || closing_side(root));
+    helpers::after(PAUSE, move || closing_side(root));
 }
 
 /// Closing one of two documents leaves the other alone in its tab; closing a tab's only one closes the tab.
@@ -275,7 +265,7 @@ fn closing_side(root: PathBuf) {
     controller.set_share_of(a, SHARE);
     let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
     check("an AI thread opens in a tab of its own", replayed, shown(&controller));
-    main_after(PAUSE, move || closing(root));
+    helpers::after(PAUSE, move || closing(root));
 }
 
 fn closing(root: PathBuf) {
@@ -283,7 +273,18 @@ fn closing(root: PathBuf) {
     let expected = controller.window_tabs();
     let share = controller.tab_shares().into_iter().flatten().next();
     controller.close_all_tabs();
-    main_after(PAUSE * 3, move || reopen(root, expected, share));
+    let (probe, count) = (root.clone(), expected.len());
+    let shell = SHELL.load(Ordering::SeqCst);
+    helpers::wait_until(
+        move || {
+            Supervisor::global()
+                .running()
+                .iter()
+                .all(|process| process.pid != shell)
+                && ide_core::layout::load(&probe).is_some_and(|layout| layout.tabs.len() == count)
+        },
+        move |_| reopen(root, expected, share),
+    );
 }
 
 fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
@@ -310,7 +311,11 @@ fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     );
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, root.clone());
-    main_after(PAUSE, move || restored(root, expected, share));
+    let (probe, wanted) = (root.clone(), expected.clone());
+    helpers::wait_until(
+        move || helpers::window_of(&probe).is_some_and(|c| c.window_tabs() == wanted && has_session(&c, SESSION)),
+        move |_| helpers::after(PAUSE, move || restored(root, expected, share)),
+    );
 }
 
 fn restored(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
@@ -336,25 +341,23 @@ fn restored(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
         snapshot(&window, "panels-restored");
     }
     controller.close_all_tabs();
-    wind_down(Instant::now());
+    wind_down();
 }
 
 /// Finishes once the window's processes ended, its shell and any language server: a quit from inside a main-queue
 /// block cannot wait for running processes, since the app's answer to the quit comes through that same queue.
-fn wind_down(since: Instant) {
-    let running = Supervisor::global().running();
-    if running.is_empty() || since.elapsed() > Duration::from_secs(8) {
-        let left: Vec<String> = running
-            .iter()
-            .map(|process| format!("{:?} {}", process.kind, process.label))
-            .collect();
-        check(
-            "closing the window ends its processes",
-            running.is_empty(),
-            left.join(", "),
-        );
-        finish(SCENARIO);
-    } else {
-        main_after(Duration::from_millis(200), move || wind_down(since));
-    }
+fn wind_down() {
+    helpers::wait_within(
+        WIND_DOWN,
+        || Supervisor::global().running().is_empty(),
+        |ended| {
+            let left: Vec<String> = Supervisor::global()
+                .running()
+                .iter()
+                .map(|process| format!("{:?} {}", process.kind, process.label))
+                .collect();
+            check("closing the window ends its processes", ended, left.join(", "));
+            finish(SCENARIO);
+        },
+    );
 }

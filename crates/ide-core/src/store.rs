@@ -116,12 +116,7 @@ pub(crate) fn write_atomically(path: &Path, value: &Value) -> io::Result<()> {
 pub(crate) mod tests {
     use super::*;
 
-    pub(crate) fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-core-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
+    pub(crate) use crate::testing::scratch;
 
     fn rename_size(values: &mut Map<String, Value>) {
         if let Some(size) = values.remove("size") {
@@ -131,7 +126,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_missing_file_is_an_empty_store_that_writes_itself() {
-        let path = scratch("missing").join("nested/settings.json");
+        let scratch_dir = scratch("missing");
+        let path = scratch_dir.join("nested/settings.json");
         let mut store = Store::load(path.clone(), &[]);
         assert!(store.get("anything").is_none());
         store.set("a", Value::from(1), &[]).unwrap();
@@ -142,7 +138,8 @@ pub(crate) mod tests {
 
     #[test]
     fn an_older_file_is_migrated_and_written_with_the_new_version() {
-        let path = scratch("migrate").join("settings.json");
+        let scratch_dir = scratch("migrate");
+        let path = scratch_dir.join("settings.json");
         std::fs::write(&path, r#"{"version": 1, "size": 13}"#).unwrap();
         let migrations: &[Migration] = &[rename_size];
         let mut store = Store::load(path.clone(), migrations);
@@ -155,7 +152,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_file_from_a_newer_version_is_read_but_never_overwritten() {
-        let path = scratch("newer").join("settings.json");
+        let scratch_dir = scratch("newer");
+        let path = scratch_dir.join("settings.json");
         let original = r#"{"version": 9, "future": "kept"}"#;
         std::fs::write(&path, original).unwrap();
         let mut store = Store::load(path.clone(), &[]);
@@ -167,7 +165,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_damaged_file_reads_as_empty_and_is_left_for_the_user_to_mend() {
-        let path = scratch("damaged").join("settings.json");
+        let scratch_dir = scratch("damaged");
+        let path = scratch_dir.join("settings.json");
         std::fs::write(&path, "{ not json").unwrap();
         let mut store = Store::load(path.clone(), &[]);
         assert!(store.get("anything").is_none());

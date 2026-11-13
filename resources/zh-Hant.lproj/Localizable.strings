@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "最後的訊息：{}";
 "Das Programm hat sich ohne Meldung beendet." = "程式已結束，沒有留下訊息。";
 "Das Programm hat sich beim Start beendet: {}" = "程式在啟動時結束：{}";
+"Konnte keinen Thread starten: {}" = "無法啟動執行緒：{}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "無法執行工作區變更。";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "「{}」是沒有程式的程式庫，且此檔案沒有測試。請除錯包含 main 或測試的檔案，或在 .vscode/launch.json 中指定啟動哪個程式。";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "如果 macOS 沒有要求輸入密碼，請在「終端機」中用「sudo DevToolsSecurity -enable」允許除錯器一次，或用「停止」取消。十分鐘後啟動會自行放棄。";
+"Haltepunkt, nicht gesetzt" = "中斷點，未設定";
+"nicht gesetzt" = "未設定";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "除錯器無法在此處設定中斷點：{}";

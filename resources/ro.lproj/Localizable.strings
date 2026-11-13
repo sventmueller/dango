@@ -1550,3 +1550,10 @@
 "Letzte Meldung: {}" = "Ultimul mesaj: {}";
 "Das Programm hat sich ohne Meldung beendet." = "Programul s-a oprit fără niciun mesaj.";
 "Das Programm hat sich beim Start beendet: {}" = "Programul s-a oprit la pornire: {}";
+"Konnte keinen Thread starten: {}" = "Nu s-a putut porni un fir de execuție: {}";
+"Die Änderung des Arbeitsbereichs ließ sich nicht ausführen." = "Modificarea spațiului de lucru nu a putut fi efectuată.";
+"„{}“ ist eine Bibliothek ohne Programm, und diese Datei hat keine Tests. Debugge eine Datei mit main oder Tests, oder lege in .vscode/launch.json fest, welches Programm startet." = "„{}” este o bibliotecă fără program, iar acest fișier nu are teste. Depanați un fișier cu main sau teste ori stabiliți în .vscode/launch.json ce program pornește.";
+"Erscheint keine Passwortabfrage von macOS, erlaube Debugger einmal im Terminal mit „sudo DevToolsSecurity -enable“, oder brich mit Stopp ab. Nach zehn Minuten gibt der Start von selbst auf." = "Dacă macOS nu cere nicio parolă, permiteți o dată depanatoarele în Terminal cu „sudo DevToolsSecurity -enable” sau anulați cu Opriți. După zece minute, pornirea renunță de la sine.";
+"Haltepunkt, nicht gesetzt" = "Punct de întrerupere, nesetat";
+"nicht gesetzt" = "nesetat";
+"Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "Depanatorul nu a putut seta aici un punct de întrerupere: {}";

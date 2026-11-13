@@ -3,61 +3,14 @@
 
 use std::path::Path;
 
-use ide_ci::{Client, Error, Forge, Item, Job, Kind, Run, Source, Workflow};
+use ide_ci::{Client, Error, Forge, Kind, Run, Source};
 use ide_git::{StatusOptions, Untracked};
 
-use super::model::Tab;
 use super::work;
+use ide_ci::panel::{Head, Loaded, RunRow, Snapshot, Tab};
 
 /// How many runs get their jobs read.
 const RUNS_WITH_JOBS: usize = 10;
-
-/// A run with its jobs.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunRow {
-    pub run: Run,
-    pub jobs: Vec<Job>,
-    /// Why its jobs could not be read.
-    pub problem: Option<String>,
-}
-
-/// The commit the runs belong to.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Head {
-    pub sha: String,
-    pub branch: Option<String>,
-}
-
-/// What a read found.
-pub enum Loaded {
-    NoGit,
-    NoRepository,
-    NoCommit,
-    NoRemote,
-    /// The remote's host does not say which service it is.
-    Unknown(String),
-    /// The service wants a token, or refused the one it got.
-    SignIn {
-        forge: Forge,
-        refused: bool,
-    },
-    Failed(Error, Option<Forge>),
-    Ready(Box<Snapshot>),
-}
-
-/// The runs of HEAD on its service.
-pub struct Snapshot {
-    pub head: Head,
-    pub client: Client,
-    pub source: Option<Source>,
-    pub account: Option<String>,
-    pub runs: Vec<RunRow>,
-    /// The tab the open merge requests or issues were read for.
-    pub tab: Tab,
-    pub items: Vec<Item>,
-    pub items_problem: Option<String>,
-    pub workflows: Vec<Workflow>,
-}
 
 /// HEAD's commit and branch, or why there is none.
 pub fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
@@ -103,12 +56,12 @@ pub fn load(root: &Path, known: Option<(String, Source, String)>, tab: Tab) -> L
         };
         let own = credential.as_ref().is_some_and(|c| c.source == Source::Keychain);
         if !(matches!(error, Error::Unauthorized { .. }) && own && !renewed) {
-            return refused(error, forge.unwrap_or_else(|| first.clone()), token.is_some());
+            return Loaded::refused(error, forge.unwrap_or_else(|| first.clone()), token.is_some());
         }
         renewed = true;
         match auth.renew(first, &*work::network(), token.as_deref().unwrap_or_default()) {
             Some(fresh) => credential = Some(fresh),
-            None => return refused(error, forge.unwrap_or_else(|| first.clone()), true),
+            None => return Loaded::refused(error, forge.unwrap_or_else(|| first.clone()), true),
         }
     };
     let kept = credential.as_ref().and_then(|c| c.account.clone());
@@ -182,18 +135,6 @@ fn with_jobs(client: &Client, run: Run, read: bool) -> RunRow {
         (Vec::new(), None)
     };
     RunRow { run, jobs, problem }
-}
-
-/// A missing or refused token asks to sign in; a repository that is not found without a token may be private.
-fn refused(error: Error, forge: Forge, had_token: bool) -> Loaded {
-    match error {
-        Error::Unauthorized { .. } => Loaded::SignIn {
-            forge,
-            refused: had_token,
-        },
-        Error::NotFound { .. } if !had_token => Loaded::SignIn { forge, refused: false },
-        other => Loaded::Failed(other, Some(forge)),
-    }
 }
 
 /// The URL of the remote the current branch tracks, else `origin`'s, else the first one's.

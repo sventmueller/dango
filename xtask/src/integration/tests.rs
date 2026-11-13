@@ -376,7 +376,7 @@ fn the_groups_that_start_coding_agents_say_they_use_paid_accounts() {
 #[test]
 fn every_step_names_an_ignored_test_or_a_scenario_that_exists() {
     let fake = complete();
-    let scenarios = files::read_to_string(root().join("src/selftest.rs")).unwrap();
+    let scenarios = files::read_to_string(root().join("src/selftest/scenarios.rs")).unwrap();
     for group in GROUPS {
         for step in (group.steps)(&context(&fake)) {
             match step.action {
@@ -393,7 +393,7 @@ fn every_step_names_an_ignored_test_or_a_scenario_that_exists() {
                 }
                 Action::Selftest { scenario, .. } => {
                     assert!(
-                        scenarios.contains(&format!("\"{scenario}\" =>")),
+                        scenarios.contains(&format!("(\"{scenario}\",")),
                         "no scenario {scenario}"
                     );
                 }
@@ -449,6 +449,7 @@ fn a_scenario_that_skipped_each_of_its_checks_counts_as_skipped() {
     let report = |checks| Report {
         scenario: "ci-live".into(),
         checks,
+        appearance: None,
     };
     assert_eq!(
         judge_selftest(&report(vec![check("skipped: SignIn, no usable login")])),

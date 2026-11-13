@@ -9,6 +9,10 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Helpers the crates' tests share, such as a folder of its own for each test.
+testing = []
+
 [dependencies]
 ide-product.workspace = true
 serde.workspace = true

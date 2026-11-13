@@ -96,8 +96,11 @@ fn select(view: &EditorTextView, range: &Range<usize>) {
 
 /// Every selection, the view's included, sorted and merged where they meet, with the place of the view's own.
 fn all(view: &EditorTextView) -> (Vec<Range<usize>>, usize) {
-    let primary = range_of(view.selectedRange());
-    let mut ranges = extra(view);
+    merge(range_of(view.selectedRange()), extra(view))
+}
+
+/// `primary` and `extra` sorted and merged where they overlap or repeat, with the place of the range holding `primary`.
+fn merge(primary: Range<usize>, mut ranges: Vec<Range<usize>>) -> (Vec<Range<usize>>, usize) {
     ranges.push(primary.clone());
     ranges.sort_by_key(|r| (r.start, r.end));
     let mut merged: Vec<Range<usize>> = vec![];
@@ -444,11 +447,13 @@ pub fn rects(view: &EditorTextView, range: Range<usize>) -> Vec<NSRect> {
          _: f64,
          _: std::ptr::NonNull<objc2_app_kit::NSTextContainer>|
          -> objc2::runtime::Bool {
-            out.borrow_mut().push(NSRect::new(
-                NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
-                frame.size,
-            ));
-            objc2::runtime::Bool::YES
+            crate::util::guarded(objc2::runtime::Bool::NO, || {
+                out.borrow_mut().push(NSRect::new(
+                    NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
+                    frame.size,
+                ));
+                objc2::runtime::Bool::YES
+            })
         },
     );
     layout.enumerateTextSegmentsInRange_type_options_usingBlock(
@@ -474,4 +479,27 @@ pub fn set(view: &EditorTextView, mut at: Vec<Range<usize>>) {
 #[cfg(feature = "selftest")]
 pub fn carets(view: &EditorTextView) -> Vec<Range<usize>> {
     all(view).0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn carets_come_in_text_order_with_the_main_one_found_again() {
+        assert_eq!(merge(5..5, vec![9..9, 1..1]), (vec![1..1, 5..5, 9..9], 1));
+    }
+
+    #[test]
+    fn overlapping_selections_merge_and_repeated_carets_become_one() {
+        let (merged, main) = merge(2..6, vec![4..8, 12..12, 12..12]);
+        assert_eq!(merged, [2..8, 12..12]);
+        assert_eq!(main, 0);
+    }
+
+    #[test]
+    fn selections_that_only_touch_stay_apart() {
+        let touching = 3..5;
+        assert_eq!(merge(0..3, vec![touching]), (vec![0..3, 3..5], 0));
+    }
 }

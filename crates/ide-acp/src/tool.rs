@@ -1,6 +1,7 @@
 //! Short-lived helper processes of an installation, such as `npm install` or `ditto`, run through the supervisor with
 //! the login shell's environment and a time limit.
 
+use ide_core::{IgnoringPoison, LockIgnoringPoison};
 use std::collections::VecDeque;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -61,7 +62,7 @@ impl Runner {
                 return;
             };
             let (lock, changed) = &*board;
-            let mut endings = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let mut endings = lock.lock_ignoring_poison();
             if endings.len() == REMEMBERED {
                 endings.pop_front();
             }
@@ -77,7 +78,7 @@ impl Runner {
 
     fn wait(&self, id: ProcessId, deadline: Instant) -> Option<Ending> {
         let (lock, changed) = &*self.board;
-        let mut endings = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut endings = lock.lock_ignoring_poison();
         loop {
             if let Some((_, ending)) = endings.iter().find(|(i, _)| *i == id) {
                 return Some(*ending);
@@ -86,10 +87,7 @@ impl Runner {
             if now >= deadline {
                 return None;
             }
-            endings = changed
-                .wait_timeout(endings, deadline - now)
-                .unwrap_or_else(|e| e.into_inner())
-                .0;
+            endings = changed.wait_timeout(endings, deadline - now).ignoring_poison().0;
         }
     }
 
