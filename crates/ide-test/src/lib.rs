@@ -16,6 +16,7 @@
 
 #![warn(missing_docs, unreachable_pub)]
 
+pub mod board;
 mod cargo;
 mod go;
 mod js;

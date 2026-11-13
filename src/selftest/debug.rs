@@ -95,7 +95,7 @@ fn enabled(menu: &[(String, bool)], title: &str) -> Option<bool> {
     menu.iter().find(|(t, _)| t == title).map(|(_, on)| *on)
 }
 
-/// ⌘5 shows the debug panel and puts the focus into its list; with no session, every control and menu item that acts
+/// ⌘6 shows the debug panel and puts the focus into its list; with no session, every control and menu item that acts
 /// on one is greyed out.
 fn focus(root: PathBuf) {
     let Some(controller) = front(&root) else {
@@ -113,7 +113,7 @@ fn focus(root: PathBuf) {
     let mut frame = window.frame();
     frame.size.width = 1700.0;
     window.setFrame_display(frame, true);
-    let went = press(&window, "5", 23, NSEventModifierFlags::Command);
+    let went = press(&window, "6", 22, NSEventModifierFlags::Command);
     let outline = debug::outline(&controller);
     let focused = window
         .firstResponder()
@@ -121,7 +121,7 @@ fn focus(root: PathBuf) {
         .zip(outline)
         .is_some_and(|(focus, outline)| focus.isDescendantOf(&outline));
     check(
-        "⌘5 shows the debug panel and puts the focus into its list",
+        "⌘6 shows the debug panel and puts the focus into its list",
         matches!(went, Went::Menu(_)) && controller.inspect().panel == Some(Panel::Debug) && focused,
         format!("{went}, {:?}, focus in the list: {focused}", controller.inspect().panel),
     );

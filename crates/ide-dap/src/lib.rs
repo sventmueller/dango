@@ -55,7 +55,7 @@ mod stub_tests;
 mod types;
 
 pub use adapter::{Adapter, AdapterKind, free_port};
-pub use current::{CurrentError, current_program};
+pub use current::{CurrentError, TestProgram, current_program, test_program};
 pub use discover::{Adapters, Install, Missing};
 pub use error::Error;
 pub use filters::{Languages, RUST_PANIC, offered as offered_filters, rust_panic};

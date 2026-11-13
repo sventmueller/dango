@@ -37,7 +37,9 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
         go_menu(mtm, &keys),
         crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
         crate::git_panel::menu(mtm),
-        crate::debug::menu(mtm, &|command| keys.get(command)),
+        crate::tests_panel::with_menu_items(mtm, crate::debug::menu(mtm, &|command| keys.get(command)), &|command| {
+            keys.get(command)
+        }),
         window_item,
         help_item,
     ] {
@@ -213,6 +215,7 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             panel(Panel::Search, "panel.search"),
             panel(Panel::Agents, "panel.agents"),
             panel(Panel::Git, "panel.git"),
+            panel(Panel::Tests, "panel.tests"),
             panel(Panel::Debug, "panel.debug"),
             panel(Panel::Ci, "panel.ci"),
             separator(mtm),

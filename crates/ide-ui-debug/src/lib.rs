@@ -71,6 +71,14 @@ pub fn menu(mtm: MainThreadMarker, key: &dyn Fn(&str) -> String) -> Retained<NSM
     commands::menu(mtm, key, target)
 }
 
+/// Debugs one test of the Tests panel in `window`, named `name`, and shows the Debug panel.
+pub fn debug_test(window: Window, name: String, program: ide_dap::TestProgram) {
+    if let Some(panel) = panel::of(&window) {
+        window.activate_panel(Panel::Debug);
+        panel.debug_test(name, program);
+    }
+}
+
 /// The document `tab` of `window` closes; a console among them is forgotten.
 pub fn closing(window: Window, tab: isize) {
     if let Some(panel) = panel::of(&window) {

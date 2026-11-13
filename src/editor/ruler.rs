@@ -108,7 +108,18 @@ define_class!(
             guarded(None, || {
                 let editor = self.ivars().editor.load()?;
                 let line = self.line_of(&editor, event)?;
-                crate::debug::gutter_menu(&editor, line)
+                let tests = crate::tests_panel::gutter_items(&editor, line);
+                let menu = crate::debug::gutter_menu(&editor, line);
+                if tests.is_empty() {
+                    return menu;
+                }
+                let menu = menu.unwrap_or_else(|| objc2_app_kit::NSMenu::new(editor.mtm()));
+                for (index, item) in tests.iter().enumerate() {
+                    crate::util::set_target(item, &editor);
+                    menu.insertItem_atIndex(item, isize::try_from(index).unwrap_or(0));
+                }
+                menu.insertItem_atIndex(&objc2_app_kit::NSMenuItem::separatorItem(editor.mtm()), 2);
+                Some(menu)
             })
         }
 
@@ -141,6 +152,18 @@ impl LineNumbers {
             let _ = self.click_change(event);
         } else if (fold - 3.0..fold + FOLD_WIDTH).contains(&x) {
             self.fold_click(event);
+        } else if x < NUMBERS_LEFT
+            && let Some(editor) = self.ivars().editor.load()
+            && let Some(line) = self.line_of(&editor, event)
+            && crate::tests_panel::gutter_click(
+                &editor,
+                line,
+                event
+                    .modifierFlags()
+                    .contains(objc2_app_kit::NSEventModifierFlags::Option),
+            )
+        {
+            self.setNeedsDisplay(true);
         } else if let Some(editor) = self.ivars().editor.load()
             && let Some(line) = self.line_of(&editor, event)
             && crate::debug::gutter_click(&editor, line)
@@ -415,12 +438,11 @@ impl LineNumbers {
                     } else if let Some(folded) = folds.get(&(line - 1)) {
                         self.fold_mark(fold_strip, *folded, tagged);
                     }
+                    let margin = NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height));
                     if let Some((severity, message)) = marks.get(&(line - 1)) {
-                        self.mark(
-                            NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height)),
-                            *severity,
-                            message,
-                        );
+                        self.mark(margin, *severity, message);
+                    } else if let Some(state) = crate::tests_panel::gutter_mark(&editor, line - 1) {
+                        draw_test_mark(margin, state);
                     }
                     self.change_mark(
                         &editor,
@@ -438,4 +460,29 @@ impl LineNumbers {
         );
         crate::lsp::place_bulb(&editor, self, bulb_row.get());
     }
+}
+
+/// The symbol of a test at its line in the left margin, in its state's shape and colour (E111).
+fn draw_test_mark(row: NSRect, state: ide_test::State) {
+    let (name, description, color) = crate::tests_panel::state_symbol(state);
+    let name = if state == ide_test::State::NotRun {
+        "play.circle"
+    } else {
+        name
+    };
+    let Some(image) = crate::util::symbol(name, description) else {
+        return;
+    };
+    let size = (row.size.height - 4.0).clamp(6.0, 11.0);
+    let rect = NSRect::new(
+        NSPoint::new(
+            (NUMBERS_LEFT - size) / 2.0,
+            row.origin.y + (row.size.height - size) / 2.0,
+        ),
+        NSSize::new(size, size),
+    );
+    let colors = objc2_foundation::NSArray::from_retained_slice(&[color]);
+    let palette = objc2_app_kit::NSImageSymbolConfiguration::configurationWithPaletteColors(&colors);
+    let image = image.imageWithSymbolConfiguration(&palette).unwrap_or(image);
+    image.drawInRect(rect);
 }

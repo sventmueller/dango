@@ -33,6 +33,7 @@ mod preview;
 mod tabs;
 mod terminal;
 mod terminal_view;
+mod tests_panel;
 mod vim;
 
 use std::cell::RefCell;

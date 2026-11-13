@@ -695,6 +695,26 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideTestRunAtLine:))]
+        fn test_run_at_line(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let line = sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSMenuItem>()).map_or(-1, |i| i.tag());
+                if let Ok(line) = usize::try_from(line) {
+                    crate::tests_panel::gutter_click(self, line, false);
+                }
+            });
+        }
+
+        #[unsafe(method(ideTestDebugAtLine:))]
+        fn test_debug_at_line(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let line = sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSMenuItem>()).map_or(-1, |i| i.tag());
+                if let Ok(line) = usize::try_from(line) {
+                    crate::tests_panel::gutter_click(self, line, true);
+                }
+            });
+        }
+
         #[unsafe(method(ideToggleVimMode:))]
         fn toggle_vim(&self, _sender: Option<&AnyObject>) {
             guarded((), super::vim::toggle);

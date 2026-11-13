@@ -15,6 +15,9 @@ use crate::helper::{self, Helper};
 use crate::launch::LaunchConfig;
 use crate::types::Request;
 
+mod tests_program;
+pub use tests_program::{TestProgram, test_program};
+
 /// How long a build may take.
 const BUILD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 

@@ -209,6 +209,26 @@ define_class!(
     }
 
     impl WindowController {
+        #[unsafe(method(ideTestRunAtCursor:))]
+        fn test_run_at_cursor(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::tests_panel::run_at_cursor(self));
+        }
+
+        #[unsafe(method(ideTestDebugAtCursor:))]
+        fn test_debug_at_cursor(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::tests_panel::debug_at_cursor(self));
+        }
+
+        #[unsafe(method(ideTestRerun:))]
+        fn test_rerun(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::tests_panel::rerun(self));
+        }
+
+        #[unsafe(method(ideTestRunAll:))]
+        fn test_run_all(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::tests_panel::run_all(self));
+        }
+
         #[unsafe(method(ideShowPanel:))]
         fn show_panel_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {

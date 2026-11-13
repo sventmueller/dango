@@ -889,6 +889,26 @@ mod selftest_probe;
 #[cfg(feature = "selftest")]
 pub use selftest_probe::*;
 
+/// Shows `failures`, lines from 1 with their messages, as errors in `view` from `source`, beside the servers' own
+/// diagnostics (E111).
+pub fn show_failures(view: &EditorTextView, source: u64, failures: &[(u32, String)]) {
+    use ide_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
+    let diagnostics: Vec<Diagnostic> = failures
+        .iter()
+        .map(|(line, message)| {
+            let line = line.saturating_sub(1);
+            Diagnostic {
+                range: Range::new(Position::new(line, 0), Position::new(line, u32::MAX)),
+                severity: Some(DiagnosticSeverity::ERROR),
+                source: Some("test".into()),
+                message: message.clone(),
+                ..Diagnostic::default()
+            }
+        })
+        .collect();
+    decorate::set_diagnostics_from(view, source, &diagnostics);
+}
+
 /// Shows `diagnostics` in `view` as if its server had sent them, for the self-test.
 #[cfg(feature = "selftest")]
 pub fn show_diagnostics(view: &EditorTextView, diagnostics: &[ide_lsp::lsp_types::Diagnostic]) {

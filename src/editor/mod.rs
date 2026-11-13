@@ -306,6 +306,44 @@ pub fn show_alert(mtm: MainThreadMarker, message: &str, detail: &str) {
     alert(mtm, message, detail);
 }
 
+/// Shows `text`, such as a test run's output, in a scrolling field of an alert titled `message`.
+pub fn show_text(mtm: MainThreadMarker, message: &str, text: &str) {
+    use objc2_app_kit::{NSAlert, NSScrollView, NSTextView};
+    let alert = NSAlert::new(mtm);
+    alert.setMessageText(&ns(message));
+    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(560.0, 320.0));
+    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+    scroll.setHasVerticalScroller(true);
+    let view = NSTextView::initWithFrame(NSTextView::alloc(mtm), frame);
+    view.setEditable(false);
+    view.setFont(Some(&code_font(11.0)));
+    view.setString(&ns(text));
+    scroll.setDocumentView(Some(&view));
+    alert.setAccessoryView(Some(&scroll));
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        return;
+    }
+    alert.runModal();
+}
+
+/// The editor of `controller`'s window that has the keyboard focus, else the one in view.
+pub fn focused_editor(controller: &WindowController) -> Option<Retained<EditorTextView>> {
+    let mine: Vec<Retained<EditorTextView>> = open_editors()
+        .into_iter()
+        .filter(|e| e.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .collect();
+    let responder = controller.window().and_then(|w| w.firstResponder());
+    mine.iter()
+        .find(|e| {
+            responder
+                .as_ref()
+                .is_some_and(|r| std::ptr::eq(Retained::as_ptr(r).cast::<u8>(), Retained::as_ptr(e).cast::<u8>()))
+        })
+        .or_else(|| mine.iter().find(|e| !e.isHiddenOrHasHiddenAncestor()))
+        .cloned()
+}
+
 pub fn display_name(path: &Path) -> String {
     path.file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned())

@@ -29,6 +29,7 @@ mod settings;
 mod settings_sync;
 mod site_preview;
 mod terminal;
+mod tests_panel;
 mod updates;
 mod util;
 mod window;

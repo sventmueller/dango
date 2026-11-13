@@ -160,6 +160,14 @@ impl DebugPanel {
         });
     }
 
+    /// Debugs one test of the Tests panel (B27), named `name`, with what `program` needs to run.
+    pub fn debug_test(&self, name: String, program: ide_dap::TestProgram) {
+        let title = name.clone();
+        self.begin(name, Origin::Launched, move |adapters, _root, trusted, cancel, line| {
+            ide_dap::test_program(adapters, trusted, &title, &program, cancel, line).map_err(|e| current_words(&e))
+        });
+    }
+
     /// Starts `config`.
     pub fn start_config(&self, config: LaunchConfig) {
         let origin = match config.request {

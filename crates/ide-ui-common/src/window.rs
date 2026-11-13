@@ -18,14 +18,16 @@ pub enum Panel {
     Git,
     Ci,
     Debug,
+    Tests,
 }
 
 impl Panel {
-    pub const ALL: [Panel; 6] = [
+    pub const ALL: [Panel; 7] = [
         Panel::Files,
         Panel::Search,
         Panel::Agents,
         Panel::Git,
+        Panel::Tests,
         Panel::Debug,
         Panel::Ci,
     ];
@@ -39,6 +41,7 @@ impl Panel {
             Panel::Git => 4,
             Panel::Ci => 5,
             Panel::Debug => 6,
+            Panel::Tests => 7,
         }
     }
 
@@ -54,6 +57,7 @@ impl Panel {
             Panel::Git => t("Git"),
             Panel::Ci => t("CI"),
             Panel::Debug => t("Debuggen"),
+            Panel::Tests => t("Tests"),
         }
     }
 
@@ -66,6 +70,7 @@ impl Panel {
             Panel::Git => "git",
             Panel::Ci => "ci",
             Panel::Debug => "debug",
+            Panel::Tests => "tests",
         }
     }
 
@@ -77,6 +82,7 @@ impl Panel {
             Panel::Git => "arrow.triangle.branch",
             Panel::Ci => "checkmark.seal",
             Panel::Debug => "ladybug",
+            Panel::Tests => "checklist",
         }
     }
 }
