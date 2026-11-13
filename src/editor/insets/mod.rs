@@ -681,46 +681,14 @@ define_class!(
             range: &objc2_app_kit::NSTextRange,
             kind: objc2_app_kit::NSTextLayoutManagerSegmentType,
             options: objc2_app_kit::NSTextLayoutManagerSegmentOptions,
-            block: &block2::DynBlock<
-                dyn Fn(*mut objc2_app_kit::NSTextRange, NSRect, f64, std::ptr::NonNull<objc2_app_kit::NSTextContainer>) -> objc2::runtime::Bool,
-            >,
+            block: &block2::DynBlock<SegmentFn<'_>>,
         ) {
-            let gaps = self.ivars().gaps.borrow().clone();
-            let start = self
-                .textContentManager()
-                .map(|content| (content.clone(), objc2_app_kit::NSTextElementProvider::documentRange(&*content).location()));
-            let moved = block2::RcBlock::new(
-                move |segment: *mut objc2_app_kit::NSTextRange,
-                      rect: NSRect,
-                      baseline: f64,
-                      container: std::ptr::NonNull<objc2_app_kit::NSTextContainer>| {
-                    crate::util::guarded(objc2::runtime::Bool::NO, || {
-                        // SAFETY: TextKit passes a valid text range or none, alive for the call.
-                        let segment = unsafe { segment.as_ref() };
-                        let rect = match (&start, segment) {
-                            (Some((content, start)), Some(segment)) if !gaps.is_empty() => {
-                                let from = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
-                                    &**content,
-                                    start,
-                                    &segment.location(),
-                                );
-                                let to = objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
-                                    &**content,
-                                    start,
-                                    &segment.endLocation(),
-                                );
-                                caret_right_of_gap(&gaps, rect, from, to)
-                            }
-                            _ => rect,
-                        };
-                        let segment = segment.map_or(std::ptr::null_mut(), |s| std::ptr::from_ref(s).cast_mut());
-                        block.call((segment, rect, baseline, container))
-                    })
-                },
-            );
-            // SAFETY: The superclass's implementation, with this method's signature and a block of the same type.
+            let moved = crate::util::guarded(None, || self.moved_segments(block));
+            let block = moved.as_deref().unwrap_or(block);
+            // SAFETY: The superclass's implementation of this method, passed the caller's arguments and a block of the
+            // caller's block type.
             let _: () = unsafe {
-                msg_send![super(self), enumerateTextSegmentsInRange: range, type: kind, options: options, usingBlock: &*moved]
+                msg_send![super(self), enumerateTextSegmentsInRange: range, type: kind, options: options, usingBlock: block]
             };
         }
     }
@@ -753,7 +721,54 @@ fn caret_right_of_gap(gaps: &[(usize, f64, bool)], mut rect: NSRect, from: isize
     rect
 }
 
+/// The block TextKit hands each text segment to: the segment's range, its rect, baseline and text container.
+type SegmentFn<'a> = dyn Fn(
+        *mut objc2_app_kit::NSTextRange,
+        NSRect,
+        f64,
+        std::ptr::NonNull<objc2_app_kit::NSTextContainer>,
+    ) -> objc2::runtime::Bool
+    + 'a;
+
 impl GapLayoutManager {
+    /// `block` behind a block that moves each segment off the gaps' kerns, or `None` while there are no gaps to move it
+    /// off; the gaps are only read on the main thread, which is the one that writes them.
+    fn moved_segments<'a>(&self, block: &'a block2::DynBlock<SegmentFn<'a>>) -> Option<block2::RcBlock<SegmentFn<'a>>> {
+        objc2::MainThreadMarker::new()?;
+        let gaps = self.ivars().gaps.try_borrow().ok()?.clone();
+        if gaps.is_empty() {
+            return None;
+        }
+        let content = self.textContentManager()?;
+        let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
+        Some(block2::RcBlock::new(
+            move |segment: *mut objc2_app_kit::NSTextRange,
+                  rect: NSRect,
+                  baseline: f64,
+                  container: std::ptr::NonNull<objc2_app_kit::NSTextContainer>| {
+                crate::util::guarded(objc2::runtime::Bool::NO, || {
+                    // SAFETY: TextKit passes a valid text range or none, alive for the call.
+                    let segment = unsafe { segment.as_ref() };
+                    let rect = match segment {
+                        Some(segment) => {
+                            let offset =
+                                |location: &objc2::runtime::ProtocolObject<dyn objc2_app_kit::NSTextLocation>| {
+                                    objc2_app_kit::NSTextElementProvider::offsetFromLocation_toLocation(
+                                        &*content, &start, location,
+                                    )
+                                };
+                            let (from, to) = (offset(&segment.location()), offset(&segment.endLocation()));
+                            caret_right_of_gap(&gaps, rect, from, to)
+                        }
+                        None => rect,
+                    };
+                    let segment = segment.map_or(std::ptr::null_mut(), |s| std::ptr::from_ref(s).cast_mut());
+                    block.call((segment, rect, baseline, container))
+                })
+            },
+        ))
+    }
+
     /// A layout manager that knows no gaps yet.
     pub fn new() -> Retained<GapLayoutManager> {
         let this = Self::alloc().set_ivars(GapIvars {
