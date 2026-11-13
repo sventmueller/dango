@@ -28,6 +28,8 @@ mod web;
 pub use dialogs::answer_asking;
 pub use host::{Host, State, install};
 #[cfg(feature = "selftest")]
-pub use tabs::{Seen, fill_login, inspect, proceed};
+pub use tabs::{Seen, address_field, fill_login, front_view, inspect, proceed};
 pub use tabs::{open_tab, perform, reload_matching, url_of_tab, validate};
 pub use trust::may_accept;
+#[cfg(feature = "selftest")]
+pub use web::open_popups_unasked;

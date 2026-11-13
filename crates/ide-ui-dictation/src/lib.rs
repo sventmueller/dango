@@ -35,3 +35,16 @@ pub fn written_shortcut(binding: &str) -> String {
     written.push_str(&key.to_uppercase());
     written
 }
+
+#[cfg(test)]
+mod tests {
+    use super::written_shortcut;
+
+    #[test]
+    fn a_shortcut_is_written_in_the_order_of_macos_and_one_without_key_not_at_all() {
+        assert_eq!(written_shortcut("shift+cmd+alt+ctrl+d"), "⌃⌥⇧⌘D");
+        assert_eq!(written_shortcut("f5"), "F5");
+        assert_eq!(written_shortcut(""), "");
+        assert_eq!(written_shortcut("hyper+d"), "");
+    }
+}

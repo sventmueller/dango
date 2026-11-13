@@ -615,6 +615,51 @@ mod tests {
     }
 
     #[test]
+    fn a_full_atlas_doubles_until_it_is_as_large_as_it_gets_and_remembers_pictures_that_are_none() {
+        let Some(device) = objc2_metal::MTLCreateSystemDefaultDevice() else {
+            return;
+        };
+        let mut sprites = Sprites::new(&device).unwrap();
+        let tall = |side: usize| Picture {
+            width: 8,
+            height: side,
+            left: 0,
+            top: 0,
+            pixels: vec![255; 8 * side * 4],
+            coloured: false,
+        };
+        let key = |glyph| Key::Glyph {
+            font: 0,
+            glyph,
+            shift: 0,
+            ink: WHITE,
+        };
+        assert!(sprites.get(key(1), || Some(tall(FIRST_SIDE + 1))).is_none());
+        assert!(sprites.full(), "the picture did not fit");
+        assert!(sprites.grow());
+        assert_eq!(sprites.texture().width(), FIRST_SIDE * 2);
+        let placed = sprites.get(key(1), || Some(tall(FIRST_SIDE + 1))).unwrap();
+        assert_eq!(
+            (placed.x, placed.y, placed.height),
+            (0, 0, u32::try_from(FIRST_SIDE + 1).unwrap())
+        );
+        while sprites.grow() {}
+        assert_eq!(sprites.texture().width(), LAST_SIDE);
+        let mut made = 0;
+        for _ in 0..2 {
+            assert!(
+                sprites
+                    .get(key(2), || {
+                        made += 1;
+                        None
+                    })
+                    .is_none()
+            );
+        }
+        assert_eq!(made, 1, "a glyph without a picture is asked for once");
+    }
+
+    #[test]
     fn positions_split_into_pixels_and_quarters() {
         assert_eq!(split(10.0), (10.0, 0));
         assert_eq!(split(10.26), (10.0, 1));

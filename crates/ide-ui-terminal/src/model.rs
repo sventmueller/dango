@@ -84,6 +84,12 @@ impl State {
         Bell::Flash(until)
     }
 
+    /// Whether a bell rang since the view opened.
+    #[cfg(feature = "selftest")]
+    pub fn has_rung(&self) -> bool {
+        self.last_bell.get().is_some()
+    }
+
     pub fn flashing(&self, now: Instant) -> bool {
         self.flash_until.get().is_some_and(|until| now < until)
     }
@@ -198,6 +204,41 @@ pub fn enabled(command: Command, started: bool, selection: bool, can_paste: impl
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_end_of_the_program_is_told_on_the_cursor_line_when_it_is_empty_else_below() {
+        let cell = |ch| ide_terminal::Cell {
+            ch,
+            zero_width: vec![],
+            fg: ide_terminal::Rgb::new(0, 0, 0),
+            bg: ide_terminal::Rgb::new(255, 255, 255),
+            underline_color: None,
+            flags: ide_terminal::CellFlags::default(),
+            hyperlink: None,
+        };
+        let screen = |row: Vec<ide_terminal::Cell>| Snapshot {
+            columns: row.len(),
+            lines: 2,
+            rows: vec![vec![cell('$'); row.len()], row],
+            cursor: ide_terminal::Cursor {
+                point: ide_terminal::Point { line: 1, column: 0 },
+                shape: ide_terminal::CursorShape::Block,
+                visible: true,
+                blinking: false,
+                wide: false,
+            },
+            selection: None,
+            display_offset: 0,
+            history: 0,
+            damage: ide_terminal::Damage::Full,
+            background: ide_terminal::Rgb::new(255, 255, 255),
+            modes: ide_terminal::InputModes::default(),
+        };
+        assert_eq!(final_line(&screen(vec![cell(' '), cell('\0')])), 1);
+        assert_eq!(final_line(&screen(vec![cell('o'), cell('k')])), 2);
+        assert_eq!(shown_title(Some("  ".into())), None);
+        assert_eq!(shown_title(Some("vim".into())).as_deref(), Some("vim"));
+    }
 
     #[test]
     fn bells_close_together_ring_once_and_out_of_sight_they_beep() {

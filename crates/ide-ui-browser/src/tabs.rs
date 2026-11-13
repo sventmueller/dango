@@ -205,6 +205,18 @@ pub fn fill_login(window: u64) {
     }
 }
 
+/// The browser tab in front of `window`, which takes the actions of its buttons.
+#[cfg(feature = "selftest")]
+pub fn front_view(window: u64) -> Option<Retained<objc2_app_kit::NSView>> {
+    front(window).map(Retained::into_super)
+}
+
+/// The address field of the browser tab in front of `window`.
+#[cfg(feature = "selftest")]
+pub fn address_field(window: u64) -> Option<Retained<objc2_app_kit::NSTextField>> {
+    front(window).map(|view| view.address_field())
+}
+
 #[cfg(feature = "selftest")]
 pub fn inspect(window: u64) -> Vec<Seen> {
     tabs_of(window).iter().map(|view| view.seen()).collect()

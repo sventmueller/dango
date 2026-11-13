@@ -41,6 +41,17 @@ fn store(mtm: MainThreadMarker) -> Retained<WKWebsiteDataStore> {
     })
 }
 
+/// Whether pages open popups without a click, which the self-test's clicks into a window behind others do not
+/// always give them.
+#[cfg(feature = "selftest")]
+static POPUPS_UNASKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Lets the pages of tabs opened from now on open popups without a click.
+#[cfg(feature = "selftest")]
+pub fn open_popups_unasked() {
+    POPUPS_UNASKED.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// The configuration of a new tab. It adds no script message handler, so no page can call into the app.
 pub fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> {
     // SAFETY: A plain configuration object, created on the main thread.
@@ -52,7 +63,11 @@ pub fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> 
             config.setApplicationNameForUserAgent(Some(&ns(name)));
         }
         let preferences = config.preferences();
-        preferences.setJavaScriptCanOpenWindowsAutomatically(false);
+        #[cfg(feature = "selftest")]
+        let unasked = POPUPS_UNASKED.load(std::sync::atomic::Ordering::Relaxed);
+        #[cfg(not(feature = "selftest"))]
+        let unasked = false;
+        preferences.setJavaScriptCanOpenWindowsAutomatically(unasked);
         preferences.setFraudulentWebsiteWarningEnabled(true);
         preferences.setElementFullscreenEnabled(true);
     }
@@ -212,6 +227,12 @@ pub fn decide_action(action: &WKNavigationAction, root: Option<&Path>) -> Decisi
             main_frame,
         )
     };
+    decide(url, download, link && command, main_frame, root)
+}
+
+/// `decide_action` for a navigation to `url`, which WebKit should `download`, from a link clicked with ⌘ when
+/// `command_link`.
+fn decide(url: Option<String>, download: bool, command_link: bool, main_frame: bool, root: Option<&Path>) -> Decision {
     let Some(url) = url else { return Decision::Cancel };
     let scheme = address::scheme_of(&url).unwrap_or_default();
     let allowed = match scheme.as_str() {
@@ -226,7 +247,7 @@ pub fn decide_action(action: &WKNavigationAction, root: Option<&Path>) -> Decisi
     if download {
         return Decision::Download;
     }
-    if link && command && main_frame && matches!(scheme.as_str(), "http" | "https") {
+    if command_link && main_frame && matches!(scheme.as_str(), "http" | "https") {
         return Decision::NewTab(url);
     }
     Decision::Allow
@@ -285,7 +306,76 @@ pub fn error_detail(error: &objc2_foundation::NSError, key: &objc2_foundation::N
 
 #[cfg(test)]
 mod tests {
-    use super::user_agent_tail;
+    use super::{Decision, WKNavigationActionPolicy, action_policy, decide, error_detail, user_agent_tail};
+    use objc2::rc::Retained;
+    use objc2::runtime::AnyObject;
+    use objc2_foundation::{NSDictionary, NSError, NSString, NSURL};
+    /// A folder with an `index.html`, as a window's project.
+    fn project(name: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("ide-ui-browser-{name}-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("index.html"), "<p>hi</p>").unwrap();
+        root.canonicalize().unwrap()
+    }
+
+    #[test]
+    fn pages_lead_to_web_pages_and_files_of_the_folder_only() {
+        let root = project("lead");
+        let inside = format!("file://{}", root.join("index.html").display());
+        let to = |url: &str| decide(Some(url.to_string()), false, false, true, Some(&root));
+        assert_eq!(to("https://example.org/"), Decision::Allow);
+        assert_eq!(to(&inside), Decision::Allow);
+        assert_eq!(to("file:///etc/hosts"), Decision::Cancel);
+        assert_eq!(to("mailto:someone@example.org"), Decision::Cancel);
+        assert_eq!(decide(Some(inside), false, false, true, None), Decision::Cancel);
+        assert_eq!(decide(None, false, false, true, Some(&root)), Decision::Cancel);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn downloads_go_to_webkit_and_command_clicks_on_web_links_to_a_new_tab() {
+        let root = project("command");
+        let url = || Some("https://example.org/file.zip".to_string());
+        assert_eq!(decide(url(), true, false, true, None), Decision::Download);
+        assert_eq!(
+            decide(url(), false, true, true, None),
+            Decision::NewTab("https://example.org/file.zip".into())
+        );
+        assert_eq!(decide(url(), false, true, false, None), Decision::Allow);
+        let file = format!("file://{}", root.join("index.html").display());
+        assert_eq!(decide(Some(file), false, true, true, Some(&root)), Decision::Allow);
+        assert_eq!(
+            decide(Some("ftp://example.org/".into()), true, false, true, None),
+            Decision::Cancel
+        );
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn an_errors_detail_reads_as_text_whether_it_is_a_string_or_an_address() {
+        let key = NSString::from_str("NSErrorFailingURLStringKey");
+        let other = NSString::from_str("NSErrorFailingURLKey");
+        let missing = NSString::from_str("Missing");
+        let url = NSURL::URLWithString(&NSString::from_str("https://example.org/x")).unwrap();
+        let values: [Retained<AnyObject>; 2] = [NSString::from_str("https://example.org/y").into(), url.into()];
+        let info = NSDictionary::from_retained_objects(&[&*key, &*other], &values);
+        // SAFETY: A plain error with a dictionary of strings to objects.
+        let error = unsafe { NSError::errorWithDomain_code_userInfo(&NSString::from_str("Test"), 1, Some(&info)) };
+        assert_eq!(error_detail(&error, &key).as_deref(), Some("https://example.org/y"));
+        assert_eq!(error_detail(&error, &other).as_deref(), Some("https://example.org/x"));
+        assert_eq!(error_detail(&error, &missing), None);
+    }
+
+    #[test]
+    fn a_new_tab_cancels_the_navigation_in_the_page() {
+        assert_eq!(action_policy(&Decision::Allow), WKNavigationActionPolicy::Allow);
+        assert_eq!(action_policy(&Decision::Download), WKNavigationActionPolicy::Download);
+        assert_eq!(action_policy(&Decision::Cancel), WKNavigationActionPolicy::Cancel);
+        assert_eq!(
+            action_policy(&Decision::NewTab("https://example.org/".into())),
+            WKNavigationActionPolicy::Cancel
+        );
+    }
 
     #[test]
     fn user_agent_tail_takes_a_dotted_version_only() {

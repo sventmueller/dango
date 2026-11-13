@@ -880,7 +880,10 @@ fn restricted(folder: PathBuf, asked: bool) {
             && menu.iter().any(|(title, on)| title == t("Starten") && !on)
             && seen(&folder).consoles.is_empty()
             && seen(&folder).sessions.is_empty(),
-        format!("{items:?}, note and start {state:?}, {menu:?}, {:?}", seen(&folder).consoles),
+        format!(
+            "{items:?}, note and start {state:?}, {menu:?}, {:?}",
+            seen(&folder).consoles
+        ),
     );
     let pressed = debug::press_trust(&controller);
     let probe = folder.clone();

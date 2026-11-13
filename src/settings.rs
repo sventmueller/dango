@@ -227,6 +227,8 @@ pub fn show_prediction(mtm: MainThreadMarker) {
 pub use predict::prediction_changed;
 #[cfg(feature = "selftest")]
 pub use predict::shown as prediction_shown;
+#[cfg(feature = "selftest")]
+pub use predict::{LocalShown, local_shown as prediction_local};
 
 /// Brings the settings window to the front on its CI tab.
 pub fn show_ci(mtm: MainThreadMarker) {

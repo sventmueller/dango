@@ -15,6 +15,11 @@ pub fn undecided() -> bool {
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return false;
     }
+    macos_undecided()
+}
+
+/// Whether macOS itself has no answer about the microphone yet, whatever the self-test plays.
+pub fn macos_undecided() -> bool {
     // SAFETY: AVMediaTypeAudio is an immutable constant that AVFoundation sets when it loads.
     let Some(audio) = (unsafe { AVMediaTypeAudio }) else {
         return false;
@@ -30,15 +35,20 @@ pub fn ask(answered: impl FnOnce(bool) + Send + 'static) {
     let Some(audio) = (unsafe { AVMediaTypeAudio }) else {
         return answered(false);
     };
+    let handler = RcBlock::new(once_on_main(answered));
+    // SAFETY: `audio` is AVFoundation's media type constant, and the handler, which AVFoundation calls once on a queue
+    // of its own, only takes the callback out of its mutex and hands it to the main thread.
+    unsafe { AVCaptureDevice::requestAccessForMediaType_completionHandler(audio, &handler) };
+}
+
+/// `answered` as the handler AVFoundation calls on a queue of its own: the answer reaches the main thread, once.
+pub fn once_on_main(answered: impl FnOnce(bool) + Send + 'static) -> impl Fn(Bool) + Send + Sync + 'static {
     let answered = Mutex::new(Some(answered));
-    let handler = RcBlock::new(move |granted: Bool| {
+    move |granted: Bool| {
         let answered = answered.lock().unwrap_or_else(PoisonError::into_inner).take();
         if let Some(answered) = answered {
             let granted = granted.as_bool();
             main_soon(move || answered(granted));
         }
-    });
-    // SAFETY: `audio` is AVFoundation's media type constant, and the handler, which AVFoundation calls once on a queue
-    // of its own, only takes the callback out of its mutex and hands it to the main thread.
-    unsafe { AVCaptureDevice::requestAccessForMediaType_completionHandler(audio, &handler) };
+    }
 }

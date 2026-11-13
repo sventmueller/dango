@@ -137,6 +137,38 @@ impl TerminalView {
         shown
     }
 
+    /// Whether a bell rang in the terminal.
+    pub fn has_rung(&self) -> bool {
+        self.ivars().state.has_rung()
+    }
+
+    /// The lines of the screen as the view last took it for drawing.
+    pub fn drawn_lines(&self) -> Vec<String> {
+        self.ivars().screen.borrow().as_ref().map_or_else(Vec::new, |screen| {
+            screen
+                .rows
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|cell| cell.ch)
+                        .collect::<String>()
+                        .trim_end()
+                        .to_string()
+                })
+                .collect()
+        })
+    }
+
+    /// The text selected in the terminal.
+    pub fn selection(&self) -> Option<String> {
+        self.selected_text()
+    }
+
+    /// Whether a drag of `pasteboard` may end on the view, then what dropping it there does: whether it took it.
+    pub fn drop_pasteboard(&self, pasteboard: &NSPasteboard) -> (bool, bool) {
+        (super::clip::accepts(pasteboard), self.drop_from(pasteboard))
+    }
+
     /// Whether the program in the terminal ended.
     pub fn has_exited(&self) -> bool {
         self.ivars().state.exited.get()

@@ -957,14 +957,18 @@ pub mod selftest {
         owner.add_folders(folders);
     }
 
+    /// Selects row `row` of `list`, as a click on it does.
+    pub fn select(owner: &AgentSettings, list: List, row: usize) {
+        if let Some(views) = owner.ivars().views.get() {
+            let table = [&views.endpoints, &views.prices, &views.rules, &views.folders][list as usize];
+            table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        }
+    }
+
     /// Removes the folder in row `row`, as selecting it and clicking "−" does.
     pub fn remove_folder(owner: &AgentSettings, row: usize) {
-        if let Some(views) = owner.ivars().views.get() {
-            views
-                .folders
-                .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
-        }
-        owner.remove_selected(super::List::Folders);
+        select(owner, List::Folders, row);
+        owner.remove_selected(List::Folders);
     }
 
     /// Scrolls the tab down to the folders of the sandbox, for a picture.

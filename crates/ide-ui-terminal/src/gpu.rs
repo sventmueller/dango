@@ -398,6 +398,39 @@ mod tests {
     }
 
     #[test]
+    fn a_frame_takes_the_layer_to_its_size_in_pixels_and_one_without_pixels_is_left_out() {
+        let Some(mut surface) = Surface::new() else {
+            return;
+        };
+        let fonts = Fonts::new(13.0, 2.0);
+        let theme = palette::theme(false, false);
+        let snapshot = screen(theme.palette.foreground, theme.palette.background, 20);
+        let overlay = Overlay {
+            focused: false,
+            cursor_on: true,
+            marked: "",
+            final_line: None,
+            flash: false,
+        };
+        let present = |surface: &mut Surface, bounds: CGRect| {
+            let paint = |canvas: &mut QuadCanvas| render::paint(canvas, &fonts, &theme, &snapshot, &overlay, bounds);
+            surface.present(&fonts, bounds, theme.palette.background, &paint);
+        };
+        let before = surface.layer().drawableSize();
+        present(&mut surface, rect(0.0, 0.0, 0.2, 0.2));
+        assert_eq!(
+            surface.layer().drawableSize(),
+            before,
+            "less than a pixel draws nothing"
+        );
+        let bounds = rect(0.0, 0.0, 300.0, 120.0);
+        present(&mut surface, bounds);
+        assert_eq!(surface.layer().drawableSize(), CGSize::new(600.0, 240.0));
+        assert_eq!(surface.layer().frame(), bounds);
+        assert!((surface.layer().contentsScale() - 2.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
     fn the_gpu_draws_what_core_graphics_draws() {
         let Some(mut surface) = Surface::new() else {
             return;

@@ -273,6 +273,67 @@ mod tests {
     }
 
     #[test]
+    fn the_rest_of_the_url_errors_and_webkits_policy_error_map_too() {
+        assert_eq!(Failure::of(URL_DOMAIN, -1009, ""), Some(Failure::Offline));
+        assert_eq!(Failure::of(URL_DOMAIN, -1020, ""), Some(Failure::Offline));
+        assert_eq!(Failure::of(URL_DOMAIN, -1001, ""), Some(Failure::TimedOut));
+        assert_eq!(Failure::of(URL_DOMAIN, -1002, ""), Some(Failure::Unsupported));
+        assert_eq!(Failure::of(WEBKIT_DOMAIN, 101, ""), Some(Failure::Unsupported));
+        assert_eq!(Failure::of(WEBKIT_DOMAIN, 204, ""), None);
+    }
+
+    #[test]
+    fn each_failure_has_its_own_symbol_and_heading_and_names_the_address() {
+        let url = Some("https://example.invalid/page");
+        let failures = [
+            Failure::Start,
+            Failure::Unreachable,
+            Failure::UnknownHost,
+            Failure::Offline,
+            Failure::TimedOut,
+            Failure::Insecure,
+            Failure::Unsupported,
+            Failure::OutsideProject,
+            Failure::Crashed,
+        ];
+        let texts: Vec<_> = failures.iter().map(|failure| failure.texts(url)).collect();
+        for (i, (symbol, heading, detail)) in texts.iter().enumerate() {
+            assert!(
+                !symbol.is_empty() && !heading.is_empty() && !detail.is_empty(),
+                "{:?}",
+                failures[i]
+            );
+            for (j, (_, other, _)) in texts.iter().enumerate() {
+                assert!(
+                    i == j || heading != other,
+                    "{:?} and {:?} share {heading}",
+                    failures[i],
+                    failures[j]
+                );
+            }
+        }
+        assert!(texts[2].2.contains("example.invalid"), "{}", texts[2].2);
+        assert!(texts[5].2.contains("example.invalid"), "{}", texts[5].2);
+        assert!(texts[6].2.contains("https://example.invalid/page"), "{}", texts[6].2);
+        assert_eq!(texts[8].0, "exclamationmark.triangle");
+        let (symbol, heading, detail) = Failure::Other("The disk is full.".into()).texts(None);
+        assert_eq!(
+            (symbol, detail.as_str()),
+            ("exclamationmark.triangle", "The disk is full.")
+        );
+        assert_ne!(heading, texts[8].1);
+    }
+
+    #[test]
+    fn an_unreachable_local_server_is_asked_about_as_a_dev_server() {
+        let (_, local_heading, local) = Failure::Unreachable.texts(Some("http://localhost:5173/"));
+        let (_, _, remote) = Failure::Unreachable.texts(Some("https://example.org/"));
+        assert!(local_heading.contains("localhost"), "{local_heading}");
+        assert_ne!(local, remote);
+        assert!(local.contains("Dev-Server"), "{local}");
+    }
+
+    #[test]
     fn replaced_loads_and_downloads_are_no_failure() {
         assert_eq!(Failure::of(URL_DOMAIN, -999, ""), None);
         assert_eq!(Failure::of(WEBKIT_DOMAIN, 102, ""), None);

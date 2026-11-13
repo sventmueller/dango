@@ -52,23 +52,24 @@ pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
 pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        return Ok(Some(format!("sk-selftest-{}", provider.raw_value())));
+        return fake::lowspeak_key(provider);
     }
     lowspeak::dictation::read_lowspeak_key(provider).map_err(|error| format!("{error:#}"))
 }
 
-/// The microphone and the engine of the self-test: the microphone opens at once and hears sound, the engine waits and
-/// answers with what the scenario queued.
+/// The microphone and the engine of the self-test: the microphone opens at once and hears sound unless the scenario
+/// queued a slow or refused opening, the engine waits and answers with what the scenario queued.
 #[cfg(feature = "selftest")]
 pub mod fake {
     use std::collections::VecDeque;
+    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::{Arc, Mutex, PoisonError};
     use std::time::Duration;
 
     use lowspeak::audio::recorder::{OnLive, StartError};
     use lowspeak::config::settings::Settings;
     use lowspeak::dictation::{Choices, Dictation, Event, Parts, Recorder, Samples, Transcriber};
-    use lowspeak::models::{Language, LocalModel, OnlineModel, PostProcessingMode, TranscriptionMode};
+    use lowspeak::models::{ApiProvider, Language, LocalModel, OnlineModel, PostProcessingMode, TranscriptionMode};
     use lowspeak::transcription::error::TranscriptionError;
     use lowspeak::transcription::postprocess::Status;
     use lowspeak::transcription::service::{Outcome, Transcript};
@@ -82,10 +83,51 @@ pub mod fake {
     }
 
     static ANSWERS: Mutex<VecDeque<Answer>> = Mutex::new(VecDeque::new());
+    static OPENINGS: Mutex<VecDeque<Opening>> = Mutex::new(VecDeque::new());
+    static TOO_SHORT: AtomicBool = AtomicBool::new(false);
+    static KEY_UNREADABLE: AtomicBool = AtomicBool::new(false);
+    static LIMIT_SECONDS: AtomicU64 = AtomicU64::new(300);
+
+    /// How the microphone opens for one recording.
+    pub enum Opening {
+        After(Duration),
+        Refused(StartError),
+    }
 
     /// Queues what the next transcriptions answer.
     pub fn answer(answers: impl IntoIterator<Item = Answer>) {
         ANSWERS.lock().unwrap_or_else(PoisonError::into_inner).extend(answers);
+    }
+
+    /// Queues how the microphone opens for the next recordings.
+    pub fn open(openings: impl IntoIterator<Item = Opening>) {
+        OPENINGS.lock().unwrap_or_else(PoisonError::into_inner).extend(openings);
+    }
+
+    /// The next recording is too short to transcribe.
+    pub fn too_short() {
+        TOO_SHORT.store(true, Ordering::SeqCst);
+    }
+
+    /// Whether macOS hands Lowspeak's key out.
+    pub fn lowspeak_key_readable(readable: bool) {
+        KEY_UNREADABLE.store(!readable, Ordering::SeqCst);
+    }
+
+    /// The longest recording of the dictations made from now on.
+    pub fn limit(limit: Duration) {
+        LIMIT_SECONDS.store(limit.as_secs(), Ordering::SeqCst);
+    }
+
+    pub fn lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String> {
+        if KEY_UNREADABLE.load(Ordering::SeqCst) {
+            return Err("the user did not allow it".to_string());
+        }
+        let prefix = match provider {
+            ApiProvider::OpenAi => "sk-",
+            ApiProvider::Groq => "gsk_",
+        };
+        Ok(Some(format!("{prefix}selftest-{}", provider.raw_value())))
     }
 
     pub fn choices() -> Choices {
@@ -110,7 +152,7 @@ pub mod fake {
             transcriber: Box::new(Engine),
             choices: Box::new(choices),
             keys: Box::new(Shared(keys)),
-            limit: Duration::from_secs(300),
+            limit: Duration::from_secs(LIMIT_SECONDS.load(Ordering::SeqCst)),
         };
         Dictation::with_parts(parts, events)
     }
@@ -124,8 +166,21 @@ pub mod fake {
             on_live: OnLive,
             started: Box<dyn FnOnce(Result<(), StartError>) + Send>,
         ) {
-            started(Ok(()));
-            on_live();
+            let opening = OPENINGS.lock().unwrap_or_else(PoisonError::into_inner).pop_front();
+            match opening {
+                None => {
+                    started(Ok(()));
+                    on_live();
+                }
+                Some(Opening::Refused(error)) => started(Err(error)),
+                Some(Opening::After(delay)) => {
+                    std::thread::spawn(move || {
+                        std::thread::sleep(delay);
+                        started(Ok(()));
+                        on_live();
+                    });
+                }
+            }
         }
 
         fn stop(&self, stopped: Box<dyn FnOnce(Samples) + Send>) {
@@ -137,6 +192,9 @@ pub mod fake {
 
     impl Transcriber for Engine {
         fn transcribe(&self, _samples: Vec<f32>, _choices: &Choices) -> Result<Outcome, TranscriptionError> {
+            if TOO_SHORT.swap(false, Ordering::SeqCst) {
+                return Ok(Outcome::TooShort);
+            }
             let answer = ANSWERS.lock().unwrap_or_else(PoisonError::into_inner).pop_front();
             let Some(answer) = answer else {
                 return Ok(Outcome::NoSpeech);

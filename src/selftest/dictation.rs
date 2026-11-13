@@ -359,7 +359,7 @@ fn failure() {
                         format!("{seen:?}, {language}: {lowspeak:?}"),
                     );
                     picture("dictation-editor-failed-dark");
-                    settings();
+                    super::dictation_more::run(target, settings);
                 },
             );
         },
@@ -386,10 +386,10 @@ fn settings() {
                 if let Some(window) = crate::settings::window() {
                     snapshot(&window, "dictation-settings-dark");
                 }
-                finish(SCENARIO);
+                super::dictation_more::settings_buttons();
             });
         } else {
-            finish(SCENARIO);
+            super::dictation_more::settings_buttons();
         }
     });
 }

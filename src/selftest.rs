@@ -23,6 +23,7 @@ pub mod application;
 mod blame;
 mod browser;
 mod browser_dev;
+mod browser_view;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;
@@ -31,6 +32,7 @@ mod paste_cli;
 mod preview;
 mod tabs;
 mod terminal;
+mod terminal_view;
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
@@ -51,10 +53,13 @@ mod debug_menus;
 mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
+#[cfg(feature = "dictation")]
+mod dictation_more;
 mod editor_commands;
 mod editor_multi;
 mod editor_scroll;
 mod editor_undo;
+mod export;
 mod extras;
 mod file_icons;
 mod files_header;
@@ -79,8 +84,10 @@ mod search;
 mod search_replace;
 mod servers;
 mod settings_general;
+mod settings_pages;
 mod split;
 mod stored_rules;
+mod window_commands;
 mod worktree;
 mod worktree_git;
 
@@ -147,6 +154,8 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "app-menus" => app_menus::run(),
         "activity-actions" => activity_actions::run(),
         "settings-general" => settings_general::run(),
+        "settings-pages" => settings_pages::run(),
+        "window-commands" => window_commands::run(),
         "markdown-commands" => markdown_commands::run(),
         "a11y" | "a11y-rtl" => a11y::run(),
         "acp" => acp::run(),
@@ -160,7 +169,9 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "agent-live" => agent_live::live(),
         "browser" => browser::run(),
         "browser-dev" => browser_dev::run(),
+        "browser-view" => browser_view::run(),
         "editor-extras" => extras::run(),
+        "export" => export::run(),
         "tabs" => tabs::run(),
         "replace-folder" => replace::run(),
         "quit" => quit::run(),
@@ -193,6 +204,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "editor-blame" => blame::run(),
         "search" => search::run(),
         "terminal" => terminal::run(),
+        "terminal-view" => terminal_view::run(),
         "paste-cli" => paste_cli::run(),
         "recovery" => recovery::run(),
         "restore" => restore::run(),

@@ -316,6 +316,14 @@ mod tests {
             "https://www.startpage.com/sp/search?query=Gr%C3%BC%C3%9Fe+%26+mehr"
         );
         assert_eq!(resolve("   ", SearchEngine::Google), None);
+        assert_eq!(
+            search_url(SearchEngine::Google, "a b"),
+            "https://www.google.com/search?q=a+b"
+        );
+        assert_eq!(
+            search_url(SearchEngine::Bing, "a b"),
+            "https://www.bing.com/search?q=a+b"
+        );
     }
 
     #[test]
@@ -324,6 +332,11 @@ mod tests {
         assert_eq!(url("file:///tmp/a%20b.html#top").as_deref(), Some("file /tmp/a b.html"));
         assert_eq!(url("file://localhost/tmp/x.html").as_deref(), Some("file /tmp/x.html"));
         assert_eq!(file_path("https://example.com/x"), None);
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        assert_eq!(
+            file_path("~/site/index.html"),
+            home.map(|home| home.join("site/index.html"))
+        );
     }
 
     #[test]

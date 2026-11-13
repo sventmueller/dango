@@ -324,4 +324,68 @@ mod tests {
         assert!(inside && !outside);
         assert!(!may_carry_along(Path::new("/etc/hosts"), None));
     }
+
+    #[test]
+    fn a_link_with_dots_and_signs_still_names_its_file() {
+        let doc = Path::new("/p/docs/./notes");
+        assert_eq!(
+            rebased("../img/50%25%231%3F.png", Some(doc), Some(Path::new("/p/out"))),
+            "../docs/img/50%25%231%3F.png"
+        );
+        assert_eq!(rebased("a.png", None, Some(doc)), "a.png");
+    }
+
+    #[test]
+    fn a_page_says_the_formula_or_that_a_diagram_stands_there() {
+        assert_eq!(
+            alt_of(&Figure::Math {
+                tex: "x^2",
+                display: true
+            }),
+            "x^2"
+        );
+        let diagram = Figure::Diagram {
+            source: "graph TD; A-->B",
+            kind: splat_markdown::doc::DiagramKind::Mermaid,
+        };
+        assert_eq!(alt_of(&diagram), splat_i18n::t("Diagramm"));
+    }
+
+    #[test]
+    fn decoded_pixels_become_a_png_of_the_same_size() {
+        let pixels = [255, 0, 0, 255].repeat(6);
+        let png = png_of_pixels(3, 2, pixels).unwrap();
+        let image = image::load_from_memory(&png).unwrap().to_rgba8();
+        assert_eq!(image.dimensions(), (3, 2));
+        assert_eq!(image.get_pixel(2, 1).0, [255, 0, 0, 255]);
+        assert!(png_of_pixels(3, 2, vec![0; 5]).is_none(), "too few pixels");
+    }
+
+    #[test]
+    fn a_drawn_picture_becomes_a_png_at_its_scale_and_a_huge_one_none() {
+        let image = NSImage::initWithSize(NSImage::alloc(), NSSize::new(3.0, 2.0));
+        let png = png_of_image(&image, NSSize::new(3.0, 2.0), 2.0).unwrap();
+        let decoded = image::load_from_memory(&png).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (6, 4));
+        assert!(png_of_image(&image, NSSize::new(0.0, 2.0), 2.0).is_none());
+        assert!(png_of_image(&image, NSSize::new(9_000.0, 9_000.0), 1.0).is_none());
+    }
+
+    #[test]
+    fn an_svg_goes_in_as_it_is_and_web_or_foreign_pictures_stay_out() {
+        let dir = std::env::temp_dir().join(format!("ide-embed-{}", std::process::id()));
+        let docs = dir.join("docs");
+        std::fs::create_dir_all(&docs).unwrap();
+        let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"4\" height=\"4\"/>";
+        std::fs::write(docs.join("kreis.svg"), svg).unwrap();
+        std::fs::write(dir.join("fremd.svg"), svg).unwrap();
+        let inside = embedded("kreis.svg", Some(&docs));
+        let outside = embedded("../fremd.svg", Some(&docs));
+        let missing = embedded("fehlt.svg", Some(&docs));
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(inside, Some(data_url("image/svg+xml", svg.as_bytes())));
+        assert_eq!(outside, None, "outside the document's folder");
+        assert_eq!(missing, None);
+        assert_eq!(embedded("https://example.org/a.png", Some(&docs)), None);
+    }
 }

@@ -88,6 +88,49 @@ mod tests {
     }
 
     #[test]
+    fn every_key_of_the_editing_block_and_the_arrows_has_its_name() {
+        let keys = [
+            (0x30, NamedKey::Tab),
+            (0x33, NamedKey::Backspace),
+            (0x35, NamedKey::Escape),
+            (0x75, NamedKey::Delete),
+            (0x72, NamedKey::Insert),
+            (0x73, NamedKey::Home),
+            (0x77, NamedKey::End),
+            (0x74, NamedKey::PageUp),
+            (0x79, NamedKey::PageDown),
+            (0x7b, NamedKey::Left),
+            (0x7c, NamedKey::Right),
+            (0x7d, NamedKey::Down),
+            (0x6e, NamedKey::Menu),
+            (0x47, NamedKey::NumLock),
+            (0x60, NamedKey::F(5)),
+            (0x6f, NamedKey::F(12)),
+        ];
+        for (code, key) in keys {
+            assert_eq!(named(code), Some(key), "{code:#x}");
+        }
+    }
+
+    #[test]
+    fn both_sides_of_every_modifier_key_are_told_apart() {
+        let keys = [
+            (0x38, ModifierKey::Shift, Side::Left),
+            (0x3c, ModifierKey::Shift, Side::Right),
+            (0x3b, ModifierKey::Control, Side::Left),
+            (0x3e, ModifierKey::Control, Side::Right),
+            (0x3a, ModifierKey::Alt, Side::Left),
+            (0x37, ModifierKey::Command, Side::Left),
+            (0x36, ModifierKey::Command, Side::Right),
+        ];
+        for (code, key, side) in keys {
+            assert_eq!(modifier(code), Some((key, side)), "{code:#x}");
+        }
+        assert_eq!(modifier(0x39), None, "Caps Lock");
+        assert_eq!(modifier(0x00), None);
+    }
+
+    #[test]
     fn option_composes_where_the_layout_has_a_character_and_is_meta_elsewhere() {
         assert!(!option_is_meta("@", "l"), "⌥L on a German layout");
         assert!(!option_is_meta("", "e"), "a dead key composes with the next one");

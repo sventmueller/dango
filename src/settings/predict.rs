@@ -493,3 +493,38 @@ pub fn shown() -> Option<(String, String, String, bool)> {
         views.revoke.isEnabled(),
     ))
 }
+
+/// What the tab shows of the local server, for the self-test.
+#[cfg(feature = "selftest")]
+pub struct LocalShown {
+    pub about: String,
+    pub url: String,
+    pub model: String,
+    /// The models the model field offers.
+    pub offered: Vec<String>,
+    pub note: String,
+    pub exclude: String,
+}
+
+/// What the tab shows of the local server, for the self-test.
+#[cfg(feature = "selftest")]
+pub fn local_shown() -> Option<LocalShown> {
+    let this = with_shown(|shown| shown.borrow().clone())?;
+    let views = this.ivars().views.get()?;
+    let offered = (0..views.model.numberOfItems())
+        .filter_map(|index| {
+            let item = views.model.itemObjectValueAtIndex(index);
+            item.downcast::<objc2_foundation::NSString>()
+                .ok()
+                .map(|s| s.to_string())
+        })
+        .collect();
+    Some(LocalShown {
+        about: views.about.stringValue().to_string(),
+        url: views.url.stringValue().to_string(),
+        model: views.model.stringValue().to_string(),
+        offered,
+        note: views.model_note.stringValue().to_string(),
+        exclude: views.exclude.stringValue().to_string(),
+    })
+}

@@ -499,3 +499,25 @@ pub mod seen {
         super::sheet_button(number, failed);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_kind_has_the_extension_of_its_files() {
+        assert_eq!(
+            [Kind::Pdf, Kind::Html, Kind::Word].map(Kind::extension),
+            ["pdf", "html", "docx"]
+        );
+    }
+
+    #[test]
+    fn an_export_waits_for_the_light_formulas_and_diagrams_of_its_text() {
+        let keys = figures("# T\n\n$$x^2$$\n\n```mermaid\ngraph TD; A-->B\n```\n\nNo figure here.\n");
+        assert_eq!(keys.len(), 2, "{keys:?}");
+        assert!(keys.iter().any(|key| matches!(key, Key::Math { dark: false, .. })));
+        assert!(keys.iter().any(|key| matches!(key, Key::Diagram { dark: false, .. })));
+        assert!(figures("Plain text.").is_empty());
+    }
+}

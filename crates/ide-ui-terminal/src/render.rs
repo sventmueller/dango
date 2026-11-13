@@ -837,34 +837,5 @@ fn marked(canvas: &mut impl Canvas, fonts: &Fonts, theme: &Theme, screen: &Snaps
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn selections_cover_the_right_columns_of_each_line() {
-        let at = |line, column| Point { line, column };
-        let flowing = Highlight {
-            start: at(1, 5),
-            end: at(3, 2),
-            block: false,
-        };
-        assert_eq!(selected(&flowing, 0, 80), None);
-        assert_eq!(selected(&flowing, 1, 80), Some((5, 79)));
-        assert_eq!(selected(&flowing, 2, 80), Some((0, 79)));
-        assert_eq!(selected(&flowing, 3, 80), Some((0, 2)));
-        let block = Highlight {
-            start: at(1, 9),
-            end: at(2, 4),
-            block: true,
-        };
-        assert_eq!(selected(&block, 2, 80), Some((4, 9)));
-    }
-
-    #[test]
-    fn counts_from_points_stay_in_range() {
-        assert_eq!(clamp_to(-3.0, 10), 0);
-        assert_eq!(clamp_to(4.7, 10), 4);
-        assert_eq!(clamp_to(99.0, 10), 10);
-        assert_eq!(clamp_to(f64::NAN, 10), 0);
-    }
-}
+#[path = "render_tests.rs"]
+mod tests;

@@ -76,7 +76,7 @@ fn setting() -> bool {
     })
 }
 
-fn asked() -> bool {
+pub(super) fn asked() -> bool {
     with_fn(|f| f.borrow().asked_now) || State::load_user().get(&ASKED)
 }
 
@@ -191,7 +191,7 @@ pub fn setting_changed(on: bool) {
     arm();
 }
 
-fn pressed(key: Pressed) {
+pub(super) fn pressed(key: Pressed) {
     let now = Instant::now();
     let command = with_fn(|f| {
         let mut f = f.borrow_mut();

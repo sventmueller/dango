@@ -792,6 +792,11 @@ impl BrowserView {
     }
 
     #[cfg(feature = "selftest")]
+    pub fn address_field(&self) -> Retained<objc2_app_kit::NSTextField> {
+        self.parts().controls.field.clone()
+    }
+
+    #[cfg(feature = "selftest")]
     pub fn seen(&self) -> tabs::Seen {
         let parts = self.parts();
         tabs::Seen {
