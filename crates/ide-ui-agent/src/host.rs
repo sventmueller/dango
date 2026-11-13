@@ -29,6 +29,10 @@ pub trait Host {
         limit: usize,
         answer: Box<dyn FnOnce(Vec<ide_project::Hit>) + Send>,
     );
+    /// The texts of the editors with unsaved changes to files below `root`, for a checkpoint (I6).
+    fn unsaved_buffers(&self, root: &Path) -> Vec<(PathBuf, Vec<u8>)>;
+    /// Gives the editors of `window` back the unsaved texts a restored checkpoint held, opening the files not open.
+    fn take_back_buffers(&self, window: u64, buffers: Vec<(PathBuf, Vec<u8>)>);
     /// Opens a terminal tab of `window` in `cwd`.
     fn open_terminal(&self, window: u64, cwd: &Path);
     /// Shows the settings' tab of the own agent.

@@ -135,6 +135,9 @@ impl AgentTab {
                 return;
             }
             Ok(Restore::Restored(done)) => {
+                if let Some(controller) = self.controller() {
+                    crate::host::host().take_back_buffers(controller.id(), done.buffers.clone());
+                }
                 alert.setMessageText(&ns(t("Code zurückgespult")));
                 alert.setInformativeText(&ns(&tf(
                     "{} Dateien wiederhergestellt, {} entfernt.",

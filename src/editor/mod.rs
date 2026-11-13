@@ -173,6 +173,34 @@ pub fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
         .collect()
 }
 
+/// Puts the unsaved texts a restored checkpoint held into their editors, opening in `controller` the files not open,
+/// each as one undoable step that leaves the editor unsaved.
+pub fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, Vec<u8>)>) {
+    for (path, bytes) in buffers {
+        let Ok(text) = String::from_utf8(bytes) else { continue };
+        let view = match open_editors()
+            .into_iter()
+            .find(|v| v.document().path() == Some(path.as_path()))
+        {
+            Some(view) => view,
+            None => {
+                controller.open_file(&path);
+                let Some(view) = editor_for(controller, &path) else {
+                    continue;
+                };
+                view
+            }
+        };
+        take_disk(&view);
+        let changes = view.document_mut().replace_all(&text);
+        match changes {
+            Ok(changes) => view.apply_model_changes(&changes),
+            Err(error) => crate::diag::report("taking back an unsaved text", error),
+        }
+        update_dirty(&view);
+    }
+}
+
 /// Adds the controls of the editor's whitespace rules, and of dictation, to its status bar's `stack`.
 pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     indent::status_items(mtm, view, stack);

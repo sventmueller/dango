@@ -422,6 +422,19 @@ impl ide_ui_agent::Host for AppHost {
         }
     }
 
+    fn unsaved_buffers(&self, root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+        crate::editor::unsaved_buffers(root)
+            .into_iter()
+            .map(|(path, text)| (path, text.into_bytes()))
+            .collect()
+    }
+
+    fn take_back_buffers(&self, window: u64, buffers: Vec<(PathBuf, Vec<u8>)>) {
+        if let Some(c) = self::window(window) {
+            crate::editor::take_back_buffers(&c, buffers);
+        }
+    }
+
     fn open_terminal(&self, window: u64, cwd: &Path) {
         if let Some(c) = self::window(window) {
             crate::terminal::open_tab(&c, Some(cwd));

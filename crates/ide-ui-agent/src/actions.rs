@@ -72,13 +72,15 @@ impl AgentTab {
         self.refresh_composer();
         let key = self.key;
         let label = format::first_line(&message.text, 80);
-        self.store.create(self.thread_id.to_string(), label, move |checkpoint| {
-            main_soon(move || {
-                if let Some(tab) = super::get(key) {
-                    tab.deliver(message, checkpoint);
-                }
+        let buffers = crate::host::host().unsaved_buffers(&self.cwd);
+        self.store
+            .create(self.thread_id.to_string(), label, buffers, move |checkpoint| {
+                main_soon(move || {
+                    if let Some(tab) = super::get(key) {
+                        tab.deliver(message, checkpoint);
+                    }
+                });
             });
-        });
     }
 
     pub(super) fn deliver(&self, mut message: UserMessage, checkpoint: Option<ide_git::Checkpoint>) {

@@ -23,6 +23,8 @@ use crate::own_agent::{self, ModelChoice};
 const NAME: &str = "own-agent";
 const MODEL: &str = "claude-opus-5-5";
 const LIB: &str = "pub fn answer() -> u32 {\n    41\n}\n";
+const NOTES: &str = "notes.md";
+const UNSAVED: &str = "unsaved before the prompt\n";
 
 fn event(name: &str, value: &Value) -> String {
     format!("event: {name}\ndata: {value}\n\n")
@@ -124,7 +126,11 @@ pub fn run() {
     std::mem::forget(stub);
     let made = helpers::make_project(
         "own-project",
-        &[("src/lib.rs", LIB), ("AGENTS.md", "Antworte auf Deutsch.\n")],
+        &[
+            ("src/lib.rs", LIB),
+            ("AGENTS.md", "Antworte auf Deutsch.\n"),
+            (NOTES, "saved\n"),
+        ],
     );
     let Ok(root) = made else {
         check("the scenario's folder is made", false, "");
@@ -327,6 +333,10 @@ fn send(root: PathBuf, key: u64) {
         model == MODEL && mode == "Manuell" && sandbox.starts_with("Sandbox aus"),
         format!("{model} / {mode} / {sandbox}"),
     );
+    if let Some(controller) = controller_of(&root) {
+        controller.open_file(&root.join(NOTES));
+        set_notes(&root, UNSAVED);
+    }
     tab.type_and_send("Mach die Antwort 42");
     soon(
         "the edit waits for approval",
@@ -448,6 +458,7 @@ fn code_rewind(root: PathBuf, key: u64) {
         move || tab_of(key).is_some_and(|t| t.finished_checkpoints() == 1),
         move || {
             crate::agent::answer_alerts(&[NSAlertFirstButtonReturn]);
+            set_notes(&root, "typed after the prompt\n");
             if let Some(tab) = tab_of(key) {
                 tab.rewind(prompt, 2);
             }
@@ -464,11 +475,37 @@ fn code_rewind(root: PathBuf, key: u64) {
                         seen.first().is_some_and(|q| q == "Code zurückgespult"),
                         seen.join(" | "),
                     );
+                    let notes = notes_editor(&root).map(|v| (v.document().text().to_string(), v.document().is_dirty()));
+                    let disk = std::fs::read_to_string(root.join(NOTES)).unwrap_or_default();
+                    check(
+                        "rewinding brings back the text that was unsaved before the prompt (I6)",
+                        notes == Some((UNSAVED.to_string(), true)) && disk == "saved\n",
+                        format!("{notes:?} / {disk:?}"),
+                    );
+                    if let Some(view) = notes_editor(&root) {
+                        crate::editor::save(&view, false);
+                    }
                     close_and_reopen(root, key);
                 },
             );
         },
     );
+}
+
+fn notes_editor(root: &PathBuf) -> Option<objc2::rc::Retained<crate::editor::EditorTextView>> {
+    crate::editor::editor_for(&*controller_of(root)?, &root.join(NOTES))
+}
+
+/// Gives the notes' editor `text` without saving it.
+fn set_notes(root: &PathBuf, text: &str) {
+    let Some(view) = notes_editor(root) else {
+        return check("the notes open in an editor", false, "");
+    };
+    let changes = view.document_mut().replace_all(text);
+    if let Ok(changes) = changes {
+        view.apply_model_changes(&changes);
+    }
+    crate::editor::update_dirty(&view);
 }
 
 fn close_and_reopen(root: PathBuf, key: u64) {

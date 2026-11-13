@@ -35,11 +35,18 @@ impl Store {
         f(checkpoints).map_err(|e| e.to_string())
     }
 
-    /// Takes a checkpoint for `thread` on a worker thread and hands it to `done` there; `None` when it failed.
-    pub fn create(&self, thread: String, label: String, done: impl FnOnce(Option<Checkpoint>) + Send + 'static) {
+    /// Takes a checkpoint for `thread` with the unsaved `buffers` on a worker thread and hands it to `done` there;
+    /// `None` when it failed.
+    pub fn create(
+        &self,
+        thread: String,
+        label: String,
+        buffers: Vec<(PathBuf, Vec<u8>)>,
+        done: impl FnOnce(Option<Checkpoint>) + Send + 'static,
+    ) {
         let store = self.clone();
         let spawned = ide_ui_common::util::spawn_with("checkpoint", done, move |done| {
-            let created = store.with(|c| c.create(&thread, &label, &[]));
+            let created = store.with(|c| c.create(&thread, &label, &buffers));
             match created {
                 Ok(created) => done(Some(created.checkpoint)),
                 Err(error) => {
@@ -67,7 +74,7 @@ impl Store {
         }
     }
 
-    /// Brings `checkpoint` back on a worker thread and hands the outcome to `done` there.
+    /// Brings `checkpoint` back on a worker thread and hands the outcome to `done` there, the buffers by full path.
     pub fn restore(
         &self,
         checkpoint: Checkpoint,
@@ -76,7 +83,15 @@ impl Store {
     ) {
         let store = self.clone();
         if let Err((done, why)) = ide_ui_common::util::spawn_with("checkpoint", done, move |done| {
-            done(store.with(|c| c.restore(&checkpoint, &options)));
+            done(store.with(|c| {
+                let mut restore = c.restore(&checkpoint, &options)?;
+                if let Restore::Restored(done) = &mut restore {
+                    for (path, _) in &mut done.buffers {
+                        *path = c.root().join(&*path);
+                    }
+                }
+                Ok(restore)
+            }));
         }) {
             done(Err(why));
         }
