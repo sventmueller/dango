@@ -432,6 +432,10 @@ pub(crate) fn resolve_cargo(
 }
 
 #[cfg(test)]
+#[path = "current_tests.rs"]
+mod cargo_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -169,6 +169,12 @@ impl ConsoleTab {
         self.text.string().to_string()
     }
 
+    /// The field for expressions, for the self-test.
+    #[cfg(feature = "selftest")]
+    pub fn input_field(&self) -> Retained<NSTextField> {
+        self.input.clone()
+    }
+
     /// Whether the field for expressions shows, for the self-test.
     #[cfg(feature = "selftest")]
     pub fn takes_input(&self) -> bool {

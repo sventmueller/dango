@@ -44,6 +44,8 @@ mod processes;
 pub mod protocol;
 pub mod replay;
 mod session;
+#[cfg(test)]
+mod stub_tests;
 mod types;
 
 pub use adapter::{Adapter, AdapterKind, free_port};

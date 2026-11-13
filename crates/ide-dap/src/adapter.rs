@@ -214,3 +214,50 @@ pub fn free_port() -> std::io::Result<u16> {
     let listener = std::net::TcpListener::bind(("127.0.0.1", 0))?;
     Ok(listener.local_addr()?.port())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_language_has_its_adapter_and_each_adapter_its_name() {
+        let cases = [
+            ("swift", Some(AdapterKind::Lldb)),
+            ("go", Some(AdapterKind::Go)),
+            ("typescriptreact", Some(AdapterKind::JsDebug)),
+            ("python", Some(AdapterKind::Python)),
+            ("markdown", None),
+        ];
+        for (language, kind) in cases {
+            assert_eq!(AdapterKind::for_language(language), kind, "{language}");
+        }
+        let labels = [
+            AdapterKind::Lldb,
+            AdapterKind::Go,
+            AdapterKind::JsDebug,
+            AdapterKind::Python,
+            AdapterKind::Fake,
+        ]
+        .map(AdapterKind::label);
+        assert_eq!(labels, ["lldb-dap", "Delve", "js-debug", "debugpy", "fake"]);
+    }
+
+    #[test]
+    fn only_a_process_has_a_program_and_arguments() {
+        let process = Adapter::command(
+            AdapterKind::Lldb,
+            Path::new("/x/lldb-dap"),
+            &["--port".into()],
+            Vec::new(),
+            Path::new("/"),
+        );
+        assert_eq!(
+            (process.label.as_str(), process.args()),
+            ("lldb-dap", &["--port".to_string()][..])
+        );
+        let shown = format!("{process:?}");
+        assert!(shown.contains("Lldb") && shown.contains("/x/lldb-dap"), "{shown}");
+        let fake = Adapter::fake(fake::Script::default());
+        assert_eq!((fake.program(), fake.args()), (None, &[][..]));
+    }
+}

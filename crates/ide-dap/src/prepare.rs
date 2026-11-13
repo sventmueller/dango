@@ -117,9 +117,154 @@ fn keep_paths(arguments: &mut serde_json::Map<String, serde_json::Value>) {
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
+    use ide_lsp::Cancel;
+    use ide_process::Supervisor;
     use serde_json::{Map, json};
 
-    use super::keep_paths;
+    use super::*;
+    use crate::stub_tests::{env, folder, script};
+
+    fn config(kind: AdapterKind, request: Request, arguments: serde_json::Value) -> LaunchConfig {
+        LaunchConfig {
+            name: "app".into(),
+            kind,
+            request,
+            arguments: arguments.as_object().cloned().unwrap_or_default(),
+            process_pick: false,
+        }
+    }
+
+    fn started(adapters: &Adapters, root: &Path, trusted: bool, config: LaunchConfig) -> Result<Session, StartError> {
+        start(
+            adapters,
+            root,
+            trusted,
+            config,
+            Setup::default(),
+            &Cancel::new(),
+            &mut |_| {},
+            |_, _| {},
+        )
+    }
+
+    #[test]
+    fn nothing_starts_in_an_untrusted_folder_or_before_a_process_is_picked() {
+        let adapters = Adapters::with_tools(&Supervisor::new(), Vec::new(), PathBuf::from("/none"));
+        let fake = config(AdapterKind::Fake, Request::Launch, json!({}));
+        let untrusted = started(&adapters, Path::new("/p"), false, fake.clone());
+        assert!(matches!(untrusted, Err(StartError::Untrusted)));
+        let pick = LaunchConfig {
+            process_pick: true,
+            ..config(AdapterKind::Lldb, Request::Attach, json!({}))
+        };
+        assert!(matches!(
+            started(&adapters, Path::new("/p"), true, pick),
+            Err(StartError::NeedsProcess)
+        ));
+    }
+
+    #[test]
+    fn a_missing_adapter_or_cargo_is_named_and_the_fake_adapter_starts() {
+        let adapters = Adapters::with_tools(&Supervisor::new(), env(&folder("empty"), &[]), PathBuf::from("/none"));
+        let go = started(
+            &adapters,
+            Path::new("/p"),
+            true,
+            config(AdapterKind::Go, Request::Launch, json!({})),
+        );
+        assert!(
+            matches!(go, Err(StartError::Missing(Missing { program: "dlv", .. }))),
+            "{go:?}"
+        );
+        let cargo = config(
+            AdapterKind::Lldb,
+            Request::Launch,
+            json!({"cargo": {"args": ["build"]}}),
+        );
+        let built = started(&adapters, Path::new("/p"), true, cargo);
+        assert!(
+            matches!(built, Err(StartError::Build(CurrentError::Missing("cargo")))),
+            "{built:?}"
+        );
+        let session = started(
+            &adapters,
+            Path::new("/p"),
+            true,
+            config(AdapterKind::Fake, Request::Launch, json!({})),
+        )
+        .unwrap();
+        assert!(session.stop_and_wait(std::time::Duration::from_secs(10)));
+    }
+
+    #[test]
+    fn each_adapter_gets_the_settings_a_configuration_may_leave_out() {
+        let root = folder("fill");
+        script(&root.join(".venv/bin/python"), "exit 0\n");
+        let adapters = Adapters::with_tools(&Supervisor::new(), env(&root.join("bin"), &[]), root.clone());
+        let filled = |kind, request, arguments| {
+            let mut config = config(kind, request, arguments);
+            fill_in(&adapters, &root, &mut config);
+            serde_json::Value::Object(config.arguments)
+        };
+        assert_eq!(
+            filled(
+                AdapterKind::Python,
+                Request::Launch,
+                json!({"console": "integratedTerminal"})
+            ),
+            json!({"python": root.join(".venv/bin/python"), "cwd": root, "console": "integratedTerminal"})
+        );
+        assert_eq!(
+            filled(AdapterKind::Lldb, Request::Launch, json!({})),
+            json!({"cwd": root})
+        );
+        assert_eq!(
+            filled(AdapterKind::JsDebug, Request::Launch, json!({"cwd": "/w"})),
+            json!({"cwd": "/w"})
+        );
+        assert_eq!(
+            filled(AdapterKind::Lldb, Request::Attach, json!({"pid": 7})),
+            json!({"pid": 7})
+        );
+        assert_eq!(
+            filled(AdapterKind::Go, Request::Launch, json!({})),
+            json!({"cwd": root, "buildFlags": "-trimpath=false"})
+        );
+        assert_eq!(
+            filled(AdapterKind::Go, Request::Attach, json!({"processId": 7})),
+            json!({"processId": 7})
+        );
+        assert_eq!(filled(AdapterKind::Fake, Request::Launch, json!({})), json!({}));
+    }
+
+    #[test]
+    fn every_reason_a_start_fails_reads_as_a_sentence() {
+        let missing = Missing {
+            kind: AdapterKind::Go,
+            program: "dlv",
+            needs: None,
+            install: None,
+            command: None,
+        };
+        let cases = [
+            (StartError::Untrusted, "the folder is not trusted"),
+            (StartError::NeedsProcess, "pick a process to attach to"),
+            (StartError::Missing(missing), "dlv is not installed"),
+            (
+                StartError::Build(CurrentError::NoProgram),
+                "the build produced no program",
+            ),
+            (
+                StartError::Io(std::io::Error::other("no such file")),
+                "the debug adapter could not be started: no such file",
+            ),
+        ];
+        for (error, words) in cases {
+            assert_eq!(error.to_string(), words);
+        }
+    }
 
     #[test]
     fn a_go_build_keeps_its_paths_unless_the_configuration_says_otherwise() {

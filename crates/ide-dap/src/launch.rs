@@ -398,6 +398,73 @@ mod tests {
     }
 
     #[test]
+    fn each_adapter_reads_the_process_from_its_own_field() {
+        let go = LaunchConfig::attach(AdapterKind::Go, 7, "go");
+        assert_eq!(
+            (&go.arguments["processId"], &go.arguments["mode"]),
+            (&json!(7), &json!("local"))
+        );
+        assert_eq!(go.adapter_type(), "go");
+        let python = LaunchConfig::attach(AdapterKind::Python, 8, "py");
+        assert_eq!(python.arguments["processId"], 8);
+        let mut chrome = LaunchConfig::attach(AdapterKind::JsDebug, 9, "web");
+        chrome.arguments.insert("type".into(), json!("pwa-chrome"));
+        assert_eq!(chrome.adapter_type(), "pwa-chrome");
+    }
+
+    #[test]
+    fn the_file_variables_name_its_parts_relative_to_the_folder() {
+        let expanded = expand(
+            "${fileBasename} ${fileBasenameNoExtension} ${fileExtname} ${fileDirnameBasename} ${relativeFileDirname} \
+             ${workspaceRoot} ${selectedText}|",
+            &variables(),
+        )
+        .unwrap();
+        assert_eq!(expanded, "tool.rs tool .rs bin src/bin /work/app |");
+        let without = Variables {
+            line: None,
+            ..variables()
+        };
+        assert!(expand("${lineNumber}", &without).unwrap_err().contains("lineNumber"));
+    }
+
+    #[test]
+    fn a_broken_file_or_entry_says_what_is_wrong() {
+        assert!(matches!(
+            parse_launch_json("{", &variables()),
+            Err(LaunchError::Syntax(_))
+        ));
+        let entries = parse_launch_json(
+            r#"{"configurations": [{"type": "lldb", "request": "debug", "name": "Odd"}]}"#,
+            &variables(),
+        )
+        .unwrap();
+        assert!(entries[0].config.as_ref().unwrap_err().contains("unknown request"));
+        let root = std::env::temp_dir().join(format!("ide-dap-launch-{}", std::process::id()));
+        std::fs::create_dir_all(root.join(".vscode/launch.json")).unwrap();
+        assert!(matches!(
+            launch_configs(&root, true, &variables()),
+            Err(LaunchError::Io(_))
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let words = [
+            (LaunchError::Untrusted, "the folder is not trusted"),
+            (LaunchError::Missing, "there is no .vscode/launch.json"),
+            (
+                LaunchError::Io("denied".into()),
+                ".vscode/launch.json could not be read: denied",
+            ),
+            (
+                LaunchError::Syntax("no list".into()),
+                ".vscode/launch.json is not valid: no list",
+            ),
+        ];
+        for (error, text) in words {
+            assert_eq!(error.to_string(), text);
+        }
+    }
+
+    #[test]
     fn an_untrusted_folder_is_not_read() {
         assert_eq!(
             launch_configs(Path::new("/nonexistent"), false, &variables()),

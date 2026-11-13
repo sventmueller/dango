@@ -41,3 +41,33 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+
+    #[test]
+    fn every_reason_reads_as_a_sentence() {
+        let cases = [
+            (
+                Error::Adapter {
+                    command: "evaluate".into(),
+                    message: "no such name".into(),
+                },
+                "evaluate: no such name",
+            ),
+            (Error::Timeout, "the debug adapter did not answer in time"),
+            (Error::Ended, "the debug session has ended"),
+            (Error::Unsupported, "the debug adapter does not support this"),
+            (Error::NotStopped, "the program is not stopped"),
+            (Error::Congested, "the debug adapter stopped reading"),
+            (
+                Error::Malformed("no body".into()),
+                "the debug adapter's answer could not be read: no body",
+            ),
+        ];
+        for (error, words) in cases {
+            assert_eq!(error.to_string(), words);
+        }
+    }
+}

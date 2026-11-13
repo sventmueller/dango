@@ -322,3 +322,31 @@ pub fn words(look: Option<Look>, paused: bool, line: usize) -> Option<String> {
     }
     (!parts.is_empty()).then(|| tf("{}, Zeile {}", &[&parts.join(", "), &(line + 1).to_string()]))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn voiceover_hears_a_lines_marks_with_its_number() {
+        assert_eq!(words(None, false, 4), None);
+        assert_eq!(words(Some(Look::Log), false, 4).as_deref(), Some("Logpunkt, Zeile 5"));
+        assert_eq!(
+            words(Some(Look::Enabled), true, 0).as_deref(),
+            Some("Haltepunkt, Programm hier angehalten, Zeile 1")
+        );
+        assert_eq!(
+            words(None, true, 9).as_deref(),
+            Some("Programm hier angehalten, Zeile 10")
+        );
+    }
+
+    #[test]
+    fn each_menu_action_has_a_name_of_its_own() {
+        let names: Vec<&str> = What::ALL.iter().map(|w| w.name()).collect();
+        let mut unique = names.clone();
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(unique.len(), What::ALL.len(), "{names:?}");
+    }
+}

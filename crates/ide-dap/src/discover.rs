@@ -332,4 +332,114 @@ mod tests {
         let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.clone());
         assert_eq!(adapters.python(&dir), Some(dir.join(".venv/bin/python")));
     }
+
+    #[test]
+    fn the_activated_environment_comes_before_the_path_and_the_systems_stand_in_needs_the_developer_tools() {
+        let dir = tools(&["active/bin/python", "bin/python3"]);
+        let active = dir.join("active").display().to_string();
+        let path = dir.join("bin").display().to_string();
+        let env = vec![("PATH".into(), path), ("VIRTUAL_ENV".into(), active)];
+        let adapters = Adapters::with_tools(&Supervisor::new(), env, dir.clone());
+        assert_eq!(adapters.python(&dir), Some(dir.join("active/bin/python")));
+
+        let system = Adapters::with_tools(
+            &Supervisor::new(),
+            vec![("PATH".into(), "/usr/bin".into())],
+            dir.clone(),
+        );
+        let tools_installed = std::process::Command::new("/usr/bin/xcode-select")
+            .arg("-p")
+            .output()
+            .is_ok_and(|o| o.status.success());
+        let expected = tools_installed.then(|| PathBuf::from("/usr/bin/python3"));
+        assert_eq!(system.python(&dir), expected);
+    }
+
+    #[test]
+    fn dlv_is_found_in_gos_bin_folder_when_the_path_lacks_it() {
+        let dir = tools(&["gopath/bin/dlv"]);
+        let gopath = dir.join("gopath").display().to_string();
+        let go = dir.join("bin/go");
+        std::fs::create_dir_all(go.parent().unwrap()).unwrap();
+        std::fs::write(&go, format!("#!/bin/sh\necho '{gopath}:/elsewhere'\n")).unwrap();
+        std::fs::set_permissions(&go, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        let path = dir.join("bin").display().to_string();
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.clone());
+        let adapter = adapters.find(AdapterKind::Go, &dir).unwrap();
+        assert_eq!(adapter.program(), Some(dir.join("gopath/bin/dlv").as_path()));
+        assert_eq!(adapter.args()[0], "dap");
+    }
+
+    #[test]
+    fn debugpy_runs_in_the_projects_python_and_its_absence_names_the_pip_command() {
+        let dir = tools(&[]);
+        let python = dir.join(".venv/bin/python");
+        crate::stub_tests::script(&python, "[ \"$2\" = 'import debugpy' ] && [ -f \"${0%/*}/debugpy\" ]\n");
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), String::new())], dir.clone());
+        let missing = adapters.find(AdapterKind::Python, &dir).unwrap_err();
+        assert_eq!(
+            missing.command,
+            Some(format!("{} -m pip install debugpy", python.display()))
+        );
+        assert_eq!(missing.needs, None);
+        assert_eq!(
+            missing.to_string(),
+            format!(
+                "debugpy is not installed; install it with: {} -m pip install debugpy",
+                python.display()
+            )
+        );
+
+        std::fs::write(dir.join(".venv/bin/debugpy"), "").unwrap();
+        let adapter = adapters.find(AdapterKind::Python, &dir).unwrap();
+        assert_eq!(adapter.program(), Some(python.as_path()));
+        assert_eq!(adapter.args(), ["-m", "debugpy.adapter"]);
+
+        let elsewhere = tools(&[]);
+        let none = adapters.find(AdapterKind::Python, &elsewhere).unwrap_err();
+        assert_eq!((none.program, none.needs), ("debugpy", Some("python3")));
+        assert_eq!(none.to_string(), "debugpy is not installed; it needs python3");
+    }
+
+    #[test]
+    fn an_installed_js_debug_runs_under_node_on_a_port_of_its_own() {
+        let dir = tools(&["bin/node"]);
+        let server = install::js_debug_server(&dir);
+        std::fs::create_dir_all(server.parent().unwrap()).unwrap();
+        std::fs::write(&server, "").unwrap();
+        let path = dir.join("bin").display().to_string();
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path.clone())], dir.clone());
+        let adapter = adapters.find(AdapterKind::JsDebug, &dir).unwrap();
+        assert_eq!(adapter.program(), Some(dir.join("bin/node").as_path()));
+        assert_eq!(adapter.args()[0], server.display().to_string());
+        assert_eq!(adapter.args()[2], "127.0.0.1");
+        assert_eq!(adapter.label, format!("js-debug {}", JS_DEBUG.version));
+        assert_eq!(adapters.tools(), dir.as_path());
+        assert_eq!(adapters.env(), [("PATH".to_string(), path)]);
+    }
+
+    #[test]
+    fn lldb_dap_comes_from_the_selected_developer_tools_or_their_installation_is_offered() {
+        let dir = tools(&[]);
+        let adapters = Adapters::new(&Supervisor::new(), std::env::vars().collect());
+        match adapters.find(AdapterKind::Lldb, &dir) {
+            Ok(adapter) => {
+                let program = adapter.program().unwrap();
+                assert!(
+                    !program.starts_with("/usr/bin") && program.ends_with("lldb-dap"),
+                    "{program:?}"
+                );
+                assert_eq!(adapter.kind, AdapterKind::Lldb);
+            }
+            Err(missing) => {
+                assert_eq!(missing.command.as_deref(), Some("xcode-select --install"));
+                assert_eq!(
+                    missing.to_string(),
+                    "lldb-dap is not installed; install it with: xcode-select --install"
+                );
+            }
+        }
+        let fake = adapters.find(AdapterKind::Fake, &dir).unwrap();
+        assert_eq!(fake.label, "fake");
+    }
 }

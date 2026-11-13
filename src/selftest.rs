@@ -40,6 +40,7 @@ use crate::window::{self, Panel};
 mod ci;
 mod conflict;
 mod debug;
+mod debug_menus;
 mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
@@ -177,6 +178,7 @@ pub fn after_launch(_mtm: MainThreadMarker) {
         "conflict" => conflict::run(),
         "debug" => debug::run(),
         "debug-restore" => debug_restore::run(),
+        "debug-menus" => debug_menus::run(),
         #[cfg(feature = "dictation")]
         "dictation" => dictation::run(),
         "show" => show(),

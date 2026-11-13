@@ -3,6 +3,8 @@
 
 mod event;
 mod handler;
+#[cfg(test)]
+mod peer_tests;
 mod requests;
 mod start;
 mod stop;

@@ -546,3 +546,50 @@ pub fn section(mtm: MainThreadMarker, title: &str) -> Retained<NSView> {
     text.setTextColor(Some(&NSColor::secondaryLabelColor()));
     text.into_super().into_super()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_shortcut_reads_as_macos_writes_it() {
+        assert_eq!(key_symbols("ctrl+cmd+y"), "⌃⌘Y");
+        assert_eq!(key_symbols("shift+alt+f11"), "⌥⇧F11");
+        assert_eq!(key_symbols("cmd++"), "⌘+");
+        assert_eq!(key_symbols(""), "");
+    }
+
+    #[test]
+    fn every_command_has_a_symbol_and_a_name_of_its_own_and_the_steps_a_shortcut() {
+        let all = [
+            Command::Continue,
+            Command::StepOver,
+            Command::StepInto,
+            Command::StepOut,
+            Command::Restart,
+            Command::Stop,
+            Command::ToggleBreakpoints,
+            Command::ClearBreakpoints,
+        ];
+        let looks: Vec<(&str, &str)> = all.iter().map(|c| control_look(*c)).collect();
+        for (n, look) in looks.iter().enumerate() {
+            assert!(
+                looks[n + 1..]
+                    .iter()
+                    .all(|other| other.0 != look.0 && other.1 != look.1),
+                "{look:?}"
+            );
+        }
+        let with_shortcut: Vec<Command> = all.into_iter().filter(|c| shortcut_of(*c).is_some()).collect();
+        assert_eq!(
+            with_shortcut,
+            [
+                Command::Continue,
+                Command::StepOver,
+                Command::StepInto,
+                Command::StepOut,
+                Command::Stop
+            ]
+        );
+    }
+}

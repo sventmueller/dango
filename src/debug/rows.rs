@@ -342,3 +342,110 @@ pub fn tag_of(sender: Option<&AnyObject>) -> Option<usize> {
     };
     usize::try_from(tag).ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session(phase: Phase, origin: Origin, waiting: bool) -> Session {
+        Session {
+            phase,
+            origin,
+            waiting,
+            ..Session::new(1, "app", Origin::Launched)
+        }
+    }
+
+    #[test]
+    fn a_session_says_how_it_stands_and_why_it_stopped() {
+        let cases = [
+            (
+                Phase::Starting,
+                Origin::Launched,
+                true,
+                "Wartet auf Freigabe durch macOS …",
+            ),
+            (Phase::Starting, Origin::Launched, false, "Startet …"),
+            (Phase::Running, Origin::Launched, false, "Läuft"),
+            (Phase::Running, Origin::Attached, false, "Angehängt"),
+            (
+                Phase::Paused {
+                    thread: 1,
+                    reason: "function breakpoint".into(),
+                },
+                Origin::Launched,
+                false,
+                "Angehalten: Haltepunkt",
+            ),
+            (
+                Phase::Paused {
+                    thread: 1,
+                    reason: "goto".into(),
+                },
+                Origin::Launched,
+                false,
+                "Angehalten: Sprung",
+            ),
+            (
+                Phase::Paused {
+                    thread: 1,
+                    reason: "signal".into(),
+                },
+                Origin::Launched,
+                false,
+                "Angehalten: signal",
+            ),
+            (
+                Phase::Ended {
+                    code: Some(3),
+                    problem: None,
+                },
+                Origin::Launched,
+                false,
+                "Beendet mit Code 3",
+            ),
+            (
+                Phase::Ended {
+                    code: None,
+                    problem: Some("lldb-dap fehlt.".into()),
+                },
+                Origin::Launched,
+                false,
+                "Beendet: lldb-dap fehlt.",
+            ),
+            (
+                Phase::Ended {
+                    code: None,
+                    problem: None,
+                },
+                Origin::Attached,
+                false,
+                "Beendet",
+            ),
+        ];
+        for (phase, origin, waiting, words) in cases {
+            assert_eq!(phase_words(&session(phase, origin, waiting)), words);
+        }
+        let reasons: Vec<String> = ["step", "exception", "pause", "entry", "data breakpoint"]
+            .into_iter()
+            .map(reason_words)
+            .collect();
+        assert_eq!(reasons, ["Schritt", "Ausnahme", "Pause", "Programmstart", "Haltepunkt"]);
+    }
+
+    #[test]
+    fn a_place_counts_its_line_from_one_and_a_breakpoint_says_how_it_looks() {
+        assert_eq!(place(std::path::Path::new("/p/src/main.rs"), 11), "main.rs:12");
+        assert_eq!(place(std::path::Path::new("/"), 0), "/:1");
+        let looks = [Look::Enabled, Look::Disabled, Look::Log, Look::Conditional].map(look_words);
+        assert_eq!(
+            looks,
+            [
+                "Haltepunkt",
+                "Haltepunkt, ausgeschaltet",
+                "Logpunkt",
+                "Haltepunkt mit Bedingung"
+            ]
+        );
+    }
+}

@@ -699,3 +699,142 @@ fn start_words(error: &StartError) -> String {
         StartError::Io(error) => tf("Der Debug-Adapter konnte nicht starten: {}", &[&error.to_string()]),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ide_dap::{CurrentError, Missing, StopReason};
+
+    use super::*;
+
+    #[test]
+    fn a_shell_word_keeps_its_quotes() {
+        assert_eq!(quote("it's here"), r"'it'\''s here'");
+        assert_eq!(quote(""), "''");
+    }
+
+    #[test]
+    fn the_model_keeps_what_the_panel_needs_of_the_capabilities() {
+        let caps = ide_dap::Capabilities {
+            restart: true,
+            conditional_breakpoints: true,
+            log_points: true,
+            evaluate_for_hovers: true,
+            exception_filters: vec![ide_dap::ExceptionFilter {
+                filter: "panic".into(),
+                label: "Panics".into(),
+                description: None,
+                default: true,
+                supports_condition: false,
+            }],
+            ..ide_dap::Capabilities::default()
+        };
+        assert_eq!(
+            caps_of(&caps),
+            Caps {
+                restart: true,
+                terminate: false,
+                conditions: true,
+                hit_conditions: false,
+                log_points: true,
+                hover_values: true,
+                exception_filters: vec![("panic".into(), "Panics".into(), true)],
+            }
+        );
+        let reasons = [
+            StopReason::Step,
+            StopReason::Breakpoint,
+            StopReason::Exception,
+            StopReason::Pause,
+            StopReason::Entry,
+            StopReason::FunctionBreakpoint,
+            StopReason::DataBreakpoint,
+            StopReason::Other("goto".into()),
+        ];
+        let words: Vec<&str> = reasons.iter().map(stop_reason).collect();
+        assert_eq!(
+            words,
+            [
+                "step",
+                "breakpoint",
+                "exception",
+                "pause",
+                "entry",
+                "function breakpoint",
+                "data breakpoint",
+                "goto"
+            ]
+        );
+    }
+
+    #[test]
+    fn why_the_current_program_cannot_be_debugged_is_said_in_the_users_words() {
+        let cases = [
+            (
+                CurrentError::Untrusted,
+                "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust.",
+            ),
+            (
+                CurrentError::Unsupported("cpp".into()),
+                "Für cpp-Dateien gibt es keinen Debugger ohne Startkonfiguration.",
+            ),
+            (CurrentError::Missing("cargo"), "cargo ist nicht installiert."),
+            (CurrentError::NoPackage, "Die Datei gehört zu keinem Cargo-Paket."),
+            (
+                CurrentError::WhichBinary(vec!["a".into(), "b".into()]),
+                "Das Paket hat mehrere Programme (a, b); lege in .vscode/launch.json fest, welches.",
+            ),
+            (
+                CurrentError::Build("E0425".into()),
+                "Der Build ist fehlgeschlagen:\nE0425",
+            ),
+            (CurrentError::Cancelled, "Der Build wurde abgebrochen."),
+            (CurrentError::NoProgram, "Der Build hat kein Programm erzeugt."),
+        ];
+        for (error, words) in cases {
+            assert_eq!(current_words(&error), words);
+        }
+    }
+
+    #[test]
+    fn why_a_session_did_not_start_names_the_missing_adapter_and_how_to_get_it() {
+        let missing = |needs, command: Option<&str>| {
+            StartError::Missing(Missing {
+                kind: ide_dap::AdapterKind::Go,
+                program: "dlv",
+                needs,
+                install: None,
+                command: command.map(str::to_string),
+            })
+        };
+        let cases = [
+            (
+                StartError::Untrusted,
+                "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust.".to_string(),
+            ),
+            (
+                StartError::NeedsProcess,
+                "Wähle einen Prozess, an den sich der Debugger anhängt.".to_string(),
+            ),
+            (
+                missing(Some("go"), Some("go install")),
+                "dlv fehlt; es braucht go.".to_string(),
+            ),
+            (
+                missing(None, Some("go install dlv")),
+                "dlv fehlt. Installiere es mit: go install dlv".to_string(),
+            ),
+            (missing(None, None), "dlv fehlt.".to_string()),
+            (
+                StartError::Build(CurrentError::NoPackage),
+                "Die Datei gehört zu keinem Cargo-Paket.".to_string(),
+            ),
+            (
+                StartError::Io(std::io::Error::other("refused")),
+                "Der Debug-Adapter konnte nicht starten: refused".to_string(),
+            ),
+        ];
+        for (error, words) in cases {
+            assert_eq!(start_words(&error), words);
+        }
+    }
+}
