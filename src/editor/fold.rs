@@ -245,6 +245,11 @@ pub fn shows(view: &EditorTextView, manager: &NSTextContentManager, element: &NS
     !folds.hidden.iter().any(|r| r.contains(&offset))
 }
 
+/// The UTF-16 ranges the folds hide, sorted by start.
+pub fn hidden_ranges(view: &EditorTextView) -> Vec<Range<usize>> {
+    view.ivars().folds.borrow().hidden.clone()
+}
+
 /// Whether a fold hides UTF-16 offset `offset`.
 pub fn hidden_by_fold(view: &EditorTextView, offset: usize) -> bool {
     view.ivars()

@@ -44,6 +44,7 @@ pub fn step(view: &EditorTextView) {
     if !view.document().is_highlighted() {
         view.later(sel!(ideColorStep), 0.01);
     }
+    super::minimap::redraw(view);
 }
 
 /// Colours everything again, after the whole text was replaced or its language changed.

@@ -45,7 +45,12 @@ use crate::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
-pub use decorate::{Severity, follow, line_marks, paint, text_range};
+pub use decorate::{Painted, Severity, follow, line_marks, paint, text_range};
+
+/// The semantic tokens of an editor's language server state, by position.
+pub fn painted(state: &ViewState) -> &[Painted] {
+    &state.tokens
+}
 pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
 pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_moved, rect_of, show as show_hover};
 pub use navigate::{Goto, definition, go_to, jump_to, next_problem, references, symbols};

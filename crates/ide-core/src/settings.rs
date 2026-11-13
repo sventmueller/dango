@@ -80,6 +80,8 @@ pub mod keys {
 
     /// Shows spaces, tabs and whitespace at the end of lines in editors.
     pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", || false);
+    /// Whether editors show the minimap beside the text (E107).
+    pub const MINIMAP: Key<bool> = Key::user("minimap", || false);
 
     /// Shows the language server's inlay hints, such as inferred types and parameter names, in editors (E83).
     pub const INLAY_HINTS: Key<bool> = Key::user("inlayHints", || true);

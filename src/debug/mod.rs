@@ -14,7 +14,7 @@ use objc2_app_kit::NSMenuItem;
 use crate::editor::EditorTextView;
 use crate::window::WindowController;
 
-pub use editor::{draw_paused_line, gutter_click, gutter_mark, gutter_menu, hover, paused_in};
+pub use editor::{draw_paused_line, gutter_click, gutter_mark, gutter_menu, hover, paused_in, paused_line};
 pub use ide_ui_debug::gutter::{draw as draw_gutter_mark, draw_paused_arrow};
 pub use rotor::{Rotors, attach as attach_rotor};
 

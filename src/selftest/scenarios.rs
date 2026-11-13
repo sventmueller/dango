@@ -167,6 +167,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("inlay-hints", inlay::run),
     limited("inlay-repo", inlay_repo::run, LANGUAGE_SERVER),
     plain("editor-blame", blame::run),
+    plain("editor-minimap", minimap::run),
     plain("search", search::run),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),

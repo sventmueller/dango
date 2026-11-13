@@ -45,6 +45,8 @@ pub struct ViewIvars {
     pub(super) spacing: RefCell<super::indent::State>,
     /// The view that shows its whitespace.
     pub(super) whitespace: RefCell<Option<Weak<super::whitespace::Overlay>>>,
+    /// The minimap beside it (E107).
+    pub(super) minimap: RefCell<Option<Weak<super::minimap::Minimap>>>,
     /// The ranges that fold and those folded.
     pub(super) folds: RefCell<super::fold::Folds>,
     /// The carets beyond the first.
@@ -395,6 +397,7 @@ define_class!(
         fn validate_menu_item(&self, item: &objc2_app_kit::NSMenuItem) -> bool {
             let answer = guarded(None, || {
                 super::whitespace::validate(item)
+                    .or_else(|| super::minimap::validate(item))
                     .or_else(|| super::predict::validate(self, item))
                     .or_else(|| crate::lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
@@ -639,6 +642,16 @@ define_class!(
             guarded((), || super::changes::revert(self));
         }
 
+        #[unsafe(method(ideFitMinimap))]
+        fn fit_minimap(&self) {
+            guarded((), || super::minimap::fit(self));
+        }
+
+        #[unsafe(method(ideToggleMinimap:))]
+        fn toggle_minimap(&self, _sender: Option<&AnyObject>) {
+            guarded((), super::minimap::toggle);
+        }
+
         #[unsafe(method(ideToggleWhitespace:))]
         fn toggle_whitespace(&self, _sender: Option<&AnyObject>) {
             guarded((), super::whitespace::toggle);
@@ -692,6 +705,7 @@ impl EditorTextView {
             marks: RefCell::new(super::changes::Marks::default()),
             spacing: RefCell::new(super::indent::State::default()),
             whitespace: RefCell::new(None),
+            minimap: RefCell::new(None),
             folds: RefCell::new(super::fold::Folds::default()),
             carets: RefCell::new(super::multi::Carets::default()),
             overlay: RefCell::new(None),
@@ -762,6 +776,7 @@ impl EditorTextView {
         super::notify_change(self, change);
         super::changes::schedule(self);
         super::whitespace::redraw(self);
+        super::minimap::redraw(self);
         if (change.start.line != change.new_end.line || change.start.line != change.old_end.line)
             && let Some(gutter) = self.ivars().gutter.borrow().as_ref().and_then(Weak::load)
         {

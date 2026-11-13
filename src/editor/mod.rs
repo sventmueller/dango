@@ -12,6 +12,7 @@ mod highlight;
 mod indent;
 mod inset_fragment;
 pub mod insets;
+mod minimap;
 mod multi;
 mod overlay;
 pub mod predict;
@@ -45,6 +46,7 @@ pub use view::EditorTextView;
 /// The state of the editors beside the list of them.
 #[derive(Default)]
 pub struct EditorState {
+    minimap: minimap::Shown,
     comparisons: compare::Comparisons,
     recovery_copies: recovery::RecoveryCopies,
     #[cfg(feature = "selftest")]
@@ -130,11 +132,29 @@ pub fn redraw_gutter(view: &EditorTextView) {
     if let Some(gutter) = view.ivars().gutter.borrow().as_ref().and_then(Weak::load) {
         gutter.setNeedsDisplay(true);
     }
+    minimap::redraw(view);
+}
+
+/// The rectangle of line `line` across the whole width of `editor`, if TextKit has laid it out.
+pub fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
+    let at = editor.line_start(line)?;
+    let layout = editor.textLayoutManager()?;
+    let content = editor.textContentStorage()?;
+    let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
+    let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).ok()?)?;
+    let fragment = layout.textLayoutFragmentForLocation(&location)?;
+    let frame = fragment.layoutFragmentFrame();
+    let origin = editor.textContainerOrigin();
+    Some(NSRect::new(
+        NSPoint::new(0.0, frame.origin.y + origin.y),
+        NSSize::new(editor.bounds().size.width, frame.size.height),
+    ))
 }
 
 pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
 pub use fold::hidden_by_fold;
 pub use ide_ui_common::util::undo_step;
+pub use minimap::redraw as redraw_minimap;
 pub use style::{code_font, palette_color};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -441,7 +461,10 @@ fn editor_container(
     let blame = blame_column::BlameColumn::new(mtm, scroll, view);
     let status = crate::lsp::status::bar(mtm, view);
     let bar = conflict::Bar::new(mtm);
+    let map = minimap::Minimap::new(mtm, scroll, view);
     let container = objc2_app_kit::NSView::new(mtm);
+    container.addSubview(&map);
+    map.setTranslatesAutoresizingMaskIntoConstraints(false);
     container.addSubview(&blame);
     container.addSubview(&gutter);
     container.addSubview(scroll);
@@ -468,7 +491,10 @@ fn editor_container(
         gutter.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
         gutter.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
         scroll.leftAnchor().constraintEqualToAnchor(&gutter.rightAnchor()),
-        scroll.rightAnchor().constraintEqualToAnchor(&container.rightAnchor()),
+        scroll.rightAnchor().constraintEqualToAnchor(&map.leftAnchor()),
+        map.rightAnchor().constraintEqualToAnchor(&container.rightAnchor()),
+        map.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
+        map.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
         scroll.topAnchor().constraintEqualToAnchor(&bar.view().bottomAnchor()),
         scroll.bottomAnchor().constraintEqualToAnchor(&status.topAnchor()),
         status
@@ -490,6 +516,9 @@ fn editor_container(
     let width = blame.widthAnchor().constraintEqualToConstant(0.0);
     width.setActive(true);
     blame.set_width_constraint(width);
+    let width = map.widthAnchor().constraintEqualToConstant(0.0);
+    width.setActive(true);
+    map.set_width_constraint(width);
     *view.ivars().bar.borrow_mut() = Some(bar);
     (container, gutter)
 }

@@ -12,6 +12,17 @@ use super::{EditorTextView, changes, compare, conflict, editing, editor_for, ope
 use crate::util::{constant, ns};
 use crate::window::WindowController;
 
+pub use super::minimap::{click as click_minimap, probe as minimap};
+
+/// The logical lines `view` shows, the first to the last on screen, for the self-test.
+pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
+    let rect = view.visibleRect();
+    let top = super::highlight::line_at(view, rect.origin).unwrap_or(0);
+    let bottom =
+        super::highlight::line_at(view, NSPoint::new(0.0, rect.origin.y + rect.size.height - 1.0)).unwrap_or(top);
+    top..bottom + 1
+}
+
 /// The editors of `controller` with their tab ids, for the self-test.
 pub fn editors_of(controller: &WindowController) -> Vec<(isize, Retained<EditorTextView>)> {
     open_editors()

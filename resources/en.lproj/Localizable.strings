@@ -1594,3 +1594,4 @@
 "Haltepunkt, nicht gesetzt" = "Breakpoint, not set";
 "nicht gesetzt" = "not set";
 "Der Debugger konnte hier keinen Haltepunkt setzen: {}" = "The debugger could not set a breakpoint here: {}";
+"Minimap" = "Minimap";

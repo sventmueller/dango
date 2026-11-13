@@ -167,6 +167,7 @@ pub fn set_tokens(view: &EditorTextView, tokens: &SemanticTokens) {
     };
     view.ivars().lsp.borrow_mut().tokens = painted;
     paint(view);
+    crate::editor::redraw_minimap(view);
 }
 
 /// The diagnostics by the line they start on, the most serious first, for the line number column.

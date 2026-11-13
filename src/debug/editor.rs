@@ -7,8 +7,7 @@ use std::path::{Path, PathBuf};
 use ide_document::{Change, Unit};
 use objc2::DefinedClass;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSColor, NSTextElementProvider};
-use objc2_foundation::{NSPoint, NSRect, NSSize};
+use objc2_app_kit::NSColor;
 use splat_i18n::tf;
 
 use ide_ui_debug::DebugPanel;
@@ -90,38 +89,17 @@ pub fn edited(editor: &EditorTextView, change: &Change) {
 }
 
 /// The line the program is paused at in `editor`, if it shows the paused frame's file.
-fn paused_line(editor: &EditorTextView) -> Option<usize> {
+pub fn paused_line(editor: &EditorTextView) -> Option<usize> {
     let (panel, path) = panel_and_path(editor)?;
     let model = panel.read();
     let frame = model.paused_at()?;
     (frame.path.as_deref() == Some(&path)).then_some(frame.line)
 }
 
-/// The rectangle of line `line` across the whole width of `editor`, if TextKit has laid it out.
-fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
-    let at = {
-        let document = editor.document();
-        let text = document.text();
-        let byte = text.offset(line, 0, Unit::Utf16).ok()?;
-        text.byte_to_utf16(byte).ok()?
-    };
-    let layout = editor.textLayoutManager()?;
-    let content = editor.textContentStorage()?;
-    let start = content.documentRange().location();
-    let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).ok()?)?;
-    let fragment = layout.textLayoutFragmentForLocation(&location)?;
-    let frame = fragment.layoutFragmentFrame();
-    let origin = editor.textContainerOrigin();
-    Some(NSRect::new(
-        NSPoint::new(0.0, frame.origin.y + origin.y),
-        NSSize::new(editor.bounds().size.width, frame.size.height),
-    ))
-}
-
 /// Draws the paused line's band in `editor`'s coordinates, under the overlay's other marks; the gutter's arrow says
 /// the same without colour.
 pub fn draw_paused_line(editor: &EditorTextView) {
-    let Some(rect) = paused_line(editor).and_then(|line| line_rect(editor, line)) else {
+    let Some(rect) = paused_line(editor).and_then(|line| crate::editor::line_rect(editor, line)) else {
         return;
     };
     NSColor::systemGreenColor().colorWithAlphaComponent(0.16).setFill();

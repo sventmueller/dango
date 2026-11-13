@@ -74,6 +74,7 @@ mod lsp;
 mod lsp_actions;
 mod lsp_more;
 mod lsp_navigation;
+mod minimap;
 mod own_agent;
 mod own_agent_menus;
 mod predict;

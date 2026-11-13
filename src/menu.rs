@@ -363,6 +363,8 @@ fn code_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             entry(t("Alle einklappen"), sel!(ideFoldAll:), "edit.foldAll"),
             entry(t("Alle ausklappen"), sel!(ideUnfoldAll:), "edit.unfoldAll"),
             separator(mtm),
+            item(mtm, t("Minimap"), Some(sel!(ideToggleMinimap:)), ""),
+            separator(mtm),
             entry(
                 t("Cursor darüber hinzufügen"),
                 sel!(ideAddCaretAbove:),
