@@ -77,6 +77,7 @@ Dango okuplja kôd, agente koji ga mijenjaju i sve oko njih u jednom prozoru po 
 - [Preglednik](#preglednik)
 - [Git](#git)
 - [CI](#ci)
+- [Kontejneri](#kontejneri)
 - [Markdown](#markdown)
 - [Diktat](#diktat)
 - [Povjerenje](#povjerenje)
@@ -94,7 +95,7 @@ Dango okuplja kôd, agente koji ga mijenjaju i sve oko njih u jednom prozoru po 
 
 - **Svi agenti na jednoj vremenskoj crti.** Claude putem vlastite naredbe `claude`, Codex, Antigravity i OpenCode putem protokola Agent Client Protocol, drugi iz ACP registra te agent ugrađen u aplikaciju za Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama i LM Studio. Odgovori, pozivi alata, zahtjevi za dozvolu, planovi, obaveze, podagenti i pozadinski zadaci izgledaju jednako, koji god agent radio.
 - **Pregled i premotavanje.** Prije svakog prompta Dango sprema kontrolnu točku. Ono što je agent promijenio može se pregledati i premotati po poruci, a nit može raditi u vlastitom Git worktreeju i predati svoj rad spajanjem ili cherry-pickom.
-- **Jedan prozor po mapi.** Datoteke, terminali, stranice preglednika, AI niti, prikazi razlika i pregledi macOS su kartice tog prozora. Rubni stupac sadrži Datoteke, Pretraga, Agenti, Git, Otklanjanje pogrešaka i CI.
+- **Jedan prozor po mapi.** Datoteke, terminali, stranice preglednika, AI niti, prikazi razlika i pregledi macOS su kartice tog prozora. Rubni stupac sadrži Datoteke, Pretraga, Agenti, Git, Testovi, Otklanjanje pogrešaka, CI i Kontejneri.
 - **Pravi urednik koda.** Isticanje sintakse, više kursora, sažimanje blokova, `.editorconfig`, jezični poslužitelji za 17 jezika s dovršavanjem, odlaskom na definiciju, referencama, preimenovanjem, brzim popravcima i hijerarhijama te predviđanja pri uređivanju od GitHub Copilota ili lokalnog modela.
 - **Ugrađeni program za otklanjanje pogrešaka, Git i CI.** Prekidne točke i izvršavanje korak po korak za Rust, C, C++, Swift, Go, JavaScript, TypeScript i Python; priprema pojedinačnih blokova, grane, stashevi, konflikti i graf commitova; pokretanja, poslovi i zapisnici iz GitHub Actions i GitLab CI.
 - **Pažljiv s vašim mapama.** Mapa kojoj niste ukazali povjerenje ne pokreće ništa: nikakve Git procese, jezične poslužitelje, hookove ni agente. Destruktivne Git naredbe nikad se ne dozvoljavaju trajno, a commitovi se provjeravaju na tajne podatke.
@@ -122,7 +123,7 @@ Dango okuplja kôd, agente koji ga mijenjaju i sve oko njih u jednom prozoru po 
 ## Prvi koraci
 
 1. **Otvorite mapu** pomoću ⌘O ili `dango <folder>`. Prvi put Dango pita vjerujete li joj (pogledajte [Povjerenje](#povjerenje)).
-2. **Rubni stupac** prebacuje između prikaza Datoteke (⌘1), Pretraga (⌘2), Agenti (⌘3), Git (⌘4), Otklanjanje pogrešaka (⌘5) i CI (⌘6); desnim klikom skrivate one koje ne koristite, a ⌃⌘S sklapa rubni stupac.
+2. **Rubni stupac** prebacuje između prikaza Datoteke (⌘1), Pretraga (⌘2), Agenti (⌘3), Git (⌘4), Testovi (⌘5), Otklanjanje pogrešaka (⌘6), CI (⌘7) i Kontejneri (⌘8); desnim klikom skrivate one koje ne koristite, a ⌃⌘S sklapa rubni stupac.
 3. **Svaki dokument je kartica** prozora mape, i to vlastite macOS kartice. Znak “+” na kraju trake kartica i ⌘T nude novu datoteku, terminal, preglednik i svaki instalirani agent, i u vlastitom Git worktreeju; držanjem znaka “+” isto se prikazuje kao izbornik.
 4. **Brzo otvaranje** pomoću ⌘P pronalazi datoteke, a s `#` simbole projekta; ⇧⌘F traži i zamjenjuje u projektu.
 5. **Razgovarajte s agentom** u AI kartici. ⌘Esc premješta fokus tipkovnice u njegovo polje za poruku i natrag.
@@ -218,6 +219,10 @@ GitHub Actions i GitLab CI, također GitHub Enterprise Server i samostalno uprav
 
 Token dolazi iz privjeska ključeva, od `gh` ili `glab`, iz okruženja prijavne ljuske ili je to onaj koji unesete u **Postavke › CI**.
 
+## Kontejneri
+
+Okno Kontejneri prikazuje Dockerove Compose projekte s njihovim servisima, pojedinačne kontejnere, slike i volumene te prati Dockerove događaje kako se događaju. Compose datoteka mape prikazuje se kao projekt i prije nego što postoji ijedan njezin kontejner. Kontejneri se pokreću, zaustavljaju i ponovno pokreću; njihovi zapisnici i ljuska otvaraju se u karticama terminala, a objavljeni port otvara se u kartici preglednika. Brisanje kontejnera, slike ili volumena te čišćenje nekorištenih podataka najprije traže potvrdu. Naredbe up, down i pull iz Composea pokreću se samo u pouzdanim mapama jer Compose gradi i pokreće ono što projekt opisuje. Izbornik okna bira Docker kontekst za prozor bez mijenjanja onog koji koriste vaše ljuske; iste su naredbe u izborniku Kontejneri. Potrebni su naredbeni redak `docker` i Docker 24.0.6 ili noviji.
+
 ## Markdown
 
 - **Pregled.** Markdown datoteka otvara se s pregledom pokraj sebe; **Prikaz › Prikaži/sakrij pregled sa strane** (⇧⌘V) zatvara ga i otvara, a **Postavke › Općenito** isključuje automatski pregled. Pregled iscrtava formule, dijagrame Mermaid, Graphviz i PlantUML te slike iz mape; slike s weba učitavaju se samo u pouzdanoj mapi ili nakon što ih zatražite u pregledu.
@@ -279,7 +284,7 @@ Dango slijedi redoslijed jezika u **Postavke sustava › Općenito › Jezik i r
 | Nova datoteka, spremi, spremi kao | ⌘N, ⌘S, ⇧⌘S |
 | Nova kartica, zatvori karticu, sljedeća i prethodna kartica | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Brzo otvaranje, pretraga u projektu | ⌘P, ⇧⌘F |
-| Datoteke, Pretraga, Agenti, Git, Testovi, Otklanjanje pogrešaka, CI | ⌘1 do ⌘7 |
+| Datoteke, Pretraga, Agenti, Git, Testovi, Otklanjanje pogrešaka, CI, Kontejneri | ⌘1 do ⌘8 |
 | Prikaži ili sakrij rubni stupac, sljedeće okno | ⌃⌘S, ⌥⌘\` |
 | Natrag i naprijed kroz uređivana mjesta | ⌃- i ⌃⇧- |
 | Uključi/isključi komentar, idi na redak | ⌘/, ⌃G |

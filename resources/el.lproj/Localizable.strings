@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Επανεκτέλεση τελευταίων δοκιμών";
 "Test ausführen" = "Εκτέλεση δοκιμής";
 "Test debuggen" = "Αποσφαλμάτωση δοκιμής";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Ανανέωση";
+"Aufräumen" = "Εκκαθάριση";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Διακοπή (down)";
+"Compose: Images holen (pull)" = "Compose: Λήψη image (pull)";
+"Compose: Starten (up)" = "Compose: Έναρξη (up)";
+"Container" = "Container";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Το image θα αφαιρεθεί από αυτό το Docker. Μπορείτε να το λάβετε ή να το δημιουργήσετε ξανά.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Το volume και όλα τα δεδομένα του θα διαγραφούν. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Το container θα αφαιρεθεί. Ό,τι έχει αποθηκεύσει εκτός volume θα χαθεί.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Το Docker δεν είναι εγκατεστημένο. Εγκαταστήστε το Docker Desktop ή τη γραμμή εντολών docker και αυτό το πλαίσιο θα εμφανίζει container, image και volume.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Το Docker δεν εκτελείται. Εκκινήστε το Docker. Το πλαίσιο θα δοκιμάσει ξανά αυτόματα.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Το Docker {} είναι πολύ παλιό. Το πλαίσιο απαιτεί την έκδοση 24.0.6 ή νεότερη.";
+"Docker-Befehl fehlgeschlagen" = "Η εντολή Docker απέτυχε";
+"Docker-Kontext dieses Fensters" = "Docker context αυτού του παραθύρου";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Θα διαγραφούν τα σταματημένα container, τα αχρησιμοποίητα δίκτυα, τα image χωρίς όνομα και η cache δόμησης. Τα volume παραμένουν.";
+"Docker-Image" = "Image Docker";
+"Images" = "Image";
+"Logs anzeigen" = "Εμφάνιση αρχείων καταγραφής";
+"Logs: {}" = "Αρχεία καταγραφής: {}";
+"Port im Browser öffnen" = "Άνοιγμα θύρας στο πρόγραμμα περιήγησης";
+"Shell öffnen" = "Άνοιγμα shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Εκτελείται εν μέρει";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Εκκαθάριση αχρησιμοποίητων δεδομένων Docker στο «{}»;";
+"Ungenutztes aufräumen …" = "Εκκαθάριση αχρησιμοποίητων…";
+"Docker-Volume" = "Volume Docker";
+"Volumes" = "Volume";
+"„{}“ löschen?" = "Διαγραφή του «{}»;";

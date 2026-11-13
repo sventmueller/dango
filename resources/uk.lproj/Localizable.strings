@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Повторити останні тести";
 "Test ausführen" = "Запустити тест";
 "Test debuggen" = "Налагодити тест";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Оновити";
+"Aufräumen" = "Очистити";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: зупинити (down)";
+"Compose: Images holen (pull)" = "Compose: завантажити образи (pull)";
+"Compose: Starten (up)" = "Compose: запустити (up)";
+"Container" = "Контейнери";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Образ буде вилучено з цього Docker; його можна знову завантажити або зібрати.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Том і всі дані в ньому буде видалено. Цю дію неможливо скасувати.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Контейнер буде вилучено; усе, що він зберіг поза томами, буде втрачено.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker не інстальовано. Інсталюйте Docker Desktop або командний рядок docker, і ця панель показуватиме контейнери, образи й томи.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker не запущено. Запустіть Docker; панель сама спробує знову.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} застарий; панелі потрібна версія 24.0.6 або новіша.";
+"Docker-Befehl fehlgeschlagen" = "Помилка команди Docker";
+"Docker-Kontext dieses Fensters" = "Контекст Docker цього вікна";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Буде видалено зупинені контейнери, невикористовувані мережі, образи без назви й кеш збирання. Томи залишаться.";
+"Docker-Image" = "Образ Docker";
+"Images" = "Образи";
+"Logs anzeigen" = "Показати журнали";
+"Logs: {}" = "Журнали: {}";
+"Port im Browser öffnen" = "Відкрити порт у браузері";
+"Shell öffnen" = "Відкрити оболонку";
+"Shell: {}" = "Оболонка: {}";
+"Teilweise" = "Частково запущено";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Очистити невикористовувані дані Docker у «{}»?";
+"Ungenutztes aufräumen …" = "Очистити невикористовуване…";
+"Docker-Volume" = "Том Docker";
+"Volumes" = "Томи";
+"„{}“ löschen?" = "Видалити «{}»?";

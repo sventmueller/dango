@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Réexécuter les derniers tests";
 "Test ausführen" = "Exécuter le test";
 "Test debuggen" = "Déboguer le test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Actualiser";
+"Aufräumen" = "Nettoyer";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose : arrêter (down)";
+"Compose: Images holen (pull)" = "Compose : récupérer les images (pull)";
+"Compose: Starten (up)" = "Compose : démarrer (up)";
+"Container" = "Conteneurs";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "L’image est supprimée de ce Docker ; elle peut être récupérée ou reconstruite.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Le volume et toutes ses données seront supprimés. Cette action est irréversible.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Le conteneur est supprimé ; ce qu’il a stocké en dehors des volumes est perdu.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker n’est pas installé. Installez Docker Desktop ou la ligne de commande docker, et ce panneau affichera les conteneurs, les images et les volumes.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker n’est pas en cours d’exécution. Démarrez Docker ; le panneau réessaiera de lui-même.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} est trop ancien ; le panneau nécessite la version 24.0.6 ou ultérieure.";
+"Docker-Befehl fehlgeschlagen" = "Échec de la commande Docker";
+"Docker-Kontext dieses Fensters" = "Contexte Docker de cette fenêtre";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Les conteneurs arrêtés, les réseaux inutilisés, les images sans nom et le cache de build seront supprimés. Les volumes sont conservés.";
+"Docker-Image" = "Image Docker";
+"Images" = "Images";
+"Logs anzeigen" = "Afficher les journaux";
+"Logs: {}" = "Journaux : {}";
+"Port im Browser öffnen" = "Ouvrir le port dans le navigateur";
+"Shell öffnen" = "Ouvrir un shell";
+"Shell: {}" = "Shell : {}";
+"Teilweise" = "Partiellement en cours";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Nettoyer les données Docker inutilisées dans « {} » ?";
+"Ungenutztes aufräumen …" = "Nettoyer les éléments inutilisés…";
+"Docker-Volume" = "Volume Docker";
+"Volumes" = "Volumes";
+"„{}“ löschen?" = "Supprimer « {} » ?";

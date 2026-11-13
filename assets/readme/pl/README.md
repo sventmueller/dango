@@ -77,6 +77,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 - [Przeglądarka](#przeglądarka)
 - [Git](#git)
 - [CI](#ci)
+- [Kontenery](#kontenery)
 - [Markdown](#markdown)
 - [Dyktowanie](#dyktowanie)
 - [Zaufanie](#zaufanie)
@@ -94,7 +95,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 
 - **Wszystkie agenty na jednej osi czasu.** Claude przez własne polecenie `claude`, Codex, Antigravity i OpenCode przez Agent Client Protocol, kolejne z rejestru ACP oraz agent wbudowany w aplikację dla Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama i LM Studio. Odpowiedzi, wywołania narzędzi, prośby o pozwolenie, plany, listy do zrobienia, subagenty i zadania w tle wyglądają tak samo, niezależnie od agenta.
 - **Przeglądanie i przewijanie do tyłu.** Przed każdym promptem Dango zachowuje punkt kontrolny. To, co zmienił agent, można przejrzeć i przewinąć do tyłu dla każdej wiadomości, a wątek może pracować we własnym worktree Git i przekazać pracę przez scalenie lub cherry-pick.
-- **Jedno okno na folder.** Pliki, terminale, strony WWW, wątki AI, różnice i podglądy są kartami macOS tego okna. Pasek boczny zawiera Pliki, Wyszukiwanie, Agenty, Git, Debugowanie i CI.
+- **Jedno okno na folder.** Pliki, terminale, strony WWW, wątki AI, różnice i podglądy są kartami macOS tego okna. Pasek boczny zawiera Pliki, Wyszukiwanie, Agenty, Git, Testy, Debugowanie, CI i Kontenery.
 - **Prawdziwy edytor kodu.** Kolorowanie składni, wiele punktów wstawiania, zwijanie, `.editorconfig`, serwery języka dla 17 języków z uzupełnianiem, przejściem do definicji, odwołaniami, zmianą nazwy, szybkimi poprawkami i hierarchiami, a także przewidywanie podczas pisania z GitHub Copilot lub modelu lokalnego.
 - **Wbudowany debuger, Git i CI.** Punkty przerwania i praca krokowa dla Rust, C, C++, Swift, Go, JavaScript, TypeScript i Python; przygotowywanie pojedynczych fragmentów, gałęzie, stashe, konflikty i graf commitów; uruchomienia, joby i logi z GitHub Actions i GitLab CI.
 - **Ostrożność wobec Twoich folderów.** Folder, któremu nie ufasz, niczego nie uruchamia: żadnych procesów Git, serwerów języka, hooków ani agentów. Destrukcyjne polecenia Git nigdy nie są dozwolone na stałe, a commity są sprawdzane pod kątem sekretów.
@@ -122,7 +123,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 ## Pierwsze kroki
 
 1. **Otwórz folder** za pomocą ⌘O lub `dango <folder>`. Za pierwszym razem Dango pyta, czy mu ufasz (zobacz [Zaufanie](#zaufanie)).
-2. **Pasek boczny** przełącza między Plikami (⌘1), Wyszukiwaniem (⌘2), Agentami (⌘3), Git (⌘4), Debugowaniem (⌘5) i CI (⌘6); kliknięcie prawym przyciskiem ukrywa te, których nie używasz, a ⌃⌘S zwija pasek boczny.
+2. **Pasek boczny** przełącza między Plikami (⌘1), Wyszukiwaniem (⌘2), Agentami (⌘3), Git (⌘4), Testami (⌘5), Debugowaniem (⌘6), CI (⌘7) i Kontenerami (⌘8); kliknięcie prawym przyciskiem ukrywa te, których nie używasz, a ⌃⌘S zwija pasek boczny.
 3. **Każdy dokument jest kartą** okna folderu, kartą samego macOS. „+” na końcu paska kart i ⌘T oferują nowy plik, terminal, przeglądarkę i każdego zainstalowanego agenta, także we własnym worktree Git; przytrzymanie „+” pokazuje to samo jako menu.
 4. **Szybko otwórz** za pomocą ⌘P znajduje pliki, a z `#` symbole projektu; ⇧⌘F wyszukuje i zastępuje w projekcie.
 5. **Rozmawiaj z agentem** w karcie AI. ⌘Esc przenosi fokus klawiatury do jego pola wiadomości i z powrotem.
@@ -218,6 +219,10 @@ GitHub Actions i GitLab CI, także GitHub Enterprise Server i samodzielnie hosto
 
 Token pochodzi z pęku kluczy, z `gh` lub `glab`, ze środowiska powłoki logowania albo jest tym, który wpiszesz w **Ustawienia › CI**.
 
+## Kontenery
+
+Panel Kontenery pokazuje projekty Compose Dockera z ich usługami, pojedyncze kontenery, obrazy i woluminy oraz śledzi zdarzenia Dockera na bieżąco. Plik Compose z folderu pojawia się jako projekt, zanim jeszcze istnieje którykolwiek z jego kontenerów. Kontenery można uruchamiać, zatrzymywać i uruchamiać ponownie; ich logi i powłoka otwierają się w kartach terminala, a opublikowany port otwiera się w karcie przeglądarki. Usunięcie kontenera, obrazu lub woluminu oraz czyszczenie nieużywanych danych najpierw pytają o potwierdzenie. Polecenia up, down i pull z Compose działają tylko w zaufanych folderach, ponieważ Compose buduje i uruchamia to, co opisuje projekt. Menu panelu wybiera kontekst Dockera dla okna, nie zmieniając tego, którego używają twoje powłoki; te same polecenia są w menu Kontenery. Panel wymaga wiersza poleceń `docker`, Dockera 24.0.6 lub nowszego.
+
 ## Markdown
 
 - **Podgląd.** Plik Markdown otwiera się z podglądem obok; **Widok › Pokaż/ukryj podgląd obok** (⇧⌘V) zamyka go i otwiera, a **Ustawienia › Ogólne** wyłączają automatyczny podgląd. Podgląd rysuje wzory, diagramy Mermaid, Graphviz i PlantUML oraz obrazki z folderu; obrazki z sieci ładują się tylko w zaufanym folderze albo gdy poprosisz o nie w podglądzie.
@@ -279,7 +284,7 @@ Dango podąża za kolejnością języków w **Ustawienia systemowe › Ogólne �
 | Nowy plik, zachowaj, zachowaj jako | ⌘N, ⌘S, ⇧⌘S |
 | Nowa karta, zamknij kartę, następna i poprzednia karta | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Szybko otwórz, szukaj w projekcie | ⌘P, ⇧⌘F |
-| Pliki, Wyszukiwanie, Agenty, Git, Testy, Debugowanie, CI | ⌘1 do ⌘7 |
+| Pliki, Wyszukiwanie, Agenty, Git, Testy, Debugowanie, CI, Kontenery | ⌘1 do ⌘8 |
 | Pokaż lub ukryj pasek boczny, następny panel | ⌃⌘S, ⌥⌘\` |
 | Wstecz i dalej przez edytowane miejsca | ⌃- i ⌃⇧- |
 | Przełącz komentarz, przejdź do wiersza | ⌘/, ⌃G |

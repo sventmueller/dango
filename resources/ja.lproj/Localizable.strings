@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "最後のテストを再実行";
 "Test ausführen" = "テストを実行";
 "Test debuggen" = "テストをデバッグ";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "更新";
+"Aufräumen" = "クリーンアップ";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: 停止（down）";
+"Compose: Images holen (pull)" = "Compose: イメージをプル（pull）";
+"Compose: Starten (up)" = "Compose: 起動（up）";
+"Container" = "コンテナ";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "イメージはこのDockerから削除されます。再度プルまたはビルドできます。";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "ボリュームとその中のすべてのデータが削除されます。この操作は取り消せません。";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "コンテナは削除されます。ボリューム外に保存されていたデータは失われます。";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Dockerがインストールされていません。Docker Desktopまたはdockerコマンドラインをインストールすると、このパネルにコンテナ、イメージ、ボリュームが表示されます。";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Dockerが実行されていません。Dockerを起動してください。パネルは自動的に再試行します。";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {}は古すぎます。このパネルには24.0.6以降が必要です。";
+"Docker-Befehl fehlgeschlagen" = "Dockerコマンドが失敗しました";
+"Docker-Kontext dieses Fensters" = "このウインドウのDockerコンテキスト";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "停止したコンテナ、未使用のネットワーク、名前のないイメージ、ビルドキャッシュが削除されます。ボリュームは残ります。";
+"Docker-Image" = "Dockerイメージ";
+"Images" = "イメージ";
+"Logs anzeigen" = "ログを表示";
+"Logs: {}" = "ログ: {}";
+"Port im Browser öffnen" = "ポートをブラウザで開く";
+"Shell öffnen" = "シェルを開く";
+"Shell: {}" = "シェル: {}";
+"Teilweise" = "一部実行中";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "“{}”内の未使用のDockerデータをクリーンアップしますか?";
+"Ungenutztes aufräumen …" = "未使用のデータをクリーンアップ…";
+"Docker-Volume" = "Dockerボリューム";
+"Volumes" = "ボリューム";
+"„{}“ löschen?" = "“{}”を削除しますか?";

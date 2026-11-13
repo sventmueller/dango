@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "再次執行上次的測試";
 "Test ausführen" = "執行測試";
 "Test debuggen" = "除錯測試";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "重新整理";
+"Aufräumen" = "清理";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose：停止（down）";
+"Compose: Images holen (pull)" = "Compose：提取映像檔（pull）";
+"Compose: Starten (up)" = "Compose：啟動（up）";
+"Container" = "容器";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "映像檔會從此 Docker 中移除；之後可以重新提取或建置。";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "磁碟區及其中的所有資料都會被刪除。此動作無法還原。";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "容器會被移除；它儲存在磁碟區以外的內容將會遺失。";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "未安裝 Docker。安裝 Docker Desktop 或 docker 命令列後，此面板會顯示容器、映像檔和磁碟區。";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker 未在執行。請啟動 Docker；面板會自動重試。";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} 版本過舊；此面板需要 24.0.6 或以上版本。";
+"Docker-Befehl fehlgeschlagen" = "Docker 指令失敗";
+"Docker-Kontext dieses Fensters" = "此視窗的 Docker 上下文";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "將刪除已停止的容器、未使用的網路、沒有名稱的映像檔和建置快取。磁碟區會保留。";
+"Docker-Image" = "Docker 映像檔";
+"Images" = "映像檔";
+"Logs anzeigen" = "顯示記錄";
+"Logs: {}" = "記錄：{}";
+"Port im Browser öffnen" = "在瀏覽器中打開連接埠";
+"Shell öffnen" = "打開 Shell";
+"Shell: {}" = "Shell：{}";
+"Teilweise" = "部分執行中";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "要清理「{}」中未使用的 Docker 資料嗎？";
+"Ungenutztes aufräumen …" = "清理未使用的項目⋯";
+"Docker-Volume" = "Docker 磁碟區";
+"Volumes" = "磁碟區";
+"„{}“ löschen?" = "要刪除「{}」嗎？";

@@ -77,6 +77,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 - [Prehliadač](#prehliadač)
 - [Git](#git)
 - [CI](#ci)
+- [Kontajnery](#kontajnery)
 - [Markdown](#markdown)
 - [Diktovanie](#diktovanie)
 - [Dôvera](#dôvera)
@@ -94,7 +95,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 
 - **Všetci agenti v jednej časovej osi.** Claude cez vlastný príkaz `claude`, Codex, Antigravity a OpenCode cez Agent Client Protocol, ďalší z registra ACP a agent zabudovaný v aplikácii pre Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama a LM Studio. Odpovede, volania nástrojov, žiadosti o povolenie, plány, zoznamy úloh, subagenti a úlohy na pozadí vyzerajú rovnako, nech beží ktorýkoľvek agent.
 - **Kontrola a pretočenie späť.** Pred každým promptom si Dango uloží kontrolný bod. To, čo agent zmenil, možno skontrolovať a pretočiť späť po jednotlivých správach, a vlákno môže pracovať vo vlastnom git worktree a odovzdať svoju prácu zlúčením alebo cherry-pickom.
-- **Jedno okno pre každý priečinok.** Súbory, terminály, stránky prehliadača, AI vlákna, diffy a náhľady sú taby macOS v tomto okne. Postranný panel obsahuje Súbory, Vyhľadávanie, Agenti, Git, Ladenie a CI.
+- **Jedno okno pre každý priečinok.** Súbory, terminály, stránky prehliadača, AI vlákna, diffy a náhľady sú taby macOS v tomto okne. Postranný panel obsahuje Súbory, Vyhľadávanie, Agenti, Git, Testy, Ladenie, CI a Kontajnery.
 - **Skutočný editor kódu.** Zvýrazňovanie syntaxe, viac kurzorov, zbaľovanie, `.editorconfig`, jazykové servery pre 17 jazykov s dopĺňaním, prechodom na definíciu, referenciami, premenovaním, rýchlymi opravami a hierarchiami a predpovede pri písaní z GitHub Copilot alebo z lokálneho modelu.
 - **Ladiaci nástroj, Git a CI priamo v aplikácii.** Body prerušenia a krokovanie pre Rust, C, C++, Swift, Go, JavaScript, TypeScript a Python; príprava jednotlivých úsekov na commit, vetvy, stashe, konflikty a graf commitov; spustenia, joby a logy z GitHub Actions a GitLab CI.
 - **Opatrné s vašimi priečinkami.** Priečinok, ktorému ste nedôverovali, nespustí nič: žiadne procesy gitu, jazykové servery, hooky ani agentov. Deštruktívne príkazy gitu sa nikdy nepovolia natrvalo a commity sa kontrolujú na tajné údaje.
@@ -122,7 +123,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 ## Začíname
 
 1. **Otvorte priečinok** cez ⌘O alebo `dango <folder>`. Pri prvom otvorení sa Dango spýta, či mu dôverujete (pozrite [Dôvera](#dôvera)).
-2. **Postranný panel** prepína medzi časťami Súbory (⌘1), Vyhľadávanie (⌘2), Agenti (⌘3), Git (⌘4), Ladenie (⌘5) a CI (⌘6); kliknutím pravým tlačidlom skryjete tie, ktoré nepoužívate, a ⌃⌘S postranný panel zbalí.
+2. **Postranný panel** prepína medzi časťami Súbory (⌘1), Vyhľadávanie (⌘2), Agenti (⌘3), Git (⌘4), Testy (⌘5), Ladenie (⌘6), CI (⌘7) a Kontajnery (⌘8); kliknutím pravým tlačidlom skryjete tie, ktoré nepoužívate, a ⌃⌘S postranný panel zbalí.
 3. **Každý dokument je tab** okna priečinka, vlastné taby macOS. „+“ na konci lišty tabov a ⌘T ponúkajú nový súbor, terminál, prehliadač a každého nainštalovaného agenta, aj vo vlastnom git worktree; podržanie „+“ zobrazí to isté ako ponuku.
 4. **Rýchlo otvoriť** cez ⌘P nájde súbory a s `#` symboly projektu; ⇧⌘F vyhľadáva a nahrádza v projekte.
 5. **Hovorte s agentom** v AI tabe. ⌘Esc presunie fokus klávesnice do jeho poľa správy a späť.
@@ -218,6 +219,10 @@ GitHub Actions a GitLab CI, aj GitHub Enterprise Server a GitLab na vlastnom ser
 
 Token pochádza z kľúčenky, z `gh` alebo `glab`, z prostredia prihlasovacieho shellu, alebo je to ten, ktorý zadáte v **Nastavenia › CI**.
 
+## Kontajnery
+
+Panel Kontajnery zobrazuje projekty Compose v Dockeri s ich službami, samostatné kontajnery, obrazy a zväzky a sleduje udalosti Dockera, ako nastávajú. Súbor Compose v priečinku sa zobrazí ako projekt ešte predtým, ako existuje ktorýkoľvek z jeho kontajnerov. Kontajnery sa spúšťajú, zastavujú a reštartujú; ich logy a shell sa otvárajú v taboch terminálu a zverejnený port sa otvorí v tabe prehliadača. Vymazanie kontajnera, obrazu alebo zväzku a vyčistenie nepoužívaných dát sa najprv opýtajú. Príkazy up, down a pull z Compose bežia len v dôveryhodných priečinkoch, pretože Compose zostavuje a spúšťa to, čo projekt opisuje. Ponuka panela vyberá kontext Dockera pre okno bez zmeny toho, ktorý používajú vaše shelly; rovnaké príkazy sú v ponuke Kontajnery. Panel potrebuje príkazový riadok `docker`, Docker 24.0.6 alebo novší.
+
 ## Markdown
 
 - **Náhľad.** Súbor Markdown sa otvorí s náhľadom vedľa; **Zobraziť › Zobraziť/skryť náhľad vedľa** (⇧⌘V) ho zatvorí a otvorí a **Nastavenia › Všeobecné** vypne automatický náhľad. Náhľad vykresľuje vzorce, diagramy Mermaid, Graphviz a PlantUML a obrázky z priečinka; obrázky z webu sa načítajú iba v dôveryhodnom priečinku alebo keď o ne v náhľade požiadate.
@@ -279,7 +284,7 @@ Dango sa riadi poradím jazykov v **Systémové nastavenia › Všeobecné › J
 | Nový súbor, uložiť, uložiť ako | ⌘N, ⌘S, ⇧⌘S |
 | Nový tab, zatvoriť tab, ďalší a predchádzajúci tab | ⌘T, ⌘W, ⇧⌘] a ⇧⌘[ |
 | Rýchlo otvoriť, vyhľadávať v projekte | ⌘P, ⇧⌘F |
-| Súbory, Vyhľadávanie, Agenti, Git, Testy, Ladenie, CI | ⌘1 až ⌘7 |
+| Súbory, Vyhľadávanie, Agenti, Git, Testy, Ladenie, CI, Kontajnery | ⌘1 až ⌘8 |
 | Zobraziť alebo skryť postranný panel, ďalší panel | ⌃⌘S, ⌥⌘\` |
 | Späť a dopredu cez upravované miesta | ⌃- a ⌃⇧- |
 | Prepnúť komentár, prejsť na riadok | ⌘/, ⌃G |

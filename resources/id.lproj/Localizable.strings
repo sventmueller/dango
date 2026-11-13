@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Jalankan Ulang Tes Terakhir";
 "Test ausführen" = "Jalankan Tes";
 "Test debuggen" = "Debug Tes";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Segarkan";
+"Aufräumen" = "Bersihkan";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Hentikan (down)";
+"Compose: Images holen (pull)" = "Compose: Tarik Image (pull)";
+"Compose: Starten (up)" = "Compose: Mulai (up)";
+"Container" = "Container";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Image dihapus dari Docker ini; image dapat ditarik atau di-build lagi.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volume dan semua data di dalamnya akan dihapus. Tindakan ini tidak dapat dibatalkan.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Container dihapus; apa pun yang disimpannya di luar volume akan hilang.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker tidak terinstal. Instal Docker Desktop atau baris perintah docker, maka panel ini akan menampilkan container, image, dan volume.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker tidak berjalan. Mulai Docker; panel akan mencoba lagi dengan sendirinya.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} terlalu lama; panel memerlukan 24.0.6 atau yang lebih baru.";
+"Docker-Befehl fehlgeschlagen" = "Perintah Docker Gagal";
+"Docker-Kontext dieses Fensters" = "Konteks Docker jendela ini";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Container yang dihentikan, jaringan yang tidak digunakan, image tanpa nama, dan cache build akan dihapus. Volume tetap ada.";
+"Docker-Image" = "Image Docker";
+"Images" = "Image";
+"Logs anzeigen" = "Tampilkan Log";
+"Logs: {}" = "Log: {}";
+"Port im Browser öffnen" = "Buka Port di Browser";
+"Shell öffnen" = "Buka Shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Berjalan Sebagian";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Bersihkan data Docker yang tidak digunakan di “{}”?";
+"Ungenutztes aufräumen …" = "Bersihkan yang Tidak Digunakan…";
+"Docker-Volume" = "Volume Docker";
+"Volumes" = "Volume";
+"„{}“ löschen?" = "Hapus “{}”?";

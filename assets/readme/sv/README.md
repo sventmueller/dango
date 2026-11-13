@@ -77,6 +77,7 @@ Dango samlar koden, agenterna som ändrar den och allt runt omkring i ett fönst
 - [Webbläsare](#webbläsare)
 - [Git](#git)
 - [CI](#ci)
+- [Containrar](#containrar)
 - [Markdown](#markdown)
 - [Diktering](#diktering)
 - [Förtroende](#förtroende)
@@ -94,7 +95,7 @@ Dango samlar koden, agenterna som ändrar den och allt runt omkring i ett fönst
 
 - **Alla agenter i en tidslinje.** Claude via sitt eget kommando `claude`, Codex, Antigravity och OpenCode via Agent Client Protocol, fler från ACP-registret och en agent inbyggd i appen för Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama och LM Studio. Svar, verktygsanrop, behörighetsförfrågningar, planer, att göra-listor, underagenter och bakgrundsuppgifter ser likadana ut oavsett vilken agent som kör.
 - **Granska och spola tillbaka.** Före varje prompt sparar Dango en kontrollpunkt. Det en agent har ändrat kan granskas och spolas tillbaka per meddelande, och en tråd kan arbeta i ett eget Git-worktree och lämna över sitt arbete genom sammanslagning eller cherry-pick.
-- **Ett fönster per mapp.** Filer, terminaler, webbsidor, AI-trådar, diffar och förhandsvisningar är macOS-flikar i det fönstret. Sidofältet innehåller Filer, Sök, Agenter, Git, Felsök och CI.
+- **Ett fönster per mapp.** Filer, terminaler, webbsidor, AI-trådar, diffar och förhandsvisningar är macOS-flikar i det fönstret. Sidofältet innehåller Filer, Sök, Agenter, Git, Tester, Felsök, CI och Containrar.
 - **En riktig kodredigerare.** Syntaxfärger, flera insättningspunkter, vikning, `.editorconfig`, språkservrar för 17 språk med komplettering, gå till definition, referenser, byt namn, snabbkorrigeringar och hierarkier, och förutsägelser medan du skriver från GitHub Copilot eller en lokal modell.
 - **Felsökare, Git och CI inbyggda.** Brytpunkter och stegvis körning för Rust, C, C++, Swift, Go, JavaScript, TypeScript och Python; stagea enskilda ändringsblock, grenar, stashar, konflikter och en commitgraf; körningar, jobb och loggar från GitHub Actions och GitLab CI.
 - **Försiktig med dina mappar.** En mapp du inte litar på startar ingenting: inga Git-processer, språkservrar, hooks eller agenter. Destruktiva Git-kommandon tillåts aldrig för gott, och commits kontrolleras efter hemligheter.
@@ -122,7 +123,7 @@ Dango samlar koden, agenterna som ändrar den och allt runt omkring i ett fönst
 ## Kom igång
 
 1. **Öppna en mapp** med ⌘O eller `dango <folder>`. Första gången frågar Dango om du litar på den (se [Förtroende](#förtroende)).
-2. **Sidofältet** växlar mellan Filer (⌘1), Sök (⌘2), Agenter (⌘3), Git (⌘4), Felsök (⌘5) och CI (⌘6); ett högerklick gömmer de du inte använder, och ⌃⌘S fäller undan sidofältet.
+2. **Sidofältet** växlar mellan Filer (⌘1), Sök (⌘2), Agenter (⌘3), Git (⌘4), Tester (⌘5), Felsök (⌘6), CI (⌘7) och Containrar (⌘8); ett högerklick gömmer de du inte använder, och ⌃⌘S fäller undan sidofältet.
 3. **Varje dokument är en flik** i mappens fönster, macOS egna flikar. ”+” i slutet av flikfältet och ⌘T erbjuder en ny fil, en terminal, webbläsaren och varje installerad agent, även i ett eget Git-worktree; håller du in ”+” visas samma sak som en meny.
 4. **Öppna snabbt** med ⌘P hittar filer, och med `#` projektets symboler; ⇧⌘F söker och ersätter i projektet.
 5. **Prata med en agent** i en AI-flik. ⌘Esc flyttar tangentbordsfokus till dess meddelandefält och tillbaka.
@@ -218,6 +219,10 @@ GitHub Actions och GitLab CI, även GitHub Enterprise Server och egendriftat Git
 
 Token kommer från nyckelringen, `gh` eller `glab`, inloggningsskalets miljö, eller är en du anger i **Inställningar › CI**.
 
+## Containrar
+
+Panelen Containrar visar Dockers Compose-projekt med deras tjänster, fristående containrar, images och volymer, och följer Dockers händelser när de sker. En Compose-fil i mappen visas som ett projekt redan innan någon av dess containrar finns. Containrar startar, stoppar och startas om; deras loggar och ett skal öppnas i terminalflikar, och en publicerad port öppnas i webbläsarfliken. Att radera en container, en image eller en volym och att rensa oanvända data frågar först. Composes up, down och pull körs bara i mappar du litar på, eftersom Compose bygger och kör det som projektet beskriver. Panelens meny väljer Docker-kontexten för fönstret utan att ändra den som dina skal använder; samma kommandon finns i menyn Containrar. Panelen behöver kommandoraden `docker`, Docker 24.0.6 eller senare.
+
 ## Markdown
 
 - **Förhandsvisning.** En Markdown-fil öppnas med sin förhandsvisning bredvid; **Innehåll › Visa/göm förhandsvisning bredvid** (⇧⌘V) stänger och öppnar den, och **Inställningar › Allmänt** stänger av den automatiska förhandsvisningen. Förhandsvisningen ritar formler, diagram i Mermaid, Graphviz och PlantUML och mappens bilder; bilder från webben läses bara in i en mapp du litar på eller när du ber om dem i förhandsvisningen.
@@ -279,7 +284,7 @@ Dango följer språkordningen i **Systeminställningar › Allmänt › Språk o
 | Ny fil, spara, spara som | ⌘N, ⌘S, ⇧⌘S |
 | Ny flik, stäng flik, nästa och föregående flik | ⌘T, ⌘W, ⇧⌘] och ⇧⌘[ |
 | Öppna snabbt, sök i projektet | ⌘P, ⇧⌘F |
-| Filer, Sök, Agenter, Git, Tester, Felsök, CI | ⌘1 till ⌘7 |
+| Filer, Sök, Agenter, Git, Tester, Felsök, CI, Containrar | ⌘1 till ⌘8 |
 | Visa eller göm sidofältet, nästa panel | ⌃⌘S, ⌥⌘\` |
 | Bakåt och framåt genom redigerade ställen | ⌃- och ⌃⇧- |
 | Växla kommentar, gå till rad | ⌘/, ⌃G |

@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Ponovno pokreni zadnje testove";
 "Test ausführen" = "Pokreni test";
 "Test debuggen" = "Otklanjanje pogrešaka u testu";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Osvježi";
+"Aufräumen" = "Počisti";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Zaustavi (down)";
+"Compose: Images holen (pull)" = "Compose: Preuzmi slike (pull)";
+"Compose: Starten (up)" = "Compose: Pokreni (up)";
+"Container" = "Kontejneri";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Slika se uklanja iz ovog Dockera; možete je ponovno preuzeti ili izgraditi.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volumen i svi podaci u njemu bit će obrisani. To se ne može poništiti.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Kontejner se uklanja; sve što je spremio izvan volumena bit će izgubljeno.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker nije instaliran. Instalirajte Docker Desktop ili naredbeni redak docker, a zatim će ovo okno prikazati kontejnere, slike i volumene.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker nije pokrenut. Pokrenite Docker; okno će automatski pokušati ponovno.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} je prestar; okno treba verziju 24.0.6 ili noviju.";
+"Docker-Befehl fehlgeschlagen" = "Naredba Dockera nije uspjela";
+"Docker-Kontext dieses Fensters" = "Docker kontekst ovog prozora";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Brišu se zaustavljeni kontejneri, nekorištene mreže, slike bez naziva i predmemorija izgradnje. Volumeni ostaju.";
+"Docker-Image" = "Docker slika";
+"Images" = "Slike";
+"Logs anzeigen" = "Prikaži zapisnike";
+"Logs: {}" = "Zapisnici: {}";
+"Port im Browser öffnen" = "Otvori port u pregledniku";
+"Shell öffnen" = "Otvori shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Djelomično radi";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Počistiti nekorištene Docker podatke u “{}”?";
+"Ungenutztes aufräumen …" = "Počisti nekorišteno…";
+"Docker-Volume" = "Docker volumen";
+"Volumes" = "Volumeni";
+"„{}“ löschen?" = "Obrisati “{}”?";

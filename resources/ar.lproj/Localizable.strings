@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "إعادة تشغيل آخر الاختبارات";
 "Test ausführen" = "تشغيل الاختبار";
 "Test debuggen" = "تصحيح الاختبار";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "تحديث";
+"Aufräumen" = "تنظيف";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "‏Compose: إيقاف (down)";
+"Compose: Images holen (pull)" = "‏Compose: جلب الصور (pull)";
+"Compose: Starten (up)" = "‏Compose: بدء (up)";
+"Container" = "الحاويات";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "ستتم إزالة الصورة من Docker هذا؛ ويمكن جلبها أو بناؤها مرة أخرى.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "سيتم حذف وحدة التخزين وجميع البيانات الموجودة فيها. لا يمكن التراجع عن ذلك.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "ستتم إزالة الحاوية؛ وسيُفقد كل ما خزّنته خارج وحدات التخزين.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "لم يتم تثبيت Docker. ثبّت Docker Desktop أو سطر أوامر docker، وستعرض هذه اللوحة الحاويات والصور ووحدات التخزين.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "لا يعمل Docker. شغّل Docker؛ وستعيد اللوحة المحاولة تلقائيًا.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "إصدار Docker {} قديم جدًا؛ تحتاج اللوحة إلى 24.0.6 أو أحدث.";
+"Docker-Befehl fehlgeschlagen" = "فشل أمر Docker";
+"Docker-Kontext dieses Fensters" = "سياق Docker لهذه النافذة";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "سيتم حذف الحاويات المتوقفة والشبكات غير المستخدمة والصور التي بلا اسم وذاكرة التخزين المؤقت للبناء. تبقى وحدات التخزين.";
+"Docker-Image" = "صورة Docker";
+"Images" = "الصور";
+"Logs anzeigen" = "إظهار السجلات";
+"Logs: {}" = "السجلات: {}";
+"Port im Browser öffnen" = "فتح المنفذ في المتصفح";
+"Shell öffnen" = "فتح Shell";
+"Shell: {}" = "‏Shell: {}";
+"Teilweise" = "قيد التشغيل جزئيًا";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "هل تريد تنظيف بيانات Docker غير المستخدمة في “{}”؟";
+"Ungenutztes aufräumen …" = "تنظيف غير المستخدم…";
+"Docker-Volume" = "وحدة تخزين Docker";
+"Volumes" = "وحدات التخزين";
+"„{}“ löschen?" = "هل تريد حذف “{}”؟";

@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Kør seneste tests igen";
 "Test ausführen" = "Kør test";
 "Test debuggen" = "Fejlfind test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Opdater";
+"Aufräumen" = "Ryd op";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Stop (down)";
+"Compose: Images holen (pull)" = "Compose: Hent images (pull)";
+"Compose: Starten (up)" = "Compose: Start (up)";
+"Container" = "Containere";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Imaget fjernes fra denne Docker; det kan hentes eller bygges igen.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volumet og alle data i det slettes. Det kan ikke fortrydes.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Containeren fjernes; det, den har gemt uden for volumes, går tabt.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker er ikke installeret. Installer Docker Desktop eller docker-kommandolinjen, så viser dette panel containere, images og volumes.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker kører ikke. Start Docker; panelet prøver igen af sig selv.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} er for gammel; panelet kræver 24.0.6 eller nyere.";
+"Docker-Befehl fehlgeschlagen" = "Docker-kommando mislykkedes";
+"Docker-Kontext dieses Fensters" = "Docker-kontekst for dette vindue";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Stoppede containere, ubrugte netværk, images uden navn og build-cachen slettes. Volumes bevares.";
+"Docker-Image" = "Docker-image";
+"Images" = "Images";
+"Logs anzeigen" = "Vis logs";
+"Logs: {}" = "Logs: {}";
+"Port im Browser öffnen" = "Åbn port i browser";
+"Shell öffnen" = "Åbn shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Kører delvist";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Ryd op i ubrugte Docker-data i “{}”?";
+"Ungenutztes aufräumen …" = "Ryd op i ubrugte…";
+"Docker-Volume" = "Docker-volume";
+"Volumes" = "Volumes";
+"„{}“ löschen?" = "Slet “{}”?";

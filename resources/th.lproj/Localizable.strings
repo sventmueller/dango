@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "เรียกใช้การทดสอบล่าสุดอีกครั้ง";
 "Test ausführen" = "เรียกใช้การทดสอบ";
 "Test debuggen" = "ดีบักการทดสอบ";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "รีเฟรช";
+"Aufräumen" = "ล้างข้อมูล";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: หยุด (down)";
+"Compose: Images holen (pull)" = "Compose: ดึงอิมเมจ (pull)";
+"Compose: Starten (up)" = "Compose: เริ่ม (up)";
+"Container" = "คอนเทนเนอร์";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "อิมเมจจะถูกเอาออกจาก Docker นี้ คุณสามารถดึงหรือสร้างอิมเมจใหม่ได้อีกครั้ง";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "วอลุ่มและข้อมูลทั้งหมดในวอลุ่มจะถูกลบ คุณไม่สามารถเลิกทำได้";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "คอนเทนเนอร์จะถูกเอาออก ข้อมูลที่คอนเทนเนอร์จัดเก็บไว้นอกวอลุ่มจะสูญหาย";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "ไม่ได้ติดตั้ง Docker ติดตั้ง Docker Desktop หรือบรรทัดคำสั่ง docker แล้วแผงนี้จะแสดงคอนเทนเนอร์ อิมเมจ และวอลุ่ม";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker ไม่ได้ทำงานอยู่ เริ่ม Docker แล้วแผงจะลองใหม่เอง";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} เก่าเกินไป แผงนี้ต้องใช้ 24.0.6 ขึ้นไป";
+"Docker-Befehl fehlgeschlagen" = "คำสั่ง Docker ล้มเหลว";
+"Docker-Kontext dieses Fensters" = "บริบท Docker ของหน้าต่างนี้";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "คอนเทนเนอร์ที่หยุดแล้ว เครือข่ายที่ไม่ได้ใช้ อิมเมจที่ไม่มีชื่อ และแคชการบิลด์จะถูกลบ วอลุ่มจะยังคงอยู่";
+"Docker-Image" = "อิมเมจ Docker";
+"Images" = "อิมเมจ";
+"Logs anzeigen" = "แสดงล็อก";
+"Logs: {}" = "ล็อก: {}";
+"Port im Browser öffnen" = "เปิดพอร์ตในเบราว์เซอร์";
+"Shell öffnen" = "เปิดเชลล์";
+"Shell: {}" = "เชลล์: {}";
+"Teilweise" = "ทำงานบางส่วน";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "ล้างข้อมูล Docker ที่ไม่ได้ใช้ใน “{}” หรือไม่";
+"Ungenutztes aufräumen …" = "ล้างรายการที่ไม่ได้ใช้…";
+"Docker-Volume" = "วอลุ่ม Docker";
+"Volumes" = "วอลุ่ม";
+"„{}“ löschen?" = "ลบ “{}” หรือไม่";

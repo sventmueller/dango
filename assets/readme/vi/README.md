@@ -77,6 +77,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 - [Trình duyệt](#trình-duyệt)
 - [Git](#git)
 - [CI](#ci)
+- [Container](#container)
 - [Markdown](#markdown)
 - [Đọc chính tả](#đọc-chính-tả)
 - [Tin cậy](#tin-cậy)
@@ -94,7 +95,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 
 - **Mọi tác nhân trong một dòng thời gian.** Claude qua lệnh `claude` riêng của nó, Codex, Antigravity và OpenCode qua Agent Client Protocol, thêm nhiều tác nhân khác từ sổ đăng ký ACP, và một tác nhân tích hợp sẵn trong ứng dụng cho Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama và LM Studio. Câu trả lời, lệnh gọi công cụ, yêu cầu cấp quyền, kế hoạch, việc cần làm, tác nhân phụ và tác vụ nền trông giống nhau dù tác nhân nào đang chạy.
 - **Xem lại và tua lại.** Trước mỗi prompt, Dango lưu một điểm kiểm tra. Những gì tác nhân đã thay đổi có thể được xem lại và tua lại theo từng tin nhắn, và một luồng có thể làm việc trong Git worktree riêng rồi bàn giao công việc bằng hợp nhất hoặc cherry-pick.
-- **Một cửa sổ cho mỗi thư mục.** Tệp, terminal, trang trình duyệt, luồng AI, diff và bản xem trước là các tab macOS của cửa sổ đó. Thanh bên chứa Tệp, Tìm kiếm, Tác nhân, Git, Gỡ lỗi và CI.
+- **Một cửa sổ cho mỗi thư mục.** Tệp, terminal, trang trình duyệt, luồng AI, diff và bản xem trước là các tab macOS của cửa sổ đó. Thanh bên chứa Tệp, Tìm kiếm, Tác nhân, Git, Kiểm thử, Gỡ lỗi, CI và Container.
 - **Một trình soạn thảo mã thực thụ.** Tô màu cú pháp, nhiều con trỏ, thu gọn khối mã, `.editorconfig`, máy chủ ngôn ngữ cho 17 ngôn ngữ với tự động hoàn thành, đi tới định nghĩa, tham chiếu, đổi tên, sửa nhanh và phân cấp, cùng dự đoán chỉnh sửa từ GitHub Copilot hoặc một mô hình cục bộ.
 - **Tích hợp sẵn trình gỡ lỗi, Git và CI.** Điểm ngắt và chạy từng bước cho Rust, C, C++, Swift, Go, JavaScript, TypeScript và Python; stage từng khối thay đổi, nhánh, stash, xung đột và biểu đồ commit; các lần chạy, job và nhật ký từ GitHub Actions và GitLab CI.
 - **Cẩn trọng với thư mục của bạn.** Thư mục bạn chưa tin cậy không khởi động gì cả: không tiến trình Git, máy chủ ngôn ngữ, hook hay tác nhân nào. Các lệnh Git mang tính phá hủy không bao giờ được cho phép vĩnh viễn, và commit được kiểm tra thông tin bí mật.
@@ -122,7 +123,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 ## Bắt đầu
 
 1. **Mở một thư mục** bằng ⌘O hoặc `dango <folder>`. Lần đầu tiên, Dango hỏi bạn có tin cậy thư mục đó không (xem [Tin cậy](#tin-cậy)).
-2. **Thanh bên** chuyển giữa Tệp (⌘1), Tìm kiếm (⌘2), Tác nhân (⌘3), Git (⌘4), Gỡ lỗi (⌘5) và CI (⌘6); bấm chuột phải để ẩn những mục bạn không dùng, và ⌃⌘S thu gọn thanh bên.
+2. **Thanh bên** chuyển giữa Tệp (⌘1), Tìm kiếm (⌘2), Tác nhân (⌘3), Git (⌘4), Kiểm thử (⌘5), Gỡ lỗi (⌘6), CI (⌘7) và Container (⌘8); bấm chuột phải để ẩn những mục bạn không dùng, và ⌃⌘S thu gọn thanh bên.
 3. **Mỗi tài liệu là một tab** trong cửa sổ của thư mục, chính là tab của macOS. Nút “+” ở cuối thanh tab và ⌘T cung cấp tệp mới, terminal, trình duyệt và từng tác nhân đã cài, kể cả trong một Git worktree riêng; giữ nút “+” sẽ hiện các mục đó dưới dạng menu.
 4. **Mở nhanh** bằng ⌘P tìm tệp, và với `#` tìm ký hiệu của dự án; ⇧⌘F tìm và thay thế trong dự án.
 5. **Trò chuyện với tác nhân** trong một tab AI. ⌘Esc chuyển tiêu điểm bàn phím vào trường tin nhắn của nó và quay lại.
@@ -218,6 +219,10 @@ GitHub Actions và GitLab CI, kể cả GitHub Enterprise Server và GitLab tự
 
 Token lấy từ Chuỗi khóa, `gh` hoặc `glab`, môi trường của login shell, hoặc token bạn nhập trong **Cài đặt › CI**.
 
+## Container
+
+Khung Container hiển thị các dự án Compose của Docker cùng các service của chúng, các container riêng lẻ, image và volume, đồng thời theo dõi sự kiện của Docker ngay khi chúng xảy ra. Tệp Compose của thư mục xuất hiện như một dự án ngay cả trước khi có container nào của nó. Container có thể khởi động, dừng và khởi động lại; nhật ký của chúng và một shell mở trong các tab terminal, còn cổng đã công bố mở trong tab trình duyệt. Việc xóa một container, image hoặc volume, và dọn dẹp dữ liệu không dùng, đều hỏi trước. Các lệnh up, down và pull của Compose chỉ chạy trong thư mục được tin cậy, vì Compose build và chạy những gì dự án mô tả. Menu của khung chọn ngữ cảnh Docker cho cửa sổ mà không thay đổi ngữ cảnh shell của bạn đang dùng; các lệnh tương tự có trong menu Container. Khung cần dòng lệnh `docker`, Docker 24.0.6 trở lên.
+
 ## Markdown
 
 - **Xem trước.** Tệp Markdown mở cùng bản xem trước bên cạnh; **Xem › Hiện/Ẩn Bản xem trước ở Bên cạnh** (⇧⌘V) đóng và mở bản xem trước, và **Cài đặt › Cài đặt chung** tắt xem trước tự động. Bản xem trước vẽ công thức, sơ đồ Mermaid, Graphviz và PlantUML và hình ảnh trong thư mục; hình ảnh từ web chỉ tải trong thư mục được tin cậy hoặc sau khi bạn yêu cầu trong bản xem trước.
@@ -279,7 +284,7 @@ Dango theo thứ tự ngôn ngữ trong **Cài đặt hệ thống › Cài đ�
 | Tệp mới, lưu, lưu thành | ⌘N, ⌘S, ⇧⌘S |
 | Tab mới, đóng tab, tab tiếp theo và trước đó | ⌘T, ⌘W, ⇧⌘] và ⇧⌘[ |
 | Mở nhanh, tìm kiếm trong dự án | ⌘P, ⇧⌘F |
-| Tệp, Tìm kiếm, Tác nhân, Git, Kiểm thử, Gỡ lỗi, CI | ⌘1 đến ⌘7 |
+| Tệp, Tìm kiếm, Tác nhân, Git, Kiểm thử, Gỡ lỗi, CI, Container | ⌘1 đến ⌘8 |
 | Hiện hoặc ẩn thanh bên, khung tiếp theo | ⌃⌘S, ⌥⌘\` |
 | Lùi và tiến qua những chỗ đã sửa | ⌃- và ⌃⇧- |
 | Bật/tắt chú thích, đi tới dòng | ⌘/, ⌃G |

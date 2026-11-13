@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Повторить последние тесты";
 "Test ausführen" = "Запустить тест";
 "Test debuggen" = "Отладить тест";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Обновить";
+"Aufräumen" = "Очистить";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: остановить (down)";
+"Compose: Images holen (pull)" = "Compose: загрузить образы (pull)";
+"Compose: Starten (up)" = "Compose: запустить (up)";
+"Container" = "Контейнеры";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Образ будет удален из этого Docker; его можно снова загрузить или собрать.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Том и все данные в нем будут удалены. Это действие нельзя отменить.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Контейнер будет удален; все, что он хранил вне томов, будет потеряно.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker не установлен. Установите Docker Desktop или командную строку docker, и эта панель покажет контейнеры, образы и тома.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker не запущен. Запустите Docker; панель повторит попытку сама.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} слишком старый; панели нужна версия 24.0.6 или новее.";
+"Docker-Befehl fehlgeschlagen" = "Ошибка команды Docker";
+"Docker-Kontext dieses Fensters" = "Контекст Docker этого окна";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Будут удалены остановленные контейнеры, неиспользуемые сети, образы без имени и кэш сборки. Тома останутся.";
+"Docker-Image" = "Образ Docker";
+"Images" = "Образы";
+"Logs anzeigen" = "Показать журналы";
+"Logs: {}" = "Журналы: {}";
+"Port im Browser öffnen" = "Открыть порт в браузере";
+"Shell öffnen" = "Открыть оболочку";
+"Shell: {}" = "Оболочка: {}";
+"Teilweise" = "Частично запущено";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Очистить неиспользуемые данные Docker в «{}»?";
+"Ungenutztes aufräumen …" = "Очистить неиспользуемое…";
+"Docker-Volume" = "Том Docker";
+"Volumes" = "Тома";
+"„{}“ löschen?" = "Удалить «{}»?";

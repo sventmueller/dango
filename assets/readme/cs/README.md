@@ -77,6 +77,7 @@ Dango spojuje kód, agenty, kteří ho mění, a vše kolem nich do jednoho okna
 - [Prohlížeč](#prohlížeč)
 - [Git](#git)
 - [CI](#ci)
+- [Kontejnery](#kontejnery)
 - [Markdown](#markdown)
 - [Diktování](#diktování)
 - [Důvěra](#důvěra)
@@ -94,7 +95,7 @@ Dango spojuje kód, agenty, kteří ho mění, a vše kolem nich do jednoho okna
 
 - **Všichni agenti v jedné časové ose.** Claude přes vlastní příkaz `claude`, Codex, Antigravity a OpenCode přes Agent Client Protocol, další z registru ACP a agent vestavěný do aplikace pro Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama a LM Studio. Odpovědi, volání nástrojů, žádosti o oprávnění, plány, úkoly, subagenti a úlohy na pozadí vypadají stejně, ať běží kterýkoli agent.
 - **Kontrola a přetáčení zpět.** Před každým promptem si Dango uloží kontrolní bod. Co agent změnil, lze zkontrolovat a přetočit zpět po jednotlivých zprávách, a vlákno může pracovat ve vlastním worktree Gitu a předat práci sloučením nebo cherry-pickem.
-- **Jedno okno na složku.** Soubory, terminály, webové stránky, AI vlákna, rozdíly a náhledy jsou panely macOS tohoto okna. Boční panel obsahuje Soubory, Hledání, Agenti, Git, Ladit a CI.
+- **Jedno okno na složku.** Soubory, terminály, webové stránky, AI vlákna, rozdíly a náhledy jsou panely macOS tohoto okna. Boční panel obsahuje Soubory, Hledání, Agenti, Git, Testy, Ladit, CI a Kontejnery.
 - **Skutečný editor kódu.** Barvy syntaxe, více kurzorů, sbalování, `.editorconfig`, jazykové servery pro 17 jazyků s doplňováním, přechodem na definici, odkazy, přejmenováním, rychlými opravami a hierarchiemi, a předpovědi při psaní z GitHub Copilotu nebo lokálního modelu.
 - **Vestavěný ladicí nástroj, Git a CI.** Zarážky a krokování pro Rust, C, C++, Swift, Go, JavaScript, TypeScript a Python; příprava jednotlivých bloků k commitu, větve, stashe, konflikty a graf commitů; běhy, joby a logy z GitHub Actions a GitLab CI.
 - **Opatrnost s vašimi složkami.** Složka, které nedůvěřujete, nic nespustí: žádné procesy Gitu, jazykové servery, hooky ani agenty. Destruktivní příkazy Gitu se nikdy nepovolí natrvalo a commity se kontrolují na tajné údaje.
@@ -122,7 +123,7 @@ Dango spojuje kód, agenty, kteří ho mění, a vše kolem nich do jednoho okna
 ## První kroky
 
 1. **Otevřete složku** pomocí ⌘O nebo `dango <folder>`. Poprvé se Dango zeptá, zda jí důvěřujete (viz [Důvěra](#důvěra)).
-2. **Boční panel** přepíná mezi Soubory (⌘1), Hledáním (⌘2), Agenty (⌘3), Gitem (⌘4), Ladit (⌘5) a CI (⌘6); kliknutím pravým tlačítkem skryjete ty, které nepoužíváte, a ⌃⌘S boční panel sbalí.
+2. **Boční panel** přepíná mezi Soubory (⌘1), Hledáním (⌘2), Agenty (⌘3), Gitem (⌘4), Testy (⌘5), Ladit (⌘6), CI (⌘7) a Kontejnery (⌘8); kliknutím pravým tlačítkem skryjete ty, které nepoužíváte, a ⌃⌘S boční panel sbalí.
 3. **Každý dokument je panel** okna složky, vlastní panely macOS. „+“ na konci řádku panelů a ⌘T nabízejí nový soubor, terminál, prohlížeč a každého nainstalovaného agenta, i ve vlastním worktree Gitu; když „+“ podržíte, zobrazí se totéž jako nabídka.
 4. **Rychle otevřít** pomocí ⌘P najde soubory a s `#` symboly projektu; ⇧⌘F hledá a nahrazuje v projektu.
 5. **Mluvte s agentem** v AI panelu. ⌘Esc přesune fokus klávesnice do jeho pole zprávy a zpět.
@@ -218,6 +219,10 @@ GitHub Actions a GitLab CI, také GitHub Enterprise Server a vlastní instalace 
 
 Token pochází z klíčenky, z `gh` nebo `glab`, z prostředí přihlašovacího shellu, nebo je to ten, který zadáte v **Nastavení › CI**.
 
+## Kontejnery
+
+Podokno Kontejnery zobrazuje projekty Compose v Dockeru s jejich službami, samostatné kontejnery, obrazy a svazky a sleduje události Dockeru, jak nastávají. Soubor Compose ve složce se zobrazí jako projekt ještě dřív, než existuje kterýkoli z jeho kontejnerů. Kontejnery lze spustit, zastavit a restartovat; jejich logy a shell se otevírají v panelech terminálu a publikovaný port se otevře v panelu prohlížeče. Smazání kontejneru, obrazu nebo svazku a vyčištění nepoužívaných dat se nejdřív zeptá. Příkazy up, down a pull z Compose běží jen v důvěryhodných složkách, protože Compose sestavuje a spouští, co projekt popisuje. Nabídka podokna vybírá kontext Dockeru pro okno, aniž by měnila ten, který používají vaše shelly; stejné příkazy jsou v nabídce Kontejnery. Potřebuje příkazový řádek `docker`, Docker 24.0.6 nebo novější.
+
 ## Markdown
 
 - **Náhled.** Soubor Markdown se otevře s náhledem vedle; **Zobrazení › Zobrazit/skrýt náhled vedle** (⇧⌘V) ho zavře a otevře a **Nastavení › Obecné** automatický náhled vypne. Náhled vykresluje vzorce, diagramy Mermaid, Graphviz a PlantUML a obrázky ze složky; obrázky z webu se načtou jen v důvěryhodné složce nebo když si o ně v náhledu řeknete.
@@ -279,7 +284,7 @@ Dango se řídí pořadím jazyků v **Nastavení systému › Obecné › Jazyk
 | Nový soubor, uložit, uložit jako | ⌘N, ⌘S, ⇧⌘S |
 | Nový panel, zavřít panel, další a předchozí panel | ⌘T, ⌘W, ⇧⌘] a ⇧⌘[ |
 | Rychle otevřít, hledat v projektu | ⌘P, ⇧⌘F |
-| Soubory, Hledání, Agenti, Git, Testy, Ladit, CI | ⌘1 až ⌘7 |
+| Soubory, Hledání, Agenti, Git, Testy, Ladit, CI, Kontejnery | ⌘1 až ⌘8 |
 | Zobrazit nebo skrýt boční panel, další podokno | ⌃⌘S, ⌥⌘\` |
 | Zpět a vpřed přes upravená místa | ⌃- a ⌃⇧- |
 | Přepnout komentář, přejít na řádek | ⌘/, ⌃G |

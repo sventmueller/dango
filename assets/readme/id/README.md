@@ -77,6 +77,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 - [Browser](#browser)
 - [Git](#git)
 - [CI](#ci)
+- [Container](#container)
 - [Markdown](#markdown)
 - [Dikte](#dikte)
 - [Kepercayaan](#kepercayaan)
@@ -94,7 +95,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 
 - **Semua agen dalam satu lini masa.** Claude melalui perintah `claude` miliknya sendiri, Codex, Antigravity, dan OpenCode melalui Agent Client Protocol, lebih banyak lagi dari registri ACP, serta agen yang dibangun ke dalam app untuk Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, dan LM Studio. Jawaban, panggilan alat, permintaan izin, rencana, daftar tugas, subagen, dan tugas latar belakang tampak sama, agen mana pun yang berjalan.
 - **Tinjau dan batalkan.** Sebelum setiap prompt, Dango menyimpan checkpoint. Apa yang diubah agen dapat ditinjau dan dibatalkan per pesan, dan sebuah utas dapat bekerja di worktree Git miliknya sendiri lalu menyerahkan hasilnya melalui gabungkan atau cherry-pick.
-- **Satu jendela per folder.** File, terminal, halaman web, utas AI, diff, dan pratinjau adalah tab macOS di jendela itu. Bar samping berisi File, Pencarian, Agen, Git, Debug, dan CI.
+- **Satu jendela per folder.** File, terminal, halaman web, utas AI, diff, dan pratinjau adalah tab macOS di jendela itu. Bar samping berisi File, Pencarian, Agen, Git, Tes, Debug, CI, dan Container.
 - **Editor kode sungguhan.** Warna sintaksis, beberapa titik sisip, pelipatan, `.editorconfig`, server bahasa untuk 17 bahasa dengan pelengkapan, buka definisi, referensi, ganti nama, perbaikan cepat, dan hierarki, serta prediksi saat mengetik dari GitHub Copilot atau model lokal.
 - **Debugger, Git, dan CI bawaan.** Breakpoint dan eksekusi langkah demi langkah untuk Rust, C, C++, Swift, Go, JavaScript, TypeScript, dan Python; stage hunk satu per satu, branch, stash, konflik, dan grafik commit; run, job, dan log dari GitHub Actions dan GitLab CI.
 - **Berhati-hati dengan folder Anda.** Folder yang tidak Anda percayai tidak memulai apa pun: tidak ada proses Git, server bahasa, hook, atau agen. Perintah Git yang merusak tidak pernah diizinkan selamanya, dan commit diperiksa dari rahasia.
@@ -122,7 +123,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 ## Memulai
 
 1. **Buka folder** dengan ⌘O atau `dango <folder>`. Pertama kali, Dango menanyakan apakah Anda memercayainya (lihat [Kepercayaan](#kepercayaan)).
-2. **Bar samping** beralih antara File (⌘1), Pencarian (⌘2), Agen (⌘3), Git (⌘4), Debug (⌘5), dan CI (⌘6); klik kanan menyembunyikan yang tidak Anda gunakan, dan ⌃⌘S menutup bar samping.
+2. **Bar samping** beralih antara File (⌘1), Pencarian (⌘2), Agen (⌘3), Git (⌘4), Tes (⌘5), Debug (⌘6), CI (⌘7), dan Container (⌘8); klik kanan menyembunyikan yang tidak Anda gunakan, dan ⌃⌘S menutup bar samping.
 3. **Setiap dokumen adalah tab** di jendela folder, tab bawaan macOS. “+” di ujung bar tab dan ⌘T menawarkan file baru, terminal, browser, dan setiap agen yang terinstal, juga di worktree Git tersendiri; menahan “+” menampilkan hal yang sama sebagai menu.
 4. **Buka Cepat** dengan ⌘P menemukan file, dan dengan `#` simbol proyek; ⇧⌘F mencari dan mengganti di proyek.
 5. **Berbicaralah dengan agen** di tab AI. ⌘Esc memindahkan fokus papan ketik ke kolom pesannya dan kembali.
@@ -218,6 +219,10 @@ GitHub Actions dan GitLab CI, juga GitHub Enterprise Server dan GitLab yang dike
 
 Token berasal dari rantai kunci, `gh` atau `glab`, lingkungan shell login, atau token yang Anda masukkan di **Pengaturan › CI**.
 
+## Container
+
+Panel Container menampilkan proyek Compose milik Docker beserta layanannya, container tunggal, image, dan volume, serta mengikuti event Docker saat terjadi. File Compose di folder muncul sebagai proyek bahkan sebelum container-nya ada. Container dapat dimulai, dihentikan, dan dimulai ulang; log-nya dan sebuah shell terbuka di tab terminal, dan port yang dipublikasikan terbuka di tab browser. Menghapus container, image, atau volume, serta membersihkan data yang tidak digunakan, akan meminta konfirmasi terlebih dahulu. Perintah up, down, dan pull dari Compose hanya berjalan di folder tepercaya, karena Compose membangun dan menjalankan apa yang dijelaskan proyek. Menu panel memilih konteks Docker untuk jendela tanpa mengubah konteks yang digunakan shell Anda; perintah yang sama ada di menu Container. Panel ini memerlukan baris perintah `docker`, Docker 24.0.6 atau yang lebih baru.
+
 ## Markdown
 
 - **Pratinjau.** File Markdown terbuka dengan pratinjau di sampingnya; **Lihat › Tampilkan/Sembunyikan Pratinjau di Samping** (⇧⌘V) menutup dan membukanya, dan **Pengaturan › Umum** menonaktifkan pratinjau otomatis. Pratinjau menggambar rumus, diagram Mermaid, Graphviz, dan PlantUML, serta gambar di folder; gambar dari web hanya dimuat di folder tepercaya atau setelah Anda memintanya di pratinjau.
@@ -279,7 +284,7 @@ Dango mengikuti urutan bahasa di **Pengaturan Sistem › Umum › Bahasa & Wilay
 | File baru, simpan, simpan sebagai | ⌘N, ⌘S, ⇧⌘S |
 | Tab baru, tutup tab, tab berikutnya dan sebelumnya | ⌘T, ⌘W, ⇧⌘] dan ⇧⌘[ |
 | Buka Cepat, cari di proyek | ⌘P, ⇧⌘F |
-| File, Pencarian, Agen, Git, Tes, Debug, CI | ⌘1 hingga ⌘7 |
+| File, Pencarian, Agen, Git, Tes, Debug, CI, Container | ⌘1 hingga ⌘8 |
 | Tampilkan atau sembunyikan bar samping, panel berikutnya | ⌃⌘S, ⌥⌘\` |
 | Mundur dan maju melalui tempat yang diedit | ⌃- dan ⌃⇧- |
 | Alihkan komentar, buka baris | ⌘/, ⌃G |

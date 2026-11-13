@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Chạy lại các kiểm thử gần nhất";
 "Test ausführen" = "Chạy kiểm thử";
 "Test debuggen" = "Gỡ lỗi kiểm thử";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Làm mới";
+"Aufräumen" = "Dọn dẹp";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Dừng (down)";
+"Compose: Images holen (pull)" = "Compose: Kéo image (pull)";
+"Compose: Starten (up)" = "Compose: Khởi động (up)";
+"Container" = "Container";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Image sẽ bị xóa khỏi Docker này; bạn có thể kéo hoặc build lại.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volume và toàn bộ dữ liệu trong đó sẽ bị xóa. Không thể hoàn tác thao tác này.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Container sẽ bị xóa; mọi thứ nó lưu bên ngoài volume sẽ bị mất.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker chưa được cài đặt. Hãy cài đặt Docker Desktop hoặc dòng lệnh docker, khi đó khung này sẽ hiển thị container, image và volume.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker không chạy. Hãy khởi động Docker; khung sẽ tự thử lại.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} quá cũ; khung cần phiên bản 24.0.6 trở lên.";
+"Docker-Befehl fehlgeschlagen" = "Lệnh Docker không thành công";
+"Docker-Kontext dieses Fensters" = "Ngữ cảnh Docker của cửa sổ này";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Các container đã dừng, mạng không dùng, image không có tên và bộ nhớ đệm build sẽ bị xóa. Volume được giữ lại.";
+"Docker-Image" = "Image Docker";
+"Images" = "Image";
+"Logs anzeigen" = "Hiển thị nhật ký";
+"Logs: {}" = "Nhật ký: {}";
+"Port im Browser öffnen" = "Mở cổng trong trình duyệt";
+"Shell öffnen" = "Mở shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Đang chạy một phần";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Dọn dẹp dữ liệu Docker không dùng trong “{}”?";
+"Ungenutztes aufräumen …" = "Dọn dẹp mục không dùng…";
+"Docker-Volume" = "Volume Docker";
+"Volumes" = "Volume";
+"„{}“ löschen?" = "Xóa “{}”?";

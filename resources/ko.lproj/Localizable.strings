@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "마지막 테스트 다시 실행";
 "Test ausführen" = "테스트 실행";
 "Test debuggen" = "테스트 디버그";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "새로 고침";
+"Aufräumen" = "정리";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: 중단(down)";
+"Compose: Images holen (pull)" = "Compose: 이미지 가져오기(pull)";
+"Compose: Starten (up)" = "Compose: 시작(up)";
+"Container" = "컨테이너";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "이미지가 이 Docker에서 제거됩니다. 다시 가져오거나 빌드할 수 있습니다.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "볼륨과 그 안의 모든 데이터가 삭제됩니다. 이 작업은 실행 취소할 수 없습니다.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "컨테이너가 제거됩니다. 볼륨 외부에 저장한 내용은 모두 사라집니다.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker가 설치되어 있지 않습니다. Docker Desktop 또는 docker 명령어 라인을 설치하면 이 패널에 컨테이너, 이미지, 볼륨이 표시됩니다.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker가 실행 중이 아닙니다. Docker를 시작하십시오. 패널이 자동으로 다시 시도합니다.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {}은(는) 너무 오래되었습니다. 패널에는 24.0.6 이상이 필요합니다.";
+"Docker-Befehl fehlgeschlagen" = "Docker 명령 실패";
+"Docker-Kontext dieses Fensters" = "이 윈도우의 Docker 컨텍스트";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "중단된 컨테이너, 사용하지 않는 네트워크, 이름 없는 이미지, 빌드 캐시가 삭제됩니다. 볼륨은 유지됩니다.";
+"Docker-Image" = "Docker 이미지";
+"Images" = "이미지";
+"Logs anzeigen" = "로그 보기";
+"Logs: {}" = "로그: {}";
+"Port im Browser öffnen" = "브라우저에서 포트 열기";
+"Shell öffnen" = "셸 열기";
+"Shell: {}" = "셸: {}";
+"Teilweise" = "일부 실행 중";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "‘{}’의 사용하지 않는 Docker 데이터를 정리하겠습니까?";
+"Ungenutztes aufräumen …" = "사용하지 않는 항목 정리…";
+"Docker-Volume" = "Docker 볼륨";
+"Volumes" = "볼륨";
+"„{}“ löschen?" = "‘{}’을(를) 삭제하겠습니까?";

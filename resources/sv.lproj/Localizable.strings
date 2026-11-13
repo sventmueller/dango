@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Kör senaste testerna igen";
 "Test ausführen" = "Kör test";
 "Test debuggen" = "Felsök test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Uppdatera";
+"Aufräumen" = "Rensa";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Stoppa (down)";
+"Compose: Images holen (pull)" = "Compose: Hämta images (pull)";
+"Compose: Starten (up)" = "Compose: Starta (up)";
+"Container" = "Containrar";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Imagen tas bort från den här Docker; den kan hämtas eller byggas igen.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volymen och all data i den raderas. Det går inte att ångra.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Containern tas bort; det den har sparat utanför volymer går förlorat.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker är inte installerat. Installera Docker Desktop eller docker-kommandoraden, så visar den här panelen containrar, images och volymer.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker körs inte. Starta Docker; panelen försöker igen av sig själv.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} är för gammal; panelen behöver 24.0.6 eller senare.";
+"Docker-Befehl fehlgeschlagen" = "Docker-kommandot misslyckades";
+"Docker-Kontext dieses Fensters" = "Docker-kontext för det här fönstret";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Stoppade containrar, oanvända nätverk, images utan namn och byggcachen raderas. Volymer finns kvar.";
+"Docker-Image" = "Docker-image";
+"Images" = "Images";
+"Logs anzeigen" = "Visa loggar";
+"Logs: {}" = "Loggar: {}";
+"Port im Browser öffnen" = "Öppna port i webbläsaren";
+"Shell öffnen" = "Öppna skal";
+"Shell: {}" = "Skal: {}";
+"Teilweise" = "Körs delvis";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Vill du rensa oanvända Docker-data i ”{}”?";
+"Ungenutztes aufräumen …" = "Rensa oanvända…";
+"Docker-Volume" = "Docker-volym";
+"Volumes" = "Volymer";
+"„{}“ löschen?" = "Vill du radera ”{}”?";

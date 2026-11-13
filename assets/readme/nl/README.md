@@ -77,6 +77,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 - [Browser](#browser)
 - [Git](#git)
 - [CI](#ci)
+- [Containers](#containers)
 - [Markdown](#markdown)
 - [Dicteren](#dicteren)
 - [Vertrouwen](#vertrouwen)
@@ -94,7 +95,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 
 - **Elke agent in één tijdlijn.** Claude via zijn eigen commando `claude`, Codex, Antigravity en OpenCode via het Agent Client Protocol, meer uit het ACP-register, en een in de app ingebouwde agent voor Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama en LM Studio. Antwoorden, toolaanroepen, toestemmingsverzoeken, plannen, to-do's, subagents en achtergrondtaken zien er hetzelfde uit, welke agent er ook draait.
 - **Nakijken en terugdraaien.** Vóór elke prompt bewaart Dango een checkpoint. Wat een agent heeft veranderd, kun je per bericht nakijken en terugdraaien, en een thread kan in een eigen Git-worktree werken en zijn werk overdragen via samenvoegen of cherry-pick.
-- **Eén venster per map.** Bestanden, terminals, browserpagina's, AI-threads, diffs en voorvertoningen zijn macOS-tabbladen van dat venster. De navigatiekolom bevat Bestanden, Zoeken, Agents, Git, Debug en CI.
+- **Eén venster per map.** Bestanden, terminals, browserpagina's, AI-threads, diffs en voorvertoningen zijn macOS-tabbladen van dat venster. De navigatiekolom bevat Bestanden, Zoeken, Agents, Git, Tests, Debug, CI en Containers.
 - **Een echte code-editor.** Syntaxkleuren, meerdere invoegpunten, invouwen, `.editorconfig`, taalservers voor 17 talen met aanvulling, ga naar definitie, verwijzingen, hernoemen, snelle oplossingen en hiërarchieën, en voorspellingen tijdens het typen van GitHub Copilot of een lokaal model.
 - **Debugger, Git en CI ingebouwd.** Breekpunten en stapsgewijs uitvoeren voor Rust, C, C++, Swift, Go, JavaScript, TypeScript en Python; losse hunks stagen, branches, stashes, conflicten en een commitgrafiek; runs, jobs en logs uit GitHub Actions en GitLab CI.
 - **Voorzichtig met je mappen.** Een map die je niet vertrouwt, start niets: geen Git-processen, taalservers, hooks of agents. Destructieve Git-commando's worden nooit voorgoed toegestaan, en commits worden op geheimen gecontroleerd.
@@ -122,7 +123,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 ## Aan de slag
 
 1. **Open een map** met ⌘O of `dango <folder>`. De eerste keer vraagt Dango of je de map vertrouwt (zie [Vertrouwen](#vertrouwen)).
-2. **De navigatiekolom** wisselt tussen Bestanden (⌘1), Zoeken (⌘2), Agents (⌘3), Git (⌘4), Debug (⌘5) en CI (⌘6); met de rechtermuisknop verberg je wat je niet gebruikt, en ⌃⌘S klapt de navigatiekolom weg.
+2. **De navigatiekolom** wisselt tussen Bestanden (⌘1), Zoeken (⌘2), Agents (⌘3), Git (⌘4), Tests (⌘5), Debug (⌘6), CI (⌘7) en Containers (⌘8); met de rechtermuisknop verberg je wat je niet gebruikt, en ⌃⌘S klapt de navigatiekolom weg.
 3. **Elk document is een tabblad** van het venster van de map, de eigen tabbladen van macOS. De '+' aan het einde van de tabbladbalk en ⌘T bieden een nieuw bestand, een terminal, de browser en elke geïnstalleerde agent aan, ook in een eigen Git-worktree; houd je de '+' ingedrukt, dan verschijnt hetzelfde als menu.
 4. **Open snel** met ⌘P vindt bestanden, en met `#` de symbolen van het project; ⇧⌘F zoekt en vervangt in het project.
 5. **Praat met een agent** in een AI-tabblad. ⌘Esc zet de toetsenbordfocus in zijn berichtveld en weer terug.
@@ -218,6 +219,10 @@ GitHub Actions en GitLab CI, ook GitHub Enterprise Server en zelfbeheerde GitLab
 
 Het token komt uit de sleutelhanger, `gh` of `glab`, de omgeving van de login-shell, of is er een die je invoert in **Instellingen › CI**.
 
+## Containers
+
+Het Containers-paneel toont de Compose-projecten van Docker met hun services, losse containers, images en volumes, en volgt de gebeurtenissen van Docker terwijl ze plaatsvinden. Een Compose-bestand in de map verschijnt als project, nog voordat een van zijn containers bestaat. Containers starten, stoppen en herstarten; hun logs en een shell openen in terminaltabbladen, en een gepubliceerde poort opent in het browsertabblad. Een container, image of volume verwijderen en ongebruikte gegevens opruimen vragen eerst om bevestiging. De Compose-commando's up, down en pull draaien alleen in vertrouwde mappen, omdat Compose bouwt en uitvoert wat het project beschrijft. Het menu van het paneel kiest de Docker-context voor het venster zonder die van je shells te wijzigen; dezelfde commando's staan in het menu 'Containers'. Het paneel heeft de `docker`-opdrachtregel nodig, Docker 24.0.6 of nieuwer.
+
 ## Markdown
 
 - **Voorvertoning.** Een Markdown-bestand opent met de voorvertoning ernaast; **Weergave › Toon/verberg voorvertoning ernaast** (⇧⌘V) sluit en opent hem, en **Instellingen › Algemeen** zet de automatische voorvertoning uit. De voorvertoning tekent formules, diagrammen in Mermaid, Graphviz en PlantUML en de afbeeldingen van de map; afbeeldingen van het web laden alleen in een vertrouwde map of nadat je er in de voorvertoning om vraagt.
@@ -279,7 +284,7 @@ Dango volgt de taalvolgorde in **Systeeminstellingen › Algemeen › Taal en re
 | Nieuw bestand, bewaren, bewaren als | ⌘N, ⌘S, ⇧⌘S |
 | Nieuw tabblad, tabblad sluiten, volgend en vorig tabblad | ⌘T, ⌘W, ⇧⌘] en ⇧⌘[ |
 | Open snel, zoeken in het project | ⌘P, ⇧⌘F |
-| Bestanden, Zoeken, Agents, Git, Tests, Debug, CI | ⌘1 tot ⌘7 |
+| Bestanden, Zoeken, Agents, Git, Tests, Debug, CI, Containers | ⌘1 tot ⌘8 |
 | Navigatiekolom tonen of verbergen, volgend paneel | ⌃⌘S, ⌥⌘\` |
 | Terug en vooruit langs bewerkte plekken | ⌃- en ⌃⇧- |
 | Commentaar aan/uit, ga naar regel | ⌘/, ⌃G |

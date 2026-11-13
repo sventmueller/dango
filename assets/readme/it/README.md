@@ -77,6 +77,7 @@ Dango riunisce il codice, gli agenti che lo modificano e tutto ciò che li circo
 - [Browser](#browser)
 - [Git](#git)
 - [CI](#ci)
+- [Container](#container)
 - [Markdown](#markdown)
 - [Dettatura](#dettatura)
 - [Fiducia](#fiducia)
@@ -94,7 +95,7 @@ Dango riunisce il codice, gli agenti che lo modificano e tutto ciò che li circo
 
 - **Tutti gli agenti in una cronologia.** Claude tramite il suo comando `claude`, Codex, Antigravity e OpenCode tramite l’Agent Client Protocol, altri dal registro ACP e un agente integrato nell’app per Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama e LM Studio. Risposte, chiamate agli strumenti, richieste di permesso, piani, cose da fare, subagenti e task in background hanno lo stesso aspetto, qualunque agente sia in esecuzione.
 - **Rivedere e riavvolgere.** Prima di ogni prompt, Dango conserva un punto di ripristino. Ciò che un agente ha modificato si può rivedere e riavvolgere per messaggio, e un thread può lavorare in un proprio worktree Git e consegnare il lavoro con un’unione o un cherry-pick.
-- **Una finestra per cartella.** File, terminali, pagine web, thread AI, diff e anteprime sono pannelli di macOS di quella finestra. La barra laterale contiene File, Ricerca, Agenti, Git, Debug e CI.
+- **Una finestra per cartella.** File, terminali, pagine web, thread AI, diff e anteprime sono pannelli di macOS di quella finestra. La barra laterale contiene File, Ricerca, Agenti, Git, Test, Debug, CI e Container.
 - **Un vero editor di codice.** Colori della sintassi, più punti di inserimento, compressione del codice, `.editorconfig`, server di linguaggio per 17 linguaggi con completamento, vai alla definizione, riferimenti, rinomina, correzioni rapide e gerarchie, e previsioni durante la digitazione da GitHub Copilot o da un modello locale.
 - **Debugger, Git e CI integrati.** Punti di interruzione ed esecuzione passo passo per Rust, C, C++, Swift, Go, JavaScript, TypeScript e Python; mettere in stage singoli blocchi, branch, stash, conflitti e un grafo dei commit; esecuzioni, job e log da GitHub Actions e GitLab CI.
 - **Prudente con le tue cartelle.** Una cartella di cui non ti fidi non avvia nulla: né processi Git, né server di linguaggio, né hook, né agenti. I comandi Git distruttivi non vengono mai consentiti per sempre, e i commit vengono controllati alla ricerca di segreti.
@@ -122,7 +123,7 @@ Dango riunisce il codice, gli agenti che lo modificano e tutto ciò che li circo
 ## Primi passi
 
 1. **Apri una cartella** con ⌘O o `dango <folder>`. La prima volta Dango chiede se ti fidi di essa (vedi [Fiducia](#fiducia)).
-2. **La barra laterale** passa tra File (⌘1), Ricerca (⌘2), Agenti (⌘3), Git (⌘4), Debug (⌘5) e CI (⌘6); un clic destro nasconde quelli che non usi, e ⌃⌘S chiude la barra laterale.
+2. **La barra laterale** passa tra File (⌘1), Ricerca (⌘2), Agenti (⌘3), Git (⌘4), Test (⌘5), Debug (⌘6), CI (⌘7) e Container (⌘8); un clic destro nasconde quelli che non usi, e ⌃⌘S chiude la barra laterale.
 3. **Ogni documento è un pannello** della finestra della cartella, i pannelli propri di macOS. Il “+” alla fine della barra dei pannelli e ⌘T offrono un nuovo file, un terminale, il browser e ogni agente installato, anche in un proprio worktree Git; tenendo premuto il “+” compare lo stesso come menu.
 4. **Apertura rapida** con ⌘P trova i file, e con `#` i simboli del progetto; ⇧⌘F cerca e sostituisce nel progetto.
 5. **Parla con un agente** in un pannello AI. ⌘Esc porta il focus della tastiera nel suo campo del messaggio e indietro.
@@ -218,6 +219,10 @@ GitHub Actions e GitLab CI, anche GitHub Enterprise Server e GitLab autogestito:
 
 Il token proviene dal portachiavi, da `gh` o `glab`, dall’ambiente della shell di login, oppure è uno che inserisci in **Impostazioni › CI**.
 
+## Container
+
+Il riquadro Container mostra i progetti Compose di Docker con i loro servizi, i singoli container, le immagini e i volumi, e segue gli eventi di Docker mentre accadono. Un file Compose della cartella appare come progetto anche prima che esista uno dei suoi container. I container si avviano, si arrestano e si riavviano; i loro log e una shell si aprono in pannelli del terminale, e una porta pubblicata si apre nel pannello del browser. Eliminare un container, un’immagine o un volume, e pulire i dati inutilizzati, chiedono prima conferma. I comandi up, down e pull di Compose vengono eseguiti solo nelle cartelle attendibili, perché Compose compila ed esegue ciò che il progetto descrive. Il menu del riquadro sceglie il contesto Docker della finestra senza cambiare quello usato dalle tue shell; gli stessi comandi si trovano nel menu Container. Serve la riga di comando `docker`, Docker 24.0.6 o versione successiva.
+
 ## Markdown
 
 - **Anteprima.** Un file Markdown si apre con la sua anteprima a lato; **Vista › Mostra/nascondi anteprima a lato** (⇧⌘V) la chiude e la apre, e **Impostazioni › Generali** disattiva l’anteprima automatica. L’anteprima disegna formule, diagrammi Mermaid, Graphviz e PlantUML e le immagini della cartella; le immagini dal web si caricano solo in una cartella attendibile o quando le richiedi nell’anteprima.
@@ -279,7 +284,7 @@ Dango segue l’ordine delle lingue in **Impostazioni di Sistema › Generali �
 | Nuovo file, salva, salva con nome | ⌘N, ⌘S, ⇧⌘S |
 | Nuovo pannello, chiudi pannello, pannello successivo e precedente | ⌘T, ⌘W, ⇧⌘] e ⇧⌘[ |
 | Apertura rapida, cerca nel progetto | ⌘P, ⇧⌘F |
-| File, Ricerca, Agenti, Git, Test, Debug, CI | da ⌘1 a ⌘7 |
+| File, Ricerca, Agenti, Git, Test, Debug, CI, Container | da ⌘1 a ⌘8 |
 | Mostra o nascondi la barra laterale, riquadro successivo | ⌃⌘S, ⌥⌘\` |
 | Indietro e avanti tra i punti modificati | ⌃- e ⌃⇧- |
 | Attiva o disattiva commento, vai alla riga | ⌘/, ⌃G |

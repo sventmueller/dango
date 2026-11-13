@@ -77,6 +77,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 - [Navegador](#navegador)
 - [Git](#git)
 - [CI](#ci)
+- [Contenidors](#contenidors)
 - [Markdown](#markdown)
 - [Dictat](#dictat)
 - [Confiança](#confiança)
@@ -94,7 +95,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 
 - **Tots els agents en una línia de temps.** Claude amb la seva pròpia ordre `claude`, Codex, Antigravity i OpenCode amb l’Agent Client Protocol, més des del registre ACP, i un agent integrat a l’app per a Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama i LM Studio. Respostes, crides a eines, sol·licituds de permís, plans, tasques, subagents i tasques en segon pla tenen el mateix aspecte, sigui quin sigui l’agent.
 - **Revisar i retrocedir.** Abans de cada prompt, el Dango desa un punt de control. El que ha canviat un agent es pot revisar i retrocedir per missatge, i un fil pot treballar en el seu propi worktree de Git i lliurar la feina fusionant o amb cherry-pick.
-- **Una finestra per carpeta.** Fitxers, terminals, pàgines web, fils d’IA, diffs i previsualitzacions són pestanyes de macOS d’aquesta finestra. La barra lateral conté Fitxers, Cerca, Agents, Git, Depura i CI.
+- **Una finestra per carpeta.** Fitxers, terminals, pàgines web, fils d’IA, diffs i previsualitzacions són pestanyes de macOS d’aquesta finestra. La barra lateral conté Fitxers, Cerca, Agents, Git, Proves, Depura, CI i Contenidors.
 - **Un editor de codi de debò.** Colors de sintaxi, diversos punts d’inserció, plegat, `.editorconfig`, servidors de llenguatge per a 17 llenguatges amb compleció, anar a la definició, referències, canvi de nom, correccions ràpides i jerarquies, i prediccions mentre escrius de GitHub Copilot o d’un model local.
 - **Depurador, Git i CI integrats.** Punts d’interrupció i execució pas a pas per a Rust, C, C++, Swift, Go, JavaScript, TypeScript i Python; preparar fragments solts, branques, stashes, conflictes i un graf de commits; execucions, jobs i logs de GitHub Actions i GitLab CI.
 - **Curós amb les teves carpetes.** Una carpeta en què no confies no inicia res: ni processos de Git, ni servidors de llenguatge, ni hooks, ni agents. Les ordres destructives de Git mai no es permeten per sempre, i els commits es revisen per buscar-hi secrets.
@@ -122,7 +123,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 ## Primers passos
 
 1. **Obre una carpeta** amb ⌘O o `dango <folder>`. La primera vegada, el Dango et pregunta si hi confies (consulta [Confiança](#confiança)).
-2. **La barra lateral** canvia entre Fitxers (⌘1), Cerca (⌘2), Agents (⌘3), Git (⌘4), Depura (⌘5) i CI (⌘6); amb un clic dret amagues els que no fas servir, i ⌃⌘S plega la barra lateral.
+2. **La barra lateral** canvia entre Fitxers (⌘1), Cerca (⌘2), Agents (⌘3), Git (⌘4), Proves (⌘5), Depura (⌘6), CI (⌘7) i Contenidors (⌘8); amb un clic dret amagues els que no fas servir, i ⌃⌘S plega la barra lateral.
 3. **Cada document és una pestanya** de la finestra de la carpeta, les pestanyes pròpies de macOS. El “+” al final de la barra de pestanyes i ⌘T ofereixen un fitxer nou, un terminal, el navegador i cada agent instal·lat, també en el seu propi worktree de Git; si mantens premut el “+”, apareix el mateix com a menú.
 4. **Obertura ràpida** amb ⌘P troba fitxers, i amb `#` els símbols del projecte; ⇧⌘F cerca i substitueix al projecte.
 5. **Parla amb un agent** en una pestanya d’IA. ⌘Esc porta el focus del teclat al seu camp del missatge i de tornada.
@@ -218,6 +219,10 @@ GitHub Actions i GitLab CI, també GitHub Enterprise Server i GitLab autogestion
 
 El token ve del clauer, de `gh` o `glab`, de l’entorn del shell d’inici de sessió, o és un que introdueixes a **Configuració › CI**.
 
+## Contenidors
+
+El tauler de Contenidors mostra els projectes Compose de Docker amb els seus serveis, els contenidors solts, les imatges i els volums, i segueix els esdeveniments de Docker a mesura que passen. Un fitxer Compose de la carpeta apareix com a projecte fins i tot abans que existeixi cap dels seus contenidors. Els contenidors s’inicien, s’aturen i es reinicien; els seus logs i un shell s’obren en pestanyes de terminal, i un port publicat s’obre a la pestanya del navegador. Eliminar un contenidor, una imatge o un volum, i netejar les dades no utilitzades, demanen confirmació abans. Les ordres up, down i pull de Compose només s’executen en carpetes de confiança, perquè Compose construeix i executa el que descriu el projecte. El menú del tauler tria el context de Docker de la finestra sense canviar el que fan servir els teus shells; les mateixes ordres són al menú Contenidors. Cal la línia d’ordres `docker`, Docker 24.0.6 o posterior.
+
 ## Markdown
 
 - **Previsualització.** Un fitxer Markdown s’obre amb la previsualització al costat; **Mostra › Mostra/amaga la previsualització al costat** (⇧⌘V) la tanca i l’obre, i **Configuració › General** desactiva la previsualització automàtica. La previsualització dibuixa fórmules, diagrames de Mermaid, Graphviz i PlantUML i les imatges de la carpeta; les imatges del web només es carreguen en una carpeta de confiança o quan les demanes a la previsualització.
@@ -279,7 +284,7 @@ El Dango segueix l’ordre d’idiomes de **Configuració del Sistema › Genera
 | Fitxer nou, desar, desar com a | ⌘N, ⌘S, ⇧⌘S |
 | Pestanya nova, tancar pestanya, pestanya següent i anterior | ⌘T, ⌘W, ⇧⌘] i ⇧⌘[ |
 | Obertura ràpida, cercar al projecte | ⌘P, ⇧⌘F |
-| Fitxers, Cerca, Agents, Git, Proves, Depura, CI | ⌘1 a ⌘7 |
+| Fitxers, Cerca, Agents, Git, Proves, Depura, CI, Contenidors | ⌘1 a ⌘8 |
 | Mostrar o amagar la barra lateral, tauler següent | ⌃⌘S, ⌥⌘\` |
 | Enrere i endavant pels llocs editats | ⌃- i ⌃⇧- |
 | Comentar o descomentar, anar a la línia | ⌘/, ⌃G |

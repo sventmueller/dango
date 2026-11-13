@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Znovu spustit poslední testy";
 "Test ausführen" = "Spustit test";
 "Test debuggen" = "Ladit test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Obnovit";
+"Aufräumen" = "Vyčistit";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Zastavit (down)";
+"Compose: Images holen (pull)" = "Compose: Stáhnout obrazy (pull)";
+"Compose: Starten (up)" = "Compose: Spustit (up)";
+"Container" = "Kontejnery";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Obraz bude z tohoto Dockeru odstraněn; lze ho znovu stáhnout nebo sestavit.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Svazek a všechna data v něm budou smazána. Tuto akci nelze vrátit.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Kontejner bude odstraněn; co uložil mimo svazky, bude ztraceno.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker není nainstalován. Nainstalujte Docker Desktop nebo příkazový řádek docker a toto podokno zobrazí kontejnery, obrazy a svazky.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker neběží. Spusťte Docker; podokno to zkusí znovu samo.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} je příliš starý; podokno potřebuje verzi 24.0.6 nebo novější.";
+"Docker-Befehl fehlgeschlagen" = "Příkaz Dockeru selhal";
+"Docker-Kontext dieses Fensters" = "Kontext Dockeru tohoto okna";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Smažou se zastavené kontejnery, nepoužívané sítě, obrazy bez názvu a mezipaměť sestavení. Svazky zůstanou.";
+"Docker-Image" = "Obraz Dockeru";
+"Images" = "Obrazy";
+"Logs anzeigen" = "Zobrazit logy";
+"Logs: {}" = "Logy: {}";
+"Port im Browser öffnen" = "Otevřít port v prohlížeči";
+"Shell öffnen" = "Otevřít shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Částečně běží";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Vyčistit nepoužívaná data Dockeru v „{}“?";
+"Ungenutztes aufräumen …" = "Vyčistit nepoužívané…";
+"Docker-Volume" = "Svazek Dockeru";
+"Volumes" = "Svazky";
+"„{}“ löschen?" = "Smazat „{}“?";

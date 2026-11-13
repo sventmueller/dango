@@ -77,6 +77,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 - [Browser](#browser)
 - [Git](#git)
 - [CI](#ci)
+- [Containere](#containere)
 - [Markdown](#markdown)
 - [Dictare](#dictare)
 - [Încredere](#încredere)
@@ -94,7 +95,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 
 - **Toți agenții într-o singură cronologie.** Claude prin propria comandă `claude`, Codex, Antigravity și OpenCode prin Agent Client Protocol, alții din registrul ACP și un agent integrat în aplicație pentru Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama și LM Studio. Răspunsurile, apelurile de instrumente, cererile de permisiune, planurile, listele De făcut, subagenții și sarcinile din fundal arată la fel, indiferent ce agent rulează.
 - **Examinare și derulare înapoi.** Înaintea fiecărui prompt, Dango păstrează un punct de control. Ce a modificat un agent poate fi examinat și derulat înapoi pentru fiecare mesaj, iar o conversație poate lucra într-un worktree Git propriu și își poate preda munca prin comasare sau cherry-pick.
-- **O fereastră pentru fiecare dosar.** Fișierele, terminalele, paginile web, conversațiile IA, diferențele și previzualizările sunt file macOS ale acelei ferestre. Bara laterală conține Fișiere, Căutare, Agenți, Git, Depanare și CI.
+- **O fereastră pentru fiecare dosar.** Fișierele, terminalele, paginile web, conversațiile IA, diferențele și previzualizările sunt file macOS ale acelei ferestre. Bara laterală conține Fișiere, Căutare, Agenți, Git, Teste, Depanare, CI și Containere.
 - **Un editor de cod adevărat.** Culori de sintaxă, mai multe puncte de inserare, pliere, `.editorconfig`, servere de limbaj pentru 17 limbaje cu completare, salt la definiție, referințe, redenumire, corecturi rapide și ierarhii, plus predicții în timp ce tastați de la GitHub Copilot sau de la un model local.
 - **Depanator, Git și CI integrate.** Puncte de întrerupere și execuție pas cu pas pentru Rust, C, C++, Swift, Go, JavaScript, TypeScript și Python; pregătirea pentru commit a unor fragmente separate, ramuri, stash-uri, conflicte și un graf al commiturilor; rulări, joburi și jurnale din GitHub Actions și GitLab CI.
 - **Atent cu dosarele dvs.** Un dosar în care nu aveți încredere nu pornește nimic: niciun proces Git, server de limbaj, hook sau agent. Comenzile Git distructive nu sunt niciodată permise definitiv, iar commiturile sunt verificate pentru secrete.
@@ -122,7 +123,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 ## Primii pași
 
 1. **Deschideți un dosar** cu ⌘O sau `dango <folder>`. Prima dată, Dango vă întreabă dacă aveți încredere în el (consultați [Încredere](#încredere)).
-2. **Bara laterală** comută între Fișiere (⌘1), Căutare (⌘2), Agenți (⌘3), Git (⌘4), Depanare (⌘5) și CI (⌘6); un clic dreapta le ascunde pe cele pe care nu le folosiți, iar ⌃⌘S pliază bara laterală.
+2. **Bara laterală** comută între Fișiere (⌘1), Căutare (⌘2), Agenți (⌘3), Git (⌘4), Teste (⌘5), Depanare (⌘6), CI (⌘7) și Containere (⌘8); un clic dreapta le ascunde pe cele pe care nu le folosiți, iar ⌃⌘S pliază bara laterală.
 3. **Fiecare document este o filă** a ferestrei dosarului, filele proprii ale macOS. „+” de la capătul barei de file și ⌘T oferă un fișier nou, un terminal, browserul și fiecare agent instalat, și într-un worktree Git propriu; dacă țineți apăsat „+”, apare același lucru sub formă de meniu.
 4. **Deschidere rapidă** cu ⌘P găsește fișiere, iar cu `#` simbolurile proiectului; ⇧⌘F caută și înlocuiește în proiect.
 5. **Vorbiți cu un agent** într-o filă IA. ⌘Esc mută focalizarea tastaturii în câmpul său de mesaj și înapoi.
@@ -218,6 +219,10 @@ GitHub Actions și GitLab CI, inclusiv GitHub Enterprise Server și GitLab autog
 
 Tokenul provine din portchei, din `gh` sau `glab`, din mediul shellului de autentificare sau este unul pe care îl introduceți în **Configurări › CI**.
 
+## Containere
+
+Panoul Containere afișează proiectele Compose ale lui Docker cu serviciile lor, containerele individuale, imaginile și volumele și urmărește evenimentele Docker pe măsură ce au loc. Un fișier Compose din dosar apare ca proiect chiar înainte să existe vreunul dintre containerele sale. Containerele pornesc, se opresc și repornesc; jurnalele lor și un shell se deschid în file de terminal, iar un port publicat se deschide în fila browserului. Ștergerea unui container, a unei imagini sau a unui volum și curățarea datelor neutilizate cer mai întâi confirmarea. Comenzile up, down și pull ale Compose rulează doar în dosarele de încredere, deoarece Compose construiește și rulează ce descrie proiectul. Meniul panoului alege contextul Docker al ferestrei fără să-l schimbe pe cel folosit de shellurile dvs.; aceleași comenzi se află în meniul Containere. Panoul necesită linia de comandă `docker`, Docker 24.0.6 sau o versiune mai nouă.
+
 ## Markdown
 
 - **Previzualizare.** Un fișier Markdown se deschide cu previzualizarea alături; **Vizualizare › Afișați/ascundeți previzualizarea alături** (⇧⌘V) o închide și o deschide, iar **Configurări › General** dezactivează previzualizarea automată. Previzualizarea desenează formule, diagrame Mermaid, Graphviz și PlantUML și imaginile dosarului; imaginile de pe web se încarcă doar într-un dosar de încredere sau când le cereți în previzualizare.
@@ -279,7 +284,7 @@ Dango urmează ordinea limbilor din **Configurări sistem › General › Limbă
 | Fișier nou, salvare, salvare ca | ⌘N, ⌘S, ⇧⌘S |
 | Filă nouă, închidere filă, fila următoare și anterioară | ⌘T, ⌘W, ⇧⌘] și ⇧⌘[ |
 | Deschidere rapidă, căutare în proiect | ⌘P, ⇧⌘F |
-| Fișiere, Căutare, Agenți, Git, Teste, Depanare, CI | ⌘1 până la ⌘7 |
+| Fișiere, Căutare, Agenți, Git, Teste, Depanare, CI, Containere | ⌘1 până la ⌘8 |
 | Afișarea sau ascunderea barei laterale, panoul următor | ⌃⌘S, ⌥⌘\` |
 | Înapoi și înainte prin locurile editate | ⌃- și ⌃⇧- |
 | Activare/dezactivare comentariu, salt la linie | ⌘/, ⌃G |

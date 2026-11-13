@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Suorita viimeisimmät testit uudelleen";
 "Test ausführen" = "Suorita testi";
 "Test debuggen" = "Testin virheenjäljitys";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Päivitä";
+"Aufräumen" = "Siivoa";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Pysäytä (down)";
+"Compose: Images holen (pull)" = "Compose: Hae imaget (pull)";
+"Compose: Starten (up)" = "Compose: Käynnistä (up)";
+"Container" = "Kontit";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Image poistetaan tästä Dockerista; sen voi hakea tai rakentaa uudelleen.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Taltio ja kaikki sen tiedot poistetaan. Tätä ei voi kumota.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Kontti poistetaan; kaikki, mitä se on tallentanut taltioiden ulkopuolelle, menetetään.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker ei ole asennettuna. Asenna Docker Desktop tai docker-komentorivi, niin tämä paneeli näyttää kontit, imaget ja taltiot.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker ei ole käynnissä. Käynnistä Docker; paneeli yrittää uudelleen itsestään.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} on liian vanha; paneeli tarvitsee version 24.0.6 tai uudemman.";
+"Docker-Befehl fehlgeschlagen" = "Docker-komento epäonnistui";
+"Docker-Kontext dieses Fensters" = "Tämän ikkunan Docker-konteksti";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Pysäytetyt kontit, käyttämättömät verkot, nimettömät imaget ja koontivälimuisti poistetaan. Taltiot säilyvät.";
+"Docker-Image" = "Docker-image";
+"Images" = "Imaget";
+"Logs anzeigen" = "Näytä lokit";
+"Logs: {}" = "Lokit: {}";
+"Port im Browser öffnen" = "Avaa portti selaimessa";
+"Shell öffnen" = "Avaa shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Osittain käynnissä";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Siivotaanko käyttämättömät Docker-tiedot kohteessa ”{}”?";
+"Ungenutztes aufräumen …" = "Siivoa käyttämättömät…";
+"Docker-Volume" = "Docker-taltio";
+"Volumes" = "Taltiot";
+"„{}“ löschen?" = "Poistetaanko ”{}”?";

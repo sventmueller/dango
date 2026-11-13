@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Torna a executar les últimes proves";
 "Test ausführen" = "Executa la prova";
 "Test debuggen" = "Depura la prova";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Actualitza";
+"Aufräumen" = "Neteja";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Atura (down)";
+"Compose: Images holen (pull)" = "Compose: Obtén les imatges (pull)";
+"Compose: Starten (up)" = "Compose: Inicia (up)";
+"Container" = "Contenidors";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "La imatge s’eliminarà d’aquest Docker; es pot tornar a obtenir o construir.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "El volum i totes les dades que conté s’eliminaran. Aquesta acció no es pot desfer.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "El contenidor s’eliminarà; tot el que hagi desat fora dels volums es perdrà.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker no està instal·lat. Instal·la Docker Desktop o la línia d’ordres de docker i aquest tauler mostrarà contenidors, imatges i volums.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker no s’està executant. Inicia Docker; el tauler ho tornarà a provar automàticament.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} és massa antic; el tauler necessita la versió 24.0.6 o posterior.";
+"Docker-Befehl fehlgeschlagen" = "L’ordre de Docker ha fallat";
+"Docker-Kontext dieses Fensters" = "Context de Docker d’aquesta finestra";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "S’eliminaran els contenidors aturats, les xarxes no utilitzades, les imatges sense nom i la memòria cau de compilació. Els volums es conserven.";
+"Docker-Image" = "Imatge de Docker";
+"Images" = "Imatges";
+"Logs anzeigen" = "Mostra els logs";
+"Logs: {}" = "Logs: {}";
+"Port im Browser öffnen" = "Obre el port al navegador";
+"Shell öffnen" = "Obre un shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Parcialment en execució";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Vols netejar les dades de Docker no utilitzades a “{}”?";
+"Ungenutztes aufräumen …" = "Neteja el que no s’utilitza…";
+"Docker-Volume" = "Volum de Docker";
+"Volumes" = "Volums";
+"„{}“ löschen?" = "Vols eliminar “{}”?";

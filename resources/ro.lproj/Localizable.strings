@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Rulați din nou ultimele teste";
 "Test ausführen" = "Rulați testul";
 "Test debuggen" = "Depanați testul";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Reîmprospătați";
+"Aufräumen" = "Curățați";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Opriți (down)";
+"Compose: Images holen (pull)" = "Compose: Descărcați imaginile (pull)";
+"Compose: Starten (up)" = "Compose: Porniți (up)";
+"Container" = "Containere";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Imaginea este eliminată din acest Docker; poate fi descărcată sau construită din nou.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Volumul și toate datele din el vor fi șterse. Acțiunea nu poate fi anulată.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Containerul este eliminat; tot ce a stocat în afara volumelor se pierde.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker nu este instalat. Instalați Docker Desktop sau linia de comandă docker, iar acest panou va afișa containere, imagini și volume.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker nu rulează. Porniți Docker; panoul va reîncerca singur.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} este prea vechi; panoul necesită 24.0.6 sau o versiune mai nouă.";
+"Docker-Befehl fehlgeschlagen" = "Comanda Docker a eșuat";
+"Docker-Kontext dieses Fensters" = "Contextul Docker al acestei ferestre";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Se șterg containerele oprite, rețelele neutilizate, imaginile fără nume și cache-ul de build. Volumele rămân.";
+"Docker-Image" = "Imagine Docker";
+"Images" = "Imagini";
+"Logs anzeigen" = "Afișați jurnalele";
+"Logs: {}" = "Jurnale: {}";
+"Port im Browser öffnen" = "Deschideți portul în browser";
+"Shell öffnen" = "Deschideți un shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Rulează parțial";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Curățați datele Docker neutilizate din „{}”?";
+"Ungenutztes aufräumen …" = "Curățați elementele neutilizate…";
+"Docker-Volume" = "Volum Docker";
+"Volumes" = "Volume";
+"„{}“ löschen?" = "Ștergeți „{}”?";

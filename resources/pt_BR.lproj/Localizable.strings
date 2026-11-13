@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Executar Novamente os Últimos Testes";
 "Test ausführen" = "Executar Teste";
 "Test debuggen" = "Depurar Teste";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Atualizar";
+"Aufräumen" = "Limpar";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Parar (down)";
+"Compose: Images holen (pull)" = "Compose: Baixar Imagens (pull)";
+"Compose: Starten (up)" = "Compose: Iniciar (up)";
+"Container" = "Contêineres";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "A imagem será removida deste Docker; ela pode ser baixada ou criada novamente.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "O volume e todos os dados nele serão apagados. Esta ação não pode ser desfeita.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "O contêiner será removido; o que ele armazenou fora dos volumes será perdido.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "O Docker não está instalado. Instale o Docker Desktop ou a linha de comando docker e este painel mostrará contêineres, imagens e volumes.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "O Docker não está em execução. Inicie o Docker; o painel tentará novamente sozinho.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "O Docker {} é antigo demais; o painel precisa da versão 24.0.6 ou posterior.";
+"Docker-Befehl fehlgeschlagen" = "Falha no Comando do Docker";
+"Docker-Kontext dieses Fensters" = "Contexto do Docker desta janela";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Serão apagados contêineres parados, redes não usadas, imagens sem nome e o cache de build. Os volumes permanecem.";
+"Docker-Image" = "Imagem do Docker";
+"Images" = "Imagens";
+"Logs anzeigen" = "Mostrar Logs";
+"Logs: {}" = "Logs: {}";
+"Port im Browser öffnen" = "Abrir Porta no Navegador";
+"Shell öffnen" = "Abrir Shell";
+"Shell: {}" = "Shell: {}";
+"Teilweise" = "Parcialmente em Execução";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Limpar dados não usados do Docker em “{}”?";
+"Ungenutztes aufräumen …" = "Limpar Não Usados…";
+"Docker-Volume" = "Volume do Docker";
+"Volumes" = "Volumes";
+"„{}“ löschen?" = "Apagar “{}”?";

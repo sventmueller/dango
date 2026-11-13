@@ -180,6 +180,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | | |
 | Tests | Tests | the panel that lists a folder's tests by package and file with their state, fifth in the sidebar (E111) |
 | Test | test | one test of the project, run or debugged from the Tests panel, the gutter or the Debug menu; also the Activity's kind of a test run |
+| **Containers** | | |
+| Container | Containers | the panel that shows a Docker context's Compose projects, containers, images and volumes, eighth in the sidebar (⌘8), and its menu (E136) |
+| Docker-Kontext | Docker context | the Docker engine a window's Containers panel talks to, as `docker context` names it; chosen per window |
 
 ## Languages
 
@@ -342,6 +345,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | الاختبارات |
 | Test | اختبار |
+| **Containers** | |
+| Container | الحاويات |
+| Docker-Kontext | سياق Docker |
 
 ### Catalan (`ca`)
 - Address: informal "tu", as macOS Catalan does ("Vols desar els canvis?", "Torna‑ho a provar"); menu items and buttons
@@ -498,6 +504,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Proves |
 | Test | prova |
+| **Containers** | |
+| Container | Contenidors |
+| Docker-Kontext | context de Docker |
 
 ### Czech (`cs`)
 - Address: formal "vy" (vykání) with plural imperatives ("Zadejte", "Vyberte"), as macOS Czech; menu items and buttons
@@ -653,6 +662,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testy |
 | Test | test |
+| **Containers** | |
+| Container | Kontejnery |
+| Docker-Kontext | kontext Dockeru |
 
 ### Danish (`da`)
 - Address: informal "du", as Danish macOS addresses the user
@@ -806,6 +818,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tests |
 | Test | test |
+| **Containers** | |
+| Container | Containere |
+| Docker-Kontext | Docker-kontekst |
 
 ### Greek (`el`)
 - Address: formal plural (εσείς), imperatives such as "Επιλέξτε", "Εισαγάγετε", "Δοκιμάστε ξανά", as macOS Greek does;
@@ -962,6 +977,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Δοκιμές |
 | Test | δοκιμή |
+| **Containers** | |
+| Container | Container |
+| Docker-Kontext | Docker context |
 
 ### Spanish (`es`)
 - Address: "tú", as macOS in Spanish (Spain) does: imperatives "Introduce", "Elige", "Abre"; possessives "tu", "tus"
@@ -1118,6 +1136,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Pruebas |
 | Test | prueba |
+| **Containers** | |
+| Container | Contenedores |
+| Docker-Kontext | contexto de Docker |
 
 ### Finnish (`fi`)
 - Address: informal singular "sinä", as Finnish macOS uses it ("Haluatko tallentaa…?", imperatives "Valitse", "Avaa");
@@ -1275,6 +1296,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testit |
 | Test | testi |
+| **Containers** | |
+| Container | Kontit |
+| Docker-Kontext | Docker-konteksti |
 
 ### French (`fr`)
 - Address: "vous", with "vous" imperatives ("Saisissez…", "Ouvrez…"), as macOS does
@@ -1429,6 +1453,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tests |
 | Test | test |
+| **Containers** | |
+| Container | Conteneurs |
+| Docker-Kontext | contexte Docker |
 
 ### Hebrew (`he`)
 - Address: neutral, as macOS Hebrew: commands and buttons as verbal nouns ("שמירה", "סגירת הכרטיסיה"), confirmation
@@ -1587,6 +1614,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | בדיקות |
 | Test | בדיקה |
+| **Containers** | |
+| Container | Containers |
+| Docker-Kontext | הקשר Docker |
 
 ### Hindi (`hi`)
 - Address: formal "आप", with polite "-ें/-एँ" imperatives ("खोलें", "दर्ज करें", "दिखाएँ"), as macOS does
@@ -1741,6 +1771,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | टेस्ट |
 | Test | टेस्ट |
+| **Containers** | |
+| Container | कंटेनर |
+| Docker-Kontext | Docker कॉन्टेक्स्ट |
 
 ### Croatian (`hr`)
 - Address: formal "vi" in sentences, lowercase as macOS writes it ("Želite li…", "Odaberite…", "vaš"); menu items and
@@ -1896,6 +1929,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testovi |
 | Test | test |
+| **Containers** | |
+| Container | Kontejneri |
+| Docker-Kontext | Docker kontekst |
 
 ### Hungarian (`hu`)
 - Address: formal, as Hungarian macOS: the polite third-person (Ön) verb forms with the pronoun left out ("Biztosan
@@ -2053,6 +2089,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tesztek |
 | Test | teszt |
+| **Containers** | |
+| Container | Konténerek |
+| Docker-Kontext | Docker-kontextus |
 
 ### Indonesian (`id`)
 - Address: formal "Anda", capitalized, as Indonesian macOS ("Apakah Anda ingin…", "Buka tautan hanya jika Anda
@@ -2208,6 +2247,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tes |
 | Test | tes |
+| **Containers** | |
+| Container | Container |
+| Docker-Kontext | konteks Docker |
 
 ### Italian (`it`)
 - Address: "tu", as Italian macOS ("Vuoi riprovare?", "Apri il link solo se ti fidi della fonte"); menu items and
@@ -2363,6 +2405,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Test |
 | Test | test |
+| **Containers** | |
+| Container | Container |
+| Docker-Kontext | contesto Docker |
 
 ### Japanese (`ja`)
 - Address: no pronoun; explanations and questions in the polite です/ます form ("保存しますか?", "…してください"); menu items and
@@ -2519,6 +2564,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | テスト |
 | Test | テスト |
+| **Containers** | |
+| Container | コンテナ |
+| Docker-Kontext | Dockerコンテキスト |
 
 ### Korean (`ko`)
 - Address: no pronoun; sentences in the formal 합쇼체, as Korean macOS ("저장하겠습니까?", "…하십시오", "…합니다"); menu items and
@@ -2674,6 +2722,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | 테스트 |
 | Test | 테스트 |
+| **Containers** | |
+| Container | 컨테이너 |
+| Docker-Kontext | Docker 컨텍스트 |
 
 ### Malay (`ms`)
 - Address: "anda" in lower case, as Malay macOS ("Adakah anda ingin…", "Buka pautan hanya jika anda mempercayai
@@ -2828,6 +2879,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Ujian |
 | Test | ujian |
+| **Containers** | |
+| Container | Container |
+| Docker-Kontext | konteks Docker |
 
 ### Dutch (`nl`)
 - Address: "je", as Dutch macOS ("Wil je…", "Weet je zeker dat…"); menu items and buttons as imperatives, verb first
@@ -2983,6 +3037,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tests |
 | Test | test |
+| **Containers** | |
+| Container | Containers |
+| Docker-Kontext | Docker-context |
 
 ### Norwegian Bokmål (`no`)
 - Address: "du", as Norwegian macOS ("Vil du…", "Er du sikker på at…"); menu items and buttons as imperatives ("Åpne",
@@ -3138,6 +3195,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tester |
 | Test | test |
+| **Containers** | |
+| Container | Containere |
+| Docker-Kontext | Docker-kontekst |
 
 ### Polish (`pl`)
 - Address: informal second person singular with the pronoun left out, as Polish macOS ("Czy chcesz…", "Otwieraj łącze
@@ -3293,6 +3353,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testy |
 | Test | test |
+| **Containers** | |
+| Container | Kontenery |
+| Docker-Kontext | kontekst Dockera |
 
 ### Portuguese (Brazil) (`pt_BR`)
 - Address: "você" with third-person verbs and "seu/sua", as Brazilian macOS ("Deseja tentar novamente?", "Abra o link
@@ -3449,6 +3512,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testes |
 | Test | teste |
+| **Containers** | |
+| Container | Contêineres |
+| Docker-Kontext | contexto do Docker |
 
 ### Portuguese (Portugal) (`pt_PT`)
 - Address: formal third person with the pronoun left out, as European Portuguese macOS ("Pretende ignorar as
@@ -3605,6 +3671,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testes |
 | Test | teste |
+| **Containers** | |
+| Container | Contentores |
+| Docker-Kontext | contexto do Docker |
 
 ### Romanian (`ro`)
 - Address: formal "dumneavoastră" (written "dvs."), as macOS Romanian; menu items, buttons and instructions in the
@@ -3761,6 +3830,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Teste |
 | Test | test |
+| **Containers** | |
+| Container | Containere |
+| Docker-Kontext | context Docker |
 
 ### Russian (`ru`)
 - Address: formal "Вы", capitalized as macOS Russian writes it ("Вы", "Ваш"); menu items and buttons in the infinitive
@@ -3917,6 +3989,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Тесты |
 | Test | тест |
+| **Containers** | |
+| Container | Контейнеры |
+| Docker-Kontext | контекст Docker |
 
 ### Slovak (`sk`)
 - Address: formal "vy" (vykanie), lowercase; menu items and buttons in the infinitive, as macOS Slovak has them
@@ -4073,6 +4148,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testy |
 | Test | test |
+| **Containers** | |
+| Container | Kontajnery |
+| Docker-Kontext | kontext Dockera |
 
 ### Slovenian (`sl`)
 - Address: formal "vi" (vikanje), lowercase; menu items and buttons in the singular imperative, as macOS Slovenian has
@@ -4230,6 +4308,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testi |
 | Test | test |
+| **Containers** | |
+| Container | Vsebniki |
+| Docker-Kontext | kontekst Docker |
 
 ### Swedish (`sv`)
 - Address: "du", as macOS Swedish ("Vill du …?", "Välj …"); menu items and buttons in the imperative ("Spara", "Göm
@@ -4385,6 +4466,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Tester |
 | Test | test |
+| **Containers** | |
+| Container | Containrar |
+| Docker-Kontext | Docker-kontext |
 
 ### Thai (`th`)
 - Address: polite neutral "คุณ", as macOS Thai; menu items and buttons are bare verbs ("บันทึก", "ซ่อนแถบเครื่องมือ");
@@ -4541,6 +4625,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | การทดสอบ |
 | Test | การทดสอบ |
+| **Containers** | |
+| Container | คอนเทนเนอร์ |
+| Docker-Kontext | บริบท Docker |
 
 ### Turkish (`tr`)
 - Address: formal "siz", as macOS Turkish ("… istediğinizden emin misiniz?", "Seçin"); menu items and buttons in the
@@ -4698,6 +4785,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Testler |
 | Test | test |
+| **Containers** | |
+| Container | Container’lar |
+| Docker-Kontext | Docker bağlamı |
 
 ### Ukrainian (`uk`)
 - Address: formal "ви", lowercase as macOS Ukrainian writes it ("ви", "ваш"); menu items and buttons in the infinitive
@@ -4853,6 +4943,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Тести |
 | Test | тест |
+| **Containers** | |
+| Container | Контейнери |
+| Docker-Kontext | контекст Docker |
 
 ### Vietnamese (`vi`)
 - Address: "bạn", as macOS Vietnamese ("Bạn có chắc chắn muốn …?"); menu items and buttons are bare verbs ("Lưu", "Ẩn
@@ -5008,6 +5101,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | Kiểm thử |
 | Test | kiểm thử |
+| **Containers** | |
+| Container | Container |
+| Docker-Kontext | ngữ cảnh Docker |
 
 ### Chinese, Simplified (`zh-Hans`)
 - Address: "你", as macOS Simplified Chinese (never "您"); menu items and buttons are bare verbs ("保存", "隐藏工具栏")
@@ -5162,6 +5258,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | 测试 |
 | Test | 测试 |
+| **Containers** | |
+| Container | 容器 |
+| Docker-Kontext | Docker 上下文 |
 
 ### Chinese, Traditional (`zh-Hant`)
 - Address: "你", as macOS Traditional Chinese (never "您"); Taiwan usage and macOS's Taiwan words (檔案, 視窗, 設定, 打開); menu
@@ -5317,3 +5416,6 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Tests** | |
 | Tests | 測試 |
 | Test | 測試 |
+| **Containers** | |
+| Container | 容器 |
+| Docker-Kontext | Docker 上下文 |

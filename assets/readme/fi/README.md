@@ -77,6 +77,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 - [Selain](#selain)
 - [Git](#git)
 - [CI](#ci)
+- [Kontit](#kontit)
 - [Markdown](#markdown)
 - [Sanelu](#sanelu)
 - [Luottamus](#luottamus)
@@ -94,7 +95,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 
 - **Kaikki agentit yhdellä aikajanalla.** Claude oman `claude`-komentonsa kautta, Codex, Antigravity ja OpenCode Agent Client Protocolin kautta, lisää ACP-rekisteristä sekä sovellukseen sisäänrakennettu agentti, joka käyttää palveluja Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama ja LM Studio. Vastaukset, työkalukutsut, lupapyynnöt, suunnitelmat, tehtävälistat, aliagentit ja taustatehtävät näyttävät samalta, toimipa mikä agentti tahansa.
 - **Tarkista ja kelaa taaksepäin.** Ennen jokaista kehotetta Dango tallentaa tarkistuspisteen. Agentin muutokset voi tarkistaa ja kelata taaksepäin viesti kerrallaan, ja ketju voi työskennellä omassa Git-worktreessaan ja luovuttaa työnsä yhdistämällä tai cherry-pickillä.
-- **Yksi ikkuna kansiota kohden.** Tiedostot, päätteet, selainsivut, AI-ketjut, eronäkymät ja esikatselut ovat tuon ikkunan macOS-välilehtiä. Sivupalkissa ovat Tiedostot, Haku, Agentit, Git, Virheenjäljitys ja CI.
+- **Yksi ikkuna kansiota kohden.** Tiedostot, päätteet, selainsivut, AI-ketjut, eronäkymät ja esikatselut ovat tuon ikkunan macOS-välilehtiä. Sivupalkissa ovat Tiedostot, Haku, Agentit, Git, Testit, Virheenjäljitys, CI ja Kontit.
 - **Oikea koodieditori.** Syntaksivärit, useita kohdistimia, laskostus, `.editorconfig`, kielipalvelimet 17 kielelle, joissa on täydennys, siirtyminen määrittelyyn, viittaukset, uudelleennimeäminen, pikakorjaukset ja hierarkiat, sekä muokkausennusteet GitHub Copilotilta tai paikalliselta mallilta.
 - **Virheenjäljitin, Git ja CI sisäänrakennettuina.** Keskeytyskohdat ja askellus kielille Rust, C, C++, Swift, Go, JavaScript, TypeScript ja Python; yksittäisten lohkojen valmistelu, haarat, stashit, ristiriidat ja commit-kaavio; ajot, työt ja lokit GitHub Actionsista ja GitLab CI:stä.
 - **Varovainen kansioidesi kanssa.** Kansio, johon et ole luottanut, ei käynnistä mitään: ei Git-prosesseja, kielipalvelimia, hookeja eikä agentteja. Tuhoavia Git-komentoja ei koskaan sallita pysyvästi, ja commitit tarkistetaan salaisuuksien varalta.
@@ -122,7 +123,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 ## Aloittaminen
 
 1. **Avaa kansio** näppäimillä ⌘O tai komennolla `dango <folder>`. Ensimmäisellä kerralla Dango kysyy, luotatko kansioon (katso [Luottamus](#luottamus)).
-2. **Sivupalkki** vaihtaa näkymien Tiedostot (⌘1), Haku (⌘2), Agentit (⌘3), Git (⌘4), Virheenjäljitys (⌘5) ja CI (⌘6) välillä; oikean painikkeen osoituksella piilotat ne, joita et käytä, ja ⌃⌘S laskostaa sivupalkin piiloon.
+2. **Sivupalkki** vaihtaa näkymien Tiedostot (⌘1), Haku (⌘2), Agentit (⌘3), Git (⌘4), Testit (⌘5), Virheenjäljitys (⌘6), CI (⌘7) ja Kontit (⌘8) välillä; oikean painikkeen osoituksella piilotat ne, joita et käytä, ja ⌃⌘S laskostaa sivupalkin piiloon.
 3. **Jokainen dokumentti on välilehti** kansion ikkunassa, macOS:n omia välilehtiä. Välilehtipalkin lopussa oleva ”+” ja ⌘T tarjoavat uuden tiedoston, päätteen, selaimen ja jokaisen asennetun agentin, myös omassa Git-worktreessaan; kun pidät ”+”-painiketta painettuna, samat vaihtoehdot näkyvät valikkona.
 4. **Avaa nopeasti** (⌘P) löytää tiedostot ja `#`-merkillä projektin symbolit; ⇧⌘F etsii ja korvaa projektissa.
 5. **Keskustele agentin kanssa** AI-välilehdessä. ⌘Esc siirtää näppäimistön kohdistuksen sen viestikenttään ja takaisin.
@@ -218,6 +219,10 @@ GitHub Actions ja GitLab CI, myös GitHub Enterprise Server ja itse ylläpidetty
 
 Token tulee Avainnipusta, `gh`- tai `glab`-komennolta tai kirjautumiskomentotulkin ympäristöstä, tai se on se, jonka syötät kohdassa **Asetukset › CI**.
 
+## Kontit
+
+Kontit-paneeli näyttää Dockerin Compose-projektit palveluineen, yksittäiset kontit, imaget ja taltiot, ja se seuraa Dockerin tapahtumia sitä mukaa kuin niitä tapahtuu. Kansion Compose-tiedosto näkyy projektina jo ennen kuin yksikään sen konteista on olemassa. Kontit käynnistyvät, pysähtyvät ja käynnistyvät uudelleen; niiden lokit ja shell avautuvat päätteen välilehdissä, ja julkaistu portti avautuu selainvälilehdessä. Kontin, imagen tai taltion poistaminen sekä käyttämättömien tietojen siivoaminen kysyvät ensin. Composen up, down ja pull toimivat vain luotetuissa kansioissa, koska Compose rakentaa ja suorittaa sen, mitä projekti kuvaa. Paneelin valikko valitsee ikkunan Docker-kontekstin muuttamatta sitä, jota shellisi käyttävät; samat komennot ovat Kontit-valikossa. Paneeli tarvitsee `docker`-komentorivin, Docker 24.0.6:n tai uudemman.
+
 ## Markdown
 
 - **Esikatselu.** Markdown-tiedosto avautuu esikatselu vieressään; **Näytä › Näytä/kätke esikatselu vieressä** (⇧⌘V) sulkee ja avaa sen, ja **Asetukset › Yleiset** kytkee automaattisen esikatselun pois. Esikatselu piirtää kaavat, Mermaid-, Graphviz- ja PlantUML-kaaviot sekä kansion kuvat; verkosta tulevat kuvat latautuvat vain luotetussa kansiossa tai kun pyydät niitä esikatselussa.
@@ -279,7 +284,7 @@ Dango seuraa kielijärjestystä kohdassa **Järjestelmäasetukset › Yleiset �
 | Uusi tiedosto, tallenna, tallenna nimellä | ⌘N, ⌘S, ⇧⌘S |
 | Uusi välilehti, sulje välilehti, seuraava ja edellinen välilehti | ⌘T, ⌘W, ⇧⌘] ja ⇧⌘[ |
 | Avaa nopeasti, etsi projektista | ⌘P, ⇧⌘F |
-| Tiedostot, Haku, Agentit, Git, Testit, Virheenjäljitys, CI | ⌘1–⌘7 |
+| Tiedostot, Haku, Agentit, Git, Testit, Virheenjäljitys, CI, Kontit | ⌘1–⌘8 |
 | Näytä tai kätke sivupalkki, seuraava paneeli | ⌃⌘S, ⌥⌘\` |
 | Taakse- ja eteenpäin muokattujen kohtien läpi | ⌃- ja ⌃⇧- |
 | Kommentoinnin vaihtaminen, siirry riville | ⌘/, ⌃G |

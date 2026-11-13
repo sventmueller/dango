@@ -77,6 +77,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 - [Brskalnik](#brskalnik)
 - [Git](#git)
 - [CI](#ci)
+- [Vsebniki](#vsebniki)
 - [Markdown](#markdown)
 - [Narekovanje](#narekovanje)
 - [Zaupanje](#zaupanje)
@@ -94,7 +95,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 
 - **Vsi agenti v eni časovnici.** Claude prek lastnega ukaza `claude`, Codex, Antigravity in OpenCode prek Agent Client Protocol, drugi iz registra ACP in agent, vgrajen v aplikacijo, za Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama in LM Studio. Odgovori, klici orodij, zahteve za dovoljenje, načrti, opravki, podagenti in opravila v ozadju so videti enako, ne glede na to, kateri agent teče.
 - **Pregled in previjanje nazaj.** Pred vsakim pozivom Dango shrani kontrolno točko. Kar je agent spremenil, lahko pregledate in previjete nazaj po posameznih sporočilih, nit pa lahko dela v lastnem worktreeju Git in svoje delo preda z združitvijo ali cherry-pickom.
-- **Eno okno na mapo.** Datoteke, terminali, strani brskalnika, niti AI, diffi in predogledi so zavihki macOS tega okna. V stranski vrstici so Datoteke, Iskanje, Agenti, Git, Odpravljanje napak in CI.
+- **Eno okno na mapo.** Datoteke, terminali, strani brskalnika, niti AI, diffi in predogledi so zavihki macOS tega okna. V stranski vrstici so Datoteke, Iskanje, Agenti, Git, Testi, Odpravljanje napak, CI in Vsebniki.
 - **Pravi urejevalnik kode.** Barvanje sintakse, več kazalk, zlaganje, `.editorconfig`, jezikovni strežniki za 17 jezikov z dokončanjem, pojdi na definicijo, sklici, preimenovanjem, hitrimi popravki in hierarhijami ter napovedovanje med tipkanjem iz GitHub Copilot ali lokalnega modela.
 - **Vgrajeni razhroščevalnik, Git in CI.** Prekinitvene točke in izvajanje po korakih za Rust, C, C++, Swift, Go, JavaScript, TypeScript in Python; priprava posameznih odsekov za commit, veje, stashi, konflikti in graf commitov; zagoni, jobi in dnevniki iz GitHub Actions in GitLab CI.
 - **Previden z vašimi mapami.** Mapa, ki ji niste zaupali, ne zažene ničesar: nobenih procesov Git, jezikovnih strežnikov, hookov ali agentov. Uničujoči ukazi Git nikoli niso dovoljeni za vedno, commiti pa se preverijo glede skrivnosti.
@@ -122,7 +123,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 ## Prvi koraki
 
 1. **Odprite mapo** z ⌘O ali `dango <folder>`. Prvič vas Dango vpraša, ali ji zaupate (glejte [Zaupanje](#zaupanje)).
-2. **Stranska vrstica** preklaplja med razdelki Datoteke (⌘1), Iskanje (⌘2), Agenti (⌘3), Git (⌘4), Odpravljanje napak (⌘5) in CI (⌘6); z desnim klikom skrijete tiste, ki jih ne uporabljate, ⌃⌘S pa stransko vrstico zloži.
+2. **Stranska vrstica** preklaplja med razdelki Datoteke (⌘1), Iskanje (⌘2), Agenti (⌘3), Git (⌘4), Testi (⌘5), Odpravljanje napak (⌘6), CI (⌘7) in Vsebniki (⌘8); z desnim klikom skrijete tiste, ki jih ne uporabljate, ⌃⌘S pa stransko vrstico zloži.
 3. **Vsak dokument je zavihek** okna mape, lastni zavihki macOS. »+« na koncu vrstice zavihkov in ⌘T ponujata novo datoteko, terminal, brskalnik in vsakega nameščenega agenta, tudi v lastnem worktreeju Git; če »+« zadržite, se isto prikaže kot meni.
 4. **Hitro odpri** z ⌘P najde datoteke, z `#` pa simbole projekta; ⇧⌘F išče in zamenjuje po projektu.
 5. **Pogovarjajte se z agentom** v zavihku AI. ⌘Esc premakne fokus tipkovnice v njegovo polje za sporočilo in nazaj.
@@ -218,6 +219,10 @@ GitHub Actions in GitLab CI, tudi GitHub Enterprise Server in samostojno gostova
 
 Žeton pride iz verige ključev, iz `gh` ali `glab`, iz okolja prijavne lupine ali pa je tisti, ki ga vnesete v **Nastavitve › CI**.
 
+## Vsebniki
+
+Podokno Vsebniki prikazuje Dockerjeve projekte Compose z njihovimi storitvami, posamezne vsebnike, slike in nosilce ter sledi Dockerjevim dogodkom, ko se zgodijo. Datoteka Compose v mapi se prikaže kot projekt, še preden obstaja kateri od njenih vsebnikov. Vsebnike lahko zaženete, ustavite in znova zaženete; njihovi dnevniki in lupina se odprejo v zavihkih terminala, objavljena vrata pa v zavihku brskalnika. Brisanje vsebnika, slike ali nosilca in čiščenje neuporabljenih podatkov najprej zahtevata potrditev. Ukazi up, down in pull iz Compose se izvajajo samo v zaupanja vrednih mapah, ker Compose zgradi in zažene, kar opisuje projekt. Meni podokna izbere kontekst Docker za okno, ne da bi spremenil tistega, ki ga uporabljajo vaše lupine; isti ukazi so v meniju Vsebniki. Podokno potrebuje ukazno vrstico `docker`, Docker 24.0.6 ali novejši.
+
 ## Markdown
 
 - **Predogled.** Datoteka Markdown se odpre s predogledom ob strani; **Prikaz › Prikaži/skrij predogled ob strani** (⇧⌘V) ga zapre in odpre, **Nastavitve › Splošno** pa izklopi samodejni predogled. Predogled izriše formule, diagrame Mermaid, Graphviz in PlantUML ter slike iz mape; slike s spleta se naložijo le v zaupanja vredni mapi ali ko jih zahtevate v predogledu.
@@ -279,7 +284,7 @@ Dango sledi vrstnemu redu jezikov v **Nastavitve sistema › Splošno › Jezik 
 | Nova datoteka, shrani, shrani kot | ⌘N, ⌘S, ⇧⌘S |
 | Nov zavihek, zapri zavihek, naslednji in prejšnji zavihek | ⌘T, ⌘W, ⇧⌘] in ⇧⌘[ |
 | Hitro odpri, išči po projektu | ⌘P, ⇧⌘F |
-| Datoteke, Iskanje, Agenti, Git, Testi, Odpravljanje napak, CI | ⌘1 do ⌘7 |
+| Datoteke, Iskanje, Agenti, Git, Testi, Odpravljanje napak, CI, Vsebniki | ⌘1 do ⌘8 |
 | Prikaži ali skrij stransko vrstico, naslednje podokno | ⌃⌘S, ⌥⌘\` |
 | Nazaj in naprej po urejanih mestih | ⌃- in ⌃⇧- |
 | Preklopi komentar, pojdi na vrstico | ⌘/, ⌃G |

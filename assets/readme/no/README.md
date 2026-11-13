@@ -77,6 +77,7 @@ Dango samler koden, agentene som endrer den, og alt rundt dem i ett vindu per ma
 - [Nettleser](#nettleser)
 - [Git](#git)
 - [CI](#ci)
+- [Containere](#containere)
 - [Markdown](#markdown)
 - [Diktering](#diktering)
 - [Tillit](#tillit)
@@ -94,7 +95,7 @@ Dango samler koden, agentene som endrer den, og alt rundt dem i ett vindu per ma
 
 - **Alle agenter i én tidslinje.** Claude via sin egen kommando `claude`, Codex, Antigravity og OpenCode via Agent Client Protocol, flere fra ACP-registeret og en agent bygd inn i appen for Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama og LM Studio. Svar, verktøykall, forespørsler om tillatelse, planer, gjøremål, underagenter og bakgrunnsoppgaver ser like ut uansett hvilken agent som kjører.
 - **Gå gjennom og spol tilbake.** Før hver ledetekst lagrer Dango et sjekkpunkt. Det en agent har endret, kan gås gjennom og spoles tilbake per melding, og en tråd kan arbeide i sitt eget Git-worktree og levere arbeidet sitt med sammenslåing eller cherry-pick.
-- **Ett vindu per mappe.** Filer, terminaler, nettsider, KI-tråder, differ og forhåndsvisninger er macOS-faner i det vinduet. Sidepanelet inneholder Filer, Søk, Agenter, Git, Feilsøk og CI.
+- **Ett vindu per mappe.** Filer, terminaler, nettsider, KI-tråder, differ og forhåndsvisninger er macOS-faner i det vinduet. Sidepanelet inneholder Filer, Søk, Agenter, Git, Tester, Feilsøk, CI og Containere.
 - **En ekte kodeeditor.** Syntaksfarger, flere innsettingspunkter, bretting, `.editorconfig`, språktjenere for 17 språk med fullføring, gå til definisjon, referanser, endre navn, hurtigrettinger og hierarkier, og forutsigelser mens du skriver fra GitHub Copilot eller en lokal modell.
 - **Debugger, Git og CI innebygd.** Stoppunkter og trinnvis kjøring for Rust, C, C++, Swift, Go, JavaScript, TypeScript og Python; stage enkeltblokker, brancher, stasher, konflikter og en commitgraf; kjøringer, jobber og logger fra GitHub Actions og GitLab CI.
 - **Forsiktig med mappene dine.** En mappe du ikke stoler på, starter ingenting: ingen Git-prosesser, språktjenere, hooks eller agenter. Destruktive Git-kommandoer tillates aldri for godt, og commits sjekkes for hemmeligheter.
@@ -122,7 +123,7 @@ Dango samler koden, agentene som endrer den, og alt rundt dem i ett vindu per ma
 ## Kom i gang
 
 1. **Åpne en mappe** med ⌘O eller `dango <folder>`. Første gang spør Dango om du stoler på den (se [Tillit](#tillit)).
-2. **Sidepanelet** veksler mellom Filer (⌘1), Søk (⌘2), Agenter (⌘3), Git (⌘4), Feilsøk (⌘5) og CI (⌘6); et høyreklikk skjuler dem du ikke bruker, og ⌃⌘S fjerner sidepanelet.
+2. **Sidepanelet** veksler mellom Filer (⌘1), Søk (⌘2), Agenter (⌘3), Git (⌘4), Tester (⌘5), Feilsøk (⌘6), CI (⌘7) og Containere (⌘8); et høyreklikk skjuler dem du ikke bruker, og ⌃⌘S fjerner sidepanelet.
 3. **Hvert dokument er en fane** i mappens vindu, macOS’ egne faner. «+» på slutten av fanelinjen og ⌘T tilbyr en ny fil, en terminal, nettleseren og hver installerte agent, også i et eget Git-worktree; holder du inne «+», vises det samme som en meny.
 4. **Åpne raskt** med ⌘P finner filer, og med `#` prosjektets symboler; ⇧⌘F søker og erstatter i prosjektet.
 5. **Snakk med en agent** i en KI-fane. ⌘Esc flytter tastaturfokuset til meldingsfeltet og tilbake.
@@ -218,6 +219,10 @@ GitHub Actions og GitLab CI, også GitHub Enterprise Server og selvdriftet GitLa
 
 Tokenet kommer fra nøkkelringen, `gh` eller `glab`, miljøet til påloggingsskallet, eller er et du skriver inn i **Innstillinger › CI**.
 
+## Containere
+
+Containere-panelet viser Dockers Compose-prosjekter med tjenestene sine, enkeltstående containere, images og volumer, og følger Dockers hendelser etter hvert som de skjer. En Compose-fil i mappen vises som et prosjekt allerede før noen av containerne finnes. Containere startes, stoppes og startes på nytt; loggene deres og et shell åpnes i terminalfaner, og en publisert port åpnes i nettleserfanen. Sletting av en container, et image eller et volum og opprydding i ubrukte data spør først. Composes up, down og pull kjører bare i mapper du stoler på, siden Compose bygger og kjører det prosjektet beskriver. Panelets meny velger Docker-konteksten for vinduet uten å endre den skallene dine bruker; de samme kommandoene finnes i Containere-menyen. Panelet trenger kommandolinjen `docker`, Docker 24.0.6 eller nyere.
+
 ## Markdown
 
 - **Forhåndsvisning.** En Markdown-fil åpnes med forhåndsvisningen ved siden av; **Vis › Vis/skjul forhåndsvisning ved siden av** (⇧⌘V) lukker og åpner den, og **Innstillinger › Generelt** slår av den automatiske forhåndsvisningen. Forhåndsvisningen tegner formler, diagrammer i Mermaid, Graphviz og PlantUML og bildene i mappen; bilder fra nettet lastes bare i en klarert mappe eller når du ber om dem i forhåndsvisningen.
@@ -279,7 +284,7 @@ Dango følger språkrekkefølgen i **Systeminnstillinger › Generelt › Språk
 | Ny fil, lagre, lagre som | ⌘N, ⌘S, ⇧⌘S |
 | Ny fane, lukk fane, neste og forrige fane | ⌘T, ⌘W, ⇧⌘] og ⇧⌘[ |
 | Åpne raskt, søk i prosjektet | ⌘P, ⇧⌘F |
-| Filer, Søk, Agenter, Git, Tester, Feilsøk, CI | ⌘1 til ⌘7 |
+| Filer, Søk, Agenter, Git, Tester, Feilsøk, CI, Containere | ⌘1 til ⌘8 |
 | Vis eller skjul sidepanelet, neste panel | ⌃⌘S, ⌥⌘\` |
 | Tilbake og fram gjennom redigerte steder | ⌃- og ⌃⇧- |
 | Slå kommentar av/på, gå til linje | ⌘/, ⌃G |

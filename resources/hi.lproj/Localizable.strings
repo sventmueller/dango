@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "पिछले टेस्ट फिर से चलाएँ";
 "Test ausführen" = "टेस्ट चलाएँ";
 "Test debuggen" = "टेस्ट डीबग करें";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "रिफ़्रेश करें";
+"Aufräumen" = "साफ़ करें";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose : रोकें (down)";
+"Compose: Images holen (pull)" = "Compose : इमेज लाएँ (pull)";
+"Compose: Starten (up)" = "Compose : शुरू करें (up)";
+"Container" = "कंटेनर";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "इमेज इस Docker से हटा दी जाएगी; इसे फिर से लाया या बिल्ड किया जा सकता है।";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "वॉल्यूम और उसका सारा डेटा डिलीट हो जाएगा। इसे पहले जैसा नहीं किया जा सकता।";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "कंटेनर हटा दिया जाएगा; उसने वॉल्यूम के बाहर जो कुछ सहेजा है, वह खो जाएगा।";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker इंस्टॉल नहीं है। Docker Desktop या docker कमांड लाइन इंस्टॉल करें, फिर यह पैनल कंटेनर, इमेज और वॉल्यूम दिखाएगा।";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker नहीं चल रहा है। Docker शुरू करें; पैनल अपने आप फिर से कोशिश करेगा।";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} बहुत पुराना है; पैनल को 24.0.6 या नया संस्करण चाहिए।";
+"Docker-Befehl fehlgeschlagen" = "Docker कमांड विफल रहा";
+"Docker-Kontext dieses Fensters" = "इस विंडो का Docker कॉन्टेक्स्ट";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "रुके हुए कंटेनर, अप्रयुक्त नेटवर्क, बिना नाम की इमेज और बिल्ड कैश डिलीट किए जाएँगे। वॉल्यूम बने रहेंगे।";
+"Docker-Image" = "Docker इमेज";
+"Images" = "इमेज";
+"Logs anzeigen" = "लॉग दिखाएँ";
+"Logs: {}" = "लॉग : {}";
+"Port im Browser öffnen" = "पोर्ट ब्राउज़र में खोलें";
+"Shell öffnen" = "शेल खोलें";
+"Shell: {}" = "शेल : {}";
+"Teilweise" = "आंशिक रूप से चल रहा है";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "“{}” में अप्रयुक्त Docker डेटा साफ़ करें?";
+"Ungenutztes aufräumen …" = "अप्रयुक्त साफ़ करें…";
+"Docker-Volume" = "Docker वॉल्यूम";
+"Volumes" = "वॉल्यूम";
+"„{}“ löschen?" = "“{}” डिलीट करें?";

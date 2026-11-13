@@ -1613,3 +1613,34 @@
 "Letzten Testlauf wiederholen" = "Uruchom ponownie ostatnie testy";
 "Test ausführen" = "Uruchom test";
 "Test debuggen" = "Debuguj test";
+
+/* Containers panel (B33) */
+"Aktualisieren" = "Odśwież";
+"Aufräumen" = "Wyczyść";
+"Compose" = "Compose";
+"Compose: Beenden (down)" = "Compose: Zatrzymaj (down)";
+"Compose: Images holen (pull)" = "Compose: Pobierz obrazy (pull)";
+"Compose: Starten (up)" = "Compose: Uruchom (up)";
+"Container" = "Kontenery";
+"Das Image wird von diesem Docker entfernt; es lässt sich wieder holen oder bauen." = "Obraz zostanie usunięty z tego Dockera; można go ponownie pobrać lub zbudować.";
+"Das Volume und alle Daten darin werden gelöscht. Das lässt sich nicht rückgängig machen." = "Wolumin i wszystkie zawarte w nim dane zostaną usunięte. Tej operacji nie można cofnąć.";
+"Der Container wird entfernt; was er außerhalb von Volumes gespeichert hat, geht verloren." = "Kontener zostanie usunięty; to, co zapisał poza woluminami, zostanie utracone.";
+"Docker ist nicht installiert. Installiere Docker Desktop oder die docker-Befehlszeile, dann zeigt dieses Panel Container, Images und Volumes." = "Docker nie jest zainstalowany. Zainstaluj Docker Desktop lub wiersz poleceń docker, a ten panel pokaże kontenery, obrazy i woluminy.";
+"Docker läuft nicht. Starte Docker; das Panel versucht es von selbst wieder." = "Docker nie działa. Uruchom Dockera; panel sam spróbuje ponownie.";
+"Docker {} ist zu alt; das Panel braucht 24.0.6 oder neuer." = "Docker {} jest za stary; panel wymaga wersji 24.0.6 lub nowszej.";
+"Docker-Befehl fehlgeschlagen" = "Polecenie Dockera nie powiodło się";
+"Docker-Kontext dieses Fensters" = "Kontekst Dockera tego okna";
+"Gelöscht werden gestoppte Container, ungenutzte Netzwerke, Images ohne Namen und der Build-Cache. Volumes bleiben." = "Usunięte zostaną zatrzymane kontenery, nieużywane sieci, obrazy bez nazwy i pamięć podręczna budowania. Woluminy pozostaną.";
+"Docker-Image" = "Obraz Dockera";
+"Images" = "Obrazy";
+"Logs anzeigen" = "Pokaż logi";
+"Logs: {}" = "Logi: {}";
+"Port im Browser öffnen" = "Otwórz port w przeglądarce";
+"Shell öffnen" = "Otwórz powłokę";
+"Shell: {}" = "Powłoka: {}";
+"Teilweise" = "Częściowo działa";
+"Ungenutzte Docker-Daten in „{}“ aufräumen?" = "Wyczyścić nieużywane dane Dockera w „{}”?";
+"Ungenutztes aufräumen …" = "Wyczyść nieużywane…";
+"Docker-Volume" = "Wolumin Dockera";
+"Volumes" = "Woluminy";
+"„{}“ löschen?" = "Usunąć „{}”?";

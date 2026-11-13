@@ -77,6 +77,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 - [Pelayar](#pelayar)
 - [Git](#git)
 - [CI](#ci)
+- [Container](#container)
 - [Markdown](#markdown)
 - [Perencanaan](#perencanaan)
 - [Kepercayaan](#kepercayaan)
@@ -94,7 +95,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 
 - **Setiap ejen dalam satu garis masa.** Claude melalui perintah `claude` miliknya sendiri, Codex, Antigravity dan OpenCode melalui Agent Client Protocol, lebih banyak lagi daripada registry ACP, dan ejen yang terbina dalam apl untuk Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama dan LM Studio. Jawapan, panggilan alat, permintaan keizinan, pelan, senarai tugasan, subejen dan tugas latar belakang kelihatan sama, tidak kira ejen mana yang berjalan.
 - **Semak dan putar balik.** Sebelum setiap prompt, Dango menyimpan titik semak. Apa yang diubah oleh ejen boleh disemak dan diputar balik bagi setiap mesej, dan thread boleh bekerja dalam worktree Git tersendiri dan menyerahkan kerjanya melalui gabung atau cherry-pick.
-- **Satu tetingkap bagi setiap folder.** Fail, terminal, halaman pelayar, thread AI, paparan perbezaan dan pratonton ialah tab macOS dalam tetingkap itu. Bar sisi memuatkan Fail, Carian, Ejen, Git, Nyahpepijat dan CI.
+- **Satu tetingkap bagi setiap folder.** Fail, terminal, halaman pelayar, thread AI, paparan perbezaan dan pratonton ialah tab macOS dalam tetingkap itu. Bar sisi memuatkan Fail, Carian, Ejen, Git, Ujian, Nyahpepijat, CI dan Container.
 - **Editor kod sebenar.** Warna sintaks, beberapa kursor, lipatan, `.editorconfig`, pelayan bahasa untuk 17 bahasa dengan pelengkapan, pergi ke definisi, rujukan, nama semula, pembetulan pantas dan hierarki, serta ramalan semasa menaip daripada GitHub Copilot atau model setempat.
 - **Penyahpepijat, Git dan CI terbina dalam.** Titik henti dan langkah demi langkah untuk Rust, C, C++, Swift, Go, JavaScript, TypeScript dan Python; stage hunk tunggal, branch, stash, konflik dan graf commit; larian, job dan log daripada GitHub Actions dan GitLab CI.
 - **Berhati-hati dengan folder anda.** Folder yang belum anda percayai tidak memulakan apa-apa: tiada proses Git, pelayan bahasa, hook atau ejen. Perintah Git yang merosakkan tidak pernah dibenarkan secara kekal, dan commit disemak untuk rahsia.
@@ -122,7 +123,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 ## Bermula
 
 1. **Buka folder** dengan ⌘O atau `dango <folder>`. Kali pertama, Dango bertanya sama ada anda mempercayainya (lihat [Kepercayaan](#kepercayaan)).
-2. **Bar sisi** bertukar antara Fail (⌘1), Carian (⌘2), Ejen (⌘3), Git (⌘4), Nyahpepijat (⌘5) dan CI (⌘6); klik kanan menyembunyikan yang tidak anda gunakan, dan ⌃⌘S melipat bar sisi.
+2. **Bar sisi** bertukar antara Fail (⌘1), Carian (⌘2), Ejen (⌘3), Git (⌘4), Ujian (⌘5), Nyahpepijat (⌘6), CI (⌘7) dan Container (⌘8); klik kanan menyembunyikan yang tidak anda gunakan, dan ⌃⌘S melipat bar sisi.
 3. **Setiap dokumen ialah tab** dalam tetingkap folder, iaitu tab macOS sendiri. “+” di hujung bar tab dan ⌘T menawarkan fail baharu, terminal, pelayar dan setiap ejen yang dipasang, juga dalam worktree Git tersendiri; menahan “+” menunjukkan perkara yang sama sebagai menu.
 4. **Buka Dengan Pantas** dengan ⌘P mencari fail, dan dengan `#` mencari simbol projek; ⇧⌘F mencari dan menggantikan dalam projek.
 5. **Bercakap dengan ejen** dalam tab AI. ⌘Esc mengalihkan fokus papan kekunci ke medan mesejnya dan kembali.
@@ -218,6 +219,10 @@ GitHub Actions dan GitLab CI, juga GitHub Enterprise Server dan GitLab yang diur
 
 Token diambil daripada Rantai Kunci, `gh` atau `glab`, persekitaran shell log masuk, atau token yang anda masukkan dalam **Seting › CI**.
 
+## Container
+
+Panel Container menunjukkan projek Compose Docker beserta perkhidmatannya, container tunggal, imej dan volum, serta mengikuti peristiwa Docker sebaik sahaja ia berlaku. Fail Compose dalam folder muncul sebagai projek walaupun sebelum mana-mana containernya wujud. Container boleh dimulakan, dihentikan dan dimulakan semula; lognya dan sebuah shell dibuka dalam tab terminal, dan port yang diterbitkan dibuka dalam tab pelayar. Memadam container, imej atau volum, dan membersihkan data yang tidak digunakan, akan bertanya dahulu. Perintah up, down dan pull Compose hanya berjalan dalam folder yang dipercayai, kerana Compose membina dan menjalankan apa yang diterangkan oleh projek. Menu panel memilih konteks Docker untuk tetingkap tanpa mengubah konteks yang digunakan oleh shell anda; perintah yang sama ada dalam menu Container. Panel ini memerlukan baris perintah `docker`, Docker 24.0.6 atau lebih baharu.
+
 ## Markdown
 
 - **Pratonton.** Fail Markdown dibuka dengan pratontonnya di sebelah; **Paparan › Tunjukkan/Sembunyikan Pratonton di Sebelah** (⇧⌘V) menutup dan membukanya, dan **Seting › Umum** mematikan pratonton automatik. Pratonton melukis formula, rajah Mermaid, Graphviz dan PlantUML serta gambar dalam folder; gambar dari web hanya dimuatkan dalam folder yang dipercayai atau selepas anda memintanya dalam pratonton.
@@ -279,7 +284,7 @@ Dango mengikut susunan bahasa dalam **Seting Sistem › Umum › Bahasa & Rantau
 | Fail baharu, simpan, simpan sebagai | ⌘N, ⌘S, ⇧⌘S |
 | Tab baharu, tutup tab, tab seterusnya dan sebelumnya | ⌘T, ⌘W, ⇧⌘] dan ⇧⌘[ |
 | Buka Dengan Pantas, cari dalam projek | ⌘P, ⇧⌘F |
-| Fail, Carian, Ejen, Git, Ujian, Nyahpepijat, CI | ⌘1 hingga ⌘7 |
+| Fail, Carian, Ejen, Git, Ujian, Nyahpepijat, CI, Container | ⌘1 hingga ⌘8 |
 | Tunjukkan atau sembunyikan bar sisi, panel seterusnya | ⌃⌘S, ⌥⌘\` |
 | Undur dan maju melalui tempat yang disunting | ⌃- dan ⌃⇧- |
 | Togol ulasan, pergi ke baris | ⌘/, ⌃G |

@@ -77,6 +77,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 - [Böngésző](#böngésző)
 - [Git](#git)
 - [CI](#ci)
+- [Konténerek](#konténerek)
 - [Markdown](#markdown)
 - [Diktálás](#diktálás)
 - [Bizalom](#bizalom)
@@ -94,7 +95,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 
 - **Minden ügynök egy idővonalon.** A Claude a saját `claude` parancsán keresztül, a Codex, az Antigravity és az OpenCode az Agent Client Protocolon keresztül, további ügynökök az ACP-jegyzékből, valamint egy az appba épített ügynök az Anthropichoz, az OpenAI-hoz, a Google Geminihez, az OpenRouterhez, az Ollamához és az LM Studióhoz. A válaszok, eszközhívások, engedélykérések, tervek, teendők, alügynökök és háttérfeladatok ugyanúgy néznek ki, bármelyik ügynök fut is.
 - **Átnézés és visszatekerés.** A Dango minden prompt előtt visszaállítási pontot ment. Amit egy ügynök módosított, az üzenetenként átnézhető és visszatekerhető, egy szál pedig dolgozhat saját Git-worktree-ben, és összefésüléssel vagy cherry-pickkel adhatja át a munkáját.
-- **Mappánként egy ablak.** A fájlok, terminálok, böngészőoldalak, AI-szálak, különbségnézetek és előnézetek ennek az ablaknak a macOS-lapjai. Az oldalsávon a Fájlok, Keresés, Ügynökök, Git, Hibakeresés és CI található.
+- **Mappánként egy ablak.** A fájlok, terminálok, böngészőoldalak, AI-szálak, különbségnézetek és előnézetek ennek az ablaknak a macOS-lapjai. Az oldalsávon a Fájlok, Keresés, Ügynökök, Git, Tesztek, Hibakeresés, CI és Konténerek található.
 - **Valódi kódszerkesztő.** Szintaxisszínezés, több kurzor, összecsukás, `.editorconfig`, nyelvi szerverek 17 nyelvhez kiegészítéssel, ugrással a definícióra, hivatkozásokkal, átnevezéssel, gyorsjavításokkal és hierarchiákkal, valamint szerkesztési előrejelzések a GitHub Copilottól vagy egy helyi modelltől.
 - **Beépített hibakereső, Git és CI.** Töréspontok és léptetés Rust, C, C++, Swift, Go, JavaScript, TypeScript és Python nyelvhez; egyes blokkok előkészítése, ágak, stashek, ütközések és commitgráf; futások, jobok és naplók a GitHub Actionsből és a GitLab CI-ból.
 - **Óvatos a mappáival.** Egy mappa, amelyben nem bízott meg, semmit sem indít: sem Git-folyamatokat, sem nyelvi szervereket, sem hookokat, sem ügynököket. A romboló Git-parancsok soha nem kapnak tartós engedélyt, a commitokat pedig titkos adatok után kutatva ellenőrzi az app.
@@ -122,7 +123,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 ## Első lépések
 
 1. **Nyisson meg egy mappát** a ⌘O billentyűkkel vagy a `dango <folder>` paranccsal. Első alkalommal a Dango megkérdezi, megbízik-e benne (lásd: [Bizalom](#bizalom)).
-2. **Az oldalsáv** a Fájlok (⌘1), Keresés (⌘2), Ügynökök (⌘3), Git (⌘4), Hibakeresés (⌘5) és CI (⌘6) nézetek között vált; jobb kattintással elrejtheti a nem használt nézeteket, a ⌃⌘S pedig összecsukja az oldalsávot.
+2. **Az oldalsáv** a Fájlok (⌘1), Keresés (⌘2), Ügynökök (⌘3), Git (⌘4), Tesztek (⌘5), Hibakeresés (⌘6), CI (⌘7) és Konténerek (⌘8) nézetek között vált; jobb kattintással elrejtheti a nem használt nézeteket, a ⌃⌘S pedig összecsukja az oldalsávot.
 3. **Minden dokumentum egy lap** a mappa ablakában, a macOS saját lapjai közül. A lapsor végén lévő „+” és a ⌘T új fájlt, terminált, a böngészőt és minden telepített ügynököt felkínál, saját Git-worktree-ben is; a „+” lenyomva tartása ugyanezt menüként jeleníti meg.
 4. **A Gyors megnyitás** a ⌘P billentyűkkel fájlokat talál, `#` jellel pedig a projekt szimbólumait; a ⇧⌘F keres és cserél a projektben.
 5. **Beszéljen egy ügynökkel** egy AI-lapon. A ⌘Esc a billentyűzetfókuszt az üzenetmezőjébe viszi, majd vissza.
@@ -218,6 +219,10 @@ GitHub Actions és GitLab CI, GitHub Enterprise Server és saját üzemeltetés�
 
 A token a kulcskarikából, a `gh` vagy a `glab` parancsból, a bejelentkezési shell környezetéből származik, vagy az, amelyet a **Beállítások › CI** lapon megad.
 
+## Konténerek
+
+A Konténerek panel megjeleníti a Docker Compose-projektjeit a szolgáltatásaikkal, az önálló konténereket, az image-eket és a köteteket, és követi a Docker eseményeit, ahogy történnek. A mappa Compose-fájlja projektként jelenik meg már azelőtt, hogy bármelyik konténere létezne. A konténerek indíthatók, leállíthatók és újraindíthatók; a naplóik és egy shell terminállapokon nyílnak meg, a közzétett port pedig a böngészőlapon. Egy konténer, image vagy kötet törlése, illetve a nem használt adatok kitakarítása előbb rákérdez. A Compose up, down és pull parancsa csak megbízható mappákban fut, mivel a Compose azt építi fel és futtatja, amit a projekt leír. A panel menüje kiválasztja az ablak Docker-kontextusát anélkül, hogy megváltoztatná a shelljei által használtat; ugyanezek a parancsok a Konténerek menüben is megtalálhatók. A panelhez a `docker` parancssor és Docker 24.0.6 vagy újabb szükséges.
+
 ## Markdown
 
 - **Előnézet.** A Markdown-fájl mellette megjelenő előnézettel nyílik meg; a **Nézet › Előnézet megjelenítése/elrejtése mellette** (⇧⌘V) bezárja és megnyitja, a **Beállítások › Általános** pedig kikapcsolja az automatikus előnézetet. Az előnézet megjeleníti a képleteket, a Mermaid-, Graphviz- és PlantUML-diagramokat és a mappa képeit; a webes képek csak megbízható mappában töltődnek be, vagy ha az előnézetben kéri őket.
@@ -279,7 +284,7 @@ A Dango a **Rendszerbeállítások › Általános › Nyelv és régió** nyelv
 | Új fájl, mentés, mentés másként | ⌘N, ⌘S, ⇧⌘S |
 | Új lap, lap bezárása, következő és előző lap | ⌘T, ⌘W, ⇧⌘] és ⇧⌘[ |
 | Gyors megnyitás, keresés a projektben | ⌘P, ⇧⌘F |
-| Fájlok, Keresés, Ügynökök, Git, Tesztek, Hibakeresés, CI | ⌘1–⌘7 |
+| Fájlok, Keresés, Ügynökök, Git, Tesztek, Hibakeresés, CI, Konténerek | ⌘1–⌘8 |
 | Oldalsáv megjelenítése vagy elrejtése, következő panel | ⌃⌘S, ⌥⌘\` |
 | Vissza és előre a szerkesztett helyek között | ⌃- és ⌃⇧- |
 | Megjegyzés be/ki, ugrás sorra | ⌘/, ⌃G |

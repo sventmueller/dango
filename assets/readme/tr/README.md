@@ -77,6 +77,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 - [Tarayıcı](#tarayıcı)
 - [Git](#git)
 - [CI](#ci)
+- [Container’lar](#containerlar)
 - [Markdown](#markdown)
 - [Dikte](#dikte)
 - [Güven](#güven)
@@ -94,7 +95,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 
 - **Tüm ajanlar tek bir zaman çizelgesinde.** Kendi `claude` komutu üzerinden Claude, Agent Client Protocol üzerinden Codex, Antigravity ve OpenCode, ACP kayıt defterinden daha fazlası ve Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama ve LM Studio için uygulamaya yerleşik bir ajan. Yanıtlar, araç çağrıları, izin istekleri, planlar, yapılacaklar, alt ajanlar ve arka plan görevleri hangi ajan çalışırsa çalışsın aynı görünür.
 - **Gözden geçirin ve geri sarın.** Dango her istemden önce bir kontrol noktası tutar. Bir ajanın değiştirdikleri ileti bazında gözden geçirilip geri sarılabilir; bir sohbet kendine ait bir Git worktree’sinde çalışıp işini birleştirme ya da cherry-pick ile teslim edebilir.
-- **Her klasör için bir pencere.** Dosyalar, terminaller, tarayıcı sayfaları, AI sohbetleri, diff’ler ve önizlemeler o pencerenin macOS sekmeleridir. Kenar çubuğunda Dosyalar, Arama, Ajanlar, Git, Hata Ayıkla ve CI bulunur.
+- **Her klasör için bir pencere.** Dosyalar, terminaller, tarayıcı sayfaları, AI sohbetleri, diff’ler ve önizlemeler o pencerenin macOS sekmeleridir. Kenar çubuğunda Dosyalar, Arama, Ajanlar, Git, Testler, Hata Ayıkla, CI ve Container’lar bulunur.
 - **Gerçek bir kod düzenleyici.** Sözdizimi renkleri, birden fazla imleç, katlama, `.editorconfig`, tamamlama, tanıma git, başvurular, yeniden adlandırma, hızlı düzeltmeler ve hiyerarşilerle 17 dil için dil sunucuları ve GitHub Copilot’tan ya da yerel bir modelden düzenleme tahminleri.
 - **Hata ayıklayıcı, Git ve CI yerleşik.** Rust, C, C++, Swift, Go, JavaScript, TypeScript ve Python için kesme noktaları ve adım adım ilerleme; tek tek parçaları hazırlama, dallar, stash’ler, çakışmalar ve bir commit grafiği; GitHub Actions ve GitLab CI’dan çalıştırmalar, işler ve günlükler.
 - **Klasörlerinize karşı özenli.** Güvenmediğiniz bir klasör hiçbir şey başlatmaz: Git işlemleri, dil sunucuları, hook’lar ya da ajanlar çalışmaz. Yıkıcı Git komutlarına hiçbir zaman kalıcı olarak izin verilmez ve commit’ler gizli bilgiler için denetlenir.
@@ -122,7 +123,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 ## Başlarken
 
 1. **Bir klasör açın:** ⌘O ile ya da `dango <folder>` ile. Dango ilk seferde o klasöre güvenip güvenmediğinizi sorar (bkz. [Güven](#güven)).
-2. **Kenar çubuğu** Dosyalar (⌘1), Arama (⌘2), Ajanlar (⌘3), Git (⌘4), Hata Ayıkla (⌘5) ve CI (⌘6) arasında geçiş yapar; sağ tıklama kullanmadıklarınızı gizler, ⌃⌘S de kenar çubuğunu kapatır.
+2. **Kenar çubuğu** Dosyalar (⌘1), Arama (⌘2), Ajanlar (⌘3), Git (⌘4), Testler (⌘5), Hata Ayıkla (⌘6), CI (⌘7) ve Container’lar (⌘8) arasında geçiş yapar; sağ tıklama kullanmadıklarınızı gizler, ⌃⌘S de kenar çubuğunu kapatır.
 3. **Her belge bir sekmedir;** klasörün penceresinde, macOS’in kendi sekmeleriyle. Sekme çubuğunun sonundaki “+” ve ⌘T yeni bir dosya, bir terminal, tarayıcı ve kurulu her ajanı sunar, kendine ait bir Git worktree’sinde de; “+” düğmesini basılı tutmak aynı seçenekleri menü olarak gösterir.
 4. **Hızlı Aç** ⌘P ile dosyaları, `#` ile de projenin sembollerini bulur; ⇧⌘F projede arar ve değiştirir.
 5. **Bir ajanla konuşun:** bir AI sekmesinde. ⌘Esc klavye odağını ajanın ileti alanına taşır ve geri getirir.
@@ -218,6 +219,10 @@ GitHub Actions ve GitLab CI, GitHub Enterprise Server ve kendi sunucunuzdaki Git
 
 Token, Anahtar Zinciri’nden, `gh` ya da `glab`’dan, giriş kabuğunun ortamından gelir ya da **Ayarlar › CI** içinde sizin girdiğiniz token’dır.
 
+## Container’lar
+
+Container’lar paneli Docker’ın Compose projelerini servisleriyle birlikte, tek başına container’ları, imajları ve volume’ları gösterir ve Docker’ın olaylarını gerçekleştikleri anda izler. Klasördeki bir Compose dosyası, container’larından hiçbiri henüz yokken bile proje olarak görünür. Container’lar başlatılır, durdurulur ve yeniden başlatılır; günlükleri ve bir kabuk terminal sekmelerinde, yayımlanan bir port ise tarayıcı sekmesinde açılır. Bir container’ı, imajı ya da volume’u silmek ve kullanılmayan verileri temizlemek önce onay ister. Compose, projenin tarif ettiğini derleyip çalıştırdığından Compose’un up, down ve pull komutları yalnızca güvenilen klasörlerde çalışır. Panelin menüsü, kabuklarınızın kullandığı bağlamı değiştirmeden pencere için Docker bağlamını seçer; aynı komutlar Container’lar menüsünde de bulunur. Panel için `docker` komut satırı ve Docker 24.0.6 veya daha yenisi gerekir.
+
 ## Markdown
 
 - **Önizleme.** Bir Markdown dosyası, önizlemesi yanında olacak şekilde açılır; **Görüntü › Önizlemeyi Yanda Göster/Gizle** (⇧⌘V) onu kapatır ve açar, **Ayarlar › Genel** de otomatik önizlemeyi kapatır. Önizleme formülleri, Mermaid, Graphviz ve PlantUML diyagramlarını ve klasördeki resimleri çizer; web’deki resimler yalnızca güvenilen bir klasörde ya da siz önizlemede istedikten sonra yüklenir.
@@ -279,7 +284,7 @@ Dango, **Sistem Ayarları › Genel › Dil ve Bölge** içindeki dil sırasın�
 | Yeni dosya, kaydet, farklı kaydet | ⌘N, ⌘S, ⇧⌘S |
 | Yeni sekme, sekmeyi kapat, sonraki ve önceki sekme | ⌘T, ⌘W, ⇧⌘] ve ⇧⌘[ |
 | Hızlı Aç, projede ara | ⌘P, ⇧⌘F |
-| Dosyalar, Arama, Ajanlar, Git, Testler, Hata Ayıkla, CI | ⌘1–⌘7 |
+| Dosyalar, Arama, Ajanlar, Git, Testler, Hata Ayıkla, CI, Container’lar | ⌘1–⌘8 |
 | Kenar çubuğunu göster ya da gizle, sonraki panel | ⌃⌘S, ⌥⌘\` |
 | Düzenlenen yerler arasında geri ve ileri | ⌃- ve ⌃⇧- |
 | Yorumu aç/kapat, satıra git | ⌘/, ⌃G |
