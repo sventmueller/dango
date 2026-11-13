@@ -313,14 +313,13 @@ mod tests {
 
     #[test]
     fn only_what_lies_with_the_document_goes_along() {
-        let dir = std::env::temp_dir().join(format!("ide-carry-{}", std::process::id()));
+        let dir = ide_core::testing::scratch("carry");
         let docs = dir.join("docs");
         std::fs::create_dir_all(&docs).unwrap();
         std::fs::write(docs.join("in.png"), b"x").unwrap();
         std::fs::write(dir.join("out.png"), b"x").unwrap();
         let inside = may_carry_along(&docs.join("in.png"), Some(&docs));
         let outside = may_carry_along(&dir.join("out.png"), Some(&docs));
-        let _ = std::fs::remove_dir_all(&dir);
         assert!(inside && !outside);
         assert!(!may_carry_along(Path::new("/etc/hosts"), None));
     }
@@ -373,7 +372,7 @@ mod tests {
 
     #[test]
     fn an_svg_goes_in_as_it_is_and_web_or_foreign_pictures_stay_out() {
-        let dir = std::env::temp_dir().join(format!("ide-embed-{}", std::process::id()));
+        let dir = ide_core::testing::scratch("embed");
         let docs = dir.join("docs");
         std::fs::create_dir_all(&docs).unwrap();
         let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"4\" height=\"4\"/>";
@@ -382,7 +381,6 @@ mod tests {
         let inside = embedded("kreis.svg", Some(&docs));
         let outside = embedded("../fremd.svg", Some(&docs));
         let missing = embedded("fehlt.svg", Some(&docs));
-        let _ = std::fs::remove_dir_all(&dir);
         assert_eq!(inside, Some(data_url("image/svg+xml", svg.as_bytes())));
         assert_eq!(outside, None, "outside the document's folder");
         assert_eq!(missing, None);

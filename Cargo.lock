@@ -1621,6 +1621,7 @@ dependencies = [
 name = "ide-docker"
 version = "0.0.0"
 dependencies = [
+ "ide-core",
  "serde",
  "serde_json",
 ]
@@ -1760,6 +1761,7 @@ dependencies = [
 name = "ide-test"
 version = "0.0.0"
 dependencies = [
+ "ide-core",
  "serde",
  "serde_json",
 ]
@@ -1882,6 +1884,7 @@ name = "ide-ui-export"
 version = "0.0.0"
 dependencies = [
  "block2",
+ "ide-core",
  "ide-ui-common",
  "image",
  "objc2",

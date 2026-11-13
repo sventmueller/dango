@@ -303,7 +303,6 @@ mod tests {
     #[test]
     fn a_background_agent_ends_where_its_end_came_during_a_turn_without_its_call() {
         let folder = scratch("async");
-        std::fs::create_dir_all(&folder).unwrap();
         let path = folder.join("s3.jsonl");
         let transcript = [
             r#"{"type":"assistant","uuid":"a1","message":{"id":"m1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_bg","name":"Agent","input":{"description":"review code","subagent_type":"general-purpose","prompt":"Review","run_in_background":true}}]}}"#,
@@ -328,7 +327,6 @@ mod tests {
     #[test]
     fn a_slash_command_comes_back_as_typed_with_its_output() {
         let folder = scratch("command");
-        std::fs::create_dir_all(&folder).unwrap();
         let path = folder.join("s2.jsonl");
         let transcript = [
             r#"{"type":"user","isMeta":true,"uuid":"c0","message":{"role":"user","content":"<local-command-caveat>The command below was run directly.</local-command-caveat>"}}"#,
@@ -356,7 +354,6 @@ mod tests {
                 "user: /model opus"
             ]
         );
-        let _ = std::fs::remove_dir_all(&folder);
     }
 
     /// A picture's type and bytes.
@@ -365,7 +362,6 @@ mod tests {
     #[test]
     fn a_pasted_picture_comes_back_with_its_message() {
         let folder = scratch("picture");
-        std::fs::create_dir_all(&folder).unwrap();
         let path = folder.join("s3.jsonl");
         let transcript = [
             r#"{"type":"user","uuid":"p1","message":{"role":"user","content":[{"type":"text","text":"Look"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"iVBORw=="}}]}}"#,
@@ -402,7 +398,6 @@ mod tests {
                 (String::new(), vec![("image/jpeg".to_string(), vec![0xff, 0xd8, 0xff])]),
             ]
         );
-        let _ = std::fs::remove_dir_all(&folder);
     }
 
     #[test]

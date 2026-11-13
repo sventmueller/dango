@@ -829,12 +829,10 @@ mod tests {
 
     #[test]
     fn pictures_attach_as_images_and_other_files_as_paths() {
-        let dir = std::env::temp_dir().join(format!("ide-attach-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("attach");
         let picture = dir.join("shot.png");
         std::fs::write(&picture, [0x89, b'P', b'N', b'G']).unwrap();
         assert!(matches!(file_attachment(&picture), Attachment::Image { .. }));
         assert!(matches!(file_attachment(&dir.join("main.rs")), Attachment::File { .. }));
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }

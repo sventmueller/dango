@@ -63,11 +63,8 @@ pub fn menu_item(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
 mod tests {
     use super::*;
 
-    fn folder(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-updates-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
+    fn folder(name: &str) -> ide_core::testing::Scratch {
+        ide_core::testing::scratch(&format!("updates-{name}"))
     }
 
     fn url(dir: &std::path::Path) -> Retained<NSURL> {

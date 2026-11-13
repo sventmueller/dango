@@ -142,11 +142,11 @@ pub fn answer_offer(settings: &mut Settings, lowspeak: &Choices, take: bool) -> 
 mod tests {
     use super::*;
 
-    fn scratch(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-dictation-choices-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir.join("settings.json")
+    /// A folder of its own and the settings file in it.
+    fn scratch(name: &str) -> (ide_core::testing::Scratch, std::path::PathBuf) {
+        let dir = ide_core::testing::scratch(&format!("dictation-choices-{name}"));
+        let path = dir.join("settings.json");
+        (dir, path)
     }
 
     fn lowspeaks() -> Choices {
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn nothing_stored_gives_lowspeaks_defaults_and_what_is_stored_comes_back() {
-        let path = scratch("roundtrip");
+        let (_dir, path) = scratch("roundtrip");
         let mut settings = Settings::load(path.clone());
         assert_eq!(in_settings(&settings), defaults());
         settings.set(&DICTATION, &Stored::from(&lowspeaks())).unwrap();
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn an_unknown_name_falls_back_alone_and_the_vocabulary_is_cleaned() {
-        let path = scratch("unknown");
+        let (_dir, path) = scratch("unknown");
         std::fs::write(
             &path,
             r#"{"dictation": {"mode": "local", "localModel": "telepathy", "language": "de",
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn lowspeaks_choices_are_offered_once_and_only_when_they_differ_from_the_defaults() {
-        let path = scratch("offer");
+        let (_dir, path) = scratch("offer");
         let mut settings = Settings::load(path.clone());
         assert!(!lowspeak_offer(&settings, &defaults()));
         assert!(lowspeak_offer(&settings, &lowspeaks()));
@@ -197,7 +197,8 @@ mod tests {
         assert!(!lowspeak_offer(&settings, &lowspeaks()));
         assert_eq!(in_settings(&settings), defaults());
 
-        let mut settings = Settings::load(scratch("offer-taken"));
+        let (_dir, path) = scratch("offer-taken");
+        let mut settings = Settings::load(path);
         answer_offer(&mut settings, &lowspeaks(), true).unwrap();
         assert!(!lowspeak_offer(&settings, &lowspeaks()));
         assert_eq!(in_settings(&settings), lowspeaks());

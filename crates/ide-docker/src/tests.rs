@@ -140,7 +140,7 @@ fn every_command_names_its_context_and_never_switches_the_users_one() {
 
 #[test]
 fn the_tree_groups_compose_projects_and_shows_their_files_without_containers() {
-    let root = std::env::temp_dir().join(format!("ide-docker-{}", std::process::id()));
+    let root = ide_core::testing::scratch("docker");
     std::fs::create_dir_all(root.join("shop")).unwrap();
     std::fs::create_dir_all(root.join("tools")).unwrap();
     std::fs::write(root.join("shop/compose.yaml"), "services: {}\n").unwrap();

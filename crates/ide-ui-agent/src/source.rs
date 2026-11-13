@@ -291,14 +291,12 @@ mod tests {
 
     #[test]
     fn claude_is_found_on_the_path_the_login_shell_gives() {
-        let dir = std::env::temp_dir().join(format!("ide-find-claude-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("find-claude");
         let exe = dir.join("claude");
         std::fs::write(&exe, "#!/bin/sh\n").unwrap();
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
         let env = vec![("PATH".to_string(), format!("/nonexistent:{}", dir.display()))];
         assert_eq!(find_claude(&env), Some(exe));
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }
