@@ -250,6 +250,10 @@ fn width_changed(key: u64) {
     with(key, |preview| preview.render_soon());
 }
 
+fn drag_ended(key: u64) {
+    with(key, |preview| preview.views.page.drag_ended());
+}
+
 /// Runs `f` with the open preview `key`, if there is one.
 fn with(key: u64, f: impl FnOnce(&Rc<Preview>)) {
     if let Some(preview) = find(|p| p.key == key) {

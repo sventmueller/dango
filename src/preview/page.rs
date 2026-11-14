@@ -14,6 +14,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
+use ide_ui_common::util::live;
+
 use crate::util::{guarded, label, ns};
 
 /// The margin around the text, as splat's preview has it.
@@ -28,6 +30,8 @@ pub struct PageIvars {
     /// The preview it shows.
     key: Cell<u64>,
     width: Cell<f64>,
+    /// A drag of the window's edge or a divider changed the width; the pictures follow once it ends.
+    drag_due: Cell<bool>,
 }
 
 define_class!(
@@ -57,15 +61,34 @@ define_class!(
         fn set_frame_size(&self, size: NSSize) {
             // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
-            guarded((), || {
-                if (size.width - self.ivars().width.get()).abs() >= WIDTH_STEP {
-                    self.ivars().width.set(size.width);
-                    super::width_changed(self.ivars().key.get());
-                }
-            });
+            guarded((), || self.width_may_have_changed(size.width));
         }
     }
 );
+
+impl Page {
+    fn width_may_have_changed(&self, width: f64) {
+        let ivars = self.ivars();
+        if (width - ivars.width.get()).abs() < WIDTH_STEP {
+            return;
+        }
+        if live::dragging(self) {
+            if !ivars.drag_due.replace(true) {
+                let key = ivars.key.get();
+                live::after_drag(move || super::drag_ended(key));
+            }
+            return;
+        }
+        ivars.width.set(width);
+        super::width_changed(ivars.key.get());
+    }
+
+    /// The drag that changed the width ended.
+    pub fn drag_ended(&self) {
+        self.ivars().drag_due.set(false);
+        self.width_may_have_changed(self.frame().size.width);
+    }
+}
 
 /// The views of one preview tab.
 pub struct Views {
@@ -87,6 +110,7 @@ impl Views {
         let page = Page::alloc(mtm).set_ivars(PageIvars {
             key: Cell::new(key),
             width: Cell::new(frame.size.width),
+            drag_due: Cell::new(false),
         });
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
         let page: Retained<Page> = unsafe { msg_send![super(page), initWithFrame: frame] };
