@@ -219,6 +219,7 @@ fn smooth_scrolling(root: &Path, path: &Path) {
         let mut seen = vec![other()];
         for k in 1..=12 {
             lead(start - 4.0 * f64::from(k));
+            crate::preview::seen::settle(path);
             seen.push(other());
         }
         seen

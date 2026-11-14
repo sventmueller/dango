@@ -113,10 +113,25 @@ pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
     let content = view.textContentStorage()?;
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
     let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).unwrap_or(isize::MAX))?;
-    // TextKit 2 places a fragment by estimated heights until all text is laid out, and a jump would land beside it.
-    layout.ensureLayoutForRange(&objc2_app_kit::NSTextElementProvider::documentRange(&*content));
+    lay_out_whole(view, &layout, &content);
+    ensure_paragraph(&layout, &location);
     let fragment = layout.textLayoutFragmentForLocation(&location)?;
     Some(fragment.layoutFragmentFrame().origin.y + view.textContainerOrigin().y)
+}
+
+/// Lays out the whole text of `view`, once per revision and size of the view. TextKit 2 places a fragment by estimated
+/// heights until all text is laid out, and a jump would land beside it.
+fn lay_out_whole(
+    view: &EditorTextView,
+    layout: &objc2_app_kit::NSTextLayoutManager,
+    content: &objc2_app_kit::NSTextContentStorage,
+) {
+    let revision = view.document().revision();
+    if view.ivars().laid_out.get() == Some((revision, view.frame().size)) {
+        return;
+    }
+    layout.ensureLayoutForRange(&objc2_app_kit::NSTextElementProvider::documentRange(content));
+    view.ivars().laid_out.set(Some((revision, view.frame().size)));
 }
 
 /// The tab that shows `view`.

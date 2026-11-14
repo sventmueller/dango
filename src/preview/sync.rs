@@ -17,7 +17,7 @@ use splat_preview::map::{Index, ParaPos, Shown, preview_offset};
 use super::markdown::Preview;
 use super::page::Views;
 use crate::editor::EditorTextView;
-use crate::util::{constant, guarded};
+use crate::util::{constant, guarded, main_soon};
 
 #[derive(Default)]
 pub struct State {
@@ -28,6 +28,8 @@ pub struct State {
     observers: RefCell<Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
     /// The editor whose scrolling the preview follows.
     follows: RefCell<Option<objc2::rc::Weak<EditorTextView>>>,
+    /// Which side scrolled since the other last followed: the editor, the preview.
+    due: Cell<(bool, bool)>,
 }
 
 /// Lets the preview and `editor` follow each other's scrolling.
@@ -46,11 +48,37 @@ pub fn attach(preview: &Rc<Preview>, editor: &EditorTextView) {
     *state.follows.borrow_mut() = Some(objc2::rc::Weak::from(editor));
     let key = preview.key;
     if let Some(scroll) = editor.enclosingScrollView() {
-        observe(preview, &scroll, move || super::with(key, |p| editor_scrolled(p)));
+        observe(preview, &scroll, move || super::with(key, |p| scrolled(p, true)));
     }
     observe(preview, &preview.views.scroll, move || {
-        super::with(key, |p| preview_scrolled(p))
+        super::with(key, |p| scrolled(p, false))
     });
+}
+
+/// One side scrolled: the other follows once the run loop comes round, once however often it scrolled meanwhile.
+fn scrolled(preview: &Preview, editor: bool) {
+    let state = &preview.sync;
+    if state.moving.get() {
+        return;
+    }
+    let (by_editor, by_preview) = state.due.get();
+    state.due.set((by_editor || editor, by_preview || !editor));
+    if by_editor || by_preview {
+        return;
+    }
+    let key = preview.key;
+    main_soon(move || super::with(key, |p| follow_due(p)));
+}
+
+/// Lets the other side follow what scrolled since the last time.
+pub(super) fn follow_due(preview: &Preview) {
+    let (by_editor, by_preview) = preview.sync.due.replace((false, false));
+    if by_editor {
+        editor_scrolled(preview);
+    }
+    if by_preview {
+        preview_scrolled(preview);
+    }
 }
 
 fn observe(preview: &Preview, scroll: &NSScrollView, scrolled: impl Fn() + 'static) {

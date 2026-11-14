@@ -77,6 +77,8 @@ pub struct ViewIvars {
     pub(super) predict: RefCell<super::predict::State>,
     /// The notifications the editor follows, its scroll view's size and scrolling, which end with it.
     pub(crate) watches: RefCell<Vec<crate::util::Observation>>,
+    /// The revision and frame size at which TextKit last laid out the whole text.
+    pub(super) laid_out: Cell<Option<(u64, NSSize)>>,
 }
 
 define_class!(
@@ -840,6 +842,7 @@ impl EditorTextView {
             blame: RefCell::new(super::blame::State::default()),
             predict: RefCell::new(super::predict::State::default()),
             watches: RefCell::new(Vec::new()),
+            laid_out: Cell::new(None),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));

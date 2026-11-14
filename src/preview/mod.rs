@@ -364,6 +364,14 @@ pub mod seen {
         }
     }
 
+    /// Lets the preview of `path` and its editor follow each other's scrolling now instead of on the run loop's next
+    /// round.
+    pub fn settle(path: &Path) {
+        if let Some(preview) = find(|p| p.path() == path) {
+            sync::follow_due(&preview);
+        }
+    }
+
     /// The visible top of the preview of `path`, in its view's coordinates.
     pub fn scrolled(path: &Path) -> Option<f64> {
         Some(find(|p| p.path() == path)?.views.text.visibleRect().origin.y)
