@@ -872,6 +872,7 @@ impl WindowController {
     /// The window's last tab closes: its layout is kept, and what runs for its folder ends.
     fn window_closes(&self) {
         layout::save(self);
+        self.context().session.wait_for_writes();
         self.save_frame();
         self.ivars().closed.set(true);
         self.folder_closes();

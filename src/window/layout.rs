@@ -49,9 +49,10 @@ pub fn save(controller: &WindowController) {
             documents: reopened,
         });
     }
-    if let Err(error) = ide_core::layout::save(&root, &layout) {
-        crate::diag::report("saving the window tabs", error);
-    }
+    controller
+        .context()
+        .session
+        .write_soon("saving the window tabs", move || ide_core::layout::save(&root, &layout));
 }
 
 /// How the document `id` opens again, if it can.

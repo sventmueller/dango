@@ -7,7 +7,11 @@
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use ide_core::LockIgnoringPoison;
 
 use ide_core::settings::{Settings, State, keys, remembered};
 use ide_document::recovery::{Pending, Recovery, RecoveryId};
@@ -22,6 +26,9 @@ use crate::window::layout::Document;
 
 /// How long the record waits after a change, so that a burst of changes writes it once.
 const SETTLE: Duration = Duration::from_secs(1);
+
+/// The longest quitting or closing a window waits for the record and the layouts to reach the disk.
+const WRITE_LIMIT: Duration = Duration::from_secs(5);
 
 /// The windows open now, in the order they opened.
 const OPEN_WINDOWS: ide_core::settings::StateKey<Vec<WindowRecord>> =
@@ -55,6 +62,8 @@ pub enum TabRecord {
 pub struct Saving {
     write_pending: Cell<bool>,
     quitting: Cell<bool>,
+    /// Writes of the record and the layouts queued on the disk lane that have not ended yet.
+    writing: Arc<AtomicUsize>,
 }
 
 /// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
@@ -74,20 +83,61 @@ pub fn changed() {
         return;
     }
     main_after(SETTLE, || {
-        app().session.write_pending.set(false);
-        remember();
+        let cx = app();
+        cx.session.write_pending.set(false);
+        remember(&cx);
     });
 }
 
 /// Writes down what the windows show now, and each folder's panels.
-pub fn remember() {
-    if is_quitting() {
+pub fn remember(cx: &crate::context::AppContext) {
+    if cx.session.quitting.get() {
         return;
     }
     crate::window::save_layouts();
     let windows = crate::window::records();
-    if let Err(error) = State::load_user().set(&OPEN_WINDOWS, &windows) {
-        crate::diag::report("remembering the windows", error);
+    cx.session.write_soon("remembering the windows", move || {
+        State::load_user().set(&OPEN_WINDOWS, &windows)
+    });
+}
+
+impl Saving {
+    /// Runs `write` on the disk lane after the writes queued before it, or here when the lane is full; a failure is
+    /// reported as `what`.
+    pub fn write_soon(&self, what: &'static str, write: impl FnOnce() -> std::io::Result<()> + Send + 'static) {
+        let job = Arc::new(Mutex::new(Some(write)));
+        let queued = job.clone();
+        self.writing.fetch_add(1, Ordering::SeqCst);
+        let counted = self.writing.clone();
+        let sent = ide_core::lane::DISK.try_run(move || {
+            if let Some(write) = queued.lock_ignoring_poison().take() {
+                written(what, ide_core::lane::contained(write));
+            }
+            counted.fetch_sub(1, Ordering::SeqCst);
+        });
+        if sent.is_err() {
+            self.writing.fetch_sub(1, Ordering::SeqCst);
+            let write = job.lock_ignoring_poison().take();
+            if let Some(write) = write {
+                written(what, Some(write()));
+            }
+        }
+    }
+
+    /// Waits until the record and the layouts queued so far are on disk, as the app quits or a window closes.
+    pub fn wait_for_writes(&self) {
+        let until = Instant::now() + WRITE_LIMIT;
+        while self.writing.load(Ordering::SeqCst) > 0 && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    }
+}
+
+fn written(what: &str, result: Option<std::io::Result<()>>) {
+    match result {
+        Some(Ok(())) => {}
+        Some(Err(error)) => ide_core::diag::report(what, error),
+        None => ide_core::diag::report(what, "the write panicked"),
     }
 }
 

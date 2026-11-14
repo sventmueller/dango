@@ -71,7 +71,7 @@ define_class!(
                 if !crate::quit::agents_may_stop(self.mtm()) || !crate::editor::confirm_quit(self.mtm()) {
                     return NSApplicationTerminateReply::TerminateCancel;
                 }
-                remember_open_projects();
+                remember_open_projects(&crate::context::AppContext::get(self.mtm()));
                 crate::editor::recovery::quit(RECOVERY_GRACE);
                 if Supervisor::global().running().is_empty() {
                     return NSApplicationTerminateReply::TerminateNow;
@@ -207,11 +207,12 @@ fn open_initial_windows(mtm: MainThreadMarker) {
     }
 }
 
-fn remember_open_projects() {
+fn remember_open_projects(cx: &crate::context::AppContext) {
     let open: Vec<PathBuf> = window::open_projects();
     let _ = State::load_user().set(&remembered::OPEN_PROJECTS, &open);
-    crate::session::remember();
+    crate::session::remember(cx);
     crate::session::quitting();
+    cx.session.wait_for_writes();
 }
 
 /// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in
