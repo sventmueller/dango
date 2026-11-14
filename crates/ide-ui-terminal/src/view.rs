@@ -34,7 +34,7 @@ use crate::model::{self, Command, State};
 use crate::palette::{self, Theme};
 use crate::render::{self, Fonts};
 use ide_ui_common::constant;
-use ide_ui_common::util::{guarded, item, ns, separator, set_target};
+use ide_ui_common::util::{guarded, item, live, main_after, ns, separator, set_target};
 
 /// What a terminal view keeps.
 pub struct Ivars {
@@ -703,12 +703,27 @@ impl TerminalView {
         })
     }
 
-    /// Fits the grid to the view and tells the program of a new size.
+    /// Fits the grid to the view and tells the program of a new size; while a size is dragged, at most every 100 ms,
+    /// as each fit reflows the scrollback, and the frames between draw the grid as it is.
     pub(super) fn layout_grid(&self) {
         let Some(size) = self.grid_size() else { return };
         let state = &self.ivars().state;
         if state.size.get() == Some(size) {
             return;
+        }
+        match state.resize(std::time::Instant::now(), live::dragging(self)) {
+            model::Frame::Now => {}
+            model::Frame::After(wait) => {
+                let id = self.id();
+                main_after(wait, move || {
+                    if let Some(view) = super::find(id) {
+                        view.ivars().state.resizes.pending.set(false);
+                        view.layout_grid();
+                    }
+                });
+                return;
+            }
+            model::Frame::Pending | model::Frame::Stale => return,
         }
         state.size.set(Some(size));
         self.with_session(|session| session.resize(size));

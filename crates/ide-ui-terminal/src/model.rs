@@ -14,6 +14,8 @@ pub const BELL_FLASH: Duration = Duration::from_millis(140);
 const BELL_GAP: Duration = Duration::from_millis(250);
 /// VoiceOver hears of new output at most this often.
 const ANNOUNCE_GAP: Duration = Duration::from_millis(500);
+/// While a size is dragged, the grid reflows its scrollback and the program hears SIGWINCH at most this often.
+const RESIZE_GAP: Duration = Duration::from_millis(100);
 
 #[derive(Default)]
 pub struct State {
@@ -30,11 +32,37 @@ pub struct State {
     flash_until: Cell<Option<Instant>>,
     announced: Cell<Option<Instant>>,
     pub size: Cell<Option<Size>>,
+    /// Fitting the grid to a dragged size.
+    pub resizes: Pace,
     notices: Cell<u64>,
     /// A GPU frame was skipped while the window was hidden behind others.
     pub unpresented: Cell<bool>,
     /// The view is drawing a picture of itself, which only Core Graphics can.
     pub picturing: Cell<bool>,
+}
+
+/// Spaces out a change that costs: at once when the last one is `gap` ago, else once after the rest of the gap.
+#[derive(Default)]
+pub struct Pace {
+    last: Cell<Option<Instant>>,
+    /// A later run is due; its timer clears this before it asks again.
+    pub pending: Cell<bool>,
+}
+
+impl Pace {
+    /// When the change asked for at `now` happens; `Now` notes it as the last.
+    pub fn ask(&self, now: Instant, gap: Duration) -> Frame {
+        if self.pending.get() {
+            return Frame::Pending;
+        }
+        let since = self.last.get().map_or(gap, |last| now - last);
+        if since < gap {
+            self.pending.set(true);
+            return Frame::After(gap - since);
+        }
+        self.last.set(Some(now));
+        Frame::Now
+    }
 }
 
 /// What a bell does.
@@ -103,6 +131,12 @@ impl State {
         }
         self.frame_pending.set(true);
         Frame::After(FRAME - since)
+    }
+
+    /// When a new size of the view at `now` reaches the grid, while a size is `dragging` or not.
+    pub fn resize(&self, now: Instant, dragging: bool) -> Frame {
+        self.resizes
+            .ask(now, if dragging { RESIZE_GAP } else { Duration::ZERO })
     }
 
     /// Notes that a snapshot was taken at `now`.
@@ -232,6 +266,23 @@ mod tests {
         assert_eq!(final_line(&screen(vec![cell('o'), cell('k')])), 2);
         assert_eq!(shown_title(Some("  ".into())), None);
         assert_eq!(shown_title(Some("vim".into())).as_deref(), Some("vim"));
+    }
+
+    #[test]
+    fn a_dragged_size_reaches_the_grid_at_most_every_gap_and_any_other_at_once() {
+        let state = State::default();
+        let now = Instant::now();
+        let ms = Duration::from_millis;
+        assert_eq!(state.resize(now, true), Frame::Now);
+        assert_eq!(state.resize(now + ms(30), true), Frame::After(ms(70)));
+        assert_eq!(state.resize(now + ms(60), true), Frame::Pending);
+        state.resizes.pending.set(false);
+        assert_eq!(state.resize(now + ms(100), true), Frame::Now);
+        assert_eq!(
+            state.resize(now + ms(110), false),
+            Frame::Now,
+            "not dragged, it fits at once"
+        );
     }
 
     #[test]
