@@ -201,19 +201,8 @@ fn resume_agent(controller: &WindowController, root: &Path, session: &str) -> bo
         .is_some_and(|(agent, resume)| ide_ui_agent::open_agent(controller, agent, Some(resume)).is_some())
 }
 
-/// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
-/// sessions started in a terminal have no thread.
+/// The session `session` of the folder `root` and the agent that ran it. Read at once, unlike the AI panel's: the
+/// restore opens the tabs in their saved order, each beside the one before.
 pub(crate) fn past_session(root: &Path, session: &str) -> Option<(ide_ui_agent::Agent, ide_ui_agent::Resume)> {
-    let (resume, _) = ide_ui_agent::agent_panel::past_sessions(root, 500)
-        .into_iter()
-        .find(|(resume, _)| resume.session == session)?;
-    let index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
-    let agent = resume
-        .thread
-        .as_ref()
-        .and_then(|id| index.get(id))
-        .map_or(ide_ui_agent::Agent::Claude, |entry| {
-            ide_ui_agent::Agent::of_thread(&entry.agent)
-        });
-    Some((agent, resume))
+    ide_ui_agent::agent_panel::past_session(root, session)
 }
