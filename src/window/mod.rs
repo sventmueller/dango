@@ -146,6 +146,15 @@ define_class!(
             });
         }
 
+        #[unsafe(method(windowDidChangeOcclusionState:))]
+        fn did_change_occlusion(&self, notification: &NSNotification) {
+            guarded((), || {
+                if let Some(tab) = self.tab_of_notification(notification) {
+                    self.tab_visibility_changed(&tab);
+                }
+            });
+        }
+
         #[unsafe(method(windowDidEnterFullScreen:))]
         fn did_enter_full_screen(&self, notification: &NSNotification) {
             guarded((), || {

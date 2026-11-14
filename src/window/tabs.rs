@@ -664,6 +664,17 @@ impl TabWindow {
         self.picture.setHidden(false);
     }
 
+    /// Lets go of the sidebar's picture, for a window that left the screen with it.
+    pub fn forget_picture(&self) {
+        self.picture.setHidden(true);
+        self.picture.setImage(None);
+    }
+
+    /// Whether the tab shows a picture of the sidebar.
+    pub fn has_picture(&self) -> bool {
+        self.picture.image().is_some()
+    }
+
     /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.
     pub fn clear_above_sidebar(&self, clear: bool) {
         super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear);

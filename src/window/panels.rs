@@ -98,23 +98,42 @@ impl Panels {
         let mut pages = vec![];
         for panel in Panel::ALL {
             let page = self.page(panel, project);
-            self.view.addSubview(&page);
             page.setTranslatesAutoresizingMaskIntoConstraints(false);
-            for constraint in [
-                page.leadingAnchor().constraintEqualToAnchor(&self.view.leadingAnchor()),
-                page.trailingAnchor()
-                    .constraintEqualToAnchor(&self.view.trailingAnchor()),
-                page.topAnchor()
-                    .constraintEqualToAnchor_constant(&self.header.bottomAnchor(), 8.0),
-                page.bottomAnchor().constraintEqualToAnchor(&self.view.bottomAnchor()),
-            ] {
-                constraint.setActive(true);
-            }
             page.setHidden(true);
+            self.attach(&page);
             pages.push((panel, page));
         }
         *self.pages.borrow_mut() = pages;
         self.show(self.shown.get());
+    }
+
+    /// Puts `page` into the panel, below the title, unless it is there.
+    fn attach(&self, page: &NSView) {
+        if placed(page) {
+            return;
+        }
+        self.view.addSubview(page);
+        for constraint in [
+            page.leadingAnchor().constraintEqualToAnchor(&self.view.leadingAnchor()),
+            page.trailingAnchor()
+                .constraintEqualToAnchor(&self.view.trailingAnchor()),
+            page.topAnchor()
+                .constraintEqualToAnchor_constant(&self.header.bottomAnchor(), 8.0),
+            page.bottomAnchor().constraintEqualToAnchor(&self.view.bottomAnchor()),
+        ] {
+            constraint.setActive(true);
+        }
+    }
+
+    /// Takes the pages of the panels that do not show out of the panel, so a move of the sidebar into another window
+    /// tab moves only the page that shows; each comes back when its panel shows.
+    pub fn leave_out_hidden(&self) {
+        let shown = self.shown.get();
+        for (panel, page) in self.pages.borrow().iter() {
+            if *panel != shown && placed(page) {
+                page.removeFromSuperview();
+            }
+        }
     }
 
     /// Shows `view`, the folder tree, on the files page, and `buttons` at the end of its title row.
@@ -172,6 +191,9 @@ impl Panels {
             self.accessory.addArrangedSubview(view);
         }
         for (candidate, page) in self.pages.borrow().iter() {
+            if *candidate == panel {
+                self.attach(page);
+            }
             page.setHidden(*candidate != panel);
         }
     }
@@ -282,4 +304,10 @@ pub fn empty_state(
         stack.addArrangedSubview(&button);
     }
     stack
+}
+
+/// Whether `page` is in a view.
+fn placed(page: &NSView) -> bool {
+    // SAFETY: Asking a view for its superview on the main thread, where views live.
+    unsafe { page.superview() }.is_some()
 }

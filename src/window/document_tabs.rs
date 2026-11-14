@@ -414,8 +414,9 @@ impl WindowController {
         }
     }
 
-    /// Makes `tab` the one in front: the sidebar moves into it at the width it had. The tab it leaves keeps a picture
-    /// of it, for a window that stays on screen beside, after a tab was dragged out, and for the overview of all tabs.
+    /// Makes `tab` the one in front: the sidebar moves into it at the width it had, with only the page of the panel
+    /// that shows. The tab it leaves keeps a picture of it while its window stays on screen beside; a tab that comes
+    /// on screen later without coming to the front gets its picture then.
     pub(super) fn make_current(&self, tab: &Rc<TabWindow>) {
         let previous = self.current_tab();
         if previous.as_ref().is_some_and(|previous| Rc::ptr_eq(previous, tab)) {
@@ -427,8 +428,12 @@ impl WindowController {
             collapsed = previous.sidebar_collapsed();
             self.remember_sidebar_width(previous);
             self.remember_inspector(previous);
-            if let Some(view) = self.ivars().sidebar.borrow().as_ref() {
-                previous.keep_picture_of(view);
+            match self.ivars().sidebar.borrow().as_ref() {
+                Some(view) if previous.window.isVisible() => previous.keep_picture_of(view),
+                _ => previous.forget_picture(),
+            }
+            if let Some(panels) = self.ivars().panels.borrow().as_ref() {
+                panels.leave_out_hidden();
             }
         }
         *self.ivars().current.borrow_mut() = Some(tab.clone());
@@ -438,6 +443,21 @@ impl WindowController {
         self.fit_sidebar(tab, collapsed);
         self.inspector_follows(tab);
         self.list_front_tabs();
+    }
+
+    /// A window tab came on screen or left it: one on screen beside the tab in front shows a picture of the sidebar.
+    pub(super) fn tab_visibility_changed(&self, tab: &Rc<TabWindow>) {
+        let current = self.current_tab();
+        if current.is_some_and(|current| Rc::ptr_eq(&current, tab)) || tab.has_picture() {
+            return;
+        }
+        let visible = tab
+            .window
+            .occlusionState()
+            .contains(objc2_app_kit::NSWindowOcclusionState::Visible);
+        if visible && let Some(view) = self.ivars().sidebar.borrow().as_ref() {
+            tab.keep_picture_of(view);
+        }
     }
 
     /// Lists only the tab in front of each tab group in the Window menu and the Dock's menu, so a folder appears once
