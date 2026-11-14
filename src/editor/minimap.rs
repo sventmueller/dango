@@ -407,7 +407,9 @@ fn runs(
     start: usize,
     columns: usize,
 ) -> Vec<(Range<usize>, Retained<NSColor>)> {
-    let first = painted.partition_point(|p| p.range.end <= start);
+    // Both lists are ordered by place and apart, and the characters come in order, so each only moves forward.
+    let mut token = painted.partition_point(|p| p.range.end <= start);
+    let mut span = 0usize;
     let mut out: Vec<(Range<usize>, Kind)> = Vec::new();
     let mut column = 0usize;
     let mut unit = 0usize;
@@ -418,13 +420,17 @@ fn runs(
         let width = if ch == '\t' { 4 } else { 1 };
         if !ch.is_whitespace() {
             let at = start + unit;
-            let kind = painted[first..]
-                .iter()
-                .take_while(|p| p.range.start <= at)
-                .find(|p| p.range.contains(&at))
+            while painted.get(token).is_some_and(|p| p.range.end <= at) {
+                token += 1;
+            }
+            while spans.get(span).is_some_and(|s| (s.end as usize) <= unit) {
+                span += 1;
+            }
+            let kind = painted
+                .get(token)
+                .filter(|p| p.range.contains(&at))
                 .map(|p| Kind::Semantic(p.token))
                 .or_else(|| {
-                    let span = spans.partition_point(|s| (s.end as usize) <= unit);
                     spans
                         .get(span)
                         .filter(|s| (s.start as usize..s.end as usize).contains(&unit))
