@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Εύρεση προηγούμενου";
 "Sichern" = "Αποθήκευση";
 "Sichern fehlgeschlagen" = "Η αποθήκευση απέτυχε";
+"Das Schreiben der Datei ist abgebrochen." = "Η εγγραφή του αρχείου διακόπηκε.";
 "Sichern unter …" = "Αποθήκευση ως…";
 "Sichern überschreibt diese Änderungen." = "Η αποθήκευση θα αντικαταστήσει αυτές τις αλλαγές.";
 "Suchen" = "Εύρεση";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Το Claude Code απέρριψε την επιστροφή: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Το Claude Code δεν απάντησε εγκαίρως.";
 "Claude Code ist beendet." = "Το Claude Code τερματίστηκε.";
+"Claude Code liest seine Eingabe nicht mehr." = "Το Claude Code δεν διαβάζει πλέον την είσοδό του.";
 "Claude Code ist nicht gestartet: {}" = "Το Claude Code δεν ξεκίνησε: {}";
 "Claude Code lehnt ab: {}" = "Το Claude Code αρνείται: {}";
 "Dafür fehlt die Berechtigung." = "Λείπει η άδεια για αυτό.";

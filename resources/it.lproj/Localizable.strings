@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Trova precedente";
 "Sichern" = "Salva";
 "Sichern fehlgeschlagen" = "Salvataggio non riuscito";
+"Das Schreiben der Datei ist abgebrochen." = "La scrittura del file è stata interrotta.";
 "Sichern unter …" = "Salva col nome…";
 "Sichern überschreibt diese Änderungen." = "Il salvataggio sovrascrive queste modifiche.";
 "Suchen" = "Trova";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code ha rifiutato il riavvolgimento: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code non ha risposto in tempo.";
 "Claude Code ist beendet." = "Claude Code è terminato.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code non legge più il suo input.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code non si è avviato: {}";
 "Claude Code lehnt ab: {}" = "Claude Code rifiuta: {}";
 "Dafür fehlt die Berechtigung." = "Non hai l’autorizzazione necessaria.";

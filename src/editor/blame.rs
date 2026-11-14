@@ -181,7 +181,7 @@ fn read(serial: u64, path: PathBuf, head: String) {
         let loaded = blame_of(&path, &head);
         main_soon(move || arrived(serial, path, head, loaded));
     };
-    if let Err(error) = std::thread::Builder::new().name("ide-git-blame".into()).spawn(job) {
+    if let Err(error) = crate::util::spawn("ide-git-blame", job) {
         crate::diag::report("reading blame", error);
     }
 }
@@ -660,7 +660,7 @@ fn read_message(view: &EditorTextView, hash: String) {
             }
         });
     };
-    if let Err(error) = std::thread::Builder::new().name("ide-git-message".into()).spawn(job) {
+    if let Err(error) = crate::util::spawn("ide-git-message", job) {
         crate::diag::report("reading a commit message", error);
     }
 }

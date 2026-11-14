@@ -279,7 +279,7 @@ pub mod fake {
                 }
                 Some(Opening::Refused(error)) => started(Err(error)),
                 Some(Opening::After(delay)) => {
-                    std::thread::spawn(move || {
+                    let _ = ide_ui_common::util::spawn("selftest-microphone", move || {
                         std::thread::sleep(delay);
                         started(Ok(()));
                         on_live();

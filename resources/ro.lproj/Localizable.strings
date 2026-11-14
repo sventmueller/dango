@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Găsiți anteriorul";
 "Sichern" = "Salvați";
 "Sichern fehlgeschlagen" = "Salvarea a eșuat";
+"Das Schreiben der Datei ist abgebrochen." = "Scrierea fișierului a fost întreruptă.";
 "Sichern unter …" = "Salvați ca…";
 "Sichern überschreibt diese Änderungen." = "Salvarea suprascrie aceste modificări.";
 "Suchen" = "Găsiți";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code a refuzat derularea înapoi: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code nu a răspuns la timp.";
 "Claude Code ist beendet." = "Claude Code s-a încheiat.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code nu mai citește intrarea.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code nu a pornit: {}";
 "Claude Code lehnt ab: {}" = "Claude Code refuză: {}";
 "Dafür fehlt die Berechtigung." = "Lipsește permisiunea pentru aceasta.";

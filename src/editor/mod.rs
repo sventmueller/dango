@@ -22,8 +22,10 @@ pub mod predict;
 mod probe;
 mod sticky;
 pub use overlay::follow as follow_overlay;
+pub(crate) use saving::{save, save_soon};
 pub mod recovery;
 mod ruler;
+mod saving;
 mod style;
 mod view;
 mod vim;
@@ -32,14 +34,12 @@ mod whitespace;
 use std::path::{Path, PathBuf};
 
 use ide_document::recovery::{Recovered, RecoveryId};
-use ide_core::explain::Explain;
-use ide_document::{Change, Document, SaveError};
+use ide_document::{Change, Document};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSColor,
-    NSFontAttributeName, NSForegroundColorAttributeName, NSModalResponseOK, NSSavePanel, NSScrollView,
-    NSUserInterfaceLayoutDirection,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSScrollView, NSUserInterfaceLayoutDirection,
 };
 use objc2_foundation::{NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
@@ -596,82 +596,6 @@ fn notify_change(view: &EditorTextView, change: &Change) {
     if let Some(path) = view.document().path() {
         crate::window::buffer_edited(path);
     }
-}
-
-/// Writes the document to its file, or asks for one; `save_as` always asks.
-pub(crate) fn save(view: &EditorTextView, save_as: bool) {
-    let target = if save_as || view.document().path().is_none() {
-        let Some(path) = ask_path(view) else { return };
-        Some(path)
-    } else {
-        None
-    };
-    indent::before_save(view, target.as_deref());
-    let result = match &target {
-        Some(path) => view.document_mut().save_as(path.clone()),
-        None => view.document_mut().save(),
-    };
-    match result {
-        Ok(()) => saved(view, target.as_deref()),
-        Err(SaveError::ChangedOnDisk) => {
-            let mtm = view.mtm();
-            let name = view.document().path().map(display_name).unwrap_or_default();
-            if confirm(
-                mtm,
-                &tf("„{}“ wurde inzwischen außerhalb geändert.", &[&name]),
-                t("Sichern überschreibt diese Änderungen."),
-                t("Überschreiben"),
-            ) {
-                let job = view.document().begin_save(true);
-                match job.and_then(|job| job.run()) {
-                    Ok(done) => {
-                        view.document_mut().end_save(done);
-                        saved(view, None);
-                    }
-                    Err(error) => alert(mtm, t("Sichern fehlgeschlagen"), &error.explain()),
-                }
-            }
-        }
-        Err(error) => alert(view.mtm(), t("Sichern fehlgeschlagen"), &error.explain()),
-    }
-}
-
-fn saved(view: &EditorTextView, new_path: Option<&Path>) {
-    update_dirty(view);
-    recovery::discard(view);
-    conflict::saved(view);
-    if new_path.is_some() {
-        crate::session::changed();
-    }
-    if let (Some(path), Some(controller)) = (new_path, view.controller()) {
-        controller.set_tab_title(view.ivars().tab.get(), &tab_title(path));
-        let language = ide_document::syntax::Language::detect(Some(path), "");
-        view.document_mut().set_language(language);
-        highlight::recolor_all(view);
-        crate::lsp::opened(view);
-        indent::configure(view);
-        changes::reload(view, true);
-    }
-    crate::lsp::saved(view);
-    if let (Some(path), Some(controller)) = (view.document().path().map(Path::to_path_buf), view.controller()) {
-        crate::worktrees::file_saved(&controller, &path);
-    }
-}
-
-fn ask_path(view: &EditorTextView) -> Option<PathBuf> {
-    let panel = NSSavePanel::savePanel(view.mtm());
-    if let Some(root) = view.controller().and_then(|c| c.project_root()) {
-        panel.setDirectoryURL(Some(&objc2_foundation::NSURL::fileURLWithPath(&ns(
-            &root.to_string_lossy()
-        ))));
-    }
-    if panel.runModal() != NSModalResponseOK {
-        return None;
-    }
-    panel
-        .URL()
-        .and_then(|url| url.path())
-        .map(|p| PathBuf::from(p.to_string()))
 }
 
 pub(crate) fn toggle_wrap(view: &EditorTextView) {

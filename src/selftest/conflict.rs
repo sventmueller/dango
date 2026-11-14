@@ -241,13 +241,16 @@ fn deleted(arrived: bool) {
         }
     }
     press(SAVED, t("Sichern"));
-    let on_disk = std::fs::read_to_string(root().join(SAVED)).unwrap_or_default();
-    check(
-        "saving writes the file anew and the bar goes",
-        on_disk == format!("{SAVED}\nzweite Zeile\n") && bar_of(SAVED).is_none() && !dirty(SAVED),
-        on_disk,
-    );
-    close_unedited();
+    let written = || bar_of(SAVED).is_none() && !dirty(SAVED);
+    wait_until(written, |_| {
+        let on_disk = std::fs::read_to_string(root().join(SAVED)).unwrap_or_default();
+        check(
+            "saving writes the file anew and the bar goes",
+            on_disk == format!("{SAVED}\nzweite Zeile\n") && bar_of(SAVED).is_none() && !dirty(SAVED),
+            on_disk,
+        );
+        close_unedited();
+    });
 }
 
 fn titles() -> Vec<String> {

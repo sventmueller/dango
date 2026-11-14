@@ -212,17 +212,15 @@ fn request_again() {
 /// Reads the folder, decides and writes this Mac's file on a worker thread, within `LIMIT`; the main thread applies.
 fn run_round(folder: PathBuf, device: String) {
     let (sent, received) = mpsc::channel();
-    let worker = std::thread::Builder::new().name("settings-sync".into()).spawn(move || {
+    let worker = crate::util::spawn("settings-sync", move || {
         let _ = sent.send(round_in(&folder, &device));
     });
-    let waited = std::thread::Builder::new()
-        .name("settings-sync-wait".into())
-        .spawn(move || {
-            let outcome = received.recv_timeout(LIMIT).unwrap_or(Err(SyncError::TimedOut));
-            crate::util::main_soon(move || finished(outcome));
-        });
-    if let Err(error) = worker.and(waited) {
-        finished(Err(SyncError::Io(error)));
+    let waited = crate::util::spawn("settings-sync-wait", move || {
+        let outcome = received.recv_timeout(LIMIT).unwrap_or(Err(SyncError::TimedOut));
+        crate::util::main_soon(move || finished(outcome));
+    });
+    if let Err(why) = worker.and(waited) {
+        finished(Err(SyncError::NoThread(why)));
     }
 }
 
@@ -236,6 +234,7 @@ enum SyncError {
     Coordinator(String),
     /// The coordinator never handed the file over.
     NotWritten,
+    NoThread(ide_core::explain::Explained),
 }
 
 impl Explain for SyncError {
@@ -246,6 +245,7 @@ impl Explain for SyncError {
             SyncError::Encode(error) => error.to_string(),
             SyncError::Coordinator(why) => why.clone(),
             SyncError::NotWritten => t("iCloud Drive hat die Datei nicht zum Schreiben freigegeben").to_string(),
+            SyncError::NoThread(why) => why.explain(),
         }
     }
 }

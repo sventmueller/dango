@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "पिछला ढूँढें";
 "Sichern" = "सहेजें";
 "Sichern fehlgeschlagen" = "सहेजना विफल";
+"Das Schreiben der Datei ist abgebrochen." = "फ़ाइल लिखना बीच में रुक गया।";
 "Sichern unter …" = "ऐसे सहेजें…";
 "Sichern überschreibt diese Änderungen." = "सहेजने पर ये बदलाव ओवरराइट हो जाएँगे।";
 "Suchen" = "ढूँढें";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code ने रिवाइंड अस्वीकार किया : {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code ने समय पर जवाब नहीं दिया।";
 "Claude Code ist beendet." = "Claude Code बंद हो गया है।";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code अब अपना इनपुट नहीं पढ़ रहा है।";
 "Claude Code ist nicht gestartet: {}" = "Claude Code शुरू नहीं हुआ : {}";
 "Claude Code lehnt ab: {}" = "Claude Code अस्वीकार करता है : {}";
 "Dafür fehlt die Berechtigung." = "इसके लिए अनुमति नहीं है।";

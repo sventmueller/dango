@@ -593,13 +593,29 @@ fn changed_outside() {
         NSAlertFirstButtonReturn,
     );
     send(&disk, sel!(ideSave:));
-    let written = std::fs::read_to_string(root().join("disk.txt")).unwrap_or_default();
-    check(
-        "saving over a file changed outside asks, and Überschreiben writes the editor's text",
-        asked.get() && written == "mine first\n" && !disk.document().is_dirty(),
-        format!("asked {}, on disk {written:?}", asked.get()),
+    after_writing(&disk, move |disk| {
+        let written = std::fs::read_to_string(root().join("disk.txt")).unwrap_or_default();
+        check(
+            "saving over a file changed outside asks, and Überschreiben writes the editor's text",
+            asked.get() && written == "mine first\n" && !disk.document().is_dirty(),
+            format!("asked {}, on disk {written:?}", asked.get()),
+        );
+        next(failed_save);
+    });
+}
+
+/// Runs `then` once ⌘S wrote the file of `view` and no alert about it is up.
+fn after_writing(view: &EditorTextView, then: impl FnOnce(Retained<EditorTextView>) + 'static) {
+    let view = view.retain();
+    let watched = view.clone();
+    wait_until(
+        move || {
+            !editor::writing(&watched)
+                && MainThreadMarker::new()
+                    .is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none())
+        },
+        move |_| then(view),
     );
-    next(failed_save);
 }
 
 fn set_mode(path: &Path, mode: u32) {
@@ -621,21 +637,25 @@ fn failed_save() {
         answer_alert(NSAlertFirstButtonReturn);
     });
     send(&locked, sel!(ideSave:));
-    set_mode(&dir, 0o755);
-    set_mode(&file, 0o644);
-    let said = seen.borrow().iter().any(|text| text == t("Sichern fehlgeschlagen"));
-    check(
-        "a save the folder refuses says so and keeps the changes unsaved",
-        said && locked.document().is_dirty(),
-        format!("{:?}", seen.borrow()),
-    );
-    send(&locked, sel!(ideSave:));
-    check(
-        "once the folder may be written again the file saves",
-        !locked.document().is_dirty(),
-        "",
-    );
-    next(close_dirty);
+    after_writing(&locked, move |locked| {
+        set_mode(&dir, 0o755);
+        set_mode(&file, 0o644);
+        let said = seen.borrow().iter().any(|text| text == t("Sichern fehlgeschlagen"));
+        check(
+            "a save the folder refuses says so and keeps the changes unsaved",
+            said && locked.document().is_dirty(),
+            format!("{:?}", seen.borrow()),
+        );
+        send(&locked, sel!(ideSave:));
+        after_writing(&locked, |locked| {
+            check(
+                "once the folder may be written again the file saves",
+                !locked.document().is_dirty(),
+                "",
+            );
+            next(close_dirty);
+        });
+    });
 }
 
 /// Closing a tab with unsaved changes asks; Abbrechen keeps it, Nicht sichern closes it and leaves the file.

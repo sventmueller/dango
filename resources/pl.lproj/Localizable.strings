@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Znajdź poprzednie";
 "Sichern" = "Zachowaj";
 "Sichern fehlgeschlagen" = "Nie udało się zachować";
+"Das Schreiben der Datei ist abgebrochen." = "Zapis pliku został przerwany.";
 "Sichern unter …" = "Zachowaj jako…";
 "Sichern überschreibt diese Änderungen." = "Zachowanie nadpisze te zmiany.";
 "Suchen" = "Znajdź";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code odrzucił przewinięcie do tyłu: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code nie odpowiedział na czas.";
 "Claude Code ist beendet." = "Claude Code zakończył działanie.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code nie odczytuje już swojego wejścia.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code nie został uruchomiony: {}";
 "Claude Code lehnt ab: {}" = "Claude Code odmawia: {}";
 "Dafür fehlt die Berechtigung." = "Brak uprawnień do tej operacji.";

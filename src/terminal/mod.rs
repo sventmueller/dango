@@ -135,21 +135,19 @@ fn start(view: &TerminalView) {
         return;
     }
     let id = view.id();
-    let waiting = std::thread::Builder::new()
-        .name("terminal-environment".into())
-        .spawn(move || {
-            let env = crate::environment::wait(ENVIRONMENT_WAIT);
-            main_soon(move || {
-                let Some(view) = find(id) else { return };
-                match env {
-                    Some(env) => view.spawn(env),
-                    None => view.notify(&tf(
-                        "Das Terminal konnte nicht starten: {}",
-                        &[t("Die Umgebung der Login-Shell fehlt.")],
-                    )),
-                }
-            });
+    let waiting = crate::util::spawn("terminal-environment", move || {
+        let env = crate::environment::wait(ENVIRONMENT_WAIT);
+        main_soon(move || {
+            let Some(view) = find(id) else { return };
+            match env {
+                Some(env) => view.spawn(env),
+                None => view.notify(&tf(
+                    "Das Terminal konnte nicht starten: {}",
+                    &[t("Die Umgebung der Login-Shell fehlt.")],
+                )),
+            }
         });
+    });
     if let Err(error) = waiting {
         view.notify(&tf("Das Terminal konnte nicht starten: {}", &[&error.to_string()]));
     }

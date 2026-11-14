@@ -67,6 +67,8 @@ pub struct ViewIvars {
     found: RefCell<Option<std::ops::Range<usize>>>,
     /// Text shown that is not in the file: inlay hints and blame (E81).
     pub(super) insets: RefCell<super::insets::Insets>,
+    /// Whether a save writes its file on the disk lane.
+    pub(super) writing: Cell<super::saving::Writing>,
     /// Who changed which line last (E86).
     pub(super) blame: RefCell<super::blame::State>,
     /// What edit prediction proposes and asks (E92).
@@ -590,7 +592,7 @@ define_class!(
 
         #[unsafe(method(ideSaveAs:))]
         fn save_as_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || super::save(self, true));
+            guarded((), || super::save_soon(self, true));
         }
 
         #[unsafe(method(ideToggleComment:))]
@@ -830,6 +832,7 @@ impl EditorTextView {
             bar: RefCell::new(None),
             found: RefCell::new(None),
             insets: RefCell::new(super::insets::Insets::default()),
+            writing: Cell::new(super::saving::Writing::Idle),
             blame: RefCell::new(super::blame::State::default()),
             predict: RefCell::new(super::predict::State::default()),
             watches: RefCell::new(Vec::new()),

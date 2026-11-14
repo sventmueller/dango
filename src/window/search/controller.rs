@@ -142,7 +142,7 @@ impl SearchPanel {
             progressive,
         };
         self.model().spawned(cancel.clone(), progressive);
-        let spawned = std::thread::Builder::new().name("ide-search".into()).spawn(move || {
+        let spawned = crate::util::spawn("ide-search", move || {
             ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
             run(job, cancel);
         });

@@ -298,7 +298,7 @@ fn go(number: u64) {
         pdf::start(number, job);
         return;
     }
-    let spawned = std::thread::Builder::new().name("export".into()).spawn(move || {
+    let spawned = ide_ui_common::util::spawn("export", move || {
         let outcome = job.write();
         main_soon(move || finish(number, outcome));
     });

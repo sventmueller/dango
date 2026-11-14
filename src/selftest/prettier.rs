@@ -100,9 +100,10 @@ fn formats(controller: Retained<WindowController>) {
     let next = controller.clone();
     opened(&controller, "web/src/a.js", move |view| {
         save(&view);
+        let watched = view.clone();
         wait_within(
             Duration::from_secs(10),
-            || disk("web/src/a.js") == TIDY,
+            move || disk("web/src/a.js") == TIDY && !watched.document().is_dirty(),
             move |saved| {
                 let ran_in = std::fs::read_to_string(root().join("web/node_modules/.bin/ran-in")).unwrap_or_default();
                 check(

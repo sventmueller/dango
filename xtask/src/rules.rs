@@ -66,6 +66,7 @@ pub(crate) fn check() -> Result<(), String> {
                 }
                 if in_production(&relative) {
                     problems.extend(errors::problems(&relative, &text));
+                    problems.extend(raw_threads(&relative, &text));
                 }
             }
         }
@@ -188,6 +189,29 @@ fn discarded_threads(relative: &str, text: &str) -> Vec<String> {
         .map(|at| {
             format!(
                 "{relative}:{}: the result of spawning is discarded; hand a failure to the caller or the user",
+                line_of(&code, at)
+            )
+        })
+        .collect()
+}
+
+/// The helper that starts the app's threads for one piece of work, the one place that may start them itself.
+const SPAWN_HELPER: &str = "crates/ide-ui-common/src/util/thread.rs";
+
+/// The threads the app file at `relative` starts itself instead of through `util::spawn` or a lane, which would panic
+/// when the system has no thread left; its unit tests aside.
+fn raw_threads(relative: &str, text: &str) -> Vec<String> {
+    if relative == SPAWN_HELPER {
+        return Vec::new();
+    }
+    let text = text.find("#[cfg(test)]\nmod tests").map_or(text, |end| &text[..end]);
+    let code = code_only(text);
+    ["thread::spawn(", "thread::Builder::new("]
+        .into_iter()
+        .flat_map(|name| occurrences(&code, name))
+        .map(|at| {
+            format!(
+                "{relative}:{}: a thread started past util::spawn; use it, spawn_joined or a lane",
                 line_of(&code, at)
             )
         })
@@ -467,6 +491,15 @@ mod tests {
     }
 
     #[test]
+    fn a_thread_started_past_the_helper_is_found_outside_tests() {
+        let source = "fn a() {\n    std::thread::spawn(|| {});\n    let b = thread::Builder::new();\n}\n#[cfg(test)]\nmod tests {\n    \
+                      fn c() { std::thread::spawn(|| {}); }\n}\n";
+        let found = raw_threads("src/a.rs", source);
+        assert_eq!(found.len(), 2, "{found:?}");
+        assert!(raw_threads(SPAWN_HELPER, source).is_empty());
+    }
+
+    #[test]
     fn statics_with_state_count_unless_built_for_tests() {
         let source = "static A: Mutex<u8> = Mutex::new(0);\nstatic B: &str = \"x\";\npub static C: AtomicU64 = \
                       AtomicU64::new(0);\nthread_local! {\n    static D: RefCell<u8> = RefCell::new(0);\n}\n\
@@ -507,6 +540,7 @@ mod tests {
                 problems.extend(discarded_threads(&relative, &text));
                 if in_production(&relative) {
                     problems.extend(errors::problems(&relative, &text));
+                    problems.extend(raw_threads(&relative, &text));
                 }
                 if !relative.ends_with(SELFTEST_PROBE) {
                     found.extend(statics(&text).into_iter().map(|name| (relative.clone(), name)));

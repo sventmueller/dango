@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Procurar anterior";
 "Sichern" = "Guardar";
 "Sichern fehlgeschlagen" = "Falha ao guardar";
+"Das Schreiben der Datei ist abgebrochen." = "A gravação do ficheiro foi interrompida.";
 "Sichern unter …" = "Guardar como…";
 "Sichern überschreibt diese Änderungen." = "Guardar substitui estas alterações.";
 "Suchen" = "Procurar";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "O Claude Code recusou o retrocesso: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "O Claude Code não respondeu a tempo.";
 "Claude Code ist beendet." = "O Claude Code terminou.";
+"Claude Code liest seine Eingabe nicht mehr." = "O Claude Code já não lê a sua entrada.";
 "Claude Code ist nicht gestartet: {}" = "O Claude Code não foi iniciado: {}";
 "Claude Code lehnt ab: {}" = "O Claude Code recusa: {}";
 "Dafür fehlt die Berechtigung." = "Não tem permissão para isso.";

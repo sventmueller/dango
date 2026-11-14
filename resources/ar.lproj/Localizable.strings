@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "بحث عن السابق";
 "Sichern" = "حفظ";
 "Sichern fehlgeschlagen" = "فشل الحفظ";
+"Das Schreiben der Datei ist abgebrochen." = "توقفت كتابة الملف.";
 "Sichern unter …" = "حفظ باسم…";
 "Sichern überschreibt diese Änderungen." = "سيؤدي الحفظ إلى استبدال هذه التغييرات.";
 "Suchen" = "بحث";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "رفض Claude Code الإرجاع: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "لم يستجب Claude Code في الوقت المحدد.";
 "Claude Code ist beendet." = "انتهى Claude Code.";
+"Claude Code liest seine Eingabe nicht mehr." = "لم يعد Claude Code يقرأ مدخلاته.";
 "Claude Code ist nicht gestartet: {}" = "لم يبدأ Claude Code: {}";
 "Claude Code lehnt ab: {}" = "يرفض Claude Code: {}";
 "Dafür fehlt die Berechtigung." = "لا يوجد إذن للقيام بذلك.";

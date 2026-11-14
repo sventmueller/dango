@@ -76,16 +76,29 @@ define_class!(
                 if Supervisor::global().running().is_empty() {
                     return NSApplicationTerminateReply::TerminateNow;
                 }
-                std::thread::spawn(|| {
-                    // Launched programs end and attached ones are let go before the supervisor ends the adapters.
-                    ide_dap::stop_all(QUIT_GRACE);
-                    Supervisor::global().shutdown(QUIT_GRACE);
+                let reply = || {
                     main_soon(|| {
                         if let Some(mtm) = MainThreadMarker::new() {
                             NSApplication::sharedApplication(mtm).replyToApplicationShouldTerminate(true);
                         }
                     });
+                };
+                let stopping = crate::util::spawn("ide-quit", move || {
+                    // Launched programs end and attached ones are let go before the supervisor ends the adapters; the
+                    // app quits even if that fails, since macOS waits for the reply.
+                    ide_core::lane::contained(|| {
+                        ide_dap::stop_all(QUIT_GRACE);
+                        Supervisor::global().shutdown(QUIT_GRACE);
+                    });
+                    reply();
                 });
+                if stopping.is_err() {
+                    ide_core::lane::contained(|| {
+                        ide_dap::stop_all(QUIT_GRACE);
+                        Supervisor::global().shutdown(QUIT_GRACE);
+                    });
+                    return NSApplicationTerminateReply::TerminateNow;
+                }
                 NSApplicationTerminateReply::TerminateLater
             })
         }

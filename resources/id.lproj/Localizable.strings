@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Temukan Sebelumnya";
 "Sichern" = "Simpan";
 "Sichern fehlgeschlagen" = "Gagal Menyimpan";
+"Das Schreiben der Datei ist abgebrochen." = "Penulisan file terhenti.";
 "Sichern unter …" = "Simpan Sebagai…";
 "Sichern überschreibt diese Änderungen." = "Menyimpan akan menimpa perubahan ini.";
 "Suchen" = "Temukan";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code menolak putar balik: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code tidak merespons tepat waktu.";
 "Claude Code ist beendet." = "Claude Code telah berakhir.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code tidak lagi membaca inputnya.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code tidak dimulai: {}";
 "Claude Code lehnt ab: {}" = "Claude Code menolak: {}";
 "Dafür fehlt die Berechtigung." = "Anda tidak memiliki izin untuk ini.";

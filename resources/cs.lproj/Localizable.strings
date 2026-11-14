@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Hledat předchozí";
 "Sichern" = "Uložit";
 "Sichern fehlgeschlagen" = "Uložení se nezdařilo";
+"Das Schreiben der Datei ist abgebrochen." = "Zápis souboru byl přerušen.";
 "Sichern unter …" = "Uložit jako…";
 "Sichern überschreibt diese Änderungen." = "Uložením tyto změny přepíšete.";
 "Suchen" = "Hledat";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code odmítl přetočení zpět: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code neodpověděl včas.";
 "Claude Code ist beendet." = "Claude Code byl ukončen.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code už nečte svůj vstup.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code se nespustil: {}";
 "Claude Code lehnt ab: {}" = "Claude Code odmítá: {}";
 "Dafür fehlt die Berechtigung." = "K tomu chybí oprávnění.";

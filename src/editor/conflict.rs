@@ -299,7 +299,7 @@ pub fn keep(view: &EditorTextView) {
 
 /// Writes the text of a gone file anew.
 pub fn save(view: &EditorTextView) {
-    super::save(view, false);
+    super::save_soon(view, false);
 }
 
 /// Closes the editor of a gone file once the user agreed.

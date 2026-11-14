@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Tìm mục trước";
 "Sichern" = "Lưu";
 "Sichern fehlgeschlagen" = "Lưu không thành công";
+"Das Schreiben der Datei ist abgebrochen." = "Việc ghi tệp đã bị gián đoạn.";
 "Sichern unter …" = "Lưu thành…";
 "Sichern überschreibt diese Änderungen." = "Lưu sẽ ghi đè các thay đổi này.";
 "Suchen" = "Tìm";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code đã từ chối tua lại: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code không phản hồi kịp thời.";
 "Claude Code ist beendet." = "Claude Code đã kết thúc.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code không còn đọc dữ liệu đầu vào của nó.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code chưa khởi động: {}";
 "Claude Code lehnt ab: {}" = "Claude Code từ chối: {}";
 "Dafür fehlt die Berechtigung." = "Không có quyền thực hiện việc này.";

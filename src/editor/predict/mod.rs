@@ -265,13 +265,11 @@ pub fn request(view: &EditorTextView) {
         return;
     }
     let (scans, scan) = (provider::scans(), provider::gitleaks());
-    let checking = std::thread::Builder::new()
-        .name("prediction-secrets".into())
-        .spawn(move || {
-            if let Some(verdict) = guard::send(request, true, &scans, &scan, &*provider, cancel, reply) {
-                main_soon(move || checked(serial, &verdict));
-            }
-        });
+    let checking = crate::util::spawn("prediction-secrets", move || {
+        if let Some(verdict) = guard::send(request, true, &scans, &scan, &*provider, cancel, reply) {
+            main_soon(move || checked(serial, &verdict));
+        }
+    });
     if let Err(error) = checking {
         crate::diag::report("checking a prediction request for secrets", error);
     }

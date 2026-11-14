@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Előző keresése";
 "Sichern" = "Mentés";
 "Sichern fehlgeschlagen" = "A mentés nem sikerült";
+"Das Schreiben der Datei ist abgebrochen." = "A fájl írása megszakadt.";
 "Sichern unter …" = "Mentés mint…";
 "Sichern überschreibt diese Änderungen." = "A mentés felülírja ezeket a módosításokat.";
 "Suchen" = "Keresés";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "A Claude Code elutasította a visszatekerést: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "A Claude Code nem válaszolt időben.";
 "Claude Code ist beendet." = "A Claude Code befejeződött.";
+"Claude Code liest seine Eingabe nicht mehr." = "A Claude Code már nem olvassa a bemenetét.";
 "Claude Code ist nicht gestartet: {}" = "A Claude Code nem indult el: {}";
 "Claude Code lehnt ab: {}" = "A Claude Code elutasítja: {}";
 "Dafür fehlt die Berechtigung." = "Ehhez hiányzik az engedély.";

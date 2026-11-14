@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Rechercher le précédent";
 "Sichern" = "Enregistrer";
 "Sichern fehlgeschlagen" = "Échec de l’enregistrement";
+"Das Schreiben der Datei ist abgebrochen." = "L’écriture du fichier a été interrompue.";
 "Sichern unter …" = "Enregistrer sous…";
 "Sichern überschreibt diese Änderungen." = "L’enregistrement écrasera ces modifications.";
 "Suchen" = "Rechercher";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code a refusé le retour en arrière : {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code n’a pas répondu à temps.";
 "Claude Code ist beendet." = "Claude Code s’est arrêté.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code ne lit plus son entrée.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code n’a pas démarré : {}";
 "Claude Code lehnt ab: {}" = "Claude Code refuse : {}";
 "Dafür fehlt die Berechtigung." = "Vous n’avez pas l’autorisation nécessaire.";

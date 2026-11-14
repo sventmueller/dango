@@ -248,6 +248,25 @@ fn a_save_writes_the_format_it_read_and_typing_during_it_stays_unsaved() {
 }
 
 #[test]
+fn a_save_that_finishes_after_a_newer_one_changes_nothing() {
+    let dir = scratch("stale-save");
+    let path = dir.join("a.txt");
+    fs::write(&path, "base\n").unwrap();
+    let mut document = Document::open(&path).unwrap();
+    edit(&mut document, 0..0, "1");
+    let older = document.begin_save(false).unwrap().run().unwrap();
+    edit(&mut document, 0..0, "2");
+    let newer = document.begin_save(true).unwrap().run().unwrap();
+    document.end_save(newer);
+    document.end_save(older);
+    assert!(!document.is_dirty());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "21base\n");
+    edit(&mut document, 0..0, "3");
+    document.save().unwrap();
+    assert_eq!(fs::read_to_string(&path).unwrap(), "321base\n");
+}
+
+#[test]
 fn a_save_refuses_to_overwrite_a_change_another_program_made() {
     let dir = scratch("overwrite");
     let path = dir.join("a.txt");

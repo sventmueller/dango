@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "이전 찾기";
 "Sichern" = "저장";
 "Sichern fehlgeschlagen" = "저장 실패";
+"Das Schreiben der Datei ist abgebrochen." = "파일 쓰기가 중단되었습니다.";
 "Sichern unter …" = "별도 저장…";
 "Sichern überschreibt diese Änderungen." = "저장하면 이 변경 사항을 덮어씁니다.";
 "Suchen" = "찾기";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code가 되감기를 거부했습니다: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code가 제시간에 응답하지 않았습니다.";
 "Claude Code ist beendet." = "Claude Code가 종료되었습니다.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code가 더 이상 입력을 읽지 않습니다.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code가 시작되지 않았습니다: {}";
 "Claude Code lehnt ab: {}" = "Claude Code가 거부했습니다: {}";
 "Dafür fehlt die Berechtigung." = "이 작업을 수행할 권한이 없습니다.";

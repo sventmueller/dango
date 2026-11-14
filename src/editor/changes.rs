@@ -179,7 +179,7 @@ fn spawn(job: impl FnOnce() + Send + 'static) {
         ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
         job();
     };
-    if let Err(error) = std::thread::Builder::new().name("ide-git-marks".into()).spawn(job) {
+    if let Err(error) = crate::util::spawn("ide-git-marks", job) {
         crate::diag::report("comparing with the last commit", error);
     }
 }

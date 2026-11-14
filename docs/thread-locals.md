@@ -172,6 +172,7 @@ whose static is gone.
 | `src/ci_panel/work.rs` | `NETWORK` | the CI panel's HTTP transport | once per process |
 | `src/ci_panel/work.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the tokens are | once per process |
 | `src/editor/recovery.rs` | `COPIES` | the thread that writes copies of unsaved text | worker threads |
+| `src/lsp/edits.rs` | `EDITS` | the thread that applies a server's workspace edits | worker threads |
 | `src/environment.rs` | `ENVIRONMENT` | the login shell's environment | once per process |
 | `src/environment.rs` | `READY` | whether that environment is read, for threads that wait for it | once per process |
 | `src/lsp/mod.rs` | `REGISTRY` | the language server registry, built once the environment is known | once per process |

@@ -374,6 +374,7 @@
 "Rückwärts suchen" = "Find Previous";
 "Sichern" = "Save";
 "Sichern fehlgeschlagen" = "Saving Failed";
+"Das Schreiben der Datei ist abgebrochen." = "Writing the file was aborted.";
 "Sichern unter …" = "Save As…";
 "Sichern überschreibt diese Änderungen." = "Saving overwrites these changes.";
 "Suchen" = "Find";
@@ -1689,6 +1690,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code refused the rewind: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code did not answer in time.";
 "Claude Code ist beendet." = "Claude Code has ended.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code no longer reads its input.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code did not start: {}";
 "Claude Code lehnt ab: {}" = "Claude Code refuses: {}";
 "Dafür fehlt die Berechtigung." = "Permission is missing for this.";

@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Poišči prejšnje";
 "Sichern" = "Shrani";
 "Sichern fehlgeschlagen" = "Shranjevanje ni uspelo";
+"Das Schreiben der Datei ist abgebrochen." = "Pisanje datoteke je bilo prekinjeno.";
 "Sichern unter …" = "Shrani kot …";
 "Sichern überschreibt diese Änderungen." = "Shranjevanje bo prepisalo te spremembe.";
 "Suchen" = "Iskanje";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code je zavrnil previjanje nazaj: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code ni pravočasno odgovoril.";
 "Claude Code ist beendet." = "Claude Code se je končal.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code ne bere več svojega vnosa.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code se ni zagnal: {}";
 "Claude Code lehnt ab: {}" = "Claude Code zavrača: {}";
 "Dafür fehlt die Berechtigung." = "Za to manjka dovoljenje.";

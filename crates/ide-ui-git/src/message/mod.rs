@@ -182,16 +182,14 @@ impl GitPanel {
         self.set_streaming(true);
         self.show_text("");
         let id = self.id();
-        let spawned = std::thread::Builder::new()
-            .name("commit-message".into())
-            .spawn(move || {
-                let mut forward = |piece: &str| {
-                    let piece = piece.to_string();
-                    main_soon(move || with_panel(id, |panel| panel.message_piece(run, &piece)));
-                };
-                let result = source.send(checked.text(), &cancel, &mut forward);
-                main_soon(move || with_panel(id, |panel| panel.message_done(run, result)));
-            });
+        let spawned = ide_ui_common::util::spawn("commit-message", move || {
+            let mut forward = |piece: &str| {
+                let piece = piece.to_string();
+                main_soon(move || with_panel(id, |panel| panel.message_piece(run, &piece)));
+            };
+            let result = source.send(checked.text(), &cancel, &mut forward);
+            main_soon(move || with_panel(id, |panel| panel.message_done(run, result)));
+        });
         if let Err(error) = spawned {
             self.message_done(run, Err(Failure::Failed(error.to_string())));
         }

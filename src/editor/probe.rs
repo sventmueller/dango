@@ -100,9 +100,14 @@ pub fn type_newline(view: &EditorTextView) {
     editing::newline(view);
 }
 
-/// Saves `view` as ⌘S does.
+/// Saves `view` and waits for the file to be written.
 pub fn save_view(view: &EditorTextView) {
     save(view, false);
+}
+
+/// Whether a save of `view` still writes its file on the disk lane.
+pub fn writing(view: &EditorTextView) -> bool {
+    view.ivars().writing.get() != super::saving::Writing::Idle
 }
 
 pub use super::changes::{

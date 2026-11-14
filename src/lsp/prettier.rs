@@ -67,7 +67,7 @@ pub fn format(view: &EditorTextView, then: Option<Then>) -> Result<(), Option<Th
     crate::context::AppContext::get(objc2::MainThreadOnly::mtm(view))
         .formatting
         .wait(serial, id, then);
-    let spawned = std::thread::Builder::new().name("prettier".into()).spawn(move || {
+    let spawned = crate::util::spawn("prettier", move || {
         let env = ide_ui_common::window::environment(Duration::from_secs(10));
         let outcome = format_text(&run, &text, &env);
         main_soon(move || finished(serial, id, revision, outcome));
@@ -97,13 +97,13 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
     };
     let input = text.as_bytes().to_vec();
     let stdin = spawned.stdin.take();
-    let writer = std::thread::spawn(move || {
+    let writer = crate::util::spawn_joined("prettier-input", move || {
         if let Some(mut stdin) = stdin {
             let _ = stdin.write_all(&input);
         }
     });
     let read = |pipe: Option<Box<dyn Read + Send>>| {
-        std::thread::spawn(move || {
+        crate::util::spawn_joined("prettier-output", move || {
             let mut out = Vec::new();
             if let Some(mut pipe) = pipe {
                 let _ = pipe.read_to_end(&mut out);
@@ -117,8 +117,11 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
         supervisor.stop(spawned.id, Duration::from_millis(200));
         return Outcome::Failed(t("Prettier hat nicht rechtzeitig geantwortet").to_string());
     };
-    let _ = writer.join();
-    let (out, err) = (stdout.join().unwrap_or_default(), stderr.join().unwrap_or_default());
+    if let Ok(writer) = writer {
+        writer.join();
+    }
+    let output = |read: Result<crate::util::Joined<Vec<u8>>, _>| read.ok().and_then(|r| r.join()).unwrap_or_default();
+    let (out, err) = (output(stdout), output(stderr));
     let code = match ending {
         Ending::Code(code) => Some(code),
         _ => None,

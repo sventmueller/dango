@@ -243,7 +243,7 @@ impl DebugPanel {
             controller.show_inspector(true);
         }
         let (panel, setup) = (self.id(), self.setup());
-        let started = std::thread::Builder::new().name("debug-start".into()).spawn(move || {
+        let started = ide_ui_common::util::spawn("debug-start", move || {
             let mut line = |text: &str| {
                 let text = format!("{text}\n");
                 main_soon(move || with_panel(panel, |p| p.note_start(&text)));
@@ -592,11 +592,14 @@ impl DebugPanel {
     pub fn pick_process(&self, then: impl FnOnce(&DebugPanel, u32) + 'static) {
         let panel = self.id();
         self.ivars().links.borrow_mut().picking = Some(Box::new(then));
-        std::thread::spawn(move || {
+        let listed = ide_ui_common::util::spawn("debug-processes", move || {
             let env = ide_ui_common::window::environment(ENVIRONMENT_WAIT);
             let found = ide_dap::processes(Supervisor::global(), &env).unwrap_or_default();
             main_soon(move || with_panel(panel, |p| super::sheets::show_processes(p, found)));
         });
+        if let Err(why) = listed {
+            self.tell(&why.0);
+        }
     }
 
     /// Asks for a process and attaches the debugger of the editor's language to it, else lldb-dap.
@@ -628,7 +631,7 @@ impl DebugPanel {
         let panel = self.id();
         super::sheets::answer(&alert, &window, move |agreed| {
             if agreed {
-                std::thread::spawn(move || {
+                let installing = ide_ui_common::util::spawn("debug-install", move || {
                     let env = ide_ui_common::window::environment(ENVIRONMENT_WAIT);
                     let adapters = Adapters::new(Supervisor::global(), env);
                     let done = adapters.install(
@@ -646,6 +649,9 @@ impl DebugPanel {
                     };
                     main_soon(move || with_panel(panel, |p| p.tell(&words)));
                 });
+                if let Err(why) = installing {
+                    with_panel(panel, |p| p.tell(&why.0));
+                }
             }
         });
     }

@@ -67,7 +67,7 @@ pub fn long<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: impl FnOnce(Option<T>) + Send + 'static,
 ) {
-    let started = std::thread::Builder::new().name("ide-ci-login".into()).spawn(move || {
+    let started = crate::util::spawn("ide-ci-login", move || {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(work)).ok();
         main_soon(move || done(result));
     });

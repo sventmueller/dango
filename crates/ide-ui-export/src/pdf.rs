@@ -66,7 +66,7 @@ impl Work {
 /// Lays the document out on the export's thread, then goes on on the main thread.
 pub fn start(number: u64, job: Job) {
     let text = job.source.text.clone();
-    let spawned = std::thread::Builder::new().name("export".into()).spawn(move || {
+    let spawned = ide_ui_common::util::spawn("export", move || {
         let doc = splat_markdown::reader::parse(&text);
         let macros = js::wanted(&doc, false).macros;
         let ready = Ready {
@@ -192,7 +192,7 @@ fn set_text(number: u64) {
     };
     let Work { job, text, paper, .. } = work;
     let handed = Handed(text);
-    let spawned = std::thread::Builder::new().name("export".into()).spawn(move || {
+    let spawned = ide_ui_common::util::spawn("export", move || {
         let outcome = draw(handed, paper, &job);
         main_soon(move || finish(number, outcome));
     });

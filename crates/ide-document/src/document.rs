@@ -575,8 +575,13 @@ impl Document {
         }
     }
 
-    /// Takes note of a save that wrote its file; edits made while it wrote stay unsaved.
+    /// Takes note of a save that wrote its file; edits made while it wrote stay unsaved. A save of an older revision
+    /// than the one known to be in the file, which finished after a newer save took note, changes nothing.
     pub fn end_save(&mut self, saved: Saved) {
+        let newer = self.disk.as_ref().and_then(|disk| disk.revision);
+        if self.path.as_ref() == Some(&saved.path) && newer.is_some_and(|newer| newer > saved.revision) {
+            return;
+        }
         if self.path.as_ref() != Some(&saved.path) {
             self.path = Some(saved.path);
             if self.read_only == Some(ReadOnly::Protected) {

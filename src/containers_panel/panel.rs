@@ -264,7 +264,7 @@ impl ContainersPanel {
         self.ivars().asked.set(asked);
         let root = self.root().to_path_buf();
         let path = self.path();
-        let spawned = std::thread::Builder::new().name("docker-read".into()).spawn(move || {
+        let spawned = crate::util::spawn("docker-read", move || {
             ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
             let env = environment(path, ENVIRONMENT_WAIT);
             let read = read_all(&env, &context, &root);
@@ -498,7 +498,7 @@ impl ContainersPanel {
     pub fn run(&self, command: ide_docker::Command) {
         let window = self.window();
         let path = self.path();
-        let spawned = std::thread::Builder::new().name("docker-action".into()).spawn(move || {
+        let spawned = crate::util::spawn("docker-action", move || {
             let env = environment(path, ENVIRONMENT_WAIT);
             let outcome = docker::run(&command, &env);
             main_soon(move || {

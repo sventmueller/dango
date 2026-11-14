@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Finn forrige";
 "Sichern" = "Lagre";
 "Sichern fehlgeschlagen" = "Lagring mislyktes";
+"Das Schreiben der Datei ist abgebrochen." = "Skrivingen av filen ble avbrutt.";
 "Sichern unter …" = "Lagre som…";
 "Sichern überschreibt diese Änderungen." = "Lagring overskriver disse endringene.";
 "Suchen" = "Finn";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code avslo tilbakespolingen: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code svarte ikke i tide.";
 "Claude Code ist beendet." = "Claude Code er avsluttet.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code leser ikke lenger inndataene sine.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code har ikke startet: {}";
 "Claude Code lehnt ab: {}" = "Claude Code avslår: {}";
 "Dafür fehlt die Berechtigung." = "Du mangler tillatelse til dette.";

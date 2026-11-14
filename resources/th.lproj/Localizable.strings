@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "ค้นหาก่อนหน้า";
 "Sichern" = "บันทึก";
 "Sichern fehlgeschlagen" = "บันทึกไม่สำเร็จ";
+"Das Schreiben der Datei ist abgebrochen." = "การเขียนไฟล์ถูกยกเลิกกลางคัน";
 "Sichern unter …" = "บันทึกเป็น…";
 "Sichern überschreibt diese Änderungen." = "การบันทึกจะเขียนทับการเปลี่ยนแปลงเหล่านี้";
 "Suchen" = "ค้นหา";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code ปฏิเสธการกรอกลับ: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code ไม่ตอบสนองภายในเวลาที่กำหนด";
 "Claude Code ist beendet." = "Claude Code สิ้นสุดการทำงานแล้ว";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code ไม่อ่านอินพุตของตนอีกต่อไป";
 "Claude Code ist nicht gestartet: {}" = "Claude Code ไม่ได้เริ่มทำงาน: {}";
 "Claude Code lehnt ab: {}" = "Claude Code ปฏิเสธ: {}";
 "Dafür fehlt die Berechtigung." = "ไม่มีสิทธิ์สำหรับการดำเนินการนี้";

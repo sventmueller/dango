@@ -249,9 +249,9 @@ pub fn save(view: &EditorTextView) {
     });
     let format_then_save = move |view: &EditorTextView| {
         if wanted && (can || super::prettier::formats(view)) {
-            format(view, Some(Box::new(|view| editor::save(view, false))));
+            format(view, Some(Box::new(|view| editor::save_soon(view, false))));
         } else {
-            editor::save(view, false);
+            editor::save_soon(view, false);
         }
     };
     let fixes = ide_core::settings::Settings::load_user().get(&keys::ESLINT_FIX_ON_SAVE);

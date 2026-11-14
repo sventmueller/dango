@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use ide_core::explain::Explain;
+use ide_core::explain::{Explain, Explained};
 use ide_process::{Ending, Kind, Supervisor};
 use splat_i18n::t;
 
@@ -41,8 +41,10 @@ fn command(program: &std::path::Path, args: &ide_docker::Command, env: &[(String
 pub enum DockerError {
     /// No `docker` on the user's PATH.
     Missing,
-    /// It did not start, or no thread could wait for it.
+    /// It did not start.
     Start(std::io::Error),
+    /// No thread could watch it.
+    NoThread(Explained),
     /// It ran past its time limit and was stopped.
     TimedOut,
     /// It ended with an error, which it printed in its own words.
@@ -54,6 +56,7 @@ impl Explain for DockerError {
         match self {
             DockerError::Missing => t("Docker ist nicht installiert.").to_string(),
             DockerError::Start(error) => error.explain(),
+            DockerError::NoThread(why) => why.explain(),
             DockerError::TimedOut => t("Docker hat nicht rechtzeitig geantwortet.").to_string(),
             DockerError::Failed(said) => said.clone(),
         }
@@ -68,7 +71,7 @@ pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<Strin
         .spawn(command(&program, args, env), Kind::Tool, label)
         .map_err(DockerError::Start)?;
     let read = |pipe: Option<Box<dyn Read + Send>>| {
-        std::thread::spawn(move || {
+        crate::util::spawn_joined("docker-output", move || {
             let mut out = String::new();
             if let Some(mut pipe) = pipe {
                 let _ = pipe.read_to_string(&mut out);
@@ -82,7 +85,9 @@ pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<Strin
     if ending.is_none() {
         Supervisor::global().stop(spawned.id, Duration::from_secs(1));
     }
-    let (out, err) = (stdout.join().unwrap_or_default(), stderr.join().unwrap_or_default());
+    let output =
+        |read: Result<crate::util::Joined<String>, Explained>| read.ok().and_then(|r| r.join()).unwrap_or_default();
+    let (out, err) = (output(stdout), output(stderr));
     match ending {
         Some(Ending::Code(0)) => Ok(out),
         None => Err(DockerError::TimedOut),
@@ -106,24 +111,22 @@ pub fn watch(
     let id = spawned.id;
     let stdout = spawned.stdout.take();
     let mut stderr = spawned.stderr.take();
-    std::thread::Builder::new()
-        .name("docker-events".into())
-        .spawn(move || {
-            ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
-            if let Some(stdout) = stdout {
-                for read in BufReader::new(stdout).lines() {
-                    match read {
-                        Ok(text) => line(&text),
-                        Err(_) => break,
-                    }
+    crate::util::spawn("docker-events", move || {
+        ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
+        if let Some(stdout) = stdout {
+            for read in BufReader::new(stdout).lines() {
+                match read {
+                    Ok(text) => line(&text),
+                    Err(_) => break,
                 }
             }
-            let mut error = String::new();
-            if let Some(stderr) = stderr.as_mut() {
-                let _ = stderr.read_to_string(&mut error);
-            }
-            ended(error.trim().to_string());
-        })
-        .map_err(DockerError::Start)?;
+        }
+        let mut error = String::new();
+        if let Some(stderr) = stderr.as_mut() {
+            let _ = stderr.read_to_string(&mut error);
+        }
+        ended(error.trim().to_string());
+    })
+    .map_err(DockerError::NoThread)?;
     Ok(id)
 }

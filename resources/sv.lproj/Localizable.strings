@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Sök föregående";
 "Sichern" = "Spara";
 "Sichern fehlgeschlagen" = "Sparandet misslyckades";
+"Das Schreiben der Datei ist abgebrochen." = "Skrivningen av filen avbröts.";
 "Sichern unter …" = "Spara som…";
 "Sichern überschreibt diese Änderungen." = "Om du sparar skrivs de här ändringarna över.";
 "Suchen" = "Sök";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code avvisade tillbakaspolningen: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code svarade inte i tid.";
 "Claude Code ist beendet." = "Claude Code har avslutats.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code läser inte längre sin indata.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code har inte startat: {}";
 "Claude Code lehnt ab: {}" = "Claude Code avvisar: {}";
 "Dafür fehlt die Berechtigung." = "Du saknar behörighet för detta.";

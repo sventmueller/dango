@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, TrySendError, channel, sync_channel};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -88,6 +88,8 @@ pub enum SessionError {
     UnknownRequest(String),
     /// The process has ended.
     Closed,
+    /// The CLI stopped reading what the app writes to it.
+    Congested,
 }
 
 impl std::fmt::Display for SessionError {
@@ -99,6 +101,7 @@ impl std::fmt::Display for SessionError {
             SessionError::RewindRejected(why) => write!(f, "the rewind was refused: {why}"),
             SessionError::UnknownRequest(id) => write!(f, "no request {id} waits for an answer"),
             SessionError::Closed => f.write_str("the claude process has ended"),
+            SessionError::Congested => f.write_str("the claude process does not read its input"),
         }
     }
 }
@@ -113,11 +116,15 @@ impl ide_core::explain::Explain for SessionError {
             SessionError::RewindRejected(why) => tf("Claude Code hat das Zurückspulen abgelehnt: {}", &[why]),
             SessionError::UnknownRequest(_) => t("Diese Anfrage wartet nicht mehr auf eine Antwort.").to_string(),
             SessionError::Closed => t("Claude Code ist beendet.").to_string(),
+            SessionError::Congested => t("Claude Code liest seine Eingabe nicht mehr.").to_string(),
         }
     }
 }
 
 impl std::error::Error for SessionError {}
+
+/// How many lines may wait for the CLI to read them; more mean it hangs, and the app says so instead of piling up.
+const WRITE_QUEUE: usize = 256;
 
 enum Outgoing {
     Line(String),
@@ -151,7 +158,7 @@ struct State {
 struct Shared {
     supervisor: Supervisor,
     process: ProcessId,
-    writer: Mutex<Option<Sender<Outgoing>>>,
+    writer: Mutex<Option<SyncSender<Outgoing>>>,
     state: Mutex<State>,
     pending: Mutex<HashMap<String, Pending>>,
     sink: Sink,
@@ -234,7 +241,7 @@ impl Session {
             supervisor.stop(spawned.id, Duration::from_millis(500));
             return Err(SessionError::Start("the pipes are missing".into()));
         };
-        let (tx, rx) = channel();
+        let (tx, rx) = sync_channel(WRITE_QUEUE);
         let close = tx.clone();
         let stderr_tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
         let shared = Arc::new(Shared {
@@ -267,7 +274,7 @@ impl Session {
             if let Some(shared) = weak.upgrade() {
                 shared.end_expected.store(true, Ordering::SeqCst);
             }
-            let _ = close.send(Outgoing::Close);
+            let _ = close.try_send(Outgoing::Close);
         });
         let started = spawn_threads(&shared, stdin, rx, stdout, stderr, stderr_tail);
         if let Err(e) = started {
@@ -532,7 +539,7 @@ impl Session {
     pub fn close_input(&self) {
         self.shared.end_expected.store(true, Ordering::SeqCst);
         if let Some(writer) = self.shared.lock_writer().take() {
-            let _ = writer.send(Outgoing::Close);
+            let _ = writer.try_send(Outgoing::Close);
         }
     }
 
@@ -717,14 +724,17 @@ impl Shared {
         self.pending.lock_ignoring_poison()
     }
 
-    fn lock_writer(&self) -> MutexGuard<'_, Option<Sender<Outgoing>>> {
+    fn lock_writer(&self) -> MutexGuard<'_, Option<SyncSender<Outgoing>>> {
         self.writer.lock_ignoring_poison()
     }
 
     fn write(&self, frame: &Value) -> Result<(), SessionError> {
         let line = serde_json::to_string(frame).map_err(|e| SessionError::Start(e.to_string()))?;
         match self.lock_writer().as_ref() {
-            Some(writer) => writer.send(Outgoing::Line(line)).map_err(|_| SessionError::Closed),
+            Some(writer) => writer.try_send(Outgoing::Line(line)).map_err(|error| match error {
+                TrySendError::Full(_) => SessionError::Congested,
+                TrySendError::Disconnected(_) => SessionError::Closed,
+            }),
             None => Err(SessionError::Closed),
         }
     }
@@ -912,7 +922,7 @@ impl Shared {
     fn finish(&self) {
         self.closed.store(true, Ordering::SeqCst);
         if let Some(writer) = self.lock_writer().take() {
-            let _ = writer.send(Outgoing::Close);
+            let _ = writer.try_send(Outgoing::Close);
         }
         for (_, pending) in self.lock_pending().drain() {
             let _ = pending.reply.send(Err(ControlError::Closed));

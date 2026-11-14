@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "尋找上一個";
 "Sichern" = "儲存";
 "Sichern fehlgeschlagen" = "儲存失敗";
+"Das Schreiben der Datei ist abgebrochen." = "檔案寫入已中止。";
 "Sichern unter …" = "儲存為⋯";
 "Sichern überschreibt diese Änderungen." = "儲存會覆寫這些變更。";
 "Suchen" = "尋找";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code 拒絕了回溯：{}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code 未及時回應。";
 "Claude Code ist beendet." = "Claude Code 已結束。";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code 不再讀取其輸入。";
 "Claude Code ist nicht gestartet: {}" = "Claude Code 未能啟動：{}";
 "Claude Code lehnt ab: {}" = "Claude Code 拒絕：{}";
 "Dafür fehlt die Berechtigung." = "缺少執行此操作的權限。";

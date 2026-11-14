@@ -612,6 +612,16 @@ B34 C#- und Java-Debugger (E134, E135).
 - **E136 Docker-Panel** über die `docker`-CLI.
 - **E140 Mehrere Sprachserver je Dokument,** Slots nach Register-Eintrag und Wurzel.
 
+Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
+
+- **E141 Fehler in der Sprache des Nutzers:** Jeder Fehler, den der Nutzer liest, sagt über `ide_core::explain::Explain`
+  in seiner Sprache, was schiefging; das `Debug`-Format bleibt dem Systemprotokoll. App und UI-Crates führen keine
+  Fehler als bloßen `String`, sondern als Typ oder als schon übersetztes `Explained`; `cargo xtask rules` prüft beides.
+- **E142 Schreiben und Hintergrundarbeit über Lanes:** ⌘S schreibt auf der Disk-Lane und kehrt sofort zurück;
+  Schließen und Beenden warten auf ihren Schreibvorgang. Keine Arbeit auf der Disk-Lane wartet auf den Haupt-Thread
+  (Workspace-Edits haben eine eigene Lane). App und UI-Crates starten Threads nur über `util::spawn` oder eine Lane;
+  `cargo xtask rules` prüft das.
+
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen
 Vertrag, **R32** Feature-Vereinigung von Abhängigkeiten, **R33** iCloud-Erlaubnis gilt für die ganze App, **R37**

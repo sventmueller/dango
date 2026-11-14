@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Знайти попереднє";
 "Sichern" = "Зберегти";
 "Sichern fehlgeschlagen" = "Не вдалося зберегти";
+"Das Schreiben der Datei ist abgebrochen." = "Запис файлу перервано.";
 "Sichern unter …" = "Зберегти як…";
 "Sichern überschreibt diese Änderungen." = "Збереження перезапише ці зміни.";
 "Suchen" = "Пошук";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code відхилив відкат: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code не відповів вчасно.";
 "Claude Code ist beendet." = "Claude Code завершив роботу.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code більше не читає свій ввід.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code не запустився: {}";
 "Claude Code lehnt ab: {}" = "Claude Code відмовляє: {}";
 "Dafür fehlt die Berechtigung." = "Для цього немає дозволу.";

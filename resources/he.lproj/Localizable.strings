@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "מציאת הקודם";
 "Sichern" = "שמירה";
 "Sichern fehlgeschlagen" = "השמירה נכשלה";
+"Das Schreiben der Datei ist abgebrochen." = "כתיבת הקובץ הופסקה.";
 "Sichern unter …" = "שמירה בשם…";
 "Sichern überschreibt diese Änderungen." = "השמירה תדרוס את השינויים האלה.";
 "Suchen" = "חיפוש";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "‏Claude Code דחה את החזרה לאחור: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "‏Claude Code לא הגיב בזמן.";
 "Claude Code ist beendet." = "‏Claude Code הסתיים.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code כבר לא קורא את הקלט שלו.";
 "Claude Code ist nicht gestartet: {}" = "‏Claude Code לא הופעל: {}";
 "Claude Code lehnt ab: {}" = "‏Claude Code מסרב: {}";
 "Dafür fehlt die Berechtigung." = "אין הרשאה לפעולה זו.";

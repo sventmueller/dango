@@ -78,7 +78,7 @@ pub(super) fn replace(
         done(result);
         return;
     }
-    let spawned = std::thread::Builder::new().name("ide-replace".into()).spawn(move || {
+    let spawned = crate::util::spawn("ide-replace", move || {
         ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
         for path in &closed {
             result.count(path, in_file(path, &options, &with, &only));

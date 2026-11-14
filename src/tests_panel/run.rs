@@ -55,9 +55,7 @@ pub fn start(
     .flatten()
     {
         let output = output.clone();
-        std::thread::Builder::new()
-            .name("test-output".into())
-            .spawn(move || gather(pipe, &output))?;
+        crate::util::spawn("test-output", move || gather(pipe, &output)).map_err(|why| std::io::Error::other(why.0))?;
     }
     Ok(Running {
         id: spawned.id,

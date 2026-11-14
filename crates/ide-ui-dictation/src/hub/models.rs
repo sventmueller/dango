@@ -52,18 +52,16 @@ pub fn download(model: LocalModel, changed: impl Fn() + 'static) {
     if !started {
         return;
     }
-    let spawned = std::thread::Builder::new()
-        .name("ide.dictation-model".into())
-        .spawn(move || {
-            let mut shown = 0.0;
-            let result = engine::download(model, &cancel, &mut |fraction| {
-                if fraction - shown >= 0.01 {
-                    shown = fraction;
-                    main_soon(move || step(model, Step::Progress(fraction)));
-                }
-            });
-            main_soon(move || step(model, Step::Done(result)));
+    let spawned = ide_ui_common::util::spawn("ide.dictation-model", move || {
+        let mut shown = 0.0;
+        let result = engine::download(model, &cancel, &mut |fraction| {
+            if fraction - shown >= 0.01 {
+                shown = fraction;
+                main_soon(move || step(model, Step::Progress(fraction)));
+            }
         });
+        main_soon(move || step(model, Step::Done(result)));
+    });
     if let Err(error) = spawned {
         step(model, Step::Done(Err(engine::EngineError::Lowspeak(error.to_string()))));
     }

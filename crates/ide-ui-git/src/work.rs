@@ -64,7 +64,7 @@ pub fn long<T: Send + 'static, D: FnOnce(Option<T>) + Send + 'static>(
 ) {
     let slot = Arc::new(Mutex::new(Some(done)));
     let theirs = slot.clone();
-    let spawned = std::thread::Builder::new().name("ide-git-long".into()).spawn(move || {
+    let spawned = ide_ui_common::util::spawn("ide-git-long", move || {
         ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
         let result = ide_core::lane::contained(work);
         if let Some(done) = theirs.lock_ignoring_poison().take() {

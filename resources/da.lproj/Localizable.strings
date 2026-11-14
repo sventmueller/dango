@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Find forrige";
 "Sichern" = "Gem";
 "Sichern fehlgeschlagen" = "Kunne ikke gemme";
+"Das Schreiben der Datei ist abgebrochen." = "Skrivningen af arkivet blev afbrudt.";
 "Sichern unter …" = "Gem som…";
 "Sichern überschreibt diese Änderungen." = "Hvis du gemmer, overskrives disse ændringer.";
 "Suchen" = "Find";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code afviste tilbagespolingen: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code svarede ikke i tide.";
 "Claude Code ist beendet." = "Claude Code er stoppet.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code læser ikke længere sit input.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code er ikke startet: {}";
 "Claude Code lehnt ab: {}" = "Claude Code afviser: {}";
 "Dafür fehlt die Berechtigung." = "Du har ikke tilladelse til dette.";

@@ -10,5 +10,5 @@ pub use appkit::{
 };
 pub use lanes::{guarded, main_after, main_on_run_loop, main_soon};
 pub use observe::{Observation, observe};
-pub use thread::{spawn, spawn_with};
+pub use thread::{Joined, spawn, spawn_joined, spawn_with};
 pub use undo::undo_step;

@@ -62,7 +62,7 @@ pub fn apply_workspace_edit(
     let (folder, edit) = (folder.to_path_buf(), edit.clone());
     let done = std::sync::Arc::new(std::sync::Mutex::new(Some(done)));
     let answer = done.clone();
-    let queued = ide_core::lane::DISK.ask(
+    let queued = EDITS.ask(
         move || super::apply::apply(&folder, &edit, &mut FromLane),
         move |result| {
             let result = result.unwrap_or_else(|| Err(not_run()));
@@ -100,7 +100,13 @@ fn editor_at(path: &Path) -> Option<Retained<EditorTextView>> {
 /// The app's editors, as a workspace edit reaches them.
 struct OpenEditors;
 
-/// The app's editors as the disk lane reaches them: each question waits for its answer from the main thread.
+/// Applies workspace edits: their thread waits for the main thread at each open editor, so it is not the disk lane,
+/// which the main thread itself waits for when a file closes or the app quits.
+static EDITS: ide_core::lane::Lane =
+    ide_core::lane::Lane::with_start("ide-workspace-edits", 1, 16, ide_process::priority::user_initiated);
+
+/// The app's editors as the workspace edits' lane reaches them: each question waits for its answer from the main
+/// thread.
 struct FromLane;
 
 /// What `f` answers on the main thread, for a worker thread that waits for it.

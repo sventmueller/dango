@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Cerca l’anterior";
 "Sichern" = "Desa";
 "Sichern fehlgeschlagen" = "No s’ha pogut desar";
+"Das Schreiben der Datei ist abgebrochen." = "S’ha interromput l’escriptura del fitxer.";
 "Sichern unter …" = "Desa com a…";
 "Sichern überschreibt diese Änderungen." = "En desar, se sobreescriuran aquests canvis.";
 "Suchen" = "Cerca";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code ha rebutjat el retrocés: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code no ha respost a temps.";
 "Claude Code ist beendet." = "Claude Code s’ha aturat.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code ja no llegeix la seva entrada.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code no s’ha iniciat: {}";
 "Claude Code lehnt ab: {}" = "Claude Code ho rebutja: {}";
 "Dafür fehlt die Berechtigung." = "No tens permís per fer-ho.";

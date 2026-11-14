@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "前を検索";
 "Sichern" = "保存";
 "Sichern fehlgeschlagen" = "保存できませんでした";
+"Das Schreiben der Datei ist abgebrochen." = "ファイルの書き込みが中断されました。";
 "Sichern unter …" = "別名で保存…";
 "Sichern überschreibt diese Änderungen." = "保存すると、これらの変更は上書きされます。";
 "Suchen" = "検索";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Codeが巻き戻しを拒否しました: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Codeが時間内に応答しませんでした。";
 "Claude Code ist beendet." = "Claude Codeは終了しました。";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code が入力を読み取らなくなりました。";
 "Claude Code ist nicht gestartet: {}" = "Claude Codeが起動しませんでした: {}";
 "Claude Code lehnt ab: {}" = "Claude Codeが拒否しました: {}";
 "Dafür fehlt die Berechtigung." = "この操作を行うアクセス権がありません。";

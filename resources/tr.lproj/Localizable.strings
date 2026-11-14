@@ -372,6 +372,7 @@
 "Rückwärts suchen" = "Öncekini Bul";
 "Sichern" = "Kaydet";
 "Sichern fehlgeschlagen" = "Kaydedilemedi";
+"Das Schreiben der Datei ist abgebrochen." = "Dosyanın yazılması yarıda kesildi.";
 "Sichern unter …" = "Farklı Kaydet…";
 "Sichern überschreibt diese Änderungen." = "Kaydetmek bu değişikliklerin üzerine yazar.";
 "Suchen" = "Bul";
@@ -1652,6 +1653,7 @@
 "Claude Code hat das Zurückspulen abgelehnt: {}" = "Claude Code geri sarmayı reddetti: {}";
 "Claude Code hat nicht rechtzeitig geantwortet." = "Claude Code zamanında yanıt vermedi.";
 "Claude Code ist beendet." = "Claude Code sonlandı.";
+"Claude Code liest seine Eingabe nicht mehr." = "Claude Code artık girdisini okumuyor.";
 "Claude Code ist nicht gestartet: {}" = "Claude Code başlamadı: {}";
 "Claude Code lehnt ab: {}" = "Claude Code reddediyor: {}";
 "Dafür fehlt die Berechtigung." = "Bunun için izin yok.";
