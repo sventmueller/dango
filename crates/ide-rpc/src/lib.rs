@@ -10,7 +10,7 @@
 //! use std::sync::{Arc, mpsc};
 //! use std::time::Duration;
 //!
-//! use ide_rpc::{Call, Receiver, Transport};
+//! use ide_rpc::{Call, Receiver, RequestId, Transport};
 //!
 //! struct Answer(mpsc::Sender<Option<Vec<u8>>>);
 //!
@@ -18,7 +18,7 @@
 //!     fn closed(self) {
 //!         let _ = self.0.send(None);
 //!     }
-//!     fn expired(self, _: i64, _: &Transport<Self>) {
+//!     fn expired(self, _: RequestId, _: &Transport<Self>) {
 //!         let _ = self.0.send(None);
 //!     }
 //! }
@@ -27,7 +27,7 @@
 //!
 //! impl Receiver<Answer> for Echo {
 //!     fn receive(&self, transport: &Arc<Transport<Answer>>, body: &[u8]) {
-//!         let id = i64::from(body[0]);
+//!         let id = RequestId::new(i64::from(body[0]));
 //!         if let Some(answer) = transport.take(id) {
 //!             let _ = answer.0.send(Some(body.to_vec()));
 //!         }
@@ -41,7 +41,7 @@
 //! let (tx, rx) = mpsc::channel();
 //! let id = transport.next_id();
 //! transport.call(id, ide_process::framing::frame(b"ask"), Duration::from_secs(5), Answer(tx)).unwrap();
-//! peer_out.write_all(&ide_process::framing::frame(&[u8::try_from(id).unwrap(), b'!']))?;
+//! peer_out.write_all(&ide_process::framing::frame(&[u8::try_from(id.get()).unwrap(), b'!']))?;
 //! assert_eq!(rx.recv().unwrap(), Some(vec![1, b'!']));
 //! # Ok::<(), std::io::Error>(())
 //! ```
@@ -53,4 +53,4 @@ mod responder;
 mod transport;
 
 pub use responder::Responder;
-pub use transport::{Build, Call, Receiver, SendError, Transport, contained};
+pub use transport::{Build, Call, Receiver, RequestId, SendError, Transport, contained};

@@ -37,7 +37,7 @@ const STDERR_KEPT: usize = 64 * 1024;
 #[derive(Debug, Clone)]
 pub struct Ticket {
     connection: Weak<Connection>,
-    id: i64,
+    id: ide_rpc::RequestId,
 }
 
 impl Ticket {

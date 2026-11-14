@@ -16,13 +16,30 @@ const QUEUE: usize = 4096;
 /// A deadline far enough away to mean none, for timeouts that overflow `Instant`.
 const NEVER: Duration = Duration::from_secs(365 * 24 * 3600);
 
+/// The number of a call or message of one transport, which its answer carries back; never reused while the transport
+/// runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RequestId(i64);
+
+impl RequestId {
+    /// The id an answer named by `number` on the wire.
+    pub const fn new(number: i64) -> RequestId {
+        RequestId(number)
+    }
+
+    /// The number the id goes on the wire as.
+    pub const fn get(self) -> i64 {
+        self.0
+    }
+}
+
 /// What waits for an answer; exactly one of its ends happens: the receiver [`take`](Transport::take)s it, it
 /// expires, or the transport closes.
 pub trait Call: Send + Sized + 'static {
     /// The transport closed before an answer came.
     fn closed(self);
     /// The deadline passed before an answer came; the call `id` is already off the table.
-    fn expired(self, id: i64, transport: &Transport<Self>);
+    fn expired(self, id: RequestId, transport: &Transport<Self>);
 }
 
 /// Hears what the other side sends.
@@ -59,7 +76,7 @@ struct Waiting<C> {
 }
 
 struct Pending<C> {
-    calls: HashMap<i64, Waiting<C>>,
+    calls: HashMap<RequestId, Waiting<C>>,
     closed: bool,
 }
 
@@ -132,13 +149,13 @@ impl<C: Call> Transport<C> {
     }
 
     /// A number no other call or message of this transport has had.
-    pub fn next_id(&self) -> i64 {
-        self.next.fetch_add(1, Ordering::Relaxed)
+    pub fn next_id(&self) -> RequestId {
+        RequestId(self.next.fetch_add(1, Ordering::Relaxed))
     }
 
     /// Queues `frame` and keeps `call` until its answer, `timeout` or the end of the transport. When this returns an
     /// error, `call` is dropped without any of its ends.
-    pub fn call(&self, id: i64, frame: Vec<u8>, timeout: Duration, call: C) -> Result<(), SendError> {
+    pub fn call(&self, id: RequestId, frame: Vec<u8>, timeout: Duration, call: C) -> Result<(), SendError> {
         {
             let mut pending = self.lock();
             if pending.closed {
@@ -181,7 +198,7 @@ impl<C: Call> Transport<C> {
     }
 
     /// The call `id` off the table, to answer or cancel it; `None` when it already ended.
-    pub fn take(&self, id: i64) -> Option<C> {
+    pub fn take(&self, id: RequestId) -> Option<C> {
         self.lock().calls.remove(&id).map(|waiting| waiting.call)
     }
 
@@ -218,14 +235,14 @@ impl<C: Call> Transport<C> {
                 return;
             }
             let now = Instant::now();
-            let due: Vec<i64> = pending
+            let due: Vec<RequestId> = pending
                 .calls
                 .iter()
                 .filter(|(_, waiting)| waiting.deadline <= now)
                 .map(|(id, _)| *id)
                 .collect();
             if !due.is_empty() {
-                let calls: Vec<(i64, C)> = due
+                let calls: Vec<(RequestId, C)> = due
                     .into_iter()
                     .filter_map(|id| pending.calls.remove(&id).map(|waiting| (id, waiting.call)))
                     .collect();
@@ -329,7 +346,7 @@ mod tests {
     #[derive(Debug, PartialEq)]
     enum End {
         Answered(Vec<u8>),
-        Expired(i64),
+        Expired(RequestId),
         Closed,
     }
 
@@ -339,8 +356,8 @@ mod tests {
         fn closed(self) {
             let _ = self.0.send(End::Closed);
         }
-        fn expired(self, id: i64, transport: &Transport<Self>) {
-            let _ = transport.send(framing::frame(format!("cancel {id}").as_bytes()));
+        fn expired(self, id: RequestId, transport: &Transport<Self>) {
+            let _ = transport.send(framing::frame(format!("cancel {}", id.get()).as_bytes()));
             let _ = self.0.send(End::Expired(id));
         }
     }
@@ -351,7 +368,7 @@ mod tests {
     impl Receiver<Probe> for ByFirstByte {
         fn receive(&self, transport: &Arc<Transport<Probe>>, body: &[u8]) {
             assert_ne!(body.first(), Some(&b'!'), "a receiver that panics");
-            if let Some(probe) = transport.take(i64::from(body[0])) {
+            if let Some(probe) = transport.take(RequestId::new(i64::from(body[0]))) {
                 let _ = probe.0.send(End::Answered(body[1..].to_vec()));
             }
         }
@@ -414,8 +431,8 @@ mod tests {
             .unwrap();
         assert_eq!(rx.recv_timeout(WAIT).unwrap(), End::Expired(id));
         assert_eq!(peer.next(), b"slow");
-        assert_eq!(peer.next(), format!("cancel {id}").as_bytes());
-        peer.send(&[u8::try_from(id).unwrap(), b'x']);
+        assert_eq!(peer.next(), format!("cancel {}", id.get()).as_bytes());
+        peer.send(&[u8::try_from(id.get()).unwrap(), b'x']);
         assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
     }
 

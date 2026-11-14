@@ -6,7 +6,7 @@ use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use ide_process::framing;
-use ide_rpc::{Call, SendError, Transport, contained};
+use ide_rpc::{Call, RequestId, SendError, Transport, contained};
 use serde_json::{Map, Value, json};
 
 use crate::error::Error;
@@ -30,7 +30,7 @@ impl Call for Waiting {
         (self.0)(Err(Error::ServerGone));
     }
 
-    fn expired(self, id: i64, transport: &Transport<Self>) {
+    fn expired(self, id: RequestId, transport: &Transport<Self>) {
         let _ = send(transport, &cancel_request(id));
         (self.0)(Err(Error::Timeout));
     }
@@ -55,9 +55,15 @@ impl Connection {
 
     /// Sends a request; `reply` hears the answer, an error, the timeout or the cancellation exactly once. When this
     /// returns an error, `reply` is dropped without a call.
-    pub(crate) fn request(&self, method: &str, params: Value, timeout: Duration, reply: Reply) -> Result<i64, Error> {
+    pub(crate) fn request(
+        &self,
+        method: &str,
+        params: Value,
+        timeout: Duration,
+        reply: Reply,
+    ) -> Result<RequestId, Error> {
         let id = self.transport.next_id();
-        let mut message = json!({"jsonrpc": "2.0", "id": id, "method": method});
+        let mut message = json!({"jsonrpc": "2.0", "id": id.get(), "method": method});
         if !params.is_null() {
             message["params"] = params;
         }
@@ -89,7 +95,7 @@ impl Connection {
     }
 
     /// Ends request `id` with `why` and asks the other side to stop working on it.
-    pub(crate) fn cancel(&self, id: i64, why: Error) {
+    pub(crate) fn cancel(&self, id: RequestId, why: Error) {
         if let Some(waiting) = self.transport.take(id) {
             let _ = send(&self.transport, &cancel_request(id));
             contained(|| (waiting.0)(Err(why)));
@@ -110,8 +116,8 @@ fn notification(method: &str, params: Value) -> Value {
     message
 }
 
-fn cancel_request(id: i64) -> Value {
-    notification("$/cancelRequest", json!({"id": id}))
+fn cancel_request(id: RequestId) -> Value {
+    notification("$/cancelRequest", json!({"id": id.get()}))
 }
 
 fn encode(message: &Value) -> Result<Vec<u8>, Error> {
@@ -172,7 +178,7 @@ fn complete(transport: &Transport<Waiting>, id: &Value, mut message: Map<String,
     let Some(id) = id.as_i64() else {
         return ide_core::diag::report("lsp: response to an id never sent", id);
     };
-    let Some(waiting) = transport.take(id) else {
+    let Some(waiting) = transport.take(RequestId::new(id)) else {
         return;
     };
     let answer = match message.remove("error") {
@@ -299,8 +305,8 @@ mod tests {
         let second = connection.request("b", Value::Null, WAIT, collect(tx)).unwrap();
         assert_eq!(peer.next()["params"], json!({"n": 1}));
         assert!(peer.next().get("params").is_none(), "no params rather than null");
-        peer.send(&json!({"jsonrpc": "2.0", "id": second, "result": "second"}));
-        peer.send(&json!({"jsonrpc": "2.0", "id": first, "error": {"code": -32801, "message": "modified"}}));
+        peer.send(&json!({"jsonrpc": "2.0", "id": second.get(), "result": "second"}));
+        peer.send(&json!({"jsonrpc": "2.0", "id": first.get(), "error": {"code": -32801, "message": "modified"}}));
         assert_eq!(rx.recv_timeout(WAIT).unwrap(), Ok(json!("second")));
         assert_eq!(
             rx.recv_timeout(WAIT).unwrap(),
@@ -322,8 +328,8 @@ mod tests {
         assert_eq!(rx.recv_timeout(WAIT).unwrap(), Err(Error::Timeout));
         let cancel = peer.next();
         assert_eq!(cancel["method"], "$/cancelRequest");
-        assert_eq!(cancel["params"]["id"], id);
-        peer.send(&json!({"jsonrpc": "2.0", "id": id, "result": "too late"}));
+        assert_eq!(cancel["params"]["id"], id.get());
+        peer.send(&json!({"jsonrpc": "2.0", "id": id.get(), "result": "too late"}));
         assert!(
             rx.recv_timeout(Duration::from_millis(100)).is_err(),
             "the reply came only once"

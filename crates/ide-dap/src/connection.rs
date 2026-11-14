@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use ide_core::LockIgnoringPoison;
-use ide_rpc::{SendError, Transport};
+use ide_rpc::{RequestId, SendError, Transport};
 use serde_json::{Value, json};
 
 use crate::error::Error;
@@ -37,7 +37,7 @@ impl ide_rpc::Call for Waiting {
         (self.answer)(Err(Error::Ended));
     }
 
-    fn expired(self, _: i64, _: &Transport<Self>) {
+    fn expired(self, _: RequestId, _: &Transport<Self>) {
         (self.answer)(Err(Error::Timeout));
     }
 }
@@ -102,11 +102,11 @@ impl Connection {
         arguments: Value,
         timeout: Duration,
         answer: Answer,
-    ) -> Result<i64, Error> {
+    ) -> Result<RequestId, Error> {
         let transport = &self.transport;
         let seq = transport.next_id();
         let message = Message::Request {
-            seq,
+            seq: seq.get(),
             command: command.to_string(),
             arguments,
         };
@@ -166,7 +166,7 @@ impl ide_rpc::Receiver<Waiting> for Dispatch {
                 body,
                 ..
             } => {
-                let Some(waiting) = transport.take(request_seq) else {
+                let Some(waiting) = transport.take(RequestId::new(request_seq)) else {
                     return;
                 };
                 let answer = if success {
@@ -206,7 +206,7 @@ impl Responder {
                 Err(message) => (false, Some(message), Value::Null),
             };
             let response = Message::Response {
-                seq: transport.next_id(),
+                seq: transport.next_id().get(),
                 request_seq: seq,
                 success,
                 command,
@@ -310,8 +310,8 @@ mod tests {
             .unwrap();
         assert!(matches!(peer.next(), Message::Request { ref command, .. } if command == "threads"));
         assert!(matches!(peer.next(), Message::Request { ref command, .. } if command == "launch"));
-        peer.send(&response(second, false, Value::Null));
-        peer.send(&response(first, true, json!({"threads": []})));
+        peer.send(&response(second.get(), false, Value::Null));
+        peer.send(&response(first.get(), true, json!({"threads": []})));
         assert_eq!(
             rx.recv_timeout(WAIT).unwrap(),
             Err(Error::Adapter {
@@ -336,7 +336,7 @@ mod tests {
             .unwrap();
         assert_eq!(rx.recv_timeout(WAIT).unwrap(), Err(Error::Timeout));
         peer.next();
-        peer.send(&response(seq, true, Value::Null));
+        peer.send(&response(seq.get(), true, Value::Null));
         assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
     }
 
