@@ -128,8 +128,8 @@ impl TabKind {
     }
 }
 
-/// What feature crates ask of a window, answered by the app for the window with the given id.
-pub trait WindowHost {
+/// What a window is and shows: whether it is open, which one is in front or shows a folder, and its native windows.
+pub trait IdentityHost {
     /// Whether the window is open and not closing.
     fn is_open(&self, window: u64) -> bool;
     /// The window in front, where menu commands act.
@@ -143,10 +143,18 @@ pub trait WindowHost {
     fn project(&self, window: u64) -> Option<PathBuf>;
     /// The native windows of the window's tabs, in their order.
     fn tab_windows(&self, window: u64) -> Vec<Retained<NSWindow>>;
-    /// Whether the user trusts the window's folder (E22).
+}
+
+/// The user's trust in a window's folder (E22).
+pub trait TrustHost {
+    /// Whether the user trusts the window's folder.
     fn is_trusted(&self, window: u64) -> bool;
     /// Asks the user again whether to trust the window's folder.
     fn ask_trust_again(&self, window: u64);
+}
+
+/// A window's document tabs.
+pub trait TabsHost {
     /// Adds `view` as a document tab; its id, or `None` once the window closed.
     fn add_tab(
         &self,
@@ -171,20 +179,26 @@ pub trait WindowHost {
     /// Brings the tab whose key is `key` to the front; whether there is one.
     fn select_tab_with_key(&self, window: u64, key: &str) -> bool;
     fn set_tab_title(&self, window: u64, tab: isize, title: &str);
-    /// Shows `color` as the status dot of `tab`, or none.
-    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&NSColor>);
-    /// Tints the symbol of `tab`.
-    fn set_tab_tint(&self, window: u64, tab: isize, color: &NSColor);
-    /// Gives the symbol of `tab` the colours of its left, top, right and bottom point instead of a tint.
-    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<NSColor>; 4]);
     fn select_tab(&self, window: u64, tab: isize);
     fn close_tab(&self, window: u64, tab: isize);
     /// The tab in front.
     fn selected_tab(&self, window: u64) -> Option<isize>;
     /// The tab whose key is `key`, such as a file's path.
     fn tab_with_key(&self, window: u64, key: &str) -> Option<isize>;
-    /// Opens `path` in an editor tab, or brings its tab to the front.
-    fn open_file(&self, window: u64, path: &Path);
+}
+
+/// How a document tab's symbol shows the state of what it holds.
+pub trait TabDecorHost {
+    /// Shows `color` as the status dot of `tab`, or none.
+    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&NSColor>);
+    /// Tints the symbol of `tab`.
+    fn set_tab_tint(&self, window: u64, tab: isize, color: &NSColor);
+    /// Gives the symbol of `tab` the colours of its left, top, right and bottom point instead of a tint.
+    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<NSColor>; 4]);
+}
+
+/// The panels beside a window's activity bar.
+pub trait PanelsHost {
     /// Shows `panel` beside the activity bar.
     fn activate_panel(&self, window: u64, panel: Panel);
     fn set_panel_page(&self, window: u64, panel: Panel, page: &NSView);
@@ -192,18 +206,55 @@ pub trait WindowHost {
     fn set_symbol_count(&self, window: u64, panel: Panel, count: usize);
     /// Puts `view` at the trailing end of `panel`'s title row.
     fn set_panel_accessory(&self, window: u64, panel: Panel, view: &NSView);
+}
+
+/// The inspector at a window's trailing edge.
+pub trait InspectorHost {
     fn set_inspector_content(&self, window: u64, view: &NSView);
     fn show_inspector(&self, window: u64, shown: bool);
+}
+
+/// What a window tells the user beside its tabs: a brief notice, and its running work in the activity view.
+pub trait NoticesHost {
     /// Shows `text` briefly over the window and has VoiceOver read it.
     fn show_notice(&self, window: u64, text: &str);
     /// The activity view of the window reads its running work again.
     fn refresh_activity(&self, window: u64);
+}
+
+/// The files a window opens in its editors.
+pub trait FilesHost {
+    /// Opens `path` in an editor tab, or brings its tab to the front.
+    fn open_file(&self, window: u64, path: &Path);
+}
+
+/// What the app knows beside its windows.
+pub trait AppEnvHost {
     /// The user's shortcuts as the menus were built with them.
     fn keymap(&self) -> ide_core::keymap::Keymap;
     /// Whether the app is quitting, when nothing should be written that the next start would read.
     fn is_quitting(&self) -> bool;
     /// The login shell's environment (E23), waiting up to `wait` for it; any thread may ask.
     fn environment(&self, wait: std::time::Duration) -> Option<Vec<(String, String)>>;
+}
+
+/// What feature crates ask of a window, answered by the app for the window with the given id.
+pub trait WindowHost:
+    IdentityHost + TrustHost + TabsHost + TabDecorHost + PanelsHost + InspectorHost + NoticesHost + FilesHost + AppEnvHost
+{
+}
+
+impl<T> WindowHost for T where
+    T: IdentityHost
+        + TrustHost
+        + TabsHost
+        + TabDecorHost
+        + PanelsHost
+        + InspectorHost
+        + NoticesHost
+        + FilesHost
+        + AppEnvHost
+{
 }
 
 static HOST: OnceLock<&'static (dyn WindowHost + Sync)> = OnceLock::new();
@@ -298,108 +349,144 @@ impl Window {
     pub fn tab_windows(self) -> Vec<Retained<NSWindow>> {
         host().tab_windows(self.0)
     }
+}
 
-    pub fn set_tab_status(self, tab: isize, color: Option<&NSColor>) {
-        host().set_tab_status(self.0, tab, color);
+/// The user's trust in a window's folder (E22).
+pub trait Trust: AsWindow {
+    fn is_trusted(&self) -> bool {
+        host().is_trusted(self.as_window().0)
     }
 
-    pub fn set_tab_tint(self, tab: isize, color: &NSColor) {
-        host().set_tab_tint(self.0, tab, color);
+    fn ask_trust_again(&self) {
+        host().ask_trust_again(self.as_window().0);
     }
+}
 
-    pub fn set_tab_four_colours(self, tab: isize, colors: [Retained<NSColor>; 4]) {
-        host().set_tab_four_colours(self.0, tab, colors);
-    }
+impl Trust for Window {}
 
-    pub fn is_trusted(self) -> bool {
-        host().is_trusted(self.0)
-    }
-
-    pub fn ask_trust_again(self) {
-        host().ask_trust_again(self.0);
-    }
-
+/// A window's document tabs.
+pub trait Tabs: AsWindow {
     /// Adds `view` as a document tab; its id, or `None` once the window closed.
-    pub fn add_tab(self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Option<isize> {
-        host().add_tab(self.0, kind, key, title, view)
+    fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Option<isize> {
+        host().add_tab(self.as_window().0, kind, key, title, view)
     }
 
     /// Adds `view` as a preview tab; its id, or `None` once the window closed.
-    pub fn add_preview_tab(
-        self,
+    fn add_preview_tab(
+        &self,
         kind: TabKind,
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
     ) -> Option<isize> {
-        host().add_preview_tab(self.0, kind, key, title, view)
+        host().add_preview_tab(self.as_window().0, kind, key, title, view)
     }
 
-    pub fn keep_tab(self, tab: isize) {
-        host().keep_tab(self.0, tab);
+    fn keep_tab(&self, tab: isize) {
+        host().keep_tab(self.as_window().0, tab);
     }
 
     /// Brings the tab whose key is `key` to the front; whether there is one.
-    pub fn select_tab(self, key: &str) -> bool {
-        host().select_tab_with_key(self.0, key)
+    fn select_tab(&self, key: &str) -> bool {
+        host().select_tab_with_key(self.as_window().0, key)
     }
 
-    pub fn set_symbol_count(self, panel: Panel, count: usize) {
-        host().set_symbol_count(self.0, panel, count);
+    fn set_tab_title(&self, tab: isize, title: &str) {
+        host().set_tab_title(self.as_window().0, tab, title);
     }
 
-    pub fn set_tab_title(self, tab: isize, title: &str) {
-        host().set_tab_title(self.0, tab, title);
+    fn select_tab_by_id(&self, tab: isize) {
+        host().select_tab(self.as_window().0, tab);
     }
 
-    pub fn select_tab_by_id(self, tab: isize) {
-        host().select_tab(self.0, tab);
+    fn close_tab(&self, tab: isize) {
+        host().close_tab(self.as_window().0, tab);
     }
 
-    pub fn close_tab(self, tab: isize) {
-        host().close_tab(self.0, tab);
+    fn selected_tab(&self) -> Option<isize> {
+        host().selected_tab(self.as_window().0)
     }
 
-    pub fn selected_tab(self) -> Option<isize> {
-        host().selected_tab(self.0)
-    }
-
-    pub fn tab_with_key(self, key: &str) -> Option<isize> {
-        host().tab_with_key(self.0, key)
-    }
-
-    pub fn open_file(self, path: &Path) {
-        host().open_file(self.0, path);
-    }
-
-    pub fn activate_panel(self, panel: Panel) {
-        host().activate_panel(self.0, panel);
-    }
-
-    pub fn set_panel_page(self, panel: Panel, page: &NSView) {
-        host().set_panel_page(self.0, panel, page);
-    }
-
-    pub fn set_panel_accessory(self, panel: Panel, view: &NSView) {
-        host().set_panel_accessory(self.0, panel, view);
-    }
-
-    pub fn set_inspector_content(self, view: &NSView) {
-        host().set_inspector_content(self.0, view);
-    }
-
-    pub fn show_inspector(self, shown: bool) {
-        host().show_inspector(self.0, shown);
-    }
-
-    pub fn show_notice(self, text: &str) {
-        host().show_notice(self.0, text);
-    }
-
-    pub fn refresh_activity(self) {
-        host().refresh_activity(self.0);
+    fn tab_with_key(&self, key: &str) -> Option<isize> {
+        host().tab_with_key(self.as_window().0, key)
     }
 }
+
+impl Tabs for Window {}
+
+/// How a document tab's symbol shows the state of what it holds.
+pub trait TabDecor: AsWindow {
+    fn set_tab_status(&self, tab: isize, color: Option<&NSColor>) {
+        host().set_tab_status(self.as_window().0, tab, color);
+    }
+
+    fn set_tab_tint(&self, tab: isize, color: &NSColor) {
+        host().set_tab_tint(self.as_window().0, tab, color);
+    }
+
+    fn set_tab_four_colours(&self, tab: isize, colors: [Retained<NSColor>; 4]) {
+        host().set_tab_four_colours(self.as_window().0, tab, colors);
+    }
+}
+
+impl TabDecor for Window {}
+
+/// The panels beside a window's activity bar.
+pub trait Panels: AsWindow {
+    fn activate_panel(&self, panel: Panel) {
+        host().activate_panel(self.as_window().0, panel);
+    }
+
+    fn set_panel_page(&self, panel: Panel, page: &NSView) {
+        host().set_panel_page(self.as_window().0, panel, page);
+    }
+
+    fn set_symbol_count(&self, panel: Panel, count: usize) {
+        host().set_symbol_count(self.as_window().0, panel, count);
+    }
+
+    fn set_panel_accessory(&self, panel: Panel, view: &NSView) {
+        host().set_panel_accessory(self.as_window().0, panel, view);
+    }
+}
+
+impl Panels for Window {}
+
+/// The inspector at a window's trailing edge.
+pub trait Inspector: AsWindow {
+    fn set_inspector_content(&self, view: &NSView) {
+        host().set_inspector_content(self.as_window().0, view);
+    }
+
+    fn show_inspector(&self, shown: bool) {
+        host().show_inspector(self.as_window().0, shown);
+    }
+}
+
+impl Inspector for Window {}
+
+/// What a window tells the user beside its tabs: a brief notice, and its running work in the activity view.
+pub trait Notices: AsWindow {
+    fn show_notice(&self, text: &str) {
+        host().show_notice(self.as_window().0, text);
+    }
+
+    fn refresh_activity(&self) {
+        host().refresh_activity(self.as_window().0);
+    }
+}
+
+impl Notices for Window {}
+
+/// The files a window opens in its editors.
+pub trait Files: AsWindow {
+    /// Opens `path` in an editor tab, or brings its tab to the front.
+    fn open_file(&self, path: &Path) {
+        host().open_file(self.as_window().0, path);
+    }
+}
+
+impl Files for Window {}
 
 /// What names a window: a handle, or the app's window controller.
 pub trait AsWindow {

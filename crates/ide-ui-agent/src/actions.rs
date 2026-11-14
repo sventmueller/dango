@@ -1,5 +1,6 @@
 //! What the user does in an AI tab: send, queue, attach, answer requests, pick model and mode, rewind.
 
+use ide_ui_common::window::Files;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

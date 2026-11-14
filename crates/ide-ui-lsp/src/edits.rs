@@ -18,6 +18,7 @@ use super::apply::{Failure, StepError};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{guarded, ns};
+use ide_ui_common::window::Window;
 
 /// Replaces `edits`, UTF-16 ranges of the text as it is now that do not overlap, as one undoable step that flows into
 /// the document model like typing; whether the view took every one.
@@ -186,7 +187,7 @@ pub fn question(
     actions: Vec<MessageActionItem>,
     answered: impl FnOnce(Option<MessageActionItem>) + 'static,
 ) {
-    let Some(window) = crate::host::window_of(folder).and_then(crate::host::window) else {
+    let Some(window) = Window::for_project(folder).and_then(Window::window) else {
         return;
     };
     let alert = NSAlert::new(window.mtm());

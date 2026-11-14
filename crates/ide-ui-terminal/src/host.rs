@@ -33,8 +33,6 @@ pub trait Host {
     fn try_state(&self) -> Option<Rc<State>>;
     /// Shows what the user opened from a terminal in window `window`.
     fn opened(&self, window: u64, what: Opened);
-    /// Names tab `tab` of window `window` `title`.
-    fn set_tab_title(&self, window: u64, tab: isize, title: &str);
 }
 
 static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();

@@ -2,6 +2,7 @@
 //! its base and how many files it changed, the files below it with their diff against the base, and taking its work
 //! over, keeping its branch or removing it.
 
+use ide_ui_common::window::Files;
 use std::path::Path;
 
 use block2::RcBlock;

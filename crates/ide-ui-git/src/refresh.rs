@@ -11,7 +11,7 @@ use super::panel::{GitPanel, with_panel};
 use super::text::{Problem, problem};
 use super::work;
 use ide_ui_common::util::main_after;
-use ide_ui_common::window::{Panel, Window};
+use ide_ui_common::window::{Panel, Panels, Trust, Window};
 
 /// How long changes on disk gather before the panel reads git again.
 const DEBOUNCE: Duration = Duration::from_millis(300);

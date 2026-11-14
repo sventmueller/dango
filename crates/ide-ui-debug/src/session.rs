@@ -3,6 +3,7 @@
 //! no session starts by itself, also not after a restart (Review C18).
 
 use ide_core::explain::Explained;
+use ide_ui_common::window::{Inspector, Notices, Tabs, Trust};
 use std::time::Duration;
 
 use ide_core::debugging::ConsoleKind;

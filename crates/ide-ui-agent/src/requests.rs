@@ -1,5 +1,6 @@
 //! What the user answers in an AI tab's cards: permissions and their rules, questions, plans, and the background tasks a turn started.
 
+use ide_ui_common::window::Files;
 use std::path::PathBuf;
 
 use ide_claude::{PermissionAnswer, PlanAnswer};

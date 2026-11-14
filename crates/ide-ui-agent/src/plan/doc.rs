@@ -17,7 +17,7 @@ use super::super::tab::AgentTab;
 use super::super::{style, ui};
 use super::{PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE, PlanNote, locate};
 use ide_ui_common::util::{guarded, main_soon, ns};
-use ide_ui_common::window::{AsWindow, TabKind, Window};
+use ide_ui_common::window::{AsWindow, TabDecor, TabKind, Tabs, Window};
 
 /// The width of the comments' column.
 const COLUMN: f64 = 320.0;

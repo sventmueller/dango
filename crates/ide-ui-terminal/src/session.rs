@@ -12,6 +12,7 @@ use splat_i18n::{t, tf};
 use super::view::TerminalView;
 use crate::model::{self, BELL_FLASH, Bell, Frame};
 use ide_ui_common::util::main_after;
+use ide_ui_common::window::{Tabs, Window};
 
 /// How long a notice shows above the terminal.
 const NOTICE_TIME: Duration = Duration::from_secs(8);
@@ -98,7 +99,7 @@ impl TerminalView {
         }
         match state.titles.ask(Instant::now(), model::TITLE_GAP) {
             Frame::Now => {
-                super::host().set_tab_title(self.window_id(), tab, &title);
+                Window::new(self.window_id()).set_tab_title(tab, &title);
                 *state.tab_title.borrow_mut() = Some(title);
             }
             Frame::After(wait) => {

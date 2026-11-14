@@ -21,7 +21,7 @@ use super::text::{Problem, problem};
 use super::{sheets, work};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns};
-use ide_ui_common::window::{AsWindow, TabKind, Window};
+use ide_ui_common::window::{AsWindow, Files, TabKind, Tabs, Window};
 
 /// What a hunk button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

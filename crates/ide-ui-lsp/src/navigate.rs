@@ -22,6 +22,7 @@ use super::{server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{guarded, item, label, main_soon, ns, set_action};
+use ide_ui_common::window::{Files, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -172,7 +173,7 @@ fn go(view: &dyn Editor, location: &Location) {
 
 /// Opens `path` in the window `window`, or brings its editor forward, and selects `range`.
 pub fn open_at(window: u64, path: &Path, range: LspRange) -> bool {
-    editor::open_file(window, path);
+    Window::new(window).open_file(path);
     let Some(target) = editor::editor_in(window, path) else {
         return false;
     };
@@ -188,10 +189,10 @@ pub fn open_at(window: u64, path: &Path, range: LspRange) -> bool {
 
 /// Shows `path` with `selection` in the window of `folder`, as a server may ask.
 pub fn show(folder: &Path, path: &Path, selection: Option<LspRange>) -> bool {
-    let Some(window) = editor::window_of(folder) else {
+    let Some(window) = Window::for_project(folder) else {
         return false;
     };
-    open_at(window, path, selection.unwrap_or_default())
+    open_at(window.id(), path, selection.unwrap_or_default())
 }
 
 /// Jumps to the next problem after the cursor, or the one before it, and shows its message.

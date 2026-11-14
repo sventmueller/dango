@@ -1,5 +1,5 @@
-//! The app as the language servers reach it beyond one editor (E99): the editors there are, the windows by id, the
-//! editor's font and colours, trust, and the state this crate keeps in the running app.
+//! The app as the language servers reach it beyond one editor (E99): the editors there are, a window's call hierarchy,
+//! the editor's font and colours, trust, and the state this crate keeps in the running app.
 
 use std::path::Path;
 use std::rc::Rc;
@@ -7,7 +7,7 @@ use std::sync::{Arc, OnceLock};
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSColor, NSFont, NSWindow};
+use objc2_app_kit::{NSColor, NSFont};
 
 use crate::editor::Editor;
 use crate::hierarchy::Hierarchy;
@@ -36,14 +36,8 @@ pub trait Host {
     fn all_editors(&self) -> Vec<Box<dyn Editor>>;
     /// The editor of `path` in the window `window`.
     fn editor_in(&self, window: u64, path: &Path) -> Option<Box<dyn Editor>>;
-    /// Opens `path` in the window `window`, or brings its editor forward.
-    fn open_file(&self, window: u64, path: &Path);
     /// Shows `hierarchy` in the window `window`.
     fn show_hierarchy(&self, window: u64, hierarchy: Hierarchy);
-    /// The window that shows the folder `root`, by its id.
-    fn window_of(&self, root: &Path) -> Option<u64>;
-    /// The AppKit window of the window `window`.
-    fn window(&self, window: u64) -> Option<Retained<NSWindow>>;
     /// Shows a warning with `message` and `detail` and waits for OK.
     fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str);
     /// The editor's font of code at `size` points.
@@ -83,20 +77,8 @@ pub(crate) fn editor_in(window: u64, path: &Path) -> Option<Box<dyn Editor>> {
     host().editor_in(window, path)
 }
 
-pub(crate) fn open_file(window: u64, path: &Path) {
-    host().open_file(window, path);
-}
-
 pub(crate) fn show_hierarchy(window: u64, hierarchy: Hierarchy) {
     host().show_hierarchy(window, hierarchy);
-}
-
-pub(crate) fn window_of(root: &Path) -> Option<u64> {
-    host().window_of(root)
-}
-
-pub(crate) fn window(window: u64) -> Option<Retained<NSWindow>> {
-    host().window(window)
 }
 
 pub(crate) fn show_alert(mtm: MainThreadMarker, message: &str, detail: &str) {

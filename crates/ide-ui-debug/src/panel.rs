@@ -20,7 +20,7 @@ use super::model::variables::Row;
 use super::ui::Ui;
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
-use ide_ui_common::window::Window;
+use ide_ui_common::window::{Inspector, Panels, Trust, Window};
 
 pub struct PanelIvars {
     id: u64,

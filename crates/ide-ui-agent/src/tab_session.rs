@@ -1,6 +1,7 @@
 //! How an AI tab's session runs: starting it, the events that come from it, and what changes of its status set off.
 
 use ide_core::LockIgnoringPoison;
+use ide_ui_common::window::{Notices, Trust};
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};

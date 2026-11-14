@@ -20,7 +20,7 @@ use super::model::{Read, RowKey, State, Task};
 use super::ui::Ui;
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
-use ide_ui_common::window::{AsWindow, Window};
+use ide_ui_common::window::{AsWindow, Trust, Window};
 
 pub struct PanelIvars {
     id: u64,

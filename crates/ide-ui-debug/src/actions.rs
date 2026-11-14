@@ -1,5 +1,6 @@
 //! What the panel's controls, checkboxes, menus and fields do, and how the panel shows the model again afterwards.
 
+use ide_ui_common::window::{Notices, Trust};
 use std::path::Path;
 
 use ide_ui_common::util::FlagGuard;

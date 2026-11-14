@@ -20,7 +20,7 @@ use super::model::console::Console;
 use super::panel::DebugPanel;
 use ide_ui_common::constant;
 use ide_ui_common::util::{label, ns, set_action, with_editing};
-use ide_ui_common::window::{TabKind, Window};
+use ide_ui_common::window::{TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 

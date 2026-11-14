@@ -28,7 +28,7 @@ use super::target::AgentTarget;
 use super::timeline::Timeline;
 use super::{overlay, ui};
 use ide_ui_common::util::{guarded, main_after, main_soon};
-use ide_ui_common::window::{TabKind, Window};
+use ide_ui_common::window::{Notices, TabDecor, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 

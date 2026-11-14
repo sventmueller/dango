@@ -9,7 +9,7 @@ use objc2_foundation::NSIndexSet;
 use super::model::{RowKey, Section};
 use super::panel::{self, GitPanel, with_panel};
 use ide_ui_common::util::main_after;
-use ide_ui_common::window::{AsWindow, Panel};
+use ide_ui_common::window::{AsWindow, Panel, Panels};
 
 /// How many further pages a reveal reads before it gives up on a commit.
 const MAX_PAGES: usize = 20;

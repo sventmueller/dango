@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
-use ide_ui_common::window::{Panel, TabKind, WindowHost};
+use ide_ui_common::window::{self, Panel, TabKind};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSView, NSWindow};
+use objc2_app_kit::{NSColor, NSView, NSWindow};
 
 use crate::window::WindowController;
 
@@ -40,12 +40,6 @@ impl ide_ui_terminal::Host for AppHost {
             Opened::TerminalHere(cwd) => crate::terminal::open_tab(&controller, Some(cwd.as_path())),
         }
     }
-
-    fn set_tab_title(&self, window: u64, tab: isize, title: &str) {
-        if let Some(controller) = self::window(window) {
-            controller.set_tab_title(tab, title);
-        }
-    }
 }
 
 #[cfg(feature = "dictation")]
@@ -71,7 +65,7 @@ pub(crate) fn window(id: u64) -> Option<Retained<WindowController>> {
     try_context()?.windows.get(id)
 }
 
-impl WindowHost for AppHost {
+impl window::IdentityHost for AppHost {
     fn is_open(&self, window: u64) -> bool {
         self::window(window).is_some()
     }
@@ -99,25 +93,9 @@ impl WindowHost for AppHost {
     fn tab_windows(&self, window: u64) -> Vec<Retained<NSWindow>> {
         self::window(window).map(|c| c.tab_windows()).unwrap_or_default()
     }
+}
 
-    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&objc2_app_kit::NSColor>) {
-        if let Some(c) = self::window(window) {
-            c.set_tab_status(tab, color);
-        }
-    }
-
-    fn set_tab_tint(&self, window: u64, tab: isize, color: &objc2_app_kit::NSColor) {
-        if let Some(c) = self::window(window) {
-            c.set_tab_tint(tab, color);
-        }
-    }
-
-    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<objc2_app_kit::NSColor>; 4]) {
-        if let Some(c) = self::window(window) {
-            c.set_tab_four_colours(tab, colors);
-        }
-    }
-
+impl window::TrustHost for AppHost {
     fn is_trusted(&self, window: u64) -> bool {
         self::window(window).is_some_and(|c| c.is_trusted())
     }
@@ -127,7 +105,9 @@ impl WindowHost for AppHost {
             c.ask_trust_again();
         }
     }
+}
 
+impl window::TabsHost for AppHost {
     fn add_tab(
         &self,
         window: u64,
@@ -185,13 +165,29 @@ impl WindowHost for AppHost {
     fn tab_with_key(&self, window: u64, key: &str) -> Option<isize> {
         self::window(window)?.tab_with_key(key)
     }
+}
 
-    fn open_file(&self, window: u64, path: &Path) {
+impl window::TabDecorHost for AppHost {
+    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&NSColor>) {
         if let Some(c) = self::window(window) {
-            c.open_file(path);
+            c.set_tab_status(tab, color);
         }
     }
 
+    fn set_tab_tint(&self, window: u64, tab: isize, color: &NSColor) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_tint(tab, color);
+        }
+    }
+
+    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<NSColor>; 4]) {
+        if let Some(c) = self::window(window) {
+            c.set_tab_four_colours(tab, colors);
+        }
+    }
+}
+
+impl window::PanelsHost for AppHost {
     fn activate_panel(&self, window: u64, panel: Panel) {
         if let Some(c) = self::window(window) {
             c.activate_panel(panel);
@@ -215,7 +211,9 @@ impl WindowHost for AppHost {
             c.set_panel_accessory(panel, view);
         }
     }
+}
 
+impl window::InspectorHost for AppHost {
     fn set_inspector_content(&self, window: u64, view: &NSView) {
         if let Some(c) = self::window(window) {
             c.set_inspector_content(view);
@@ -227,7 +225,9 @@ impl WindowHost for AppHost {
             c.show_inspector(shown);
         }
     }
+}
 
+impl window::NoticesHost for AppHost {
     fn show_notice(&self, window: u64, text: &str) {
         if let Some(c) = self::window(window) {
             c.show_notice(text);
@@ -239,7 +239,17 @@ impl WindowHost for AppHost {
             crate::activity::refresh(&c);
         }
     }
+}
 
+impl window::FilesHost for AppHost {
+    fn open_file(&self, window: u64, path: &Path) {
+        if let Some(c) = self::window(window) {
+            c.open_file(path);
+        }
+    }
+}
+
+impl window::AppEnvHost for AppHost {
     fn keymap(&self) -> ide_core::keymap::Keymap {
         try_context().map(|cx| cx.keymap.borrow().clone()).unwrap_or_default()
     }
@@ -495,24 +505,10 @@ impl ide_ui_lsp::Host for AppHost {
         crate::editor::editor_for(&controller, path).map(crate::editor::lsp_editor)
     }
 
-    fn open_file(&self, window: u64, path: &Path) {
-        if let Some(controller) = self::window(window) {
-            controller.open_file(path);
-        }
-    }
-
     fn show_hierarchy(&self, window: u64, hierarchy: ide_ui_lsp::Hierarchy) {
         if let Some(controller) = self::window(window) {
             controller.show_hierarchy(hierarchy);
         }
-    }
-
-    fn window_of(&self, root: &Path) -> Option<u64> {
-        crate::window::for_project(root).map(|controller| controller.id())
-    }
-
-    fn window(&self, window: u64) -> Option<Retained<objc2_app_kit::NSWindow>> {
-        self::window(window)?.window()
     }
 
     fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str) {

@@ -1,6 +1,7 @@
 //! The graph in the Git panel, as VS Code shows it: a row per commit with its dot, subject, author and the branches and
 //! tags at it; a commit opens to the files it changed, each with its diff; details on hover; a row that reads more.
 
+use ide_ui_common::window::Files;
 use std::path::Path;
 
 use ide_git::{Commit, CommitChanges};

@@ -11,7 +11,7 @@ use splat_i18n::t;
 use super::model::Command;
 use super::panel::{self, DebugPanel};
 use ide_ui_common::util::{guarded, item, ns, separator, set_target, submenu};
-use ide_ui_common::window::{Panel, Window};
+use ide_ui_common::window::{Panel, Panels, Window};
 
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `DebugCommands` does not implement Drop.

@@ -22,7 +22,7 @@ use splat_i18n::t;
 use crate::Resume;
 use ide_ui_common::panel::ACCESSORY_INSET;
 use ide_ui_common::util::{main_after, main_soon, ns};
-use ide_ui_common::window::{AsWindow, Panel, Window};
+use ide_ui_common::window::{AsWindow, Panel, Panels, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
 pub use store::{

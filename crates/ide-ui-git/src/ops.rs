@@ -1,6 +1,7 @@
 //! What the Git panel does: staging, discarding, committing after the secrets check, branches, and the remote
 //! operations with progress and cancel.
 
+use ide_ui_common::window::Files;
 use std::path::PathBuf;
 
 use ide_git::{CommitOptions, Error, PullMode, PullOptions, Repository, SecretScan};

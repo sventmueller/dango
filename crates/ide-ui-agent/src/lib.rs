@@ -56,7 +56,7 @@ pub mod work;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use ide_ui_common::window::{AsWindow, Window};
+use ide_ui_common::window::{AsWindow, Notices, Window};
 
 pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_register, launch_of};
 pub use acp_install::confirm_install;

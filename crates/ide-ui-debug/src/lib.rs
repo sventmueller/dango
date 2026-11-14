@@ -29,7 +29,7 @@ mod ui;
 use std::path::Path;
 
 use ide_core::debugging::ConsoleLine;
-use ide_ui_common::window::{Panel, Window};
+use ide_ui_common::window::{Panel, Panels, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSMenuItem;

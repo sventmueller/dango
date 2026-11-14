@@ -15,7 +15,7 @@ use super::model::Phase;
 use super::model::RowKey;
 use super::panel::{self, GitPanel};
 use ide_ui_common::util::{guarded, item, separator, set_target, submenu};
-use ide_ui_common::window::{Panel, Window};
+use ide_ui_common::window::{Panel, Panels, Window};
 
 thread_local! {
     static COMMANDS: OnceCell<Retained<GitCommands>> = const { OnceCell::new() };
