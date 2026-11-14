@@ -66,7 +66,8 @@ impl TerminalView {
                 Damage::Lines(lines) if same_shape && !all => {
                     let before = previous.as_ref().map_or(now.cursor.point.line, |b| b.cursor.point.line);
                     let changed = lines.iter().map(|line| line.line);
-                    for line in changed.chain([before, now.cursor.point.line]) {
+                    let selected = model::selection_lines(previous.as_ref().and_then(|b| b.selection), now.selection);
+                    for line in changed.chain([before, now.cursor.point.line]).chain(selected) {
                         self.setNeedsDisplayInRect(m.line_rect(line, width));
                     }
                 }

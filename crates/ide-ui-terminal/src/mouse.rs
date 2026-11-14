@@ -4,7 +4,8 @@
 //! rectangle.
 
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
 use block2::RcBlock;
@@ -19,7 +20,7 @@ use objc2_foundation::{NSPoint, NSTimer, NSURL};
 use super::view::TerminalView;
 use crate::links;
 use crate::render::clamp_to;
-use ide_ui_common::util::{guarded, ns};
+use ide_ui_common::util::{guarded, main_soon, ns};
 
 /// How often a selection dragged beyond the top or bottom scrolls on.
 const AUTOSCROLL: f64 = 0.05;
@@ -39,6 +40,9 @@ pub struct MouseState {
     beyond: Cell<Option<(f64, usize, CellSide)>>,
     /// The cell under the pointer while ⌘ is held, and whether a link or file is there.
     hover: Cell<Option<(Point, bool)>>,
+    /// While ⌘ is held, the file each path under the pointer named, by that path; none while it is looked for or when
+    /// there is no file.
+    files: RefCell<HashMap<PathBuf, Option<PathBuf>>>,
     /// Where the pointer was last seen, in the window's coordinates.
     pointer: Cell<Option<NSPoint>>,
     /// The pointing hand shows rather than the I-beam.
@@ -211,7 +215,7 @@ impl TerminalView {
         } else {
             self.start_autoscroll();
         }
-        self.refresh(true);
+        self.redraw_requested();
     }
 
     fn start_autoscroll(&self) {
@@ -363,6 +367,7 @@ impl TerminalView {
             },
             None => {
                 mouse.hover.set(None);
+                mouse.files.borrow_mut().clear();
                 false
             }
         };
@@ -381,7 +386,42 @@ impl TerminalView {
             let Some(screen) = screen.as_ref() else { return false };
             (links::url_at(&screen.rows, point), links::path_at(&screen.rows, point))
         };
-        url.is_some() || word.is_some_and(|file| self.file_at(&file.path).is_some())
+        if url.is_some() {
+            return true;
+        }
+        let Some(file) = word else { return false };
+        let named = self.named(&file.path);
+        if let Some(found) = self.ivars().mouse.files.borrow().get(&named) {
+            return found.is_some();
+        }
+        self.look_up(named);
+        false
+    }
+
+    /// Looks for the file at `named` on the disk lane; the pointer turns into a hand once it is found.
+    fn look_up(&self, named: PathBuf) {
+        self.ivars().mouse.files.borrow_mut().insert(named.clone(), None);
+        let id = self.id();
+        let path = named.clone();
+        let queued = ide_core::lane::DISK.ask(
+            move || existing_file(&path),
+            move |found| {
+                let Some(found) = found.flatten() else { return };
+                main_soon(move || {
+                    let Some(view) = super::find(id) else { return };
+                    let mouse = &view.ivars().mouse;
+                    if !mouse.files.borrow().contains_key(&named) {
+                        return;
+                    }
+                    mouse.files.borrow_mut().insert(named, Some(found));
+                    mouse.hover.set(None);
+                    view.update_pointer(NSEvent::modifierFlags_class(), None);
+                });
+            },
+        );
+        if queued.is_err() {
+            ide_ui_common::diag::report("looking for a file under the pointer", "the disk lane is full");
+        }
     }
 
     /// Opens the link or file at `point`; whether there was one.
@@ -409,14 +449,28 @@ impl TerminalView {
         true
     }
 
-    /// The file `word` names, relative to the shell's working directory, as the path editor tabs know it by.
+    /// The file `word` names, relative to the shell's working directory, as the path editor tabs know it by; what the
+    /// pointer found while ⌘ was held, else looked for now.
     fn file_at(&self, word: &str) -> Option<PathBuf> {
-        let path = match word.strip_prefix("~/") {
+        let named = self.named(word);
+        if let Some(Some(found)) = self.ivars().mouse.files.borrow().get(&named) {
+            return Some(found.clone());
+        }
+        existing_file(&named)
+    }
+
+    /// The path `word` names, relative to the shell's working directory.
+    fn named(&self, word: &str) -> PathBuf {
+        match word.strip_prefix("~/") {
             Some(rest) => ide_core::paths::home().join(rest),
             None => self.ivars().cwd.borrow().join(word),
-        };
-        path.canonicalize().ok().filter(|path| path.is_file())
+        }
     }
+}
+
+/// The file at `path` as editor tabs know it by, if there is one.
+fn existing_file(path: &Path) -> Option<PathBuf> {
+    path.canonicalize().ok().filter(|path| path.is_file())
 }
 
 #[cfg(test)]

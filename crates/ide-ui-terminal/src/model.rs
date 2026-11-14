@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::time::{Duration, Instant};
 
-use ide_terminal::{Size, Snapshot};
+use ide_terminal::{Highlight, Size, Snapshot};
 use splat_i18n::{t, tf};
 
 /// The shortest time between two snapshots, about a frame of a fast display.
@@ -193,6 +193,26 @@ pub fn final_line(screen: &Snapshot) -> usize {
     if blank { cursor.line } else { cursor.line + 1 }
 }
 
+/// The lines that look different as the selection goes from `before` to `now`: those its ends passed over, or every
+/// line of a block, whose columns span all of its lines.
+pub fn selection_lines(before: Option<Highlight>, now: Option<Highlight>) -> Vec<usize> {
+    let span = |h: Highlight| h.start.line..=h.end.line;
+    match (before, now) {
+        (a, b) if a == b => Vec::new(),
+        (Some(a), Some(b)) if !a.block && !b.block => {
+            let between = |x: usize, y: usize| x.min(y)..=x.max(y);
+            between(a.start.line, b.start.line)
+                .chain(between(a.end.line, b.end.line))
+                .collect()
+        }
+        (a, b) => a
+            .into_iter()
+            .flat_map(span)
+            .chain(b.into_iter().flat_map(span))
+            .collect(),
+    }
+}
+
 /// The title a program set, if it holds more than spaces.
 pub fn shown_title(title: Option<String>) -> Option<String> {
     title.filter(|t| !t.trim().is_empty())
@@ -351,6 +371,31 @@ mod tests {
         assert!(!enabled(Command::Clear, false, false, || true));
         assert!(enabled(Command::NewTerminalHere, false, false, || false));
         assert_eq!(menu().iter().filter(|e| e.is_none()).count(), 2);
+    }
+
+    #[test]
+    fn a_selection_redraws_the_lines_its_ends_passed_and_a_block_all_of_its_lines() {
+        let at = |line, column| ide_terminal::Point { line, column };
+        let simple = |from: (usize, usize), to: (usize, usize)| Highlight {
+            start: at(from.0, from.1),
+            end: at(to.0, to.1),
+            block: false,
+        };
+        let grown = selection_lines(Some(simple((2, 3), (5, 1))), Some(simple((2, 3), (7, 4))));
+        assert_eq!(grown, [2, 5, 6, 7]);
+        assert_eq!(
+            selection_lines(Some(simple((2, 3), (5, 1))), Some(simple((2, 3), (5, 1)))),
+            [0usize; 0]
+        );
+        assert_eq!(selection_lines(None, Some(simple((4, 0), (5, 2)))), [4, 5]);
+        let block = Highlight {
+            block: true,
+            ..simple((1, 2), (3, 4))
+        };
+        assert_eq!(
+            selection_lines(Some(block), Some(Highlight { end: at(3, 6), ..block })),
+            [1, 2, 3, 1, 2, 3]
+        );
     }
 
     #[test]
