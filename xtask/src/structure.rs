@@ -8,10 +8,15 @@ use crate::root;
 /// The most lines a Rust file may have.
 pub(crate) const MAX_LINES: usize = 1000;
 
+/// The public fields the models hold at most, a ratchet that only goes down: a state whose fields anyone may set keeps
+/// its rules only as long as every caller follows them, so models hand out methods for their changes instead.
+const MODEL_PUB_FIELDS: usize = 289;
+
 pub(crate) fn check() -> Result<(), String> {
     let root = root();
     let mut problems = Vec::new();
     let files = rust_files(&root);
+    let mut pub_fields = 0;
     for file in &files {
         let text = std::fs::read_to_string(file).map_err(|e| format!("{}: {e}", file.display()))?;
         let relative = file
@@ -20,6 +25,16 @@ pub(crate) fn check() -> Result<(), String> {
             .to_string_lossy()
             .replace('\\', "/");
         problems.extend(file_problems(&relative, &text));
+        if is_model(&relative) {
+            pub_fields += public_fields(&text);
+        }
+    }
+    if pub_fields > MODEL_PUB_FIELDS {
+        problems.push(format!(
+            "the models have {pub_fields} public fields, more than {MODEL_PUB_FIELDS}; change them through methods"
+        ));
+    } else if pub_fields < MODEL_PUB_FIELDS {
+        println!("the models have {pub_fields} public fields: lower MODEL_PUB_FIELDS in xtask/src/structure.rs to it");
     }
     if problems.is_empty() {
         println!(
@@ -52,6 +67,20 @@ fn file_problems(relative: &str, text: &str) -> Vec<String> {
         }
     }
     problems
+}
+
+/// How many fields `text` declares `pub`, outside its unit tests.
+fn public_fields(text: &str) -> usize {
+    let code = text.split("#[cfg(test)]").next().unwrap_or_default();
+    code.lines()
+        .filter(|line| {
+            let line = line.trim_start();
+            line.strip_prefix("pub ").is_some_and(|rest| {
+                let name: String = rest.chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
+                !name.is_empty() && rest[name.len()..].starts_with(':') && !rest[name.len()..].starts_with("::")
+            })
+        })
+        .count()
 }
 
 /// Whether the file at `relative` is a model: a `model.rs` or a file in a `model` folder.
@@ -101,6 +130,13 @@ mod tests {
         assert_eq!(file_problems("src/agent/model/rows.rs", code).len(), 1);
         assert!(file_problems("src/agent/view.rs", code).is_empty());
         assert!(file_problems("src/git_panel/model.rs", "// no objc2 here\n").is_empty());
+    }
+
+    #[test]
+    fn public_fields_are_counted_but_not_functions_paths_or_tests() {
+        let text = "struct A {\n    pub name: String,\n    pub(crate) kept: u8,\n    hidden: u8,\n}\n\
+                    pub fn f() {}\npub use a::b;\n#[cfg(test)]\nmod tests {\n    pub x: u8,\n}\n";
+        assert_eq!(public_fields(text), 1);
     }
 
     #[test]
