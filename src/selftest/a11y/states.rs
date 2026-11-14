@@ -126,6 +126,13 @@ fn editor(root: PathBuf) {
 
 fn git_panel(root: PathBuf, ok: bool) {
     check("the Git panel lists the changes", ok, "");
+    let seen = window_of(&root).and_then(|c| git::seen(&*c));
+    check(
+        "the Git panel read while out of view shows its rows once it comes into view",
+        seen.as_ref()
+            .is_some_and(|s| usize::try_from(s.rows).unwrap_or(0) > s.changes.len()),
+        format!("{:?}", seen.map(|s| (s.rows, s.changes.len()))),
+    );
     walk("the Git panel misses nothing");
     picture(&root, "git");
     let Some(controller) = window_of(&root) else { return };

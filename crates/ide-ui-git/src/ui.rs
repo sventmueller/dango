@@ -57,7 +57,7 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(mtm: MainThreadMarker, panel: &GitPanel) -> Ui {
-        let page = NSView::new(mtm);
+        let page: Retained<NSView> = super::panel::GitPage::new(mtm, panel.id()).into_super();
         let empty = NSView::new(mtm);
         let content = NSStackView::new(mtm);
         content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);

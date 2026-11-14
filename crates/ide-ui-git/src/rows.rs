@@ -705,6 +705,11 @@ impl GitPanel {
 
     /// Reloads the list, keeping which sections are closed and which rows are selected.
     pub fn reload_outline(&self) {
+        let away = self.out_of_view();
+        self.set_stale(away);
+        if away {
+            return;
+        }
         let outline = &self.ui().outline;
         let selected = self.selected_keys();
         outline.reloadData();

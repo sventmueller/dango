@@ -1,9 +1,10 @@
 //! The Git panel of one window as AppKit sees it: the data source and delegate of its list, and the actions of its
 //! buttons and menus, which go on to the panel's operations.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use ide_git::Repository;
 use objc2::rc::Retained;
@@ -31,6 +32,10 @@ pub struct PanelIvars {
     /// The objects that stand for rows in the outline view, which keeps no reference of its own; the same object
     /// for a key for as long as the row exists, so the view keeps it open and selected.
     items: RefCell<HashMap<RowKey, Retained<RowItem>>>,
+    /// The keys below each row the outline asked for, kept until the state changes.
+    children: RefCell<HashMap<Option<RowKey>, Rc<[RowKey]>>>,
+    /// The state changed while the page was out of view, so the list reloads when it comes into view.
+    stale: Cell<bool>,
     /// The commit message's own undo, apart from the window's, so that a message a model wrote is one step to take
     /// back (E88).
     undo: Retained<NSUndoManager>,
@@ -44,6 +49,38 @@ define_class!(
     #[ivars = RowKey]
     pub struct RowItem;
 );
+
+define_class!(
+    // SAFETY: NSView has no subclassing requirements and `GitPage` does not implement Drop.
+    /// The panel's page, which tells the panel of the id it holds when it comes into view.
+    #[unsafe(super(NSView))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDEGitPage"]
+    #[ivars = u64]
+    pub struct GitPage;
+
+    unsafe impl NSObjectProtocol for GitPage {}
+
+    impl GitPage {
+        #[unsafe(method(viewDidUnhide))]
+        fn did_unhide(&self) {
+            guarded((), || with_panel(*self.ivars(), GitPanel::came_into_view));
+        }
+
+        #[unsafe(method(viewDidMoveToWindow))]
+        fn did_move_to_window(&self) {
+            guarded((), || with_panel(*self.ivars(), GitPanel::came_into_view));
+        }
+    }
+);
+
+impl GitPage {
+    /// The page of the panel `panel`.
+    pub fn new(mtm: MainThreadMarker, panel: u64) -> Retained<GitPage> {
+        // SAFETY: NSView's initializer, called once on the newly allocated object.
+        unsafe { msg_send![super(GitPage::alloc(mtm).set_ivars(panel)), init] }
+    }
+}
 
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `GitPanel` does not implement Drop.
@@ -419,6 +456,8 @@ impl GitPanel {
             ui: OnceCell::new(),
             state: RefCell::new(State::default()),
             items: RefCell::new(HashMap::new()),
+            children: RefCell::new(HashMap::new()),
+            stale: Cell::new(false),
             undo: NSUndoManager::new(mtm),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -440,7 +479,27 @@ impl GitPanel {
     }
 
     pub fn state(&self) -> std::cell::RefMut<'_, State> {
-        self.ivars().state.borrow_mut()
+        let state = self.ivars().state.borrow_mut();
+        self.ivars().children.borrow_mut().clear();
+        state
+    }
+
+    /// Whether the page is out of view, where the list waits with reloading until it comes back.
+    pub(super) fn out_of_view(&self) -> bool {
+        let page = &self.ui().page;
+        page.window().is_none() || page.isHiddenOrHasHiddenAncestor()
+    }
+
+    /// Notes whether the list waits to reload until the page comes into view.
+    pub(super) fn set_stale(&self, stale: bool) {
+        self.ivars().stale.set(stale);
+    }
+
+    /// The page came into view: the list catches up with what changed while it was away.
+    fn came_into_view(&self) {
+        if self.ivars().stale.get() && !self.out_of_view() {
+            self.reload_outline();
+        }
     }
 
     pub fn read(&self) -> std::cell::Ref<'_, State> {
@@ -466,12 +525,20 @@ impl GitPanel {
     }
 
     /// The rows below `item`, the sections for the top.
-    pub fn children(&self, item: Option<&AnyObject>) -> Vec<RowKey> {
-        let state = self.read();
-        match item {
-            None => state.children(None),
-            Some(item) => key_of(item).map_or_else(Vec::new, |key| state.children(Some(&key))),
+    pub fn children(&self, item: Option<&AnyObject>) -> Rc<[RowKey]> {
+        let parent = match item {
+            None => None,
+            Some(item) => match key_of(item) {
+                Some(key) => Some(key),
+                None => return Rc::from([]),
+            },
+        };
+        if let Some(found) = self.ivars().children.borrow().get(&parent) {
+            return found.clone();
         }
+        let found: Rc<[RowKey]> = self.read().children(parent.as_ref()).into();
+        self.ivars().children.borrow_mut().insert(parent, found.clone());
+        found
     }
 
     /// The object that stands for `key`, the same one for as long as its row exists.
