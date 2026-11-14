@@ -55,8 +55,8 @@ pub struct State {
     /// The commit being read, so a second request waits for the first.
     reading: Option<String>,
     /// The last mapping of lines to committed lines, with the revision it belongs to, which the column keeps using
-    /// while the marks catch up with typing.
-    mapping: Option<(u64, Vec<Option<usize>>)>,
+    /// while the marks catch up with typing; built once per answer of the marks, which takes the revision away.
+    mapping: Option<(Option<u64>, Mapping)>,
     /// Whether the column before the line numbers shows.
     pub(super) column: bool,
     popover: Option<Retained<NSPopover>>,
@@ -70,6 +70,9 @@ pub struct State {
 
 /// A file and the commit its blame belongs to.
 type Key = (PathBuf, String);
+
+/// For each line of a text, counted from 0, its line in the committed file; `None` for one added or changed since.
+type Mapping = Rc<[Option<usize>]>;
 
 thread_local! {
     static AT_LINE_END: Cell<Option<bool>> = const { Cell::new(None) };
@@ -252,9 +255,16 @@ fn arrived(serial: u64, path: PathBuf, head: String, loaded: Result<Loaded, Blam
 }
 
 /// The committed line of each line of `view`'s text, the latest mapping the marks gave when `fresh` is false.
-fn mapping(view: &EditorTextView, fresh: bool) -> Option<Vec<Option<usize>>> {
+fn mapping(view: &EditorTextView, fresh: bool) -> Option<Mapping> {
+    let revision = view.document().revision();
+    if let Some((Some(at), lines)) = &view.ivars().blame.borrow().mapping
+        && *at == revision
+    {
+        return Some(lines.clone());
+    }
     if let Some(lines) = super::changes::head_lines(view) {
-        view.ivars().blame.borrow_mut().mapping = Some((view.document().revision(), lines.clone()));
+        let lines: Mapping = lines.into();
+        view.ivars().blame.borrow_mut().mapping = Some((Some(revision), lines.clone()));
         return Some(lines);
     }
     if fresh {
@@ -268,30 +278,34 @@ fn mapping(view: &EditorTextView, fresh: bool) -> Option<Vec<Option<usize>>> {
         .map(|(_, lines)| lines.clone())
 }
 
-/// What blame says about each line of `view`'s text, from `lines` mapped to the committed file.
-fn lines_of(loaded: &Loaded, lines: &[Option<usize>]) -> Vec<Option<Line>> {
-    lines
-        .iter()
-        .map(|committed| match committed {
+/// What blame says about each line of a text: the file's blame and where each line stands in the committed file.
+pub struct Lines {
+    loaded: Rc<Loaded>,
+    mapping: Mapping,
+}
+
+impl Lines {
+    /// What blame says about `line`, counted from 0.
+    pub fn at(&self, line: usize) -> Option<Line> {
+        match self.mapping.get(line)? {
             None => Some(Line::Uncommitted),
-            Some(line) => loaded.blame.commit_of(*line).cloned().map(Line::Commit),
-        })
-        .collect()
+            Some(committed) => self.loaded.blame.commit_of(*committed).cloned().map(Line::Commit),
+        }
+    }
 }
 
 /// What blame says about `line` of `view`, counted from 0; `None` while the data or the marks are not ready.
 pub fn line(view: &EditorTextView, line: usize, fresh: bool) -> Option<Line> {
     let loaded = data(view)?;
-    let lines = mapping(view, fresh)?;
-    lines_of(&loaded, &lines).into_iter().nth(line).flatten()
+    let mapping = mapping(view, fresh)?;
+    Lines { loaded, mapping }.at(line)
 }
 
-/// What blame says about every line of `view`; empty while not ready.
-pub fn all_lines(view: &EditorTextView) -> Vec<Option<Line>> {
-    match (data(view), mapping(view, false)) {
-        (Some(loaded), Some(lines)) => lines_of(&loaded, &lines),
-        _ => Vec::new(),
-    }
+/// What blame says about every line of `view`; `None` while not ready.
+pub fn all_lines(view: &EditorTextView) -> Option<Lines> {
+    let loaded = data(view)?;
+    let mapping = mapping(view, false)?;
+    Some(Lines { loaded, mapping })
 }
 
 /// How the end of a line reads it: "Autor, vor 3 Tagen · Betreff".
@@ -415,6 +429,9 @@ pub fn hover_rest(view: &EditorTextView) {
 
 /// The change marks compared again, as after a commit or an edit: what blame shows follows.
 pub fn marks_changed(view: &EditorTextView) {
+    if let Some((revision, _)) = &mut view.ivars().blame.borrow_mut().mapping {
+        *revision = None;
+    }
     let (column, end) = (view.ivars().blame.borrow().column, at_line_end());
     if column || end {
         refresh(view);

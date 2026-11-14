@@ -121,10 +121,9 @@ impl BlameColumn {
 
     /// The entries on screen: a block starts where a line's commit differs from the line before.
     fn entries(&self, editor: &EditorTextView) -> Vec<Entry> {
-        let lines = blame::all_lines(editor);
-        if lines.is_empty() {
+        let Some(lines) = blame::all_lines(editor) else {
             return Vec::new();
-        }
+        };
         let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
             return Vec::new();
         };
@@ -155,10 +154,10 @@ impl BlameColumn {
                 else {
                     return Bool::YES;
                 };
-                let here = lines.get(line).cloned().flatten();
+                let here = lines.at(line);
                 let starts = line == 0
                     || entries.borrow().is_empty()
-                    || lines.get(line - 1).cloned().flatten().as_ref() != here.as_ref()
+                    || lines.at(line - 1) != here
                     || super::fold::hidden_by_fold(editor, editor.line_start(line.saturating_sub(1)).unwrap_or(0));
                 if let Some(here) = here.filter(|_| starts) {
                     let top = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(editor)).y;
