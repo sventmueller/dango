@@ -48,14 +48,14 @@ define_class!(
 
         #[unsafe(method(viewDidChangeEffectiveAppearance))]
         fn appearance_changed(&self) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), viewDidChangeEffectiveAppearance] };
             guarded((), || super::appearance_changed(self.ivars().key.get()));
         }
 
         #[unsafe(method(setFrameSize:))]
         fn set_frame_size(&self, size: NSSize) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
             guarded((), || {
                 if (size.width - self.ivars().width.get()).abs() >= WIDTH_STEP {

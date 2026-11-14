@@ -55,7 +55,7 @@ define_class!(
     impl TimelineTable {
         #[unsafe(method(setFrameSize:))]
         fn set_frame_size(&self, size: NSSize) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
             let key = self.ivars().key;
             if !self.inLiveResize() {
@@ -69,7 +69,7 @@ define_class!(
 
         #[unsafe(method(viewDidEndLiveResize))]
         fn did_end_live_resize(&self) {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), viewDidEndLiveResize] };
             guarded((), || {
                 if let Some(tab) = super::get(self.ivars().key) {
@@ -114,7 +114,7 @@ define_class!(
                 tab.is_some_and(|tab| tab.timeline().toggle_row(row))
             });
             if !handled {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }

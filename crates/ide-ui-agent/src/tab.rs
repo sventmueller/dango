@@ -95,7 +95,7 @@ define_class!(
                 true
             });
             if !taken {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let () = unsafe { msg_send![super(self), mouseDown: event] };
             }
         }
@@ -446,7 +446,7 @@ impl AgentTab {
 
     /// Shows the thread as `snapshot` has it and reacts to how its status moved.
     pub(super) fn absorb(&self, snapshot: Thread, changes: &[Change]) {
-        let _interval = ide_process::signpost::begin(c"agent update");
+        let _interval = ide_process::signpost::begin(ide_process::signpost::name!("agent update"));
         let snapshot = Rc::new(snapshot);
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status;

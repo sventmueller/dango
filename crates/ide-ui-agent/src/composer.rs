@@ -67,14 +67,14 @@ define_class!(
                 false
             });
             if !handled {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }
 
         #[unsafe(method(becomeFirstResponder))]
         fn become_first_responder(&self) -> bool {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let accepted: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
             guarded((), || {
                 if accepted && let Some(tab) = super::get(self.ivars().key) {
@@ -86,7 +86,7 @@ define_class!(
 
         #[unsafe(method(resignFirstResponder))]
         fn resign_first_responder(&self) -> bool {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let resigned: bool = unsafe { msg_send![super(self), resignFirstResponder] };
             guarded((), || {
                 if resigned && let Some(tab) = super::get(self.ivars().key) {
@@ -103,7 +103,7 @@ define_class!(
                 super::get(self.ivars().key).is_some_and(|tab| tab.take_pasteboard(&pasteboard))
             });
             if !taken {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), paste: sender] };
             }
         }
@@ -129,7 +129,7 @@ define_class!(
             let taken = guarded(false, || {
                 super::get(self.ivars().key).is_some_and(|tab| tab.take_pasteboard(&pasteboard))
             });
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             taken || unsafe { msg_send![super(self), performDragOperation: sender] }
         }
     }

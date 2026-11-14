@@ -16,7 +16,8 @@ use objc2_core_graphics::{
 };
 use objc2_core_text::{CTFontOrientation, CTLineBoundsOptions};
 use objc2_metal::{
-    MTLDevice, MTLOrigin, MTLPixelFormat, MTLRegion, MTLSize, MTLTexture, MTLTextureDescriptor, MTLTextureUsage,
+    MTLCommandBuffer, MTLCommandBufferStatus, MTLDevice, MTLOrigin, MTLPixelFormat, MTLRegion, MTLSize, MTLTexture,
+    MTLTextureDescriptor, MTLTextureUsage,
 };
 
 use crate::boxdraw::{self, Pen};
@@ -158,6 +159,8 @@ impl Shelves {
 pub struct Sprites {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     texture: Retained<ProtocolObject<dyn MTLTexture>>,
+    /// The last frame committed that reads `texture`, until a new sprite waits for it to finish.
+    reading: Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>>,
     shelves: Shelves,
     entries: HashMap<Key, Option<Sprite>>,
     widths: HashMap<(String, Face), f64>,
@@ -171,6 +174,7 @@ impl Sprites {
         Some(Sprites {
             device: device.retain(),
             texture: atlas(device, FIRST_SIDE)?,
+            reading: None,
             shelves: Shelves::new(FIRST_SIDE),
             entries: HashMap::new(),
             widths: HashMap::new(),
@@ -181,6 +185,21 @@ impl Sprites {
 
     pub fn texture(&self) -> &ProtocolObject<dyn MTLTexture> {
         &self.texture
+    }
+
+    /// Notes that `frame`, committed, reads the texture, so a sprite written later waits until it has finished.
+    pub fn read_by(&mut self, frame: Retained<ProtocolObject<dyn MTLCommandBuffer>>) {
+        self.reading = Some(frame);
+    }
+
+    /// Waits until the frame that reads the texture has finished; Metal does not order the processor's
+    /// `replaceRegion` after the GPU's reads, and a font change writes over sprites the last frame still shows.
+    fn finish_reading(&mut self) {
+        if let Some(frame) = self.reading.take()
+            && frame.status() != MTLCommandBufferStatus::Completed
+        {
+            frame.waitUntilCompleted();
+        }
     }
 
     /// Readies the sprites for a frame drawn with `fonts`, forgetting those of other fonts.
@@ -209,6 +228,7 @@ impl Sprites {
             return false;
         };
         self.texture = texture;
+        self.reading = None;
         self.shelves = Shelves::new(side);
         self.entries.clear();
         true
@@ -234,8 +254,10 @@ impl Sprites {
                 depth: 1,
             },
         };
+        self.finish_reading();
         let bytes = NonNull::from(picture.pixels.as_slice()).cast();
-        // SAFETY: The region lies inside the texture, and the pixels hold its rows of 4 bytes per pixel.
+        // SAFETY: The region lies inside the texture, the pixels hold its rows of 4 bytes per pixel, and no frame
+        // reads the texture while it is written.
         unsafe {
             self.texture
                 .replaceRegion_mipmapLevel_withBytes_bytesPerRow(region, 0, bytes, picture.width * 4);

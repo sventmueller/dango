@@ -99,7 +99,7 @@ define_class!(
         /// Everything but the close button answers as the shade, so the tab behind takes no clicks.
         #[unsafe(method(hitTest:))]
         fn hit_test(&self, point: NSPoint) -> *mut NSView {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let hit: Option<Retained<NSView>> = unsafe { msg_send![super(self), hitTest: point] };
             let Some(hit) = hit else {
                 return std::ptr::null_mut();
@@ -137,7 +137,7 @@ define_class!(
                 escape
             });
             if !closed {
-                // SAFETY: The superclass's implementation, with this method's signature.
+                // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let () = unsafe { msg_send![super(self), keyDown: event] };
             }
         }

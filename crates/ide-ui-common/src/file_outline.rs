@@ -43,7 +43,7 @@ define_class!(
         /// interface.
         #[unsafe(method(frameOfCellAtColumn:row:))]
         fn cell_frame(&self, column: isize, row: isize) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
             if column != 0 {
                 return frame;
