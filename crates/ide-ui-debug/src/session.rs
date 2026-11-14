@@ -49,8 +49,8 @@ impl DebugPanel {
     /// Brings the newest console tab to the front.
     pub fn show_console(&self) {
         let console = self.ivars().links.borrow().consoles.last().cloned();
-        if let (Some(console), Some(controller)) = (console, self.controller()) {
-            controller.select_tab_by_id(console.tab);
+        if let (Some(tab), Some(controller)) = (console.and_then(|c| c.tab), self.controller()) {
+            controller.select_tab_by_id(tab);
         }
     }
 

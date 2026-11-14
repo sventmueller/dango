@@ -12,7 +12,7 @@ use super::address::{self, Address};
 use super::host::state;
 use super::view::BrowserView;
 use ide_ui_common::util::main_soon;
-use ide_ui_common::window::{TabKind, Tabs, Window, WindowId};
+use ide_ui_common::window::{TabId, TabKind, Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -81,10 +81,10 @@ pub fn urls(window: WindowId) -> Vec<String> {
 }
 
 /// The address the browser tab `tab` of `window` shows, for opening it again.
-pub fn url_of_tab(window: WindowId, tab: isize) -> Option<String> {
+pub fn url_of_tab(window: WindowId, tab: TabId) -> Option<String> {
     tabs_of(window)
         .into_iter()
-        .find(|view| view.tab() == tab)
+        .find(|view| view.tab() == Some(tab))
         .and_then(|view| view.current_url())
 }
 
@@ -113,8 +113,8 @@ pub(super) fn close_later(view: &BrowserView) {
                 .filter_map(Weak::load)
                 .find(|view| std::ptr::from_ref::<BrowserView>(view) as usize == address)
         });
-        if let Some(view) = view {
-            Window::new(view.window_id()).close_tab(view.tab());
+        if let Some((view, tab)) = view.and_then(|view| view.tab().map(|tab| (view, tab))) {
+            Window::new(view.window_id()).close_tab(tab);
         }
     });
 }
@@ -146,7 +146,7 @@ pub(super) fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
 /// The browser tab in front in `window`.
 fn front(window: WindowId) -> Option<Retained<BrowserView>> {
     let selected = Window::new(window).selected_tab()?;
-    tabs_of(window).into_iter().find(|view| view.tab() == selected)
+    tabs_of(window).into_iter().find(|view| view.tab() == Some(selected))
 }
 
 /// Runs a browser command of the menu bar on the browser tab in front of `window`, wherever the focus is.

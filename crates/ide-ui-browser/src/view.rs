@@ -31,7 +31,7 @@ use super::notice::Notice;
 use super::{autofill, dialogs, downloads, tabs, trust, web};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, item, ns, set_target};
-use ide_ui_common::window::{Tabs, Window, WindowId};
+use ide_ui_common::window::{TabId, Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -61,7 +61,7 @@ pub struct Ivars {
     /// The id of the window the tab lives in.
     window: WindowId,
     key: String,
-    tab: Cell<isize>,
+    tab: Cell<Option<TabId>>,
     parts: OnceCell<Parts>,
     /// What was last asked for, which the field shows until the page has an address, and "Try Again" asks again.
     asked: RefCell<Option<Address>>,
@@ -400,7 +400,7 @@ impl BrowserView {
         let this = Self::alloc(mtm).set_ivars(Ivars {
             window,
             key,
-            tab: Cell::new(-1),
+            tab: Cell::new(None),
             parts: OnceCell::new(),
             asked: RefCell::new(None),
             failure: RefCell::new(None),
@@ -515,12 +515,12 @@ impl BrowserView {
         &self.ivars().key
     }
 
-    pub fn tab(&self) -> isize {
+    pub fn tab(&self) -> Option<TabId> {
         self.ivars().tab.get()
     }
 
-    pub fn set_tab(&self, id: isize) {
-        self.ivars().tab.set(id);
+    pub fn set_tab(&self, id: TabId) {
+        self.ivars().tab.set(Some(id));
     }
 
     pub fn window_id(&self) -> WindowId {
@@ -811,12 +811,13 @@ impl BrowserView {
         if *self.ivars().title.borrow() == title {
             return;
         }
-        if self.tab() < 0 || self.window().is_none() {
+        let Some(tab) = self.tab() else { return };
+        if self.window().is_none() {
             return;
         }
         let window = Window::new(self.window_id());
         if window.is_open() {
-            window.set_tab_title(self.tab(), &title);
+            window.set_tab_title(tab, &title);
             *self.ivars().title.borrow_mut() = title;
         }
     }

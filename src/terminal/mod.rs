@@ -1,6 +1,7 @@
 //! The terminal tab (E8, E9): the user's login shell in a PTY, drawn by `TerminalView` under banners for a dev server
 //! it started and for short notices.
 
+use ide_ui_common::window::TabId;
 use std::path::Path;
 use std::time::Duration;
 
@@ -29,7 +30,7 @@ pub fn set_font_size(size: f64) {
 pub fn folder_of_tab(controller: &WindowController, tab: isize) -> Option<std::path::PathBuf> {
     all_views()
         .into_iter()
-        .find(|view| view.window_id() == controller.id() && view.tab() == Some(tab))
+        .find(|view| view.window_id() == controller.id() && view.tab() == Some(TabId::new(tab)))
         .filter(|view| !view.passing())
         .map(|view| view.cwd())
 }
@@ -44,7 +45,7 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
         .unwrap_or_else(ide_core::paths::home);
     let (view, root) = TerminalView::new(controller.mtm(), controller.id(), cwd);
     let tab = controller.add_tab(TabKind::Terminal, None, t("Terminal"), root);
-    view.set_tab(tab);
+    view.set_tab(TabId::new(tab));
     if let Some(window) = controller.window() {
         window.makeFirstResponder(Some(&view));
     }
@@ -76,7 +77,7 @@ pub fn open_passing(controller: &WindowController, cwd: &Path, title: &str, line
     };
     view.set_passing();
     if let Some(tab) = view.tab() {
-        controller.set_tab_title(tab, title);
+        controller.set_tab_title(tab.get(), title);
     }
     type_when_started(view.id(), line + "\n", Box::new(|_| {}), 100);
 }
@@ -171,7 +172,7 @@ fn in_view(view: &TerminalView) -> bool {
 pub fn tab_of_process(controller: &WindowController, pid: u32) -> Option<isize> {
     let shells: Vec<(u32, isize)> = of_window(controller)
         .iter()
-        .filter_map(|view| Some((view.with_session(ide_terminal::Session::pid)?, view.tab()?)))
+        .filter_map(|view| Some((view.with_session(ide_terminal::Session::pid)?, view.tab()?.get())))
         .collect();
     let mut current = pid;
     for _ in 0..32 {

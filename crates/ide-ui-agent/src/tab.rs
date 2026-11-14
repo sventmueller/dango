@@ -28,7 +28,7 @@ use super::target::AgentTarget;
 use super::timeline::Timeline;
 use super::{overlay, ui};
 use ide_ui_common::util::{guarded, main_after, main_soon};
-use ide_ui_common::window::{Notices, TabDecor, TabKind, Tabs, Window};
+use ide_ui_common::window::{Notices, TabDecor, TabId, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -124,7 +124,7 @@ pub struct AgentTab {
     pub(super) agent: Agent,
     pub(super) mtm: MainThreadMarker,
     pub(super) controller: Window,
-    pub(super) tab_id: std::cell::Cell<isize>,
+    pub(super) tab_id: std::cell::Cell<Option<TabId>>,
     pub(super) cwd: PathBuf,
     pub(super) thread_id: ThreadId,
     pub(super) target: Retained<AgentTarget>,
@@ -205,7 +205,7 @@ impl AgentTab {
             key,
             mtm,
             controller: *controller,
-            tab_id: std::cell::Cell::new(-1),
+            tab_id: std::cell::Cell::new(None),
             store: Store::new(cwd.clone()),
             cwd,
             thread_id,
@@ -319,13 +319,13 @@ impl AgentTab {
     /// Adds the tab to the window's tab bar.
     pub(super) fn add_to_window(&self, controller: &Window) {
         let view: Retained<NSView> = self.root();
-        let id = controller
-            .add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view)
-            .unwrap_or(-1);
+        let id = controller.add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view);
         self.tab_id.set(id);
-        controller.set_tab_tint(id, &self.agent.colour());
-        if let Some(colors) = self.agent.four_colours() {
-            controller.set_tab_four_colours(id, colors);
+        if let Some(id) = id {
+            controller.set_tab_tint(id, &self.agent.colour());
+            if let Some(colors) = self.agent.four_colours() {
+                controller.set_tab_four_colours(id, colors);
+            }
         }
         self.composer.set_agent(self.agent.name());
         self.refresh();
@@ -542,8 +542,8 @@ impl AgentTab {
         self.header.set_bookmarked(self.state.borrow().bookmarked());
         self.refresh_remote();
         self.refresh_work();
-        if let Some(controller) = self.controller() {
-            controller.set_tab_title(self.tab_id.get(), &super::format::first_line(&title, 32));
+        if let (Some(controller), Some(tab)) = (self.controller(), self.tab_id.get()) {
+            controller.set_tab_title(tab, &super::format::first_line(&title, 32));
         }
         if matches!(self.agent, Agent::Claude)
             && let Some(session) = self.session()
@@ -575,8 +575,10 @@ impl AgentTab {
     }
 
     pub(super) fn refresh_tab_mark(&self) {
-        let Some(controller) = self.controller() else { return };
-        controller.set_tab_status(self.tab_id.get(), self.tab_mark().as_deref());
+        let (Some(controller), Some(tab)) = (self.controller(), self.tab_id.get()) else {
+            return;
+        };
+        controller.set_tab_status(tab, self.tab_mark().as_deref());
     }
 
     /// The colour of the dot on the tab: green while the agent or one of its subagents works, red while it waits for

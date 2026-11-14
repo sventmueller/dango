@@ -45,12 +45,12 @@ pub fn edited(editor: &EditorTextView, change: &ide_document::Change) {
 
 /// The document `id` of `controller`'s window closes; a console among them is forgotten.
 pub fn closing(controller: &WindowController, id: isize) {
-    ide_ui_debug::closing(controller.handle(), id);
+    ide_ui_debug::closing(controller.handle(), ide_ui_common::window::TabId::new(id));
 }
 
 /// The name and history of the console in tab `id`, for the layout (Review C18).
 pub fn console_of_tab(controller: &WindowController, id: isize) -> Option<(String, Vec<ConsoleLine>)> {
-    ide_ui_debug::console_of_tab(controller.handle(), id)
+    ide_ui_debug::console_of_tab(controller.handle(), ide_ui_common::window::TabId::new(id))
 }
 
 /// Opens a console that came back with the layout, finished and only to read; no session starts (Review C18).

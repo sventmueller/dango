@@ -163,7 +163,7 @@ pub trait TabsHost {
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
-    ) -> Option<isize>;
+    ) -> Option<TabId>;
     /// Adds `view` as a preview tab, which the next preview replaces unless the user keeps it; a plain tab when the
     /// user turned previews off.
     fn add_preview_tab(
@@ -173,28 +173,28 @@ pub trait TabsHost {
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
-    ) -> Option<isize>;
+    ) -> Option<TabId>;
     /// Turns the preview tab `tab` into one that stays.
-    fn keep_tab(&self, window: WindowId, tab: isize);
+    fn keep_tab(&self, window: WindowId, tab: TabId);
     /// Brings the tab whose key is `key` to the front; whether there is one.
     fn select_tab_with_key(&self, window: WindowId, key: &str) -> bool;
-    fn set_tab_title(&self, window: WindowId, tab: isize, title: &str);
-    fn select_tab(&self, window: WindowId, tab: isize);
-    fn close_tab(&self, window: WindowId, tab: isize);
+    fn set_tab_title(&self, window: WindowId, tab: TabId, title: &str);
+    fn select_tab(&self, window: WindowId, tab: TabId);
+    fn close_tab(&self, window: WindowId, tab: TabId);
     /// The tab in front.
-    fn selected_tab(&self, window: WindowId) -> Option<isize>;
+    fn selected_tab(&self, window: WindowId) -> Option<TabId>;
     /// The tab whose key is `key`, such as a file's path.
-    fn tab_with_key(&self, window: WindowId, key: &str) -> Option<isize>;
+    fn tab_with_key(&self, window: WindowId, key: &str) -> Option<TabId>;
 }
 
 /// How a document tab's symbol shows the state of what it holds.
 pub trait TabDecorHost {
     /// Shows `color` as the status dot of `tab`, or none.
-    fn set_tab_status(&self, window: WindowId, tab: isize, color: Option<&NSColor>);
+    fn set_tab_status(&self, window: WindowId, tab: TabId, color: Option<&NSColor>);
     /// Tints the symbol of `tab`.
-    fn set_tab_tint(&self, window: WindowId, tab: isize, color: &NSColor);
+    fn set_tab_tint(&self, window: WindowId, tab: TabId, color: &NSColor);
     /// Gives the symbol of `tab` the colours of its left, top, right and bottom point instead of a tint.
-    fn set_tab_four_colours(&self, window: WindowId, tab: isize, colors: [Retained<NSColor>; 4]);
+    fn set_tab_four_colours(&self, window: WindowId, tab: TabId, colors: [Retained<NSColor>; 4]);
 }
 
 /// The panels beside a window's activity bar.
@@ -306,6 +306,22 @@ impl WindowId {
     }
 }
 
+/// A document tab of a window, by the id the window gave it when it was added.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TabId(isize);
+
+impl TabId {
+    /// The tab the window's document tabs numbered `number`.
+    pub const fn new(number: isize) -> TabId {
+        TabId(number)
+    }
+
+    /// The number under which the window's document tabs keep the tab.
+    pub const fn get(self) -> isize {
+        self.0
+    }
+}
+
 /// A window by its id, which stays valid as a value after the window closed; its calls then do nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Window(WindowId);
@@ -383,7 +399,7 @@ impl Trust for Window {}
 /// A window's document tabs.
 pub trait Tabs: AsWindow {
     /// Adds `view` as a document tab; its id, or `None` once the window closed.
-    fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Option<isize> {
+    fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Option<TabId> {
         host().add_tab(self.as_window().0, kind, key, title, view)
     }
 
@@ -394,11 +410,11 @@ pub trait Tabs: AsWindow {
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
-    ) -> Option<isize> {
+    ) -> Option<TabId> {
         host().add_preview_tab(self.as_window().0, kind, key, title, view)
     }
 
-    fn keep_tab(&self, tab: isize) {
+    fn keep_tab(&self, tab: TabId) {
         host().keep_tab(self.as_window().0, tab);
     }
 
@@ -407,23 +423,23 @@ pub trait Tabs: AsWindow {
         host().select_tab_with_key(self.as_window().0, key)
     }
 
-    fn set_tab_title(&self, tab: isize, title: &str) {
+    fn set_tab_title(&self, tab: TabId, title: &str) {
         host().set_tab_title(self.as_window().0, tab, title);
     }
 
-    fn select_tab_by_id(&self, tab: isize) {
+    fn select_tab_by_id(&self, tab: TabId) {
         host().select_tab(self.as_window().0, tab);
     }
 
-    fn close_tab(&self, tab: isize) {
+    fn close_tab(&self, tab: TabId) {
         host().close_tab(self.as_window().0, tab);
     }
 
-    fn selected_tab(&self) -> Option<isize> {
+    fn selected_tab(&self) -> Option<TabId> {
         host().selected_tab(self.as_window().0)
     }
 
-    fn tab_with_key(&self, key: &str) -> Option<isize> {
+    fn tab_with_key(&self, key: &str) -> Option<TabId> {
         host().tab_with_key(self.as_window().0, key)
     }
 }
@@ -432,15 +448,15 @@ impl Tabs for Window {}
 
 /// How a document tab's symbol shows the state of what it holds.
 pub trait TabDecor: AsWindow {
-    fn set_tab_status(&self, tab: isize, color: Option<&NSColor>) {
+    fn set_tab_status(&self, tab: TabId, color: Option<&NSColor>) {
         host().set_tab_status(self.as_window().0, tab, color);
     }
 
-    fn set_tab_tint(&self, tab: isize, color: &NSColor) {
+    fn set_tab_tint(&self, tab: TabId, color: &NSColor) {
         host().set_tab_tint(self.as_window().0, tab, color);
     }
 
-    fn set_tab_four_colours(&self, tab: isize, colors: [Retained<NSColor>; 4]) {
+    fn set_tab_four_colours(&self, tab: TabId, colors: [Retained<NSColor>; 4]) {
         host().set_tab_four_colours(self.as_window().0, tab, colors);
     }
 }

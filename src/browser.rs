@@ -30,7 +30,7 @@ pub fn reload_matching(controller: &WindowController, origin: &str) {
 
 /// The address the browser tab `tab` of `controller`'s window shows, for opening it again.
 pub fn url_of_tab(controller: &WindowController, tab: isize) -> Option<String> {
-    ide_ui_browser::url_of_tab(controller.id(), tab)
+    ide_ui_browser::url_of_tab(controller.id(), ide_ui_common::window::TabId::new(tab))
 }
 
 /// Runs a browser command of the menu bar on the browser tab in front, wherever the focus is.

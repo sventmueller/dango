@@ -29,7 +29,7 @@ mod ui;
 use std::path::Path;
 
 use ide_core::debugging::ConsoleLine;
-use ide_ui_common::window::{Panel, Panels, Window};
+use ide_ui_common::window::{Panel, Panels, TabId, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSMenuItem;
@@ -80,14 +80,14 @@ pub fn debug_test(window: Window, name: String, program: ide_dap::TestProgram) {
 }
 
 /// The document `tab` of `window` closes; a console among them is forgotten.
-pub fn closing(window: Window, tab: isize) {
+pub fn closing(window: Window, tab: TabId) {
     if let Some(panel) = panel::of(&window) {
         panel.console_closed(tab);
     }
 }
 
 /// The name and history of the console in tab `tab`, for the layout (Review C18).
-pub fn console_of_tab(window: Window, tab: isize) -> Option<(String, Vec<ConsoleLine>)> {
+pub fn console_of_tab(window: Window, tab: TabId) -> Option<(String, Vec<ConsoleLine>)> {
     let console = panel::of(&window)?.console_of_tab(tab)?;
     let title = console.title.borrow().clone();
     Some((title, console.lines()))

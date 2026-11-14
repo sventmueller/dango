@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
-use ide_ui_common::window::{self, Panel, TabKind, WindowId};
+use ide_ui_common::window::{self, Panel, TabId, TabKind, WindowId};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSView, NSWindow};
@@ -115,8 +115,8 @@ impl window::TabsHost for AppHost {
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
-    ) -> Option<isize> {
-        Some(self::window(window)?.add_tab(kind, key, title, view))
+    ) -> Option<TabId> {
+        Some(TabId::new(self::window(window)?.add_tab(kind, key, title, view)))
     }
 
     fn add_preview_tab(
@@ -126,13 +126,15 @@ impl window::TabsHost for AppHost {
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
-    ) -> Option<isize> {
-        Some(self::window(window)?.add_preview_tab(kind, key, title, view))
+    ) -> Option<TabId> {
+        Some(TabId::new(
+            self::window(window)?.add_preview_tab(kind, key, title, view),
+        ))
     }
 
-    fn keep_tab(&self, window: WindowId, tab: isize) {
+    fn keep_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.keep_tab(tab);
+            c.keep_tab(tab.get());
         }
     }
 
@@ -140,49 +142,49 @@ impl window::TabsHost for AppHost {
         self::window(window).is_some_and(|c| c.select_tab(key))
     }
 
-    fn set_tab_title(&self, window: WindowId, tab: isize, title: &str) {
+    fn set_tab_title(&self, window: WindowId, tab: TabId, title: &str) {
         if let Some(c) = self::window(window) {
-            c.set_tab_title(tab, title);
+            c.set_tab_title(tab.get(), title);
         }
     }
 
-    fn select_tab(&self, window: WindowId, tab: isize) {
+    fn select_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.select_tab_by_id(tab);
+            c.select_tab_by_id(tab.get());
         }
     }
 
-    fn close_tab(&self, window: WindowId, tab: isize) {
+    fn close_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.close_tab(tab);
+            c.close_tab(tab.get());
         }
     }
 
-    fn selected_tab(&self, window: WindowId) -> Option<isize> {
-        self::window(window)?.selected_tab()
+    fn selected_tab(&self, window: WindowId) -> Option<TabId> {
+        self::window(window)?.selected_tab().map(TabId::new)
     }
 
-    fn tab_with_key(&self, window: WindowId, key: &str) -> Option<isize> {
-        self::window(window)?.tab_with_key(key)
+    fn tab_with_key(&self, window: WindowId, key: &str) -> Option<TabId> {
+        self::window(window)?.tab_with_key(key).map(TabId::new)
     }
 }
 
 impl window::TabDecorHost for AppHost {
-    fn set_tab_status(&self, window: WindowId, tab: isize, color: Option<&NSColor>) {
+    fn set_tab_status(&self, window: WindowId, tab: TabId, color: Option<&NSColor>) {
         if let Some(c) = self::window(window) {
-            c.set_tab_status(tab, color);
+            c.set_tab_status(tab.get(), color);
         }
     }
 
-    fn set_tab_tint(&self, window: WindowId, tab: isize, color: &NSColor) {
+    fn set_tab_tint(&self, window: WindowId, tab: TabId, color: &NSColor) {
         if let Some(c) = self::window(window) {
-            c.set_tab_tint(tab, color);
+            c.set_tab_tint(tab.get(), color);
         }
     }
 
-    fn set_tab_four_colours(&self, window: WindowId, tab: isize, colors: [Retained<NSColor>; 4]) {
+    fn set_tab_four_colours(&self, window: WindowId, tab: TabId, colors: [Retained<NSColor>; 4]) {
         if let Some(c) = self::window(window) {
-            c.set_tab_four_colours(tab, colors);
+            c.set_tab_four_colours(tab.get(), colors);
         }
     }
 }

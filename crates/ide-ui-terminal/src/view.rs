@@ -1,6 +1,6 @@
 //! The terminal view: a layer-backed view that draws a session's screen and hands it keys, mouse, pastes and drops.
 
-use ide_ui_common::window::WindowId;
+use ide_ui_common::window::{TabId, WindowId};
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::ptr::NonNull;
@@ -43,7 +43,7 @@ pub struct Ivars {
     /// The id of the window the view's tab is in.
     window: WindowId,
     font_size: Cell<f64>,
-    pub(super) tab: Cell<Option<isize>>,
+    pub(super) tab: Cell<Option<TabId>>,
     /// Its tab does not open again after a restart, since it shows a command, not a shell of its own (G30).
     passing: Cell<bool>,
     pub(super) session: RefCell<Option<Session>>,
@@ -564,7 +564,7 @@ impl TerminalView {
     }
 
     /// The id of the view's tab.
-    pub fn tab(&self) -> Option<isize> {
+    pub fn tab(&self) -> Option<TabId> {
         self.ivars().tab.get()
     }
 

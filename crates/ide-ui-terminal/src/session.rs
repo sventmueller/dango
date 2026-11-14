@@ -12,7 +12,7 @@ use splat_i18n::{t, tf};
 use super::view::TerminalView;
 use crate::model::{self, BELL_FLASH, Bell, Frame};
 use ide_ui_common::util::main_after;
-use ide_ui_common::window::{Tabs, Window};
+use ide_ui_common::window::{TabId, Tabs, Window};
 
 /// How long a notice shows above the terminal.
 const NOTICE_TIME: Duration = Duration::from_secs(8);
@@ -116,7 +116,7 @@ impl TerminalView {
     }
 
     /// The tab's id, once the tab exists; a title that arrived before is shown now.
-    pub fn set_tab(&self, id: isize) {
+    pub fn set_tab(&self, id: TabId) {
         self.ivars().tab.set(Some(id));
         self.ivars().state.tab_title.borrow_mut().take();
         if self.ivars().title.borrow().is_some() {

@@ -20,14 +20,14 @@ use super::model::console::Console;
 use super::panel::DebugPanel;
 use ide_ui_common::constant;
 use ide_ui_common::util::{label, ns, set_action, with_editing};
-use ide_ui_common::window::{TabKind, Tabs, Window};
+use ide_ui_common::window::{TabId, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// A debug console tab.
 pub struct ConsoleTab {
-    /// The tab's document number.
-    pub tab: isize,
+    /// The tab's document number; none when its window had closed.
+    pub tab: Option<TabId>,
     /// The session it belongs to; none once it came back after a restart.
     pub session: Cell<Option<u64>>,
     pub title: RefCell<String>,
@@ -55,10 +55,8 @@ impl ConsoleTab {
     fn build(panel: &DebugPanel, controller: &Window, title: &str, model: Console) -> Rc<ConsoleTab> {
         let mtm = controller.mtm();
         let (root, text, input, finished) = views(mtm, panel);
-        let tab = controller
-            .add_tab(TabKind::Console, None, &tf("Debug-Konsole: {}", &[title]), root)
-            .unwrap_or(-1);
-        input.setTag(tab);
+        let tab = controller.add_tab(TabKind::Console, None, &tf("Debug-Konsole: {}", &[title]), root);
+        input.setTag(tab.map_or(-1, TabId::get));
         let console = Rc::new(ConsoleTab {
             tab,
             session: Cell::new(None),
@@ -108,7 +106,9 @@ impl ConsoleTab {
         *self.model.borrow_mut() = Console::default();
         *self.title.borrow_mut() = title.to_string();
         self.session.set(None);
-        controller.set_tab_title(self.tab, &tf("Debug-Konsole: {}", &[title]));
+        if let Some(tab) = self.tab {
+            controller.set_tab_title(tab, &tf("Debug-Konsole: {}", &[title]));
+        }
         self.show_all();
     }
 
@@ -249,13 +249,13 @@ fn views(
 
 impl DebugPanel {
     /// The console of the tab `tab`.
-    pub fn console_of_tab(&self, tab: isize) -> Option<Rc<ConsoleTab>> {
+    pub fn console_of_tab(&self, tab: TabId) -> Option<Rc<ConsoleTab>> {
         self.ivars()
             .links
             .borrow()
             .consoles
             .iter()
-            .find(|c| c.tab == tab)
+            .find(|c| c.tab == Some(tab))
             .cloned()
     }
 
@@ -271,8 +271,8 @@ impl DebugPanel {
     }
 
     /// The tab of a console closed.
-    pub fn console_closed(&self, tab: isize) {
-        self.ivars().links.borrow_mut().consoles.retain(|c| c.tab != tab);
+    pub fn console_closed(&self, tab: TabId) {
+        self.ivars().links.borrow_mut().consoles.retain(|c| c.tab != Some(tab));
     }
 
     /// Opens the finished console `title` with `history`, as the layout brings it back.
@@ -290,7 +290,7 @@ impl DebugPanel {
         let Some(field) = sender.and_then(|s| s.downcast_ref::<NSTextField>()) else {
             return;
         };
-        let Some(console) = self.console_of_tab(field.tag()) else {
+        let Some(console) = self.console_of_tab(TabId::new(field.tag())) else {
             return;
         };
         let text = field.stringValue().to_string();
@@ -302,7 +302,7 @@ impl DebugPanel {
     /// ↑ and ↓ in a console's field go through what was asked.
     pub(super) fn console_key(&self, field: &NSTextField, older: bool) -> bool {
         match self
-            .console_of_tab(field.tag())
+            .console_of_tab(TabId::new(field.tag()))
             .filter(|c| std::ptr::eq(&*c.input, field))
         {
             Some(console) => {
