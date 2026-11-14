@@ -9,7 +9,6 @@ use ide_thread::{
 };
 use splat_i18n::tf;
 
-use super::source::Source;
 use super::tab::AgentTab;
 
 /// What the thread was before a rewind, to go back to when the agent refuses it.
@@ -110,7 +109,7 @@ impl AgentTab {
         let kept_entry = self.keep_in_history(&session);
         let replaying = {
             let mut state = self.state.borrow_mut();
-            let old = std::mem::replace(&mut state.source, Source::Idle);
+            let old = state.end();
             let replaying = old.is_replay();
             old.end();
             state.rewound(
@@ -155,7 +154,7 @@ impl AgentTab {
         });
         {
             let mut state = self.state.borrow_mut();
-            let old = std::mem::replace(&mut state.source, Source::Idle);
+            let old = state.end();
             old.end();
             state.rewind_undone(before.clone(), message);
         }

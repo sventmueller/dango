@@ -54,7 +54,7 @@ impl AgentTab {
             let has_code = state.checkpoints.contains_key(uuid);
             return vec![(t("Code auf den Stand vor dieser Nachricht"), 2, has_code)];
         }
-        let has_code = state.checkpoints.contains_key(uuid) || state.source.is_live();
+        let has_code = state.checkpoints.contains_key(uuid) || state.source().is_live();
         drop(state);
         let has_conversation = self.conversation_rewindable(entry);
         vec![
@@ -154,7 +154,7 @@ impl AgentTab {
 
     /// Without a checkpoint of the app, as for a resumed session: the CLI's own file history (experimental).
     fn rewind_with_cli(&self, uuid: &str) {
-        let Some(session) = self.state.borrow().source.session().cloned() else {
+        let Some(session) = self.state.borrow().source().session().cloned() else {
             return;
         };
         let key = self.key;

@@ -63,11 +63,7 @@ impl AgentTab {
 
     /// Plays recorded lines.
     pub fn feed(&self, lines: &str) {
-        let (changes, snapshot) = {
-            let mut state = self.state.borrow_mut();
-            let changes = state.source.feed(lines);
-            (changes, state.source.snapshot())
-        };
+        let (changes, snapshot) = self.state.borrow_mut().feed(lines);
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
         }
@@ -148,7 +144,7 @@ impl AgentTab {
 
     /// Switches to the permission mode `mode`, as the mode pill's menu does.
     pub fn use_mode(&self, mode: &str) {
-        self.state.borrow().source.set_mode(mode, |_| ());
+        self.state.borrow().source().set_mode(mode, |_| ());
         self.state.borrow_mut().mode = mode.to_string();
         self.refresh_composer();
     }

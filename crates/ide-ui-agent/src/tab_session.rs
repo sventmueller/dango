@@ -25,11 +25,7 @@ impl AgentTab {
             return;
         }
         if self.agent.is_own() {
-            {
-                let mut state = self.state.borrow_mut();
-                state.source = Source::Starting;
-                state.problem = None;
-            }
+            self.state.borrow_mut().start();
             self.refresh();
             self.start_own();
             return;
@@ -37,8 +33,7 @@ impl AgentTab {
         if let Some(agent) = self.acp_agent() {
             let thread = {
                 let mut state = self.state.borrow_mut();
-                state.source = Source::Starting;
-                state.problem = None;
+                state.start();
                 state.choice_applied = false;
                 state.thread.as_ref().clone()
             };
@@ -48,8 +43,7 @@ impl AgentTab {
         }
         let transcript = {
             let mut state = self.state.borrow_mut();
-            state.source = Source::Starting;
-            state.problem = None;
+            state.start();
             state.resume.as_ref().and_then(|r| r.transcript.clone())
         };
         self.refresh();
@@ -70,15 +64,13 @@ impl AgentTab {
                 }
             });
         }) {
-            self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why.0)));
+            self.start_failed(Problem::Start(why.0));
         }
     }
 
     pub(super) fn launch(&self, exe: Option<PathBuf>, env: Vec<(String, String)>, thread: Thread) {
         let Some(exe) = exe else {
-            self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::NotFound));
+            self.start_failed(Problem::NotFound);
             return;
         };
         let mut launch = Launch::new(exe, env, &self.cwd);
@@ -109,21 +101,16 @@ impl AgentTab {
         let started = Session::start(Supervisor::global(), &launch, thread.clone(), sink);
         match started {
             Ok(session) => {
-                {
-                    let mut state = self.state.borrow_mut();
-                    state.source = Source::Live(session);
-                    state.problem = None;
-                }
+                self.state.borrow_mut().started(Source::Live(session));
                 self.absorb(thread, &[Change::Cleared]);
                 self.send_queued();
             }
             Err(error) => {
-                self.state.borrow_mut().source = Source::Idle;
                 let problem = match error {
                     ide_claude::SessionError::NotFound(_) => Problem::NotFound,
                     other => Problem::Start(other.to_string()),
                 };
-                self.set_problem(Some(problem));
+                self.start_failed(problem);
             }
         }
     }
@@ -165,13 +152,10 @@ impl AgentTab {
         }
         let snapshot = {
             let mut state = self.state.borrow_mut();
-            if learned && let Some(caps) = state.source.capabilities() {
-                state.caps = caps;
+            if learned {
+                state.learn();
             }
-            if learned && let Some(caps) = state.source.acp_capabilities() {
-                state.acp = Some(caps);
-            }
-            state.source.snapshot()
+            state.source().snapshot()
         };
         if learned && self.agent.is_acp() {
             self.acp_apply_choice();
@@ -195,7 +179,7 @@ impl AgentTab {
 
     /// What an ACP session's failure means for the tab; failures of a running session's requests are only logged.
     fn acp_problem(&self, error: &ide_acp::SessionError) -> Option<Problem> {
-        let ready = self.state.borrow().source.is_live();
+        let ready = self.state.borrow().source().is_live();
         let problem = acp_problem_of(self.agent.name(), ready, error);
         if problem.is_none() {
             ide_ui_common::diag::report("a request to the agent", error);

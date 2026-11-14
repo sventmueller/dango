@@ -134,7 +134,7 @@ pub fn open_own(
 ) -> Option<Rc<AgentTab>> {
     let controller = &controller.as_window();
     let tab = AgentTab::open(controller, Agent::Own, None)?;
-    tab.state.borrow_mut().own = choice;
+    tab.state.borrow_mut().pick_own(choice);
     started(controller, &tab);
     Some(tab)
 }

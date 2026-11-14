@@ -6,13 +6,15 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ide_claude::Capabilities;
+use ide_claude::{Capabilities, PlanAnswer, SessionError};
 use ide_git::Checkpoint;
-use ide_thread::{Attachment, Entry, Lane, Status, Thread, UserMessage};
+use ide_thread::{Attachment, Change, Entry, Lane, Status, Thread, UserMessage};
 use splat_i18n::{t, tf};
 
+use super::acp::Agent;
 use super::rewind::Fork;
 use super::source::{Problem, Resume, Source};
+use crate::own_agent::ModelChoice;
 
 /// What the composer's menus offered, so the picked item's tag can be read.
 #[derive(Default)]
@@ -25,13 +27,8 @@ pub struct Offered {
 }
 
 pub struct State {
-    pub source: Source,
+    run: Run,
     pub thread: Rc<Thread>,
-    pub caps: Capabilities,
-    /// What the ACP agent and its session offer.
-    pub acp: Option<ide_acp::Capabilities>,
-    /// The endpoint and model of the own agent's session.
-    pub own: Option<crate::own_agent::ModelChoice>,
     pub problem: Option<Problem>,
     pub custom_title: Option<String>,
     pub queue: Vec<UserMessage>,
@@ -53,6 +50,23 @@ pub struct State {
     pub offer: Option<Attachment>,
     /// The session runs with the model and mode the user picked last for its agent, where it offers them.
     pub choice_applied: bool,
+}
+
+/// The tab's session, with what the tab knows of its agent beyond it.
+struct Run {
+    source: Source,
+    known: Known,
+}
+
+/// What the tab learned of its agent or was given for it, by the agent it runs; it outlasts the session, which starts
+/// again with it.
+enum Known {
+    /// What the CLI offers.
+    Claude(Capabilities),
+    /// What the ACP agent and its session offer, once they said.
+    Acp(Option<ide_acp::Capabilities>),
+    /// The endpoint and model of the own agent's session.
+    Own(Option<ModelChoice>),
 }
 
 /// The turn in flight: how the session stands, the prompt on its way and the checkpoint taken before it.
@@ -84,14 +98,16 @@ pub struct SandboxLook {
 }
 
 impl State {
-    /// A tab's state before its session starts, with the user's last picks for its agent.
-    pub fn new(source: Source, thread: Rc<Thread>, choice: ide_core::settings::AgentChoice) -> State {
+    /// The state of a tab running `agent` before its session starts, with the user's last picks for the agent.
+    pub fn new(agent: &Agent, source: Source, thread: Rc<Thread>, choice: ide_core::settings::AgentChoice) -> State {
+        let known = match agent {
+            Agent::Claude => Known::Claude(Capabilities::default()),
+            Agent::Acp(_) => Known::Acp(None),
+            Agent::Own => Known::Own(None),
+        };
         State {
-            source,
+            run: Run { source, known },
             thread,
-            caps: Capabilities::default(),
-            acp: None,
-            own: None,
             problem: None,
             custom_title: None,
             queue: Vec::new(),
@@ -137,10 +153,90 @@ impl State {
 
     /// Takes the first queued message off the queue, once the session rests and nothing else is on its way.
     pub fn next_queued(&mut self) -> Option<UserMessage> {
-        if self.running() || !self.source.is_live() || self.queue.is_empty() {
+        if self.running() || !self.run.source.is_live() || self.queue.is_empty() {
             return None;
         }
         Some(self.queue.remove(0))
+    }
+
+    pub fn source(&self) -> &Source {
+        &self.run.source
+    }
+
+    /// Notes that the session is being started.
+    pub fn start(&mut self) {
+        self.run.source = Source::Starting;
+        self.problem = None;
+    }
+
+    /// Notes that `source` runs the session now.
+    pub fn started(&mut self, source: Source) {
+        self.run.source = source;
+        self.problem = None;
+    }
+
+    /// Notes that the session did not start, for `problem`.
+    pub fn failed(&mut self, problem: Problem) {
+        self.run.source = Source::Idle;
+        self.problem = Some(problem);
+    }
+
+    /// Takes the session off the tab, for the caller to end it.
+    pub fn end(&mut self) -> Source {
+        std::mem::replace(&mut self.run.source, Source::Idle)
+    }
+
+    /// Takes in what the session says it offers.
+    pub fn learn(&mut self) {
+        match &mut self.run.known {
+            Known::Claude(caps) => {
+                if let Some(learned) = self.run.source.capabilities() {
+                    *caps = learned;
+                }
+            }
+            Known::Acp(caps) => {
+                if let Some(learned) = self.run.source.acp_capabilities() {
+                    *caps = Some(learned);
+                }
+            }
+            Known::Own(_) => {}
+        }
+    }
+
+    /// What the CLI offers, in a Claude tab.
+    pub fn claude_caps(&self) -> Option<&Capabilities> {
+        match &self.run.known {
+            Known::Claude(caps) => Some(caps),
+            _ => None,
+        }
+    }
+
+    /// What the ACP agent offers, in an ACP tab once it said.
+    pub fn acp_caps(&self) -> Option<&ide_acp::Capabilities> {
+        match &self.run.known {
+            Known::Acp(caps) => caps.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// The endpoint and model of the own agent's session.
+    pub fn own_choice(&self) -> Option<&ModelChoice> {
+        match &self.run.known {
+            Known::Own(choice) => choice.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// Picks the endpoint and model the own agent's session runs with; other agents have none.
+    pub fn pick_own(&mut self, picked: Option<ModelChoice>) {
+        if let Known::Own(choice) = &mut self.run.known {
+            *choice = picked;
+        }
+    }
+
+    /// Answers a plan; what a recording played for the self-test changed.
+    pub fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, SessionError> {
+        self.run.source.answer_plan(request, answer)
     }
 
     pub fn status(&self) -> Status {
@@ -277,10 +373,8 @@ impl State {
         let model = model_id
             .as_deref()
             .map(|id| {
-                self.caps
-                    .models
-                    .iter()
-                    .find(|m| m.value == id)
+                self.claude_caps()
+                    .and_then(|caps| caps.models.iter().find(|m| m.value == id))
                     .map_or_else(|| model_name(id), |m| m.display_name.clone())
             })
             .unwrap_or_else(|| t("Standardmodell").to_string());
@@ -380,6 +474,9 @@ pub fn find_entry(thread: &Thread, id: u64) -> Option<Arc<Entry>> {
     None
 }
 
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,6 +485,7 @@ mod tests {
     fn state() -> State {
         let thread = Thread::new(ThreadId::new(), "claude", std::path::Path::new("/p"));
         State::new(
+            &Agent::Claude,
             Source::Idle,
             Rc::new(thread),
             ide_core::settings::AgentChoice::default(),

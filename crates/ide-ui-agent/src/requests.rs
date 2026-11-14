@@ -128,7 +128,7 @@ impl AgentTab {
     }
 
     fn settle(&self, id: u64, request: &str, answer: PermissionAnswer) {
-        let result = self.state.borrow().source.answer(request, answer);
+        let result = self.state.borrow().source().answer(request, answer);
         if let Err(error) = result {
             ide_ui_common::diag::report("answering a permission request", &error);
         }
@@ -243,7 +243,7 @@ impl AgentTab {
             self.timeline().reload_entry(id);
             return false;
         };
-        let result = self.state.borrow().source.answer_questions(&request, answers);
+        let result = self.state.borrow().source().answer_questions(&request, answers);
         if let Err(error) = result {
             ide_ui_common::diag::report("answering a question", &error);
         }
@@ -264,10 +264,10 @@ impl AgentTab {
             _ => PlanAnswer::Revise(self.plan_feedback(id)),
         };
         super::plan::close_comment();
-        let result = self.state.borrow_mut().source.answer_plan(&request, answer);
+        let result = self.state.borrow_mut().answer_plan(&request, answer);
         match result {
             Ok(changes) if !changes.is_empty() => {
-                let snapshot = self.state.borrow().source.snapshot();
+                let snapshot = self.state.borrow().source().snapshot();
                 if let Some(snapshot) = snapshot {
                     self.absorb(snapshot, &changes);
                 }
@@ -295,13 +295,13 @@ impl AgentTab {
 
     /// Stops a subagent or background task by its task id.
     pub fn stop_task(&self, task: &str) {
-        self.state.borrow().source.stop_task(task);
+        self.state.borrow().source().stop_task(task);
     }
 
     pub fn move_to_background(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         if let EntryKind::ToolCall(call) = &entry.kind {
-            self.state.borrow().source.background(&call.call_id);
+            self.state.borrow().source().background(&call.call_id);
         }
     }
 
@@ -330,7 +330,7 @@ impl AgentTab {
             controller.open_file(&path);
             return;
         }
-        let Some(session) = self.state.borrow().source.session().cloned() else {
+        let Some(session) = self.state.borrow().source().session().cloned() else {
             return;
         };
         let key = self.key;

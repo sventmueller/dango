@@ -26,7 +26,7 @@ pub fn set_test_launch(launch: Option<Launch>) {
 impl AgentTab {
     /// What the ACP agent offers, as the tab last learned it.
     pub fn acp_capabilities(&self) -> Option<ide_acp::Capabilities> {
-        self.state.borrow().acp.clone()
+        self.state.borrow().acp_caps().cloned()
     }
 
     /// The titles of the model and mode pills and the sandbox switch's explanation.

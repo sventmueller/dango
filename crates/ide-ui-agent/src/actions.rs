@@ -94,7 +94,7 @@ impl AgentTab {
         let own_id = message.message_id.clone().filter(|_| app_ids);
         self.state.borrow_mut().delivering(&message);
         let text = message.text.clone();
-        let sent = self.state.borrow().source.send(message);
+        let sent = self.state.borrow().source().send(message);
         match sent {
             Ok(uuid) => {
                 self.state.borrow_mut().sent(uuid.or(own_id), checkpoint);
@@ -304,17 +304,13 @@ impl AgentTab {
             )]
         } else {
             let state = self.state.borrow();
-            if state.caps.commands.is_empty() {
-                state
-                    .caps
-                    .slash_commands
-                    .iter()
-                    .map(|c| (c.clone(), String::new()))
-                    .collect()
+            let Some(caps) = state.claude_caps() else {
+                return Vec::new();
+            };
+            if caps.commands.is_empty() {
+                caps.slash_commands.iter().map(|c| (c.clone(), String::new())).collect()
             } else {
-                state
-                    .caps
-                    .commands
+                caps.commands
                     .iter()
                     .map(|c| (c.name.clone(), c.description.clone()))
                     .collect()
@@ -368,15 +364,12 @@ impl AgentTab {
         let (models, efforts, current, effort) = {
             let state = self.state.borrow();
             let current = state.thread.model().map(str::to_string).or_else(|| state.model.clone());
-            let models: Vec<(String, String, String)> = state
-                .caps
-                .models
+            let known = state.claude_caps().map_or(&[][..], |caps| &caps.models[..]);
+            let models: Vec<(String, String, String)> = known
                 .iter()
                 .map(|m| (m.value.clone(), m.display_name.clone(), m.description.clone()))
                 .collect();
-            let supported = state
-                .caps
-                .models
+            let supported = known
                 .iter()
                 .find(|m| Some(&m.value) == current.as_ref())
                 .map(|m| m.supported_effort_levels.clone())
@@ -432,7 +425,7 @@ impl AgentTab {
         let Some(model) = self.state.borrow().offered.models.get(index).cloned() else {
             return;
         };
-        self.state.borrow().source.set_model(&model);
+        self.state.borrow().source().set_model(&model);
         super::choices::remember(self.agent.id(), |choice| choice.model = Some(model.clone()));
         self.state.borrow_mut().model = Some(model);
         self.refresh_composer();
@@ -445,7 +438,7 @@ impl AgentTab {
         let Some(level) = self.state.borrow().offered.efforts.get(index).cloned() else {
             return;
         };
-        self.state.borrow().source.set_effort(&level);
+        self.state.borrow().source().set_effort(&level);
         super::choices::remember(self.agent.id(), |choice| choice.effort = Some(level.clone()));
         self.state.borrow_mut().effort = Some(level);
         self.refresh_composer();
@@ -496,7 +489,7 @@ impl AgentTab {
             return;
         };
         let key = self.key;
-        self.state.borrow().source.set_mode(&mode, move |why| {
+        self.state.borrow().source().set_mode(&mode, move |why| {
             ide_ui_common::util::main_soon(move || {
                 if let Some(tab) = super::get(key) {
                     tab.mode_refused(&why);
@@ -532,11 +525,11 @@ impl AgentTab {
         let restart = {
             let mut state = self.state.borrow_mut();
             state.sandbox = !state.sandbox;
-            state.source.is_live() && state.status() == Status::Idle
+            state.source().is_live() && state.status() == Status::Idle
         };
         self.refresh_composer();
         if restart {
-            let source = std::mem::replace(&mut self.state.borrow_mut().source, super::source::Source::Idle);
+            let source = self.state.borrow_mut().end();
             source.end();
             self.start();
         }

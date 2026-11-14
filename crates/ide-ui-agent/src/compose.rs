@@ -167,9 +167,9 @@ impl AgentTab {
     fn dispatch(&self, message: UserMessage) {
         let (busy, into_turn) = {
             let state = self.state.borrow();
-            let claude = state.source.session().is_some() && state.source.is_live();
+            let claude = state.source().session().is_some() && state.source().is_live();
             (
-                state.running() || !state.source.is_live(),
+                state.running() || !state.source().is_live(),
                 reaches_turn(state.status(), state.is_sending(), claude),
             )
         };

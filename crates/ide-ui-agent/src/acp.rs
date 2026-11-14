@@ -276,21 +276,19 @@ impl AgentTab {
                 }
             });
         }) {
-            self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why.0)));
+            self.start_failed(Problem::Start(why.0));
         }
     }
 
     fn launch_acp(&self, launch: Option<Launch>, missing: Option<Availability>, thread: Thread) {
         let Some(agent) = self.acp_agent() else { return };
         let Some(mut launch) = launch else {
-            self.state.borrow_mut().source = Source::Idle;
             let problem = match missing {
                 Some(Availability::Installable(plan)) => Problem::Missing(Some(Box::new(plan))),
                 Some(Availability::Unavailable(why)) => Problem::Start(why),
                 _ => Problem::Missing(None),
             };
-            self.set_problem(Some(problem));
+            self.start_failed(problem);
             return;
         };
         {
@@ -306,16 +304,11 @@ impl AgentTab {
         let sink = self.sink(Incoming::Acp);
         match ide_acp::Session::start(Supervisor::global(), launch, thread.clone(), sink) {
             Ok(session) => {
-                {
-                    let mut state = self.state.borrow_mut();
-                    state.source = Source::Acp(session);
-                    state.problem = None;
-                }
+                self.state.borrow_mut().started(Source::Acp(session));
                 self.absorb(thread, &[ide_thread::Change::Cleared]);
             }
             Err(error) => {
-                self.state.borrow_mut().source = Source::Idle;
-                self.set_problem(Some(Problem::Start(ide_core::explain::Explain::explain(&error))));
+                self.start_failed(Problem::Start(ide_core::explain::Explain::explain(&error)));
             }
         }
     }
@@ -325,10 +318,10 @@ impl AgentTab {
     pub(super) fn acp_ended(&self, stderr: &str) {
         let source = {
             let mut state = self.state.borrow_mut();
-            if !matches!(state.source, Source::Acp(_)) {
+            if !matches!(state.source(), Source::Acp(_)) {
                 return;
             }
-            std::mem::replace(&mut state.source, Source::Idle)
+            state.end()
         };
         let opened = source.acp().is_some_and(|s| s.session_id().is_some());
         source.end();
@@ -338,19 +331,19 @@ impl AgentTab {
     /// Signs in with method `index` of the agent: one the agent runs itself goes through the session; one in a
     /// terminal opens a terminal with the command on the pasteboard.
     pub fn acp_sign_in(&self, index: usize) {
-        let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let caps = self.state.borrow().acp_caps().cloned().unwrap_or_default();
         let Some(method) = caps.auth_methods.get(index) else {
             return;
         };
         match &method.terminal {
             None => {
-                let result = self.state.borrow().source.authenticate(&method.id);
+                let result = self.state.borrow().source().authenticate(&method.id);
                 if let Err(error) = result {
                     ide_ui_common::diag::report("signing in to an agent", &error);
                 }
             }
             Some(terminal) => {
-                let program = match &self.state.borrow().source {
+                let program = match self.state.borrow().source() {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
                     #[cfg(feature = "selftest")]
                     Source::Replay(_) => None,
@@ -377,7 +370,7 @@ impl AgentTab {
     /// The model and mode pills, the sandbox switch and its explanation, from what the agent offers.
     pub(super) fn refresh_acp_pills(&self, agent: &AcpAgent) {
         let state = self.state.borrow();
-        let caps = state.acp.clone().unwrap_or_default();
+        let caps = state.acp_caps().cloned().unwrap_or_default();
         let model = caps
             .model()
             .map_or_else(|| t("Modell des Agenten").to_string(), |m| m.current_name());
@@ -432,7 +425,7 @@ impl AgentTab {
     pub(super) fn acp_model_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let caps = self.state.borrow().acp_caps().cloned().unwrap_or_default();
         let mut offered = Vec::new();
         for option in [caps.model(), caps.thought_level()].into_iter().flatten() {
             if !offered.is_empty() {
@@ -481,11 +474,11 @@ impl AgentTab {
     /// Sets the agent's option `option`, its model or how much it thinks, to `value`, and remembers it for the
     /// agent's next sessions.
     fn acp_set_option(&self, option: &str, value: &str) {
-        let result = self.state.borrow().source.set_option(option, value);
+        let result = self.state.borrow().source().set_option(option, value);
         if let Err(error) = result {
             return ide_ui_common::diag::report("choosing a model", &error);
         }
-        let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let caps = self.state.borrow().acp_caps().cloned().unwrap_or_default();
         let effort = caps.thought_level().is_some_and(|o| o.id == option);
         super::choices::remember(self.agent.id(), |choice| {
             let slot = if effort { &mut choice.effort } else { &mut choice.model };
@@ -498,7 +491,7 @@ impl AgentTab {
     pub(super) fn acp_apply_choice(&self) {
         let caps = {
             let state = self.state.borrow();
-            match &state.acp {
+            match state.acp_caps() {
                 Some(caps) if !state.choice_applied && (!caps.modes.is_empty() || !caps.options.is_empty()) => {
                     caps.clone()
                 }
@@ -515,7 +508,7 @@ impl AgentTab {
                 continue;
             };
             if *current != wanted && choices.iter().any(|c| c.value == wanted) {
-                let result = self.state.borrow().source.set_option(&option.id, &wanted);
+                let result = self.state.borrow().source().set_option(&option.id, &wanted);
                 if let Err(error) = result {
                     ide_ui_common::diag::report("choosing the model picked last", &error);
                 }
@@ -525,7 +518,7 @@ impl AgentTab {
             && caps.mode.as_ref() != Some(&mode)
             && caps.modes.iter().any(|m| m.id == mode)
         {
-            let result = self.state.borrow().source.set_acp_mode(&mode);
+            let result = self.state.borrow().source().set_acp_mode(&mode);
             if let Err(error) = result {
                 ide_ui_common::diag::report("choosing the mode picked last", &error);
             }
@@ -536,7 +529,7 @@ impl AgentTab {
     pub(super) fn acp_mode_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let caps = self.state.borrow().acp.clone().unwrap_or_default();
+        let caps = self.state.borrow().acp_caps().cloned().unwrap_or_default();
         let agent = self.agent.id().to_string();
         for (n, mode) in caps.modes.iter().enumerate() {
             let own = acp_words::mode(&agent, &mode.id);
@@ -565,7 +558,7 @@ impl AgentTab {
 
     /// Switches the agent to the mode `mode` and remembers it for the agent's next sessions.
     fn acp_set_mode(&self, mode: String) {
-        let result = self.state.borrow().source.set_acp_mode(&mode);
+        let result = self.state.borrow().source().set_acp_mode(&mode);
         if let Err(error) = result {
             return ide_ui_common::diag::report("choosing a mode", &error);
         }
@@ -576,8 +569,7 @@ impl AgentTab {
     pub(super) fn acp_commands(&self) -> Vec<(String, String)> {
         self.state
             .borrow()
-            .acp
-            .as_ref()
+            .acp_caps()
             .map(|caps| {
                 caps.commands
                     .iter()
@@ -607,7 +599,7 @@ impl AgentTab {
             _ => request.options.iter().position(|o| *o == PermissionOption::Deny),
         };
         let choice = index.map_or(Choice::Dismiss, Choice::Option);
-        let result = self.state.borrow().source.answer_acp(&request.request_id, choice);
+        let result = self.state.borrow().source().answer_acp(&request.request_id, choice);
         if let Err(error) = result {
             ide_ui_common::diag::report("answering a permission request", &error);
         }

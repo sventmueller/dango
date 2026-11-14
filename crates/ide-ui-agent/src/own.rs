@@ -118,8 +118,8 @@ impl AgentTab {
         let chosen = self
             .state
             .borrow()
-            .own
-            .clone()
+            .own_choice()
+            .cloned()
             .or_else(|| picked_model(self.agent.id()));
         let (key, cwd, thread_id) = (self.key, self.cwd.clone(), self.thread_id.clone());
         let sandbox = self.state.borrow().sandbox;
@@ -150,8 +150,7 @@ impl AgentTab {
                 }
             });
         }) {
-            self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why.0)));
+            self.start_failed(Problem::Start(why.0));
         }
     }
 
@@ -159,21 +158,18 @@ impl AgentTab {
         let session = match session {
             Some(Ok(session)) => session,
             Some(Err(Explained(why))) => {
-                self.state.borrow_mut().source = Source::Idle;
-                return self.set_problem(Some(Problem::Start(why)));
+                return self.start_failed(Problem::Start(why));
             }
             None => {
-                self.state.borrow_mut().source = Source::Idle;
-                return self.set_problem(Some(Problem::NoModel));
+                return self.start_failed(Problem::NoModel);
             }
         };
         apply_choice(&session, &super::choices::of(self.agent.id()));
         let snapshot = session.snapshot();
         {
             let mut state = self.state.borrow_mut();
-            state.own = choice;
-            state.source = Source::Own(session);
-            state.problem = None;
+            state.pick_own(choice);
+            state.started(Source::Own(session));
         }
         self.absorb(snapshot, &[Change::Cleared]);
     }
@@ -208,7 +204,7 @@ impl AgentTab {
             .thread
             .model()
             .map(str::to_string)
-            .or_else(|| state.own.as_ref().map(|c| c.model.clone()))
+            .or_else(|| state.own_choice().map(|c| c.model.clone()))
             .unwrap_or_else(|| t("Kein Modell").to_string());
         let pill = match state.thread.effort() {
             Some(effort) => tf("{} · {}", &[&model, effort]),
@@ -216,7 +212,7 @@ impl AgentTab {
         };
         self.composer.model.setTitle(&ns(&pill));
         self.composer.model.setEnabled(true);
-        let policy = state.source.own().map(Session::policy);
+        let policy = state.source().own().map(Session::policy);
         let (profile, approval) = policy
             .as_ref()
             .map_or((Profile::Write, Approval::Manual), |p| (p.profile, p.approval));
@@ -260,7 +256,7 @@ impl AgentTab {
     pub(super) fn own_model_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let choice = self.state.borrow().own.clone();
+        let choice = self.state.borrow().own_choice().cloned();
         let mut offered = Vec::new();
         for endpoint in own_agent::endpoints().into_iter().filter(own_agent::usable) {
             let models = own_agent::models(&endpoint.id);
@@ -326,12 +322,11 @@ impl AgentTab {
         let same_endpoint = self
             .state
             .borrow()
-            .own
-            .as_ref()
+            .own_choice()
             .is_some_and(|c| c.endpoint == choice.endpoint);
-        self.state.borrow_mut().own = Some(choice.clone());
+        self.state.borrow_mut().pick_own(Some(choice.clone()));
         super::choices::remember(self.agent.id(), |remembered| remembered.model = Some(picked.clone()));
-        let session = self.state.borrow().source.own().cloned();
+        let session = self.state.borrow().source().own().cloned();
         match session {
             Some(session) if same_endpoint => {
                 let listed = own_agent::models(endpoint).into_iter().find(|m| m.id == model);
@@ -350,7 +345,7 @@ impl AgentTab {
         let Some(level) = self.state.borrow().offered.efforts.get(index).cloned() else {
             return;
         };
-        if let Some(session) = self.state.borrow().source.own() {
+        if let Some(session) = self.state.borrow().source().own() {
             session.set_effort(Some(level.as_str()).filter(|l| !l.is_empty()));
         }
         super::choices::remember(self.agent.id(), |choice| {
@@ -364,7 +359,7 @@ impl AgentTab {
         if self.state.borrow().status() != ide_thread::Status::Idle {
             return;
         }
-        let source = std::mem::replace(&mut self.state.borrow_mut().source, Source::Idle);
+        let source = self.state.borrow_mut().end();
         source.end();
         self.start();
     }
@@ -373,7 +368,7 @@ impl AgentTab {
     pub(super) fn own_mode_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let policy = self.state.borrow().source.own().map(Session::policy);
+        let policy = self.state.borrow().source().own().map(Session::policy);
         let (profile, approval) = policy.map_or((Profile::Write, Approval::Manual), |p| (p.profile, p.approval));
         let mut modes = Vec::new();
         for (n, (item, title, symbol)) in [
@@ -413,7 +408,7 @@ impl AgentTab {
         let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
             return;
         };
-        if let Some(session) = self.state.borrow().source.own() {
+        if let Some(session) = self.state.borrow().source().own() {
             match mode.as_str() {
                 "ask" => session.set_profile(Profile::Ask),
                 "write" => session.set_profile(Profile::Write),
@@ -436,7 +431,7 @@ impl AgentTab {
             state.sandbox = !state.sandbox;
             state.sandbox
         };
-        if let Some(session) = self.state.borrow().source.own() {
+        if let Some(session) = self.state.borrow().source().own() {
             session.set_sandbox(on);
         }
         self.refresh_composer();
@@ -464,7 +459,7 @@ impl AgentTab {
         let result = self
             .state
             .borrow()
-            .source
+            .source()
             .own()
             .map(|s| s.answer(&request.request_id, choice));
         if let Some(Err(error)) = result {

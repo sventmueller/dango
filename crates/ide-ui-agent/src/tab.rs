@@ -204,6 +204,7 @@ impl AgentTab {
         } else {
             ide_core::settings::AgentChoice::default()
         };
+        let state = RefCell::new(State::new(&agent, source, thread, choice));
         let tab = AgentTab {
             key,
             mtm,
@@ -223,7 +224,7 @@ impl AgentTab {
             queue_view,
             suggestions,
             agent,
-            state: RefCell::new(State::new(source, thread, choice)),
+            state,
             inbox: RefCell::new(Arc::new(Inbox::default())),
             ticking: std::cell::Cell::new(false),
             previous_focus: RefCell::new(None),
@@ -396,7 +397,12 @@ impl AgentTab {
 
     /// The running session, if there is one.
     pub fn session(&self) -> Option<Session> {
-        self.state.borrow().source.session().filter(|s| !s.is_ended()).cloned()
+        self.state
+            .borrow()
+            .source()
+            .session()
+            .filter(|s| !s.is_ended())
+            .cloned()
     }
 
     pub fn status(&self) -> Status {
@@ -520,6 +526,12 @@ impl AgentTab {
         self.refresh();
     }
 
+    /// Shows that the session did not start, for `problem`.
+    pub(super) fn start_failed(&self, problem: Problem) {
+        self.state.borrow_mut().failed(problem);
+        self.refresh();
+    }
+
     /// Brings the head, the composer, the status line and the overlays up to date with the state.
     pub fn refresh(&self) {
         let (problem, thread, title) = {
@@ -550,7 +562,7 @@ impl AgentTab {
             view.removeFromSuperview();
         }
         if let Some(problem) = &problem {
-            let methods = self.state.borrow().acp.clone().unwrap_or_default().auth_methods;
+            let methods = self.state.borrow().acp_caps().cloned().unwrap_or_default().auth_methods;
             let view = overlay::problem(self.mtm, &self.target, problem, self.agent.name(), &methods);
             self.problem_holder.addSubview(&view);
             ide_ui_common::util::pin_edges(&view, &self.problem_holder);
@@ -586,7 +598,7 @@ impl AgentTab {
     /// Ends the session, as the tab closes.
     pub fn close(&self) {
         self.persist();
-        let source = std::mem::replace(&mut self.state.borrow_mut().source, Source::Idle);
+        let source = self.state.borrow_mut().end();
         source.end();
     }
 
@@ -597,7 +609,7 @@ impl AgentTab {
         }
         ide_ui_common::diag::report("stopping a turn", format!("{by:?}"));
         self.controller.show_notice(by.notice());
-        self.state.borrow().source.interrupt();
+        self.state.borrow().source().interrupt();
     }
 
     pub fn composer_has_focus(&self) -> bool {

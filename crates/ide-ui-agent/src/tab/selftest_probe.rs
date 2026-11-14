@@ -50,6 +50,6 @@ impl AgentTab {
 
     /// Whether a `claude` process runs for the tab.
     pub fn is_live(&self) -> bool {
-        self.state.borrow().source.is_live()
+        self.state.borrow().source().is_live()
     }
 }
