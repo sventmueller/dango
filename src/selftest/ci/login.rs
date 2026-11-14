@@ -15,7 +15,8 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::t;
 
-use super::super::git::{answer_sheet, pictures, sheet_pictures, wait_for, wait_within, window_of};
+use super::super::git::{answer_sheet, pictures, sheet_pictures, wait_for, window_of};
+use super::super::helpers::wait_on_within;
 use super::super::{check, finish};
 use super::stub::{DEVICE_TOKEN, USER_CODE};
 use super::{TOKEN, describe, stubs};
@@ -204,7 +205,7 @@ fn taken_over(twin: PathBuf, ok: bool) {
     if let Some(window) = window_of(&twin).and_then(|c| c.window()) {
         window.performClose(None);
     }
-    wait_within(stubs().gitlab_root.clone(), RELEASE, |_| port_free(), port_released);
+    wait_on_within(stubs().gitlab_root.clone(), RELEASE, |_| port_free(), port_released);
 }
 
 fn port_free() -> bool {

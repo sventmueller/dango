@@ -24,7 +24,7 @@ const WAIT: Duration = Duration::from_secs(150);
 /// The whole scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`.
 const BUDGET: Duration = Duration::from_secs(560);
 
-static END: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+static END: helpers::Deadline = helpers::Deadline::new();
 
 const RUST_MAIN: &str = "mod big;\n\nfn scale(value: u32, factor: u32) -> u32 {\n    value * factor\n}\n\nfn main() {\n    let total = scale(21, 2);\n    let words = vec![\"a\", \"b\"];\n    println!(\"{total} {words:?} {}\", big::f0(1));\n}\n";
 const GO_MAIN: &str = "package main\n\nimport \"fmt\"\n\nfunc add(left, right int) int {\n\treturn left + right\n}\n\nfunc main() {\n\ttotal := add(1, 2)\n\tfmt.Println(total)\n}\n";
@@ -99,11 +99,7 @@ fn poll(
     ready: impl Fn() -> bool + 'static,
     then: impl FnOnce(bool, Duration) + 'static,
 ) {
-    let started = Instant::now();
-    let limit = END
-        .get()
-        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
-    let asked = std::cell::Cell::new(started);
+    let asked = std::cell::Cell::new(Instant::now());
     let ready = move || {
         if ready() {
             return true;
@@ -117,11 +113,11 @@ fn poll(
         }
         false
     };
-    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
+    END.poll(within, ready, then);
 }
 
 pub fn run() {
-    let _ = END.set(Instant::now() + BUDGET);
+    END.start(BUDGET);
     let big = big_rust();
     let written = helpers::make_project(
         RUST_PROJECT,
@@ -141,9 +137,7 @@ pub fn run() {
             return finish(SCENARIO);
         }
     };
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    helpers::open_trusted(&root);
     let Some(controller) = window::for_project(&root) else {
         check("the project opens", false, "");
         return finish(SCENARIO);

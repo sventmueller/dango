@@ -18,7 +18,6 @@ use std::time::Duration;
 
 use ide_ci::State;
 use ide_core::settings::Settings;
-use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::git::{answer_sheet, append, fixture_git, pictures, wait_for, window_of, write};
@@ -137,9 +136,7 @@ fn repository(folder: &Path, url: &str, stub: &Stub) -> Result<PathBuf, String> 
 }
 
 fn open(root: PathBuf, then: fn(PathBuf, bool)) {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    let root = super::helpers::open_trusted(&root);
     if let Some(controller) = window_of(&root) {
         controller.activate_panel(Panel::Ci);
     }
@@ -429,13 +426,11 @@ pub fn live() {
         );
         return finish(LIVE);
     };
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    let root = super::helpers::open_trusted(&root);
     if let Some(controller) = window_of(&root) {
         controller.activate_panel(Panel::Ci);
     }
-    super::git::wait_within(
+    super::helpers::wait_on_within(
         root,
         Duration::from_secs(60),
         |c| panel::seen(c).is_some_and(|s| s.phase != "Loading"),

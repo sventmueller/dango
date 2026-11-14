@@ -13,12 +13,12 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSButton, NSControlStateValueOn, N
 use splat_i18n::{t, tf};
 
 use super::{answer_sheet, fixture_git, pictures, sheet_default_button, sheet_ready, sheet_views, window_of, write};
-use crate::git_panel::probe::{self, StashAction};
-use crate::git_panel::selftest as panel;
-use crate::selftest::helpers::{editor, text_of, type_at, wait_until};
+use crate::selftest::helpers::{editor, text_of, type_at, wait_on};
 use crate::selftest::{check, finish, snapshot};
 use crate::util::main_soon;
-use crate::window::{Panel, WindowController};
+use crate::window::WindowController;
+use ide_ui_git::probe::{self, StashAction};
+use ide_ui_git::selftest as panel;
 
 const SCENARIO: &str = "git-stash";
 const README: &str = "README.md";
@@ -60,19 +60,6 @@ fn make_repository(folder: &Path) -> Result<(), String> {
     write(folder, NOTES, "untracked\n")
 }
 
-/// Waits until `ready` holds for the window of `root`, then goes on with `then` and whether it did.
-fn after(
-    root: &Path,
-    ready: impl Fn(&WindowController) -> bool + Send + 'static,
-    then: impl FnOnce(PathBuf, bool) + Send + 'static,
-) {
-    let (mine, theirs) = (root.to_path_buf(), root.to_path_buf());
-    wait_until(
-        move || window_of(&mine).is_some_and(|c| ready(&c)),
-        move |ok| then(theirs, ok),
-    );
-}
-
 /// Runs `job` on the repository at `root` on a thread of its own, then `then` on the main thread.
 fn job(
     root: PathBuf,
@@ -110,21 +97,13 @@ fn idle(controller: &WindowController) -> bool {
 }
 
 fn open(folder: PathBuf) {
-    let Some(mtm) = objc2::MainThreadMarker::new() else {
+    let Some((root, controller)) = super::open_repository(&folder, SCENARIO) else {
         return;
     };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    let Some(controller) = window_of(&root) else {
-        check("the repository opens in a window", false, "");
-        return finish(SCENARIO);
-    };
-    controller.activate_panel(Panel::Git);
     controller.open_file(&root.join(LIBRARY));
     controller.open_file(&root.join(README));
-    after(
-        &root,
+    wait_on(
+        root,
         |c| {
             panel::seen(c).is_some_and(|s| s.changes.len() == 2)
                 && editor(c, "lib.rs").is_some()
@@ -149,7 +128,7 @@ fn listed(root: PathBuf, ok: bool) {
     };
     type_at(&library, objc2_foundation::NSRange::new(0, 0), "// unsaved\n");
     probe::stash(&controller);
-    after(&root, sheet_ready, save_offered);
+    wait_on(root.clone(), sheet_ready, save_offered);
 }
 
 fn save_offered(root: PathBuf, ok: bool) {
@@ -163,7 +142,7 @@ fn save_offered(root: PathBuf, ok: bool) {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
             return finish(SCENARIO);
         }
-        after(&root, sheet_ready, options_asked);
+        wait_on(root.clone(), sheet_ready, options_asked);
     });
 }
 
@@ -186,8 +165,8 @@ fn options_asked(root: PathBuf, ok: bool) {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(PARKED)) {
             return finish(SCENARIO);
         }
-        after(
-            &root,
+        wait_on(
+            root.clone(),
             |c| stash_count(c) == 1 && panel::seen(c).is_some_and(|s| s.changes.is_empty()),
             stashed,
         );
@@ -210,8 +189,8 @@ fn stashed(root: PathBuf, ok: bool) {
         pill.as_deref() == Some(tf("{}, 1 Eintrag", &[t("Stashes")]).as_str()),
         format!("{pill:?}"),
     );
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| {
             editor(c, "README.md").is_some_and(|v| text_of(&v) == COMMITTED_README)
                 && editor(c, "lib.rs").is_some_and(|v| text_of(&v) == COMMITTED_LIBRARY)
@@ -237,7 +216,11 @@ fn reloaded(root: PathBuf, ok: bool) {
     );
     let hash = probe::stashes(&controller).remove(0).0;
     probe::open_stash(&controller, &hash);
-    after(&root, move |c| probe::stash_rows(c, &hash).len() == 3, stash_opened);
+    wait_on(
+        root.clone(),
+        move |c| probe::stash_rows(c, &hash).len() == 3,
+        stash_opened,
+    );
 }
 
 fn stash_opened(root: PathBuf, ok: bool) {
@@ -260,8 +243,8 @@ fn stash_opened(root: PathBuf, ok: bool) {
         "",
     );
     probe::show_stash_diff(&controller, &hash, Path::new(README));
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         move |c| probe::stash_diff_counts(c, &hash, Path::new(README)).is_some_and(|(_, hunks)| hunks == 1),
         move |root, ok| {
             check("the diff of an entry's file opens in a tab", ok, "");
@@ -276,8 +259,8 @@ fn apply(root: PathBuf) {
     };
     let hash = probe::stashes(&controller).remove(0).0;
     probe::stash_action(&controller, &hash, StashAction::Apply);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| idle(c) && panel::seen(c).is_some_and(|s| s.changes.len() == 3),
         applied,
     );
@@ -292,8 +275,8 @@ fn applied(root: PathBuf, ok: bool) {
         ok && stash_count(&controller) == 1 && root.join(NOTES).exists(),
         "",
     );
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| {
             editor(c, "README.md").is_some_and(|v| text_of(&v) == CHANGED_README)
                 && editor(c, "lib.rs").is_some_and(|v| text_of(&v).starts_with("// unsaved"))
@@ -318,8 +301,8 @@ fn conflicting_commit(root: &Path) -> Result<(), String> {
 }
 
 fn pop_into_conflict(root: PathBuf) {
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| idle(c) && panel::seen(c).is_some_and(|s| s.changes.is_empty()),
         |root, _| {
             let Some(controller) = window_of(&root) else {
@@ -327,7 +310,7 @@ fn pop_into_conflict(root: PathBuf) {
             };
             let hash = probe::stashes(&controller).remove(0).0;
             probe::stash_action(&controller, &hash, StashAction::Pop);
-            after(&root, |c| probe::stash_conflict(c).is_some() && idle(c), popped);
+            wait_on(root.clone(), |c| probe::stash_conflict(c).is_some() && idle(c), popped);
         },
     );
 }
@@ -354,7 +337,7 @@ fn popped(root: PathBuf, ok: bool) {
             return finish(SCENARIO);
         };
         probe::end_conflict(&controller, false);
-        after(&root, sheet_ready, abort_asked);
+        wait_on(root.clone(), sheet_ready, abort_asked);
     });
 }
 
@@ -368,8 +351,8 @@ fn abort_asked(root: PathBuf, ok: bool) {
     if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
         return finish(SCENARIO);
     }
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| idle(c) && probe::stash_conflict(c).is_none() && panel::seen(c).is_some_and(|s| s.conflicts.is_empty()),
         aborted,
     );
@@ -390,8 +373,8 @@ fn aborted(root: PathBuf, ok: bool) {
     );
     let hash = probe::stashes(&controller).remove(0).0;
     probe::stash_action(&controller, &hash, StashAction::Apply);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| probe::stash_conflict(c) == Some(false) && idle(c),
         |root, ok| {
             check("an apply with conflicts waits as well", ok, "");
@@ -409,8 +392,8 @@ fn finish_conflict(root: PathBuf) {
         return finish(SCENARIO);
     };
     probe::end_conflict(&controller, true);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| idle(c) && probe::stash_conflict(c).is_none() && panel::seen(c).is_some_and(|s| s.conflicts.is_empty()),
         finished,
     );
@@ -432,8 +415,8 @@ fn finished(root: PathBuf, ok: bool) {
         "",
     );
     probe::stash_staged(&controller);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| idle(c) && stash_count(c) == 2 && panel::seen(c).is_some_and(|s| s.staged.is_empty()),
         staged_stashed,
     );
@@ -450,7 +433,7 @@ fn staged_stashed(root: PathBuf, ok: bool) {
     );
     let hash = probe::stashes(&controller).remove(0).0;
     probe::stash_action(&controller, &hash, StashAction::Drop);
-    after(&root, sheet_ready, delete_asked);
+    wait_on(root.clone(), sheet_ready, delete_asked);
 }
 
 fn delete_asked(root: PathBuf, ok: bool) {
@@ -468,7 +451,7 @@ fn delete_asked(root: PathBuf, ok: bool) {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
             return finish(SCENARIO);
         }
-        after(&root, |c| idle(c) && stash_count(c) == 1, deleted);
+        wait_on(root.clone(), |c| idle(c) && stash_count(c) == 1, deleted);
     });
 }
 

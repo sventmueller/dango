@@ -20,9 +20,9 @@ use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{NSAppearance, NSApplication, NSButton, NSModalResponse, NSTextField, NSTextView, NSView};
 
 use super::{check, finish, snapshot};
-use crate::git_panel::selftest as panel;
 use crate::util::{main_soon, ns};
 use crate::window::{self, Panel, WindowController};
+use ide_ui_git::selftest as panel;
 
 const SCENARIO: &str = "git";
 const WAIT: Duration = Duration::from_secs(25);
@@ -149,53 +149,37 @@ pub(super) fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>,
 }
 
 fn open(folder: PathBuf) {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
+    if let Some((root, _)) = open_repository(&folder, SCENARIO) {
+        wait_for(root, lists_changes, listed);
+    }
+}
+
+/// Opens the repository at `folder` trusted, with the Git panel showing; its root and window, or none after a failed
+/// check that ends `scenario`.
+pub(super) fn open_repository(folder: &Path, scenario: &'static str) -> Option<(PathBuf, Retained<WindowController>)> {
+    let root = super::helpers::open_trusted(folder);
     let Some(controller) = window_of(&root) else {
         check(
             "the repository opens in a window",
             false,
             format!("{:?}", window::open_projects()),
         );
-        finish(SCENARIO);
-        return;
+        finish(scenario);
+        return None;
     };
     controller.activate_panel(Panel::Git);
-    wait_for(root, lists_changes, listed);
+    Some((root, controller))
 }
 
-pub(super) fn window_of(root: &Path) -> Option<Retained<WindowController>> {
-    window::open_windows()
-        .into_iter()
-        .find(|w| w.project().as_deref() == Some(root))
-}
+pub(super) use super::helpers::project_window as window_of;
 
-/// Calls `then` once `ready` holds for the window of `root`, or with false once `limit` passed.
-pub(super) fn wait_within(
-    root: PathBuf,
-    limit: Duration,
-    ready: fn(&WindowController) -> bool,
-    then: impl FnOnce(PathBuf, bool) + 'static,
-) {
-    let folder = root.clone();
-    super::helpers::wait_within(
-        limit,
-        move || window_of(&folder).is_some_and(|c| ready(&c)),
-        move |ok| {
-            then(root, ok);
-        },
-    );
-}
-
-/// `wait_within` with the usual time limit.
+/// `helpers::wait_on` with the longer limit of the scenarios around a repository.
 pub(super) fn wait_for(
     root: PathBuf,
-    ready: fn(&WindowController) -> bool,
+    ready: impl Fn(&WindowController) -> bool + 'static,
     then: impl FnOnce(PathBuf, bool) + 'static,
 ) {
-    wait_within(root, WAIT, ready, then);
+    super::helpers::wait_on_within(root, WAIT, ready, then);
 }
 
 /// Takes the picture `name` of the window of `root` in light, then in dark appearance, then goes on with `then`.
@@ -669,7 +653,7 @@ fn untrusted(root: PathBuf, ok: bool) {
     };
     controller.activate_panel(Panel::Git);
     check("an untrusted folder runs no git and says why", ok, "");
-    let shown = crate::git_panel::toolbar_seen(&controller);
+    let shown = ide_ui_git::toolbar_seen(&controller);
     check(
         "an untrusted folder shows no branch in the toolbar",
         !shown.is_empty() && shown.iter().all(Option::is_none),
@@ -685,7 +669,7 @@ fn untrusted(root: PathBuf, ok: bool) {
         snapshot(&window, "git-untrusted");
     }
     crate::project::trust(&root);
-    crate::git_panel::trust_changed(&root);
+    ide_ui_git::trust_changed(&root);
     wait_for(root, |c| phase_is(c, "NotRepository"), not_a_repository);
 }
 

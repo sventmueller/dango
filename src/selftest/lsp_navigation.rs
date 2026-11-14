@@ -30,7 +30,7 @@ const QUERY: &str = "#ViewState";
 const TRAIT_FILE: &str = "crates/ide-lsp/src/convert.rs";
 const CALLS_FILE: &str = "crates/ide-lsp/src/server.rs";
 
-static END: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+static END: helpers::Deadline = helpers::Deadline::new();
 /// What Open Quickly said while it found nothing.
 static SAID: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
@@ -62,11 +62,7 @@ fn poll(
     again: impl Fn() + 'static,
     then: impl FnOnce(bool, Duration) + 'static,
 ) {
-    let started = Instant::now();
-    let limit = END
-        .get()
-        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
-    let last = std::cell::Cell::new(started);
+    let last = std::cell::Cell::new(Instant::now());
     let ready = move || {
         if ready() {
             return true;
@@ -77,7 +73,7 @@ fn poll(
         }
         false
     };
-    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
+    END.poll(within, ready, then);
 }
 
 fn done() {
@@ -111,11 +107,9 @@ fn audit(name: &'static str, title: Option<&str>) {
 }
 
 pub fn run() {
-    let _ = END.set(Instant::now() + BUDGET);
+    END.start(BUDGET);
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let folder = root();
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder);
+    helpers::open_trusted(&root());
     let Some(controller) = controller() else {
         check(
             "the repository opens in a window",

@@ -68,6 +68,79 @@ fn poll<T: 'static>(deadline: Instant, find: impl Fn() -> Option<T> + 'static, t
     });
 }
 
+/// Calls `then` with `root` and whether `ready` held for the window of `root`, as soon as it does or once `WAIT`
+/// passed.
+pub fn wait_on(
+    root: PathBuf,
+    ready: impl Fn(&WindowController) -> bool + 'static,
+    then: impl FnOnce(PathBuf, bool) + 'static,
+) {
+    wait_on_within(root, WAIT, ready, then);
+}
+
+/// `wait_on` with a limit of its own.
+pub fn wait_on_within(
+    root: PathBuf,
+    limit: Duration,
+    ready: impl Fn(&WindowController) -> bool + 'static,
+    then: impl FnOnce(PathBuf, bool) + 'static,
+) {
+    let folder = root.clone();
+    wait_within(
+        limit,
+        move || project_window(&folder).is_some_and(|c| ready(&c)),
+        move |ok| then(root, ok),
+    );
+}
+
+/// The window whose folder is `root` as it is given, so that it is still found once the folder is gone.
+pub fn project_window(root: &Path) -> Option<Retained<WindowController>> {
+    window::open_windows()
+        .into_iter()
+        .find(|w| w.project().as_deref() == Some(root))
+}
+
+/// The end of a scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`, so that the scenario
+/// still writes its report when every wait runs to its bound.
+pub struct Deadline(std::sync::OnceLock<Instant>);
+
+impl Deadline {
+    /// A deadline that has not started; until it does, waits keep only their own limits.
+    pub const fn new() -> Deadline {
+        Deadline(std::sync::OnceLock::new())
+    }
+
+    /// Ends the scenario's time `budget` from now.
+    pub fn start(&self, budget: Duration) {
+        let _ = self.0.set(Instant::now() + budget);
+    }
+
+    /// Calls `then` with whether `ready` held and how long it waited, as soon as it does or once `within` or the
+    /// scenario's time passed.
+    pub fn poll(
+        &self,
+        within: Duration,
+        ready: impl Fn() -> bool + 'static,
+        then: impl FnOnce(bool, Duration) + 'static,
+    ) {
+        let started = Instant::now();
+        let limit = self
+            .0
+            .get()
+            .map_or(within, |end| within.min(end.saturating_duration_since(started)));
+        wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
+    }
+}
+
+/// Trusts `folder` and opens it as the user does; its root with links resolved.
+pub fn open_trusted(folder: &Path) -> PathBuf {
+    crate::project::trust(folder);
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::app::open_project(mtm, folder.to_path_buf());
+    }
+    folder.canonicalize().unwrap_or_else(|_| folder.to_path_buf())
+}
+
 /// Calls `then` with the window of `folder` once it shows, or with none once `WAIT` passed.
 pub fn wait_for_window(folder: &Path, then: impl FnOnce(Option<Retained<WindowController>>) + 'static) {
     let folder = folder.to_path_buf();
@@ -128,9 +201,7 @@ pub fn open_project(
             return super::finish(scenario);
         }
     };
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    let root = open_trusted(&root);
     wait_for_window(&root.clone(), move |controller| match controller {
         Some(controller) => then(controller),
         None => {

@@ -12,16 +12,15 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use ide_git::CommitOptions;
-use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::git::{
     answer_sheet, append, fixture_git, pictures, sheet_pictures, sheet_ready, wait_for, window_of, write,
 };
 use super::{check, finish};
-use crate::git_panel::selftest::{self as panel, Control, TreeAction};
 use crate::util::main_soon;
 use crate::window::{Panel, WindowController};
+use ide_ui_git::selftest::{self as panel, Control, TreeAction};
 
 const SCENARIO: &str = "worktree";
 const TITLE: &str = "Login reparieren";
@@ -68,7 +67,7 @@ pub fn run() {
             &folder,
         )
     });
-    crate::agent::set_test_launch(launch);
+    ide_ui_agent::set_test_launch(launch);
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
@@ -98,10 +97,7 @@ fn make_repository(folder: &Path) -> Result<(), String> {
 }
 
 fn open(folder: PathBuf) {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
+    let root = super::helpers::open_trusted(&folder);
     if let Some(controller) = window_of(&root) {
         controller.activate_panel(Panel::Git);
     }
@@ -118,12 +114,12 @@ fn ready(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     let offered = controller.worktree_menu_titles();
-    let installed = |agent: crate::agent::Agent| crate::agent::installed(&agent);
-    let expected: Vec<String> = installed(crate::agent::Agent::Claude)
+    let installed = |agent: ide_ui_agent::Agent| ide_ui_agent::installed(&agent);
+    let expected: Vec<String> = installed(ide_ui_agent::Agent::Claude)
         .then(|| "Claude".to_string())
         .into_iter()
-        .chain(crate::agent::installed_presets().into_iter().map(|(_, name)| name))
-        .chain(installed(crate::agent::Agent::Own).then(|| splat_i18n::t("Eigener Agent").to_string()))
+        .chain(ide_ui_agent::installed_presets().into_iter().map(|(_, name)| name))
+        .chain(installed(ide_ui_agent::Agent::Own).then(|| splat_i18n::t("Eigener Agent").to_string()))
         .map(|name| format!("{name} …"))
         .collect();
     check(
@@ -144,7 +140,7 @@ fn ready(root: PathBuf, ok: bool) {
 fn created(controller: &WindowController) -> bool {
     panel::worktrees(controller)
         .first()
-        .is_some_and(|tree| crate::agent::working_in(&tree.0))
+        .is_some_and(|tree| ide_ui_agent::working_in(&tree.0))
 }
 
 fn made(root: PathBuf, ok: bool) {
@@ -164,7 +160,7 @@ fn made(root: PathBuf, ok: bool) {
         path.starts_with(&data) && !path.starts_with(&root) && branch == BRANCH,
         format!("{} on {branch}", path.display()),
     );
-    let tab = crate::agent::all().into_iter().find(|tab| tab.cwd() == path);
+    let tab = ide_ui_agent::all().into_iter().find(|tab| tab.cwd() == path);
     check(
         "the thread's session works in the worktree and carries its title",
         tab.is_some_and(|tab| tab.title() == TITLE),
@@ -200,7 +196,7 @@ fn listed(root: PathBuf, ok: bool) {
         format!("{files:?}"),
     );
     note_counts();
-    crate::git_panel::refresh(&controller);
+    ide_ui_git::refresh(&controller);
     wait_for(root, |_| crate::worktrees::read_counts().0 > counts_before().0, cached);
 }
 
@@ -386,12 +382,12 @@ fn aborted(root: PathBuf, ok: bool) {
         &problem,
     );
     close_thread(&controller, &tree());
-    wait_for(root, |_| !crate::agent::working_in(&tree()), thread_closed);
+    wait_for(root, |_| !ide_ui_agent::working_in(&tree()), thread_closed);
 }
 
 /// Closes the AI tab that works in `path`, as its close button does.
 fn close_thread(controller: &WindowController, path: &Path) {
-    let tab = crate::agent::all().into_iter().find(|tab| tab.cwd() == path);
+    let tab = ide_ui_agent::all().into_iter().find(|tab| tab.cwd() == path);
     if let Some(id) = tab.and_then(|tab| controller.tab_with_key(&tab.tab_key())) {
         controller.close_tab(id);
     }
@@ -402,7 +398,7 @@ fn thread_closed(root: PathBuf, ok: bool) {
     if let Some(controller) = window_of(&root) {
         panel::tree_action(&controller, &tree(), TreeAction::OpenThread);
     }
-    wait_for(root, |_| crate::agent::working_in(&tree()), reopened);
+    wait_for(root, |_| ide_ui_agent::working_in(&tree()), reopened);
 }
 
 fn reopened(root: PathBuf, ok: bool) {
@@ -412,7 +408,7 @@ fn reopened(root: PathBuf, ok: bool) {
     }
     wait_for(
         root,
-        |_| !crate::agent::working_in(&tree()),
+        |_| !ide_ui_agent::working_in(&tree()),
         |root, _| {
             if let Some(controller) = window_of(&root) {
                 panel::tree_action(&controller, &tree(), TreeAction::Remove);
@@ -493,7 +489,7 @@ fn second_made(root: PathBuf, ok: bool) {
         root,
         |_| {
             let tree = tree();
-            crate::agent::all()
+            ide_ui_agent::all()
                 .into_iter()
                 .any(|tab| tab.cwd() == tree && tab.is_live())
         },
@@ -506,11 +502,11 @@ fn second_live(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     let path = tree();
-    let tab = crate::agent::all().into_iter().find(|tab| tab.cwd() == path);
+    let tab = ide_ui_agent::all().into_iter().find(|tab| tab.cwd() == path);
     let noted = crate::worktrees::list(&root)
         .into_iter()
         .find(|t| t.path == path)
-        .map(|t| crate::agent::Agent::of_thread(&t.agent).name().to_string());
+        .map(|t| ide_ui_agent::Agent::of_thread(&t.agent).name().to_string());
     let name = tab.map(|tab| tab.agent_name()).unwrap_or_default();
     check(
         "a worktree thread runs the ACP agent picked for it, whose session opens in the worktree",
@@ -524,7 +520,7 @@ fn second_live(root: PathBuf, ok: bool) {
     close_thread(&controller, &path);
     wait_for(
         root,
-        |_| !crate::agent::working_in(&tree()),
+        |_| !ide_ui_agent::working_in(&tree()),
         |root, _| {
             if let Some(controller) = window_of(&root) {
                 panel::tree_action(&controller, &tree(), TreeAction::KeepBranch);

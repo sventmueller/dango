@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use ide_document::recovery::{Recovery, RecoveryId};
-use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertSecondButtonReturn;
 use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
@@ -64,7 +63,6 @@ fn tabs_back() -> bool {
 }
 
 fn before_crash() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
     let folder = folder();
     let _ = helpers::make_project(
         "recovery-project",
@@ -75,8 +73,7 @@ fn before_crash() {
             (KEPT, "unverändert\n"),
         ],
     );
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
+    super::helpers::open_trusted(&folder);
     let Some(controller) = window_of(&folder) else {
         check("the folder gets its window", false, "");
         crash();

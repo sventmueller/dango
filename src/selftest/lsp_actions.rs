@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::sel;
@@ -98,7 +98,7 @@ const GO: Case = Case {
 };
 
 static CASE: OnceLock<&'static Case> = OnceLock::new();
-static END: OnceLock<Instant> = OnceLock::new();
+static END: helpers::Deadline = helpers::Deadline::new();
 
 fn case() -> &'static Case {
     CASE.get().copied().unwrap_or(&RUST)
@@ -133,16 +133,6 @@ fn picture(name: &str) {
     }
 }
 
-/// Calls `then` with whether `ready` held and how long it waited, as soon as it holds or once `within` or the
-/// scenario's budget passed.
-fn poll(within: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool, Duration) + 'static) {
-    let started = Instant::now();
-    let limit = END
-        .get()
-        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
-    helpers::wait_within(limit, ready, move |ok| then(ok, started.elapsed()));
-}
-
 fn quiet() -> bool {
     main_view()
         .and_then(|v| crate::lsp::quiet_for(&v))
@@ -170,14 +160,14 @@ pub fn run_go() {
 
 fn run(chosen: &'static Case) {
     let _ = CASE.set(chosen);
-    let _ = END.set(Instant::now() + BUDGET);
+    END.start(BUDGET);
     helpers::open_project(chosen.scenario, chosen.folder, chosen.files, opened);
 }
 
 fn opened(controller: Retained<WindowController>) {
     let chosen = case();
     controller.open_file(&root().join(chosen.main));
-    poll(
+    END.poll(
         WAIT,
         || main_view().is_some_and(|v| crate::lsp::server_running(&v) != Ok(false)),
         |_, _| started(),
@@ -197,7 +187,7 @@ fn started() {
         }
         Ok(true) => {
             check("the language server starts", true, case().server);
-            poll(WAIT, quiet, |_, took| rest_on_name(took));
+            END.poll(WAIT, quiet, |_, took| rest_on_name(took));
         }
         other => {
             check("the language server starts", false, format!("{other:?}"));
@@ -220,7 +210,7 @@ fn rest_on_name(settled: Duration) {
         .split('\n')
         .position(|l| l.contains(case().unresolved))
         .unwrap_or(0);
-    poll(
+    END.poll(
         ANSWER,
         move || main_view().is_some_and(|v| crate::lsp::bulb_line(&v) == Some(line)),
         move |ok, took| {
@@ -263,14 +253,14 @@ fn typing_hides_the_bulb(view: &EditorTextView) {
     );
     crate::lsp::code_action_menu::forget();
     let wanted = case().fix_title;
-    poll(
+    END.poll(
         ANSWER,
         || main_view().is_some_and(|v| crate::lsp::bulb_line(&v).is_some()),
         move |_, _| {
             if let Some(view) = main_view() {
                 crate::lsp::code_actions(&view, crate::lsp::ActionKind::Fixes);
             }
-            poll(
+            END.poll(
                 ANSWER,
                 move || {
                     main_view()
@@ -297,7 +287,7 @@ fn listed(ok: bool, took: Duration) {
         .iter()
         .find(|w| titles.iter().any(|t| t.starts_with(**w)))
         .is_some_and(|w| crate::lsp::code_action_menu::choose(w));
-    poll(
+    END.poll(
         ANSWER,
         || main_view().is_some_and(|v| v.document().text().to_string().contains(case().fixed)),
         move |ok, took| {
@@ -337,7 +327,7 @@ fn call() {
     for c in case().call.chars() {
         editor::type_text(&view, &c.to_string());
     }
-    poll(
+    END.poll(
         ANSWER,
         || main_view().and_then(|v| crate::lsp::signatures::shown(&v)).is_some(),
         |ok, took| {
@@ -361,7 +351,7 @@ fn call() {
                 editor::type_text(&view, &c.to_string());
             }
             let second = case().second;
-            poll(
+            END.poll(
                 ANSWER,
                 move || {
                     main_view()
@@ -389,7 +379,7 @@ fn second_parameter(ok: bool, took: Duration) {
         "",
     );
     crate::lsp::signature_help(&view);
-    poll(
+    END.poll(
         ANSWER,
         || main_view().and_then(|v| crate::lsp::signatures::shown(&v)).is_some(),
         |ok, _| {
@@ -398,7 +388,7 @@ fn second_parameter(ok: bool, took: Duration) {
             if let Some(start) = offset_of(&view, case().call, 0) {
                 put_cursor(&view, start);
             }
-            poll(
+            END.poll(
                 ANSWER,
                 || main_view().is_some_and(|v| crate::lsp::signatures::shown(&v).is_none()),
                 |ok, took| {

@@ -1,12 +1,12 @@
 //! The `lsp` scenario: a tiny cargo project with a type error, served by the real rust-analyzer. Diagnostics,
 //! hover, completion, definition, references, rename across two files and formatting, each through the code its
 //! command runs. Without rust-analyzer on this Mac it reports itself skipped. Every step waits for the server to
-//! settle and then for its answer, each within a generous bound, and reports how long it waited. It goes on in
-//! `lsp_more`.
+//! settle and then for its answer, each within a generous bound, and reports how long it waited. Its commands follow
+//! in `lsp_commands`.
 
 use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2_foundation::NSRange;
@@ -28,7 +28,7 @@ const SILENCE: Duration = Duration::from_secs(10);
 /// writes its report when every wait runs to its bound.
 const BUDGET: Duration = Duration::from_secs(540);
 
-static END: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+static END: helpers::Deadline = helpers::Deadline::new();
 
 const MAIN: &str = "src/main.rs";
 const UTIL: &str = "src/util.rs";
@@ -88,15 +88,11 @@ impl std::fmt::Display for Waited {
 
 /// Calls `then` with how the wait ended, as soon as `ready` holds or once `within` or the scenario's budget passed.
 pub(super) fn poll(within: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(Waited) + 'static) {
-    let started = Instant::now();
-    let limit = END
-        .get()
-        .map_or(within, |end| within.min(end.saturating_duration_since(started)));
-    helpers::wait_within(limit, ready, move |ok| {
+    END.poll(within, ready, move |ok, took| {
         then(Waited {
             ok,
             settled: None,
-            took: started.elapsed(),
+            took,
         });
     });
 }
@@ -172,7 +168,7 @@ pub(super) fn done() {
 }
 
 pub fn run() {
-    let _ = END.set(Instant::now() + BUDGET);
+    END.start(BUDGET);
     let files = [
         (
             "Cargo.toml",
@@ -554,5 +550,5 @@ fn watched(waited: Waited) {
         waited.ok,
         format!("{waited}: {marks:?}"),
     );
-    super::lsp_more::run();
+    super::lsp_commands::run();
 }

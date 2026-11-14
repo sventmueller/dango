@@ -72,7 +72,6 @@ fn folder(name: &str) -> PathBuf {
 }
 
 pub(super) fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
     let root = folder("preview-project");
     let _ = std::fs::write(root.join("doc.md"), document());
     let _ = std::fs::write(root.join("bild.png"), PNG);
@@ -89,8 +88,7 @@ pub(super) fn run() {
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\"><circle cx=\"20\" cy=\"20\" r=\"16\" fill=\"teal\"/></svg>\n",
     );
     let _ = std::fs::write(root.join("seite.html"), "<html><body><h1>Seite</h1></body></html>\n");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    helpers::open_trusted(&root);
     helpers::wait_for_window(&root.clone(), move |_| open_preview(root));
 }
 
@@ -247,22 +245,22 @@ fn smooth_scrolling(root: &Path, path: &Path) {
 /// An AI answer shows the formula the preview had drawn as a picture, and asks for one it has not seen.
 fn answers(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let drawn = crate::agent::answer_text(mtm, "Wie gesagt: $E = mc^2$.");
+    let drawn = ide_ui_agent::answer_text(mtm, "Wie gesagt: $E = mc^2$.");
     let text = drawn.string().to_string();
     check(
         "an AI answer shows a formula the renderer drew as a picture",
         text.contains('\u{FFFC}') && !text.contains("mc^2"),
         text,
     );
-    let fresh = crate::agent::answer_text(mtm, "Neu: $a^2 + b^2$.").string().to_string();
+    let fresh = ide_ui_agent::answer_text(mtm, "Neu: $a^2 + b^2$.").string().to_string();
     let key = splat_render::js::Key::math(
         "a^2 + b^2",
         false,
-        crate::agent::is_dark(mtm),
+        ide_ui_agent::is_dark(mtm),
         &std::sync::Arc::from(""),
     );
     helpers::wait_until(
-        move || crate::agent::asked_for_figure(&key),
+        move || ide_ui_agent::asked_for_figure(&key),
         move |asked| {
             check(
                 "an AI answer shows a formula as code until it is drawn, and asks for it",

@@ -19,14 +19,13 @@ use splat_i18n::{t, tf};
 
 use super::stash::sheet_labels;
 use super::{answer_sheet, fixture_git, pictures, sheet_ready, sheet_text, window_of, write};
-use crate::git_panel::message::source::{CONSENT, MODEL};
-use crate::git_panel::probe;
-use crate::git_panel::selftest as panel;
-use crate::own_agent::ModelChoice;
-use crate::selftest::helpers::wait_until;
+use crate::selftest::helpers::wait_on;
 use crate::selftest::{check, finish, snapshot};
 use crate::util::main_soon;
-use crate::window::{Panel, WindowController};
+use ide_ui_agent::own_agent::ModelChoice;
+use ide_ui_git::message::source::{CONSENT, MODEL};
+use ide_ui_git::probe;
+use ide_ui_git::selftest as panel;
 
 const SCENARIO: &str = "git-message";
 const README: &str = "README.md";
@@ -72,7 +71,7 @@ pub fn run() {
     };
     let base = format!("{}/v1", stub.url());
     STUB.with(|cell| *cell.borrow_mut() = Some(stub));
-    crate::own_agent::save_endpoint(Endpoint::new(ENDPOINT, ProviderKind::OpenAiCompatible, "Stub", &base));
+    ide_ui_agent::own_agent::save_endpoint(Endpoint::new(ENDPOINT, ProviderKind::OpenAiCompatible, "Stub", &base));
     let mut settings = Settings::load_user();
     let chosen = settings.set(
         &MODEL,
@@ -124,32 +123,12 @@ fn make_repository(folder: &Path) -> Result<(), String> {
     write(folder, LIBRARY, "pub fn step() -> u32 { 4 }\n")
 }
 
-fn after(
-    root: &Path,
-    ready: impl Fn(&WindowController) -> bool + Send + 'static,
-    then: impl FnOnce(PathBuf, bool) + Send + 'static,
-) {
-    let (mine, theirs) = (root.to_path_buf(), root.to_path_buf());
-    wait_until(
-        move || window_of(&mine).is_some_and(|c| ready(&c)),
-        move |ok| then(theirs, ok),
-    );
-}
-
 fn open(folder: PathBuf) {
-    let Some(mtm) = objc2::MainThreadMarker::new() else {
+    let Some((root, _)) = super::open_repository(&folder, SCENARIO) else {
         return;
     };
-    crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
-    let root = folder.canonicalize().unwrap_or(folder);
-    let Some(controller) = window_of(&root) else {
-        check("the repository opens in a window", false, "");
-        return finish(SCENARIO);
-    };
-    controller.activate_panel(Panel::Git);
-    after(
-        &root,
+    wait_on(
+        root,
         |c| panel::seen(c).is_some_and(|s| s.staged.len() == 1 && s.changes.len() == 1),
         listed,
     );
@@ -172,7 +151,7 @@ fn listed(root: PathBuf, ok: bool) {
         "",
     );
     probe::generate(&controller);
-    after(&root, sheet_ready, consent_asked);
+    wait_on(root.clone(), sheet_ready, consent_asked);
 }
 
 fn consent_asked(root: PathBuf, ok: bool) {
@@ -187,8 +166,8 @@ fn consent_asked(root: PathBuf, ok: bool) {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
             return finish(SCENARIO);
         }
-        after(
-            &root,
+        wait_on(
+            root.clone(),
             |c| {
                 let seen = probe::message(c);
                 seen.running && !seen.text.is_empty() && seen.text != written()
@@ -213,7 +192,7 @@ fn streaming(root: PathBuf, ok: bool) {
         seen.progress == t("Fasst 1 geänderte Datei zusammen …") && panel::seen(&controller).is_some_and(|s| s.busy),
         seen.progress,
     );
-    after(&root, |c| !probe::message(c).running, done);
+    wait_on(root.clone(), |c| !probe::message(c).running, done);
 }
 
 fn done(root: PathBuf, ok: bool) {
@@ -248,7 +227,7 @@ fn done(root: PathBuf, ok: bool) {
             return finish(SCENARIO);
         };
         probe::show_sent(&controller);
-        after(&root, sheet_ready, sent_shown);
+        wait_on(root.clone(), sheet_ready, sent_shown);
     });
 }
 
@@ -272,8 +251,8 @@ fn sent_shown(root: PathBuf, ok: bool) {
         let seen = probe::message(&controller);
         check("one undo brings the draft back", seen.text == DRAFT, seen.text);
         probe::generate(&controller);
-        after(
-            &root,
+        wait_on(
+            root.clone(),
             |c| !probe::message(c).running && probe::message(c).text == written(),
             regenerated,
         );
@@ -298,8 +277,8 @@ fn regenerated(root: PathBuf, ok: bool) {
     );
     let typed = seen.text;
     probe::generate(&controller);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| {
             let seen = probe::message(c);
             seen.running && !seen.editable && !seen.text.is_empty()
@@ -308,8 +287,8 @@ fn regenerated(root: PathBuf, ok: bool) {
             if let Some(controller) = window_of(&root) {
                 probe::cancel(&controller);
             }
-            after(
-                &root,
+            wait_on(
+                root.clone(),
                 |c| !probe::message(c).running,
                 move |root, done| cancelled(root, ok && done, typed),
             );
@@ -330,8 +309,8 @@ fn cancelled(root: PathBuf, ok: bool, typed: String) {
     std::thread::spawn(move || {
         let done = plant_secret(&root);
         main_soon(move || match done {
-            Ok(()) => after(
-                &root,
+            Ok(()) => wait_on(
+                root.clone(),
                 |c| panel::seen(c).is_some_and(|s| s.staged.is_empty() && !s.busy),
                 with_secret,
             ),
@@ -356,8 +335,8 @@ fn with_secret(root: PathBuf, ok: bool) {
     };
     check("the panel shows nothing staged", ok, "");
     probe::generate(&controller);
-    after(
-        &root,
+    wait_on(
+        root.clone(),
         |c| !probe::message(c).running && panel::seen(c).is_some_and(|s| s.problem.is_some() && !s.busy),
         secret_found,
     );
@@ -389,8 +368,8 @@ fn secret_found(root: PathBuf, ok: bool) {
             return;
         };
         crate::settings::show_agent(mtm);
-        after(
-            &root,
+        wait_on(
+            root.clone(),
             |_| crate::settings::commit_message_selftest::allowed().is_some(),
             revoke,
         );
@@ -423,7 +402,7 @@ fn revoke(root: PathBuf, ok: bool) {
     }
     std::fs::write(root.join(LIBRARY), "pub fn step() -> u32 { 5 }\n").ok();
     probe::generate(&controller);
-    after(&root, sheet_ready, asked_again);
+    wait_on(root.clone(), sheet_ready, asked_again);
 }
 
 fn asked_again(root: PathBuf, ok: bool) {

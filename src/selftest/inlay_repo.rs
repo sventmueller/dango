@@ -5,7 +5,6 @@ use std::cell::Cell;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_foundation::NSRect;
 
@@ -36,9 +35,7 @@ fn view() -> Option<Retained<EditorTextView>> {
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&root());
-    crate::app::open_project(mtm, root());
+    helpers::open_trusted(&root());
     helpers::wait_for_editor(&root(), &root().join(FILE), |opened| {
         if opened.is_none() {
             check("the file opens", false, "");

@@ -106,7 +106,7 @@ fn preview_beside(root: PathBuf) {
 }
 
 /// Runs `command` with `range` selected; the text afterwards.
-fn after(view: &EditorTextView, range: NSRange, command: Command) -> String {
+fn text_after(view: &EditorTextView, range: NSRange, command: Command) -> String {
     view.setSelectedRange(range);
     crate::markdown::perform(view, command as isize);
     text_of(view)
@@ -119,14 +119,14 @@ fn at(text: &str, part: &str) -> NSRange {
 
 fn formats(_root: &Path, view: &EditorTextView) {
     let word = at(NOTE, "Wort");
-    let bold = after(view, word, Command::Bold);
-    let unbold = after(view, view.selectedRange(), Command::Bold);
+    let bold = text_after(view, word, Command::Bold);
+    let unbold = text_after(view, view.selectedRange(), Command::Bold);
     check(
         "Fett wraps the selection and unwraps it again",
         bold.contains("Ein **Wort** hier.") && unbold == NOTE,
         format!("{bold:?} / {unbold:?}"),
     );
-    let italic = after(view, word, Command::Italic);
+    let italic = text_after(view, word, Command::Italic);
     if let Some(undo) = view.undoManager() {
         undo.undo();
     }
@@ -144,8 +144,8 @@ fn formats(_root: &Path, view: &EditorTextView) {
     ];
     let mut seen = Vec::new();
     for (command, expected) in lines {
-        let on = after(view, line, command);
-        let off = after(view, at(&on, "Zweite"), command);
+        let on = text_after(view, line, command);
+        let off = text_after(view, at(&on, "Zweite"), command);
         seen.push((on.contains(expected), off == NOTE));
     }
     check(
@@ -153,7 +153,7 @@ fn formats(_root: &Path, view: &EditorTextView) {
         seen.iter().all(|(on, off)| *on && *off),
         format!("{seen:?}"),
     );
-    let block = after(view, at(NOTE, "Zweite Zeile"), Command::CodeBlock);
+    let block = text_after(view, at(NOTE, "Zweite Zeile"), Command::CodeBlock);
     check(
         "Codeblock puts the line between fences",
         block.contains("```\nZweite Zeile\n```"),

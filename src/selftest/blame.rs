@@ -117,9 +117,7 @@ pub fn run() {
             return finish(SCENARIO);
         }
     }
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::project::trust(&dir);
-    crate::app::open_project(mtm, dir.clone());
+    super::helpers::open_trusted(&dir);
     if let Some(controller) = window::for_project(&dir) {
         controller.open_file(&dir.join(FILE));
     }
@@ -147,7 +145,7 @@ fn line_end() {
                 "at the end of the cursor's line after a rest: author, age and subject",
                 text == splat_i18n::tf(
                     "{}, {} · {}",
-                    &["Bea", &crate::git_panel::ago(3 * 86_400), "Change the second line"],
+                    &["Bea", &ide_ui_git::ago(3 * 86_400), "Change the second line"],
                 ),
                 text,
             );
@@ -279,7 +277,7 @@ fn popover() {
             wait_until(
                 || {
                     window::for_project(&root())
-                        .and_then(|c| crate::git_panel::selected_commit(&c))
+                        .and_then(|c| ide_ui_git::selected_commit(&c))
                         .is_some_and(|hash| hash == head())
                 },
                 graph,
@@ -289,7 +287,7 @@ fn popover() {
 }
 
 fn graph(ok: bool) {
-    let selected = window::for_project(&root()).and_then(|c| crate::git_panel::selected_commit(&c));
+    let selected = window::for_project(&root()).and_then(|c| ide_ui_git::selected_commit(&c));
     check(
         "\"Im Graph zeigen\" selects the commit in the Git panel's history",
         ok,

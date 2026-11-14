@@ -9,7 +9,6 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use ide_terminal::{Foreground, PasteAction};
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2_app_kit::{
@@ -127,11 +126,9 @@ struct Run {
 }
 
 pub fn run() {
-    let Some(mtm) = MainThreadMarker::new() else { return };
     let _ = helpers::make_project("paste-cli-project", &[]);
     let root = helpers::root("paste-cli-project");
-    crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    helpers::open_trusted(&root);
     std::thread::spawn(move || {
         let path = crate::environment::wait(Duration::from_secs(30))
             .and_then(|env| {
