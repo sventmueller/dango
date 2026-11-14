@@ -36,9 +36,7 @@ pub struct State {
     pub sandbox: bool,
     /// Whether the user connected the thread to Remote Control or ended it; `None` follows their Claude settings.
     pub remote: Option<bool>,
-    pub mode: String,
-    pub model: Option<String>,
-    pub effort: Option<String>,
+    picks: Picks,
     pub bookmarked: bool,
     pub resume: Option<Resume>,
     /// The checkpoint taken before each user message, by the CLI's id for the message.
@@ -48,8 +46,6 @@ pub struct State {
     rewind: Rewind,
     /// The editor's selection, offered as context while the composer has the focus.
     pub offer: Option<Attachment>,
-    /// The session runs with the model and mode the user picked last for its agent, where it offers them.
-    pub choice_applied: bool,
 }
 
 /// The tab's session, with what the tab knows of its agent beyond it.
@@ -67,6 +63,29 @@ enum Known {
     Acp(Option<ide_acp::Capabilities>),
     /// The endpoint and model of the own agent's session.
     Own(Option<ModelChoice>),
+}
+
+/// The model, effort and mode the user picked, which the session starts with.
+pub struct Picks {
+    mode: String,
+    model: Option<String>,
+    effort: Option<String>,
+    /// The session runs with the model and mode the user picked last for its agent, where it offers them.
+    applied: bool,
+}
+
+impl Picks {
+    pub fn mode(&self) -> &str {
+        &self.mode
+    }
+
+    pub fn model(&self) -> Option<&str> {
+        self.model.as_deref()
+    }
+
+    pub fn effort(&self) -> Option<&str> {
+        self.effort.as_deref()
+    }
 }
 
 /// The turn in flight: how the session stands, the prompt on its way and the checkpoint taken before it.
@@ -114,9 +133,12 @@ impl State {
             attachments: Vec::new(),
             sandbox: false,
             remote: None,
-            mode: choice.mode.unwrap_or_else(|| "default".into()),
-            model: choice.model,
-            effort: choice.effort,
+            picks: Picks {
+                mode: choice.mode.unwrap_or_else(|| "default".into()),
+                model: choice.model,
+                effort: choice.effort,
+                applied: false,
+            },
             bookmarked: false,
             resume: None,
             checkpoints: HashMap::new(),
@@ -129,7 +151,6 @@ impl State {
             offered: Offered::default(),
             rewind: Rewind::default(),
             offer: None,
-            choice_applied: false,
         }
     }
 
@@ -167,6 +188,7 @@ impl State {
     pub fn start(&mut self) {
         self.run.source = Source::Starting;
         self.problem = None;
+        self.picks.applied = false;
     }
 
     /// Notes that `source` runs the session now.
@@ -237,6 +259,33 @@ impl State {
     /// Answers a plan; what a recording played for the self-test changed.
     pub fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, SessionError> {
         self.run.source.answer_plan(request, answer)
+    }
+
+    pub fn picks(&self) -> &Picks {
+        &self.picks
+    }
+
+    pub fn pick_model(&mut self, model: String) {
+        self.picks.model = Some(model);
+    }
+
+    pub fn pick_effort(&mut self, level: String) {
+        self.picks.effort = Some(level);
+    }
+
+    pub fn pick_mode(&mut self, mode: String) {
+        self.picks.mode = mode;
+    }
+
+    /// What the ACP agent offers, for the picks the user made last for it to be put on its session; once per
+    /// session, as soon as it offers modes or options.
+    pub fn apply_picks(&mut self) -> Option<ide_acp::Capabilities> {
+        let caps = self
+            .acp_caps()
+            .filter(|caps| !self.picks.applied && (!caps.modes.is_empty() || !caps.options.is_empty()))
+            .cloned()?;
+        self.picks.applied = true;
+        Some(caps)
     }
 
     pub fn status(&self) -> Status {
@@ -369,7 +418,11 @@ impl State {
 
     /// The model pill of a Claude session: the model as people say it, with the effort if one is set.
     pub fn model_pill(&self) -> String {
-        let model_id = self.thread.model().map(str::to_string).or_else(|| self.model.clone());
+        let model_id = self
+            .thread
+            .model()
+            .map(str::to_string)
+            .or_else(|| self.picks.model.clone());
         let model = model_id
             .as_deref()
             .map(|id| {
@@ -378,7 +431,11 @@ impl State {
                     .map_or_else(|| model_name(id), |m| m.display_name.clone())
             })
             .unwrap_or_else(|| t("Standardmodell").to_string());
-        let effort = self.thread.effort().map(str::to_string).or_else(|| self.effort.clone());
+        let effort = self
+            .thread
+            .effort()
+            .map(str::to_string)
+            .or_else(|| self.picks.effort.clone());
         match effort {
             Some(effort) => tf("{} · {}", &[&model, &effort_name(&effort)]),
             None => model,
@@ -387,7 +444,10 @@ impl State {
 
     /// The mode pill of a Claude session: its title and symbol.
     pub fn mode_pill(&self) -> (String, &'static str) {
-        let mode_id = self.thread.mode().map_or_else(|| self.mode.clone(), str::to_string);
+        let mode_id = self
+            .thread
+            .mode()
+            .map_or_else(|| self.picks.mode.clone(), str::to_string);
         let mode_id = if mode_id == "manual" {
             "default".to_string()
         } else {
@@ -548,12 +608,12 @@ mod tests {
     fn the_pills_name_model_effort_and_mode() {
         let mut state = state();
         assert_eq!(state.model_pill(), t("Standardmodell"));
-        state.model = Some("claude-opus-5-5".into());
-        state.effort = Some("high".into());
+        state.pick_model("claude-opus-5-5".into());
+        state.pick_effort("high".into());
         assert_eq!(state.model_pill(), tf("{} · {}", &["Opus 5.5", t("Hoch")]));
-        state.mode = "manual".into();
+        state.pick_mode("manual".into());
         assert_eq!(state.mode_pill(), (t("Manuell").to_string(), "hand.raised"));
-        state.mode = "plan".into();
+        state.pick_mode("plan".into());
         assert_eq!(state.mode_pill().1, "list.bullet.clipboard");
         assert!(!state.sandbox_look().on);
     }

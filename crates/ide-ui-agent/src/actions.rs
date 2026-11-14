@@ -363,7 +363,11 @@ impl AgentTab {
         menu.setAutoenablesItems(false);
         let (models, efforts, current, effort) = {
             let state = self.state.borrow();
-            let current = state.thread.model().map(str::to_string).or_else(|| state.model.clone());
+            let current = state
+                .thread
+                .model()
+                .map(str::to_string)
+                .or_else(|| state.picks().model().map(str::to_string));
             let known = state.claude_caps().map_or(&[][..], |caps| &caps.models[..]);
             let models: Vec<(String, String, String)> = known
                 .iter()
@@ -379,7 +383,7 @@ impl AgentTab {
                 .thread
                 .effort()
                 .map(str::to_string)
-                .or_else(|| state.effort.clone());
+                .or_else(|| state.picks().effort().map(str::to_string));
             (models, supported, current, effort)
         };
         let heading = self.menu_item(&menu, t("Modell"), sel!(ideAgentPickModel:), -1);
@@ -427,7 +431,7 @@ impl AgentTab {
         };
         self.state.borrow().source().set_model(&model);
         super::choices::remember(self.agent.id(), |choice| choice.model = Some(model.clone()));
-        self.state.borrow_mut().model = Some(model);
+        self.state.borrow_mut().pick_model(model);
         self.refresh_composer();
     }
 
@@ -440,7 +444,7 @@ impl AgentTab {
         };
         self.state.borrow().source().set_effort(&level);
         super::choices::remember(self.agent.id(), |choice| choice.effort = Some(level.clone()));
-        self.state.borrow_mut().effort = Some(level);
+        self.state.borrow_mut().pick_effort(level);
         self.refresh_composer();
     }
 
@@ -465,7 +469,7 @@ impl AgentTab {
                 .thread
                 .mode()
                 .map(str::to_string)
-                .unwrap_or_else(|| state.mode.clone())
+                .unwrap_or_else(|| state.picks().mode().to_string())
         };
         for (n, (id, title, symbol)) in modes().iter().enumerate() {
             let entry = self.menu_item(&menu, title, sel!(ideAgentPickMode:), index_tag(n));
@@ -497,7 +501,7 @@ impl AgentTab {
             });
         });
         super::choices::remember(self.agent.id(), |choice| choice.mode = Some(mode.clone()));
-        self.state.borrow_mut().mode = mode;
+        self.state.borrow_mut().pick_mode(mode);
         self.refresh_composer();
     }
 
@@ -509,7 +513,7 @@ impl AgentTab {
             Some(mode) => mode.to_string(),
         };
         super::choices::remember(self.agent.id(), |choice| choice.mode = Some(now.clone()));
-        self.state.borrow_mut().mode = now;
+        self.state.borrow_mut().pick_mode(now);
         self.refresh_composer();
         crate::host::host().show_alert(self.mtm, t("Freigabemodus nicht gewechselt"), why);
     }

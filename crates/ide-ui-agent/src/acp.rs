@@ -489,16 +489,9 @@ impl AgentTab {
     /// Puts a session that just told its options on the model, thought level and mode the user picked last for the
     /// agent, those it offers; once per session.
     pub(super) fn acp_apply_choice(&self) {
-        let caps = {
-            let state = self.state.borrow();
-            match state.acp_caps() {
-                Some(caps) if !state.choice_applied && (!caps.modes.is_empty() || !caps.options.is_empty()) => {
-                    caps.clone()
-                }
-                _ => return,
-            }
+        let Some(caps) = self.state.borrow_mut().apply_picks() else {
+            return;
         };
-        self.state.borrow_mut().choice_applied = true;
         let choice = super::choices::of(self.agent.id());
         for (option, wanted) in [(caps.model(), choice.model), (caps.thought_level(), choice.effort)] {
             let (Some(option), Some(wanted)) = (option, wanted) else {

@@ -34,7 +34,6 @@ impl AgentTab {
             let thread = {
                 let mut state = self.state.borrow_mut();
                 state.start();
-                state.choice_applied = false;
                 state.thread.as_ref().clone()
             };
             self.refresh();
@@ -82,10 +81,11 @@ impl AgentTab {
                 .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
             launch.sandbox = state.sandbox;
             launch.remote_control = state.remote;
-            launch.permission_mode = Some(state.mode.clone());
+            let picks = state.picks();
+            launch.permission_mode = Some(picks.mode().to_string());
             launch.allow_bypass = true;
-            launch.model.clone_from(&state.model);
-            launch.effort.clone_from(&state.effort);
+            launch.model = picks.model().map(str::to_string);
+            launch.effort = picks.effort().map(str::to_string);
             launch.file_checkpoints = true;
             match state.fork() {
                 Some(Fork {

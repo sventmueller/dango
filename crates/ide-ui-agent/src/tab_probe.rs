@@ -114,7 +114,7 @@ impl AgentTab {
 
     /// Picks the model for the next start.
     pub fn use_model(&self, model: &str) {
-        self.state.borrow_mut().model = Some(model.to_string());
+        self.state.borrow_mut().pick_model(model.to_string());
     }
 
     /// Picks `model`, `effort` and `mode` as the pills' menus do, which remembers them for the agent's next sessions.
@@ -139,13 +139,18 @@ impl AgentTab {
     /// The model, effort and mode the session runs with or starts with.
     pub fn picks(&self) -> (Option<String>, Option<String>, String) {
         let state = self.state.borrow();
-        (state.model.clone(), state.effort.clone(), state.mode.clone())
+        let picks = state.picks();
+        (
+            picks.model().map(str::to_string),
+            picks.effort().map(str::to_string),
+            picks.mode().to_string(),
+        )
     }
 
     /// Switches to the permission mode `mode`, as the mode pill's menu does.
     pub fn use_mode(&self, mode: &str) {
         self.state.borrow().source().set_mode(mode, |_| ());
-        self.state.borrow_mut().mode = mode.to_string();
+        self.state.borrow_mut().pick_mode(mode.to_string());
         self.refresh_composer();
     }
 
