@@ -308,7 +308,7 @@ pub struct TabWindow {
     status: Retained<NSImageView>,
     /// The watch that keeps the toolbar clear above the sidebar in full screen.
     sidebar_watch: Retained<ProtocolObject<dyn NSObjectProtocol>>,
-    /// The watches that keep the sidebar below the toolbar as the documents' column moves with it.
+    /// The watches that keep the sidebar below the toolbar as it slides and the documents' column moves with it.
     toolbar_watch: Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
 }
 
@@ -401,11 +401,13 @@ impl TabWindow {
         let sidebar_watch = super::full_screen::follow_sidebar(&window, &slot, &split.splitView());
         let top = content_top(&content);
         let controller_ref = Weak::from(controller);
-        let toolbar_watch = super::full_screen::follow_frames(&[&content, &top], move || {
+        let follow = move || {
             if let Some(controller) = controller_ref.load() {
                 controller.follow_toolbar();
             }
-        });
+        };
+        let mut toolbar_watch = super::full_screen::follow_frames(&[&content, &top], follow.clone());
+        toolbar_watch.push(super::full_screen::follow_toolbar_window(&window, follow));
         let tab = Rc::new(TabWindow {
             window,
             split,

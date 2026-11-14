@@ -772,9 +772,30 @@ fn full_screen(root: PathBuf) {
         kept == 1.0 && back == 1.0,
         format!("{kept} {back}"),
     );
+    toolbar_slide(&c, &toolbar);
     toolbar.close();
     below_toolbar(&c, &window);
     finish(NAME);
+}
+
+/// The toolbar's window sliding down from the window's top, as showing the window buttons in full screen makes it,
+/// counts as far as it slid, and as nothing once it is back.
+fn toolbar_slide(c: &WindowController, toolbar: &NSWindow) {
+    const SLID: f64 = 30.0;
+    let frame = toolbar.frame();
+    let at_top = c.toolbar_slide();
+    toolbar.setFrame_display(
+        NSRect::new(NSPoint::new(frame.origin.x, frame.origin.y - SLID), frame.size),
+        false,
+    );
+    let down = c.toolbar_slide();
+    toolbar.setFrame_display(frame, false);
+    let back = c.toolbar_slide();
+    check(
+        "the toolbar's window sliding down from the window's top counts as far as it slid",
+        at_top.abs() < 0.5 && (down - SLID).abs() < 0.5 && back.abs() < 0.5,
+        format!("{at_top:.1} {down:.1} {back:.1}"),
+    );
 }
 
 /// A toolbar that reaches further down than the sidebar's safe area, as in full screen, pushes the sidebar's symbols

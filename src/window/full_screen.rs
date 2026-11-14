@@ -11,7 +11,7 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
 use objc2_app_kit::{
     NSApplication, NSSplitView, NSSplitViewDidResizeSubviewsNotification, NSView, NSViewFrameDidChangeNotification,
-    NSWindow, NSWindowStyleMask,
+    NSWindow, NSWindowDidMoveNotification, NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol, NSRect, NSRunLoop};
 
@@ -43,15 +43,7 @@ fn toolbar_windows(window: &NSWindow) -> Vec<(Retained<NSWindow>, Retained<NSVie
     NSApplication::sharedApplication(mtm)
         .windows()
         .iter()
-        .filter(|toolbar| {
-            // Key-value observing puts a prefix before the class's name.
-            toolbar
-                .class()
-                .name()
-                .to_bytes()
-                .ends_with(b"NSToolbarFullScreenWindow")
-                && same_columns(toolbar.frame(), window.frame())
-        })
+        .filter(|toolbar| is_toolbar_of(toolbar, window))
         .filter_map(|toolbar| {
             // SAFETY: Asking for the superview only reads; the frame view holds the content view while it shows.
             let frame = toolbar.contentView().and_then(|c| unsafe { c.superview() })?;
@@ -60,8 +52,19 @@ fn toolbar_windows(window: &NSWindow) -> Vec<(Retained<NSWindow>, Retained<NSVie
         .collect()
 }
 
+fn is_toolbar_of(toolbar: &NSWindow, window: &NSWindow) -> bool {
+    // Key-value observing puts a prefix before the class's name.
+    toolbar
+        .class()
+        .name()
+        .to_bytes()
+        .ends_with(b"NSToolbarFullScreenWindow")
+        && same_columns(toolbar.frame(), window.frame())
+}
+
 /// How far the toolbar of `window` in full screen reaches down from the top of `sidebar`, none outside full screen:
-/// down to where the safe area of `content`, the documents' column, begins, less a tab bar between them.
+/// down to where the safe area of `content`, the documents' column, begins, less a tab bar between them, and further
+/// by as far as the toolbar slid down from the screen's top.
 pub fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f64 {
     if !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
         return 0.0;
@@ -83,7 +86,17 @@ pub fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f
         })
         .map_or(0.0, |bar| bar.bounds().size.height);
     let below = top(content, content.safeAreaLayoutGuide().frame()) + tab_bar;
-    (top(sidebar, sidebar.bounds()) - below).max(0.0)
+    (top(sidebar, sidebar.bounds()) - below).max(0.0) + toolbar_slide(window)
+}
+
+/// How far the toolbar's window of `window` slid down from the window's top, as it does in full screen while the window
+/// buttons or the menu bar show; the documents' column keeps its safe area meanwhile, and the toolbar covers its top.
+pub fn toolbar_slide(window: &NSWindow) -> f64 {
+    let frame = window.frame();
+    toolbar_windows(window).first().map_or(0.0, |(toolbar, _)| {
+        let toolbar = toolbar.frame();
+        (frame.origin.y + frame.size.height - toolbar.origin.y - toolbar.size.height).max(0.0)
+    })
 }
 
 fn tab_bar(view: &NSView) -> Option<Retained<NSView>> {
@@ -119,6 +132,31 @@ pub fn follow_sidebar(
     let name = constant!(NSSplitViewDidResizeSubviewsNotification);
     // SAFETY: The block holds the window and the sidebar weakly and runs on the main thread, where split views post.
     unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), Some(split), None, &block) }
+}
+
+/// Calls `moved` whenever AppKit moves the toolbar's window of `window` in full screen; the token ends the watch when
+/// handed to `NSNotificationCenter::removeObserver`.
+pub fn follow_toolbar_window(
+    window: &NSWindow,
+    moved: impl Fn() + 'static,
+) -> Retained<ProtocolObject<dyn NSObjectProtocol>> {
+    let window = Weak::from(window);
+    let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
+        guarded((), || {
+            // SAFETY: The center hands the block a notification that lives for the call.
+            let object = unsafe { notification.as_ref() }.object();
+            let toolbar = object.as_deref().and_then(|object| object.downcast_ref::<NSWindow>());
+            if let (Some(toolbar), Some(window)) = (toolbar, window.load())
+                && is_toolbar_of(toolbar, &window)
+            {
+                moved();
+            }
+        });
+    });
+    let center = NSNotificationCenter::defaultCenter();
+    let name = constant!(NSWindowDidMoveNotification);
+    // SAFETY: The block holds the window weakly and runs on the main thread, where windows post.
+    unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), None, None, &block) }
 }
 
 /// Calls `moved` once AppKit laid out anew after `views` changed their frames; the tokens end the watch when handed to

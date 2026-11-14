@@ -444,6 +444,12 @@ impl WindowController {
         (tabs, safe, activity)
     }
 
+    /// How far the toolbar's window slid down from the window's top, which the sidebar follows in full screen.
+    pub fn toolbar_slide(&self) -> f64 {
+        self.window()
+            .map_or(f64::NAN, |window| super::full_screen::toolbar_slide(&window))
+    }
+
     /// Lays the sidebar out below a toolbar that reaches `toolbar` down from its top, as one in full screen does.
     pub fn push_sidebar_below_toolbar(&self, toolbar: f64) {
         self.keep_sidebar_below_toolbar(toolbar);
