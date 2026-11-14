@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Sobrescrever Mesmo Assim";
 "Umgehen" = "Ignorar";
 "Unterbrochen" = "Interrompido";
+"Gestoppt in der Aktivität" = "Interrompido em Atividade";
+"Gestoppt mit dem Stopp-Knopf" = "Interrompido com o botão de parar";
+"Gestoppt mit Esc" = "Interrompido com Esc";
 "Unterhaltung bis hierher zurückspulen" = "Retroceder a Conversa até Aqui";
 "Verdichte …" = "Compactando…";
 "Verdichtet · {} ({})" = "Compactado · {} ({})";

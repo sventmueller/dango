@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "このまま上書き";
 "Umgehen" = "バイパス";
 "Unterbrochen" = "中断";
+"Gestoppt in der Aktivität" = "アクティビティで停止しました";
+"Gestoppt mit dem Stopp-Knopf" = "停止ボタンで停止しました";
+"Gestoppt mit Esc" = "Esc で停止しました";
 "Unterhaltung bis hierher zurückspulen" = "ここまで会話を巻き戻す";
 "Verdichte …" = "圧縮中…";
 "Verdichtet · {} ({})" = "圧縮済み · {}（{}）";

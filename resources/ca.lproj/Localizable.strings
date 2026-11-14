@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Sobreescriu de tota manera";
 "Umgehen" = "Omet els permisos";
 "Unterbrochen" = "Interromput";
+"Gestoppt in der Aktivität" = "Aturat a Activitat";
+"Gestoppt mit dem Stopp-Knopf" = "Aturat amb el botó d’aturar";
+"Gestoppt mit Esc" = "Aturat amb Esc";
 "Unterhaltung bis hierher zurückspulen" = "Retrocedeix la conversa fins aquí";
 "Verdichte …" = "Compactant…";
 "Verdichtet · {} ({})" = "Compactat · {} ({})";

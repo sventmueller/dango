@@ -795,6 +795,9 @@
 "Trotzdem überschreiben" = "Overwrite Anyway";
 "Umgehen" = "Bypass";
 "Unterbrochen" = "Interrupted";
+"Gestoppt in der Aktivität" = "Stopped in Activity";
+"Gestoppt mit dem Stopp-Knopf" = "Stopped with the stop button";
+"Gestoppt mit Esc" = "Stopped with Esc";
 "Unterhaltung bis hierher zurückspulen" = "Rewind Conversation to Here";
 "Verdichte …" = "Compacting…";
 "Verdichtet · {} ({})" = "Compacted · {} ({})";

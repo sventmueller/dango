@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Overskriv alligevel";
 "Umgehen" = "Omgå";
 "Unterbrochen" = "Afbrudt";
+"Gestoppt in der Aktivität" = "Stoppet i Aktivitet";
+"Gestoppt mit dem Stopp-Knopf" = "Stoppet med stopknappen";
+"Gestoppt mit Esc" = "Stoppet med Esc";
 "Unterhaltung bis hierher zurückspulen" = "Spol samtalen tilbage hertil";
 "Verdichte …" = "Komprimerer…";
 "Verdichtet · {} ({})" = "Komprimeret · {} ({})";

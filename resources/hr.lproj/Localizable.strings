@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Svejedno prebriši";
 "Umgehen" = "Zaobilaženje";
 "Unterbrochen" = "Prekinuto";
+"Gestoppt in der Aktivität" = "Zaustavljeno u Aktivnosti";
+"Gestoppt mit dem Stopp-Knopf" = "Zaustavljeno tipkom za zaustavljanje";
+"Gestoppt mit Esc" = "Zaustavljeno tipkom Esc";
 "Unterhaltung bis hierher zurückspulen" = "Premotaj razgovor do ovdje";
 "Verdichte …" = "Sažimanje…";
 "Verdichtet · {} ({})" = "Sažeto · {} ({})";

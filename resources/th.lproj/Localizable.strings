@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "เขียนทับอยู่ดี";
 "Umgehen" = "ข้ามสิทธิ์";
 "Unterbrochen" = "ถูกขัดจังหวะ";
+"Gestoppt in der Aktivität" = "หยุดในกิจกรรม";
+"Gestoppt mit dem Stopp-Knopf" = "หยุดด้วยปุ่มหยุด";
+"Gestoppt mit Esc" = "หยุดด้วย Esc";
 "Unterhaltung bis hierher zurückspulen" = "กรอกบทสนทนากลับมาถึงตรงนี้";
 "Verdichte …" = "กำลังบีบอัด…";
 "Verdichtet · {} ({})" = "บีบอัดแล้ว · {} ({})";

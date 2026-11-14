@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Sovrascrivi comunque";
 "Umgehen" = "Ignora";
 "Unterbrochen" = "Interrotto";
+"Gestoppt in der Aktivität" = "Interrotto in Attività";
+"Gestoppt mit dem Stopp-Knopf" = "Interrotto con il pulsante di stop";
+"Gestoppt mit Esc" = "Interrotto con Esc";
 "Unterhaltung bis hierher zurückspulen" = "Riavvolgi la conversazione fino a qui";
 "Verdichte …" = "Compattazione…";
 "Verdichtet · {} ({})" = "Compattato · {} ({})";

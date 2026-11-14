@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Sobrescribir igualmente";
 "Umgehen" = "Omitir permisos";
 "Unterbrochen" = "Interrumpido";
+"Gestoppt in der Aktivität" = "Detenido en Actividad";
+"Gestoppt mit dem Stopp-Knopf" = "Detenido con el botón de detener";
+"Gestoppt mit Esc" = "Detenido con Esc";
 "Unterhaltung bis hierher zurückspulen" = "Rebobinar la conversación hasta aquí";
 "Verdichte …" = "Compactando…";
 "Verdichtet · {} ({})" = "Compactado · {} ({})";

@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "그래도 덮어쓰기";
 "Umgehen" = "우회";
 "Unterbrochen" = "중단됨";
+"Gestoppt in der Aktivität" = "활동에서 중지됨";
+"Gestoppt mit dem Stopp-Knopf" = "중지 버튼으로 중지됨";
+"Gestoppt mit Esc" = "Esc로 중지됨";
 "Unterhaltung bis hierher zurückspulen" = "여기까지 대화 되감기";
 "Verdichte …" = "압축 중…";
 "Verdichtet · {} ({})" = "압축됨 · {}({})";

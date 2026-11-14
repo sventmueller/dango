@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Vẫn ghi đè";
 "Umgehen" = "Bỏ qua quyền";
 "Unterbrochen" = "Đã bị gián đoạn";
+"Gestoppt in der Aktivität" = "Đã dừng trong Hoạt động";
+"Gestoppt mit dem Stopp-Knopf" = "Đã dừng bằng nút dừng";
+"Gestoppt mit Esc" = "Đã dừng bằng Esc";
 "Unterhaltung bis hierher zurückspulen" = "Tua lại cuộc hội thoại đến đây";
 "Verdichte …" = "Đang thu gọn…";
 "Verdichtet · {} ({})" = "Đã thu gọn · {} ({})";

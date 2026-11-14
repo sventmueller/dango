@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Yine de Üzerine Yaz";
 "Umgehen" = "Atla";
 "Unterbrochen" = "Kesildi";
+"Gestoppt in der Aktivität" = "Etkinlik’te durduruldu";
+"Gestoppt mit dem Stopp-Knopf" = "Durdur düğmesiyle durduruldu";
+"Gestoppt mit Esc" = "Esc ile durduruldu";
 "Unterhaltung bis hierher zurückspulen" = "Konuşmayı Buraya Kadar Geri Sar";
 "Verdichte …" = "Sıkıştırılıyor…";
 "Verdichtet · {} ({})" = "Sıkıştırıldı · {} ({})";

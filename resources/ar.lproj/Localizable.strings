@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "استبدال على أي حال";
 "Umgehen" = "تجاوز";
 "Unterbrochen" = "تمت المقاطعة";
+"Gestoppt in der Aktivität" = "أُوقف في النشاط";
+"Gestoppt mit dem Stopp-Knopf" = "أُوقف بزر الإيقاف";
+"Gestoppt mit Esc" = "أُوقف باستخدام Esc";
 "Unterhaltung bis hierher zurückspulen" = "إرجاع المحادثة إلى هذه النقطة";
 "Verdichte …" = "جارٍ الضغط…";
 "Verdichtet · {} ({})" = "تم الضغط · {} ({})";

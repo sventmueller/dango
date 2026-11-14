@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Nadpisz mimo to";
 "Umgehen" = "Pomiń";
 "Unterbrochen" = "Przerwano";
+"Gestoppt in der Aktivität" = "Zatrzymano w Aktywności";
+"Gestoppt mit dem Stopp-Knopf" = "Zatrzymano przyciskiem Zatrzymaj";
+"Gestoppt mit Esc" = "Zatrzymano klawiszem Esc";
 "Unterhaltung bis hierher zurückspulen" = "Przewiń rozmowę do tego miejsca";
 "Verdichte …" = "Kompaktowanie…";
 "Verdichtet · {} ({})" = "Skompaktowano · {} ({})";

@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "仍要覆寫";
 "Umgehen" = "略過權限";
 "Unterbrochen" = "已中斷";
+"Gestoppt in der Aktivität" = "已在「活動」中停止";
+"Gestoppt mit dem Stopp-Knopf" = "已用停止按鈕停止";
+"Gestoppt mit Esc" = "已用 Esc 停止";
 "Unterhaltung bis hierher zurückspulen" = "將對話內容回溯到此處";
 "Verdichte …" = "正在壓縮⋯";
 "Verdichtet · {} ({})" = "已壓縮 · {}（{}）";

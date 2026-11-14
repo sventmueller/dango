@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Все равно перезаписать";
 "Umgehen" = "Обход разрешений";
 "Unterbrochen" = "Прервано";
+"Gestoppt in der Aktivität" = "Остановлено в разделе «Активность»";
+"Gestoppt mit dem Stopp-Knopf" = "Остановлено кнопкой остановки";
+"Gestoppt mit Esc" = "Остановлено клавишей Esc";
 "Unterhaltung bis hierher zurückspulen" = "Откатить диалог до этого места";
 "Verdichte …" = "Сжатие…";
 "Verdichtet · {} ({})" = "Сжато · {} ({})";

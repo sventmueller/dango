@@ -50,6 +50,8 @@ pub struct State {
     pub status: Status,
     /// A checkpoint is being taken before a prompt goes out.
     pub sending: bool,
+    /// When the last message went out, which the stop button waits a moment after.
+    pub sent_at: Option<std::time::Instant>,
     pub offered: Offered,
     /// The rewind the session started with, until the agent accepted it.
     pub fork: Option<Fork>,
@@ -94,6 +96,7 @@ impl State {
             turn: None,
             status: Status::Idle,
             sending: false,
+            sent_at: None,
             offered: Offered::default(),
             fork: None,
             last_sent: None,

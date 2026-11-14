@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Felülírás mégis";
 "Umgehen" = "Megkerülés";
 "Unterbrochen" = "Megszakítva";
+"Gestoppt in der Aktivität" = "Leállítva a Tevékenységben";
+"Gestoppt mit dem Stopp-Knopf" = "Leállítva a leállítás gombbal";
+"Gestoppt mit Esc" = "Leállítva az Esc billentyűvel";
 "Unterhaltung bis hierher zurückspulen" = "Beszélgetés visszatekerése eddig";
 "Verdichte …" = "Tömörítés…";
 "Verdichtet · {} ({})" = "Tömörítve · {} ({})";

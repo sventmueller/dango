@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "דריסה בכל זאת";
 "Umgehen" = "עקיפה";
 "Unterbrochen" = "הופסק";
+"Gestoppt in der Aktivität" = "נעצר בפעילות";
+"Gestoppt mit dem Stopp-Knopf" = "נעצר בכפתור העצירה";
+"Gestoppt mit Esc" = "נעצר באמצעות Esc";
 "Unterhaltung bis hierher zurückspulen" = "החזרת השיחה לאחור עד לכאן";
 "Verdichte …" = "דוחס…";
 "Verdichtet · {} ({})" = "נדחס · {} ({})";

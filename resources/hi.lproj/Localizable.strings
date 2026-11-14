@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "फिर भी ओवरराइट करें";
 "Umgehen" = "बायपास";
 "Unterbrochen" = "बाधित";
+"Gestoppt in der Aktivität" = "ऐक्टिविटी में रोका गया";
+"Gestoppt mit dem Stopp-Knopf" = "रोकें बटन से रोका गया";
+"Gestoppt mit Esc" = "Esc से रोका गया";
 "Unterhaltung bis hierher zurückspulen" = "बातचीत को यहाँ तक रिवाइंड करें";
 "Verdichte …" = "कॉम्पैक्ट हो रहा है…";
 "Verdichtet · {} ({})" = "कॉम्पैक्ट किया गया · {} ({})";

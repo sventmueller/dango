@@ -574,8 +574,13 @@ impl AgentTab {
         source.end();
     }
 
-    /// Stops the current turn; background work goes on (E23).
-    pub fn stop_turn(&self) {
+    /// Stops the current turn, as `by` asked; background work goes on (E23). The window's foot says what stopped it.
+    pub fn stop_turn(&self, by: super::Stop) {
+        if self.status() == Status::Idle {
+            return;
+        }
+        ide_ui_common::diag::report("stopping a turn", format!("{by:?}"));
+        self.controller.show_notice(by.notice());
         self.state.borrow().source.interrupt();
     }
 

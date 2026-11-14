@@ -81,8 +81,10 @@ define_class!(
         #[unsafe(method(cancelOperation:))]
         fn cancel_operation(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                if let Some(tab) = super::get(self.ivars().key) {
-                    tab.stop_turn();
+                if let Some(tab) = super::get(self.ivars().key)
+                    && super::stop::stop_key_pressed(self.mtm())
+                {
+                    tab.stop_turn(super::Stop::Key);
                 }
             });
         }

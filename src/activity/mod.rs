@@ -777,7 +777,7 @@ impl Activity {
             }
             Action::StopTurn(key) => {
                 if let Some(tab) = tab(key) {
-                    tab.stop_turn();
+                    tab.stop_turn(crate::agent::Stop::Activity);
                 }
             }
             Action::Reveal(key, sub) => {

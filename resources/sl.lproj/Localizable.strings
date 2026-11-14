@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Vseeno prepiši";
 "Umgehen" = "Obidi";
 "Unterbrochen" = "Prekinjeno";
+"Gestoppt in der Aktivität" = "Ustavljeno v Aktivnosti";
+"Gestoppt mit dem Stopp-Knopf" = "Ustavljeno z gumbom za ustavitev";
+"Gestoppt mit Esc" = "Ustavljeno s tipko Esc";
 "Unterhaltung bis hierher zurückspulen" = "Previj pogovor nazaj do sem";
 "Verdichte …" = "Zgoščevanje …";
 "Verdichtet · {} ({})" = "Zgoščeno · {} ({})";

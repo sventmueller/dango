@@ -37,6 +37,7 @@ mod rewind_actions;
 mod row;
 mod source;
 mod status;
+mod stop;
 pub mod style;
 mod suggest;
 mod tab;
@@ -65,6 +66,7 @@ pub use format::{age, elapsed, iso_time, short_age, time_of_day, tokens};
 pub use host::{Host, install};
 pub use outside::ci_log;
 pub use source::Resume;
+pub use stop::Stop;
 pub use tab::AgentTab;
 pub use ui::{framed, icon, insets, separator};
 

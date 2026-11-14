@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Усе одно перезаписати";
 "Umgehen" = "Обхід";
 "Unterbrochen" = "Перервано";
+"Gestoppt in der Aktivität" = "Зупинено в розділі «Активність»";
+"Gestoppt mit dem Stopp-Knopf" = "Зупинено кнопкою зупинки";
+"Gestoppt mit Esc" = "Зупинено клавішею Esc";
 "Unterhaltung bis hierher zurückspulen" = "Відкотити діалог до цього місця";
 "Verdichte …" = "Стиснення…";
 "Verdichtet · {} ({})" = "Стиснуто · {} ({})";

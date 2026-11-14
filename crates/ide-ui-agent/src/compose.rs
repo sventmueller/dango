@@ -151,8 +151,8 @@ impl AgentTab {
         self.update_suggestions();
     }
 
-    /// Commands of the composer's text view: arrows and Tab steer an open completion list, Esc closes it or stops
-    /// the turn.
+    /// Commands of the composer's text view: arrows and Tab steer an open completion list, Esc closes it or, with
+    /// nothing typed, stops the turn.
     pub fn composer_command(&self, command: Sel) -> bool {
         let open = self.suggestions.is_shown();
         if open && command == sel!(moveUp:) {
@@ -174,8 +174,8 @@ impl AgentTab {
             }
             if open {
                 self.suggestions.hide();
-            } else {
-                self.stop_turn();
+            } else if self.composer.text().is_empty() && super::stop::stop_key_pressed(self.mtm) {
+                self.stop_turn(super::Stop::Key);
             }
             return true;
         }

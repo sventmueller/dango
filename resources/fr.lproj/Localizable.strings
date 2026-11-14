@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Écraser quand même";
 "Umgehen" = "Contourner";
 "Unterbrochen" = "Interrompu";
+"Gestoppt in der Aktivität" = "Arrêté dans Activité";
+"Gestoppt mit dem Stopp-Knopf" = "Arrêté avec le bouton d’arrêt";
+"Gestoppt mit Esc" = "Arrêté avec Échap";
 "Unterhaltung bis hierher zurückspulen" = "Ramener la conversation à ce point";
 "Verdichte …" = "Compactage…";
 "Verdichtet · {} ({})" = "Compacté · {} ({})";

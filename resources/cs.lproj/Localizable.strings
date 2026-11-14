@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Přesto přepsat";
 "Umgehen" = "Obejít";
 "Unterbrochen" = "Přerušeno";
+"Gestoppt in der Aktivität" = "Zastaveno v Aktivitě";
+"Gestoppt mit dem Stopp-Knopf" = "Zastaveno tlačítkem Zastavit";
+"Gestoppt mit Esc" = "Zastaveno klávesou Esc";
 "Unterhaltung bis hierher zurückspulen" = "Přetočit konverzaci zpět sem";
 "Verdichte …" = "Zestručňování…";
 "Verdichtet · {} ({})" = "Zestručněno · {} ({})";

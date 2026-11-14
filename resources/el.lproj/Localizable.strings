@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Αντικατάσταση παρ’ όλα αυτά";
 "Umgehen" = "Παράκαμψη";
 "Unterbrochen" = "Διακόπηκε";
+"Gestoppt in der Aktivität" = "Διακόπηκε στη Δραστηριότητα";
+"Gestoppt mit dem Stopp-Knopf" = "Διακόπηκε με το κουμπί διακοπής";
+"Gestoppt mit Esc" = "Διακόπηκε με Esc";
 "Unterhaltung bis hierher zurückspulen" = "Επιστροφή της συνομιλίας ως εδώ";
 "Verdichte …" = "Συμπύκνωση…";
 "Verdichtet · {} ({})" = "Συμπυκνώθηκε · {} ({})";

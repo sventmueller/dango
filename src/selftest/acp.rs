@@ -354,7 +354,7 @@ fn cancel(root: PathBuf, key: u64) {
         },
         move || {
             if let Some(tab) = tab_of(key) {
-                tab.stop_turn();
+                tab.stop_turn(crate::agent::Stop::Button);
             }
             soon(
                 "the turn stops",

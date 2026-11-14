@@ -52,8 +52,10 @@ impl AgentTab {
         let has_text = !self.composer.text().trim().is_empty() || !self.state.borrow().attachments.is_empty();
         if has_text {
             self.submit();
-        } else if self.status() != Status::Idle {
-            self.stop_turn();
+        } else if self.status() != Status::Idle
+            && !super::stop::too_soon_after_send(self.state.borrow().sent_at, std::time::Instant::now())
+        {
+            self.stop_turn(super::Stop::Button);
         }
     }
 
@@ -94,7 +96,11 @@ impl AgentTab {
         let text = message.text.clone();
         let sent = self.state.borrow().source.send(message);
         match sent {
-            Ok(uuid) => self.state.borrow_mut().sent(uuid.or(own_id), checkpoint),
+            Ok(uuid) => {
+                let mut state = self.state.borrow_mut();
+                state.sent(uuid.or(own_id), checkpoint);
+                state.sent_at = Some(std::time::Instant::now());
+            }
             Err(error) => {
                 ide_ui_common::diag::report("sending to the agent", &error);
                 if self.composer.text().is_empty() {

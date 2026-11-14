@@ -775,6 +775,9 @@
 "Trotzdem überschreiben" = "Korvaa silti";
 "Umgehen" = "Ohita";
 "Unterbrochen" = "Keskeytetty";
+"Gestoppt in der Aktivität" = "Pysäytetty Toiminnassa";
+"Gestoppt mit dem Stopp-Knopf" = "Pysäytetty pysäytyspainikkeella";
+"Gestoppt mit Esc" = "Pysäytetty Esc-näppäimellä";
 "Unterhaltung bis hierher zurückspulen" = "Kelaa keskustelu taaksepäin tähän";
 "Verdichte …" = "Tiivistetään…";
 "Verdichtet · {} ({})" = "Tiivistetty · {} ({})";
