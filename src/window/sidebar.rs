@@ -14,6 +14,10 @@ use super::{
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
+/// How long a panel's page stays in the sidebar after another panel showed, so switching back and forth is cheap and
+/// a move of the sidebar into another window tab later moves only the page that shows.
+const LEAVE_OUT: std::time::Duration = std::time::Duration::from_secs(2);
+
 impl WindowController {
     /// Keeps the width the user gave the sidebar in `tab`.
     pub(super) fn remember_sidebar_width(&self, tab: &TabWindow) {
@@ -36,6 +40,10 @@ impl WindowController {
         } else {
             ACTIVITY_WIDTH
         };
+        // A tab laid out at that width already keeps it, and pinning it again would lay out its window anew.
+        if tab.sidebar_collapsed() == collapsed && (tab.sidebar_width() - width).abs() < 0.5 {
+            return;
+        }
         tab.pin_sidebar(width, collapsed);
         if open {
             // The tab itself, not the one in front then: another may come to the front meanwhile, and the held one
@@ -71,6 +79,14 @@ impl WindowController {
         if let Some(panels) = self.ivars().panels.borrow().as_ref() {
             panels.show(panel);
         }
+        let id = self.id();
+        crate::util::main_after(LEAVE_OUT, move || {
+            if let Some(controller) = crate::host::window(id)
+                && let Some(panels) = controller.ivars().panels.borrow().as_ref()
+            {
+                panels.leave_out_hidden();
+            }
+        });
         if let Some(activity) = self.ivars().activity.borrow().as_ref() {
             activity.select(Some(panel));
         }

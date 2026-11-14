@@ -186,9 +186,18 @@ fn dragged_out(controller: &WindowController, root: &Path) {
     let Some(window) = controller.window() else { return };
     window.moveTabToNewWindow(None);
     let alone = window.tabbedWindows().is_none_or(|tabbed| tabbed.count() == 1);
-    controller.select_tab_by_id(tab_of(controller, root, "a.rs"));
+    let a = tab_of(controller, root, "a.rs");
+    controller.select_tab_by_id(a);
     let pictures = controller.sidebar_pictures();
-    let apart_ok = alone && sidebar_in_front(controller) && pictures.iter().filter(|shown| !**shown).count() == 1;
+    // Only a window on screen beside the one in front needs the picture; the tabs behind the one in front show none.
+    let order = controller.window_tab_ids();
+    let picture_of = |id| {
+        order
+            .iter()
+            .position(|docs| docs.contains(&id))
+            .and_then(|at| pictures.get(at).copied())
+    };
+    let apart_ok = alone && sidebar_in_front(controller) && picture_of(c) == Some(true) && picture_of(a) == Some(false);
     controller.select_tab_by_id(c);
     check(
         "a tab moved to a window of its own keeps a picture of the sidebar and gets the sidebar in front",

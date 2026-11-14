@@ -100,7 +100,6 @@ impl Panels {
             let page = self.page(panel, project);
             page.setTranslatesAutoresizingMaskIntoConstraints(false);
             page.setHidden(true);
-            self.attach(&page);
             pages.push((panel, page));
         }
         *self.pages.borrow_mut() = pages;
@@ -126,7 +125,7 @@ impl Panels {
     }
 
     /// Takes the pages of the panels that do not show out of the panel, so a move of the sidebar into another window
-    /// tab moves only the page that shows; each comes back when its panel shows.
+    /// tab moves only the page that shows; each comes in when its panel shows.
     pub fn leave_out_hidden(&self) {
         let shown = self.shown.get();
         for (panel, page) in self.pages.borrow().iter() {

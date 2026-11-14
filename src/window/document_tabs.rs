@@ -429,7 +429,7 @@ impl WindowController {
             self.remember_sidebar_width(previous);
             self.remember_inspector(previous);
             match self.ivars().sidebar.borrow().as_ref() {
-                Some(view) if previous.window.isVisible() => previous.keep_picture_of(view),
+                Some(view) if stays_on_screen(previous, tab) => previous.keep_picture_of(view),
                 _ => previous.forget_picture(),
             }
             if let Some(panels) = self.ivars().panels.borrow().as_ref() {
@@ -516,4 +516,11 @@ impl WindowController {
             .or_else(|| index.checked_sub(1).and_then(|before| windows.get(before)))
             .and_then(|window| self.tab_of_window(window))
     }
+}
+
+/// Whether the window of `previous` stays on screen once `next` comes to the front: it is visible and not in the tab
+/// group of `next`, whose selected window is the only one of the group on screen.
+fn stays_on_screen(previous: &TabWindow, next: &TabWindow) -> bool {
+    let group = |tab: &TabWindow| tab.window.tabGroup().map(|group| Retained::as_ptr(&group));
+    previous.window.isVisible() && (group(previous).is_none() || group(previous) != group(next))
 }
