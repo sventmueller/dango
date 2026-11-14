@@ -27,9 +27,6 @@ use crate::util::{guarded, label, main_after, ns, set_action};
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
 
-/// How far AppKit's source list sets its disclosure triangles in past the panel's title.
-const OUTDENT: f64 = 6.0;
-
 pub struct PanelIvars {
     id: u64,
     window: u64,
@@ -70,7 +67,7 @@ define_class!(
         fn outline_cell_frame(&self, row: isize) -> NSRect {
             // SAFETY: The superclass's implementation, with this method's signature.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
-            ide_ui_common::panel::outdent(self, frame, OUTDENT, false)
+            ide_ui_common::panel::outdent(self, frame, ide_ui_common::panel::OUTDENT, false)
         }
 
         #[unsafe(method(frameOfCellAtColumn:row:))]
@@ -80,7 +77,7 @@ define_class!(
             if column != 0 {
                 return frame;
             }
-            ide_ui_common::panel::outdent(self, frame, OUTDENT, true)
+            ide_ui_common::panel::outdent(self, frame, ide_ui_common::panel::OUTDENT, true)
         }
     }
 );
@@ -284,11 +281,17 @@ impl TestsPanel {
         let spinner = NSProgressIndicator::new(mtm);
         spinner.setStyle(NSProgressIndicatorStyle::Spinning);
         spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
-        spinner.setDisplayedWhenStopped(false);
+        spinner.setHidden(true);
         let footer = NSStackView::new(mtm);
         footer.setSpacing(ide_ui_common::style::space::S);
         footer.addArrangedSubview(&spinner);
         footer.addArrangedSubview(&status);
+        footer.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+            top: 0.0,
+            left: ide_ui_common::panel::MARGIN,
+            bottom: 0.0,
+            right: ide_ui_common::panel::MARGIN,
+        });
         let empty = crate::window::panels::empty_state(
             mtm,
             "checklist",
@@ -306,6 +309,10 @@ impl TestsPanel {
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         page.addView_inGravity(&empty, NSStackViewGravity::Center);
         page.addView_inGravity(&footer, NSStackViewGravity::Bottom);
+        footer
+            .widthAnchor()
+            .constraintEqualToAnchor(&page.widthAnchor())
+            .setActive(true);
         *self.ivars().table.borrow_mut() = Some(table);
         *self.ivars().scroll.borrow_mut() = Some(scroll.into_super());
         *self.ivars().empty.borrow_mut() = Some(empty.into_super());
@@ -466,6 +473,7 @@ impl TestsPanel {
         }
         let busy = self.ivars().runs.borrow().iter().any(|(_, r)| !r.listing);
         if let Some(spinner) = self.ivars().spinner.borrow().as_ref() {
+            spinner.setHidden(!busy);
             // SAFETY: A nil sender is what AppKit's own callers pass.
             unsafe {
                 if busy {

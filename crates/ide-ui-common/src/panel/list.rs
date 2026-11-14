@@ -4,9 +4,9 @@
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSAccessibility, NSColor, NSImageView, NSLineBreakMode, NSOutlineView, NSScrollView, NSStackView,
-    NSStackViewGravity, NSTableColumn, NSTableColumnResizingOptions, NSTableView, NSTableViewColumnAutoresizingStyle,
-    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSColor, NSFont, NSImageView, NSLineBreakMode, NSOutlineView, NSScrollView, NSStackView,
+    NSStackViewGravity, NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableView,
+    NSTableViewColumnAutoresizingStyle, NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 
@@ -19,12 +19,17 @@ pub const LIST_FRAME: NSRect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(2
 pub const INDENT: f64 = 12.0;
 /// How far a top-level row built as a stack keeps from the list's edges.
 pub const ROW_INSET: f64 = 4.0;
-/// The margins of a panel's page around its list.
+/// How far text and controls of a panel keep from the sidebar's edges: as far as the panel's title.
+pub const MARGIN: f64 = 8.0;
+/// How far AppKit's source list sets its disclosure triangles in past the panel's title, for a list that spans the
+/// panel's width.
+pub const OUTDENT: f64 = 5.5;
+/// The margins of a panel's page; its list spans the width, so its triangles line up with the panel's title.
 pub const PAGE_INSETS: NSEdgeInsets = NSEdgeInsets {
     top: 4.0,
-    left: 8.0,
+    left: 0.0,
     bottom: 6.0,
-    right: 8.0,
+    right: 0.0,
 };
 
 /// A source-list table of one column `id` without a header, named `name` for VoiceOver, in a scroll view.
@@ -76,6 +81,52 @@ fn scroll(mtm: MainThreadMarker, list: &NSView) -> Retained<NSScrollView> {
     scroll.setDrawsBackground(false);
     scroll.setDocumentView(Some(list));
     scroll
+}
+
+/// `view` in a row that keeps [`MARGIN`] from the sidebar's edges, for a panel's page beside its list.
+pub fn padded(mtm: MainThreadMarker, view: &NSView) -> Retained<NSStackView> {
+    let row = NSStackView::new(mtm);
+    row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+    row.setEdgeInsets(NSEdgeInsets {
+        top: 0.0,
+        left: MARGIN,
+        bottom: 0.0,
+        right: MARGIN,
+    });
+    row.addArrangedSubview(view);
+    row
+}
+
+/// A heading of the sidebar, `text` cut at its end: a panel's title, or a section's title in a panel's list.
+pub fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
+    let heading = label(mtm, text);
+    heading.setFont(Some(&NSFont::boldSystemFontOfSize(crate::style::SMALL)));
+    heading.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    heading.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    heading.setContentCompressionResistancePriority_forOrientation(
+        200.0,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    heading
+}
+
+/// The cell of a section's row in a panel's list: its [`heading`] `title`, level with the row's disclosure triangle.
+pub fn section_cell(mtm: MainThreadMarker, title: &str) -> Retained<NSTableCellView> {
+    let cell = NSTableCellView::new(mtm);
+    let text = heading(mtm, title);
+    cell.addSubview(&text);
+    text.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        text.leadingAnchor()
+            .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
+        text.trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
+        text.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ] {
+        constraint.setActive(true);
+    }
+    // Not the cell's text field: the source list would draw it dimmer than the panel's title.
+    cell
 }
 
 /// A panel's page: a vertical stack with the margins of [`PAGE_INSETS`].

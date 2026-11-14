@@ -72,8 +72,10 @@ impl DebugPanel {
         let model = self.read();
         let secondary = NSColor::secondaryLabelColor();
         Some(match key {
-            Key::Section(Section::Sessions) => ui::section(mtm, t("Sitzungen")),
-            Key::Section(Section::Breakpoints) => ui::section(mtm, t("Haltepunkte")),
+            Key::Section(Section::Sessions) => ide_ui_common::panel::section_cell(mtm, t("Sitzungen")).into_super(),
+            Key::Section(Section::Breakpoints) => {
+                ide_ui_common::panel::section_cell(mtm, t("Haltepunkte")).into_super()
+            }
             Key::Empty(Section::Sessions) => ui::note(mtm, t("Keine Debug-Sitzung")),
             Key::Empty(Section::Breakpoints) => {
                 ui::note(mtm, t("Klicke neben eine Zeilennummer, um einen Haltepunkt zu setzen."))
@@ -162,8 +164,8 @@ impl DebugPanel {
         let model = self.read();
         let variables = &model.variables;
         Some(match row {
-            Row::Part(Part::Variables) => ui::section(mtm, t("Variablen")),
-            Row::Part(Part::Watches) => ui::section(mtm, t("Überwachte Ausdrücke")),
+            Row::Part(Part::Variables) => ide_ui_common::panel::section_cell(mtm, t("Variablen")).into_super(),
+            Row::Part(Part::Watches) => ide_ui_common::panel::section_cell(mtm, t("Überwachte Ausdrücke")).into_super(),
             Row::Empty(Part::Variables) => {
                 let text = if variables.frame.is_some() {
                     t("Die Variablen werden gelesen …")

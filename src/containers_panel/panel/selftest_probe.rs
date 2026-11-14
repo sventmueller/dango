@@ -58,12 +58,11 @@ impl ContainersPanel {
 
     /// Selects the row labelled `label`, for the self-test.
     pub fn select(&self, label: &str) -> bool {
-        let index = self.ivars().rows.borrow().iter().position(|r| r.label == label);
-        match (index, self.ivars().table.borrow().as_ref()) {
-            (Some(index), Some(table)) => {
-                let set = objc2_foundation::NSIndexSet::indexSetWithIndex(index);
-                table.selectRowIndexes_byExtendingSelection(&set, false);
-                true
+        let row = self.ivars().rows.borrow().iter().find(|r| r.label == label).cloned();
+        match (row, self.ivars().table.borrow().as_ref()) {
+            (Some(row), Some(table)) => {
+                self.select_row(table, Some(&row));
+                table.selectedRow() >= 0
             }
             _ => false,
         }

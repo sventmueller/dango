@@ -4,6 +4,7 @@
 //! menu, deleting only after a sheet whose destructive button is never the default.
 
 use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -16,11 +17,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSColor, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSPopUpButton, NSStackView, NSStackViewGravity,
-    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSColor, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
+    NSOutlineViewDelegate, NSPopUpButton, NSStackView, NSStackViewGravity, NSTableColumn, NSTextField, NSView,
 };
-use objc2_foundation::NSObjectProtocol;
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::docker;
@@ -54,10 +54,19 @@ pub struct PanelIvars {
     context: RefCell<String>,
     contexts: RefCell<Vec<String>>,
     pub(super) board: RefCell<Board>,
+    /// Every row of the tree, a section or project before its rows.
     rows: RefCell<Vec<Row>>,
+    /// The object that stands for each row in the outline, by its node, the same one for as long as the row shows.
+    items: RefCell<HashMap<String, Retained<NSString>>>,
+    /// The sections and projects the user closed; all others show open.
+    closed: RefCell<HashSet<String>>,
+    /// Set while the panel opens rows itself, so that does not count as the user's choice.
+    unfolding: Cell<bool>,
     pub(super) reach: RefCell<Reach>,
-    table: RefCell<Option<Retained<NSTableView>>>,
+    table: RefCell<Option<Retained<NSOutlineView>>>,
     note: RefCell<Option<Retained<NSTextField>>>,
+    /// The row that keeps the note off the sidebar's edges, hidden while there is no note.
+    note_row: RefCell<Option<Retained<NSStackView>>>,
     picker: RefCell<Option<Retained<NSPopUpButton>>>,
     events: Cell<Option<ide_process::ProcessId>>,
     /// Counts the starts of `docker events`, so the end of one stopped meanwhile is told from the end of the one now.
@@ -73,6 +82,49 @@ pub struct PanelIvars {
 }
 
 define_class!(
+    // SAFETY: NSOutlineView has no subclassing requirements and `ContainersOutlineView` does not implement Drop.
+    /// The containers' outline, its disclosure triangles where the panel's title begins as in the other panels.
+    #[unsafe(super(NSOutlineView))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDEContainersOutlineView"]
+    struct ContainersOutlineView;
+
+    unsafe impl NSObjectProtocol for ContainersOutlineView {}
+
+    impl ContainersOutlineView {
+        /// A row below a section has its triangle where the section has its own.
+        #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn outline_cell_frame(&self, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
+            self.toward_title(frame, row, false)
+        }
+
+        /// The rows moved along with the triangles, so a section's rows begin where its title does.
+        #[unsafe(method(frameOfCellAtColumn:row:))]
+        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
+            if column != 0 {
+                return frame;
+            }
+            self.toward_title(frame, row, true)
+        }
+    }
+);
+
+impl ContainersOutlineView {
+    fn toward_title(&self, frame: NSRect, row: isize, cell: bool) -> NSRect {
+        let frame = ide_ui_common::panel::outdent(self, frame, ide_ui_common::panel::OUTDENT, cell);
+        if self.levelForRow(row) > 0 {
+            ide_ui_common::panel::outdent(self, frame, self.indentationPerLevel(), cell)
+        } else {
+            frame
+        }
+    }
+}
+
+define_class!(
     // SAFETY: NSObject has no subclassing requirements and `ContainersPanel` does not implement Drop.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
@@ -84,28 +136,46 @@ define_class!(
 
     unsafe impl NSControlTextEditingDelegate for ContainersPanel {}
 
-    unsafe impl NSTableViewDataSource for ContainersPanel {
-        #[unsafe(method(numberOfRowsInTableView:))]
-        fn number_of_rows(&self, _table: &NSTableView) -> isize {
-            guarded(0, || isize::try_from(self.ivars().rows.borrow().len()).unwrap_or(0))
+    unsafe impl NSOutlineViewDataSource for ContainersPanel {
+        #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
+        fn children_count(&self, _view: &NSOutlineView, item: Option<&AnyObject>) -> isize {
+            guarded(0, || isize::try_from(self.children(item).len()).unwrap_or(0))
+        }
+
+        #[unsafe(method_id(outlineView:child:ofItem:))]
+        fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
+            let found = guarded(None, || {
+                let at = *self.children(item).get(usize::try_from(index).ok()?)?;
+                let row = self.ivars().rows.borrow().get(at)?.clone();
+                Some(self.item_for(&row))
+            });
+            found.map_or_else(|| ns("").into(), Into::into)
+        }
+
+        #[unsafe(method(outlineView:isItemExpandable:))]
+        fn expandable(&self, _view: &NSOutlineView, item: &AnyObject) -> bool {
+            guarded(false, || !self.children(Some(item)).is_empty())
         }
     }
 
-    unsafe impl NSTableViewDelegate for ContainersPanel {
-        #[unsafe(method_id(tableView:viewForTableColumn:row:))]
-        fn view_for(&self, _table: &NSTableView, _column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
+    unsafe impl NSOutlineViewDelegate for ContainersPanel {
+        #[unsafe(method_id(outlineView:viewForTableColumn:item:))]
+        fn view_for(&self, _view: &NSOutlineView, _column: Option<&NSTableColumn>, item: &AnyObject) -> Option<Retained<NSView>> {
             guarded(None, || {
-                let rows = self.ivars().rows.borrow();
-                Some(row_view(self.mtm(), rows.get(usize::try_from(row).ok()?)?))
+                let at = self.index_of(item)?;
+                let row = self.ivars().rows.borrow().get(at)?.clone();
+                Some(row_view(self.mtm(), &row))
             })
         }
 
-        #[unsafe(method(tableView:isGroupRow:))]
-        fn is_group_row(&self, _table: &NSTableView, row: isize) -> bool {
-            guarded(false, || {
-                let rows = self.ivars().rows.borrow();
-                usize::try_from(row).ok().and_then(|r| rows.get(r)).is_some_and(|r| r.level == 0)
-            })
+        #[unsafe(method(outlineViewItemDidCollapse:))]
+        fn did_collapse(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, false));
+        }
+
+        #[unsafe(method(outlineViewItemDidExpand:))]
+        fn did_expand(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, true));
         }
     }
 
@@ -150,9 +220,13 @@ impl ContainersPanel {
             contexts: RefCell::new(Vec::new()),
             board: RefCell::new(Board::default()),
             rows: RefCell::new(Vec::new()),
+            items: RefCell::new(HashMap::new()),
+            closed: RefCell::new(HashSet::new()),
+            unfolding: Cell::new(false),
             reach: RefCell::new(Reach::Unknown),
             table: RefCell::new(None),
             note: RefCell::new(None),
+            note_row: RefCell::new(None),
             picker: RefCell::new(None),
             events: Cell::new(None),
             watches: Cell::new(0),
@@ -202,7 +276,11 @@ impl ContainersPanel {
         );
         header.addArrangedSubview(&picker);
         header.addArrangedSubview(&refresh);
-        let (scroll, table) = ide_ui_common::panel::source_list_table(mtm, "containers", t("Container"));
+        // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
+        let table: Retained<ContainersOutlineView> =
+            unsafe { msg_send![ContainersOutlineView::alloc(mtm), initWithFrame: ide_ui_common::panel::LIST_FRAME] };
+        let table: Retained<NSOutlineView> = table.into_super();
+        let scroll = ide_ui_common::panel::source_list_outline(mtm, &table, "containers", t("Container"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
             table.setDataSource(Some(ProtocolObject::from_ref(self)));
@@ -219,10 +297,12 @@ impl ContainersPanel {
             objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
         );
         let page = ide_ui_common::panel::panel_page(mtm);
-        page.addView_inGravity(&note, NSStackViewGravity::Top);
+        let note_row = ide_ui_common::panel::padded(mtm, &note);
+        page.addView_inGravity(&note_row, NSStackViewGravity::Top);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         *self.ivars().table.borrow_mut() = Some(table);
         *self.ivars().note.borrow_mut() = Some(note);
+        *self.ivars().note_row.borrow_mut() = Some(note_row);
         *self.ivars().picker.borrow_mut() = Some(picker);
         (Retained::into_super(page), header)
     }
@@ -402,7 +482,9 @@ impl ContainersPanel {
         };
         if let Some(label) = self.ivars().note.borrow().as_ref() {
             label.setStringValue(&ns(&note));
-            label.setHidden(note.is_empty());
+        }
+        if let Some(row) = self.ivars().note_row.borrow().as_ref() {
+            row.setHidden(note.is_empty());
         }
         if let Some(picker) = self.ivars().picker.borrow().as_ref() {
             picker.removeAllItems();
@@ -412,26 +494,111 @@ impl ContainersPanel {
             picker.selectItemWithTitle(&ns(&self.context()));
             picker.setHidden(self.ivars().contexts.borrow().is_empty());
         }
-        if let Some(table) = self.ivars().table.borrow().as_ref() {
-            table.reloadData();
-            let again = selected.and_then(|node| self.ivars().rows.borrow().iter().position(|r| r.node == node));
-            match again {
-                Some(index) => {
-                    table.selectRowIndexes_byExtendingSelection(
-                        &objc2_foundation::NSIndexSet::indexSetWithIndex(index),
-                        false,
-                    );
-                }
-                None => table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false),
+        let Some(table) = self.ivars().table.borrow().clone() else {
+            return;
+        };
+        table.reloadData();
+        self.unfold(&table);
+        let again = selected.and_then(|node| self.ivars().rows.borrow().iter().find(|r| r.node == node).cloned());
+        self.select_row(&table, again.as_ref());
+    }
+
+    /// Opens every section and project the user did not close, and forgets the items of rows that went away.
+    fn unfold(&self, table: &NSOutlineView) {
+        let rows = self.ivars().rows.borrow().clone();
+        self.ivars().unfolding.set(true);
+        for row in &rows {
+            if !self.ivars().closed.borrow().contains(&key_of(row)) {
+                // SAFETY: The item is one the data source handed the outline for this row.
+                unsafe { table.expandItem(Some(&self.item_for(row))) };
             }
         }
+        self.ivars().unfolding.set(false);
+        let keys: HashSet<String> = rows.iter().map(key_of).collect();
+        self.ivars().items.borrow_mut().retain(|key, _| keys.contains(key));
+    }
+
+    /// Selects the outline's row of `row`, or none.
+    fn select_row(&self, table: &NSOutlineView, row: Option<&Row>) {
+        // SAFETY: The item is one the data source handed the outline for this row.
+        let index = row.map_or(-1, |row| unsafe { table.rowForItem(Some(&self.item_for(row))) });
+        match usize::try_from(index) {
+            Ok(index) => {
+                table.selectRowIndexes_byExtendingSelection(
+                    &objc2_foundation::NSIndexSet::indexSetWithIndex(index),
+                    false,
+                );
+            }
+            Err(_) => table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false),
+        }
+    }
+
+    /// The rows one level under the row `item` stands for, or the sections for none, as indices into `rows`.
+    fn children(&self, item: Option<&AnyObject>) -> Vec<usize> {
+        let rows = self.ivars().rows.borrow();
+        let Some(item) = item else {
+            return (0..rows.len()).filter(|&i| rows[i].level == 0).collect();
+        };
+        let Some(parent) = self.index_of(item) else {
+            return Vec::new();
+        };
+        let level = rows[parent].level;
+        rows.iter()
+            .enumerate()
+            .skip(parent + 1)
+            .take_while(|(_, row)| row.level > level)
+            .filter(|(_, row)| row.level == level + 1)
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// The index in `rows` of the row `item` stands for.
+    fn index_of(&self, item: &AnyObject) -> Option<usize> {
+        let key = item.downcast_ref::<NSString>()?.to_string();
+        self.ivars().rows.borrow().iter().position(|row| key_of(row) == key)
+    }
+
+    fn item_for(&self, row: &Row) -> Retained<NSString> {
+        self.ivars()
+            .items
+            .borrow_mut()
+            .entry(key_of(row))
+            .or_insert_with_key(|key| ns(key))
+            .clone()
+    }
+
+    /// Notes that the user opened or closed a section or project, which stays so when Docker is read again.
+    fn note_expansion(&self, notification: &NSNotification, open: bool) {
+        if self.ivars().unfolding.get() {
+            return;
+        }
+        let Some(at) = notification
+            .userInfo()
+            .and_then(|info| info.objectForKey(&ns("NSObject")))
+            .and_then(|item| self.index_of(&item))
+        else {
+            return;
+        };
+        let key = key_of(&self.ivars().rows.borrow()[at]);
+        let mut closed = self.ivars().closed.borrow_mut();
+        if open {
+            closed.remove(&key);
+        } else {
+            closed.insert(key);
+        }
+    }
+
+    /// The row at `row` of the outline.
+    fn row_at(&self, table: &NSOutlineView, row: isize) -> Option<Row> {
+        let item = table.itemAtRow(row)?;
+        let at = self.index_of(&item)?;
+        self.ivars().rows.borrow().get(at).cloned()
     }
 
     /// What the selected row stands for, which stays selected when the rows are read again and shift.
     fn selected_node(&self) -> Option<Node> {
         let table = self.ivars().table.borrow().clone()?;
-        let row = usize::try_from(table.selectedRow()).ok()?;
-        self.ivars().rows.borrow().get(row).map(|r| r.node.clone())
+        self.row_at(&table, table.selectedRow()).map(|r| r.node)
     }
 
     /// The row the menu or the selection is about.
@@ -439,7 +606,7 @@ impl ContainersPanel {
         let table = self.ivars().table.borrow().clone()?;
         let row = table.clickedRow();
         let row = if row < 0 { table.selectedRow() } else { row };
-        self.ivars().rows.borrow().get(usize::try_from(row).ok()?).cloned()
+        self.row_at(&table, row)
     }
 
     /// Runs `command` and reads Docker again after it; an error shows in an alert.
@@ -586,15 +753,14 @@ fn section_title(section: Section) -> &'static str {
     }
 }
 
+/// What stands for `row` in the outline: its node, which stays when Docker is read again.
+fn key_of(row: &Row) -> String {
+    format!("{:?}", row.node)
+}
+
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     if let Node::Section(section) = &row.node {
-        let stack = NSStackView::new(mtm);
-        stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        stack.setSpacing(ide_ui_common::style::space::S);
-        let title = label(mtm, section_title(*section));
-        title.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        stack.addView_inGravity(&title, NSStackViewGravity::Leading);
-        return stack.into_super();
+        return ide_ui_common::panel::section_cell(mtm, section_title(*section)).into_super();
     }
     let (name, description, color) = look_symbol(row);
     let spoken = if description.is_empty() {
@@ -602,8 +768,7 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     } else {
         format!("{}, {description}, {}", row.label, row.detail)
     };
-    let (stack, text) =
-        ide_ui_common::panel::icon_row(mtm, (name, &description, &color), &row.label, row.level, &spoken);
+    let (stack, text) = ide_ui_common::panel::icon_row(mtm, (name, &description, &color), &row.label, 0, &spoken);
     text.setContentCompressionResistancePriority_forOrientation(
         objc2_app_kit::NSLayoutPriorityDefaultLow,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,

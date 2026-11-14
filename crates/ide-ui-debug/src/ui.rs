@@ -6,8 +6,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSControl, NSEvent, NSFont, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSMenu, NSOutlineView, NSPopUpButton, NSScrollView, NSStackView, NSStackViewDistribution, NSTextField,
+    NSAccessibility, NSButton, NSColor, NSControl, NSEvent, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
+    NSOutlineView, NSPopUpButton, NSScrollView, NSStackView, NSStackViewDistribution, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
@@ -313,9 +313,7 @@ impl InspectorUi {
         // The list draws no grey of its own, so the inspector reads as one surface below the window's tab bar.
         outline.setBackgroundColor(&NSColor::clearColor());
         list.setDrawsBackground(false);
-        let title = label(mtm, t("Inspektor"));
-        title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::SMALL)));
-        title.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        let title = ide_ui_common::panel::heading(mtm, t("Inspektor"));
         // Nil target: the window controller in the responder chain answers it, as the menu item does.
         let close = ide_ui_common::panel::header_button(mtm, "xmark", t("Schließen"), None, sel!(ideToggleInspector:));
         page.addSubview(&title);
@@ -610,29 +608,6 @@ pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     }
     // SAFETY: The cell holds its text field weakly; the field is its subview and lives as long.
     unsafe { cell.setTextField(Some(&field)) };
-    cell.into_super()
-}
-
-/// The title of a section row, level with the row's disclosure triangle.
-pub fn section(mtm: MainThreadMarker, title: &str) -> Retained<NSView> {
-    let cell = objc2_app_kit::NSTableCellView::new(mtm);
-    let text = label(mtm, title);
-    text.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::SMALL)));
-    text.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
-    text.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
-    cell.addSubview(&text);
-    text.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        text.leadingAnchor()
-            .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
-        text.trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
-        text.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
-    // Not the cell's text field: the source list would draw it dimmer than the panel's title.
     cell.into_super()
 }
 

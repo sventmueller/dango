@@ -524,13 +524,7 @@ pub(super) fn mark_color(mark: Mark) -> Retained<NSColor> {
 
 fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count: usize) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
-    let title = label(mtm, section.title());
-    title.setFont(Some(&NSFont::systemFontOfSize_weight(
-        NSFont::systemFontSize(),
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightSemibold },
-    )));
-    title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    let title = ide_ui_common::panel::heading(mtm, section.title());
     title.setContentCompressionResistancePriority_forOrientation(
         100.0,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
@@ -593,8 +587,7 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
         _ => tf("{}, {} Dateien", &[section.title(), &count.to_string()]),
     };
     cell.setAccessibilityLabel(Some(&ns(&files)));
-    // SAFETY: The label is a subview of the cell, which keeps it.
-    unsafe { cell.setTextField(Some(&title)) };
+    // Not the cell's text field: the source list would draw it dimmer than the panel's title.
     cell.into_super()
 }
 

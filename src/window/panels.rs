@@ -7,8 +7,8 @@ use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{
-    NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSLineBreakMode, NSStackView,
-    NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLineBreakMode, NSStackView, NSTextAlignment, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use splat_i18n::{t, tf};
 
@@ -41,11 +41,8 @@ pub struct Panels {
 impl Panels {
     pub fn new(mtm: MainThreadMarker, _target: &WindowController, project: Option<&Path>) -> Panels {
         let view = NSView::new(mtm);
-        let header = label(mtm, "");
-        header.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::SMALL)));
-        header.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        let header = ide_ui_common::panel::heading(mtm, "");
         header.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-        header.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
         let accessory = NSStackView::new(mtm);
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         view.addSubview(&header);
