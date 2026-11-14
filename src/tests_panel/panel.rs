@@ -14,10 +14,11 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSStackView,
-    NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
+    NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView,
+    NSOutlineViewDataSource, NSOutlineViewDelegate, NSStackView, NSStackViewGravity, NSTableColumn, NSTextField,
+    NSView,
 };
-use objc2_foundation::NSObjectProtocol;
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
@@ -33,8 +34,13 @@ pub struct PanelIvars {
     pub(super) board: RefCell<Board>,
     tools: RefCell<Vec<Tool>>,
     runs: RefCell<Vec<(Tool, Running)>>,
+    /// Every row of the tree, packages before their files and tests.
     rows: RefCell<Vec<Row>>,
-    table: RefCell<Option<Retained<NSTableView>>>,
+    /// The object that stands for each row in the outline, by its node, the same one for as long as the panel lives.
+    items: RefCell<std::collections::HashMap<String, Retained<NSString>>>,
+    /// Set while the panel opens rows itself, so that does not count as the user's choice.
+    unfolding: Cell<bool>,
+    table: RefCell<Option<Retained<NSOutlineView>>>,
     status: RefCell<Option<Retained<NSTextField>>>,
     failed: RefCell<Option<Retained<NSButton>>>,
     polling: Cell<bool>,
@@ -54,21 +60,46 @@ define_class!(
 
     unsafe impl NSControlTextEditingDelegate for TestsPanel {}
 
-    unsafe impl NSTableViewDataSource for TestsPanel {
-        #[unsafe(method(numberOfRowsInTableView:))]
-        fn number_of_rows(&self, _table: &NSTableView) -> isize {
-            guarded(0, || isize::try_from(self.ivars().rows.borrow().len()).unwrap_or(0))
+    unsafe impl NSOutlineViewDataSource for TestsPanel {
+        #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
+        fn children_count(&self, _view: &NSOutlineView, item: Option<&AnyObject>) -> isize {
+            guarded(0, || isize::try_from(self.children(item).len()).unwrap_or(0))
+        }
+
+        #[unsafe(method_id(outlineView:child:ofItem:))]
+        fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
+            let found = guarded(None, || {
+                let at = *self.children(item).get(usize::try_from(index).ok()?)?;
+                let row = self.ivars().rows.borrow().get(at)?.clone();
+                Some(self.item_for(&row))
+            });
+            found.map_or_else(|| ns("").into(), Into::into)
+        }
+
+        #[unsafe(method(outlineView:isItemExpandable:))]
+        fn expandable(&self, _view: &NSOutlineView, item: &AnyObject) -> bool {
+            guarded(false, || !self.children(Some(item)).is_empty())
         }
     }
 
-    unsafe impl NSTableViewDelegate for TestsPanel {
-        #[unsafe(method_id(tableView:viewForTableColumn:row:))]
-        fn view_for(&self, _table: &NSTableView, _column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
+    unsafe impl NSOutlineViewDelegate for TestsPanel {
+        #[unsafe(method_id(outlineView:viewForTableColumn:item:))]
+        fn view_for(&self, _view: &NSOutlineView, _column: Option<&NSTableColumn>, item: &AnyObject) -> Option<Retained<NSView>> {
             guarded(None, || {
-                let rows = self.ivars().rows.borrow();
-                let row = rows.get(usize::try_from(row).ok()?)?;
-                Some(row_view(self.mtm(), row))
+                let at = self.index_of(item)?;
+                let row = self.ivars().rows.borrow().get(at)?.clone();
+                Some(row_view(self.mtm(), &row))
             })
+        }
+
+        #[unsafe(method(outlineViewItemDidCollapse:))]
+        fn did_collapse(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, false));
+        }
+
+        #[unsafe(method(outlineViewItemDidExpand:))]
+        fn did_expand(&self, notification: &NSNotification) {
+            guarded((), || self.note_expansion(notification, true));
         }
     }
 
@@ -143,6 +174,8 @@ impl TestsPanel {
             tools: RefCell::new(Vec::new()),
             runs: RefCell::new(Vec::new()),
             rows: RefCell::new(Vec::new()),
+            items: RefCell::new(std::collections::HashMap::new()),
+            unfolding: Cell::new(false),
             table: RefCell::new(None),
             status: RefCell::new(None),
             failed: RefCell::new(None),
@@ -184,7 +217,8 @@ impl TestsPanel {
         for button in [&run, &find, &failed, &stop] {
             header.addArrangedSubview(button);
         }
-        let (scroll, table) = ide_ui_common::panel::source_list_table(mtm, "tests", t("Tests"));
+        let table = NSOutlineView::new(mtm);
+        let scroll = ide_ui_common::panel::source_list_outline(mtm, &table, "tests", t("Tests"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
             table.setDataSource(Some(ProtocolObject::from_ref(self)));
@@ -350,9 +384,67 @@ impl TestsPanel {
     pub fn show(&self) {
         let rows = self.ivars().board.borrow().rows();
         *self.ivars().rows.borrow_mut() = rows;
-        if let Some(table) = self.ivars().table.borrow().as_ref() {
-            table.reloadData();
+        let Some(table) = self.ivars().table.borrow().clone() else {
+            return;
+        };
+        table.reloadData();
+        self.ivars().unfolding.set(true);
+        let rows = self.ivars().rows.borrow().clone();
+        for row in rows.iter().filter(|r| self.ivars().board.borrow().is_open(&r.node)) {
+            // SAFETY: The item is one the data source handed the outline for this row.
+            unsafe { table.expandItem(Some(&self.item_for(row))) };
         }
+        self.ivars().unfolding.set(false);
+    }
+
+    /// The rows one level under the row `item` stands for, or the packages for none, as indices into `rows`.
+    fn children(&self, item: Option<&AnyObject>) -> Vec<usize> {
+        let rows = self.ivars().rows.borrow();
+        let Some(item) = item else {
+            return (0..rows.len()).filter(|&i| rows[i].level == 0).collect();
+        };
+        let Some(parent) = self.index_of(item) else {
+            return Vec::new();
+        };
+        let level = rows[parent].level;
+        rows.iter()
+            .enumerate()
+            .skip(parent + 1)
+            .take_while(|(_, row)| row.level > level)
+            .filter(|(_, row)| row.level == level + 1)
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// The index in `rows` of the row `item` stands for.
+    fn index_of(&self, item: &AnyObject) -> Option<usize> {
+        let key = item.downcast_ref::<NSString>()?.to_string();
+        self.ivars().rows.borrow().iter().position(|row| key_of(row) == key)
+    }
+
+    fn item_for(&self, row: &Row) -> Retained<NSString> {
+        self.ivars()
+            .items
+            .borrow_mut()
+            .entry(key_of(row))
+            .or_insert_with_key(|key| ns(key))
+            .clone()
+    }
+
+    /// Notes that the user opened or closed a package or file, which stays so when the tree is built again.
+    fn note_expansion(&self, notification: &NSNotification, open: bool) {
+        if self.ivars().unfolding.get() {
+            return;
+        }
+        let Some(at) = notification
+            .userInfo()
+            .and_then(|info| info.objectForKey(&ns("NSObject")))
+            .and_then(|item| self.index_of(&item))
+        else {
+            return;
+        };
+        let node = self.ivars().rows.borrow()[at].node.clone();
+        self.ivars().board.borrow_mut().set_open(node, open);
     }
 
     fn say(&self, text: &str) {
@@ -365,7 +457,9 @@ impl TestsPanel {
         let table = self.ivars().table.borrow().clone()?;
         let row = table.clickedRow();
         let row = if row < 0 { table.selectedRow() } else { row };
-        self.ivars().rows.borrow().get(usize::try_from(row).ok()?).cloned()
+        let item = table.itemAtRow(row)?;
+        let at = self.index_of(&item)?;
+        self.ivars().rows.borrow().get(at).cloned()
     }
 
     fn on_row(&self, _sender: Option<&AnyObject>, debug: bool) {
@@ -510,10 +604,16 @@ pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSCol
     }
 }
 
+/// What stands for `row` in the outline: its node, which stays when the tree is built again.
+fn key_of(row: &Row) -> String {
+    format!("{:?}", row.node)
+}
+
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     let (name, description, color) = state_symbol(row.state);
     let spoken = format!("{}, {description}", row.label);
-    let (view, _) = ide_ui_common::panel::icon_row(mtm, (name, description, &color), &row.label, row.level, &spoken);
+    // The outline indents by level itself.
+    let (view, _) = ide_ui_common::panel::icon_row(mtm, (name, description, &color), &row.label, 0, &spoken);
     view.into_super()
 }
 

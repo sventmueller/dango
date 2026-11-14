@@ -23,7 +23,7 @@ pub struct Entry {
 }
 
 /// What a row of the tree is.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     /// A package with its tool.
     Package(Tool, String),
@@ -52,6 +52,8 @@ pub struct Board {
     entries: Vec<Entry>,
     /// Only failed tests show.
     pub failed_only: bool,
+    /// The packages and files shown open; all others are closed.
+    pub open: std::collections::HashSet<Node>,
     /// The last run, for running it again.
     pub last_run: Option<(Tool, Scope)>,
 }
@@ -221,6 +223,20 @@ impl Board {
             }
         }
         rows
+    }
+
+    /// Opens the package or file `node`, or closes it.
+    pub fn set_open(&mut self, node: Node, open: bool) {
+        if open {
+            self.open.insert(node);
+        } else {
+            self.open.remove(&node);
+        }
+    }
+
+    /// Whether the package or file `node` shows its rows.
+    pub fn is_open(&self, node: &Node) -> bool {
+        self.failed_only || self.open.contains(node)
     }
 
     /// The tests whose source is in `path`, by line from 1.
