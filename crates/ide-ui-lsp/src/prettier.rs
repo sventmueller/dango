@@ -2,6 +2,7 @@
 //! shell's environment, only in trusted folders since Prettier loads plugins from the project, and applied only to
 //! the revision it was asked for, as one undo step.
 
+use crate::EditorSerial;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -63,7 +64,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>>
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let text = view.document().text().to_string();
-    let id = super::new_serial();
+    let id = super::next_id();
     crate::host::state().formatting.wait(serial, id, then);
     let spawned = ide_ui_common::util::spawn("prettier", move || {
         let env = ide_ui_common::window::environment(Duration::from_secs(10));
@@ -130,7 +131,7 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
 
 /// Applies what Prettier answered to the editor `serial`, if its text is still the one of `revision`, then runs what
 /// waited for the formatting.
-fn finished(serial: u64, id: u64, revision: u64, outcome: Outcome) {
+fn finished(serial: EditorSerial, id: u64, revision: u64, outcome: Outcome) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };

@@ -33,7 +33,7 @@ const MAX_WIDTH: f64 = 640.0;
 struct Help {
     panel: Retained<NSPanel>,
     field: Retained<NSTextField>,
-    view: Cell<Option<u64>>,
+    view: Cell<Option<crate::EditorSerial>>,
     shown: RefCell<Option<SignatureHelp>>,
     /// The signature shown, which ↑ and ↓ change.
     active: Cell<usize>,

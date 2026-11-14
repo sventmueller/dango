@@ -77,7 +77,7 @@ pub fn all_editors() -> Vec<Retained<EditorTextView>> {
 }
 
 /// The open editor with `serial`, the number that other threads hold instead of the view.
-pub fn find_editor(serial: u64) -> Option<Retained<EditorTextView>> {
+pub fn find_editor(serial: ide_ui_lsp::EditorSerial) -> Option<Retained<EditorTextView>> {
     open_editors().into_iter().find(|v| v.ivars().serial == serial)
 }
 

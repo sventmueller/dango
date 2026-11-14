@@ -33,7 +33,7 @@ impl Deref for Held {
 }
 
 impl Editor for EditorTextView {
-    fn serial(&self) -> u64 {
+    fn serial(&self) -> ide_ui_lsp::EditorSerial {
         self.ivars().serial
     }
 
@@ -159,7 +159,7 @@ fn inset(hint: Hint) -> Inset {
 }
 
 impl Editor for Held {
-    fn serial(&self) -> u64 {
+    fn serial(&self) -> ide_ui_lsp::EditorSerial {
         Editor::serial(&*self.0)
     }
 

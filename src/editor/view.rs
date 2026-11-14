@@ -38,7 +38,7 @@ pub struct ViewIvars {
     /// Its language server's diagnostics, colours, popovers and status.
     pub(crate) lsp: RefCell<ide_ui_lsp::ViewState>,
     /// Tells editors apart in callbacks from other threads, which cannot hold a view.
-    pub(crate) serial: u64,
+    pub(crate) serial: ide_ui_lsp::EditorSerial,
     /// Names the copy of the unsaved text against a crash, the one a restored view came from.
     pub(super) recovery: RecoveryId,
     /// Where the text differs from its file's last commit.

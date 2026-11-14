@@ -3,6 +3,7 @@
 //! and the bulb list them as a menu at the cursor, the preferred first. Choosing one applies its edit through `apply`,
 //! bound to the revision it was made for (R21), and runs its command on the server.
 
+use crate::EditorSerial;
 use std::cell::RefCell;
 use std::ops::Range;
 use std::time::Duration;
@@ -81,7 +82,7 @@ pub struct State {
 
 /// A menu of actions on screen, with what its items stand for.
 struct Shown {
-    serial: u64,
+    serial: EditorSerial,
     revision: u64,
     actions: Vec<CodeActionOrCommand>,
     origins: Vec<u64>,
@@ -131,7 +132,7 @@ define_class!(
                 let serial = sender
                     .and_then(|s| s.downcast_ref::<NSButton>())
                     .map_or(0, |button| button.tag());
-                if let Some(view) = u64::try_from(serial).ok().and_then(editor::find_editor) {
+                if let Some(view) = u64::try_from(serial).ok().map(crate::EditorSerial).and_then(editor::find_editor) {
                     open(&*view, Kind::Fixes);
                 }
             });
@@ -200,7 +201,7 @@ pub fn moved(view: &dyn Editor) {
 
 /// The timer of the editor `serial` fired: it asks for the fixes of the cursor's place once the cursor rested, and
 /// waits on while it still moves.
-fn rested(serial: u64) {
+fn rested(serial: EditorSerial) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };
@@ -307,7 +308,7 @@ fn request(view: &dyn Editor, kind: Kind, show: bool) {
 
 /// One server's answer to a question of `request`; the last one shows them all.
 fn arrived(
-    serial: u64,
+    serial: EditorSerial,
     asked: u64,
     revision: u64,
     (kind, show, line, range): (Kind, bool, usize, Range<usize>),
@@ -638,7 +639,7 @@ fn make_bulb(view: &dyn Editor) -> Retained<NSButton> {
     );
     ide_ui_common::util::set_label(&bulb, Some(label));
     bulb.setContentTintColor(Some(&NSColor::systemYellowColor()));
-    bulb.setTag(isize::try_from(view.lsp().borrow().serial).unwrap_or(0));
+    bulb.setTag(isize::try_from(view.lsp().borrow().serial.0).unwrap_or(0));
     bulb
 }
 

@@ -178,7 +178,7 @@ fn data(view: &EditorTextView) -> Option<Rc<Loaded>> {
 }
 
 /// Reads the blame of `path` at `head` on a thread of its own and hands it to the editor `serial`.
-fn read(serial: u64, path: PathBuf, head: String) {
+fn read(serial: ide_ui_lsp::EditorSerial, path: PathBuf, head: String) {
     let job = move || {
         ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
         let loaded = blame_of(&path, &head);
@@ -225,7 +225,7 @@ fn blame_of(path: &Path, head: &str) -> Result<Loaded, BlameError> {
     })
 }
 
-fn arrived(serial: u64, path: PathBuf, head: String, loaded: Result<Loaded, BlameError>) {
+fn arrived(serial: ide_ui_lsp::EditorSerial, path: PathBuf, head: String, loaded: Result<Loaded, BlameError>) {
     let loaded = match loaded {
         Ok(loaded) => Rc::new(loaded),
         Err(error) => {

@@ -281,7 +281,7 @@ pub fn request(view: &EditorTextView) {
 
 /// The secrets check of a request of the editor `serial` said `verdict`: a missing gitleaks or a failed check shows in
 /// the status bar, a finding pauses the file there.
-fn checked(serial: u64, verdict: &guard::Verdict) {
+fn checked(serial: ide_ui_lsp::EditorSerial, verdict: &guard::Verdict) {
     let Some(view) = super::find_editor(serial) else { return };
     let warning = match verdict {
         guard::Verdict::NotInstalled if !crate::context::app().predictions().told_missing.replace(true) => Some(tf(
@@ -298,7 +298,7 @@ fn checked(serial: u64, verdict: &guard::Verdict) {
 }
 
 fn arrived(
-    serial: u64,
+    serial: ide_ui_lsp::EditorSerial,
     id: u64,
     revision: u64,
     asked: Range<usize>,

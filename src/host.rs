@@ -489,7 +489,7 @@ impl ide_ui_lsp::Host for AppHost {
         crate::context::app().lsp().clone()
     }
 
-    fn find_editor(&self, serial: u64) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {
+    fn find_editor(&self, serial: ide_ui_lsp::EditorSerial) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {
         crate::editor::find_editor(serial).map(crate::editor::lsp_editor)
     }
 

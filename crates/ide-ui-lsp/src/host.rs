@@ -1,6 +1,7 @@
 //! The app as the language servers reach it beyond one editor (E99): the editors there are, a window's call hierarchy,
 //! the editor's font and colours, trust, and the state this crate keeps in the running app.
 
+use crate::EditorSerial;
 use ide_ui_common::window::WindowId;
 use std::path::Path;
 use std::rc::Rc;
@@ -32,7 +33,7 @@ pub trait Host {
     /// The crate's state in the running app.
     fn state(&self) -> Rc<State>;
     /// The open editor with `serial`.
-    fn find_editor(&self, serial: u64) -> Option<Box<dyn Editor>>;
+    fn find_editor(&self, serial: EditorSerial) -> Option<Box<dyn Editor>>;
     /// Every open editor, in every window.
     fn all_editors(&self) -> Vec<Box<dyn Editor>>;
     /// The editor of `path` in the window `window`.
@@ -66,7 +67,7 @@ pub(crate) fn state() -> Rc<State> {
     host().state()
 }
 
-pub(crate) fn find_editor(serial: u64) -> Option<Box<dyn Editor>> {
+pub(crate) fn find_editor(serial: EditorSerial) -> Option<Box<dyn Editor>> {
     host().find_editor(serial)
 }
 

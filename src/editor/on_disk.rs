@@ -36,7 +36,13 @@ pub(super) fn look(view: &EditorTextView, why: Look) {
     }
 }
 
-fn found(serial: u64, asked: u64, probe: &DiskProbe, why: Look, check: Option<io::Result<DiskCheck>>) {
+fn found(
+    serial: ide_ui_lsp::EditorSerial,
+    asked: u64,
+    probe: &DiskProbe,
+    why: Look,
+    check: Option<io::Result<DiskCheck>>,
+) {
     let Some(view) = super::find_editor(serial) else {
         return;
     };

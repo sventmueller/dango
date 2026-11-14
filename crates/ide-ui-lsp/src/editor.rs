@@ -16,7 +16,7 @@ use super::ViewState;
 /// An editor; it is the text view it shows its document in.
 pub trait Editor: Deref<Target = NSTextView> {
     /// Tells this editor apart from every other one in callbacks that cannot hold a view.
-    fn serial(&self) -> u64;
+    fn serial(&self) -> crate::EditorSerial;
     /// What the language servers keep about this editor.
     fn lsp(&self) -> &RefCell<ViewState>;
     fn document(&self) -> Ref<'_, Document>;

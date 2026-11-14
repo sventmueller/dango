@@ -38,7 +38,7 @@ pub struct ListIvars {
     panel: RefCell<Option<Retained<NSPanel>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
     /// The editor it completes in, by its serial.
-    view: Cell<Option<u64>>,
+    view: Cell<Option<crate::EditorSerial>>,
     items: RefCell<Vec<CompletionItem>>,
     /// The slot of the server each item came from, which resolves it (E140).
     origins: RefCell<Vec<u64>>,

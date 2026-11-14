@@ -1,5 +1,6 @@
 //! Renaming a symbol across the files of the folder, and formatting a document, on request or when it is saved.
 
+use crate::EditorSerial;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -151,19 +152,19 @@ struct Pending {
 /// The format-on-save requests that run, by editor.
 #[derive(Default)]
 pub struct Formatting {
-    formatting: RefCell<HashMap<u64, Pending>>,
+    formatting: RefCell<HashMap<crate::EditorSerial, Pending>>,
     /// Prettier's runs by editor: the run's id and what waits for it.
-    prettier: RefCell<HashMap<u64, (u64, Option<Then>)>>,
+    prettier: RefCell<HashMap<crate::EditorSerial, (u64, Option<Then>)>>,
 }
 
 impl Formatting {
     /// Keeps `then` until Prettier's run `id` for the editor `serial` ends.
-    pub fn wait(&self, serial: u64, id: u64, then: Option<Then>) {
+    pub fn wait(&self, serial: EditorSerial, id: u64, then: Option<Then>) {
         self.prettier.borrow_mut().insert(serial, (id, then));
     }
 
     /// What waits for Prettier's run `id` for the editor `serial`; `None` once a later run took its place.
-    pub fn take(&self, serial: u64, id: u64) -> Option<Option<Then>> {
+    pub fn take(&self, serial: EditorSerial, id: u64) -> Option<Option<Then>> {
         let mut runs = self.prettier.borrow_mut();
         if runs.get(&serial).is_some_and(|(run, _)| *run == id) {
             runs.remove(&serial).map(|(_, then)| then)
@@ -173,7 +174,7 @@ impl Formatting {
     }
 }
 
-fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Pending>>) -> R) -> R {
+fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, Pending>>) -> R) -> R {
     f(&crate::host::state().formatting.formatting)
 }
 
@@ -191,7 +192,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) {
         return;
     };
     let serial = view.lsp().borrow().serial;
-    let id = super::new_serial();
+    let id = super::next_id();
     let started = server.format(&uri, options(view), move |answer| {
         main_soon(move || finished(serial, id, Some(answer)));
     });
@@ -212,7 +213,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) {
 }
 
 /// The answer to formatting request `id`, or `None` when the wait ran out first.
-fn finished(serial: u64, id: u64, answer: Option<Result<Vec<TextEdit>, Error>>) {
+fn finished(serial: EditorSerial, id: u64, answer: Option<Result<Vec<TextEdit>, Error>>) {
     let pending = with_formatting(|all| {
         let mut all = all.borrow_mut();
         if all.get(&serial).is_some_and(|p| p.id == id) {
@@ -262,7 +263,7 @@ pub fn save(view: &dyn Editor) {
 }
 
 /// Runs what waited for the fixes of request `id` of the editor `serial`, unless a later request took its place.
-fn resume(serial: u64, id: u64) {
+fn resume(serial: EditorSerial, id: u64) {
     let pending = with_formatting(|all| {
         let mut all = all.borrow_mut();
         if all.get(&serial).is_some_and(|p| p.id == id) {
@@ -293,7 +294,7 @@ fn fix_all(view: &dyn Editor, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types
     use ide_lsp::lsp_types::{CodeActionKind, CodeActionOrCommand, Position, Range};
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
-    let id = super::new_serial();
+    let id = super::next_id();
     let lines = u32::try_from(view.document().text().line_count()).unwrap_or(u32::MAX);
     let whole = Range::new(Position::new(0, 0), Position::new(lines, 0));
     with_formatting(|all| {

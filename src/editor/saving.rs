@@ -93,7 +93,7 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
 }
 
 /// The write that ⌘S started for the editor `serial` is done; `None` if it panicked.
-fn written_soon(serial: u64, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>) {
+fn written_soon(serial: ide_ui_lsp::EditorSerial, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>) {
     let Some(view) = super::find_editor(serial) else { return };
     let again = view.ivars().writing.replace(Writing::Idle) == Writing::Again;
     finish(&view, target, written, Wait::Not);

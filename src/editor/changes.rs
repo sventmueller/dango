@@ -192,7 +192,7 @@ enum Answer {
     Hunks(Vec<Hunk>, usize, u64),
 }
 
-fn deliver(serial: u64, asked: u64, answer: Answer) {
+fn deliver(serial: ide_ui_lsp::EditorSerial, asked: u64, answer: Answer) {
     let Some(view) = super::find_editor(serial) else { return };
     {
         let mut marks = view.ivars().marks.borrow_mut();

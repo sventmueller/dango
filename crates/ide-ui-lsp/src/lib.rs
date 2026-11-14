@@ -95,7 +95,7 @@ const CONTENT_MODIFIED: i64 = -32801;
 #[derive(Default)]
 pub struct ViewState {
     /// Tells editors apart in callbacks from other threads, which cannot hold a view.
-    pub serial: u64,
+    pub serial: EditorSerial,
     slot: Option<u64>,
     /// The second servers beside the main one (E140): their slots and the document's language id for them.
     companions: Vec<(u64, String)>,
@@ -247,7 +247,7 @@ pub fn servers_changed() {
     }
 }
 
-fn next_id() -> u64 {
+pub(crate) fn next_id() -> u64 {
     with_next_id(|next| {
         let id = next.get();
         next.set(id + 1);
@@ -255,14 +255,19 @@ fn next_id() -> u64 {
     })
 }
 
-/// A number that tells this editor apart from every other one while the app runs.
-pub fn new_serial() -> u64 {
-    next_id()
+/// The number that tells an editor apart from every other one while the app runs, which callbacks from other threads
+/// carry instead of the view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EditorSerial(u64);
+
+/// A serial no editor had before.
+pub fn new_serial() -> EditorSerial {
+    EditorSerial(next_id())
 }
 
 impl ViewState {
     /// The state of the new editor `serial`.
-    pub fn new(serial: u64) -> ViewState {
+    pub fn new(serial: EditorSerial) -> ViewState {
         ViewState {
             serial,
             ..ViewState::default()
@@ -860,7 +865,7 @@ fn semantic_tokens(view: &dyn Editor, server: &Server, uri: &Uri) {
 }
 
 /// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
-fn pull_diagnostics(view: &dyn Editor, serial: u64) {
+fn pull_diagnostics(view: &dyn Editor, serial: EditorSerial) {
     for (source, server, uri) in servers_of(view) {
         if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
             continue;

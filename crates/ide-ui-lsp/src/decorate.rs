@@ -383,7 +383,7 @@ pub fn follow_squiggles(view: &dyn Editor) {
 
 pub struct SquiggleIvars {
     /// The editor it covers, by its serial.
-    editor: u64,
+    editor: crate::EditorSerial,
 }
 
 define_class!(
