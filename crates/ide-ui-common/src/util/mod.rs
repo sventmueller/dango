@@ -1,6 +1,7 @@
 mod appkit;
 mod lanes;
 mod observe;
+pub mod stall;
 mod thread;
 mod undo;
 

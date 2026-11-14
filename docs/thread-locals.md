@@ -152,6 +152,10 @@ whose static is gone.
 | `crates/ide-ui-agent/src/own_agent/mod.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the keys are | once per process |
 | `crates/ide-ui-browser/src/host.rs` | `HOST` | the browser's `Host` | install-once hook |
 | `crates/ide-ui-browser/src/web.rs` | `NAME` | Safari's part of the user agent | cache |
+| `crates/ide-ui-common/src/util/stall.rs` | `LAST` | when the main run loop last stepped | once per process |
+| `crates/ide-ui-common/src/util/stall.rs` | `OBSERVER` | the run loop observer that times the main thread | once per process |
+| `crates/ide-ui-common/src/util/stall.rs` | `START` | the moment the stall times count from | once per process |
+| `crates/ide-ui-common/src/util/stall.rs` | `WORST` | the longest main-thread step since the self-test last asked | serial |
 | `crates/ide-ui-common/src/window.rs` | `HOST` | the `WindowHost` the feature crates reach windows through | install-once hook |
 | `crates/ide-ui-debug/src/host.rs` | `HOST` | the debugger's `Host` | install-once hook |
 | `crates/ide-ui-lsp/src/host.rs` | `HOST` | the language servers' `Host` | install-once hook |

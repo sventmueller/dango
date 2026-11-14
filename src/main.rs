@@ -67,6 +67,7 @@ fn main() {
         report(info);
     }));
     let mtm = MainThreadMarker::new().expect("the app starts on the main thread");
+    ide_ui_common::util::stall::install();
     preview::start(mtm);
     #[cfg(feature = "selftest")]
     selftest::application::install(mtm);
