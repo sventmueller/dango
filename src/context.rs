@@ -23,6 +23,7 @@ pub struct AppContext {
     pub session: crate::session::Saving,
     pub navigation: crate::navigation::Navigation,
     pub new_tab_menu: crate::window::NewTabMenu,
+    pub agent_choices: crate::window::AgentChoicesCache,
     pub activities: crate::activity::Activities,
     pub settings: crate::settings::SettingsState,
     /// The user's shortcuts as the menus were built with them.

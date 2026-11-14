@@ -27,11 +27,6 @@ pub fn agents() -> Vec<(Agent, bool)> {
         .collect()
 }
 
-/// Whether the agent at `index` of [`agents`] can be opened now.
-pub fn agent_usable(index: usize) -> bool {
-    agents().get(index).is_some_and(|(_, usable)| *usable)
-}
-
 /// Whether the window can start a worktree thread: its folder is trusted and a repository with a commit.
 pub fn can_start(controller: &WindowController) -> bool {
     controller.is_trusted() && ide_ui_git::has_commit(controller)

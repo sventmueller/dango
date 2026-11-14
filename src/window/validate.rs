@@ -54,11 +54,16 @@ impl WindowController {
         }
         if action == Some(sel!(ideNewWorktreeThread:)) {
             let index = usize::try_from(item.tag()).unwrap_or(usize::MAX);
-            return crate::worktrees::can_start(self) && crate::worktrees::agent_usable(index);
+            let usable = super::agent_choices::now(self.context())
+                .worktree
+                .get(index)
+                .is_some_and(|(_, usable, _)| *usable);
+            return usable && crate::worktrees::can_start(self);
         }
         if action == Some(sel!(ideNewAcpThread:)) {
             let index = usize::try_from(item.tag()).unwrap_or(usize::MAX);
-            return ide_ui_agent::preset_menu()
+            return super::agent_choices::now(self.context())
+                .presets
                 .get(index)
                 .is_some_and(|(_, usable)| *usable);
         }

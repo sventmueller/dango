@@ -225,7 +225,7 @@ impl WindowController {
 
     /// The menu of new tabs, filled as when the "+" opens it.
     pub fn new_tab_menu(&self) -> Retained<objc2_app_kit::NSMenu> {
-        let menu = tabs::new_tab_menu(self.mtm());
+        let menu = tabs::new_tab_menu(self.mtm(), &super::agent_choices::now(self.context()));
         tabs::fill_new_tab_menu(self, &menu);
         menu
     }

@@ -111,9 +111,11 @@ fn show_menu(controller: &WindowController, view: &NSView, below_plus: bool) {
 
 /// The menu the "+" of `controller`'s window shows; its entries open in a new tab of that window, whichever is key.
 pub(super) fn menu_for(controller: &WindowController) -> Retained<NSMenu> {
-    let menu = tabs::new_tab_menu(controller.mtm());
+    let choices = super::agent_choices::now(controller.context());
+    let menu = tabs::new_tab_menu(controller.mtm(), &choices);
     tabs::fill_new_tab_menu(controller, &menu);
     aim(&menu, controller);
+    super::agent_choices::refresh(controller.context());
     menu
 }
 

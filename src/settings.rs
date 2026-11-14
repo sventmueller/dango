@@ -288,6 +288,9 @@ pub fn show_agents(mtm: MainThreadMarker) {
 
 /// The agents changed, such as an installation that finished; an open settings window shows them again.
 pub fn agents_changed() {
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::window::refresh_agent_choices(&crate::context::AppContext::get(mtm));
+    }
     if let Some(agents) = agents_tab_now() {
         agents.reload();
         fit(AGENTS_TAB);

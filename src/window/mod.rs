@@ -2,6 +2,7 @@
 //! tab of its own (E60).
 
 mod activity_bar;
+mod agent_choices;
 mod document_area;
 mod document_tabs;
 pub(crate) mod file_outline;
@@ -45,6 +46,7 @@ use splat_i18n::t;
 use crate::context::AppContext;
 use crate::util::{guarded, main_soon, ns};
 use activity_bar::ActivityBar;
+pub use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
 use files::FileTree;
 pub use new_tab_button::NewTabMenu;
 pub use notice::announce;
@@ -565,6 +567,7 @@ impl WindowController {
     pub fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         new_tab_button::install();
         let controller = WindowController::new(mtm, project);
+        agent_choices::refresh(controller.context());
         controller.bring_to_front();
         if let Some(tab) = controller.current_tab() {
             controller.fit_sidebar(&tab, controller.saved_sidebar().collapsed);

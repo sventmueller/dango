@@ -68,6 +68,8 @@ pub fn run() {
         )
     });
     ide_ui_agent::set_test_launch(launch);
+    // As an installation does, so the menus read the agents again.
+    crate::settings::agents_changed();
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
@@ -110,10 +112,9 @@ fn ready(root: PathBuf, ok: bool) {
         ok,
         "",
     );
-    let Some(controller) = window_of(&root).filter(|_| ok) else {
+    if window_of(&root).filter(|_| ok).is_none() {
         return finish(SCENARIO);
-    };
-    let offered = controller.worktree_menu_titles();
+    }
     let installed = |agent: ide_ui_agent::Agent| ide_ui_agent::installed(&agent);
     let expected: Vec<String> = installed(ide_ui_agent::Agent::Claude)
         .then(|| "Claude".to_string())
@@ -122,6 +123,19 @@ fn ready(root: PathBuf, ok: bool) {
         .chain(installed(ide_ui_agent::Agent::Own).then(|| splat_i18n::t("Eigener Agent").to_string()))
         .map(|name| format!("{name} …"))
         .collect();
+    // The menu offers the agents as they were read in the background, after the window opened.
+    let (probe, wanted) = (root.clone(), expected.clone());
+    let read = move || window_of(&probe).is_some_and(|c| c.worktree_menu_titles() == wanted);
+    super::helpers::wait_within(std::time::Duration::from_secs(20), read, move |_| {
+        offered(root, expected)
+    });
+}
+
+fn offered(root: PathBuf, expected: Vec<String>) {
+    let Some(controller) = window_of(&root) else {
+        return finish(SCENARIO);
+    };
+    let offered = controller.worktree_menu_titles();
     check(
         "the worktree menu offers the installed agents: Claude, the ACP agents, the own agent last",
         offered == expected && expected.len() > 3,

@@ -23,6 +23,7 @@ use objc2_foundation::{
 use splat_i18n::{t, tf};
 
 use super::WindowController;
+use super::agent_choices::AgentChoices;
 use super::document_area::DocumentArea;
 use crate::util::{item, ns, pin_edges, separator, submenu, symbol, symbol_button};
 
@@ -797,12 +798,13 @@ pub(super) fn first_responder_in(view: &NSView) -> Option<Retained<NSView>> {
 
 /// The installed agents' entries for a thread in a worktree of its own (I1), if any agent is installed, each tagged with
 /// its place in `crate::worktrees::agents`; the window enables them as they can start.
-fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
-    let agents: Vec<Retained<NSMenuItem>> = crate::worktrees::agents()
-        .into_iter()
+fn worktree_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Option<Retained<NSMenuItem>> {
+    let agents: Vec<Retained<NSMenuItem>> = choices
+        .worktree
+        .iter()
         .enumerate()
-        .filter(|(_, (agent, _))| ide_ui_agent::installed(agent))
-        .map(|(n, (agent, _))| {
+        .filter(|(_, (_, _, installed))| *installed)
+        .map(|(n, (agent, _, _))| {
             let entry = item(mtm, &tf("{} …", &[agent.name()]), Some(sel!(ideNewWorktreeThread:)), "");
             entry.setTag(isize::try_from(n).unwrap_or(-1));
             entry
@@ -818,8 +820,8 @@ fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
 }
 
 /// What a new tab can show (E17), the menu that ⌘T and the tab bar's "+" open (E79). The installed agents stand in it
-/// directly, a thread in a worktree of its own below them.
-pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
+/// directly, a thread in a worktree of its own below them, as `choices` knows them.
+pub fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);
     let entry = |title: &str, symbol_name: &str, action: Option<Sel>| {
@@ -837,22 +839,21 @@ pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
         menu.addItem(&entry);
     }
     // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
-    if ide_ui_agent::installed(&ide_ui_agent::Agent::Claude) {
+    if choices.claude {
         menu.addItem(&entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
     }
-    let usable = ide_ui_agent::preset_menu();
-    for (index, name) in ide_ui_agent::installed_presets() {
-        let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
-        agent.setTag(isize::try_from(index).unwrap_or(-1));
-        agent.setEnabled(usable.get(index).is_some_and(|(_, usable)| *usable));
+    for (index, name) in &choices.installed_presets {
+        let agent = entry(name, "sparkles", Some(sel!(ideNewAcpThread:)));
+        agent.setTag(isize::try_from(*index).unwrap_or(-1));
+        agent.setEnabled(choices.presets.get(*index).is_some_and(|(_, usable)| *usable));
         menu.addItem(&agent);
     }
-    if ide_ui_agent::installed(&ide_ui_agent::Agent::Own) {
+    if choices.own {
         let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
         own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
         menu.addItem(&own);
     }
-    if let Some(worktree) = worktree_menu(mtm) {
+    if let Some(worktree) = worktree_menu(mtm, choices) {
         menu.addItem(&worktree);
     }
     for entry in [
