@@ -197,9 +197,8 @@ impl AgentTab {
             t("⌘Esc zum Fokussieren oder Verlassen").to_string()
         };
         self.composer.set_placeholder(&placeholder);
-        let running = state.status != ide_thread::Status::Idle || state.sending;
-        let can_send = !self.composer.text().trim().is_empty() || !state.attachments.is_empty();
-        self.composer.show_running(running, can_send);
+        drop(state);
+        self.refresh_send(&self.composer.text());
     }
 
     /// The model, mode and sandbox pills, and the warning of a thread that allows everything without a sandbox.

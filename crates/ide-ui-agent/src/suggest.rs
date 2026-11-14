@@ -31,6 +31,8 @@ pub struct Suggestions {
     column: Retained<NSStackView>,
     target: Retained<AgentTarget>,
     items: RefCell<Vec<Item>>,
+    /// The rows in the list, with the item each shows and whether it shows it chosen.
+    rows: RefCell<Vec<(Item, bool, Retained<NSBox>)>>,
     selected: Cell<usize>,
     /// The bytes of the composer's text the chosen completion replaces.
     range: RefCell<Range<usize>>,
@@ -56,6 +58,7 @@ impl Suggestions {
             column,
             target: objc2::Message::retain(target),
             items: RefCell::new(Vec::new()),
+            rows: RefCell::new(Vec::new()),
             selected: Cell::new(0),
             range: RefCell::new(0..0),
             asked: Cell::new(0),
@@ -119,20 +122,45 @@ impl Suggestions {
         Some((item, self.range.borrow().clone()))
     }
 
+    /// Brings the rows to the items, building only those whose item changed.
     fn draw(&self) {
-        for view in self.column.arrangedSubviews().iter() {
-            self.column.removeArrangedSubview(&view);
-            view.removeFromSuperview();
-        }
         let Some(mtm) = MainThreadMarker::new() else { return };
         let selected = self.selected.get();
-        for (n, item) in self.items.borrow().iter().enumerate() {
-            let row = self.row(mtm, item, n, n == selected);
-            ui::add_full_width(&self.column, &row);
+        let items = self.items.borrow();
+        let mut rows = self.rows.borrow_mut();
+        let kept = items.len().min(rows.len());
+        for old in rows.drain(kept..) {
+            self.column.removeArrangedSubview(&old.2);
+            old.2.removeFromSuperview();
+        }
+        for (n, item) in items.iter().enumerate() {
+            let chosen = n == selected;
+            match rows.get_mut(n) {
+                Some((shown, was, frame)) if shown == item => {
+                    if *was != chosen {
+                        *was = chosen;
+                        frame.setFillColor(&fill(chosen));
+                    }
+                }
+                Some(slot) => {
+                    let frame = self.row(mtm, item, n, chosen);
+                    self.column.removeArrangedSubview(&slot.2);
+                    slot.2.removeFromSuperview();
+                    self.column
+                        .insertArrangedSubview_atIndex(&frame, isize::try_from(n).unwrap_or(isize::MAX));
+                    full_width(&self.column, &frame);
+                    *slot = (item.clone(), chosen, frame);
+                }
+                None => {
+                    let frame = self.row(mtm, item, n, chosen);
+                    ui::add_full_width(&self.column, &frame);
+                    rows.push((item.clone(), chosen, frame));
+                }
+            }
         }
     }
 
-    fn row(&self, mtm: MainThreadMarker, item: &Item, index: usize, chosen: bool) -> Retained<NSView> {
+    fn row(&self, mtm: MainThreadMarker, item: &Item, index: usize, chosen: bool) -> Retained<NSBox> {
         // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
         let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(&item.label), None, None, mtm) };
         set_action(&button, &self.target, sel!(ideAgentSuggest:));
@@ -146,22 +174,34 @@ impl Suggestions {
         let detail = ui::label(mtm, &item.detail, &style::small(), &NSColor::secondaryLabelColor());
         let spacer = ui::spacer(mtm);
         let line = ui::row(mtm, 6.0, &[&button, &detail, &spacer]);
-        let fill = if chosen {
-            NSColor::selectedContentBackgroundColor().colorWithAlphaComponent(0.18)
-        } else {
-            NSColor::clearColor()
-        };
         let frame = ui::framed(
             mtm,
             &line,
             &NSColor::clearColor(),
-            Some(&fill),
+            Some(&fill(chosen)),
             5.0,
             ui::insets(2.0, 6.0, 2.0, 6.0),
         );
         frame.setBorderWidth(0.0);
-        ui::view(&frame)
+        frame
     }
+}
+
+/// The background of a row, marked when it is the chosen one.
+fn fill(chosen: bool) -> Retained<NSColor> {
+    if chosen {
+        NSColor::selectedContentBackgroundColor().colorWithAlphaComponent(0.18)
+    } else {
+        NSColor::clearColor()
+    }
+}
+
+/// Holds `view`, which `stack` arranges, as wide as the stack.
+fn full_width(stack: &NSStackView, view: &NSView) {
+    view.setTranslatesAutoresizingMaskIntoConstraints(false);
+    view.widthAnchor()
+        .constraintEqualToAnchor(&stack.widthAnchor())
+        .setActive(true);
 }
 
 #[cfg(feature = "selftest")]

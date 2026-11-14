@@ -150,6 +150,8 @@ pub struct Composer {
     pub mode: Retained<NSButton>,
     pub sandbox: Retained<NSButton>,
     pub send: Retained<NSButton>,
+    /// Whether the send button shows a running turn and something to send, once it was set.
+    send_look: std::cell::Cell<Option<(bool, bool)>>,
     /// The microphone, which dictates into the text view.
     #[cfg(feature = "dictation")]
     pub mic: ide_ui_dictation::Mic,
@@ -279,6 +281,7 @@ impl Composer {
             mode: parts.mode,
             sandbox: parts.sandbox,
             send: parts.send,
+            send_look: std::cell::Cell::new(None),
             #[cfg(feature = "dictation")]
             mic,
         }
@@ -343,6 +346,9 @@ impl Composer {
 
     /// The send button as a stop button while a turn runs, dimmed when there is nothing to send.
     pub fn show_running(&self, running: bool, can_send: bool) {
+        if self.send_look.replace(Some((running, can_send))) == Some((running, can_send)) {
+            return;
+        }
         let glass = has_glass(&self.send);
         let (send, stop) = send_symbols(glass);
         let (name, label) = if running && !can_send {

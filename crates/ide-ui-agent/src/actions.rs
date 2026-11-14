@@ -120,9 +120,8 @@ impl AgentTab {
             self.refresh_acp_pills(&agent);
             let state = self.state.borrow();
             self.composer.set_placeholder(state.placeholder());
-            self.composer
-                .show_running(state.running(), state.can_send(&self.composer.text()));
-            return;
+            drop(state);
+            return self.refresh_send(&self.composer.text());
         }
         let state = self.state.borrow();
         self.composer.model.setTitle(&ns(&state.model_pill()));
@@ -146,8 +145,14 @@ impl AgentTab {
         self.composer.sandbox.setContentTintColor(Some(&tint));
         self.composer.sandbox.setToolTip(Some(&ns(look.tip)));
         self.composer.set_placeholder(state.placeholder());
-        self.composer
-            .show_running(state.running(), state.can_send(&self.composer.text()));
+        drop(state);
+        self.refresh_send(&self.composer.text());
+    }
+
+    /// The send button for `text` in the composer.
+    pub(super) fn refresh_send(&self, text: &str) {
+        let state = self.state.borrow();
+        self.composer.show_running(state.running(), state.can_send(text));
     }
 
     /// The queued messages above the composer, each with a button that drops it.

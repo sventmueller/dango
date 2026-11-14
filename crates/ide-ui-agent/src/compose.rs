@@ -17,6 +17,28 @@ use ide_ui_common::util::{main_soon, ns};
 /// An attachment's name and symbol, whether it is outside text, and its picture.
 type Chip = ((String, &'static str), bool, Option<std::sync::Arc<[u8]>>);
 
+/// The message `typed` with `attached`: the line ranges of its file mentions as attachments, and what lies outside
+/// the project at `cwd` as outside text.
+fn resolve(typed: &str, attached: Vec<Attachment>, cwd: &std::path::Path) -> (String, Vec<Attachment>) {
+    let (text, resolved) = mention::resolve_files(typed, cwd);
+    let attachments = resolved
+        .into_iter()
+        .chain(attached)
+        .map(|a| super::outside::classify(a, cwd))
+        .collect();
+    (text, attachments)
+}
+
+/// Whether resolving `typed` with `attached` looks at files, which only file mentions and attachments naming a file do.
+fn reads_files(typed: &str, attached: &[Attachment]) -> bool {
+    mention::parse(typed)
+        .iter()
+        .any(|(_, m)| matches!(m, Mention::File { .. }))
+        || attached
+            .iter()
+            .any(|a| matches!(a, Attachment::File { .. } | Attachment::Selection { .. }))
+}
+
 /// Whether a message sent now goes into the turn that runs: Claude Code reads it as soon as its running tool calls
 /// finish, within the turn, as its own prompt does; ACP agents take one prompt at a time and wait in the queue.
 fn reaches_turn(status: Status, sending: bool, claude: bool) -> bool {
@@ -84,18 +106,36 @@ impl AgentTab {
             self.show_work(crate::work::Part::All, None);
             return;
         }
-        let (text, resolved) = mention::resolve_files(&typed, &self.cwd);
         let attached = std::mem::take(&mut self.state.borrow_mut().attachments);
-        let mut attachments: Vec<Attachment> = resolved
-            .into_iter()
-            .chain(attached)
-            .map(|a| super::outside::classify(a, &self.cwd))
-            .collect();
-        if text.trim().is_empty() && attachments.is_empty() {
+        if typed.trim().is_empty() && attached.is_empty() {
             return;
         }
         self.composer.clear();
         self.refresh_chips();
+        if !reads_files(&typed, &attached) {
+            let (text, attachments) = resolve(&typed, attached, &self.cwd);
+            return self.send_typed(text, attachments);
+        }
+        let (key, cwd) = (self.key, self.cwd.clone());
+        let kept = (typed.clone(), attached.clone());
+        let queued = ide_core::lane::DISK.ask(
+            move || resolve(&typed, attached, &cwd),
+            move |resolved| {
+                main_soon(move || {
+                    if let (Some(tab), Some((text, attachments))) = (super::get(key), resolved) {
+                        tab.send_typed(text, attachments);
+                    }
+                });
+            },
+        );
+        if queued.is_err() {
+            let (text, attachments) = resolve(&kept.0, kept.1, &self.cwd);
+            self.send_typed(text, attachments);
+        }
+    }
+
+    /// Sends `text` with `attachments`, the output of the terminal and the page of the browser it mentions along.
+    fn send_typed(&self, text: String, mut attachments: Vec<Attachment>) {
         let controller = self.controller();
         if let Some(controller) = &controller
             && mention::mentions(&text, &Mention::Terminal)
@@ -145,10 +185,12 @@ impl AgentTab {
         self.send_message(message);
     }
 
+    /// Follows a keystroke in the composer; the pills follow the session's state, not the text.
     pub fn composer_changed(&self) {
         self.composer.fit();
-        self.refresh_composer();
-        self.update_suggestions();
+        let text = self.composer.text();
+        self.refresh_send(&text);
+        self.update_suggestions(&text);
     }
 
     /// Commands of the composer's text view: arrows and Tab steer an open completion list, Esc closes it or, with
@@ -183,10 +225,9 @@ impl AgentTab {
     }
 
     /// Offers completions for the mention at the caret: the terminal, the browser and the project's files.
-    fn update_suggestions(&self) {
-        let text = self.composer.text();
-        let caret = byte_offset(&text, self.composer.text.selectedRange().location);
-        if let Some((range, query)) = slash_typing(&text, caret) {
+    fn update_suggestions(&self, text: &str) {
+        let caret = byte_offset(text, self.composer.text.selectedRange().location);
+        if let Some((range, query)) = slash_typing(text, caret) {
             let items = matching_commands(self.known_commands(), &query)
                 .into_iter()
                 .map(|(name, detail)| Item {
@@ -200,7 +241,7 @@ impl AgentTab {
             self.suggestions.show(items, range);
             return;
         }
-        let Some((range, query)) = mention::typing(&text, caret) else {
+        let Some((range, query)) = mention::typing(text, caret) else {
             self.suggestions.hide();
             return;
         };
