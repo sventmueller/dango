@@ -204,7 +204,11 @@ mod tests {
             .find(|&c| name(c).as_deref() == Some("zsh"))
             .unwrap();
         let command = children(shell)[0];
-        assert_eq!(nice_of(helper), 0, "the agent's own helper keeps its priority");
+        assert_eq!(
+            nice_of(helper),
+            nice_of(std::process::id()),
+            "the agent's own helper keeps the priority it started with"
+        );
         assert_eq!(
             (nice_of(shell), nice_of(command)),
             (AGENT_COMMAND_NICE, AGENT_COMMAND_NICE)

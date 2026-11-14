@@ -227,6 +227,7 @@ impl TestsPanel {
             self.say(t("Keine Tests gefunden"));
             return;
         }
+        let waiting = !all && tools.iter().all(|tool| tool.lists_by_building());
         for tool in tools {
             if tool.lists_by_building() && !all {
                 continue;
@@ -235,6 +236,9 @@ impl TestsPanel {
             self.launch(tool, command, None);
         }
         self.show();
+        if waiting {
+            self.say(t("Auflisten baut das Projekt; dafür ↻ drücken"));
+        }
     }
 
     fn scratch(&self) -> PathBuf {

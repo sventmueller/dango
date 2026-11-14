@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} brukte for lang tid og ble stoppet.";
 "{} ist fehlgeschlagen: {}" = "{} mislyktes: {}";
 "{} wurde nicht gefunden." = "{} ble ikke funnet.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Opplisting bygger prosjektet; trykk ↻";

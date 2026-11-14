@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} ha impiegato troppo tempo ed è stato interrotto.";
 "{} ist fehlgeschlagen: {}" = "{} non è riuscito: {}";
 "{} wurde nicht gefunden." = "Impossibile trovare {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "L’elenco compila il progetto; premi ↻";

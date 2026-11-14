@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "Çok uzun sürdüğü için durduruldu: {}.";
 "{} ist fehlgeschlagen: {}" = "{} başarısız oldu: {}";
 "{} wurde nicht gefunden." = "Bulunamadı: {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Listeleme projeyi derler; ↻ düğmesine basın";

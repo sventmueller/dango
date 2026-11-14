@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{}: перевищено час виконання, процес зупинено.";
 "{} ist fehlgeschlagen: {}" = "{} — помилка: {}";
 "{} wurde nicht gefunden." = "Не знайдено: {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Для списку проєкт буде зібрано; натисніть ↻";

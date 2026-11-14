@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} ha trigat massa i s’ha aturat.";
 "{} ist fehlgeschlagen: {}" = "{} ha fallat: {}";
 "{} wurde nicht gefunden." = "No s’ha trobat {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Llistar construeix el projecte; premeu ↻ per llistar";

@@ -1745,3 +1745,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} took too long and was ended.";
 "{} ist fehlgeschlagen: {}" = "{} failed: {}";
 "{} wurde nicht gefunden." = "{} was not found.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Listing builds the project; press ↻ to list";

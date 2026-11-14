@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "استغرق {} وقتًا طويلًا وتم إيقافه.";
 "{} ist fehlgeschlagen: {}" = "فشل {}: {}";
 "{} wurde nicht gefunden." = "لم يتم العثور على {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "يؤدي الإدراج إلى بناء المشروع؛ اضغط ↻ للإدراج";

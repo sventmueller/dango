@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} ใช้เวลานานเกินไปและถูกหยุด";
 "{} ist fehlgeschlagen: {}" = "{} ล้มเหลว: {}";
 "{} wurde nicht gefunden." = "ไม่พบ {}";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "การแสดงรายการจะบิลด์โปรเจกต์ กด ↻";

@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} działał zbyt długo i został zatrzymany.";
 "{} ist fehlgeschlagen: {}" = "{} – niepowodzenie: {}";
 "{} wurde nicht gefunden." = "Nie znaleziono: {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Wyświetlenie listy buduje projekt; naciśnij ↻";

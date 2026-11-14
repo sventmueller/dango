@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "Program {} trval príliš dlho a bol zastavený.";
 "{} ist fehlgeschlagen: {}" = "Program {} zlyhal: {}";
 "{} wurde nicht gefunden." = "{} sa nenašlo.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Výpis zostaví projekt; stlačte ↻";

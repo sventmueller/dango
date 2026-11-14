@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} terlalu lama dan dihentikan.";
 "{} ist fehlgeschlagen: {}" = "{} gagal: {}";
 "{} wurde nicht gefunden." = "{} tidak ditemukan.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Mendaftar akan membangun proyek; tekan ↻";

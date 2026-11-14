@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{}に時間がかかりすぎたため、停止しました。";
 "{} ist fehlgeschlagen: {}" = "{}に失敗しました: {}";
 "{} wurde nicht gefunden." = "{}が見つかりませんでした。";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "一覧表示ではプロジェクトをビルドします。↻ を押してください";

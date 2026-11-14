@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} mất quá nhiều thời gian và đã bị dừng.";
 "{} ist fehlgeschlagen: {}" = "{} không thành công: {}";
 "{} wurde nicht gefunden." = "Không tìm thấy {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Liệt kê sẽ dựng dự án; nhấn ↻";

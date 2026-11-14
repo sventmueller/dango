@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "Το {} άργησε πολύ και τερματίστηκε.";
 "{} ist fehlgeschlagen: {}" = "Το {} απέτυχε: {}";
 "{} wurde nicht gefunden." = "Το {} δεν βρέθηκε.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Η απαρίθμηση δομεί το έργο· πατήστε ↻";

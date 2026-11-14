@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} a mis trop de temps et a été arrêté.";
 "{} ist fehlgeschlagen: {}" = "Échec de {} : {}";
 "{} wurde nicht gefunden." = "{} est introuvable.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Lister compile le projet ; appuyez sur ↻";

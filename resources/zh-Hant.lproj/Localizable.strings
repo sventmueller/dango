@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} 執行時間過長，已被停止。";
 "{} ist fehlgeschlagen: {}" = "{} 失敗：{}";
 "{} wurde nicht gefunden." = "找不到 {}。";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "列出會建置專案；請按 ↻";

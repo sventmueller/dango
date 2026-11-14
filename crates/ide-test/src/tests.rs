@@ -106,6 +106,9 @@ fn nextest_lists_its_suites_and_reads_the_junit_report_of_0_9_151() {
 #[test]
 fn go_lists_top_level_tests_and_reads_the_json_events_of_go_1_27() {
     let root = sample("go");
+    // The recorded events name files by the module path the recording's go.mod declared.
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("go.mod"), "module example.com/sample\n\ngo 1.27\n").unwrap();
     let tests = Tool::Go.tests(&root, &fixture("go", "list-1.27.jsonl"));
     let names: Vec<&str> = tests.iter().map(|t| t.id.name.as_str()).collect();
     assert_eq!(names, ["TestPass", "TestFail", "TestSkip", "TestTable"]);

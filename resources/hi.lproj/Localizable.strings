@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} ने बहुत देर लगाई, इसलिए उसे रोक दिया गया।";
 "{} ist fehlgeschlagen: {}" = "{} विफल रहा : {}";
 "{} wurde nicht gefunden." = "{} नहीं मिला।";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "सूची बनाने से प्रोजेक्ट बिल्ड होता है; ↻ दबाएँ";

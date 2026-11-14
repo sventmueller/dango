@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{}이(가) 너무 오래 걸려 중단되었습니다.";
 "{} ist fehlgeschlagen: {}" = "{} 실패: {}";
 "{} wurde nicht gefunden." = "{}을(를) 찾을 수 없습니다.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "목록을 만들면 프로젝트가 빌드됩니다. ↻를 누르세요";

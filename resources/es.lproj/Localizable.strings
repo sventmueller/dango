@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} ha tardado demasiado y se ha detenido.";
 "{} ist fehlgeschlagen: {}" = "Ha fallado {}: {}";
 "{} wurde nicht gefunden." = "No se ha encontrado {}.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Listar compila el proyecto; pulsa ↻ para listar";

@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "{} tog för lång tid och stoppades.";
 "{} ist fehlgeschlagen: {}" = "{} misslyckades: {}";
 "{} wurde nicht gefunden." = "{} hittades inte.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Listningen bygger projektet; tryck på ↻";

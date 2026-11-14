@@ -1708,3 +1708,4 @@
 "{} hat zu lange gebraucht und wurde beendet." = "Program {} je potreboval preveč časa in je bil ustavljen.";
 "{} ist fehlgeschlagen: {}" = "Program {} ni uspel: {}";
 "{} wurde nicht gefunden." = "{} ni bilo najdeno.";
+"Auflisten baut das Projekt; dafür ↻ drücken" = "Seznam zgradi projekt; pritisnite ↻";
