@@ -169,6 +169,28 @@ fn a_server_counting_utf8_is_answered_and_heard_in_utf16() {
 }
 
 #[test]
+fn a_hover_that_comes_after_its_editor_closed_is_answered_once_and_counted_on_the_file() {
+    let env = [("FAKE_ENCODING", "utf-8"), ("FAKE_HOVER_MS", "300")];
+    let f = start("late-hover", &env, utf8());
+    let text = "let ä = 😀word;\n";
+    std::fs::write(f.root.join("late.go"), text).unwrap();
+    let doc = f.uri("late.go");
+    f.server.open(&doc, "go", 1, text);
+    let (tx, rx) = channel();
+    f.server
+        .hover(&doc, at(0, 12), move |answer| tx.send(answer).unwrap())
+        .unwrap();
+    f.server.close(&doc);
+    assert!(!f.server.is_open(&doc));
+    let hover = rx.recv_timeout(WAIT).unwrap().unwrap().unwrap();
+    assert_eq!(hover.range, Some(range((0, 10), (0, 14))));
+    assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+    assert!(!f.server.is_open(&doc));
+    let opened = f.received().iter().filter(|m| *m == "textDocument/didOpen").count();
+    assert_eq!(opened, 1);
+}
+
+#[test]
 fn a_server_that_was_offered_only_utf16_counts_in_utf16() {
     let f = start("utf16", &[("FAKE_ENCODING", "utf-8")], |_| {});
     assert_eq!(f.server.encoding(), Encoding::Utf16);

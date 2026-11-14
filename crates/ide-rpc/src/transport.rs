@@ -481,6 +481,45 @@ mod tests {
     }
 
     #[test]
+    fn closing_twice_and_then_the_end_of_the_stream_end_each_waiting_call_once() {
+        let (transport, mut peer, ends) = connect();
+        let (tx, rx) = channel();
+        let id = transport.next_id();
+        transport.call(id, framing::frame(b"a"), WAIT, Probe(tx)).unwrap();
+        transport.close();
+        transport.close();
+        assert_eq!(rx.recv_timeout(WAIT).unwrap(), End::Closed);
+        assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+        assert!(!transport.is_open());
+        assert_eq!(peer.next(), b"a");
+        peer.to_us = None;
+        ends.recv_timeout(WAIT).unwrap();
+        assert!(ends.recv_timeout(Duration::from_millis(100)).is_err());
+        assert_eq!(transport.send(framing::frame(b"late")), Err(SendError::Closed));
+    }
+
+    #[test]
+    fn an_output_that_fails_leaves_its_call_to_the_deadline_and_refuses_what_follows() {
+        let (input, to_us) = std::io::pipe().unwrap();
+        let output = ide_core::testing::FailingWriter::after(0, io::ErrorKind::BrokenPipe);
+        let (ended, _ends) = channel();
+        let transport = Transport::start(input, output.clone(), Arc::new(ByFirstByte(ended)), "rpc", "test").unwrap();
+        let (tx, rx) = channel();
+        let id = transport.next_id();
+        transport
+            .call(id, framing::frame(b"lost"), Duration::from_millis(50), Probe(tx))
+            .unwrap();
+        assert_eq!(rx.recv_timeout(WAIT).unwrap(), End::Expired(id));
+        let deadline = Instant::now() + WAIT;
+        while transport.send(framing::frame(b"next")) != Err(SendError::Closed) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(transport.send(framing::frame(b"next")), Err(SendError::Closed));
+        assert!(output.taken().is_empty());
+        drop(to_us);
+    }
+
+    #[test]
     fn taking_a_call_twice_finds_it_once() {
         let (transport, _peer, _) = connect();
         let (tx, _rx) = channel();

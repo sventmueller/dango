@@ -5,6 +5,7 @@
 //! method it receives to, `FAKE_EXIT_AT_START` makes it exit at once with code 7, and `FAKE_SYNC` is the JSON of the
 //! `textDocumentSync` capability it announces in place of incremental changes with saved texts. `FAKE_SHAPES` makes
 //! it also format and give inlay hints, and answer completion and document symbols in their other, plain shapes.
+//! `FAKE_HOVER_MS` holds each hover's answer back for that many milliseconds.
 
 use ide_core::LockIgnoringPoison;
 use std::collections::{HashMap, HashSet};
@@ -206,7 +207,10 @@ impl Fake {
                 self.shutdown = true;
                 Value::Null
             }
-            "textDocument/hover" => self.hover(&uri, &params["position"]),
+            "textDocument/hover" => {
+                let hover = self.hover(&uri, &params["position"]);
+                return self.later(id, hover);
+            }
             "textDocument/completion" => self.completion(&uri, &params["position"]),
             "completionItem/resolve" => {
                 let mut item = params.clone();
@@ -383,6 +387,22 @@ impl Fake {
                 }
             }
             send(&out, &json!({"jsonrpc": "2.0", "id": id, "result": "slept"}));
+        });
+    }
+
+    /// Sends `result`, made from the documents as they are now, after the `FAKE_HOVER_MS` milliseconds.
+    fn later(&self, id: Value, result: Value) {
+        let ms = std::env::var("FAKE_HOVER_MS")
+            .ok()
+            .and_then(|ms| ms.parse().ok())
+            .unwrap_or(0);
+        if ms == 0 {
+            return self.reply(&id, result);
+        }
+        let out = self.out.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(ms));
+            send(&out, &json!({"jsonrpc": "2.0", "id": id, "result": result}));
         });
     }
 

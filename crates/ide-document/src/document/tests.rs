@@ -288,6 +288,48 @@ fn a_save_that_finishes_after_a_newer_one_changes_nothing() {
     assert_eq!(fs::read_to_string(&path).unwrap(), "321base\n");
 }
 
+/// What the app's `editor/saving.rs` relies on when the disk lane is full: the lane drops the refused job and its
+/// answer unrun, and the copy the editor kept writes the file on its own thread.
+#[test]
+fn a_save_the_full_disk_lane_refuses_is_written_by_the_copy_kept_for_it() {
+    use ide_core::lane::{Full, Lane};
+    use std::sync::mpsc::channel;
+    use std::sync::{Arc, Barrier};
+    static LANE: Lane = Lane::new("test-full-save", 1, 1);
+    let gate = Arc::new(Barrier::new(2));
+    let held = gate.clone();
+    let (started, running) = channel();
+    LANE.try_run(move || {
+        started.send(()).unwrap();
+        held.wait();
+    })
+    .unwrap();
+    running.recv_timeout(Duration::from_secs(5)).unwrap();
+    LANE.try_run(|| ()).unwrap();
+
+    let dir = scratch("full-lane");
+    let path = dir.join("a.txt");
+    fs::write(&path, "base\n").unwrap();
+    let mut document = Document::open(&path).unwrap();
+    edit(&mut document, 0..0, "mine ");
+    let job = document.begin_save(false).unwrap();
+    let kept = job.clone();
+    let (answered, answers) = channel();
+    let queued = LANE.ask(
+        move || job.run(),
+        move |written| answered.send(written.is_some()).unwrap(),
+    );
+    assert_eq!(queued, Err(Full));
+    assert!(
+        answers.recv().is_err(),
+        "the refused answer is gone without being called"
+    );
+    document.end_save(kept.run().unwrap());
+    gate.wait();
+    assert!(!document.is_dirty());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "mine base\n");
+}
+
 #[test]
 fn a_save_refuses_to_overwrite_a_change_another_program_made() {
     let dir = scratch("overwrite");

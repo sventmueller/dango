@@ -196,6 +196,23 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_write_the_disk_refuses_keeps_the_old_file_and_the_store_and_leaves_no_temporary_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = scratch("refused-write");
+        let path = dir.join("settings.json");
+        let mut store = Store::load(path.clone(), &[]);
+        store.set("a", Value::from(1), &[]).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
+        let refused = store.set("a", Value::from(2), &[]);
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        assert_eq!(refused.unwrap_err().kind(), io::ErrorKind::PermissionDenied);
+        assert_eq!(store.get("a"), Some(&Value::from(1)));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    #[test]
     fn a_write_keeps_what_another_store_of_the_file_wrote_since_its_load() {
         let dir = scratch("read-modify-write");
         let path = dir.join("settings.json");
