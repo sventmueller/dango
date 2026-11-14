@@ -106,11 +106,17 @@ impl Store {
                 self.path.display()
             )));
         }
-        self.values = fresh.values;
-        change(&mut self.values);
-        self.values
-            .insert(VERSION_FIELD.to_string(), Value::from(current_version(migrations)));
-        write_atomically(&self.path, &Value::Object(self.values.clone()))
+        // The store takes the change only once it is on disk, so a failed write leaves it as the file is.
+        let mut values = fresh.values;
+        change(&mut values);
+        values.insert(VERSION_FIELD.to_string(), Value::from(current_version(migrations)));
+        let value = Value::Object(values);
+        write_atomically(&self.path, &value)?;
+        let Value::Object(values) = value else {
+            unreachable!("built as an object above")
+        };
+        self.values = values;
+        Ok(())
     }
 }
 
@@ -151,6 +157,17 @@ pub(crate) fn write_atomically(path: &Path, value: &Value) -> io::Result<()> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn a_failed_write_leaves_the_store_as_the_file_is() {
+        let dir = scratch("failed-write");
+        // A folder where the file should be makes the move over it fail.
+        let path = dir.join("settings.json");
+        let mut store = Store::load(path.clone(), &[]);
+        std::fs::create_dir_all(path.join("blocker")).unwrap();
+        assert!(store.set("a", Value::from(1), &[]).is_err());
+        assert_eq!(store.get("a"), None);
+    }
 
     #[test]
     fn a_write_keeps_what_another_store_of_the_file_wrote_since_its_load() {

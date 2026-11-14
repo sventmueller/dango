@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::io::{self, BufReader, Read, Write};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -71,6 +71,8 @@ enum Out {
 /// One transport.
 pub struct Transport<C> {
     out: SyncSender<Out>,
+    /// Set when the other side's input ends; the writer sees it even when the queue was too full for `EndOfInput`.
+    ending: Arc<AtomicBool>,
     pending: Mutex<Pending<C>>,
     wake: Condvar,
     next: AtomicI64,
@@ -87,8 +89,11 @@ impl<C: Call> Transport<C> {
         label: &str,
     ) -> io::Result<Arc<Transport<C>>> {
         let (out, queue) = sync_channel(QUEUE);
+        let ending = Arc::new(AtomicBool::new(false));
+        let ends = Arc::clone(&ending);
         let transport = Arc::new(Transport {
             out,
+            ending,
             pending: Mutex::new(Pending {
                 calls: HashMap::new(),
                 closed: false,
@@ -99,7 +104,7 @@ impl<C: Call> Transport<C> {
         let writer_name = format!("{protocol}-write-{label}");
         let writer = std::thread::Builder::new().name(writer_name.clone()).spawn(move || {
             ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
-            write_all(output, &queue, &writer_name);
+            write_all(output, &queue, &ends, &writer_name);
         });
         let timer = Arc::clone(&transport);
         let started = writer.and_then(|_| {
@@ -151,6 +156,9 @@ impl<C: Call> Transport<C> {
 
     /// Queues `frame` without waiting for anything.
     pub fn send(&self, frame: Vec<u8>) -> Result<(), SendError> {
+        if self.ending.load(Ordering::Acquire) {
+            return Err(SendError::Closed);
+        }
         match self.out.try_send(Out::Frame(frame)) {
             Ok(()) => Ok(()),
             Err(TrySendError::Full(_)) => Err(SendError::Congested),
@@ -165,6 +173,7 @@ impl<C: Call> Transport<C> {
 
     /// Closes the other side's input once everything queued is written.
     pub fn end_input(&self) {
+        self.ending.store(true, Ordering::Release);
         let _ = self.out.try_send(Out::EndOfInput);
     }
 
@@ -181,7 +190,7 @@ impl<C: Call> Transport<C> {
             pending.calls.drain().map(|(_, waiting)| waiting.call).collect()
         };
         self.wake.notify_all();
-        let _ = self.out.try_send(Out::EndOfInput);
+        self.end_input();
         for call in calls {
             contained(|| call.closed());
         }
@@ -246,13 +255,32 @@ fn read_all<C: Call>(input: impl Read, transport: &Arc<Transport<C>>, receiver: 
     contained(|| receiver.ended());
 }
 
-fn write_all(mut output: impl Write, queue: &std::sync::mpsc::Receiver<Out>, name: &str) {
+fn write_all(mut output: impl Write, queue: &std::sync::mpsc::Receiver<Out>, ending: &AtomicBool, name: &str) {
     while let Ok(Out::Frame(bytes)) = queue.recv() {
-        if let Err(error) = output.write_all(&bytes).and_then(|()| output.flush()) {
+        if !write_frame(&mut output, &bytes, name) {
+            return;
+        }
+        // The flag is set before `EndOfInput` is offered, so a queue that was full for it still holds this frame.
+        if ending.load(Ordering::Acquire) {
+            while let Ok(Out::Frame(bytes)) = queue.try_recv() {
+                if !write_frame(&mut output, &bytes, name) {
+                    return;
+                }
+            }
+            return;
+        }
+    }
+}
+
+/// Writes one frame; whether the output still takes more.
+fn write_frame(output: &mut impl Write, bytes: &[u8], name: &str) -> bool {
+    match output.write_all(bytes).and_then(|()| output.flush()) {
+        Ok(()) => true,
+        Err(error) => {
             if error.kind() != io::ErrorKind::BrokenPipe {
                 ide_core::diag::report(name, error);
             }
-            return;
+            false
         }
     }
 }
@@ -390,6 +418,25 @@ mod tests {
         assert_eq!(peer.next(), b"last");
         let mut rest = String::new();
         assert_eq!(peer.from_us.read_line(&mut rest).unwrap(), 0);
+    }
+
+    #[test]
+    fn the_writer_ends_after_the_queued_frames_when_the_queue_was_too_full_for_the_end() {
+        let (out, queue) = sync_channel(2);
+        out.try_send(Out::Frame(b"a".to_vec())).unwrap();
+        out.try_send(Out::Frame(b"b".to_vec())).unwrap();
+        assert!(out.try_send(Out::EndOfInput).is_err());
+        let ending = AtomicBool::new(true);
+        let mut written = Vec::new();
+        write_all(&mut written, &queue, &ending, "test");
+        assert_eq!(written, b"ab");
+    }
+
+    #[test]
+    fn nothing_is_sent_once_the_transport_closed() {
+        let (transport, _peer, _) = connect();
+        transport.close();
+        assert_eq!(transport.send(framing::frame(b"late")), Err(SendError::Closed));
     }
 
     #[test]
