@@ -24,7 +24,7 @@ use splat_i18n::{t, tf};
 
 use super::outline::{self, Outline};
 use super::run::{self, Running};
-use crate::util::{guarded, main_after, main_soon, ns, set_action};
+use crate::util::{FlagGuard, guarded, main_after, main_soon, ns, set_action};
 
 mod poll;
 
@@ -462,7 +462,7 @@ impl TestsPanel {
                 .filter_map(|row| outline.item(row))
                 .collect()
         };
-        self.ivars().unfolding.set(true);
+        let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
         for item in open {
             // SAFETY: The item is one the data source handed the outline for this row.
             unsafe {
@@ -471,7 +471,6 @@ impl TestsPanel {
                 }
             }
         }
-        self.ivars().unfolding.set(false);
     }
 
     /// Shows the tree or the hint before the first run, and the spinner while tests run.

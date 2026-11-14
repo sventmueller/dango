@@ -15,7 +15,7 @@ use objc2_quartz_core::CADisplayLink;
 
 use super::Timeline;
 use ide_ui_common::constant;
-use ide_ui_common::util::guarded;
+use ide_ui_common::util::{FlagGuard, guarded};
 
 /// How quickly a glide closes its distance to the end: the time for it to shrink to about a third.
 const TAU: f64 = 0.06;
@@ -132,10 +132,9 @@ impl Timeline {
     /// Scrolls the view to `y` as the timeline's own move.
     fn scroll_ours(&self, y: f64) {
         let clip = self.scroll.contentView();
-        self.follow.ours.set(true);
+        let _ours = FlagGuard::raise(&self.follow.ours);
         clip.scrollToPoint(NSPoint::new(0.0, y));
         self.scroll.reflectScrolledClipView(&clip);
-        self.follow.ours.set(false);
     }
 
     /// Shifts the view by `by` points to keep the rows in view where they were.

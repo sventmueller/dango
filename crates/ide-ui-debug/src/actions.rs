@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use ide_ui_common::util::FlagGuard;
 use objc2::DefinedClass;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{NSButton, NSControlStateValueOn, NSOutlineView, NSTextField};
@@ -167,7 +168,7 @@ impl DebugPanel {
         view: &NSOutlineView,
         open: impl Fn(&DebugPanel) -> Vec<objc2::rc::Retained<objc2_foundation::NSString>>,
     ) {
-        self.ivars().unfolding.set(true);
+        let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
         let selected = view.selectedRow();
         let selected_item = (selected >= 0).then(|| view.itemAtRow(selected)).flatten();
         view.reloadData();
@@ -185,7 +186,6 @@ impl DebugPanel {
                 );
             }
         }
-        self.ivars().unfolding.set(false);
     }
 
     /// Selects the row of the paused frame, as a stop does.
@@ -202,10 +202,9 @@ impl DebugPanel {
         // SAFETY: The item is one of this panel's row objects.
         let row = unsafe { view.rowForItem(Some(&item)) };
         if let Ok(index) = usize::try_from(row) {
-            self.ivars().unfolding.set(true);
+            let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
             view.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(index), false);
             view.scrollRowToVisible(row);
-            self.ivars().unfolding.set(false);
         }
     }
 }

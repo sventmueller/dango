@@ -18,6 +18,7 @@ use objc2_foundation::{NSRange, NSString};
 use splat_i18n::t;
 
 use super::view::EditorTextView;
+use crate::util::OnDrop;
 
 /// Whether editors use Vim's keys, as the user last chose; read from the settings once.
 #[derive(Default)]
@@ -348,6 +349,7 @@ fn apply(view: &EditorTextView, outcome: &Outcome) {
     }
     let ending = if view.ivars().vim.borrow().crlf { "\r\n" } else { "\n" };
     view.ivars().vim.borrow_mut().applying = true;
+    let _applying = OnDrop::new(|| view.ivars().vim.borrow_mut().applying = false);
     for replacement in &outcome.replacements {
         let start = utf16_of(view, replacement.start);
         let end = utf16_of(view, replacement.end);
@@ -361,7 +363,6 @@ fn apply(view: &EditorTextView, outcome: &Outcome) {
             Err(error) => crate::diag::report("applying a Vim edit", error),
         }
     }
-    view.ivars().vim.borrow_mut().applying = false;
 }
 
 fn perform(view: &EditorTextView, effect: Effect) {

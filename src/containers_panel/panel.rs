@@ -24,7 +24,7 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::docker;
-use crate::util::{guarded, label, main_after, main_soon, ns, set_action};
+use crate::util::{FlagGuard, guarded, label, main_after, main_soon, ns, set_action};
 
 /// How long a read waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
@@ -522,14 +522,15 @@ impl ContainersPanel {
     /// Opens every section and project the user did not close, and forgets the items of rows that went away.
     fn unfold(&self, table: &NSOutlineView) {
         let rows = self.ivars().rows.borrow().clone();
-        self.ivars().unfolding.set(true);
-        for row in &rows {
-            if !self.ivars().closed.borrow().contains(&key_of(row)) {
-                // SAFETY: The item is one the data source handed the outline for this row.
-                unsafe { table.expandItem(Some(&self.item_for(row))) };
+        {
+            let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
+            for row in &rows {
+                if !self.ivars().closed.borrow().contains(&key_of(row)) {
+                    // SAFETY: The item is one the data source handed the outline for this row.
+                    unsafe { table.expandItem(Some(&self.item_for(row))) };
+                }
             }
         }
-        self.ivars().unfolding.set(false);
         let keys: HashSet<String> = rows.iter().map(key_of).collect();
         self.ivars().items.borrow_mut().retain(|key, _| keys.contains(key));
     }

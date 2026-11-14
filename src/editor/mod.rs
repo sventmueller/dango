@@ -46,7 +46,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
 
-use crate::util::{constant, ns};
+use crate::util::{FlagGuard, constant, ns};
 use crate::window::{TabKind, WindowController};
 pub use view::EditorTextView;
 
@@ -628,9 +628,10 @@ fn configure(view: &EditorTextView, font_size: f64) {
         let name = document.path().map(display_name).unwrap_or_default();
         (document.text().to_string(), document.read_only().is_some(), name)
     };
-    view.ivars().applying.set(true);
-    view.setString(&ns(&text));
-    view.ivars().applying.set(false);
+    {
+        let _applying = FlagGuard::raise(&view.ivars().applying);
+        view.setString(&ns(&text));
+    }
     indent::configure(view);
     // Markdown is prose, whose paragraphs are single long lines; VS Code wraps it by default as well.
     if view

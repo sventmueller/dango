@@ -14,7 +14,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSValue};
 
-use crate::util::{guarded, ns};
+use crate::util::{FlagGuard, guarded, ns};
 use crate::window::WindowController;
 
 pub struct ViewIvars {
@@ -935,9 +935,10 @@ impl EditorTextView {
     /// Puts the document's whole text into the view after the two drifted apart.
     pub fn resync(&self) {
         let text = self.ivars().document.borrow().text().to_string();
-        self.ivars().applying.set(true);
-        self.setString(&ns(&text));
-        self.ivars().applying.set(false);
+        {
+            let _applying = FlagGuard::raise(&self.ivars().applying);
+            self.setString(&ns(&text));
+        }
         super::highlight::recolor_all(self);
         super::insets::reset(self);
     }
@@ -955,17 +956,18 @@ impl EditorTextView {
 
     fn apply_changes(&self, changes: &[Change]) {
         let Some(storage) = self.storage() else { return };
-        self.ivars().applying.set(true);
-        super::undo_step(self, || {
-            for change in changes {
-                let range = NSRange::new(change.utf16.start, change.utf16.end - change.utf16.start);
-                if self.shouldChangeTextInRange_replacementString(range, Some(&ns(&change.text))) {
-                    storage.replaceCharactersInRange_withString(range, &ns(&change.text));
-                    self.didChangeText();
+        {
+            let _applying = FlagGuard::raise(&self.ivars().applying);
+            super::undo_step(self, || {
+                for change in changes {
+                    let range = NSRange::new(change.utf16.start, change.utf16.end - change.utf16.start);
+                    if self.shouldChangeTextInRange_replacementString(range, Some(&ns(&change.text))) {
+                        storage.replaceCharactersInRange_withString(range, &ns(&change.text));
+                        self.didChangeText();
+                    }
                 }
-            }
-        });
-        self.ivars().applying.set(false);
+            });
+        }
         self.changed_all(changes);
     }
 

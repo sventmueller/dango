@@ -24,7 +24,7 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::EditorTextView;
-use crate::util::{main_soon, ns};
+use crate::util::{OnDrop, main_soon, ns};
 use model::{Kind, Proposal};
 use provider::Blocked;
 
@@ -130,9 +130,8 @@ fn utf16(view: &EditorTextView, at: usize) -> usize {
 /// Runs `f` while the editor's own moves and edits neither drop the proposal nor ask anew.
 fn quietly<R>(view: &EditorTextView, f: impl FnOnce() -> R) -> R {
     view.ivars().predict.borrow_mut().quiet = true;
-    let result = f();
-    view.ivars().predict.borrow_mut().quiet = false;
-    result
+    let _quiet = OnDrop::new(|| view.ivars().predict.borrow_mut().quiet = false);
+    f()
 }
 
 /// Takes the proposal away and stops the question under way.

@@ -12,7 +12,7 @@ use objc2_foundation::{NSArray, NSObjectProtocol, NSRange};
 use splat_i18n::t;
 
 use crate::editor::EditorTextView;
-use crate::util::{guarded, ns, symbol};
+use crate::util::{OnDrop, guarded, ns, symbol};
 use crate::window::WindowController;
 
 /// How many lines a move must cross within a file to leave a place behind.
@@ -190,6 +190,7 @@ pub fn go(controller: &WindowController, back: bool) {
 
 fn show(controller: &WindowController, place: &Place) {
     with_history(controller, |history| history.moving = true);
+    let moving = OnDrop::new(|| with_history(controller, |history| history.moving = false));
     controller.open_file(&place.path);
     if let Some(view) = editor_of(controller, &place.path) {
         let at = place.offset.min(view.document().text().len_utf16());
@@ -199,10 +200,8 @@ fn show(controller: &WindowController, place: &Place) {
             window.makeFirstResponder(Some(&view));
         }
     }
-    with_history(controller, |history| {
-        history.moving = false;
-        history.here = Some(place.clone());
-    });
+    drop(moving);
+    with_history(controller, |history| history.here = Some(place.clone()));
 }
 
 fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {

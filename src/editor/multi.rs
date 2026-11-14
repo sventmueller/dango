@@ -15,7 +15,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSNotFound, NSPoint, NSRange, NSRect, NSStringCompareOptions};
 
 use super::view::EditorTextView;
-use crate::util::{constant, ns};
+use crate::util::{OnDrop, constant, ns};
 
 /// The carets and selections beyond NSTextView's own.
 #[derive(Debug, Default)]
@@ -90,8 +90,8 @@ pub fn selection_changed(view: &EditorTextView) {
 
 fn select(view: &EditorTextView, range: &Range<usize>) {
     view.ivars().carets.borrow_mut().selecting = true;
+    let _selecting = OnDrop::new(|| view.ivars().carets.borrow_mut().selecting = false);
     view.setSelectedRange(ns_range(range));
-    view.ivars().carets.borrow_mut().selecting = false;
 }
 
 /// Every selection, the view's included, sorted and merged where they meet, with the place of the view's own.
@@ -127,6 +127,7 @@ fn at_every_caret(view: &EditorTextView, op: impl Fn(&EditorTextView, usize)) {
         carets.replaying = true;
         carets.done.clear();
     }
+    let replaying = OnDrop::new(|| view.ivars().carets.borrow_mut().replaying = false);
     super::undo_step(view, || {
         for (index, range) in ranges.iter().enumerate().rev() {
             let before = view.string().length();
@@ -141,9 +142,9 @@ fn at_every_caret(view: &EditorTextView, op: impl Fn(&EditorTextView, usize)) {
             carets.done.push((index, now));
         }
     });
+    drop(replaying);
     let (main, others) = {
         let mut carets = view.ivars().carets.borrow_mut();
-        carets.replaying = false;
         let mut done = std::mem::take(&mut carets.done);
         done.sort_by_key(|(index, _)| *index);
         let main = done.iter().find(|(i, _)| *i == primary).map(|(_, r)| r.clone());

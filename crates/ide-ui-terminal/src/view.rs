@@ -34,7 +34,7 @@ use crate::model::{self, Command, State};
 use crate::palette::{self, Theme};
 use crate::render::{self, Fonts};
 use ide_ui_common::constant;
-use ide_ui_common::util::{guarded, item, live, main_after, ns, separator, set_target};
+use ide_ui_common::util::{FlagGuard, guarded, item, live, main_after, ns, separator, set_target};
 
 /// What a terminal view keeps.
 pub struct Ivars {
@@ -188,11 +188,9 @@ define_class!(
 
         #[unsafe(method(cacheDisplayInRect:toBitmapImageRep:))]
         fn cache_display(&self, rect: NSRect, bitmap: &NSBitmapImageRep) {
-            let picturing = &self.ivars().state.picturing;
-            picturing.set(true);
+            let _picturing = FlagGuard::raise(&self.ivars().state.picturing);
             // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let () = unsafe { msg_send![super(self), cacheDisplayInRect: rect, toBitmapImageRep: bitmap] };
-            picturing.set(false);
         }
 
         #[unsafe(method(updateLayer))]

@@ -18,7 +18,7 @@ use splat_i18n::t;
 
 use super::model::{Changes, Command, Effect, Kind, MenuEntry, Model, Naming, changes, valid_name};
 use super::view::{FileTreeSource, Pending, path_of};
-use crate::util::{constant, main_after, ns};
+use crate::util::{FlagGuard, constant, main_after, ns};
 
 /// How long a folder's entries may take to read before the folder shows a spinner.
 const SPINNER_AFTER: Duration = Duration::from_millis(100);
@@ -205,13 +205,12 @@ impl FileTreeSource {
 
     /// Opens the folders among `entries`, and the folders inside them as they are read.
     fn open_inside(&self, view: &NSOutlineView, entries: &[Entry]) {
-        self.ivars().cascade.set(true);
+        let _cascade = FlagGuard::raise(&self.ivars().cascade);
         for entry in entries.iter().filter(|e| e.can_expand()) {
             let item = self.item_for(entry);
             // SAFETY: The item is one the data source handed this view for a row of the folder just shown.
             unsafe { view.expandItem_expandChildren(Some(&item), true) };
         }
-        self.ivars().cascade.set(false);
     }
 
     /// Asks the view for the rows of `dir` again, and of the folders inside.

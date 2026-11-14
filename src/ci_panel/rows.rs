@@ -16,7 +16,7 @@ use splat_i18n::{t, tf};
 use super::model::{Key, Tab};
 use super::panel::CiPanel;
 use super::text;
-use crate::util::{item, label, ns, separator, set_target, symbol};
+use crate::util::{FlagGuard, item, label, ns, separator, set_target, symbol};
 
 /// Return and the keypad's Enter.
 const RETURN_KEYS: [u16; 2] = [36, 76];
@@ -287,16 +287,17 @@ impl CiPanel {
             }
             let chosen = self.read().chosen.get(&key).copied();
             let open = chosen.unwrap_or_else(|| self.opens_by_itself(key, index));
-            self.ivars().unfolding.set(true);
-            // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
-            unsafe {
-                if open {
-                    outline.expandItem(Some(&item));
-                } else {
-                    outline.collapseItem(Some(&item));
+            {
+                let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
+                // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+                unsafe {
+                    if open {
+                        outline.expandItem(Some(&item));
+                    } else {
+                        outline.collapseItem(Some(&item));
+                    }
                 }
             }
-            self.ivars().unfolding.set(false);
             if open {
                 self.unfold(Some(&key));
             }

@@ -44,7 +44,7 @@ use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
 
 use crate::context::AppContext;
-use crate::util::{guarded, main_soon, ns};
+use crate::util::{FlagGuard, guarded, main_soon, ns};
 use activity_bar::ActivityBar;
 pub use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
 use files::FileTree;
@@ -853,11 +853,10 @@ impl WindowController {
             return;
         }
         layout::save(self);
-        self.ivars().closing.set(true);
+        let _closing = FlagGuard::raise(&self.ivars().closing);
         for window in windows {
             window.close();
         }
-        self.ivars().closing.set(false);
     }
 
     fn bring_to_front(&self) {
