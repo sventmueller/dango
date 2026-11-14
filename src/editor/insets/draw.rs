@@ -360,6 +360,21 @@ pub fn shown(view: &EditorTextView) -> Vec<Shown> {
         .unwrap_or_default()
 }
 
+/// Where each inset was drawn last, with whether it has a tooltip and whether a click on it does something.
+pub fn offers(view: &EditorTextView) -> Vec<(NSRect, bool, bool)> {
+    let Ok(state) = view.ivars().insets.try_borrow() else {
+        return Vec::new();
+    };
+    state
+        .shown
+        .iter()
+        .filter_map(|shown| {
+            let inset = layer_insets(&state, shown.layer)?.get(shown.index)?;
+            Some((shown.rect, inset.tooltip.is_some(), inset.action.is_some()))
+        })
+        .collect()
+}
+
 fn contains(rect: NSRect, point: NSPoint) -> bool {
     point.x >= rect.origin.x
         && point.x < rect.origin.x + rect.size.width

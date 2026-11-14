@@ -2,6 +2,8 @@
 //! the first. It also knows where the insets of E81 are, which the layout fragments draw, for their clicks, tooltips
 //! and pointer. Clicks pass through to the text, except on an inset that does something.
 
+use std::cell::{Cell, RefCell};
+
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
@@ -16,6 +18,11 @@ use crate::util::{constant, guarded, ns};
 
 pub struct OverlayIvars {
     editor: Weak<EditorTextView>,
+    /// Where it drew Vim's block caret last, in the editor's coordinates.
+    block: Cell<Option<NSRect>>,
+    /// The insets its tooltip areas and pointer are for: where each is, in the overlay's coordinates, whether it has a
+    /// tooltip and whether a click on it does something.
+    offered: RefCell<Vec<(NSRect, bool, bool)>>,
 }
 
 define_class!(
@@ -90,6 +97,8 @@ define_class!(
 pub fn attach(editor: &EditorTextView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
+        block: Cell::new(None),
+        offered: RefCell::new(Vec::new()),
     });
     // SAFETY: NSView's initializer, called once on the newly allocated object.
     let this: Retained<Overlay> = unsafe { msg_send![super(this), initWithFrame: editor.visibleRect()] };
@@ -143,6 +152,20 @@ pub fn redraw(editor: &EditorTextView) {
     }
 }
 
+/// The caret of `editor` moved, which of what the overlay draws only Vim's block caret follows: only where it was and
+/// where it goes are drawn again.
+pub fn caret_moved(editor: &EditorTextView) {
+    let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) else {
+        return;
+    };
+    for rect in [overlay.ivars().block.get(), super::vim::block(editor)]
+        .into_iter()
+        .flatten()
+    {
+        overlay.setNeedsDisplayInRect(overlay.convertRect_fromView(rect, Some(editor)));
+    }
+}
+
 impl Overlay {
     fn draw(&self, dirty: NSRect) {
         let Some(editor) = self.ivars().editor.load() else {
@@ -157,26 +180,26 @@ impl Overlay {
         self.draw_placeholders(&editor);
         super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);
-        super::vim::draw_block(&editor);
+        self.ivars().block.set(super::vim::draw_block(&editor));
         self.offer_tooltips(&editor);
     }
 
-    /// Gives every inset with a tooltip a tooltip area, which the overlay answers from the inset under the mouse.
+    /// Gives every inset with a tooltip a tooltip area, which the overlay answers from the inset under the mouse; only
+    /// when the insets or their places changed since the last drawing.
     fn offer_tooltips(&self, editor: &EditorTextView) {
-        self.removeAllToolTips();
-        let shown = super::insets::shown(editor);
-        for inset in &shown {
-            if super::insets::tooltip(
-                editor,
-                NSPoint::new(inset.rect.origin.x + 1.0, inset.rect.origin.y + 1.0),
-            )
-            .is_some()
-            {
-                let rect = self.convertRect_fromView(inset.rect, Some(editor));
-                // SAFETY: The overlay owns its tooltip areas and answers them as their owner; no user data is passed.
-                unsafe { self.addToolTipRect_owner_userData(rect, self, std::ptr::null_mut()) };
-            }
+        let offers: Vec<(NSRect, bool, bool)> = super::insets::offers(editor)
+            .into_iter()
+            .map(|(rect, tooltip, action)| (self.convertRect_fromView(rect, Some(editor)), tooltip, action))
+            .collect();
+        if *self.ivars().offered.borrow() == offers {
+            return;
         }
+        self.removeAllToolTips();
+        for (rect, _, _) in offers.iter().filter(|(_, tooltip, _)| *tooltip) {
+            // SAFETY: The overlay owns its tooltip areas and answers them as their owner; no user data is passed.
+            unsafe { self.addToolTipRect_owner_userData(*rect, self, std::ptr::null_mut()) };
+        }
+        *self.ivars().offered.borrow_mut() = offers;
         if let Some(window) = self.window() {
             window.invalidateCursorRectsForView(self);
         }
@@ -187,14 +210,14 @@ impl Overlay {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
-        for inset in super::insets::shown(&editor) {
-            let middle = NSPoint::new(inset.rect.origin.x + 1.0, inset.rect.origin.y + 1.0);
-            if super::insets::hits(&editor, middle) {
-                self.addCursorRect_cursor(
-                    self.convertRect_fromView(inset.rect, Some(&editor)),
-                    &NSCursor::pointingHandCursor(),
-                );
-            }
+        for (rect, _, _) in super::insets::offers(&editor)
+            .into_iter()
+            .filter(|(_, _, action)| *action)
+        {
+            self.addCursorRect_cursor(
+                self.convertRect_fromView(rect, Some(&editor)),
+                &NSCursor::pointingHandCursor(),
+            );
         }
     }
 

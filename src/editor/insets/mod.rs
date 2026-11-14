@@ -27,7 +27,7 @@ use draw::fill;
 use rotor::Rotor;
 
 pub(in crate::editor) use draw::line_fragments;
-pub use draw::{click, click_gap, draw, draw_fragment, hits, retarget, shown, tooltip, width_after_text};
+pub use draw::{click, click_gap, draw, draw_fragment, hits, offers, retarget, shown, tooltip, width_after_text};
 pub use rotor::attach;
 #[cfg(feature = "selftest")]
 mod selftest_probe;

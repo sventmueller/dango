@@ -82,10 +82,12 @@ pub fn selection_changed(view: &EditorTextView) {
         .carets
         .try_borrow()
         .is_ok_and(|c| c.replaying || c.selecting);
-    if !ours {
+    if ours {
+        super::overlay::redraw(view);
+    } else {
         clear(view);
+        super::overlay::caret_moved(view);
     }
-    super::overlay::redraw(view);
 }
 
 fn select(view: &EditorTextView, range: &Range<usize>) {

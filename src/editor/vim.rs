@@ -489,13 +489,21 @@ pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_
 }
 
 /// Draws the block caret outside Insert mode, over the character under the caret.
-pub fn draw_block(view: &EditorTextView) {
+pub fn draw_block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
+    let rect = block(view)?;
+    NSColor::textColor().colorWithAlphaComponent(0.45).setFill();
+    objc2_app_kit::NSBezierPath::fillRect(rect);
+    Some(rect)
+}
+
+/// Where the block caret of `view` goes, in the editor's coordinates.
+pub fn block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
     if matches!(mode(view), None | Some(Mode::Insert)) {
-        return;
+        return None;
     }
     let at = view.selectedRange();
     if at.length > 0 {
-        return;
+        return None;
     }
     let length = view.document().text().len_utf16();
     let rect = if at.location < length {
@@ -503,12 +511,11 @@ pub fn draw_block(view: &EditorTextView) {
     } else {
         ide_ui_lsp::rect_of(view, at.location..at.location)
     };
-    let Some(mut rect) = rect else { return };
+    let mut rect = rect?;
     if rect.size.width < 2.0 {
         rect.size.width = view.ivars().font_size.get() * 0.6;
     }
-    NSColor::textColor().colorWithAlphaComponent(0.45).setFill();
-    objc2_app_kit::NSBezierPath::fillRect(rect);
+    Some(rect)
 }
 
 /// Opens the undo group of an insert pass, which closes on Esc, a lost focus, another document or a change from
