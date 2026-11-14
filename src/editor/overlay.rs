@@ -2,7 +2,7 @@
 //! the first. It also knows where the insets of E81 are, which the layout fragments draw, for their clicks, tooltips
 //! and pointer. Clicks pass through to the text, except on an inset that does something.
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
@@ -18,8 +18,6 @@ use crate::util::{constant, guarded, ns};
 
 pub struct OverlayIvars {
     editor: Weak<EditorTextView>,
-    /// Where it drew Vim's block caret last, in the editor's coordinates.
-    block: Cell<Option<NSRect>>,
     /// The insets its tooltip areas and pointer are for: where each is, in the overlay's coordinates, whether it has a
     /// tooltip and whether a click on it does something.
     offered: RefCell<Vec<(NSRect, bool, bool)>>,
@@ -97,7 +95,6 @@ define_class!(
 pub fn attach(editor: &EditorTextView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
-        block: Cell::new(None),
         offered: RefCell::new(Vec::new()),
     });
     // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -152,20 +149,6 @@ pub fn redraw(editor: &EditorTextView) {
     }
 }
 
-/// The caret of `editor` moved, which of what the overlay draws only Vim's block caret follows: only where it was and
-/// where it goes are drawn again.
-pub fn caret_moved(editor: &EditorTextView) {
-    let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) else {
-        return;
-    };
-    for rect in [overlay.ivars().block.get(), super::vim::block(editor)]
-        .into_iter()
-        .flatten()
-    {
-        overlay.setNeedsDisplayInRect(overlay.convertRect_fromView(rect, Some(editor)));
-    }
-}
-
 impl Overlay {
     fn draw(&self, dirty: NSRect) {
         let Some(editor) = self.ivars().editor.load() else {
@@ -180,7 +163,7 @@ impl Overlay {
         self.draw_placeholders(&editor);
         super::insets::draw(&editor, self.convertRect_toView(dirty, Some(&editor)));
         self.draw_carets(&editor);
-        self.ivars().block.set(super::vim::draw_block(&editor));
+        super::vim::draw_block(&editor);
         self.offer_tooltips(&editor);
     }
 
