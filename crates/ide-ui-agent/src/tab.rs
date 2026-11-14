@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 use ide_claude::{Event, Session};
-use ide_thread::{Change, Status, Thread, ThreadId, ThreadIndex};
+use ide_thread::{Change, Status, Thread, ThreadId};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
@@ -163,6 +163,7 @@ impl AgentTab {
             state.bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
             state.resume = resume;
         }
+        crate::agent_panel::read_past(&tab.cwd);
         tab.add_to_window(controller);
         Some(tab)
     }
@@ -504,11 +505,18 @@ impl AgentTab {
         if state.thread.session().is_none() && state.thread.entries(&ide_thread::Lane::Main).is_empty() {
             return;
         }
-        let mut index = ThreadIndex::open(&ThreadIndex::default_dir());
-        let _ = index.record(&state.thread, SystemTime::now());
-        if let Some(title) = &state.custom_title {
-            let _ = index.rename(&self.thread_id, title);
-        }
+        crate::agent_panel::record(
+            ide_thread::IndexEntry::of(&state.thread, SystemTime::now()),
+            state.thread.usage().subscription,
+            state.custom_title.clone(),
+        );
+    }
+
+    /// Takes in the bookmarks, read after the tab opened.
+    pub(super) fn bookmarks_read(&self) {
+        let on = crate::agent_panel::is_bookmarked(&self.thread_id);
+        self.state.borrow_mut().bookmarked = on;
+        self.header.set_bookmarked(on);
     }
 
     pub fn set_problem(&self, problem: Option<Problem>) {

@@ -693,6 +693,19 @@ fn names(root: PathBuf, key: u64) {
         tab.is_bookmarked() && ide_ui_agent::agent_panel::is_bookmarked(tab.thread_id()),
         "",
     );
+    let listed = move || {
+        tab_of(key).is_some_and(|tab| {
+            titles(&tab.menu(TabMenu::History))
+                .iter()
+                .any(|t| t.starts_with("Aktionen im Test · "))
+        })
+    };
+    helpers::wait_until(listed, move |_| history(root, key));
+}
+
+/// The clock's menu, opening a file of a card and the keyboard on a card.
+fn history(root: PathBuf, key: u64) {
+    let Some(tab) = tab_of(key) else { return finish(NAME) };
     let history = tab.menu(TabMenu::History);
     let past = titles(&history);
     check(

@@ -63,6 +63,24 @@ pub(super) fn panel(root: PathBuf, key: u64) {
     if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, row) {
         menu.performActionForItemAtIndex(2);
     }
+    let id = tab.thread_id().clone();
+    helpers::wait_until(move || archived(&id), move |_| archive(root, key, tabs));
+}
+
+/// The row of the session titled `title` in the AI panel of `root`'s window.
+fn row_of_in(root: &PathBuf, title: &str) -> Option<isize> {
+    let controller = controller_of(root)?;
+    ide_ui_agent::agent_panel::inspect(&controller)
+        .and_then(|seen| seen.rows.iter().position(|(_, _, t)| t == title))
+        .and_then(|n| isize::try_from(n).ok())
+}
+
+/// The archive: an archived session shows there and comes back from it.
+fn archive(root: PathBuf, key: u64, tabs: usize) {
+    let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
+        return finish(NAME);
+    };
+    let row_of = |title: &str| row_of_in(&root, title);
     let was_archived = archived(tab.thread_id());
     if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, -1) {
         let only = titles(&menu);
@@ -81,14 +99,29 @@ pub(super) fn panel(root: PathBuf, key: u64) {
             menu.performActionForItemAtIndex(2);
         }
         ide_ui_agent::agent_panel::open_session_row(&controller, usize::try_from(row).unwrap_or(0));
-        check(
-            "the archive's menu brings a session back, and a click on an open session shows its tab",
-            back.get(2).map(String::as_str) == Some("Aus dem Archiv holen")
-                && !archived(tab.thread_id())
-                && ide_ui_agent::all().len() == tabs,
-            format!("{back:?}"),
-        );
+        let id = tab.thread_id().clone();
+        let back_again = move || !archived(&id);
+        helpers::wait_until(back_again, move |_| {
+            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            check(
+                "the archive's menu brings a session back, and a click on an open session shows its tab",
+                back.get(2).map(String::as_str) == Some("Aus dem Archiv holen")
+                    && !archived(tab.thread_id())
+                    && ide_ui_agent::all().len() == tabs,
+                format!("{back:?}"),
+            );
+            leave(root, key);
+        });
+        return;
     }
+    leave(root, key);
+}
+
+/// The archive's own menu leads back to the sessions.
+fn leave(root: PathBuf, key: u64) {
+    let Some(controller) = controller_of(&root) else {
+        return finish(NAME);
+    };
     let leave = ide_ui_agent::agent_panel::session_menu(&controller, -1);
     let shown = leave.as_ref().map(|m| titles(m)).unwrap_or_default();
     if let Some(menu) = &leave {

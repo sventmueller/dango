@@ -566,7 +566,7 @@ impl AgentTab {
     pub(super) fn history_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let past = crate::agent_panel::past_sessions(&self.cwd, 20);
+        let past = crate::agent_panel::past_sessions_cached(&self.cwd, 20);
         if past.is_empty() {
             let none = self.menu_item(&menu, t("Keine früheren Sitzungen"), sel!(ideAgentOpenPast:), -1);
             none.setEnabled(false);
@@ -612,8 +612,7 @@ impl AgentTab {
 
     pub fn set_title(&self, name: &str) {
         self.state.borrow_mut().custom_title = Some(name.to_string());
-        let mut index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
-        let _ = index.rename(&self.thread_id, name);
+        crate::agent_panel::rename(&self.thread_id, name);
         self.persist();
         self.refresh();
         if let Some(controller) = self.controller() {

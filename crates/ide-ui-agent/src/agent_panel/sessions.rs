@@ -267,7 +267,6 @@ define_class!(
                 if let Some(thread) = self.clicked_thread() {
                     let id = ide_thread::ThreadId::from(thread.as_str());
                     super::set_bookmarked(&id, !super::is_bookmarked(&id));
-                    self.with_panel(|panel| panel.reload());
                 }
             });
         }
@@ -475,33 +474,30 @@ impl Source {
             .and_then(|c| crate::of_window(&c).into_iter().find(|t| t.thread_id() == &id));
         let current = match &open {
             Some(tab) => tab.title(),
-            None => ThreadIndex::open(&ThreadIndex::default_dir())
-                .get(&id)
-                .map(|e| e.title.clone())
-                .unwrap_or_default(),
+            None => self.listed(&thread).map(|e| e.title).unwrap_or_default(),
         };
         let Some(name) = crate::ask_text(self.mtm(), t("Sitzung umbenennen"), &current) else {
             return;
         };
         match open {
             Some(tab) => tab.set_title(&name),
-            None => {
-                let mut index = ThreadIndex::open(&ThreadIndex::default_dir());
-                let _ = index.rename(&id, &name);
-            }
+            None => crate::agent_panel::rename(&id, &name),
         }
-        self.with_panel(|panel| panel.reload());
     }
 
     fn archive_clicked(&self) {
         let Some(thread) = self.clicked_thread() else { return };
         let id = ide_thread::ThreadId::from(thread.as_str());
-        let mut index = ThreadIndex::open(&ThreadIndex::default_dir());
-        let archived = index.get(&id).is_some_and(|e| e.archived);
-        if let Err(error) = index.set_archived(&id, !archived) {
-            ide_ui_common::diag::report("archiving a session", error);
+        let archived = self.listed(&thread).is_some_and(|e| e.archived);
+        super::set_archived(&id, !archived);
+    }
+
+    /// The index's entry of the listed thread `thread`, as the list was read last.
+    fn listed(&self, thread: &str) -> Option<ide_thread::IndexEntry> {
+        match self.ivars().model.borrow().nodes.get(&format!("thread:{thread}")) {
+            Some(Node::Thread { entry, .. }) => Some(entry.clone()),
+            _ => None,
         }
-        self.with_panel(|panel| panel.reload());
     }
 }
 

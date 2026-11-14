@@ -5,8 +5,7 @@ use std::rc::Rc;
 use std::time::SystemTime;
 
 use ide_thread::{
-    Change, Entry, EntryId, EntryKind, IndexEntry, Lane, Notice, Subagent, SubagentPatch, TaskStatus, Thread,
-    ThreadIndex, Update,
+    Change, Entry, EntryId, EntryKind, IndexEntry, Lane, Notice, Subagent, SubagentPatch, TaskStatus, Thread, Update,
 };
 use splat_i18n::tf;
 
@@ -147,7 +146,7 @@ impl AgentTab {
         };
         let Some(fork) = fork else { return };
         if let Some(id) = &fork.kept_entry {
-            let _ = ThreadIndex::open(&ThreadIndex::default_dir()).remove(id);
+            crate::agent_panel::remove(id);
         }
         let mut before = fork.before;
         before.apply(Update::Put {
@@ -196,14 +195,8 @@ impl AgentTab {
             cwd: Some(self.cwd.clone()),
             cost_usd: self.snapshot().usage().billed_cost(),
         };
-        let mut index = ThreadIndex::open(&ThreadIndex::default_dir());
-        match index.upsert(entry) {
-            Ok(()) => Some(id),
-            Err(error) => {
-                ide_ui_common::diag::report("keeping a session before a rewind", error);
-                None
-            }
-        }
+        crate::agent_panel::upsert(entry);
+        Some(id)
     }
 }
 

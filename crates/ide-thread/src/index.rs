@@ -151,14 +151,18 @@ impl ThreadIndex {
 
     /// Records `thread` as it is now, keeping its group and archive flag, and writes the file.
     pub fn record(&mut self, thread: &Thread, at: SystemTime) -> io::Result<()> {
-        let mut entry = IndexEntry::of(thread, at);
-        if let Some(known) = self.get(thread.id()) {
+        self.record_entry(IndexEntry::of(thread, at), thread.usage().subscription)
+    }
+
+    /// `record` for the entry a thread made, on a subscription or not, so the thread itself need not come along.
+    pub fn record_entry(&mut self, mut entry: IndexEntry, subscription: bool) -> io::Result<()> {
+        if let Some(known) = self.get(&entry.id) {
             entry.group.clone_from(&known.group);
             entry.archived = known.archived;
             if entry.title.is_empty() {
                 entry.title.clone_from(&known.title);
             }
-            if entry.cost_usd.is_none() && !thread.usage().subscription {
+            if entry.cost_usd.is_none() && !subscription {
                 entry.cost_usd = known.cost_usd;
             }
         }

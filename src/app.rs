@@ -213,6 +213,7 @@ fn remember_open_projects(cx: &crate::context::AppContext) {
     crate::session::remember(cx);
     crate::session::quitting();
     cx.session.wait_for_writes();
+    ide_ui_agent::agent_panel::wait_for_writes(std::time::Duration::from_secs(5));
 }
 
 /// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in

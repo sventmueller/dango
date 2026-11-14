@@ -4,6 +4,7 @@
 mod agents;
 mod rows;
 mod sessions;
+mod store;
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeSet;
@@ -11,7 +12,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
-use ide_thread::{ThreadId, ThreadIndex};
+use ide_thread::ThreadIndex;
 use objc2::rc::Retained;
 #[cfg(feature = "selftest")]
 use objc2_app_kit::NSView;
@@ -24,6 +25,11 @@ use ide_ui_common::util::{main_after, main_soon, ns};
 use ide_ui_common::window::{AsWindow, Panel, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
+pub use store::{
+    is_bookmarked, past_session, past_session_soon, past_sessions_cached, read_past, set_archived, set_bookmarked,
+    wait_for_writes,
+};
+pub(crate) use store::{record, remove, rename, upsert};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -55,10 +61,24 @@ pub struct AgentPanels {
     panels: RefCell<Vec<Rc<AgentPanel>>>,
     last_id: Cell<usize>,
     offered_agents: agents::OfferedAgents,
+    store: store::Store,
+}
+
+fn with_state<R>(f: impl FnOnce(&AgentPanels) -> R) -> R {
+    f(&crate::host::state().agent_panels)
 }
 
 fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentPanel>>>) -> R) -> R {
-    f(&crate::host::state().agent_panels.panels)
+    with_state(|state| f(&state.panels))
+}
+
+/// Reads every panel's lists again in the background.
+fn reload_all() {
+    for panel in with_panels(|panels| panels.borrow().clone()) {
+        if panel.controller.is_open() {
+            panel.reload_soon();
+        }
+    }
 }
 
 fn panel_of(controller: &Window) -> Option<Rc<AgentPanel>> {
@@ -87,6 +107,7 @@ pub fn attach(controller: &(impl AsWindow + ?Sized)) {
     let panel = AgentPanel::new(controller, root);
     controller.set_panel_page(Panel::Agents, &panel.view);
     with_panels(|panels| panels.borrow_mut().push(panel.clone()));
+    store::read_bookmarks();
     panel.reload_soon();
 }
 
@@ -117,32 +138,17 @@ fn bookmarks() -> BTreeSet<String> {
         .unwrap_or_default()
 }
 
-/// Whether the user bookmarked the thread `id`.
-pub fn is_bookmarked(id: &ThreadId) -> bool {
-    bookmarks().contains(id.as_str())
-}
-
-/// Bookmarks the thread `id` or takes the bookmark away.
-pub fn set_bookmarked(id: &ThreadId, on: bool) {
-    let mut marks = bookmarks();
-    if on {
-        marks.insert(id.as_str().to_string());
-    } else {
-        marks.remove(id.as_str());
-    }
+/// Writes the bookmarks `marks`.
+fn write_bookmarks(marks: &BTreeSet<String>) -> std::io::Result<()> {
     let file = bookmarks_file();
-    let written = file
-        .parent()
-        .map(std::fs::create_dir_all)
-        .transpose()
-        .and_then(|_| std::fs::write(&file, serde_json::to_vec(&marks).unwrap_or_default()));
-    if let Err(error) = written {
-        ide_ui_common::diag::report("bookmarks", error);
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent)?;
     }
+    std::fs::write(&file, serde_json::to_vec(marks).unwrap_or_default())
 }
 
 /// The sessions of `cwd` that can be resumed, newest first: the index's, then — experimental — those the CLI saved
-/// from a terminal.
+/// from a terminal. Reads the disk; the main thread takes `past_sessions_cached`.
 pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
     let index = ThreadIndex::open(&ThreadIndex::default_dir());
     let mut past: Vec<(Resume, SystemTime)> = index
