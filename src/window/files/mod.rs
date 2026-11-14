@@ -5,7 +5,7 @@ mod controller;
 use ide_project::files_panel as model;
 mod view;
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::rc::Rc;
 
 use objc2::rc::Retained;
@@ -16,9 +16,9 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
 use super::WindowController;
-use crate::project::Project;
+use crate::project::{Listing, Project};
 use crate::util::set_action;
-use view::FileTreeSource;
+use view::{FileTreeSource, Pending};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -52,6 +52,14 @@ impl FileTree {
         menu.setDelegate(Some(ProtocolObject::from_ref(&*source)));
         // SAFETY: The view keeps the menu; its delegate, the source, lives as long as the view through `FileTree`.
         unsafe { view.setMenu(Some(&menu)) };
+        // `Project::open` started reading the root.
+        let root = source.ivars().project.root().to_path_buf();
+        let waiting = Pending {
+            spinner: None,
+            deep: false,
+        };
+        source.ivars().pending.borrow_mut().insert(root.clone(), waiting);
+        source.spin_later(root);
         FileTree { scroll, view, source }
     }
 
@@ -69,19 +77,15 @@ impl FileTree {
         self.view.clone()
     }
 
-    /// Shows the new entries of `dirs`.
-    pub fn reload(&self, dirs: &[PathBuf]) {
-        let root = self.source.ivars().project.root().to_path_buf();
-        for dir in dirs {
-            if *dir == root {
-                // SAFETY: Nil stands for the root, whose children the data source answers for.
-                unsafe { self.view.reloadItem_reloadChildren(None, true) };
-                continue;
-            }
-            if let Some(item) = self.source.item_of(dir) {
-                // SAFETY: The item is one the data source handed to this view, kept alive by the source.
-                unsafe { self.view.reloadItem_reloadChildren(Some(&item), true) };
-            }
+    /// Shows the entries the tree read of the folders in `listings`, those the view shows or waits for.
+    pub fn listed(&self, listings: &[Listing]) {
+        for (dir, entries) in listings {
+            self.source.listed(&self.view, dir, entries.as_ref());
         }
+    }
+
+    /// Shows a spinner in `dir` while its entries are still being read.
+    fn spin(&self, dir: &Path) {
+        self.source.spin(&self.view, dir);
     }
 }

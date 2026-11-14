@@ -54,7 +54,7 @@ use quick_open::QuickOpenPanel;
 pub use registry::open_windows;
 pub use registry::{
     deliver, for_project, frontmost, open_projects, records, save_layouts, show_ignored_files, toggle_activity_symbol,
-    tree_changed,
+    tree_changed, tree_listed,
 };
 pub use search::SearchPanel;
 pub use search::{HierarchyPanels, SearchPanels};

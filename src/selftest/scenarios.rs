@@ -189,6 +189,7 @@ pub const SCENARIOS: &[Scenario] = &[
         )
     },
     plain("search", search::run),
+    plain("snappy-tree", snappy::tree),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),
     outside("paste-cli", paste_cli::run),

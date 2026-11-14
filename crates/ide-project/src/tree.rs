@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use ignore::IncrementalIgnore;
@@ -77,7 +78,7 @@ pub struct Tree {
     root: PathBuf,
     options: TreeOptions,
     rules: IncrementalIgnore,
-    loaded: HashMap<PathBuf, Vec<Entry>>,
+    loaded: HashMap<PathBuf, Arc<[Entry]>>,
 }
 
 impl Tree {
@@ -107,7 +108,12 @@ impl Tree {
 
     /// The entries of `dir` if it has been read.
     pub fn children(&self, dir: &Path) -> Option<&[Entry]> {
-        self.loaded.get(dir).map(Vec::as_slice)
+        self.loaded.get(dir).map(|entries| &**entries)
+    }
+
+    /// The entries of `dir` if it has been read, shared with the tree.
+    pub fn listed(&self, dir: &Path) -> Option<Arc<[Entry]>> {
+        self.loaded.get(dir).cloned()
     }
 
     /// The entries of `dir`, the root or a folder below it, read now unless the tree already holds them.
@@ -127,7 +133,7 @@ impl Tree {
     pub fn expand(&mut self, dir: &Path) -> io::Result<&[Entry]> {
         if !self.loaded.contains_key(dir) {
             let entries = self.read(dir)?;
-            self.loaded.insert(dir.to_path_buf(), entries);
+            self.loaded.insert(dir.to_path_buf(), entries.into());
         }
         Ok(self.children(dir).unwrap_or_default())
     }
@@ -146,7 +152,8 @@ impl Tree {
         self.reload_all()
     }
 
-    /// Brings the folders read so far up to date with what the watcher saw; the folders whose entries changed.
+    /// Brings the folders read so far up to date with what the watcher saw; the folders whose entries changed, with
+    /// those it no longer follows because their parent no longer lists them.
     pub fn apply(&mut self, event: &WatchEvent) -> Vec<PathBuf> {
         match event {
             WatchEvent::Rescan(_) => self.reload_all(),
@@ -185,9 +192,9 @@ impl Tree {
                 continue;
             }
             match self.read(&dir) {
-                Ok(entries) if self.loaded.get(&dir) == Some(&entries) => {}
+                Ok(entries) if self.loaded.get(&dir).is_some_and(|old| **old == *entries) => {}
                 Ok(entries) => {
-                    self.loaded.insert(dir.clone(), entries);
+                    self.loaded.insert(dir.clone(), entries.into());
                     changed.push(dir);
                 }
                 Err(_) => {
@@ -196,14 +203,15 @@ impl Tree {
                 }
             }
         }
-        self.prune();
+        changed.extend(self.prune());
         changed
     }
 
-    /// Drops folders whose parent was dropped or no longer lists them as a folder to open.
-    fn prune(&mut self) {
+    /// Drops folders whose parent was dropped or no longer lists them as a folder to open; the folders dropped.
+    fn prune(&mut self) -> Vec<PathBuf> {
         let mut dirs: Vec<PathBuf> = self.loaded.keys().filter(|dir| **dir != self.root).cloned().collect();
         dirs.sort_by_key(|dir| dir.components().count());
+        let mut dropped = Vec::new();
         for dir in dirs {
             let listed = dir
                 .parent()
@@ -211,8 +219,10 @@ impl Tree {
                 .is_some_and(|entries| entries.iter().any(|e| e.path == dir && e.can_expand()));
             if !listed {
                 self.loaded.remove(&dir);
+                dropped.push(dir);
             }
         }
+        dropped
     }
 
     fn read(&mut self, dir: &Path) -> io::Result<Vec<Entry>> {

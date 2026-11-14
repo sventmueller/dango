@@ -1,10 +1,11 @@
 //! The view of the files panel: the outline view's data source and delegate, which draws the rows and passes clicks,
 //! folds and menu commands on to the controller.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use ide_project::Entry;
 use objc2::rc::{Retained, Weak};
@@ -12,8 +13,9 @@ use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSColor, NSControlTextEditingDelegate, NSImageAlignment, NSImageView, NSLineBreakMode, NSMenu,
-    NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource, NSOutlineViewDelegate, NSTableCellView, NSTableColumn,
-    NSTextField, NSUserInterfaceLayoutDirection, NSView,
+    NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource, NSOutlineViewDelegate, NSProgressIndicator,
+    NSProgressIndicatorStyle, NSTableCellView, NSTableColumn, NSTextField, NSUserInterfaceItemIdentification,
+    NSUserInterfaceLayoutDirection, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
 
@@ -29,7 +31,31 @@ pub struct TreeIvars {
     /// The objects that stand for rows in the outline view, one per path for as long as the tree lives, since the
     /// view keeps no reference of its own.
     items: RefCell<HashMap<PathBuf, Retained<NSString>>>,
+    /// The entries of each open folder as the outline view was last told them.
+    pub(super) shown: RefCell<HashMap<PathBuf, Arc<[Entry]>>>,
+    /// The folders opened whose entries are still being read.
+    pub(super) pending: RefCell<HashMap<PathBuf, Pending>>,
+    /// Set while the tree opens the folders inside one the user opened with all its folders.
+    pub(super) cascade: Cell<bool>,
 }
+
+/// A folder that opened before its entries were read.
+pub(super) struct Pending {
+    /// The row that shows a spinner in the folder once reading takes long enough to be seen.
+    pub(super) spinner: Option<Retained<NSObject>>,
+    /// The folders inside open as well, as Option asks.
+    pub(super) deep: bool,
+}
+
+/// What a folder's rows are as the outline view asks for them.
+enum Listed {
+    Entries(Arc<[Entry]>),
+    Loading(Retained<NSObject>),
+    Nothing,
+}
+
+/// The identifier of the rows the outline view keeps for reuse.
+const ROW: &str = "file";
 
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `FileTreeSource` does not implement Drop.
@@ -44,15 +70,19 @@ define_class!(
     unsafe impl NSOutlineViewDataSource for FileTreeSource {
         #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
         fn children_count(&self, _view: &NSOutlineView, item: Option<&AnyObject>) -> isize {
-            guarded(0, || isize::try_from(self.children_of(item).len()).unwrap_or(0))
+            guarded(0, || match self.children_of(item) {
+                Listed::Entries(entries) => isize::try_from(entries.len()).unwrap_or(0),
+                Listed::Loading(_) => 1,
+                Listed::Nothing => 0,
+            })
         }
 
         #[unsafe(method_id(outlineView:child:ofItem:))]
         fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
-            let found = guarded(None, || {
-                let children = self.children_of(item);
-                let entry = children.get(usize::try_from(index).ok()?)?;
-                Some(self.item_for(entry))
+            let found: Option<Retained<AnyObject>> = guarded(None, || match self.children_of(item) {
+                Listed::Entries(entries) => Some(self.item_for(entries.get(usize::try_from(index).ok()?)?).into()),
+                Listed::Loading(spinner) => Some(spinner.into()),
+                Listed::Nothing => None,
             });
             found.map_or_else(|| ns("").into(), Into::into)
         }
@@ -78,11 +108,18 @@ define_class!(
             item: &AnyObject,
         ) -> Option<Retained<NSView>> {
             guarded(None, || {
-                let path = path_of(item)?;
+                let Some(path) = path_of(item) else {
+                    return Some(spinner_view(self.mtm()));
+                };
                 let row = self.ivars().model.borrow().row(&path).unwrap_or_default();
                 // SAFETY: The item came from this outline view, which knows it.
                 let open = row.expandable.then(|| unsafe { view.isItemExpanded(Some(item)) });
-                Some(row_view(self.mtm(), &path, row.ignored, open))
+                // SAFETY: The identifier names cells `row_view` made; no owner is involved.
+                let reused = unsafe { view.makeViewWithIdentifier_owner(&ns(ROW), None) };
+                let cell = reused.and_then(|cell| cell.downcast::<NSTableCellView>().ok());
+                let cell = cell.unwrap_or_else(|| row_view(self.mtm()));
+                fill_row(&cell, &path, row.ignored, open);
+                Some(cell.into_super())
             })
         }
 
@@ -90,7 +127,8 @@ define_class!(
         fn will_expand(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(path) = expanded_path(notification) {
-                    self.folder_opens(&path);
+                    let deep = self.ivars().cascade.get() || option_held(self.mtm());
+                    self.folder_opens(&path, deep);
                 }
             });
         }
@@ -216,6 +254,9 @@ impl FileTreeSource {
             project,
             controller: Weak::from(controller),
             items: RefCell::new(HashMap::new()),
+            shown: RefCell::new(HashMap::new()),
+            pending: RefCell::new(HashMap::new()),
+            cascade: Cell::new(false),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(FileTreeSource::alloc(mtm).set_ivars(ivars)), init] }
@@ -226,26 +267,25 @@ impl FileTreeSource {
         self.ivars().items.borrow().get(path).cloned()
     }
 
-    fn children_of(&self, item: Option<&AnyObject>) -> Vec<Entry> {
-        let project = &self.ivars().project;
+    fn children_of(&self, item: Option<&AnyObject>) -> Listed {
         let dir = match item {
             Some(item) => match path_of(item) {
                 Some(path) => path,
-                None => return vec![],
+                None => return Listed::Nothing,
             },
-            None => project.root().to_path_buf(),
+            None => self.ivars().project.root().to_path_buf(),
         };
-        project.tree().children(&dir).map(<[Entry]>::to_vec).unwrap_or_default()
+        if let Some(entries) = self.ivars().shown.borrow().get(&dir) {
+            return Listed::Entries(entries.clone());
+        }
+        match self.ivars().pending.borrow().get(&dir).and_then(|p| p.spinner.clone()) {
+            Some(spinner) => Listed::Loading(spinner),
+            None => Listed::Nothing,
+        }
     }
 
-    fn item_for(&self, entry: &Entry) -> Retained<NSString> {
-        self.ivars().model.borrow_mut().note(
-            &entry.path,
-            Row {
-                expandable: entry.can_expand(),
-                ignored: entry.is_ignored || entry.is_hidden,
-            },
-        );
+    pub(super) fn item_for(&self, entry: &Entry) -> Retained<NSString> {
+        self.ivars().model.borrow_mut().note(&entry.path, Row::of(entry));
         self.ivars()
             .items
             .borrow_mut()
@@ -350,10 +390,45 @@ fn expanded_path(notification: &NSNotification) -> Option<PathBuf> {
     path_of(&item)
 }
 
-/// The row of `path`: its icon, or the chevron of a folder that is `open` or not, and its name.
-fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool>) -> Retained<NSView> {
+/// Whether the event being handled holds Option, which opens a folder with all the folders inside.
+fn option_held(mtm: MainThreadMarker) -> bool {
+    let event = NSApplication::sharedApplication(mtm).currentEvent();
+    event.is_some_and(|event| {
+        event
+            .modifierFlags()
+            .contains(objc2_app_kit::NSEventModifierFlags::Option)
+    })
+}
+
+/// The row of a folder whose entries take a while to read.
+fn spinner_view(mtm: MainThreadMarker) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
-    let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, path, open.is_some());
+    let spinner = NSProgressIndicator::new(mtm);
+    spinner.setStyle(NSProgressIndicatorStyle::Spinning);
+    spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
+    cell.addSubview(&spinner);
+    spinner.setTranslatesAutoresizingMaskIntoConstraints(false);
+    spinner
+        .leadingAnchor()
+        .constraintEqualToAnchor(&cell.leadingAnchor())
+        .setActive(true);
+    spinner
+        .centerYAnchor()
+        .constraintEqualToAnchor(&cell.centerYAnchor())
+        .setActive(true);
+    // SAFETY: A nil sender is what AppKit's own callers pass.
+    unsafe { spinner.startAnimation(None) };
+    cell.into_super()
+}
+
+/// Shows `path` in `cell`: its icon, or the chevron of a folder that is `open` or not, and its name.
+fn fill_row(cell: &NSTableCellView, path: &Path, ignored: bool, open: Option<bool>) {
+    let mtm = cell.mtm();
+    // SAFETY: The cell is one `row_view` made, whose image view and text field it set.
+    let (Some(image), Some(label)) = (unsafe { cell.imageView() }, unsafe { cell.textField() }) else {
+        return;
+    };
+    crate::file_icon::show(&image, path, open.is_some());
     if let Some(open) = open {
         image.setImage(crate::window::file_outline::chevron(open).as_deref());
         // At the start of the icon's place, where the search panel's chevrons sit under the panel's title.
@@ -364,15 +439,28 @@ fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool
         } else {
             NSImageAlignment::AlignLeft
         });
+    } else {
+        image.setImageAlignment(NSImageAlignment::AlignCenter);
     }
     let name = path
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-    let label = NSTextField::labelWithString(&ns(&name), mtm);
+    label.setStringValue(&ns(&name));
+    label.setTextColor(Some(&*if ignored {
+        NSColor::tertiaryLabelColor()
+    } else {
+        NSColor::labelColor()
+    }));
+    cell.setToolTip(Some(&ns(&path.to_string_lossy())));
+}
+
+/// An empty row for `fill_row`, which the outline view keeps for reuse.
+fn row_view(mtm: MainThreadMarker) -> Retained<NSTableCellView> {
+    let cell = NSTableCellView::new(mtm);
+    cell.setIdentifier(Some(&ns(ROW)));
+    let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, Path::new(""), true);
+    let label = NSTextField::labelWithString(&ns(""), mtm);
     label.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
-    if ignored {
-        label.setTextColor(Some(&NSColor::tertiaryLabelColor()));
-    }
     cell.addSubview(&image);
     cell.addSubview(&label);
     // SAFETY: Both views are subviews of the cell, which keeps them.
@@ -397,8 +485,7 @@ fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool
     ] {
         constraint.setActive(true);
     }
-    cell.setToolTip(Some(&ns(&path.to_string_lossy())));
-    cell.into_super()
+    cell
 }
 
 #[cfg(feature = "selftest")]

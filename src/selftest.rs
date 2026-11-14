@@ -100,6 +100,7 @@ mod settings_general;
 mod settings_pages;
 mod settings_sync;
 mod settings_toolbar;
+mod snappy;
 mod split;
 mod sticky;
 mod stored_rules;
@@ -442,29 +443,55 @@ fn probe_app(mtm: MainThreadMarker) {
     };
     check("an untrusted folder asks for trust", controller.has_sheet(), "");
     clicks_pass_through(mtm);
-    let rows = controller.tree_rows();
+    let probe = canonical.clone();
+    helpers::wait_until(
+        move || window::for_project(&probe).is_some_and(|c| c.tree_rows() > 0),
+        move |_| probe_ignored(canonical),
+    );
+}
+
+/// The tree lists the folder's top without ignored entries, with them while the setting is on, and then the watcher's
+/// update and quick open's answer.
+fn probe_ignored(root: PathBuf) {
+    let rows_of = |root: &Path| window::for_project(root).map_or(0, |c| c.tree_rows());
+    let rows = rows_of(&root);
     check(
         "the tree lists the folder's top without ignored entries",
         rows == 3,
         format!("{rows} rows"),
     );
     window::show_ignored_files(true);
-    let shown = controller.tree_rows();
-    window::show_ignored_files(false);
-    check(
-        "the setting for ignored files lists them in the tree and leaves them out again",
-        shown == rows + 1 && controller.tree_rows() == rows,
-        format!("{shown} rows with them, {} without", controller.tree_rows()),
-    );
-    let _ = std::fs::write(canonical.join("added.txt"), "new\n");
-    controller.quick_open_with("main");
-    let root = canonical.clone();
+    let probe = root.clone();
     helpers::wait_until(
-        move || {
-            window::for_project(&root)
-                .is_some_and(|c| c.tree_rows() > rows && c.quick_open_hits().iter().any(|hit| hit == "src/main.rs"))
+        move || rows_of(&probe) > rows,
+        move |_| {
+            let shown = rows_of(&root);
+            window::show_ignored_files(false);
+            let probe = root.clone();
+            helpers::wait_until(
+                move || rows_of(&probe) == rows,
+                move |_| {
+                    check(
+                        "the setting for ignored files lists them in the tree and leaves them out again",
+                        shown == rows + 1 && rows_of(&root) == rows,
+                        format!("{shown} rows with them, {} without", rows_of(&root)),
+                    );
+                    let _ = std::fs::write(root.join("added.txt"), "new\n");
+                    if let Some(controller) = window::for_project(&root) {
+                        controller.quick_open_with("main");
+                    }
+                    let probe = root.clone();
+                    helpers::wait_until(
+                        move || {
+                            window::for_project(&probe).is_some_and(|c| {
+                                c.tree_rows() > rows && c.quick_open_hits().iter().any(|hit| hit == "src/main.rs")
+                            })
+                        },
+                        move |_| probe_project(root, rows),
+                    );
+                },
+            );
         },
-        move |_| probe_project(canonical, rows),
     );
 }
 

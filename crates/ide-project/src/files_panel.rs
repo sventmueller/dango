@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 use splat_i18n::{t, tf};
 
+use crate::tree::Entry;
+
 /// What the tree knows of a row besides its path.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Row {
@@ -342,9 +344,104 @@ pub fn is_svg(path: &Path) -> bool {
     path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"))
 }
 
+impl Row {
+    /// What the tree shows of `entry` besides its path.
+    pub fn of(entry: &Entry) -> Row {
+        Row {
+            expandable: entry.can_expand(),
+            ignored: entry.is_ignored || entry.is_hidden,
+        }
+    }
+}
+
+/// How the rows of a folder change from one reading to the next, so the tree moves only those.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Changes {
+    /// The positions in the old list of the rows that go, removed first.
+    pub removed: Vec<usize>,
+    /// The positions in the new list of the rows that come, inserted after the removals.
+    pub inserted: Vec<usize>,
+    /// The positions in the new list of the rows that stay but look different.
+    pub redrawn: Vec<usize>,
+}
+
+/// The changes from the rows `old` to `new`; `None` where removing and inserting cannot get there, such as when a
+/// row turns from a file into a folder or rows swap places, and the folder's rows are shown again as a whole.
+pub fn changes(old: &[Entry], new: &[Entry]) -> Option<Changes> {
+    let before: HashMap<&Path, usize> = old.iter().enumerate().map(|(i, e)| (e.path.as_path(), i)).collect();
+    let after: HashMap<&Path, usize> = new.iter().enumerate().map(|(i, e)| (e.path.as_path(), i)).collect();
+    let mut changes = Changes {
+        removed: (0..old.len())
+            .filter(|i| !after.contains_key(old[*i].path.as_path()))
+            .collect(),
+        ..Changes::default()
+    };
+    let mut last = None;
+    for (i, entry) in new.iter().enumerate() {
+        let Some(&was) = before.get(entry.path.as_path()) else {
+            changes.inserted.push(i);
+            continue;
+        };
+        if last.is_some_and(|last| was < last) || Row::of(&old[was]).expandable != Row::of(entry).expandable {
+            return None;
+        }
+        last = Some(was);
+        if Row::of(&old[was]) != Row::of(entry) {
+            changes.redrawn.push(i);
+        }
+    }
+    Some(changes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tree::Kind as EntryKind;
+
+    fn entry(name: &str, kind: EntryKind, is_ignored: bool) -> Entry {
+        Entry {
+            name: name.into(),
+            path: PathBuf::from("/p").join(name),
+            kind,
+            link: None,
+            size: 0,
+            modified: None,
+            is_ignored,
+            is_hidden: false,
+        }
+    }
+
+    #[test]
+    fn a_folder_read_again_moves_only_the_rows_that_came_went_or_look_different() {
+        let old = [
+            entry("a", EntryKind::Dir, false),
+            entry("b.rs", EntryKind::File, false),
+            entry("c.rs", EntryKind::File, false),
+        ];
+        let new = [
+            entry("a", EntryKind::Dir, false),
+            entry("a.rs", EntryKind::File, false),
+            entry("c.rs", EntryKind::File, true),
+            entry("d.rs", EntryKind::File, false),
+        ];
+        assert_eq!(
+            changes(&old, &new),
+            Some(Changes {
+                removed: vec![1],
+                inserted: vec![1, 3],
+                redrawn: vec![2],
+            })
+        );
+        assert_eq!(changes(&new, &new), Some(Changes::default()));
+    }
+
+    #[test]
+    fn rows_that_swap_places_or_a_file_that_turns_into_a_folder_show_the_folder_again() {
+        let a = entry("a", EntryKind::File, false);
+        let b = entry("b", EntryKind::File, false);
+        assert_eq!(changes(&[a.clone(), b.clone()], &[b, a.clone()]), None);
+        assert_eq!(changes(&[a], &[entry("a", EntryKind::Dir, false)]), None);
+    }
 
     fn model() -> Model {
         Model::new(PathBuf::from("/p"))

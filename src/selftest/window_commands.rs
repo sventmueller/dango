@@ -260,7 +260,28 @@ fn tree_command(c: &WindowController, path: &Path, title: &str) -> Option<Vec<St
     pick(&menu, title).then_some(shown)
 }
 
+/// Opens `src` in the folder tree and waits for its rows, which are read on the disk lane.
 fn files_menu(root: PathBuf) {
+    let Some(c) = controller(&root) else {
+        return finish(NAME);
+    };
+    if let Some(outline) = c.file_tree_outline()
+        && let Some(row) = row_of(&outline, &root.join("src"))
+        && let Some(item) = outline.itemAtRow(row)
+    {
+        // SAFETY: The item is one the outline's data source handed it, shown in `row`.
+        unsafe { outline.expandItem(Some(&item)) };
+    }
+    let probe = root.clone();
+    let shown = move || {
+        controller(&probe)
+            .and_then(|c| c.file_tree_outline())
+            .is_some_and(|outline| row_of(&outline, &probe.join("src/lib.rs")).is_some())
+    };
+    wait_until(shown, move |_| files_menu_shown(root));
+}
+
+fn files_menu_shown(root: PathBuf) {
     let Some(c) = controller(&root) else {
         return finish(NAME);
     };

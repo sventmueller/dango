@@ -38,15 +38,17 @@ pub fn icon_of(name: &str) -> Icon {
 pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<NSImageView> {
     let view = NSImageView::new(mtm);
     view.setImageScaling(NSImageScaling::ScaleNone);
-    if !folder {
-        let icon = icon_of(&file_name(path));
-        if let Some(image) = template(&icon) {
-            view.setImage(Some(&image));
-            view.setContentTintColor(Some(&color(icon.tint)));
-        }
-    }
+    show(&view, path, folder);
     ide_ui_common::util::hide_from_voiceover(&view);
     view
+}
+
+/// Shows the icon of the file at `path` in `view`, one of [`image_view`]'s, or nothing for a folder.
+pub fn show(view: &NSImageView, path: &Path, folder: bool) {
+    let icon = (!folder).then(|| icon_of(&file_name(path)));
+    let image = icon.as_ref().and_then(template);
+    view.setImage(image.as_deref());
+    view.setContentTintColor(icon.filter(|_| image.is_some()).map(|icon| color(icon.tint)).as_deref());
 }
 
 /// The icon of the file at `path` drawn in its colour, for a place that takes an image rather than an image view,

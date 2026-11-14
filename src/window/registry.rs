@@ -9,6 +9,7 @@ use objc2_app_kit::NSWindow;
 
 use super::{Panel, WindowController, activity_bar, layout, windows};
 use crate::context::AppContext;
+use crate::project::Listing;
 use crate::util::main_soon;
 
 /// Runs `f` with the controller of the window with `id` once the main queue gets to it, unless the window closed
@@ -21,15 +22,21 @@ pub fn deliver(id: u64, f: impl FnOnce(&WindowController) + Send + 'static) {
     });
 }
 
-/// Shows the changed folders `dirs` in the tree of the window that has `root` open, and lets editors of files there
-/// take what changed on disk.
-pub fn tree_changed(root: &Path, dirs: &[PathBuf]) {
-    crate::editor::files_changed(dirs);
+/// Shows the folders that changed on disk in the tree of the windows that have `root` open, and lets editors of files
+/// there take what changed.
+pub fn tree_changed(root: &Path, listings: &[Listing]) {
+    let dirs: Vec<PathBuf> = listings.iter().map(|(dir, _)| dir.clone()).collect();
+    crate::editor::files_changed(&dirs);
+    tree_listed(root, listings);
+}
+
+/// Shows the folders the tree of `root` read in the windows that have it open.
+pub fn tree_listed(root: &Path, listings: &[Listing]) {
     for window in windows() {
         let ivars = window.ivars();
         let same = ivars.workspace.borrow().as_ref().is_some_and(|p| p.root() == root);
         if same && let Some(files) = ivars.files.borrow().as_ref() {
-            files.reload(dirs);
+            files.listed(listings);
         }
     }
 }
@@ -55,14 +62,8 @@ pub fn toggle_activity_symbol(panel: Panel) {
 pub fn show_ignored_files(on: bool) {
     for window in windows() {
         let ivars = window.ivars();
-        let Some(project) = ivars.workspace.borrow().clone() else {
-            continue;
-        };
-        let changed = project
-            .tree()
-            .set_options(ide_project::TreeOptions { show_ignored: on });
-        if let Some(files) = ivars.files.borrow().as_ref() {
-            files.reload(&changed);
+        if let Some(project) = ivars.workspace.borrow().as_ref() {
+            project.set_options(ide_project::TreeOptions { show_ignored: on });
         }
     }
 }
