@@ -604,6 +604,7 @@ impl AgentTab {
             return;
         }
         ide_ui_common::diag::report("stopping a turn", format!("{by:?}"));
+        super::stop::record(by, &self.title());
         self.controller.show_notice(by.notice());
         self.state.borrow().source().interrupt();
     }

@@ -39,6 +39,32 @@ impl Stop {
     }
 }
 
+/// Writes down that `by` stopped the turn of the tab `title` in `~/Library/Logs`, as the window's notice fades and the
+/// system log keeps the app's lines only a short while; a stop that ends work nobody meant to end can be traced then.
+pub fn record(by: Stop, title: &str) {
+    let seconds = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    let line = format!("{seconds} {by:?} {title}\n");
+    let queued = ide_core::lane::DISK.try_run(move || {
+        let dir = ide_core::paths::logs_dir();
+        let written = std::fs::create_dir_all(&dir).and_then(|()| {
+            use std::io::Write;
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(dir.join("stops.log"))?
+                .write_all(line.as_bytes())
+        });
+        if let Err(error) = written {
+            ide_core::diag::report("writing down a stop", error);
+        }
+    });
+    if queued.is_err() {
+        ide_core::diag::report("writing down a stop", "the disk lane is full");
+    }
+}
+
 /// Whether a key with `code` pressed with `flags` means stop: Esc on its own, or ⌘.
 pub fn is_stop_key(code: u16, flags: NSEventModifierFlags) -> bool {
     let held = flags
