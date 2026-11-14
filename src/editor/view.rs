@@ -79,6 +79,8 @@ pub struct ViewIvars {
     pub(crate) watches: RefCell<Vec<crate::util::Observation>>,
     /// The revision and frame size at which TextKit last laid out the whole text.
     pub(super) laid_out: Cell<Option<(u64, NSSize)>>,
+    /// Counts the looks at the file on disk, so that only the answer to the latest is followed.
+    pub(super) disk_asked: Cell<u64>,
 }
 
 define_class!(
@@ -843,6 +845,7 @@ impl EditorTextView {
             predict: RefCell::new(super::predict::State::default()),
             watches: RefCell::new(Vec::new()),
             laid_out: Cell::new(None),
+            disk_asked: Cell::new(0),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));

@@ -714,12 +714,18 @@ fn positions() {
     );
     let _ = std::fs::write(&main_path, "fn main() {}\n");
     editor::check_disk_below(&root());
-    check(
-        "after the app's own git changed a file, its unchanged editor takes the new text",
-        text_of(&main) == "fn main() {}\n",
-        format!("{:?}", text_of(&main)),
+    let taken = main.clone();
+    wait_until(
+        move || text_of(&taken) == "fn main() {}\n",
+        move |_| {
+            check(
+                "after the app's own git changed a file, its unchanged editor takes the new text",
+                text_of(&main) == "fn main() {}\n",
+                format!("{:?}", text_of(&main)),
+            );
+            next(file_operations);
+        },
     );
-    next(file_operations);
 }
 
 /// A workspace edit renames an open file, and its editor and tab follow.

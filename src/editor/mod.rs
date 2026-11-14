@@ -17,6 +17,7 @@ mod line_diagnostics;
 mod lsp_editor;
 mod minimap;
 mod multi;
+mod on_disk;
 mod overlay;
 pub mod predict;
 mod sticky;
@@ -712,7 +713,7 @@ pub fn files_changed(dirs: &[PathBuf]) {
         if !path.parent().is_some_and(|parent| dirs.iter().any(|dir| dir == parent)) {
             continue;
         }
-        take_disk(&view);
+        on_disk::look(&view, on_disk::Look::Changed);
     }
 }
 
@@ -721,11 +722,12 @@ pub fn files_changed(dirs: &[PathBuf]) {
 pub fn check_disk_below(root: &Path) {
     for view in open_editors() {
         if view.document().path().is_some_and(|path| path.starts_with(root)) {
-            take_disk(&view);
+            on_disk::look(&view, on_disk::Look::Changed);
         }
     }
 }
 
+/// Takes what changed in the file of `view` before going on, as a restored checkpoint must before it puts its text in.
 fn take_disk(view: &EditorTextView) {
     let Some(probe) = view.document().disk_probe() else {
         return;
@@ -739,17 +741,9 @@ fn take_disk(view: &EditorTextView) {
 /// merged without a word.
 pub fn check_recovered(ids: &[RecoveryId]) {
     for view in open_editors() {
-        if !ids.contains(&view.ivars().recovery) {
-            continue;
+        if ids.contains(&view.ivars().recovery) {
+            on_disk::look(&view, on_disk::Look::Recovered);
         }
-        let Some(probe) = view.document().disk_probe() else {
-            continue;
-        };
-        match probe.check() {
-            Ok(check) => conflict::follow(&view, check),
-            Err(error) => crate::diag::report("looking at a recovered file", error),
-        }
-        recovery::store(&view);
     }
 }
 

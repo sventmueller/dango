@@ -222,7 +222,7 @@ pub struct Saved {
 }
 
 /// What the document knows of its file, to look at the file from another thread.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DiskProbe {
     path: PathBuf,
     stamp: Stamp,
