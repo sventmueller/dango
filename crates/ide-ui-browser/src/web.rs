@@ -322,11 +322,10 @@ mod tests {
     use objc2::runtime::AnyObject;
     use objc2_foundation::{NSDictionary, NSError, NSString, NSURL};
     /// A folder with an `index.html`, as a window's project.
-    fn project(name: &str) -> std::path::PathBuf {
-        let root = std::env::temp_dir().join(format!("ide-ui-browser-{name}-{}", std::process::id()));
-        std::fs::create_dir_all(&root).unwrap();
+    fn project(name: &str) -> ide_core::testing::Scratch {
+        let root = ide_core::testing::scratch(&format!("ui-browser-{name}"));
         std::fs::write(root.join("index.html"), "<p>hi</p>").unwrap();
-        root.canonicalize().unwrap()
+        root
     }
 
     #[test]

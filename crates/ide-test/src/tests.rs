@@ -209,11 +209,11 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         file: None,
         name: "TestTable/case_one".into(),
     };
-    std::fs::create_dir_all("/tmp/ide-test-go").unwrap();
-    std::fs::write("/tmp/ide-test-go/go.mod", "module example.com/m\n").unwrap();
-    match Tool::Go.debug(Path::new("/tmp/ide-test-go"), &go) {
+    let module = ide_core::testing::scratch("test-go");
+    std::fs::write(module.join("go.mod"), "module example.com/m\n").unwrap();
+    match Tool::Go.debug(&module, &go) {
         DebugTarget::Go { package, args } => {
-            assert_eq!(package, Path::new("/tmp/ide-test-go/sub"));
+            assert_eq!(package, module.join("sub"));
             assert_eq!(args, ["-test.run", "^TestTable$/^case_one$"]);
         }
         other => panic!("{other:?}"),
@@ -243,7 +243,7 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
 
 #[test]
 fn the_tools_of_a_project_follow_its_files() {
-    let root = std::env::temp_dir().join(format!("ide-test-tools-{}", std::process::id()));
+    let root = ide_core::testing::scratch("test-tools");
     std::fs::create_dir_all(root.join("bin")).unwrap();
     std::fs::write(root.join("Cargo.toml"), "").unwrap();
     std::fs::write(root.join("go.mod"), "module m\n").unwrap();

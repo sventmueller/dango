@@ -77,9 +77,7 @@ mod tests {
 
     #[test]
     fn a_pasted_picture_lands_beside_the_document_under_a_name_not_taken() {
-        let dir = std::env::temp_dir().join(format!("ide-paste-pictures-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("paste-pictures");
         assert_eq!(
             write_picture(&dir, "image/png", b"one"),
             Some(link_destination("Bild.png"))
@@ -102,10 +100,8 @@ mod tests {
 
     #[test]
     fn a_picture_of_a_kind_markdown_cannot_show_is_left_out() {
-        let dir = std::env::temp_dir().join(format!("ide-paste-tiff-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = ide_core::testing::scratch("paste-tiff");
         assert_eq!(write_picture(&dir, "image/tiff", b"x"), None);
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }

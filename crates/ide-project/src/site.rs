@@ -320,8 +320,8 @@ fn percent_encode(text: &str) -> String {
 mod tests {
     use super::*;
 
-    fn folder() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-site-{}-{}", std::process::id(), rand_suffix()));
+    fn folder() -> ide_core::testing::Scratch {
+        let dir = ide_core::testing::scratch("site");
         std::fs::create_dir_all(dir.join("css")).unwrap();
         std::fs::create_dir_all(dir.join("build")).unwrap();
         std::fs::write(dir.join("index.html"), "<h1>hi</h1>").unwrap();
@@ -329,13 +329,7 @@ mod tests {
         std::fs::write(dir.join(".env"), "SECRET=1").unwrap();
         std::fs::write(dir.join(".gitignore"), "build/\n").unwrap();
         std::fs::write(dir.join("build/out.js"), "x").unwrap();
-        dir.canonicalize().unwrap()
-    }
-
-    fn rand_suffix() -> u128 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos())
+        dir
     }
 
     fn get(site: &Site, path: &str, cookie: Option<&str>, host: Option<String>) -> (u16, String) {
@@ -372,7 +366,8 @@ mod tests {
     #[test]
     fn it_refuses_hidden_ignored_and_outside_files() {
         let dir = folder();
-        let outside = std::env::temp_dir().join(format!("ide-site-outside-{}", rand_suffix()));
+        let elsewhere = ide_core::testing::scratch("site-outside");
+        let outside = elsewhere.join("private.txt");
         std::fs::write(&outside, "private").unwrap();
         std::os::unix::fs::symlink(&outside, dir.join("link.txt")).unwrap();
         let site = Site::start(&dir, "k".into()).unwrap();

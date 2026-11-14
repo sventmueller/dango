@@ -1599,6 +1599,7 @@ name = "ide-core"
 version = "0.0.0"
 dependencies = [
  "ide-product",
+ "rustix",
  "serde",
  "serde_json",
  "splat-i18n",
@@ -1626,6 +1627,7 @@ dependencies = [
 name = "ide-docker"
 version = "0.0.0"
 dependencies = [
+ "ide-core",
  "serde",
  "serde_json",
 ]
@@ -1637,7 +1639,6 @@ dependencies = [
  "ide-core",
  "proptest",
  "ropey",
- "rustix",
  "serde",
  "serde_json",
  "similar",
@@ -1768,6 +1769,7 @@ dependencies = [
 name = "ide-test"
 version = "0.0.0"
 dependencies = [
+ "ide-core",
  "serde",
  "serde_json",
 ]

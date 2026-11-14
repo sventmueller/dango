@@ -152,11 +152,8 @@ pub fn outcome(code: Option<i32>, stdout: Vec<u8>, stderr: &[u8]) -> Outcome {
 mod tests {
     use super::*;
 
-    fn project(files: &[(&str, &str)]) -> PathBuf {
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos());
-        let root = std::env::temp_dir().join(format!("ide-prettier-{}-{stamp}", std::process::id()));
+    fn project(files: &[(&str, &str)]) -> ide_core::testing::Scratch {
+        let root = ide_core::testing::scratch("prettier");
         for (path, text) in files {
             let file = root.join(path);
             std::fs::create_dir_all(file.parent().unwrap()).unwrap();
@@ -212,7 +209,7 @@ mod tests {
         let path = bare.join("bin").to_string_lossy().into_owned();
         assert_eq!(
             program(&bare.join("a.ts"), &bare, Some(&path)),
-            Some((bare.join("bin/prettier"), bare.clone()))
+            Some((bare.join("bin/prettier"), bare.to_path_buf()))
         );
         assert_eq!(program(&bare.join("a.ts"), &bare, Some("/nowhere")), None);
     }

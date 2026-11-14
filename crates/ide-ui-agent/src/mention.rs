@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn a_line_range_becomes_an_attachment_and_the_mention_stays_whole() {
-        let dir = std::env::temp_dir().join(format!("ide-mention-{}", std::process::id()));
+        let dir = ide_core::testing::scratch("mention");
         std::fs::create_dir_all(dir.join("src")).unwrap();
         std::fs::write(dir.join("src/a.rs"), "fn a() {}\n").unwrap();
         let (text, attachments) = resolve_files("fix @src/a.rs#2-3 and @src/a.rs please", &dir);
@@ -209,12 +209,11 @@ mod tests {
                 lines: Some((2, 3))
             }]
         );
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn a_file_outside_the_project_goes_along_as_outside_text() {
-        let base = std::env::temp_dir().join(format!("ide-mention-outside-{}", std::process::id()));
+        let base = ide_core::testing::scratch("mention-outside");
         std::fs::create_dir_all(base.join("project")).unwrap();
         let notes = base.join("notes.md");
         std::fs::write(&notes, "one\ntwo\n").unwrap();
@@ -222,6 +221,5 @@ mod tests {
         let (text, attachments) = resolve_files(&typed, &base.join("project"));
         assert_eq!(text, format!("read {} now", notes.display()));
         assert!(matches!(&attachments[..], [Attachment::External { text, .. }] if text == "two"));
-        let _ = std::fs::remove_dir_all(&base);
     }
 }

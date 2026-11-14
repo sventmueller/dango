@@ -330,9 +330,9 @@ fn finish_samples(bench: Bench) {
         ..
     }) = thread.entries(&ide_thread::Lane::Main).last().map(|entry| &**entry)
     {
-        let started = super::insets::thread_time();
+        let started = ide_core::testing::thread_time();
         let expected = crate::agent::answer_height(view.mtm(), &message.markdown, view.frame().size.width);
-        let built = super::insets::thread_time().saturating_sub(started);
+        let built = ide_core::testing::thread_time().saturating_sub(started);
         check(
             "E25: a finished answer's card is rendered and laid out in under 200 ms",
             built < CARD,

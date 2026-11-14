@@ -1,5 +1,5 @@
-//! What the crates' tests share, behind the feature `testing`: a folder of its own for each test that goes away with
-//! it.
+//! What the crates' tests and the app's self-tests share, behind the feature `testing`: a folder of its own for each
+//! test that goes away with it, and a thread's CPU time for timing budgets.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -82,6 +82,15 @@ impl Drop for Scratch {
     }
 }
 
+/// The CPU time of the calling thread, so other processes competing for the cores do not count against a budget.
+pub fn thread_time() -> std::time::Duration {
+    let now = rustix::time::clock_gettime(rustix::time::ClockId::ThreadCPUTime);
+    std::time::Duration::new(
+        u64::try_from(now.tv_sec).unwrap_or(0),
+        u32::try_from(now.tv_nsec).unwrap_or(0),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,5 +105,15 @@ mod tests {
         drop(one);
         assert!(!kept.exists());
         assert!(two.is_dir());
+    }
+
+    #[test]
+    fn the_thread_time_grows_with_work_on_the_thread() {
+        let start = thread_time();
+        let mut spun = 0_u64;
+        while thread_time() == start {
+            spun = std::hint::black_box(spun.wrapping_add(1));
+        }
+        assert!(thread_time() > start);
     }
 }

@@ -22,6 +22,9 @@ objc2-foundation.workspace = true
 objc2-security.workspace = true
 objc2-web-kit.workspace = true
 
+[dev-dependencies]
+ide-core = { workspace = true, features = ["testing"] }
+
 [features]
 # What the self-test reads of a tab, the panels it answers, and a data store and downloads that leave nothing behind.
 selftest = []

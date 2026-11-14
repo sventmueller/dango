@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn a_file_outside_the_project_goes_along_as_outside_text() {
-        let base = std::env::temp_dir().join(format!("ide-outside-{}", std::process::id()));
+        let base = ide_core::testing::scratch("outside");
         let project = base.join("project");
         std::fs::create_dir_all(&project).unwrap();
         let inside = project.join("a.rs");

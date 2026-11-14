@@ -26,6 +26,9 @@ objc2-core-graphics.workspace = true
 objc2-foundation.workspace = true
 image = { version = "0.25", default-features = false, features = ["png"] }
 
+[dev-dependencies]
+ide-core = { workspace = true, features = ["testing"] }
+
 [features]
 # What the self-test reads of a running export and the button it presses on the export's sheet.
 selftest = []

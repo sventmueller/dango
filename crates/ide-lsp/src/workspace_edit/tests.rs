@@ -81,12 +81,8 @@ impl Editors for Mock {
     }
 }
 
-/// A fresh folder for one test, with its symlinks resolved as the app's folders are.
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ide-apply-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir.canonicalize().unwrap()
+fn scratch(name: &str) -> ide_core::testing::Scratch {
+    ide_core::testing::scratch(&format!("apply-{name}"))
 }
 
 fn uri(path: &Path) -> lsp_types::Uri {

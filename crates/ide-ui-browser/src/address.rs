@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn a_file_counts_as_inside_only_where_its_links_resolve() {
-        let root = std::env::temp_dir().join(format!("ide-browser-inside-{}", std::process::id()));
+        let root = ide_core::testing::scratch("browser-inside");
         std::fs::create_dir_all(root.join("site")).unwrap();
         std::fs::write(root.join("site/index.html"), "<p>x</p>").unwrap();
         assert!(is_inside(&root.join("site/index.html"), &root));

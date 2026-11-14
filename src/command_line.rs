@@ -95,11 +95,8 @@ pub fn install(mtm: MainThreadMarker) {
 mod tests {
     use super::*;
 
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ide-command-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
+    fn scratch(name: &str) -> ide_core::testing::Scratch {
+        ide_core::testing::scratch(&format!("command-{name}"))
     }
 
     #[test]

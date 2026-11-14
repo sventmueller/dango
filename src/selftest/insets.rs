@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 
+use ide_core::testing::thread_time;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{
@@ -731,17 +732,6 @@ pub const KEYSTROKE: Duration = Duration::from_millis(5);
 
 /// What drawing insets, diagnostics or proposals may add to a keystroke's median.
 pub const ADDED: Duration = Duration::from_millis(2);
-
-/// The CPU time of the main thread, so other work on this Mac does not count against a budget.
-pub fn thread_time() -> Duration {
-    let mut now = libc::timespec { tv_sec: 0, tv_nsec: 0 };
-    // SAFETY: `now` is a valid timespec to fill.
-    unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &raw mut now) };
-    Duration::new(
-        u64::try_from(now.tv_sec).unwrap_or(0),
-        u32::try_from(now.tv_nsec).unwrap_or(0),
-    )
-}
 
 /// Keystrokes with and without insets in alternating blocks, so that the load of this Mac weighs on both alike: the
 /// lowest median and the highest slowest of each, with first.

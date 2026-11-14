@@ -624,11 +624,8 @@ mod tests {
 mod companion_tests {
     use super::*;
 
-    fn project(files: &[(&str, &str)]) -> PathBuf {
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos());
-        let root = std::env::temp_dir().join(format!("ide-companions-{}-{stamp}", std::process::id()));
+    fn project(files: &[(&str, &str)]) -> ide_core::testing::Scratch {
+        let root = ide_core::testing::scratch("companions");
         for (path, text) in files {
             let file = root.join(path);
             fs::create_dir_all(file.parent().unwrap()).unwrap();
