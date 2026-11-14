@@ -471,6 +471,26 @@ mod tests {
     }
 
     #[test]
+    fn background_agents_running_after_the_turn_are_no_turn() {
+        let state = |state: &str| {
+            format!(
+                r#"{{"type":"system","subtype":"session_state_changed","state":"{state}","session_id":"s","uuid":"u"}}"#
+            )
+        };
+        let result = r#"{"type":"result","subtype":"success","is_error":false,"session_id":"s"}"#;
+        let mut mapper = Mapper::new();
+        mapper.user_message(UserMessage::default(), "u-1", SystemTime::UNIX_EPOCH);
+        assert_eq!(
+            statuses(&mut mapper, &state("requires_action")),
+            [Status::RequiresAction]
+        );
+        assert_eq!(statuses(&mut mapper, &state("running")), [Status::Running]);
+        assert_eq!(statuses(&mut mapper, result), [Status::Idle]);
+        assert!(statuses(&mut mapper, &state("running")).is_empty());
+        assert_eq!(statuses(&mut mapper, &state("idle")), [Status::Idle]);
+    }
+
+    #[test]
     fn a_turn_the_cli_starts_after_a_background_task_runs() {
         let start = |parent: &str| {
             format!(

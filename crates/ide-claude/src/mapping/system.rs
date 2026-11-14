@@ -74,7 +74,10 @@ impl Mapper {
             System::Hook(hook) => vec![hook_notice(hook, now)],
             System::SessionStateChanged(state) => match state.as_str() {
                 "idle" => vec![self.status(Status::Idle)],
-                "running" => vec![self.status(Status::Running)],
+                // The CLI says it runs while only background agents work after its turn ended; that is no turn the
+                // user could stop, and a stop would end those agents too.
+                "running" if self.busy => vec![self.status(Status::Running)],
+                "running" => Vec::new(),
                 "requires_action" => vec![self.status(Status::RequiresAction)],
                 _ => Vec::new(),
             },
