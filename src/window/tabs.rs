@@ -308,12 +308,17 @@ pub struct TabWindow {
     status: Retained<NSImageView>,
     /// The watch that keeps the toolbar clear above the sidebar in full screen.
     sidebar_watch: Retained<ProtocolObject<dyn NSObjectProtocol>>,
+    /// The watches that keep the sidebar below the toolbar as the documents' column moves with it.
+    toolbar_watch: Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
 }
 
 impl Drop for TabWindow {
     fn drop(&mut self) {
-        // SAFETY: The token came from this center's block-based `addObserverForName`.
-        unsafe { NSNotificationCenter::defaultCenter().removeObserver(self.sidebar_watch.as_ref()) };
+        let center = NSNotificationCenter::defaultCenter();
+        for token in std::iter::once(&self.sidebar_watch).chain(&self.toolbar_watch) {
+            // SAFETY: The token came from this center's block-based `addObserverForName`.
+            unsafe { center.removeObserver(token.as_ref()) };
+        }
     }
 }
 
@@ -394,6 +399,13 @@ impl TabWindow {
 
         let status = status_dot(mtm);
         let sidebar_watch = super::full_screen::follow_sidebar(&window, &slot, &split.splitView());
+        let top = content_top(&content);
+        let controller_ref = Weak::from(controller);
+        let toolbar_watch = super::full_screen::follow_frames(&[&content, &top], move || {
+            if let Some(controller) = controller_ref.load() {
+                controller.follow_toolbar();
+            }
+        });
         let tab = Rc::new(TabWindow {
             window,
             split,
@@ -410,6 +422,7 @@ impl TabWindow {
             focused: Cell::new(0),
             status,
             sidebar_watch,
+            toolbar_watch,
         });
         TabWindow::follow_drags(&tab);
         tab
@@ -649,10 +662,14 @@ impl TabWindow {
         self.picture.setHidden(false);
     }
 
-    /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false; answers
-    /// how far the toolbar reaches down over the sidebar.
-    pub fn clear_above_sidebar(&self, clear: bool) -> f64 {
-        super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear)
+    /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.
+    pub fn clear_above_sidebar(&self, clear: bool) {
+        super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear);
+    }
+
+    /// How far the toolbar reaches down over the sidebar in full screen, where the menu bar can push it down.
+    pub fn toolbar_reach(&self) -> f64 {
+        super::full_screen::toolbar_reach(&self.window, &self.slot, &self.content)
     }
 
     /// The width of the sidebar now.
@@ -682,6 +699,24 @@ impl TabWindow {
         self.sidebar.setMinimumThickness(min);
         self.sidebar.setMaximumThickness(max);
     }
+}
+
+/// An empty line at the top of `content`'s safe area, whose frame changes when the toolbar above it moves.
+fn content_top(content: &NSView) -> Retained<NSView> {
+    let line = NSView::new(content.mtm());
+    line.setHidden(true);
+    content.addSubview(&line);
+    line.setTranslatesAutoresizingMaskIntoConstraints(false);
+    for constraint in [
+        line.topAnchor()
+            .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
+        line.leadingAnchor().constraintEqualToAnchor(&content.leadingAnchor()),
+        line.widthAnchor().constraintEqualToConstant(1.0),
+        line.heightAnchor().constraintEqualToConstant(0.0),
+    ] {
+        constraint.setActive(true);
+    }
+    line
 }
 
 /// A tab's title after its icon, which is centred on the capitals of the text and left out for VoiceOver, which reads

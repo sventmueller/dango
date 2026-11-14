@@ -139,7 +139,8 @@ define_class!(
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
                     self.make_current(&tab);
-                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(true));
+                    tab.clear_above_sidebar(true);
+                    self.follow_toolbar();
                 }
                 ide_ui_agent::show_pending(self);
             });
@@ -149,8 +150,9 @@ define_class!(
         fn did_enter_full_screen(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
-                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(true));
+                    tab.clear_above_sidebar(true);
                 }
+                self.follow_toolbar();
             });
         }
 
@@ -158,9 +160,14 @@ define_class!(
         fn will_exit_full_screen(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
-                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(false));
+                    tab.clear_above_sidebar(false);
                 }
             });
+        }
+
+        #[unsafe(method(windowDidExitFullScreen:))]
+        fn did_exit_full_screen(&self, _notification: &NSNotification) {
+            guarded((), || self.follow_toolbar());
         }
 
         #[unsafe(method(windowShouldClose:))]
@@ -666,6 +673,12 @@ impl WindowController {
         *ivars.activity.borrow_mut() = Some(activity);
         *ivars.panels.borrow_mut() = Some(panels);
         *ivars.sidebar.borrow_mut() = Some(sidebar_view);
+    }
+
+    /// Moves the sidebar's first symbol and title below the toolbar of the window tab in front, as far as it reaches now.
+    fn follow_toolbar(&self) {
+        let reach = self.current_tab().map_or(0.0, |tab| tab.toolbar_reach());
+        self.keep_sidebar_below_toolbar(reach);
     }
 
     /// Keeps the sidebar's first symbol and title clear of a toolbar that reaches `toolbar` down from the sidebar's top.

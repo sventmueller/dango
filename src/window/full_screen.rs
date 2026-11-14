@@ -3,13 +3,15 @@
 //! background lets the sidebar run up to the screen's top again.
 
 use std::ptr::NonNull;
+use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::MainThreadMarker;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
 use objc2_app_kit::{
-    NSApplication, NSSplitView, NSSplitViewDidResizeSubviewsNotification, NSView, NSWindow, NSWindowStyleMask,
+    NSApplication, NSSplitView, NSSplitViewDidResizeSubviewsNotification, NSView, NSViewFrameDidChangeNotification,
+    NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol, NSRect, NSRunLoop};
 
@@ -19,39 +21,76 @@ use crate::util::{constant, guarded};
 const SLACK: f64 = 1.0;
 
 /// Clears the toolbar's background above `sidebar` while `window` is in full screen, or brings it back with `clear`
-/// false; answers how far the toolbar then reaches down over the sidebar's top, none outside full screen.
-pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) -> f64 {
+/// false.
+pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) {
     if clear && !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
-        return 0.0;
+        return;
     }
     let column = window.convertRectToScreen(sidebar.convertRect_toView(sidebar.bounds(), None));
     if column.size.width < SLACK {
-        return 0.0;
+        return;
     }
-    let mut reach = 0.0;
-    let mtm = MainThreadMarker::from(window);
-    for toolbar in NSApplication::sharedApplication(mtm).windows().iter() {
-        // Key-value observing puts a prefix before the class's name.
-        if !toolbar
-            .class()
-            .name()
-            .to_bytes()
-            .ends_with(b"NSToolbarFullScreenWindow")
-            || !same_columns(toolbar.frame(), window.frame())
-        {
-            continue;
-        }
-        // SAFETY: Asking for the superview only reads; the frame view holds the content view while the window shows.
-        let Some(frame) = toolbar.contentView().and_then(|c| unsafe { c.superview() }) else {
-            continue;
-        };
+    for (toolbar, frame) in toolbar_windows(window) {
         if let Some(background) = background_over(&frame, &toolbar, column) {
             background.setAlphaValue(if clear { 0.0 } else { 1.0 });
-            let below = toolbar.convertRectToScreen(background.convertRect_toView(background.bounds(), None));
-            reach = (column.origin.y + column.size.height - below.origin.y).max(0.0);
         }
     }
-    if clear { reach } else { 0.0 }
+}
+
+/// The window AppKit shows `window`'s toolbar in while it is in full screen, with its frame view.
+fn toolbar_windows(window: &NSWindow) -> Vec<(Retained<NSWindow>, Retained<NSView>)> {
+    let mtm = MainThreadMarker::from(window);
+    NSApplication::sharedApplication(mtm)
+        .windows()
+        .iter()
+        .filter(|toolbar| {
+            // Key-value observing puts a prefix before the class's name.
+            toolbar
+                .class()
+                .name()
+                .to_bytes()
+                .ends_with(b"NSToolbarFullScreenWindow")
+                && same_columns(toolbar.frame(), window.frame())
+        })
+        .filter_map(|toolbar| {
+            // SAFETY: Asking for the superview only reads; the frame view holds the content view while it shows.
+            let frame = toolbar.contentView().and_then(|c| unsafe { c.superview() })?;
+            Some((toolbar, frame))
+        })
+        .collect()
+}
+
+/// How far the toolbar of `window` in full screen reaches down from the top of `sidebar`, none outside full screen:
+/// down to where the safe area of `content`, the documents' column, begins, less a tab bar between them.
+pub fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f64 {
+    if !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
+        return 0.0;
+    }
+    let top = |view: &NSView, rect: NSRect| {
+        let rect = view.convertRect_toView(rect, None);
+        rect.origin.y + rect.size.height
+    };
+    let tab_bar = window
+        .tabGroup()
+        .filter(|group| group.isTabBarVisible())
+        .and_then(|_| {
+            let mut frames = toolbar_windows(window);
+            // SAFETY: Asking for the superview only reads; the frame view holds the content view while it shows.
+            if let Some(frame) = window.contentView().and_then(|c| unsafe { c.superview() }) {
+                frames.push((objc2::Message::retain(window), frame));
+            }
+            frames.iter().find_map(|(_, frame)| tab_bar(frame))
+        })
+        .map_or(0.0, |bar| bar.bounds().size.height);
+    let below = top(content, content.safeAreaLayoutGuide().frame()) + tab_bar;
+    (top(sidebar, sidebar.bounds()) - below).max(0.0)
+}
+
+fn tab_bar(view: &NSView) -> Option<Retained<NSView>> {
+    if view.class().name().to_bytes().ends_with(b"NSTabBar") && !view.isHiddenOrHasHiddenAncestor() {
+        return Some(objc2::Message::retain(view));
+    }
+    view.subviews().iter().find_map(|child| tab_bar(&child))
 }
 
 /// Clears the toolbar above `sidebar` again whenever `split` resizes it in full screen, where AppKit lays the toolbar's
@@ -80,6 +119,32 @@ pub fn follow_sidebar(
     let name = constant!(NSSplitViewDidResizeSubviewsNotification);
     // SAFETY: The block holds the window and the sidebar weakly and runs on the main thread, where split views post.
     unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), Some(split), None, &block) }
+}
+
+/// Calls `moved` once AppKit laid out anew after `views` changed their frames; the tokens end the watch when handed to
+/// `NSNotificationCenter::removeObserver`.
+pub fn follow_frames(
+    views: &[&NSView],
+    moved: impl Fn() + 'static,
+) -> Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>> {
+    let moved = Rc::new(moved);
+    let center = NSNotificationCenter::defaultCenter();
+    views
+        .iter()
+        .map(|view| {
+            view.setPostsFrameChangedNotifications(true);
+            let moved = moved.clone();
+            let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+                let moved = moved.clone();
+                let later = RcBlock::new(move || guarded((), || moved()));
+                // SAFETY: Views post on the main thread, whose run loop then calls the block on the same thread.
+                unsafe { NSRunLoop::currentRunLoop().performBlock(&later) };
+            });
+            let name = constant!(NSViewFrameDidChangeNotification);
+            // SAFETY: The block runs on the main thread, where views post, and holds nothing the view owns.
+            unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), Some(*view), None, &block) }
+        })
+        .collect()
 }
 
 /// The toolbar's background whose columns on screen are those of `column`.
