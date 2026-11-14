@@ -10,7 +10,7 @@ use objc2_app_kit::{NSBeep, NSPasteboard, NSWorkspace};
 use splat_i18n::{t, tf};
 
 use super::view::TerminalView;
-use crate::model::{self, BELL_FLASH, Bell};
+use crate::model::{self, BELL_FLASH, Bell, Frame};
 use ide_ui_common::util::main_after;
 
 /// How long a notice shows above the terminal.
@@ -79,18 +79,47 @@ impl TerminalView {
     }
 
     fn set_title(&self, title: Option<String>) {
-        let shown = model::shown_title(title);
-        *self.ivars().title.borrow_mut() = shown.clone();
+        *self.ivars().title.borrow_mut() = model::shown_title(title);
+        self.show_title();
+    }
+
+    /// Gives the tab the title when it changed, at most every `TITLE_GAP`.
+    fn show_title(&self) {
         let Some(tab) = self.tab() else { return };
-        super::host().set_tab_title(self.window_id(), tab, shown.as_deref().unwrap_or(t("Terminal")));
+        let state = &self.ivars().state;
+        let title = self
+            .ivars()
+            .title
+            .borrow()
+            .clone()
+            .unwrap_or_else(|| t("Terminal").to_string());
+        if state.tab_title.borrow().as_deref() == Some(title.as_str()) {
+            return;
+        }
+        match state.titles.ask(Instant::now(), model::TITLE_GAP) {
+            Frame::Now => {
+                super::host().set_tab_title(self.window_id(), tab, &title);
+                *state.tab_title.borrow_mut() = Some(title);
+            }
+            Frame::After(wait) => {
+                let id = self.id();
+                main_after(wait, move || {
+                    if let Some(view) = super::find(id) {
+                        view.ivars().state.titles.pending.set(false);
+                        view.show_title();
+                    }
+                });
+            }
+            Frame::Pending | Frame::Stale => {}
+        }
     }
 
     /// The tab's id, once the tab exists; a title that arrived before is shown now.
     pub fn set_tab(&self, id: isize) {
         self.ivars().tab.set(Some(id));
-        let title = self.ivars().title.borrow().clone();
-        if title.is_some() {
-            self.set_title(title);
+        self.ivars().state.tab_title.borrow_mut().take();
+        if self.ivars().title.borrow().is_some() {
+            self.show_title();
         }
     }
 

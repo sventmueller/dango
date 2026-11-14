@@ -1,7 +1,7 @@
 //! What a terminal view decides without AppKit (E98): when a frame is due, how a bell rings, when VoiceOver hears of
 //! new output, how long a notice stays, which commands its menu offers and when they work.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
 
 use ide_terminal::{Highlight, Size, Snapshot};
@@ -16,6 +16,8 @@ const BELL_GAP: Duration = Duration::from_millis(250);
 const ANNOUNCE_GAP: Duration = Duration::from_millis(500);
 /// While a size is dragged, the grid reflows its scrollback and the program hears SIGWINCH at most this often.
 const RESIZE_GAP: Duration = Duration::from_millis(100);
+/// The tab takes a new title at most this often, as a spinner in a program's title changes it on every frame.
+pub const TITLE_GAP: Duration = Duration::from_millis(250);
 
 #[derive(Default)]
 pub struct State {
@@ -34,6 +36,10 @@ pub struct State {
     pub size: Cell<Option<Size>>,
     /// Fitting the grid to a dragged size.
     pub resizes: Pace,
+    /// Handing the title to the tab.
+    pub titles: Pace,
+    /// The title the tab was given last.
+    pub tab_title: RefCell<Option<String>>,
     notices: Cell<u64>,
     /// A GPU frame was skipped while the window was hidden behind others.
     pub unpresented: Cell<bool>,
@@ -303,6 +309,18 @@ mod tests {
             Frame::Now,
             "not dragged, it fits at once"
         );
+    }
+
+    #[test]
+    fn a_title_reaches_the_tab_at_once_and_then_at_most_every_gap() {
+        let state = State::default();
+        let now = Instant::now();
+        let ms = Duration::from_millis;
+        assert_eq!(state.titles.ask(now, TITLE_GAP), Frame::Now);
+        assert_eq!(state.titles.ask(now + ms(50), TITLE_GAP), Frame::After(ms(200)));
+        assert_eq!(state.titles.ask(now + ms(100), TITLE_GAP), Frame::Pending);
+        state.titles.pending.set(false);
+        assert_eq!(state.titles.ask(now + ms(250), TITLE_GAP), Frame::Now);
     }
 
     #[test]
