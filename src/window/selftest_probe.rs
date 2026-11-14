@@ -198,6 +198,14 @@ impl WindowController {
         self.select_relative(true);
     }
 
+    /// Moves the window tab in front to place `index` of its tab bar, as dragging its tab there does.
+    pub fn move_front_tab_to(&self, index: usize) {
+        let Some(tab) = self.current_tab() else { return };
+        if let Some(group) = tab.window.tabGroup() {
+            group.insertWindow_atIndex(&tab.window, isize::try_from(index).unwrap_or(0));
+        }
+    }
+
     /// Closes every tab of the window in front, as ⇧⌘W does.
     pub fn close_all_tabs(&self) {
         self.close_window();

@@ -32,4 +32,17 @@ impl WindowController {
     pub fn inspector_width(&self) -> f64 {
         self.current_tab().map_or(0.0, |tab| tab.inspector_width())
     }
+
+    /// Shows the inspector `width` wide in the tab in front, as a drag of its edge leaves it.
+    pub fn set_inspector_width(&self, width: f64) {
+        self.ivars().inspector.width.set(width.clamp(MIN_WIDTH, MAX_WIDTH));
+        if let Some(tab) = self.current_tab() {
+            tab.set_inspector(true, self.ivars().inspector.width.get());
+        }
+        self.later(|controller| {
+            if let Some(tab) = controller.current_tab() {
+                tab.release_inspector();
+            }
+        });
+    }
 }

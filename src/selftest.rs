@@ -101,6 +101,7 @@ mod settings_pages;
 mod settings_sync;
 mod settings_toolbar;
 mod snappy;
+mod snappy_input;
 mod split;
 mod sticky;
 mod stored_rules;

@@ -15,12 +15,12 @@ const BUDGET: Duration = Duration::from_millis(50);
 const LISTING: Duration = Duration::from_secs(20);
 
 /// Starts a measured part.
-fn measure() {
+pub(super) fn measure() {
     let _ = stall::take_worst();
 }
 
 /// Checks that no main thread step since `measure` held up input.
-fn measured(name: &'static str, what: &str) {
+pub(super) fn measured(name: &'static str, what: &str) {
     let worst = stall::take_worst();
     check(
         name,
