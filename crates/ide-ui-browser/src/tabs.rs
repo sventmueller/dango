@@ -12,7 +12,7 @@ use super::address::{self, Address};
 use super::host::state;
 use super::view::BrowserView;
 use ide_ui_common::util::main_soon;
-use ide_ui_common::window::{TabKind, Tabs, Window};
+use ide_ui_common::window::{TabKind, Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -37,7 +37,7 @@ fn with_serial<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
 
 /// Opens a browser tab at `url`, or empty, in `window`. A URL whose tab is open selects that tab instead; a tab of a
 /// local server reloads, since a dev server that called it has new content.
-pub fn open_tab(mtm: MainThreadMarker, window: u64, url: Option<&str>) {
+pub fn open_tab(mtm: MainThreadMarker, window: WindowId, url: Option<&str>) {
     let engine = Settings::load_user().get(&keys::SEARCH_ENGINE);
     let Some(address) = url.and_then(|url| address::resolve(url, engine)) else {
         let view = BrowserView::new(mtm, window, None, unique_key());
@@ -63,7 +63,7 @@ pub fn open_tab(mtm: MainThreadMarker, window: u64, url: Option<&str>) {
 
 /// Reloads the open tabs of `window` that show a page of `origin`, such as `http://localhost:5173`, for a dev server
 /// that does not reload by itself after a file was saved (I7).
-pub fn reload_matching(window: u64, origin: &str) {
+pub fn reload_matching(window: WindowId, origin: &str) {
     let Some(origin) = address::origin(origin) else { return };
     for view in tabs_of(window) {
         if view.current_url().and_then(|url| address::origin(&url)).as_deref() == Some(origin.as_str()) {
@@ -73,7 +73,7 @@ pub fn reload_matching(window: u64, origin: &str) {
 }
 
 /// The addresses the browser tabs of `window` show.
-pub fn urls(window: u64) -> Vec<String> {
+pub fn urls(window: WindowId) -> Vec<String> {
     tabs_of(window)
         .into_iter()
         .filter_map(|view| view.current_url())
@@ -81,7 +81,7 @@ pub fn urls(window: u64) -> Vec<String> {
 }
 
 /// The address the browser tab `tab` of `window` shows, for opening it again.
-pub fn url_of_tab(window: u64, tab: isize) -> Option<String> {
+pub fn url_of_tab(window: WindowId, tab: isize) -> Option<String> {
     tabs_of(window)
         .into_iter()
         .find(|view| view.tab() == tab)
@@ -144,25 +144,25 @@ pub(super) fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
 }
 
 /// The browser tab in front in `window`.
-fn front(window: u64) -> Option<Retained<BrowserView>> {
+fn front(window: WindowId) -> Option<Retained<BrowserView>> {
     let selected = Window::new(window).selected_tab()?;
     tabs_of(window).into_iter().find(|view| view.tab() == selected)
 }
 
 /// Runs a browser command of the menu bar on the browser tab in front of `window`, wherever the focus is.
-pub fn perform(window: u64, action: objc2::runtime::Sel) {
+pub fn perform(window: WindowId, action: objc2::runtime::Sel) {
     if let Some(view) = front(window) {
         view.perform(action);
     }
 }
 
 /// Whether the browser command `action` of the menu bar applies to the tab in front of `window`.
-pub fn validate(window: u64, action: objc2::runtime::Sel) -> bool {
+pub fn validate(window: WindowId, action: objc2::runtime::Sel) -> bool {
     front(window).is_some_and(|view| view.validate(Some(action)))
 }
 
 /// The open browser tabs of `window`; forgets closed ones.
-fn tabs_of(window: u64) -> Vec<Retained<BrowserView>> {
+fn tabs_of(window: WindowId) -> Vec<Retained<BrowserView>> {
     with_tabs(|tabs| {
         let mut tabs = tabs.borrow_mut();
         tabs.retain(|tab| tab.load().is_some());

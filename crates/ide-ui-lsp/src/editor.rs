@@ -1,6 +1,7 @@
 //! The editor as the language servers reach it: a text view with its document, its window's folder and the state
 //! this module keeps for it, and the few things of the editor's own that a server's answer changes.
 
+use ide_ui_common::window::WindowId;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::{Deref, Range};
 use std::path::PathBuf;
@@ -23,7 +24,7 @@ pub trait Editor: Deref<Target = NSTextView> {
     /// The folder of the editor's window, if it shows one.
     fn project_root(&self) -> Option<PathBuf>;
     /// The editor's window, by its id.
-    fn window_id(&self) -> Option<u64>;
+    fn window_id(&self) -> Option<WindowId>;
     /// Sends the editor `selector` after `delay` seconds, once however often it is asked meanwhile.
     fn later(&self, selector: Sel, delay: f64);
     fn storage(&self) -> Option<Retained<NSTextStorage>>;

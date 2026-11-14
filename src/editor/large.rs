@@ -1,6 +1,7 @@
 //! Opening a large file: it is read on the disk lane and its tab opens once the read is done, so a slow volume never
 //! holds up the main thread; what wanted its editor right away gets it then.
 
+use ide_ui_common::window::WindowId;
 use std::path::{Path, PathBuf};
 
 use ide_document::Document;
@@ -50,7 +51,7 @@ pub(super) fn with_opened(
     look(controller.id(), path.to_path_buf(), TRIES, then);
 }
 
-fn look(window: u64, path: PathBuf, tries: u32, then: impl FnOnce(&EditorTextView) + Send + 'static) {
+fn look(window: WindowId, path: PathBuf, tries: u32, then: impl FnOnce(&EditorTextView) + Send + 'static) {
     let Some(controller) = crate::host::window(window) else {
         return;
     };

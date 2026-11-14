@@ -1,6 +1,7 @@
 //! The way back from worker threads (E97, Review C11): an answer carries the id of its window, and one for a window
 //! that closed before it arrived is dropped.
 
+use ide_ui_common::window::WindowId;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -34,11 +35,11 @@ pub fn run() {
         move || open_flag.load(Ordering::SeqCst),
         move |_| {
             super::helpers::after(WORK, move || {
-                let gone = crate::context::app().windows().get(closed_id).is_none();
+                let gone = crate::context::app().windows().get(closed_id.get()).is_none();
                 check(
                     "a window that closed leaves the open ones",
                     gone,
-                    format!("window {closed_id}"),
+                    format!("window {}", closed_id.get()),
                 );
                 check(
                     "a worker's answer for a window that closed before it came is dropped",
@@ -57,7 +58,7 @@ pub fn run() {
 }
 
 /// Starts a worker whose answer goes to the window `id` after `WORK`; the flag says whether it got there.
-fn answer_later(id: u64) -> Arc<AtomicBool> {
+fn answer_later(id: WindowId) -> Arc<AtomicBool> {
     let reached = Arc::new(AtomicBool::new(false));
     let flag = Arc::clone(&reached);
     std::thread::spawn(move || {

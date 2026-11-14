@@ -31,7 +31,7 @@ use super::notice::Notice;
 use super::{autofill, dialogs, downloads, tabs, trust, web};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, item, ns, set_target};
-use ide_ui_common::window::{Tabs, Window};
+use ide_ui_common::window::{Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -59,7 +59,7 @@ struct Parts {
 
 pub struct Ivars {
     /// The id of the window the tab lives in.
-    window: u64,
+    window: WindowId,
     key: String,
     tab: Cell<isize>,
     parts: OnceCell<Parts>,
@@ -393,7 +393,7 @@ impl BrowserView {
     /// WebKit hands over; other tabs get a new one.
     pub fn new(
         mtm: MainThreadMarker,
-        window: u64,
+        window: WindowId,
         configuration: Option<&WKWebViewConfiguration>,
         key: String,
     ) -> Retained<BrowserView> {
@@ -523,7 +523,7 @@ impl BrowserView {
         self.ivars().tab.set(id);
     }
 
-    pub fn window_id(&self) -> u64 {
+    pub fn window_id(&self) -> WindowId {
         self.ivars().window
     }
 

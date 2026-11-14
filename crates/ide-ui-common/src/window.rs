@@ -131,26 +131,26 @@ impl TabKind {
 /// What a window is and shows: whether it is open, which one is in front or shows a folder, and its native windows.
 pub trait IdentityHost {
     /// Whether the window is open and not closing.
-    fn is_open(&self, window: u64) -> bool;
+    fn is_open(&self, window: WindowId) -> bool;
     /// The window in front, where menu commands act.
-    fn frontmost(&self) -> Option<u64>;
+    fn frontmost(&self) -> Option<WindowId>;
     /// The window that shows `root`.
-    fn for_project(&self, root: &Path) -> Option<u64>;
-    fn ns_window(&self, window: u64) -> Option<Retained<NSWindow>>;
+    fn for_project(&self, root: &Path) -> Option<WindowId>;
+    fn ns_window(&self, window: WindowId) -> Option<Retained<NSWindow>>;
     /// The folder the window shows.
-    fn project_root(&self, window: u64) -> Option<PathBuf>;
+    fn project_root(&self, window: WindowId) -> Option<PathBuf>;
     /// What the window opened: its folder, or a file it shows alone.
-    fn project(&self, window: u64) -> Option<PathBuf>;
+    fn project(&self, window: WindowId) -> Option<PathBuf>;
     /// The native windows of the window's tabs, in their order.
-    fn tab_windows(&self, window: u64) -> Vec<Retained<NSWindow>>;
+    fn tab_windows(&self, window: WindowId) -> Vec<Retained<NSWindow>>;
 }
 
 /// The user's trust in a window's folder (E22).
 pub trait TrustHost {
     /// Whether the user trusts the window's folder.
-    fn is_trusted(&self, window: u64) -> bool;
+    fn is_trusted(&self, window: WindowId) -> bool;
     /// Asks the user again whether to trust the window's folder.
-    fn ask_trust_again(&self, window: u64);
+    fn ask_trust_again(&self, window: WindowId);
 }
 
 /// A window's document tabs.
@@ -158,7 +158,7 @@ pub trait TabsHost {
     /// Adds `view` as a document tab; its id, or `None` once the window closed.
     fn add_tab(
         &self,
-        window: u64,
+        window: WindowId,
         kind: TabKind,
         key: Option<String>,
         title: &str,
@@ -168,64 +168,64 @@ pub trait TabsHost {
     /// user turned previews off.
     fn add_preview_tab(
         &self,
-        window: u64,
+        window: WindowId,
         kind: TabKind,
         key: Option<String>,
         title: &str,
         view: Retained<NSView>,
     ) -> Option<isize>;
     /// Turns the preview tab `tab` into one that stays.
-    fn keep_tab(&self, window: u64, tab: isize);
+    fn keep_tab(&self, window: WindowId, tab: isize);
     /// Brings the tab whose key is `key` to the front; whether there is one.
-    fn select_tab_with_key(&self, window: u64, key: &str) -> bool;
-    fn set_tab_title(&self, window: u64, tab: isize, title: &str);
-    fn select_tab(&self, window: u64, tab: isize);
-    fn close_tab(&self, window: u64, tab: isize);
+    fn select_tab_with_key(&self, window: WindowId, key: &str) -> bool;
+    fn set_tab_title(&self, window: WindowId, tab: isize, title: &str);
+    fn select_tab(&self, window: WindowId, tab: isize);
+    fn close_tab(&self, window: WindowId, tab: isize);
     /// The tab in front.
-    fn selected_tab(&self, window: u64) -> Option<isize>;
+    fn selected_tab(&self, window: WindowId) -> Option<isize>;
     /// The tab whose key is `key`, such as a file's path.
-    fn tab_with_key(&self, window: u64, key: &str) -> Option<isize>;
+    fn tab_with_key(&self, window: WindowId, key: &str) -> Option<isize>;
 }
 
 /// How a document tab's symbol shows the state of what it holds.
 pub trait TabDecorHost {
     /// Shows `color` as the status dot of `tab`, or none.
-    fn set_tab_status(&self, window: u64, tab: isize, color: Option<&NSColor>);
+    fn set_tab_status(&self, window: WindowId, tab: isize, color: Option<&NSColor>);
     /// Tints the symbol of `tab`.
-    fn set_tab_tint(&self, window: u64, tab: isize, color: &NSColor);
+    fn set_tab_tint(&self, window: WindowId, tab: isize, color: &NSColor);
     /// Gives the symbol of `tab` the colours of its left, top, right and bottom point instead of a tint.
-    fn set_tab_four_colours(&self, window: u64, tab: isize, colors: [Retained<NSColor>; 4]);
+    fn set_tab_four_colours(&self, window: WindowId, tab: isize, colors: [Retained<NSColor>; 4]);
 }
 
 /// The panels beside a window's activity bar.
 pub trait PanelsHost {
     /// Shows `panel` beside the activity bar.
-    fn activate_panel(&self, window: u64, panel: Panel);
-    fn set_panel_page(&self, window: u64, panel: Panel, page: &NSView);
+    fn activate_panel(&self, window: WindowId, panel: Panel);
+    fn set_panel_page(&self, window: WindowId, panel: Panel, page: &NSView);
     /// Shows `count` on `panel`'s symbol in the activity bar; none for 0.
-    fn set_symbol_count(&self, window: u64, panel: Panel, count: usize);
+    fn set_symbol_count(&self, window: WindowId, panel: Panel, count: usize);
     /// Puts `view` at the trailing end of `panel`'s title row.
-    fn set_panel_accessory(&self, window: u64, panel: Panel, view: &NSView);
+    fn set_panel_accessory(&self, window: WindowId, panel: Panel, view: &NSView);
 }
 
 /// The inspector at a window's trailing edge.
 pub trait InspectorHost {
-    fn set_inspector_content(&self, window: u64, view: &NSView);
-    fn show_inspector(&self, window: u64, shown: bool);
+    fn set_inspector_content(&self, window: WindowId, view: &NSView);
+    fn show_inspector(&self, window: WindowId, shown: bool);
 }
 
 /// What a window tells the user beside its tabs: a brief notice, and its running work in the activity view.
 pub trait NoticesHost {
     /// Shows `text` briefly over the window and has VoiceOver read it.
-    fn show_notice(&self, window: u64, text: &str);
+    fn show_notice(&self, window: WindowId, text: &str);
     /// The activity view of the window reads its running work again.
-    fn refresh_activity(&self, window: u64);
+    fn refresh_activity(&self, window: WindowId);
 }
 
 /// The files a window opens in its editors.
 pub trait FilesHost {
     /// Opens `path` in an editor tab, or brings its tab to the front.
-    fn open_file(&self, window: u64, path: &Path);
+    fn open_file(&self, window: WindowId, path: &Path);
 }
 
 /// What the app knows beside its windows.
@@ -290,13 +290,29 @@ pub fn keymap() -> ide_core::keymap::Keymap {
     host().keymap()
 }
 
+/// The number the app gives a window; never reused while the app runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct WindowId(u64);
+
+impl WindowId {
+    /// The id the app's registry of windows handed out as `number`.
+    pub const fn new(number: u64) -> WindowId {
+        WindowId(number)
+    }
+
+    /// The number under which the app's registry of windows keeps the window.
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
 /// A window by its id, which stays valid as a value after the window closed; its calls then do nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Window(u64);
+pub struct Window(WindowId);
 
 impl Window {
     /// The window with the id the app gave it.
-    pub fn new(id: u64) -> Window {
+    pub fn new(id: WindowId) -> Window {
         Window(id)
     }
 
@@ -311,11 +327,11 @@ impl Window {
     }
 
     /// The window if it is still open.
-    pub fn open(id: u64) -> Option<Window> {
+    pub fn open(id: WindowId) -> Option<Window> {
         host().is_open(id).then_some(Window(id))
     }
 
-    pub fn id(self) -> u64 {
+    pub fn id(self) -> WindowId {
         self.0
     }
 

@@ -1,10 +1,11 @@
 //! What the self-test reads from and does with the parts of `tabs.rs`, kept out of its production code.
 
+use super::*;
 #[allow(
     unused_imports,
     reason = "the parts moved here use only some of their module's names"
 )]
-use super::*;
+use ide_ui_common::window::WindowId;
 
 /// What the self-test reads from a browser tab.
 pub struct Seen {
@@ -24,7 +25,7 @@ pub struct Seen {
 }
 
 /// Presses "Trotzdem öffnen" on the first tab of `window` that offers it; whether one did.
-pub fn proceed(window: u64) -> bool {
+pub fn proceed(window: WindowId) -> bool {
     let Some(view) = tabs_of(window).into_iter().find(|view| view.seen().proceed) else {
         return false;
     };
@@ -33,22 +34,22 @@ pub fn proceed(window: u64) -> bool {
 }
 
 /// Presses the key button of the browser tab in front of `window`, as the self-test's user.
-pub fn fill_login(window: u64) {
+pub fn fill_login(window: WindowId) {
     if let Some(view) = front(window) {
         view.fill_login();
     }
 }
 
 /// The browser tab in front of `window`, which takes the actions of its buttons.
-pub fn front_view(window: u64) -> Option<Retained<objc2_app_kit::NSView>> {
+pub fn front_view(window: WindowId) -> Option<Retained<objc2_app_kit::NSView>> {
     front(window).map(Retained::into_super)
 }
 
 /// The address field of the browser tab in front of `window`.
-pub fn address_field(window: u64) -> Option<Retained<objc2_app_kit::NSTextField>> {
+pub fn address_field(window: WindowId) -> Option<Retained<objc2_app_kit::NSTextField>> {
     front(window).map(|view| view.address_field())
 }
 
-pub fn inspect(window: u64) -> Vec<Seen> {
+pub fn inspect(window: WindowId) -> Vec<Seen> {
     tabs_of(window).iter().map(|view| view.seen()).collect()
 }

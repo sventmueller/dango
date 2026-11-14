@@ -1,6 +1,7 @@
 //! The open windows as the rest of the app reaches them: by id for answers from other threads, by folder, the one in
 //! front, and what all of them are told when files, settings or the session change.
 
+use ide_ui_common::window::WindowId;
 use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
@@ -14,9 +15,9 @@ use crate::util::main_soon;
 
 /// Runs `f` with the controller of the window with `id` once the main queue gets to it, unless the window closed
 /// in the meantime; the way back for answers from other threads (Review C11).
-pub fn deliver(id: u64, f: impl FnOnce(&WindowController) + Send + 'static) {
+pub fn deliver(id: WindowId, f: impl FnOnce(&WindowController) + Send + 'static) {
     main_soon(move || {
-        if let Some(controller) = crate::context::app().windows().get(id) {
+        if let Some(controller) = crate::context::app().windows().get(id.get()) {
             f(&controller);
         }
     });

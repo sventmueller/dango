@@ -10,7 +10,7 @@ use ide_process::Ending;
 use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
 use ide_ui_common::registry::WindowPart;
-use ide_ui_common::window::Window;
+use ide_ui_common::window::{Window, WindowId};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -35,7 +35,7 @@ const RELOADED_ROWS: usize = 100;
 
 pub struct PanelIvars {
     id: u64,
-    window: u64,
+    window: WindowId,
     root: PathBuf,
     pub(super) board: RefCell<Board>,
     tools: RefCell<Vec<Tool>>,
@@ -222,7 +222,7 @@ define_class!(
 
 impl TestsPanel {
     /// The panel `id` of the window `window` for the folder `root`.
-    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<TestsPanel> {
+    pub fn new(mtm: MainThreadMarker, id: u64, window: WindowId, root: PathBuf) -> Retained<TestsPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
             id,
             window,
@@ -255,7 +255,7 @@ impl TestsPanel {
         self.ivars().id
     }
 
-    pub fn window(&self) -> u64 {
+    pub fn window(&self) -> WindowId {
         self.ivars().window
     }
 
@@ -381,7 +381,7 @@ impl TestsPanel {
     }
 
     fn scratch(&self) -> PathBuf {
-        std::env::temp_dir().join(format!("dango-tests-{}", self.window()))
+        std::env::temp_dir().join(format!("dango-tests-{}", self.window().get()))
     }
 
     /// Runs `scope` with `tool`.

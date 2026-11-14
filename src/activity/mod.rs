@@ -458,7 +458,7 @@ impl Activity {
                 return;
             };
             main_after(Duration::from_millis(300), move || {
-                let controller = crate::context::app().windows().get(window);
+                let controller = crate::context::app().windows().get(window.get());
                 if let Some(activity) = controller.and_then(|c| of(&c)) {
                     activity.ivars().scheduled.set(false);
                     activity.fill();
@@ -550,7 +550,7 @@ impl Activity {
             return;
         };
         main_after(Duration::from_secs(1), move || {
-            let controller = crate::context::app().windows().get(window);
+            let controller = crate::context::app().windows().get(window.get());
             if let Some(activity) = controller.and_then(|c| of(&c))
                 && activity.ivars().popover.borrow().as_ref().is_some_and(|p| p.isShown())
             {

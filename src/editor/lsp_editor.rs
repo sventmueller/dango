@@ -53,7 +53,7 @@ impl Editor for EditorTextView {
         self.controller().and_then(|c| c.project_root())
     }
 
-    fn window_id(&self) -> Option<u64> {
+    fn window_id(&self) -> Option<ide_ui_common::window::WindowId> {
         self.controller().map(|c| c.id())
     }
 
@@ -179,7 +179,7 @@ impl Editor for Held {
         Editor::project_root(&*self.0)
     }
 
-    fn window_id(&self) -> Option<u64> {
+    fn window_id(&self) -> Option<ide_ui_common::window::WindowId> {
         Editor::window_id(&*self.0)
     }
 

@@ -12,7 +12,7 @@ use ide_core::explain::Explain;
 use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
 use ide_ui_common::registry::WindowPart;
-use ide_ui_common::window::Window;
+use ide_ui_common::window::{Window, WindowId};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -49,7 +49,7 @@ pub enum Reach {
 
 pub struct PanelIvars {
     id: u64,
-    window: u64,
+    window: WindowId,
     root: PathBuf,
     context: RefCell<String>,
     contexts: RefCell<Vec<String>>,
@@ -211,7 +211,7 @@ define_class!(
 
 impl ContainersPanel {
     /// The panel `id` of the window `window` for the folder `root`.
-    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<ContainersPanel> {
+    pub fn new(mtm: MainThreadMarker, id: u64, window: WindowId, root: PathBuf) -> Retained<ContainersPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
             id,
             window,
@@ -245,7 +245,7 @@ impl ContainersPanel {
         self.ivars().id
     }
 
-    pub fn window(&self) -> u64 {
+    pub fn window(&self) -> WindowId {
         self.ivars().window
     }
 
@@ -326,7 +326,7 @@ impl ContainersPanel {
     fn shown_now(&self) -> bool {
         crate::context::AppContext::get(self.mtm())
             .windows()
-            .get(self.window())
+            .get(self.window().get())
             .is_some_and(|c| c.shown_panel() == Some(crate::window::Panel::Containers))
     }
 

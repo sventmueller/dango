@@ -48,6 +48,7 @@ use crate::util::{FlagGuard, guarded, main_soon, ns};
 use activity_bar::ActivityBar;
 pub use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
 use files::FileTree;
+use ide_ui_common::window::WindowId;
 pub use new_tab_button::NewTabMenu;
 pub use notice::announce;
 use panels::Panels;
@@ -83,7 +84,7 @@ pub use ide_ui_common::window::Panel;
 pub struct Ivars {
     context: Rc<AppContext>,
     /// The window's id among the open ones, which answers from other threads carry.
-    id: u64,
+    id: WindowId,
     project: RefCell<Option<PathBuf>>,
     panel: Cell<Option<Panel>>,
     panel_open: Cell<bool>,
@@ -480,9 +481,9 @@ define_class!(
 );
 
 /// Drops the window controller with `id` from the open windows once AppKit is done closing its window.
-fn main_soon_unregister(id: u64) {
+fn main_soon_unregister(id: WindowId) {
     main_soon(move || {
-        crate::context::app().windows().remove(id);
+        crate::context::app().windows().remove(id.get());
         crate::session::changed();
     });
 }
@@ -494,7 +495,7 @@ impl WindowController {
     }
 
     /// The window's id among the open ones.
-    pub fn id(&self) -> u64 {
+    pub fn id(&self) -> WindowId {
         self.ivars().id
     }
 
@@ -581,7 +582,7 @@ impl WindowController {
     fn new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         let context = AppContext::get(mtm);
         let ivars = Ivars {
-            id: context.windows().next_id(),
+            id: WindowId::new(context.windows().next_id()),
             context,
             project: RefCell::new(project),
             panel: Cell::default(),
@@ -619,7 +620,7 @@ impl WindowController {
         }
         this.open_welcome();
         // The window's parts reach it by id from the moment they attach to its folder, which `load_project` starts.
-        this.context().windows().insert(this.id(), this.clone());
+        this.context().windows().insert(this.id().get(), this.clone());
         this.load_project();
         this
     }

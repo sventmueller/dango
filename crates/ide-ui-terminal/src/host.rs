@@ -1,6 +1,7 @@
 //! What the terminal views need of the app (E99): the registry of open views, kept in the app's state, and the window
 //! a view belongs to, which it names by the window's id and asks to show what it opened.
 
+use ide_ui_common::window::WindowId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -32,7 +33,7 @@ pub trait Host {
     /// The terminal views unless the app has none (yet), for code such as `Drop` that must not fail.
     fn try_state(&self) -> Option<Rc<State>>;
     /// Shows what the user opened from a terminal in window `window`.
-    fn opened(&self, window: u64, what: Opened);
+    fn opened(&self, window: WindowId, what: Opened);
 }
 
 static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();

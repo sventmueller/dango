@@ -1,5 +1,6 @@
 //! The app as the Git panel reaches it: its editors, threads and agent settings (E99).
 
+use ide_ui_common::window::WindowId;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -35,7 +36,7 @@ pub trait Host {
     /// Whether a thread works in `folder`.
     fn thread_works_in(&self, folder: &Path) -> bool;
     /// Opens a thread of the worktree's agent in `tree` in `window` (I1).
-    fn open_thread(&self, window: u64, tree: &ThreadTree);
+    fn open_thread(&self, window: WindowId, tree: &ThreadTree);
     /// The `claude` program on the login shell's PATH.
     fn claude_program(&self, env: &[(String, String)]) -> Option<PathBuf>;
     /// The own agent's endpoint `id` (E6).

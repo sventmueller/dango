@@ -3,6 +3,7 @@
 //! page's alert and confirm, a popup that closes itself, HTTP logins, a download by a link and one that breaks off,
 //! and a login asked for on a page without a form.
 
+use ide_ui_common::window::WindowId;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
@@ -158,8 +159,8 @@ fn wait(seconds: u64, done: impl Fn() -> bool + 'static, then: impl FnOnce(bool)
     helpers::wait_within(Duration::from_secs(seconds), done, then);
 }
 
-fn window_id() -> u64 {
-    first_window().map_or(0, |controller| controller.id())
+fn window_id() -> WindowId {
+    first_window().map_or(WindowId::new(0), |controller| controller.id())
 }
 
 /// The address of the browser tab in front.

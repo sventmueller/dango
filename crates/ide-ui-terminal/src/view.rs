@@ -1,5 +1,6 @@
 //! The terminal view: a layer-backed view that draws a session's screen and hands it keys, mouse, pastes and drops.
 
+use ide_ui_common::window::WindowId;
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::ptr::NonNull;
@@ -40,7 +41,7 @@ use ide_ui_common::util::{FlagGuard, guarded, item, live, main_after, ns, separa
 pub struct Ivars {
     pub(super) id: u64,
     /// The id of the window the view's tab is in.
-    window: u64,
+    window: WindowId,
     font_size: Cell<f64>,
     pub(super) tab: Cell<Option<isize>>,
     /// Its tab does not open again after a restart, since it shows a command, not a shell of its own (G30).
@@ -494,7 +495,7 @@ define_class!(
 impl TerminalView {
     /// A terminal view for a tab of window `window` that starts in `cwd`, and what the tab shows: the view under its
     /// banners.
-    pub fn new(mtm: MainThreadMarker, window: u64, cwd: PathBuf) -> (Retained<TerminalView>, Retained<NSView>) {
+    pub fn new(mtm: MainThreadMarker, window: WindowId, cwd: PathBuf) -> (Retained<TerminalView>, Retained<NSView>) {
         let settings = Settings::load_user();
         super::set_option_as_meta(settings.get(&keys::OPTION_AS_META));
         let ivars = Ivars {
@@ -558,7 +559,7 @@ impl TerminalView {
     }
 
     /// The id of the window the view's tab is in.
-    pub fn window_id(&self) -> u64 {
+    pub fn window_id(&self) -> WindowId {
         self.ivars().window
     }
 

@@ -1,6 +1,7 @@
 //! The app as the language servers reach it beyond one editor (E99): the editors there are, a window's call hierarchy,
 //! the editor's font and colours, trust, and the state this crate keeps in the running app.
 
+use ide_ui_common::window::WindowId;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
@@ -35,9 +36,9 @@ pub trait Host {
     /// Every open editor, in every window.
     fn all_editors(&self) -> Vec<Box<dyn Editor>>;
     /// The editor of `path` in the window `window`.
-    fn editor_in(&self, window: u64, path: &Path) -> Option<Box<dyn Editor>>;
+    fn editor_in(&self, window: WindowId, path: &Path) -> Option<Box<dyn Editor>>;
     /// Shows `hierarchy` in the window `window`.
-    fn show_hierarchy(&self, window: u64, hierarchy: Hierarchy);
+    fn show_hierarchy(&self, window: WindowId, hierarchy: Hierarchy);
     /// Shows a warning with `message` and `detail` and waits for OK.
     fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str);
     /// The editor's font of code at `size` points.
@@ -73,11 +74,11 @@ pub(crate) fn all_editors() -> Vec<Box<dyn Editor>> {
     host().all_editors()
 }
 
-pub(crate) fn editor_in(window: u64, path: &Path) -> Option<Box<dyn Editor>> {
+pub(crate) fn editor_in(window: WindowId, path: &Path) -> Option<Box<dyn Editor>> {
     host().editor_in(window, path)
 }
 
-pub(crate) fn show_hierarchy(window: u64, hierarchy: Hierarchy) {
+pub(crate) fn show_hierarchy(window: WindowId, hierarchy: Hierarchy) {
     host().show_hierarchy(window, hierarchy);
 }
 

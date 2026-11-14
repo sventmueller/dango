@@ -22,7 +22,7 @@ use super::{server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{guarded, item, label, main_soon, ns, set_action};
-use ide_ui_common::window::{Files, Window};
+use ide_ui_common::window::{Files, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -172,7 +172,7 @@ fn go(view: &dyn Editor, location: &Location) {
 }
 
 /// Opens `path` in the window `window`, or brings its editor forward, and selects `range`.
-pub fn open_at(window: u64, path: &Path, range: LspRange) -> bool {
+pub fn open_at(window: WindowId, path: &Path, range: LspRange) -> bool {
     Window::new(window).open_file(path);
     let Some(target) = editor::editor_in(window, path) else {
         return false;
@@ -301,7 +301,7 @@ struct Entry {
 
 pub struct SheetIvars {
     /// The window it shows over, by its id.
-    window: u64,
+    window: WindowId,
     entries: RefCell<Vec<Entry>>,
     sheet: RefCell<Option<Retained<NSPanel>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
