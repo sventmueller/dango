@@ -9,9 +9,10 @@ use objc2_web_kit::{WKWebView, WKWebViewConfiguration};
 use splat_i18n::t;
 
 use super::address::{self, Address};
-use super::host::{host, state};
+use super::host::state;
 use super::view::BrowserView;
 use ide_ui_common::util::main_soon;
+use ide_ui_common::window::{TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -50,7 +51,7 @@ pub fn open_tab(mtm: MainThreadMarker, window: u64, url: Option<&str>) {
         .into_iter()
         .find(|view| view.key() == key || view.current_url().is_some_and(|url| address::key_of(&url) == key));
     if let Some(view) = open {
-        host().select_tab(window, view.key());
+        Window::new(window).select_tab(view.key());
         view.revisit(address);
         return;
     }
@@ -113,16 +114,16 @@ pub(super) fn close_later(view: &BrowserView) {
                 .find(|view| std::ptr::from_ref::<BrowserView>(view) as usize == address)
         });
         if let Some(view) = view {
-            host().close_tab(view.window_id(), view.tab());
+            Window::new(view.window_id()).close_tab(view.tab());
         }
     });
 }
 
 /// Adds `view` as a tab of its window; whether the window was still open.
 fn attach(view: &Retained<BrowserView>) -> bool {
-    let added = host().add_tab(
-        view.window_id(),
-        view.key().to_string(),
+    let added = Window::new(view.window_id()).add_tab(
+        TabKind::Browser,
+        Some(view.key().to_string()),
         t("Browser"),
         Retained::into_super(view.clone()),
     );
@@ -144,7 +145,7 @@ pub(super) fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
 
 /// The browser tab in front in `window`.
 fn front(window: u64) -> Option<Retained<BrowserView>> {
-    let selected = host().selected_tab(window)?;
+    let selected = Window::new(window).selected_tab()?;
     tabs_of(window).into_iter().find(|view| view.tab() == selected)
 }
 

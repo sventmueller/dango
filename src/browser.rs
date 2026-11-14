@@ -1,15 +1,12 @@
 //! The browser tab of a window (E17) as the app reaches it: `ide_ui_browser` by the window's id, and the app as that
 //! crate's `Host`.
 
-use std::path::PathBuf;
 use std::rc::Rc;
 
 use ide_ui_browser::{Host, State};
 use objc2::MainThreadOnly;
-use objc2::rc::Retained;
-use objc2_app_kit::NSView;
 
-use crate::window::{TabKind, WindowController};
+use crate::window::WindowController;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -49,38 +46,5 @@ pub fn validate(controller: &WindowController, action: objc2::runtime::Sel) -> b
 impl Host for crate::host::AppHost {
     fn state(&self) -> Rc<State> {
         crate::host::context().browser().clone()
-    }
-
-    fn add_tab(&self, window: u64, key: String, title: &str, view: Retained<NSView>) -> Option<isize> {
-        let controller = crate::host::window(window)?;
-        Some(controller.add_tab(TabKind::Browser, Some(key), title, view))
-    }
-
-    fn select_tab(&self, window: u64, key: &str) {
-        if let Some(controller) = crate::host::window(window) {
-            controller.select_tab(key);
-        }
-    }
-
-    fn close_tab(&self, window: u64, tab: isize) {
-        if let Some(controller) = crate::host::window(window) {
-            controller.close_tab(tab);
-        }
-    }
-
-    fn selected_tab(&self, window: u64) -> Option<isize> {
-        crate::host::window(window)?.selected_tab()
-    }
-
-    fn set_tab_title(&self, window: u64, tab: isize, title: &str) -> bool {
-        let Some(controller) = crate::host::window(window) else {
-            return false;
-        };
-        controller.set_tab_title(tab, title);
-        true
-    }
-
-    fn project_root(&self, window: u64) -> Option<PathBuf> {
-        crate::host::window(window)?.project_root()
     }
 }

@@ -28,9 +28,10 @@ use super::address::{self, Address};
 use super::controls::Controls;
 use super::failure::{Failure, FailurePage};
 use super::notice::Notice;
-use super::{autofill, dialogs, downloads, host, tabs, trust, web};
+use super::{autofill, dialogs, downloads, tabs, trust, web};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, item, ns, set_target};
+use ide_ui_common::window::{Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -531,7 +532,7 @@ impl BrowserView {
     }
 
     fn project_root(&self) -> Option<PathBuf> {
-        host::host().project_root(self.window_id())
+        Window::new(self.window_id()).project_root()
     }
 
     /// The address of the page, or of what was asked for while there is none or it failed.
@@ -813,7 +814,9 @@ impl BrowserView {
         if self.tab() < 0 || self.window().is_none() {
             return;
         }
-        if host::host().set_tab_title(self.window_id(), self.tab(), &title) {
+        let window = Window::new(self.window_id());
+        if window.is_open() {
+            window.set_tab_title(self.tab(), &title);
             *self.ivars().title.borrow_mut() = title;
         }
     }
