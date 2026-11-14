@@ -8,26 +8,23 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
-use std::ptr::NonNull;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use block2::RcBlock;
 use ide_thread::{Change, Entry, EntryId, EntryKind, Lane, Thread};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSAnimationContext, NSEvent, NSScrollView, NSScrollerStyle, NSTableCellView, NSTableColumn,
-    NSTableRowView, NSTableView, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSView,
+    NSAccessibility, NSAnimationContext, NSEvent, NSScrollView, NSTableCellView, NSTableColumn, NSTableRowView,
+    NSTableView, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSView,
 };
-use objc2_foundation::{NSIndexSet, NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSIndexSet, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::cards::{self, Ctx, Inputs, Live, Part};
 use super::row::TimelineRow;
 use super::target::AgentTarget;
-use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, main_soon, ns};
 
 /// Room on the leading side for the line and its dots.
@@ -164,6 +161,8 @@ pub struct Timeline {
     pub(super) built: Cell<usize>,
     /// Only the conversation shows: no tools, thinking or status lines.
     focus: Cell<bool>,
+    follow: Rc<follow::Follow>,
+    glide: follow::Glide,
     scrolled: Retained<ProtocolObject<dyn NSObjectProtocol>>,
 }
 
@@ -212,7 +211,8 @@ impl Timeline {
         let list = shown(&thread, false);
         let rows: Vec<_> = list.iter().map(|e| e.id).collect();
         let positions = rows.iter().enumerate().map(|(i, id)| (*id, i)).collect();
-        let scrolled = show_scroller_away_from_end(&scroll);
+        let follow = follow::Follow::new();
+        let scrolled = follow::observe(&scroll, &follow);
         Timeline {
             mtm,
             key,
@@ -235,6 +235,8 @@ impl Timeline {
             corrections: RefCell::new(BTreeMap::new()),
             built: Cell::new(0),
             focus: Cell::new(false),
+            follow,
+            glide: follow::Glide::default(),
             scrolled,
         }
     }
@@ -391,7 +393,7 @@ impl Timeline {
         if corrections.is_empty() {
             return;
         }
-        let following = self.is_at_bottom();
+        let following = self.follows();
         let visible = self.scroll.contentView().bounds();
         let mut shift = 0.0;
         let set = objc2_foundation::NSMutableIndexSet::new();
@@ -418,18 +420,15 @@ impl Timeline {
         self.table.noteHeightOfRowsWithIndexesChanged(&set);
         NSAnimationContext::endGrouping();
         if following {
-            self.scroll_to_end();
+            self.follow_end();
         } else if shift.abs() > 0.5 {
-            let clip = self.scroll.contentView();
-            let origin = clip.bounds().origin;
-            clip.scrollToPoint(NSPoint::new(origin.x, (origin.y + shift).max(0.0)));
-            self.scroll.reflectScrolledClipView(&clip);
+            self.shift_by(shift);
         }
     }
 
     /// Takes in a new state; content-only changes keep the row index and untouched cards.
     pub fn apply(&self, thread: Rc<Thread>, changes: &[Change]) {
-        let following = self.is_at_bottom() || self.count() == 0;
+        let following = self.follows() || self.count() == 0;
         let structural = self.structure_changed(&thread, changes);
         let old_len = self.count();
         let appended = !structural || self.reindex(&thread);
@@ -449,7 +448,8 @@ impl Timeline {
             self.refresh_marks();
             return;
         }
-        if !appended || changes.contains(&Change::Cleared) {
+        let reloaded = !appended || changes.contains(&Change::Cleared);
+        if reloaded {
             self.table.reloadData();
         } else {
             if self.count() > old_len {
@@ -464,8 +464,10 @@ impl Timeline {
         }
         self.correct_now();
         self.refresh_marks();
-        if following {
+        if following && reloaded {
             self.scroll_to_end();
+        } else if following {
+            self.follow_end();
         }
     }
 
@@ -741,24 +743,6 @@ impl Timeline {
         at_bottom(&self.scroll)
     }
 
-    pub fn scroll_to_end(&self) {
-        let count = self.count();
-        if count == 0 {
-            return;
-        }
-        // After a reload or height change the table sizes itself only on its next layout pass, too late to find the end.
-        self.table.tile();
-        // An overlay scroller shows itself on every scroll, which would blink at each streamed line.
-        if self.scroll.scrollerStyle() == NSScrollerStyle::Overlay && self.scroll.hasVerticalScroller() {
-            self.scroll.setHasVerticalScroller(false);
-        }
-        let clip = self.scroll.contentView();
-        let height = self.table.frame().size.height;
-        let y = (height - clip.bounds().size.height).max(0.0);
-        clip.scrollToPoint(NSPoint::new(0.0, y));
-        self.scroll.reflectScrolledClipView(&clip);
-    }
-
     /// Scrolls to entry `key` and selects its row.
     pub fn reveal(&self, key: &str) {
         let thread = self.thread.borrow().clone();
@@ -794,16 +778,13 @@ impl Timeline {
         }
         if !self.is_visible() {
             if !self.pending.replace(true) {
-                self.pending_follow.set(self.is_at_bottom());
+                self.pending_follow.set(self.follows());
             }
             return;
         }
-        let following = self.is_at_bottom();
         self.reload_rows(rows.into_iter());
         self.correct_now();
-        if following {
-            self.scroll_to_end();
-        }
+        self.follow_end();
     }
 
     /// Lays the cards out anew after the width changed.
@@ -813,7 +794,7 @@ impl Timeline {
         if (width - self.width.get()).abs() < 0.5 || self.table.inLiveResize() {
             return;
         }
-        let following = self.is_at_bottom();
+        let following = self.follows();
         if !self.is_visible() {
             if !self.pending.replace(true) {
                 self.pending_follow.set(following);
@@ -938,37 +919,11 @@ fn at_bottom(scroll: &NSScrollView) -> bool {
     clip.origin.y + clip.size.height >= height - 40.0
 }
 
-/// Gives the timeline its scroller back once it no longer shows its end, which `Timeline::scroll_to_end` hides it at.
-fn show_scroller_away_from_end(scroll: &NSScrollView) -> Retained<ProtocolObject<dyn NSObjectProtocol>> {
-    let clip = scroll.contentView();
-    clip.setPostsBoundsChangedNotifications(true);
-    let weak = objc2::rc::Weak::from(scroll);
-    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
-        guarded((), || {
-            if let Some(scroll) = weak.load()
-                && !scroll.hasVerticalScroller()
-                && !at_bottom(&scroll)
-            {
-                scroll.setHasVerticalScroller(true);
-            }
-        });
-    });
-    let name = constant!(objc2_app_kit::NSViewBoundsDidChangeNotification);
-    // SAFETY: The block holds the scroll view weakly and does nothing once it is gone; the timeline removes the
-    // observer when it goes.
-    unsafe {
-        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-            Some(name),
-            Some(&clip),
-            None,
-            &block,
-        )
-    }
-}
-
 #[cfg(test)]
 #[path = "timeline_tests.rs"]
 mod tests;
+
+mod follow;
 
 #[cfg(feature = "selftest")]
 mod selftest_probe;

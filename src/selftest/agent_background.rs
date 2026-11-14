@@ -1,5 +1,5 @@
 //! The `agent-background` scenario: an AI tab that streams while another tab is in front shows the end of its answer
-//! when it comes back, twice in a row, and keeps following the answer after.
+//! when it comes back, twice in a row, and keeps following the answer after; scrolling up stops following it.
 
 use std::path::PathBuf;
 
@@ -105,10 +105,58 @@ fn returned(root: PathBuf, key: u64, round: u32, before: f64) {
             if round == 0 {
                 return to_background(root, key, 1);
             }
-            if let Some(window) = tab.root().window() {
-                snapshot(&window, NAME);
+            scroll_up_while_streaming(key);
+        },
+    );
+}
+
+/// A user who scrolls a little up while the answer streams stays where they scrolled, and follows again at the end.
+fn scroll_up_while_streaming(key: u64) {
+    let Some(tab) = tab_of(key) else {
+        return finish(NAME);
+    };
+    let clip = tab.timeline().view().contentView();
+    let up = clip.bounds().origin.y - 30.0;
+    clip.scrollToPoint(objc2_foundation::NSPoint::new(0.0, up));
+    for n in 0..10 {
+        append(&tab, &format!("Line {n} streamed while the user reads above.\n\n"));
+    }
+    helpers::wait_until(
+        move || tab_of(key).is_some_and(|tab| !tab.timeline().is_at_bottom()),
+        move |_| {
+            let Some(tab) = tab_of(key) else {
+                return finish(NAME);
+            };
+            let clip = tab.timeline().view().contentView();
+            let y = clip.bounds().origin.y;
+            check(
+                "scrolling up a little while the answer streams stops following it",
+                !tab.timeline().follows() && (y - up).abs() < 0.5,
+                format!("follows {}, at {y}, scrolled to {up}", tab.timeline().follows()),
+            );
+            let end = table_height(&tab) - clip.bounds().size.height;
+            clip.scrollToPoint(objc2_foundation::NSPoint::new(0.0, end));
+            let height = table_height(&tab);
+            for n in 0..10 {
+                append(&tab, &format!("Line {n} streamed after the user came back.\n\n"));
             }
-            finish(NAME);
+            helpers::wait_until(
+                move || followed(key, height + 50.0),
+                move |_| {
+                    let Some(tab) = tab_of(key) else {
+                        return finish(NAME);
+                    };
+                    check(
+                        "scrolling back to the end follows the answer again",
+                        tab.timeline().follows() && tab.timeline().is_at_bottom(),
+                        format!("follows {}", tab.timeline().follows()),
+                    );
+                    if let Some(window) = tab.root().window() {
+                        snapshot(&window, NAME);
+                    }
+                    finish(NAME);
+                },
+            );
         },
     );
 }

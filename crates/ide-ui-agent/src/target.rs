@@ -9,6 +9,7 @@ use objc2_app_kit::{
     NSTableViewDataSource, NSTableViewDelegate, NSTextDelegate, NSTextView, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol};
+use objc2_quartz_core::CADisplayLink;
 
 use super::cards::{Part, unpack};
 use super::tab::AgentTab;
@@ -88,6 +89,15 @@ define_class!(
     }
 
     impl AgentTarget {
+        #[unsafe(method(ideAgentGlide:))]
+        fn glide(&self, link: &CADisplayLink) {
+            guarded((), || {
+                if let Some(tab) = self.tab() {
+                    tab.timeline().glide_frame(link);
+                }
+            });
+        }
+
         #[unsafe(method(ideAgentToggle:))]
         fn toggle(&self, sender: Option<&AnyObject>) {
             self.on_entry(sender, |tab, id, what| {
