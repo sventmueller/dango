@@ -51,10 +51,10 @@ impl AgentTab {
     pub(super) fn rewind_choices(&self, entry: &Entry, uuid: &str) -> Vec<(&'static str, u8, bool)> {
         let state = self.state.borrow();
         if !matches!(self.agent, Agent::Claude) {
-            let has_code = state.checkpoints.contains_key(uuid);
+            let has_code = state.checkpoints().contains_key(uuid);
             return vec![(t("Code auf den Stand vor dieser Nachricht"), 2, has_code)];
         }
-        let has_code = state.checkpoints.contains_key(uuid) || state.source().is_live();
+        let has_code = state.checkpoints().contains_key(uuid) || state.source().is_live();
         drop(state);
         let has_conversation = self.conversation_rewindable(entry);
         vec![
@@ -85,7 +85,7 @@ impl AgentTab {
             return;
         };
         let Some(uuid) = message.message_id.clone() else { return };
-        let checkpoint = self.state.borrow().checkpoints.get(&uuid).cloned();
+        let checkpoint = self.state.borrow().checkpoints().get(&uuid).cloned();
         match checkpoint {
             Some(checkpoint) => self.restore(checkpoint, RestoreOptions::default()),
             None if matches!(self.agent, Agent::Claude) => self.rewind_with_cli(&uuid),

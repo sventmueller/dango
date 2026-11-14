@@ -109,7 +109,7 @@ impl AgentTab {
     /// Keeps the thread off Remote Control whatever the user's Claude settings say, so a live self-test registers
     /// nothing on claude.ai.
     pub fn keep_remote_control_off(&self) {
-        self.state.borrow_mut().remote = Some(false);
+        self.state.borrow_mut().set_remote(false);
     }
 
     /// Picks the model for the next start.
@@ -121,9 +121,9 @@ impl AgentTab {
     pub fn pick_all(&self, model: &str, effort: &str, mode: &str) {
         {
             let mut state = self.state.borrow_mut();
-            state.offered.models = vec![model.to_string()];
-            state.offered.efforts = vec![effort.to_string()];
-            state.offered.modes = vec![mode.to_string()];
+            state.offered_mut().models = vec![model.to_string()];
+            state.offered_mut().efforts = vec![effort.to_string()];
+            state.offered_mut().modes = vec![mode.to_string()];
         }
         self.pick_model(0);
         self.pick_effort(0);
@@ -132,7 +132,7 @@ impl AgentTab {
 
     /// Picks the mode `mode` as the mode pill's menu does, which remembers it for the agent's next sessions.
     pub fn pick_mode_id(&self, mode: &str) {
-        self.state.borrow_mut().offered.modes = vec![mode.to_string()];
+        self.state.borrow_mut().offered_mut().modes = vec![mode.to_string()];
         self.pick_mode(0);
     }
 
@@ -186,20 +186,20 @@ impl AgentTab {
             .iter()
             .map(|path| super::outside::classify(super::actions::file_attachment(path), &self.cwd))
             .collect();
-        self.state.borrow_mut().attachments.extend(picked);
+        self.state.borrow_mut().attach(picked);
         self.refresh_chips();
     }
 
     /// What the next message takes along.
     pub fn pending_attachments(&self) -> Vec<ide_thread::Attachment> {
-        self.state.borrow().attachments.clone()
+        self.state.borrow().attachments().to_vec()
     }
 
     /// The text of the next message's attachments from outside.
     pub fn outside_texts(&self) -> Vec<String> {
         self.state
             .borrow()
-            .attachments
+            .attachments()
             .iter()
             .filter_map(|a| match a {
                 ide_thread::Attachment::External { text, .. } => Some(text.clone()),
@@ -234,14 +234,14 @@ impl AgentTab {
 
     /// Whether the editor's selection is offered as context.
     pub fn has_offer(&self) -> bool {
-        self.state.borrow().offer.is_some()
+        self.state.borrow().offer().is_some()
     }
 
     /// The attachments of the next message.
     pub fn attachment_names(&self) -> Vec<String> {
         self.state
             .borrow()
-            .attachments
+            .attachments()
             .iter()
             .map(|a| match a {
                 ide_thread::Attachment::Image { .. } => "image".to_string(),
@@ -302,7 +302,7 @@ impl AgentTab {
 
     /// How many checkpoints were taken before prompts.
     pub fn checkpoint_count(&self) -> usize {
-        self.state.borrow().checkpoints.len()
+        self.state.borrow().checkpoints().len()
     }
 
     /// Menu `which`, built as a click on its button would show it.
@@ -346,7 +346,7 @@ impl AgentTab {
 
     /// The messages waiting to be sent, by their text.
     pub fn queued(&self) -> Vec<String> {
-        self.state.borrow().queue.iter().map(|m| m.text.clone()).collect()
+        self.state.borrow().queue().iter().map(|m| m.text.clone()).collect()
     }
 
     /// The rows of the queue above the composer that show.
@@ -440,7 +440,7 @@ impl AgentTab {
 
     /// Whether the user bookmarked the session.
     pub fn is_bookmarked(&self) -> bool {
-        self.state.borrow().bookmarked
+        self.state.borrow().bookmarked()
     }
 
     /// Opens every card part with `part`, as a user would click them.

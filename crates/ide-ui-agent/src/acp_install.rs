@@ -82,7 +82,8 @@ pub fn confirm_install(mtm: objc2::MainThreadMarker, agent: &str, plan: &Plan) -
 impl AgentTab {
     /// Installs the agent after the user agreed, showing the progress, then starts it.
     pub fn install_agent(&self) {
-        let (Some(agent), Some(Problem::Missing(Some(plan)))) = (self.acp_agent(), self.state.borrow().problem.clone())
+        let (Some(agent), Some(Problem::Missing(Some(plan)))) =
+            (self.acp_agent(), self.state.borrow().problem().cloned())
         else {
             return;
         };
@@ -105,7 +106,7 @@ impl AgentTab {
                 let text = progress_text(&shown, step);
                 main_soon(move || {
                     if let Some(tab) = super::get(key)
-                        && matches!(tab.state.borrow().problem, Some(Problem::Installing(_)))
+                        && matches!(tab.state.borrow().problem(), Some(Problem::Installing(_)))
                     {
                         tab.set_problem(Some(Problem::Installing(text)));
                     }

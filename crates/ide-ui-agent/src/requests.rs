@@ -285,7 +285,7 @@ impl AgentTab {
         let task = self
             .state
             .borrow()
-            .thread
+            .thread()
             .subagent(&call.call_id)
             .and_then(|s| s.task_id.clone());
         if let Some(task) = task {
@@ -320,7 +320,7 @@ impl AgentTab {
         let path = {
             let state = self.state.borrow();
             state
-                .thread
+                .thread()
                 .background()
                 .iter()
                 .find(|b| b.id == task)

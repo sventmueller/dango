@@ -106,7 +106,7 @@ impl AgentTab {
             self.show_work(crate::work::Part::All, None);
             return;
         }
-        let attached = std::mem::take(&mut self.state.borrow_mut().attachments);
+        let attached = self.state.borrow_mut().take_attachments();
         if typed.trim().is_empty() && attached.is_empty() {
             return;
         }
@@ -178,7 +178,7 @@ impl AgentTab {
             return;
         }
         if busy {
-            self.state.borrow_mut().queue.push(message);
+            self.state.borrow_mut().enqueue(message);
             self.refresh_queue();
             return;
         }
@@ -324,14 +324,7 @@ impl AgentTab {
     /// Offers the selection of the editor as context, as the composer gets the focus.
     pub(super) fn offer_selection(&self) {
         let offer = self.controller().and_then(|c| context::editor_selection(&c));
-        let changed = {
-            let mut state = self.state.borrow_mut();
-            let already = offer.as_ref().is_some_and(|o| state.attachments.contains(o));
-            let offer = offer.filter(|_| !already);
-            let changed = state.offer != offer;
-            state.offer = offer;
-            changed
-        };
+        let changed = self.state.borrow_mut().offer_selection(offer);
         if changed {
             self.refresh_chips();
         }
@@ -339,11 +332,10 @@ impl AgentTab {
 
     /// Takes the offered selection as an attachment.
     pub fn use_selection(&self) {
-        {
-            let mut state = self.state.borrow_mut();
-            if let Some(offer) = state.offer.take() {
-                state.attachments.push(super::outside::classify(offer, &self.cwd));
-            }
+        let offer = self.state.borrow_mut().take_offer();
+        if let Some(offer) = offer {
+            let attachment = super::outside::classify(offer, &self.cwd);
+            self.state.borrow_mut().attach([attachment]);
         }
         self.refresh_chips();
     }
@@ -358,7 +350,7 @@ impl AgentTab {
         let (names, offer) = {
             let state = self.state.borrow();
             let names: Vec<Chip> = state
-                .attachments
+                .attachments()
                 .iter()
                 .map(|a| {
                     let picture = match a {
@@ -368,7 +360,7 @@ impl AgentTab {
                     (self.chip_name(a), matches!(a, Attachment::External { .. }), picture)
                 })
                 .collect();
-            (names, state.offer.as_ref().map(|o| self.chip_name(o).0))
+            (names, state.offer().map(|o| self.chip_name(o).0))
         };
         for (n, ((name, symbol), outside, picture)) in names.iter().enumerate() {
             let tag = isize::try_from(n).unwrap_or(-1);

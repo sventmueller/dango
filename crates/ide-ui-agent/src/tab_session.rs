@@ -34,7 +34,7 @@ impl AgentTab {
             let thread = {
                 let mut state = self.state.borrow_mut();
                 state.start();
-                state.thread.as_ref().clone()
+                state.thread().as_ref().clone()
             };
             self.refresh();
             self.start_acp(agent, thread);
@@ -43,7 +43,7 @@ impl AgentTab {
         let transcript = {
             let mut state = self.state.borrow_mut();
             state.start();
-            state.resume.as_ref().and_then(|r| r.transcript.clone())
+            state.resume().and_then(|r| r.transcript.clone())
         };
         self.refresh();
         let key = self.key;
@@ -78,9 +78,9 @@ impl AgentTab {
             launch.resume = thread
                 .session()
                 .map(str::to_string)
-                .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
-            launch.sandbox = state.sandbox;
-            launch.remote_control = state.remote;
+                .or_else(|| state.resume().map(|r| r.session.clone()));
+            launch.sandbox = state.sandbox();
+            launch.remote_control = state.remote();
             let picks = state.picks();
             launch.permission_mode = Some(picks.mode().to_string());
             launch.allow_bypass = true;

@@ -80,9 +80,9 @@ impl AgentTab {
     /// knows, or the first prompt, before which a new session starts.
     pub(super) fn conversation_rewindable(&self, entry: &Entry) -> bool {
         let state = self.state.borrow();
-        let thread = &state.thread;
+        let thread = state.thread();
         let first = first_prompt(thread) == Some(entry.id);
-        let known = thread.session().is_some() || state.resume.is_some();
+        let known = thread.session().is_some() || state.resume().is_some();
         first || (known && thread.rewind_before(entry.id).is_some())
     }
 
@@ -102,7 +102,7 @@ impl AgentTab {
         let session = thread
             .session()
             .map(str::to_string)
-            .or_else(|| self.state.borrow().resume.as_ref().map(|r| r.session.clone()))
+            .or_else(|| self.state.borrow().resume().map(|r| r.session.clone()))
             .unwrap_or_default();
         let rewind = thread.rewind_before(entry.id);
         let kept = kept_before(&thread, entry.id);

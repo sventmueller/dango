@@ -157,12 +157,8 @@ impl AgentTab {
         let thread_id = resume.as_ref().and_then(|r| r.thread.clone()).unwrap_or_default();
         let thread = Thread::new(thread_id.clone(), agent.id(), &cwd);
         let tab = Rc::new(AgentTab::build(controller, agent, cwd, thread_id, thread, Source::Idle));
-        {
-            let mut state = tab.state.borrow_mut();
-            state.custom_title = resume.as_ref().and_then(|r| r.title.clone());
-            state.bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
-            state.resume = resume;
-        }
+        let bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
+        tab.state.borrow_mut().opened(resume, bookmarked);
         crate::agent_panel::read_past(&tab.cwd);
         tab.add_to_window(controller);
         Some(tab)
@@ -359,10 +355,10 @@ impl AgentTab {
     pub fn session_id(&self) -> Option<String> {
         let state = self.state.borrow();
         state
-            .thread
+            .thread()
             .session()
             .map(str::to_string)
-            .or_else(|| state.resume.as_ref().map(|r| r.session.clone()))
+            .or_else(|| state.resume().map(|r| r.session.clone()))
     }
 
     pub fn thread_id(&self) -> &ThreadId {
@@ -376,7 +372,7 @@ impl AgentTab {
 
     /// Names the thread `title`, as the user would rename it.
     pub fn set_custom_title(&self, title: &str) {
-        self.state.borrow_mut().custom_title = Some(title.to_string());
+        self.state.borrow_mut().set_custom_title(title.to_string());
         self.refresh();
     }
 
@@ -387,12 +383,12 @@ impl AgentTab {
 
     /// The thread as it is now.
     pub fn snapshot(&self) -> Thread {
-        self.state.borrow().thread.as_ref().clone()
+        self.state.borrow().thread().as_ref().clone()
     }
 
     /// The last state received by the UI, shared without copying its history.
     pub fn view_snapshot(&self) -> Rc<Thread> {
-        self.state.borrow().thread.clone()
+        self.state.borrow().thread().clone()
     }
 
     /// The running session, if there is one.
@@ -458,9 +454,9 @@ impl AgentTab {
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status();
         let now = snapshot.status();
-        let delegated_before = delegates(&self.state.borrow().thread);
+        let delegated_before = delegates(self.state.borrow().thread());
         let delegated_now = delegates(&snapshot);
-        let title_changed = snapshot.title() != self.state.borrow().thread.title();
+        let title_changed = snapshot.title() != self.state.borrow().thread().title();
         self.state.borrow_mut().absorbed(snapshot.clone());
         let had_rows = self.timeline.count() > 0;
         self.timeline.apply(snapshot, changes);
@@ -472,7 +468,7 @@ impl AgentTab {
         {
             self.refresh();
         } else if refresh.status {
-            self.status.show(&self.state.borrow().thread);
+            self.status.show(self.state.borrow().thread());
         }
         if refresh.plans {
             self.refresh_plan_docs();
@@ -504,25 +500,25 @@ impl AgentTab {
     /// Records the session in the index the AI panel lists.
     pub(super) fn persist(&self) {
         let state = self.state.borrow();
-        if state.thread.session().is_none() && state.thread.entries(&ide_thread::Lane::Main).is_empty() {
+        if state.thread().session().is_none() && state.thread().entries(&ide_thread::Lane::Main).is_empty() {
             return;
         }
         crate::agent_panel::record(
-            ide_thread::IndexEntry::of(&state.thread, SystemTime::now()),
-            state.thread.usage().subscription,
-            state.custom_title.clone(),
+            ide_thread::IndexEntry::of(state.thread(), SystemTime::now()),
+            state.thread().usage().subscription,
+            state.custom_title().map(str::to_string),
         );
     }
 
     /// Takes in the bookmarks, read after the tab opened.
     pub(super) fn bookmarks_read(&self) {
         let on = crate::agent_panel::is_bookmarked(&self.thread_id);
-        self.state.borrow_mut().bookmarked = on;
+        self.state.borrow_mut().set_bookmarked(on);
         self.header.set_bookmarked(on);
     }
 
     pub fn set_problem(&self, problem: Option<Problem>) {
-        self.state.borrow_mut().problem = problem;
+        self.state.borrow_mut().set_problem(problem);
         self.refresh();
     }
 
@@ -537,13 +533,13 @@ impl AgentTab {
         let (problem, thread, title) = {
             let state = self.state.borrow();
             (
-                state.problem.clone(),
-                state.thread.clone(),
+                state.problem().cloned(),
+                state.thread().clone(),
                 state.title(&untitled(&self.agent)),
             )
         };
         self.header.set_title(&title);
-        self.header.set_bookmarked(self.state.borrow().bookmarked);
+        self.header.set_bookmarked(self.state.borrow().bookmarked());
         self.refresh_remote();
         self.refresh_work();
         if let Some(controller) = self.controller() {
@@ -590,7 +586,7 @@ impl AgentTab {
         match state.status() {
             Status::Running => Some(NSColor::systemGreenColor()),
             Status::RequiresAction => Some(NSColor::systemRedColor()),
-            Status::Idle if delegates(&state.thread) => Some(NSColor::systemGreenColor()),
+            Status::Idle if delegates(state.thread()) => Some(NSColor::systemGreenColor()),
             Status::Idle => None,
         }
     }
@@ -624,7 +620,7 @@ impl AgentTab {
 
     /// Adds text from outside to the next message, such as a CI log.
     pub fn attach_outside(&self, attachment: ide_thread::Attachment) {
-        self.state.borrow_mut().attachments.push(attachment);
+        self.state.borrow_mut().attach([attachment]);
         self.refresh_chips();
     }
 

@@ -26,26 +26,28 @@ pub struct Offered {
     pub past: Vec<Resume>,
 }
 
+/// What an AI tab holds besides its views: its session, the turn in flight, the user's picks and what the next
+/// message takes along.
 pub struct State {
     run: Run,
-    pub thread: Rc<Thread>,
-    pub problem: Option<Problem>,
-    pub custom_title: Option<String>,
-    pub queue: Vec<UserMessage>,
-    pub attachments: Vec<Attachment>,
-    pub sandbox: bool,
+    thread: Rc<Thread>,
+    problem: Option<Problem>,
+    custom_title: Option<String>,
+    queue: Vec<UserMessage>,
+    attachments: Vec<Attachment>,
+    sandbox: bool,
     /// Whether the user connected the thread to Remote Control or ended it; `None` follows their Claude settings.
-    pub remote: Option<bool>,
+    remote: Option<bool>,
     picks: Picks,
-    pub bookmarked: bool,
-    pub resume: Option<Resume>,
+    bookmarked: bool,
+    resume: Option<Resume>,
     /// The checkpoint taken before each user message, by the CLI's id for the message.
-    pub checkpoints: HashMap<String, Checkpoint>,
+    checkpoints: HashMap<String, Checkpoint>,
     turn: Turn,
-    pub offered: Offered,
+    offered: Offered,
     rewind: Rewind,
     /// The editor's selection, offered as context while the composer has the focus.
-    pub offer: Option<Attachment>,
+    offer: Option<Attachment>,
 }
 
 /// The tab's session, with what the tab knows of its agent beyond it.
@@ -178,6 +180,124 @@ impl State {
             return None;
         }
         Some(self.queue.remove(0))
+    }
+
+    /// Takes in what the tab opens with: the past session `resume`, and whether the user bookmarked the thread.
+    pub fn opened(&mut self, resume: Option<Resume>, bookmarked: bool) {
+        self.custom_title = resume.as_ref().and_then(|r| r.title.clone());
+        self.bookmarked = bookmarked;
+        self.resume = resume;
+    }
+
+    pub fn thread(&self) -> &Rc<Thread> {
+        &self.thread
+    }
+
+    /// The past session the tab continues.
+    pub fn resume(&self) -> Option<&Resume> {
+        self.resume.as_ref()
+    }
+
+    pub fn custom_title(&self) -> Option<&str> {
+        self.custom_title.as_deref()
+    }
+
+    pub fn set_custom_title(&mut self, title: String) {
+        self.custom_title = Some(title);
+    }
+
+    pub fn bookmarked(&self) -> bool {
+        self.bookmarked
+    }
+
+    pub fn set_bookmarked(&mut self, on: bool) {
+        self.bookmarked = on;
+    }
+
+    /// Bookmarks the thread or takes the bookmark off; whether it is bookmarked now.
+    pub fn toggle_bookmark(&mut self) -> bool {
+        self.bookmarked = !self.bookmarked;
+        self.bookmarked
+    }
+
+    pub fn sandbox(&self) -> bool {
+        self.sandbox
+    }
+
+    /// Switches the sandbox on or off; whether it is on now.
+    pub fn toggle_sandbox(&mut self) -> bool {
+        self.sandbox = !self.sandbox;
+        self.sandbox
+    }
+
+    pub fn remote(&self) -> Option<bool> {
+        self.remote
+    }
+
+    pub fn set_remote(&mut self, on: bool) {
+        self.remote = Some(on);
+    }
+
+    pub fn problem(&self) -> Option<&Problem> {
+        self.problem.as_ref()
+    }
+
+    pub fn set_problem(&mut self, problem: Option<Problem>) {
+        self.problem = problem;
+    }
+
+    pub fn queue(&self) -> &[UserMessage] {
+        &self.queue
+    }
+
+    pub fn enqueue(&mut self, message: UserMessage) {
+        self.queue.push(message);
+    }
+
+    /// What the next message takes along.
+    pub fn attachments(&self) -> &[Attachment] {
+        &self.attachments
+    }
+
+    pub fn attach(&mut self, attachments: impl IntoIterator<Item = Attachment>) {
+        self.attachments.extend(attachments);
+    }
+
+    /// Takes the attachments off for the message that goes out.
+    pub fn take_attachments(&mut self) -> Vec<Attachment> {
+        std::mem::take(&mut self.attachments)
+    }
+
+    /// The editor's selection, offered as context.
+    pub fn offer(&self) -> Option<&Attachment> {
+        self.offer.as_ref()
+    }
+
+    /// Offers the editor's selection `offer`, unless the next message takes it along already; whether the offer
+    /// changed.
+    pub fn offer_selection(&mut self, offer: Option<Attachment>) -> bool {
+        let offer = offer.filter(|o| !self.attachments.contains(o));
+        let changed = self.offer != offer;
+        self.offer = offer;
+        changed
+    }
+
+    pub fn take_offer(&mut self) -> Option<Attachment> {
+        self.offer.take()
+    }
+
+    /// The checkpoint taken before each user message, by the CLI's id for the message.
+    pub fn checkpoints(&self) -> &HashMap<String, Checkpoint> {
+        &self.checkpoints
+    }
+
+    pub fn offered(&self) -> &Offered {
+        &self.offered
+    }
+
+    /// What the composer's menus offer, to be set as one of them is built.
+    pub fn offered_mut(&mut self) -> &mut Offered {
+        &mut self.offered
     }
 
     pub fn source(&self) -> &Source {

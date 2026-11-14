@@ -293,13 +293,13 @@ impl AgentTab {
         };
         {
             let state = self.state.borrow();
-            if state.sandbox {
+            if state.sandbox() {
                 launch = launch.sandboxed(&agent.sandbox);
             }
             launch.resume = thread
                 .session()
                 .map(str::to_string)
-                .or_else(|| state.resume.as_ref().map(|r| r.session.clone()));
+                .or_else(|| state.resume().map(|r| r.session.clone()));
         }
         let sink = self.sink(Incoming::Acp);
         match ide_acp::Session::start(Supervisor::global(), launch, thread.clone(), sink) {
@@ -396,7 +396,7 @@ impl AgentTab {
             .mode
             .setImage(ide_ui_common::util::symbol("slider.horizontal.3", &mode).as_deref());
         let available = agent.sandbox.is_available();
-        let (symbol, tint, tip) = match (available, state.sandbox) {
+        let (symbol, tint, tip) = match (available, state.sandbox()) {
             (false, _) => (
                 "shield.slash",
                 NSColor::tertiaryLabelColor(),
@@ -457,12 +457,12 @@ impl AgentTab {
                 offered.push(format!("{}\u{1f}{}", option.id, choice.value));
             }
         }
-        self.state.borrow_mut().offered.models = offered;
+        self.state.borrow_mut().offered_mut().models = offered;
         menu
     }
 
     pub(super) fn acp_pick_model(&self, index: usize) {
-        let Some(picked) = self.state.borrow().offered.models.get(index).cloned() else {
+        let Some(picked) = self.state.borrow().offered().models.get(index).cloned() else {
             return;
         };
         let Some((option, value)) = picked.split_once('\u{1f}') else {
@@ -538,12 +538,12 @@ impl AgentTab {
                 entry.setState(objc2_app_kit::NSControlStateValueOn);
             }
         }
-        self.state.borrow_mut().offered.modes = caps.modes.iter().map(|m| m.id.clone()).collect();
+        self.state.borrow_mut().offered_mut().modes = caps.modes.iter().map(|m| m.id.clone()).collect();
         menu
     }
 
     pub(super) fn acp_pick_mode(&self, index: usize) {
-        let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
+        let Some(mode) = self.state.borrow().offered().modes.get(index).cloned() else {
             return;
         };
         self.acp_set_mode(mode);

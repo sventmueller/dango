@@ -44,7 +44,7 @@ impl AgentTab {
 
     /// What keeps the session from running, by name.
     pub fn problem_name(&self) -> Option<&'static str> {
-        self.state.borrow().problem.as_ref().map(|p| match p {
+        self.state.borrow().problem().map(|p| match p {
             Problem::Untrusted => "untrusted",
             Problem::NotFound => "not found",
             Problem::SignIn(_) | Problem::AcpSignIn => "sign in",
@@ -73,7 +73,12 @@ impl AgentTab {
 
     /// How many checkpoints before prompts belong to turns that have ended.
     pub fn finished_checkpoints(&self) -> usize {
-        self.state.borrow().checkpoints.values().filter(|c| c.finished).count()
+        self.state
+            .borrow()
+            .checkpoints()
+            .values()
+            .filter(|c| c.finished)
+            .count()
     }
 
     /// What the rewind menu of user message `id` offers, by title.

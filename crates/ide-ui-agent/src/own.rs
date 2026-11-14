@@ -122,7 +122,7 @@ impl AgentTab {
             .cloned()
             .or_else(|| picked_model(self.agent.id()));
         let (key, cwd, thread_id) = (self.key, self.cwd.clone(), self.thread_id.clone());
-        let sandbox = self.state.borrow().sandbox;
+        let sandbox = self.state.borrow().sandbox();
         let sink = self.sink(Incoming::Own);
         let diagnostics = crate::host::host().agent_diagnostics(&cwd);
         if let Err(why) = ide_ui_common::util::spawn("own-agent-start", move || {
@@ -201,12 +201,12 @@ impl AgentTab {
     fn refresh_own_pills(&self) {
         let state = self.state.borrow();
         let model = state
-            .thread
+            .thread()
             .model()
             .map(str::to_string)
             .or_else(|| state.own_choice().map(|c| c.model.clone()))
             .unwrap_or_else(|| t("Kein Modell").to_string());
-        let pill = match state.thread.effort() {
+        let pill = match state.thread().effort() {
             Some(effort) => tf("{} · {}", &[&model, effort]),
             None => model,
         };
@@ -231,7 +231,7 @@ impl AgentTab {
         self.composer
             .mode
             .setImage(ide_ui_common::util::symbol(symbol, &title).as_deref());
-        let (symbol, tint, tip) = if state.sandbox {
+        let (symbol, tint, tip) = if state.sandbox() {
             (
                 "checkmark.shield.fill",
                 NSColor::systemGreenColor(),
@@ -284,7 +284,7 @@ impl AgentTab {
             }
             menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
         }
-        let effort = self.state.borrow().thread.effort().map(str::to_string);
+        let effort = self.state.borrow().thread().effort().map(str::to_string);
         let heading = self.menu_item(&menu, t("Denktiefe"), sel_pick_effort(), -1);
         heading.setEnabled(false);
         let mut efforts = vec![String::new()];
@@ -302,14 +302,14 @@ impl AgentTab {
         }
         {
             let mut state = self.state.borrow_mut();
-            state.offered.models = offered;
-            state.offered.efforts = efforts;
+            state.offered_mut().models = offered;
+            state.offered_mut().efforts = efforts;
         }
         menu
     }
 
     pub(super) fn own_pick_model(&self, index: usize) {
-        let Some(picked) = self.state.borrow().offered.models.get(index).cloned() else {
+        let Some(picked) = self.state.borrow().offered().models.get(index).cloned() else {
             return;
         };
         let Some((endpoint, model)) = picked.split_once('\u{1f}') else {
@@ -342,7 +342,7 @@ impl AgentTab {
     }
 
     pub(super) fn own_pick_effort(&self, index: usize) {
-        let Some(level) = self.state.borrow().offered.efforts.get(index).cloned() else {
+        let Some(level) = self.state.borrow().offered().efforts.get(index).cloned() else {
             return;
         };
         if let Some(session) = self.state.borrow().source().own() {
@@ -400,12 +400,12 @@ impl AgentTab {
             }
             modes.push(ide_agent::session::mode_id(item).to_string());
         }
-        self.state.borrow_mut().offered.modes = modes;
+        self.state.borrow_mut().offered_mut().modes = modes;
         menu
     }
 
     pub(super) fn own_pick_mode(&self, index: usize) {
-        let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
+        let Some(mode) = self.state.borrow().offered().modes.get(index).cloned() else {
             return;
         };
         if let Some(session) = self.state.borrow().source().own() {
@@ -426,11 +426,7 @@ impl AgentTab {
 
     /// The sandbox switch: it takes effect with the next tool call, also in a running turn.
     pub(super) fn own_toggle_sandbox(&self) {
-        let on = {
-            let mut state = self.state.borrow_mut();
-            state.sandbox = !state.sandbox;
-            state.sandbox
-        };
+        let on = self.state.borrow_mut().toggle_sandbox();
         if let Some(session) = self.state.borrow().source().own() {
             session.set_sandbox(on);
         }

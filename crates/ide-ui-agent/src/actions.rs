@@ -30,7 +30,7 @@ pub(super) fn pop_up(menu: &NSMenu, view: &NSView) {
 
 impl AgentTab {
     pub(super) fn entry(&self, id: u64) -> Option<Arc<Entry>> {
-        find_entry(&self.state.borrow().thread, id)
+        find_entry(self.state.borrow().thread(), id)
     }
 
     pub(super) fn menu_item(
@@ -49,7 +49,7 @@ impl AgentTab {
 
     /// The send button: sends, or stops the turn when there is nothing to send.
     pub fn send_or_stop(&self) {
-        let has_text = !self.composer.text().trim().is_empty() || !self.state.borrow().attachments.is_empty();
+        let has_text = !self.composer.text().trim().is_empty() || !self.state.borrow().attachments().is_empty();
         if has_text {
             self.submit();
         } else if self.status() != Status::Idle
@@ -159,7 +159,7 @@ impl AgentTab {
             self.queue_view.removeArrangedSubview(&view);
             view.removeFromSuperview();
         }
-        let queue: Vec<String> = self.state.borrow().queue.iter().map(|m| m.text.clone()).collect();
+        let queue: Vec<String> = self.state.borrow().queue().iter().map(|m| m.text.clone()).collect();
         for (n, text) in queue.iter().enumerate() {
             let mtm = self.mtm;
             let icon = ui::icon(
@@ -236,7 +236,7 @@ impl AgentTab {
         if taken.is_empty() {
             return pictures;
         }
-        self.state.borrow_mut().attachments.extend(taken);
+        self.state.borrow_mut().attach(taken);
         self.refresh_chips();
         true
     }
@@ -254,7 +254,7 @@ impl AgentTab {
             let queued = ide_core::lane::DISK.ask(read, move |read| {
                 main_soon(move || {
                     if let (Some(tab), Some(read)) = (super::get(key), read) {
-                        tab.state.borrow_mut().attachments.extend(read);
+                        tab.state.borrow_mut().attach(read);
                         tab.refresh_chips();
                     }
                 });
@@ -284,7 +284,7 @@ impl AgentTab {
             .map(|p| PathBuf::from(p.to_string()))
             .collect();
         let picked = self.take_files(paths);
-        self.state.borrow_mut().attachments.extend(picked);
+        self.state.borrow_mut().attach(picked);
         self.refresh_chips();
     }
 
@@ -333,12 +333,12 @@ impl AgentTab {
                 entry.setToolTip(Some(&ns(description)));
             }
         }
-        self.state.borrow_mut().offered.commands = commands.into_iter().map(|(n, _)| n).collect();
+        self.state.borrow_mut().offered_mut().commands = commands.into_iter().map(|(n, _)| n).collect();
         menu
     }
 
     pub fn pick_command(&self, index: usize) {
-        let Some(name) = self.state.borrow().offered.commands.get(index).cloned() else {
+        let Some(name) = self.state.borrow().offered().commands.get(index).cloned() else {
             return;
         };
         self.composer.set_text(&format!("/{name} "));
@@ -364,7 +364,7 @@ impl AgentTab {
         let (models, efforts, current, effort) = {
             let state = self.state.borrow();
             let current = state
-                .thread
+                .thread()
                 .model()
                 .map(str::to_string)
                 .or_else(|| state.picks().model().map(str::to_string));
@@ -380,7 +380,7 @@ impl AgentTab {
                 .filter(|l| !l.is_empty())
                 .unwrap_or_else(|| ["low", "medium", "high", "xhigh", "max"].map(str::to_string).to_vec());
             let effort = state
-                .thread
+                .thread()
                 .effort()
                 .map(str::to_string)
                 .or_else(|| state.picks().effort().map(str::to_string));
@@ -413,8 +413,8 @@ impl AgentTab {
         }
         {
             let mut state = self.state.borrow_mut();
-            state.offered.models = models.into_iter().map(|(v, _, _)| v).collect();
-            state.offered.efforts = efforts;
+            state.offered_mut().models = models.into_iter().map(|(v, _, _)| v).collect();
+            state.offered_mut().efforts = efforts;
         }
         menu
     }
@@ -426,7 +426,7 @@ impl AgentTab {
         if self.agent.is_own() {
             return self.own_pick_model(index);
         }
-        let Some(model) = self.state.borrow().offered.models.get(index).cloned() else {
+        let Some(model) = self.state.borrow().offered().models.get(index).cloned() else {
             return;
         };
         self.state.borrow().source().set_model(&model);
@@ -439,7 +439,7 @@ impl AgentTab {
         if self.agent.is_own() {
             return self.own_pick_effort(index);
         }
-        let Some(level) = self.state.borrow().offered.efforts.get(index).cloned() else {
+        let Some(level) = self.state.borrow().offered().efforts.get(index).cloned() else {
             return;
         };
         self.state.borrow().source().set_effort(&level);
@@ -466,7 +466,7 @@ impl AgentTab {
         let current = {
             let state = self.state.borrow();
             state
-                .thread
+                .thread()
                 .mode()
                 .map(str::to_string)
                 .unwrap_or_else(|| state.picks().mode().to_string())
@@ -478,7 +478,7 @@ impl AgentTab {
                 entry.setState(objc2_app_kit::NSControlStateValueOn);
             }
         }
-        self.state.borrow_mut().offered.modes = modes().iter().map(|(id, _, _)| (*id).to_string()).collect();
+        self.state.borrow_mut().offered_mut().modes = modes().iter().map(|(id, _, _)| (*id).to_string()).collect();
         menu
     }
 
@@ -489,7 +489,7 @@ impl AgentTab {
         if self.agent.is_own() {
             return self.own_pick_mode(index);
         }
-        let Some(mode) = self.state.borrow().offered.modes.get(index).cloned() else {
+        let Some(mode) = self.state.borrow().offered().modes.get(index).cloned() else {
             return;
         };
         let key = self.key;
@@ -508,7 +508,7 @@ impl AgentTab {
     /// The CLI kept its mode instead of the one picked: the composer shows the mode it runs in, the next sessions start
     /// with that one, and an alert gives the CLI's reason.
     pub(super) fn mode_refused(&self, why: &str) {
-        let now = match self.state.borrow().thread.mode() {
+        let now = match self.state.borrow().thread().mode() {
             None | Some("manual") => "default".to_string(),
             Some(mode) => mode.to_string(),
         };
@@ -528,7 +528,7 @@ impl AgentTab {
         }
         let restart = {
             let mut state = self.state.borrow_mut();
-            state.sandbox = !state.sandbox;
+            state.toggle_sandbox();
             state.source().is_live() && state.status() == Status::Idle
         };
         self.refresh_composer();
@@ -540,11 +540,7 @@ impl AgentTab {
     }
 
     pub fn toggle_bookmark(&self) {
-        let on = {
-            let mut state = self.state.borrow_mut();
-            state.bookmarked = !state.bookmarked;
-            state.bookmarked
-        };
+        let on = self.state.borrow_mut().toggle_bookmark();
         crate::agent_panel::set_bookmarked(&self.thread_id, on);
         self.refresh();
         if let Some(controller) = self.controller() {
@@ -576,12 +572,12 @@ impl AgentTab {
             );
             entry.setToolTip(Some(&ns(&title)));
         }
-        self.state.borrow_mut().offered.past = past.into_iter().map(|(r, _)| r).collect();
+        self.state.borrow_mut().offered_mut().past = past.into_iter().map(|(r, _)| r).collect();
         menu
     }
 
     pub fn open_past(&self, index: usize) {
-        let Some(resume) = self.state.borrow().offered.past.get(index).cloned() else {
+        let Some(resume) = self.state.borrow().offered().past.get(index).cloned() else {
             return;
         };
         if let Some(controller) = self.controller() {
@@ -606,7 +602,7 @@ impl AgentTab {
     }
 
     pub fn set_title(&self, name: &str) {
-        self.state.borrow_mut().custom_title = Some(name.to_string());
+        self.state.borrow_mut().set_custom_title(name.to_string());
         crate::agent_panel::rename(&self.thread_id, name);
         self.persist();
         self.refresh();
@@ -704,7 +700,7 @@ impl AgentTab {
 
     /// Connects or disconnects, and keeps the choice for when the thread's session starts again.
     fn set_remote_control(&self, session: &Session, on: bool) {
-        self.state.borrow_mut().remote = Some(on);
+        self.state.borrow_mut().set_remote(on);
         session.set_remote_control(on);
     }
 
