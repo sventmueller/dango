@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "A(z) {} futása nem sikerült: {}";
 "{} wurde nicht gefunden." = "A(z) {} nem található.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "A listázás lefordítja a projektet; nyomja meg a ↻ gombot";
+"Noch keine Tests ausgeführt" = "Még nem futott teszt";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Futtassa a teszteket, hogy itt lássa az eredményeiket.";
+"Läuft … {}" = "Fut … {}";
+"Fertig: {}" = "Kész: {}";

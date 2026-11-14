@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "‏{} נכשל: {}";
 "{} wurde nicht gefunden." = "‏{} לא נמצא.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "הצגת הרשימה בונה את הפרויקט; יש ללחוץ ↻";
+"Noch keine Tests ausgeführt" = "עדיין לא הורצו בדיקות";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "הרץ את הבדיקות כדי לראות כאן את התוצאות.";
+"Läuft … {}" = "פועל … {}";
+"Fertig: {}" = "הסתיים: {}";

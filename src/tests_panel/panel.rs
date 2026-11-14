@@ -15,10 +15,10 @@ use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView,
-    NSOutlineViewDataSource, NSOutlineViewDelegate, NSStackView, NSStackViewGravity, NSTableColumn, NSTextField,
-    NSView,
+    NSOutlineViewDataSource, NSOutlineViewDelegate, NSProgressIndicator, NSProgressIndicatorStyle, NSStackView,
+    NSStackViewGravity, NSTableColumn, NSTextField, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
@@ -26,6 +26,9 @@ use crate::util::{guarded, label, main_after, ns, set_action};
 
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
+
+/// How far AppKit's source list sets its disclosure triangles in past the panel's title.
+const OUTDENT: f64 = 6.0;
 
 pub struct PanelIvars {
     id: u64,
@@ -41,12 +44,46 @@ pub struct PanelIvars {
     /// Set while the panel opens rows itself, so that does not count as the user's choice.
     unfolding: Cell<bool>,
     table: RefCell<Option<Retained<NSOutlineView>>>,
+    scroll: RefCell<Option<Retained<NSView>>>,
+    /// What the panel shows before the first run.
+    empty: RefCell<Option<Retained<NSView>>>,
+    spinner: RefCell<Option<Retained<NSProgressIndicator>>>,
     status: RefCell<Option<Retained<NSTextField>>>,
     failed: RefCell<Option<Retained<NSButton>>>,
     polling: Cell<bool>,
     /// The output of the last run of each test, by entry index, for "show output".
     pub(super) output: RefCell<String>,
 }
+
+define_class!(
+    // SAFETY: NSOutlineView has no subclassing requirements and `TestsOutlineView` does not implement Drop.
+    /// The tests' outline, its disclosure triangles where the panel's title begins as in the other panels.
+    #[unsafe(super(NSOutlineView))]
+    #[thread_kind = MainThreadOnly]
+    #[name = "IDETestsOutlineView"]
+    struct TestsOutlineView;
+
+    unsafe impl NSObjectProtocol for TestsOutlineView {}
+
+    impl TestsOutlineView {
+        #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn outline_cell_frame(&self, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
+            ide_ui_common::panel::outdent(self, frame, OUTDENT, false)
+        }
+
+        #[unsafe(method(frameOfCellAtColumn:row:))]
+        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
+            // SAFETY: The superclass's implementation, with this method's signature.
+            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
+            if column != 0 {
+                return frame;
+            }
+            ide_ui_common::panel::outdent(self, frame, OUTDENT, true)
+        }
+    }
+);
 
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `TestsPanel` does not implement Drop.
@@ -177,6 +214,9 @@ impl TestsPanel {
             items: RefCell::new(std::collections::HashMap::new()),
             unfolding: Cell::new(false),
             table: RefCell::new(None),
+            scroll: RefCell::new(None),
+            empty: RefCell::new(None),
+            spinner: RefCell::new(None),
             status: RefCell::new(None),
             failed: RefCell::new(None),
             polling: Cell::new(false),
@@ -217,7 +257,10 @@ impl TestsPanel {
         for button in [&run, &find, &failed, &stop] {
             header.addArrangedSubview(button);
         }
-        let table = NSOutlineView::new(mtm);
+        // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
+        let table: Retained<TestsOutlineView> =
+            unsafe { msg_send![TestsOutlineView::alloc(mtm), initWithFrame: ide_ui_common::panel::LIST_FRAME] };
+        let table: Retained<NSOutlineView> = table.into_super();
         let scroll = ide_ui_common::panel::source_list_outline(mtm, &table, "tests", t("Tests"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
@@ -238,10 +281,35 @@ impl TestsPanel {
         status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
             ide_ui_common::style::SMALL,
         )));
+        let spinner = NSProgressIndicator::new(mtm);
+        spinner.setStyle(NSProgressIndicatorStyle::Spinning);
+        spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
+        spinner.setDisplayedWhenStopped(false);
+        let footer = NSStackView::new(mtm);
+        footer.setSpacing(ide_ui_common::style::space::S);
+        footer.addArrangedSubview(&spinner);
+        footer.addArrangedSubview(&status);
+        let empty = crate::window::panels::empty_state(
+            mtm,
+            "checklist",
+            t("Noch keine Tests ausgeführt"),
+            t("Führe die Tests aus, um ihre Ergebnisse hier zu sehen."),
+            Some((t("Alle Tests ausführen"), sel!(ideTestsRunAll:))),
+        );
+        if let Some(link) = empty.arrangedSubviews().lastObject()
+            && let Ok(link) = link.downcast::<NSButton>()
+        {
+            set_action(&link, self, sel!(ideTestsRunAll:));
+        }
         let page = ide_ui_common::panel::panel_page(mtm);
+        scroll.setHidden(true);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
-        page.addView_inGravity(&status, NSStackViewGravity::Bottom);
+        page.addView_inGravity(&empty, NSStackViewGravity::Center);
+        page.addView_inGravity(&footer, NSStackViewGravity::Bottom);
         *self.ivars().table.borrow_mut() = Some(table);
+        *self.ivars().scroll.borrow_mut() = Some(scroll.into_super());
+        *self.ivars().empty.borrow_mut() = Some(empty.into_super());
+        *self.ivars().spinner.borrow_mut() = Some(spinner);
         *self.ivars().status.borrow_mut() = Some(status);
         *self.ivars().failed.borrow_mut() = Some(failed);
         (Retained::into_super(page), header)
@@ -348,7 +416,7 @@ impl TestsPanel {
         let mut ended = Vec::new();
         for (index, (tool, running)) in self.ivars().runs.borrow().iter().enumerate() {
             let done = run::ended(running, Duration::ZERO).is_some();
-            if done || tool.reports_starts() {
+            if done || (!running.listing && tool.reports_as_it_goes()) {
                 let said = run::said(running);
                 if done && listing_command(running) {
                     let tests = tool.tests(self.root(), &said);
@@ -373,10 +441,14 @@ impl TestsPanel {
         };
         self.show();
         super::marks_changed(self);
+        let summary = summary(&self.ivars().board.borrow());
         if still {
+            if !listing {
+                self.say(&tf("Läuft … {}", &[&summary]));
+            }
             self.poll_later(listing);
         } else {
-            self.say(&summary(&self.ivars().board.borrow()));
+            self.say(&tf("Fertig: {}", &[&summary]));
         }
     }
 
@@ -384,6 +456,25 @@ impl TestsPanel {
     pub fn show(&self) {
         let rows = self.ivars().board.borrow().rows();
         *self.ivars().rows.borrow_mut() = rows;
+        let ran = self.ivars().board.borrow().last_run.is_some();
+        if let (Some(scroll), Some(empty)) = (
+            self.ivars().scroll.borrow().as_ref(),
+            self.ivars().empty.borrow().as_ref(),
+        ) {
+            scroll.setHidden(!ran);
+            empty.setHidden(ran);
+        }
+        let busy = self.ivars().runs.borrow().iter().any(|(_, r)| !r.listing);
+        if let Some(spinner) = self.ivars().spinner.borrow().as_ref() {
+            // SAFETY: A nil sender is what AppKit's own callers pass.
+            unsafe {
+                if busy {
+                    spinner.startAnimation(None);
+                } else {
+                    spinner.stopAnimation(None);
+                }
+            }
+        }
         let Some(table) = self.ivars().table.borrow().clone() else {
             return;
         };

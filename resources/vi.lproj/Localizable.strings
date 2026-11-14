@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} không thành công: {}";
 "{} wurde nicht gefunden." = "Không tìm thấy {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Liệt kê sẽ dựng dự án; nhấn ↻";
+"Noch keine Tests ausgeführt" = "Chưa chạy kiểm thử nào";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Chạy kiểm thử để xem kết quả tại đây.";
+"Läuft … {}" = "Đang chạy … {}";
+"Fertig: {}" = "Xong: {}";

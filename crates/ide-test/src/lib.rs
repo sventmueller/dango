@@ -221,6 +221,12 @@ impl Tool {
         matches!(self, Tool::Go | Tool::Pytest)
     }
 
+    /// Whether what a run printed so far already reads as the reports of the tests that ended; the others write
+    /// whole documents that read only once the run ended.
+    pub fn reports_as_it_goes(self) -> bool {
+        matches!(self, Tool::Cargo | Tool::Go | Tool::Pytest)
+    }
+
     /// Whether listing builds the project, which `cargo test -- --list` does for every test program while holding
     /// Cargo's lock, so that the panel lists on request only.
     pub fn lists_by_building(self) -> bool {

@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} – niepowodzenie: {}";
 "{} wurde nicht gefunden." = "Nie znaleziono: {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Wyświetlenie listy buduje projekt; naciśnij ↻";
+"Noch keine Tests ausgeführt" = "Nie uruchomiono jeszcze testów";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Uruchom testy, aby zobaczyć tutaj ich wyniki.";
+"Läuft … {}" = "Działa … {}";
+"Fertig: {}" = "Gotowe: {}";

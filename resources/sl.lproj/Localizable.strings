@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "Program {} ni uspel: {}";
 "{} wurde nicht gefunden." = "{} ni bilo najdeno.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Seznam zgradi projekt; pritisnite ↻";
+"Noch keine Tests ausgeführt" = "Testi še niso bili zagnani";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Zaženite teste, da tukaj vidite njihove rezultate.";
+"Läuft … {}" = "V teku … {}";
+"Fertig: {}" = "Končano: {}";

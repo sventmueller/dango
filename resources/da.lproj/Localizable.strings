@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} mislykkedes: {}";
 "{} wurde nicht gefunden." = "{} blev ikke fundet.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Visning bygger projektet; tryk på ↻ for at vise";
+"Noch keine Tests ausgeführt" = "Ingen test kørt endnu";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Kør testene for at se deres resultater her.";
+"Läuft … {}" = "Kører … {}";
+"Fertig: {}" = "Færdig: {}";

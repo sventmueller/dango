@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} 失敗：{}";
 "{} wurde nicht gefunden." = "找不到 {}。";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "列出會建置專案；請按 ↻";
+"Noch keine Tests ausgeführt" = "尚未執行測試";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "執行測試後，結果會顯示在這裡。";
+"Läuft … {}" = "執行中 … {}";
+"Fertig: {}" = "完成: {}";

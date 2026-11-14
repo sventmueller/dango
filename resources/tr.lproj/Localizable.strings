@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} başarısız oldu: {}";
 "{} wurde nicht gefunden." = "Bulunamadı: {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Listeleme projeyi derler; ↻ düğmesine basın";
+"Noch keine Tests ausgeführt" = "Henüz test çalıştırılmadı";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Sonuçları burada görmek için testleri çalıştırın.";
+"Läuft … {}" = "Çalışıyor … {}";
+"Fertig: {}" = "Bitti: {}";

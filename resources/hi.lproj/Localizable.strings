@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} विफल रहा : {}";
 "{} wurde nicht gefunden." = "{} नहीं मिला।";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "सूची बनाने से प्रोजेक्ट बिल्ड होता है; ↻ दबाएँ";
+"Noch keine Tests ausgeführt" = "अभी तक कोई टेस्ट नहीं चला";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "परिणाम यहाँ देखने के लिए टेस्ट चलाएँ।";
+"Läuft … {}" = "चल रहा है … {}";
+"Fertig: {}" = "पूरा हुआ: {}";

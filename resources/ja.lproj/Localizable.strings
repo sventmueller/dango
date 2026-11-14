@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{}に失敗しました: {}";
 "{} wurde nicht gefunden." = "{}が見つかりませんでした。";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "一覧表示ではプロジェクトをビルドします。↻ を押してください";
+"Noch keine Tests ausgeführt" = "まだテストを実行していません";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "テストを実行すると、ここに結果が表示されます。";
+"Läuft … {}" = "実行中 … {}";
+"Fertig: {}" = "完了: {}";

@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} a eșuat: {}";
 "{} wurde nicht gefunden." = "{} nu a fost găsit.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Listarea construiește proiectul; apăsați ↻";
+"Noch keine Tests ausgeführt" = "Niciun test rulat încă";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Rulați testele pentru a vedea aici rezultatele.";
+"Läuft … {}" = "Rulează … {}";
+"Fertig: {}" = "Terminat: {}";

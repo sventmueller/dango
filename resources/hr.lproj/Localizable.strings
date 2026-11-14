@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "Program {} nije uspio: {}";
 "{} wurde nicht gefunden." = "{} nije pronađeno.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Popis gradi projekt; pritisnite ↻";
+"Noch keine Tests ausgeführt" = "Još nisu pokrenuti testovi";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Pokrenite testove da biste ovdje vidjeli rezultate.";
+"Läuft … {}" = "Radi … {}";
+"Fertig: {}" = "Gotovo: {}";

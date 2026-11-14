@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "Ha fallado {}: {}";
 "{} wurde nicht gefunden." = "No se ha encontrado {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Listar compila el proyecto; pulsa ↻ para listar";
+"Noch keine Tests ausgeführt" = "Aún no se han ejecutado pruebas";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Ejecuta las pruebas para ver aquí sus resultados.";
+"Läuft … {}" = "En curso … {}";
+"Fertig: {}" = "Terminado: {}";

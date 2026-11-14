@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "فشل {}: {}";
 "{} wurde nicht gefunden." = "لم يتم العثور على {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "يؤدي الإدراج إلى بناء المشروع؛ اضغط ↻ للإدراج";
+"Noch keine Tests ausgeführt" = "لم تُشغَّل أي اختبارات بعد";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "شغّل الاختبارات لترى نتائجها هنا.";
+"Läuft … {}" = "قيد التشغيل … {}";
+"Fertig: {}" = "تم: {}";

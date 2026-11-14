@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} gagal: {}";
 "{} wurde nicht gefunden." = "{} tidak ditemui.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Penyenaraian membina projek; tekan ↻";
+"Noch keine Tests ausgeführt" = "Belum ada ujian dijalankan";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Jalankan ujian untuk melihat keputusannya di sini.";
+"Läuft … {}" = "Sedang berjalan … {}";
+"Fertig: {}" = "Selesai: {}";

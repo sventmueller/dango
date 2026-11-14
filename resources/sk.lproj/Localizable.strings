@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "Program {} zlyhal: {}";
 "{} wurde nicht gefunden." = "{} sa nenašlo.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Výpis zostaví projekt; stlačte ↻";
+"Noch keine Tests ausgeführt" = "Zatiaľ neboli spustené žiadne testy";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Spustite testy a uvidíte tu ich výsledky.";
+"Läuft … {}" = "Beží … {}";
+"Fertig: {}" = "Hotovo: {}";

@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} ha fallat: {}";
 "{} wurde nicht gefunden." = "No s’ha trobat {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Llistar construeix el projecte; premeu ↻ per llistar";
+"Noch keine Tests ausgeführt" = "Encara no s'ha executat cap prova";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Executa les proves per veure'n els resultats aquí.";
+"Läuft … {}" = "En execució … {}";
+"Fertig: {}" = "Fet: {}";

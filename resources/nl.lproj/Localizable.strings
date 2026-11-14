@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} is mislukt: {}";
 "{} wurde nicht gefunden." = "{} is niet gevonden.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Opsommen bouwt het project; druk op ↻";
+"Noch keine Tests ausgeführt" = "Nog geen tests uitgevoerd";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Voer de tests uit om hier de resultaten te zien.";
+"Läuft … {}" = "Bezig … {}";
+"Fertig: {}" = "Klaar: {}";

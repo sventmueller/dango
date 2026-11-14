@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} ล้มเหลว: {}";
 "{} wurde nicht gefunden." = "ไม่พบ {}";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "การแสดงรายการจะบิลด์โปรเจกต์ กด ↻";
+"Noch keine Tests ausgeführt" = "ยังไม่ได้รันการทดสอบ";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "รันการทดสอบเพื่อดูผลลัพธ์ที่นี่";
+"Läuft … {}" = "กำลังทำงาน … {}";
+"Fertig: {}" = "เสร็จแล้ว: {}";

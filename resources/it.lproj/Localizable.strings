@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} non è riuscito: {}";
 "{} wurde nicht gefunden." = "Impossibile trovare {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "L’elenco compila il progetto; premi ↻";
+"Noch keine Tests ausgeführt" = "Nessun test ancora eseguito";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Esegui i test per vederne qui i risultati.";
+"Läuft … {}" = "In esecuzione … {}";
+"Fertig: {}" = "Fatto: {}";

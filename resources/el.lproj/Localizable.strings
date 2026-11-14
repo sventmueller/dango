@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "Το {} απέτυχε: {}";
 "{} wurde nicht gefunden." = "Το {} δεν βρέθηκε.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Η απαρίθμηση δομεί το έργο· πατήστε ↻";
+"Noch keine Tests ausgeführt" = "Δεν έχουν εκτελεστεί ακόμη έλεγχοι";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Εκτελέστε τους ελέγχους για να δείτε εδώ τα αποτελέσματά τους.";
+"Läuft … {}" = "Εκτελείται … {}";
+"Fertig: {}" = "Ολοκληρώθηκε: {}";

@@ -1747,3 +1747,7 @@
 "{} ist fehlgeschlagen: {}" = "{} failed: {}";
 "{} wurde nicht gefunden." = "{} was not found.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Listing builds the project; press ↻ to list";
+"Noch keine Tests ausgeführt" = "No Tests Run Yet";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Run the tests to see their results here.";
+"Läuft … {}" = "Running … {}";
+"Fertig: {}" = "Done: {}";

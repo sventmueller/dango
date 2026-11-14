@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} — ошибка: {}";
 "{} wurde nicht gefunden." = "Не найдено: {}.";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "Для списка проект будет собран; нажмите ↻";
+"Noch keine Tests ausgeführt" = "Тесты ещё не запускались";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "Запустите тесты, чтобы увидеть здесь их результаты.";
+"Läuft … {}" = "Выполняется … {}";
+"Fertig: {}" = "Готово: {}";

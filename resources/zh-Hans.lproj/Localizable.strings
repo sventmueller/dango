@@ -1709,3 +1709,7 @@
 "{} ist fehlgeschlagen: {}" = "{} 失败：{}";
 "{} wurde nicht gefunden." = "未找到 {}。";
 "Auflisten baut das Projekt; dafür ↻ drücken" = "列出会构建项目；请按 ↻";
+"Noch keine Tests ausgeführt" = "尚未运行测试";
+"Führe die Tests aus, um ihre Ergebnisse hier zu sehen." = "运行测试后，结果会显示在这里。";
+"Läuft … {}" = "正在运行 … {}";
+"Fertig: {}" = "已完成: {}";
