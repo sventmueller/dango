@@ -1,29 +1,54 @@
-//! cargo-nextest: `nextest list` as JSON, results from a JUnit report that a tool configuration of Dango's asks for
-//! (`--tool-config-file`), which leaves the repository's own configuration in place. The report lies under
-//! `target/nextest/dango/`; the app checks that path before the build, as the target folder may be elsewhere.
+//! cargo-nextest: `nextest list` as JSON; a run in its experimental libtest JSON with nextest's additions, which
+//! reports each test's start and end as it happens. A test there is `<package>::<binary name>$<test>`, and the suite
+//! lines name each binary's kind, which together give the binary id the listing and filters use.
 
+use std::collections::HashMap;
 use std::path::Path;
+
+use serde::Deserialize;
 
 use crate::{Command, Report, Scope, State, Test, TestId, command};
 
-/// The tool configuration with Dango's profile, which writes the JUnit report.
-pub(crate) const CONFIG: &str = "[profile.dango]\nfail-fast = false\n\n[profile.dango.junit]\npath = \"junit.xml\"\n";
+#[derive(Deserialize)]
+struct Line {
+    #[serde(rename = "type")]
+    kind: String,
+    event: String,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    stdout: Option<String>,
+    #[serde(default)]
+    message: Option<String>,
+    #[serde(default)]
+    nextest: Option<Suite>,
+}
+
+#[derive(Deserialize)]
+struct Suite {
+    #[serde(rename = "crate")]
+    package: String,
+    test_binary: String,
+    kind: String,
+}
 
 pub(crate) fn list(root: &Path) -> Command {
     command("cargo", &["nextest", "list", "--message-format", "json"], root)
 }
 
-pub(crate) fn run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
-    let config = scratch.join("dango-nextest.toml");
+pub(crate) fn run(root: &Path, scope: &Scope) -> Command {
     let mut run = command(
         "cargo",
-        &["nextest", "run", "--profile", "dango", "--no-fail-fast"],
+        &[
+            "nextest",
+            "run",
+            "--no-fail-fast",
+            "--message-format",
+            "libtest-json-plus",
+        ],
         root,
     );
-    run.args.insert(2, format!("dango:{}", config.display()));
-    run.args.insert(2, "--tool-config-file".into());
-    run.files.push((config, CONFIG.into()));
-    run.results = Some(root.join("target/nextest/dango/junit.xml"));
+    run.env.push(("NEXTEST_EXPERIMENTAL_LIBTEST_JSON".into(), "1".into()));
     match scope {
         Scope::All | Scope::File(_) => {}
         Scope::Package(package) => run.args.extend(["-E".into(), format!("binary_id({package})")]),
@@ -33,6 +58,15 @@ pub(crate) fn run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
         ]),
     }
     run
+}
+
+/// The binary id nextest gives the test binary `binary` of `kind` in `package`: the package alone for its library.
+pub(crate) fn binary_id(package: &str, kind: &str, binary: &str) -> String {
+    match kind {
+        "lib" | "proc-macro" => package.to_string(),
+        "test" => format!("{package}::{binary}"),
+        other => format!("{package}::{other}/{binary}"),
+    }
 }
 
 pub(crate) fn tests(output: &str) -> Vec<Test> {
@@ -61,73 +95,57 @@ pub(crate) fn tests(output: &str) -> Vec<Test> {
     out
 }
 
-/// The outcomes in a JUnit report: a `testsuite` per test program, a `testcase` per test with a `failure` or
-/// `skipped` inside where it did not pass.
-pub(crate) fn reports(root: &Path, junit: &str) -> Vec<Report> {
-    let mut out = Vec::new();
-    let mut suite = String::new();
-    let mut rest = junit;
-    while let Some(start) = rest.find('<') {
-        rest = &rest[start..];
-        let end = rest.find('>').unwrap_or(rest.len());
-        let tag = &rest[1..end];
-        if tag.starts_with("testsuite ") {
-            suite = attribute(tag, "name").unwrap_or_default();
-        } else if tag.starts_with("testcase ") {
-            let name = attribute(tag, "name").unwrap_or_default();
-            let closed = tag.ends_with('/');
-            let body = if closed {
-                ""
-            } else {
-                let close = rest.find("</testcase>").unwrap_or(rest.len());
-                &rest[end..close]
-            };
-            let (state, message) = if body.contains("<failure") || body.contains("<error") {
-                let text = body
-                    .split_once("<failure")
-                    .or_else(|| body.split_once("<error"))
-                    .and_then(|(_, b)| b.split_once('>'))
-                    .map(|(_, b)| unescape(b.split("</").next().unwrap_or_default()))
-                    .unwrap_or_default();
-                (State::Failed, Some(text))
-            } else if body.contains("<skipped") {
-                (State::Skipped, None)
-            } else {
-                (State::Passed, None)
-            };
-            let failure = message.as_deref().and_then(|m| crate::cargo::panic_place(m, root));
-            out.push(Report {
-                id: TestId {
-                    package: suite.clone(),
-                    file: None,
-                    name,
-                },
-                state,
-                message,
-                failure,
-                location: None,
-            });
+/// The outcomes in what a run printed so far, its human output among them skipped.
+pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
+    let mut kinds: HashMap<(String, String), String> = HashMap::new();
+    let mut out: Vec<Report> = Vec::new();
+    let mut at: HashMap<TestId, usize> = HashMap::new();
+    for line in output.lines().filter_map(|l| serde_json::from_str::<Line>(l).ok()) {
+        if line.kind == "suite" {
+            if let Some(suite) = line.nextest {
+                kinds.insert((suite.package, suite.test_binary), suite.kind);
+            }
+            continue;
         }
-        rest = &rest[end.min(rest.len())..];
-        if rest.len() <= 1 {
-            break;
+        let Some((binary, name)) = line.name.as_deref().and_then(|n| n.split_once('$')) else {
+            continue;
+        };
+        let (package, binary) = binary.split_once("::").unwrap_or((binary, binary));
+        let kind = kinds
+            .get(&(package.to_string(), binary.to_string()))
+            .map_or("lib", String::as_str);
+        let state = match line.event.as_str() {
+            "started" => State::Running,
+            "ok" => State::Passed,
+            "failed" => State::Failed,
+            "ignored" => State::Skipped,
+            _ => continue,
+        };
+        let id = TestId {
+            package: binary_id(package, kind, binary),
+            file: None,
+            name: name.to_string(),
+        };
+        let output = line.stdout.as_deref().unwrap_or_default();
+        let message = match state {
+            State::Failed => crate::cargo::panic_message(output).or_else(|| line.message.clone()),
+            State::Skipped => line.message.clone(),
+            _ => None,
+        };
+        let report = Report {
+            id: id.clone(),
+            state,
+            message,
+            failure: crate::cargo::panic_place(output, root),
+            location: None,
+        };
+        match at.get(&id) {
+            Some(index) => out[*index] = report,
+            None => {
+                at.insert(id, out.len());
+                out.push(report);
+            }
         }
-        rest = &rest[1..];
     }
     out
-}
-
-fn attribute(tag: &str, name: &str) -> Option<String> {
-    let start = tag.find(&format!(" {name}=\""))? + name.len() + 3;
-    let end = tag[start..].find('"')? + start;
-    Some(unescape(&tag[start..end]))
-}
-
-fn unescape(text: &str) -> String {
-    text.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&#10;", "\n")
-        .replace("&amp;", "&")
 }

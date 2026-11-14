@@ -1,7 +1,8 @@
 //! Finding, running and debugging tests (E110): one adapter per tool — `cargo test`, cargo-nextest, Go, pytest,
 //! Vitest and Jest — that says which commands to run and reads what they print. A test's identity (package, file,
 //! name with its parameters) is kept apart from where it is in the source, which a test may not have. Only stable
-//! outputs are read; the crate starts no processes itself, the app runs the commands through its supervisor.
+//! outputs are read, but for nextest's libtest JSON, which nextest still calls experimental; the crate starts no
+//! processes itself, the app runs the commands through its supervisor.
 //!
 //! ```
 //! use ide_test::{Scope, Tool};
@@ -22,6 +23,7 @@ mod go;
 mod js;
 mod nextest;
 mod pytest;
+mod source;
 
 use std::path::{Path, PathBuf};
 
@@ -30,15 +32,15 @@ use std::path::{Path, PathBuf};
 pub enum Tool {
     /// `cargo test`, read from libtest's text.
     Cargo,
-    /// cargo-nextest, read from its JUnit report.
+    /// cargo-nextest, read from its libtest JSON as it goes.
     Nextest,
     /// `go test -json`.
     Go,
     /// pytest with Dango's plugin.
     Pytest,
-    /// Vitest's JSON reporter.
+    /// Vitest with Dango's reporter.
     Vitest,
-    /// Jest's JSON output.
+    /// Jest with Dango's reporter.
     Jest,
 }
 
@@ -216,21 +218,26 @@ impl Tool {
         }
     }
 
-    /// Whether a run reports each test as it starts; without, the panel shows the whole run as running.
+    /// Whether a run reports each test as it starts; without, the panel shows the whole run as running. Every
+    /// tool's output reads as the reports of the tests that ended so far.
     pub fn reports_starts(self) -> bool {
-        matches!(self, Tool::Go | Tool::Pytest)
+        !matches!(self, Tool::Cargo)
     }
 
-    /// Whether what a run printed so far already reads as the reports of the tests that ended; the others write
-    /// whole documents that read only once the run ended.
-    pub fn reports_as_it_goes(self) -> bool {
-        matches!(self, Tool::Cargo | Tool::Go | Tool::Pytest)
-    }
-
-    /// Whether listing builds the project, which `cargo test -- --list` does for every test program while holding
-    /// Cargo's lock, so that the panel lists on request only.
+    /// Whether listing builds the project, which `cargo test -- --list` and `cargo nextest list` do for every test
+    /// program while holding Cargo's lock, so that the panel lists on request only and finds the tests in the
+    /// sources until then ([`Tool::from_source`]).
     pub fn lists_by_building(self) -> bool {
-        matches!(self, Tool::Cargo)
+        matches!(self, Tool::Cargo | Tool::Nextest)
+    }
+
+    /// The tests the sources of the project at `root` show for a tool that lists by building, read without
+    /// building: a stand-in until a listing or a run names them.
+    pub fn from_source(self, root: &Path) -> Vec<Test> {
+        match self {
+            Tool::Cargo | Tool::Nextest => source::tests(self, root),
+            Tool::Go | Tool::Pytest | Tool::Vitest | Tool::Jest => Vec::new(),
+        }
     }
 
     /// The command that lists the tests of the project at `root`; `scratch` is a folder for files the command needs.
@@ -262,7 +269,7 @@ impl Tool {
         let scratch = scratch.map_or_else(std::env::temp_dir, Path::to_path_buf);
         match self {
             Tool::Cargo => cargo::run(root, scope),
-            Tool::Nextest => nextest::run(root, scope, &scratch),
+            Tool::Nextest => nextest::run(root, scope),
             Tool::Go => go::run(root, scope),
             Tool::Pytest => pytest::run(root, scope, &scratch),
             Tool::Vitest => js::vitest_run(root, scope, &scratch),

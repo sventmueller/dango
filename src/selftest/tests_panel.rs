@@ -1,6 +1,7 @@
-//! The `tests-panel` scenario (B27): a Go project's Tests panel lists its tests, a click on the gutter's symbol at a
-//! failing test runs it, the panel shows it failed and the editor marks the failing line; the test at the caret runs
-//! from the Debug menu's command and passes.
+//! The `tests-panel` scenario (B27): a Go and Rust project's Tests panel shows its tests before any run, the Rust ones
+//! read from the sources without building; a click on the gutter's symbol at a failing Go test runs it, the panel
+//! shows it failed and the editor marks the failing line; the test at the caret runs from the Debug menu's command and
+//! passes.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -17,6 +18,7 @@ const SCENARIO: &str = "tests-panel";
 const PROJECT: &str = "tests-project";
 const FILE: &str = "sample_test.go";
 const SOURCE: &str = "package sample\n\nimport \"testing\"\n\nfunc TestPass(t *testing.T) {\n\tif 1+2 != 3 {\n\t\tt.Fatal(\"wrong\")\n\t}\n}\n\nfunc TestFail(t *testing.T) {\n\tt.Errorf(\"got %d, want 4\", 1+2)\n}\n";
+const RUST: &str = "#[cfg(test)]\nmod tests {\n    #[test]\n    fn adds_up() {}\n}\n";
 /// `go test` compiles first, which takes a while on a busy Mac.
 const RUN: Duration = Duration::from_secs(120);
 
@@ -50,7 +52,15 @@ pub fn run() {
     helpers::open_project(
         SCENARIO,
         PROJECT,
-        &[("go.mod", "module example.com/sample\n\ngo 1.22\n"), (FILE, SOURCE)],
+        &[
+            ("go.mod", "module example.com/sample\n\ngo 1.22\n"),
+            (FILE, SOURCE),
+            (
+                "Cargo.toml",
+                "[package]\nname = \"sample\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+            ),
+            ("src/lib.rs", RUST),
+        ],
         listed,
     );
 }
@@ -59,12 +69,18 @@ fn listed(controller: Retained<WindowController>) {
     controller.activate_panel(Panel::Tests);
     wait_within(
         RUN,
-        || state("TestFail").is_some(),
+        || state("TestFail").is_some() && state("adds_up").is_some(),
         move |found| {
             check(
                 "the Tests panel lists the Go package's tests",
                 found && state("TestPass") == Some(ide_test::State::NotRun),
                 format!("{:?}", rows()),
+            );
+            let shown = crate::tests_panel::panel_of(&controller).is_some_and(|p| p.tree_shown());
+            check(
+                "before any run the panel shows its tests as not run, the Rust ones from the sources",
+                shown && state("adds_up") == Some(ide_test::State::NotRun),
+                format!("tree shown {shown}, {:?}", rows()),
             );
             controller.open_file(&root().join(FILE));
             wait_within(Duration::from_secs(10), || editor_view().is_some(), |_| gutter());

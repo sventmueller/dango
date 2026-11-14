@@ -6,6 +6,7 @@ use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use ide_process::Ending;
 use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
 use ide_ui_common::registry::WindowPart;
@@ -22,7 +23,7 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
-use crate::util::{guarded, main_after, ns, set_action};
+use crate::util::{guarded, main_after, main_soon, ns, set_action};
 
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
@@ -325,6 +326,7 @@ impl TestsPanel {
         let waiting = !all && tools.iter().all(|tool| tool.lists_by_building());
         for tool in tools {
             if tool.lists_by_building() && !all {
+                self.find_in_sources(tool);
                 continue;
             }
             let command = tool.list(self.root(), &self.scratch());
@@ -334,6 +336,26 @@ impl TestsPanel {
         if waiting {
             self.say(t("Auflisten baut das Projekt; dafür ↻ drücken"));
         }
+    }
+
+    /// Reads the tests of `tool` from the sources on the disk lane, to show them until a listing or a run comes.
+    fn find_in_sources(&self, tool: Tool) {
+        let id = self.id();
+        let root = self.root().to_path_buf();
+        let _ = ide_core::lane::DISK.ask(
+            move || tool.from_source(&root),
+            move |tests| {
+                main_soon(move || {
+                    super::with_panel(id, |panel| panel.found_in_sources(tool, tests.unwrap_or_default()));
+                });
+            },
+        );
+    }
+
+    fn found_in_sources(&self, tool: Tool, tests: Vec<ide_test::Test>) {
+        self.ivars().board.borrow_mut().guessed(tool, tests);
+        self.show();
+        super::marks_changed(self);
     }
 
     fn scratch(&self) -> PathBuf {
@@ -387,7 +409,7 @@ impl TestsPanel {
                 self.poll_later(scope.is_none());
             }
             Err(error) => {
-                self.ivars().board.borrow_mut().finished(tool);
+                self.ivars().board.borrow_mut().finished(tool, false);
                 self.say(&tf("{} startet nicht: {}", &[tool.name(), &error.to_string()]));
             }
         }
@@ -408,8 +430,9 @@ impl TestsPanel {
         self.ivars().polling.set(false);
         let mut ended = Vec::new();
         for (index, (tool, running)) in self.ivars().runs.borrow().iter().enumerate() {
-            let done = run::ended(running, Duration::ZERO).is_some();
-            if done || (!running.listing && tool.reports_as_it_goes()) {
+            let ending = run::ended(running, Duration::ZERO);
+            let done = ending.is_some();
+            if done || !running.listing {
                 let said = run::said(running);
                 if done && listing_command(running) {
                     let tests = tool.tests(self.root(), &said);
@@ -421,14 +444,16 @@ impl TestsPanel {
             }
             if done {
                 *self.ivars().output.borrow_mut() = running.output.lock().map(|o| o.clone()).unwrap_or_default();
-                ended.push(index);
+                ended.push((index, matches!(ending, Some(Ending::Code(_)))));
             }
         }
         let still = {
             let mut runs = self.ivars().runs.borrow_mut();
-            for index in ended.iter().rev() {
-                let (tool, _) = runs.remove(*index);
-                self.ivars().board.borrow_mut().finished(tool);
+            for (index, complete) in ended.iter().rev() {
+                let (tool, running) = runs.remove(*index);
+                if !running.listing {
+                    self.ivars().board.borrow_mut().finished(tool, *complete);
+                }
             }
             !runs.is_empty()
         };
@@ -449,13 +474,16 @@ impl TestsPanel {
     pub fn show(&self) {
         let rows = self.ivars().board.borrow().rows();
         *self.ivars().rows.borrow_mut() = rows;
-        let ran = self.ivars().board.borrow().last_run.is_some();
+        let known = {
+            let board = self.ivars().board.borrow();
+            board.last_run.is_some() || !board.entries().is_empty()
+        };
         if let (Some(scroll), Some(empty)) = (
             self.ivars().scroll.borrow().as_ref(),
             self.ivars().empty.borrow().as_ref(),
         ) {
-            scroll.setHidden(!ran);
-            empty.setHidden(ran);
+            scroll.setHidden(!known);
+            empty.setHidden(known);
         }
         let busy = self.ivars().runs.borrow().iter().any(|(_, r)| !r.listing);
         if let Some(spinner) = self.ivars().spinner.borrow().as_ref() {

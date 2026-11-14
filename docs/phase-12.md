@@ -400,16 +400,17 @@ ungesicherten Puffer zurück.
   - Ein Adapter legt Versionen, Befehle, Ergebnisdateien und Rückfälle fest.
   - Testidentität (Paket, Datei, Name, Parameter) und Quellstelle sind getrennt. Ein Test ohne Quellstelle ist erlaubt
     und steht im Panel ohne Sprung.
-  - Nur stabile Ausgaben werden gelesen, kein nightly:
+  - Nur stabile Ausgaben werden gelesen, kein nightly; einzige Ausnahme ist das libtest-JSON von nextest, das nextest
+    noch experimentell nennt (`NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1`):
 
   | Werkzeug | Finden | Ergebnis | „Läuft“ je Test |
   |---|---|---|---|
-  | cargo test | `cargo test -- --list`, nur auf Wunsch und zwischengespeichert, weil es alle Testprogramme baut und die Cargo-Sperre hält; vorher statisch aus offenen Dateien | Textausgabe von libtest, mit eingefrorenen Mitschnitten je Version | nein; libtest meldet auf stable keinen Start, das Testprogramm läuft |
-  | cargo-nextest (wenn auf dem PATH) | `cargo nextest list --message-format json` | JUnit über eine Werkzeug-Konfiguration (`--tool-config-file`), die die des Repos nicht ersetzt; Pfad unter `target/nextest/<profil>/` (vor dem Bau prüfen) | nein |
+  | cargo test | `cargo test -- --list`, nur auf Wunsch, weil es alle Testprogramme baut und die Cargo-Sperre hält; vorher ohne Bau aus den Quellen: Standard-Mitglieder des Workspace, Ziele nach Cargos Layout und Manifest, Modulbaum ab der Crate-Wurzel mit `#[path]`, ohne Module hinter einem Feature | Textausgabe von libtest, mit eingefrorenen Mitschnitten je Version, Ergebnisse je Test sofort | nein; libtest meldet auf stable keinen Start, das Testprogramm läuft |
+  | cargo-nextest (wenn auf dem PATH) | `cargo nextest list --message-format json`, wie bei cargo test nur auf Wunsch, vorher aus den Quellen | `--message-format libtest-json-plus` laufend gelesen; die Binary-ID ergibt sich aus Name und Art der Suite | ja |
   | Go | `go test -json -list . ./...`; Untertests erst aus dem Lauf | `go test -json` | ja |
   | pytest | mitgeliefertes Plugin, meldet Collection, Start und Ergebnis je Test als JSON-Zeilen mit Node-ID | dasselbe Plugin | ja |
-  | Vitest | `vitest list --json` | `vitest run --reporter=json` | nein |
-  | Jest | nur Dateien (`--listTests`); Testfälle erst aus dem Lauf | `--json` | nein |
+  | Vitest | `vitest list --json` | mitgelieferter Reporter neben dem eigenen, meldet Start und Ergebnis je Test als JSON-Zeilen; Namensfilter `-t` über den Namen mit ` > ` | ja |
+  | Jest | nur Dateien (`--listTests`); Testfälle erst aus dem Lauf | mitgelieferter Reporter neben dem eigenen, wie bei Vitest; Namensfilter über die mit Leerzeichen verbundenen Teile | ja |
 
   - Parametrisierte und dynamisch erzeugte Tests bekommen ihre Identität aus dem Lauf.
   - Ohne Ereignisse je Test läuft im Panel die Datei, das Paket oder das Testprogramm; Einzelergebnisse erscheinen am
@@ -424,6 +425,9 @@ ungesicherten Puffer zurück.
     der Panels aus E55 und phase-11 C18 *(F35)*. Es lässt sich über E80 ausblenden.
   - Das Panel zeigt einen Baum aus Paket, Datei und Test mit Zustand (nicht gelaufen, läuft, bestanden,
     fehlgeschlagen, übersprungen). Der Zustand ist als Form erkennbar, nicht nur über Farbe (E101).
+  - Der Baum steht schon vor dem ersten Lauf da, jeder Test als „nicht gelaufen“; ein Lauf schaltet jeden Test live
+    um, soweit das Werkzeug Start und Ergebnis je Test meldet. Ein vollständiger Lauf entfernt Tests, die nur die
+    Quellen zeigten und der Lauf nicht nannte.
   - Aktionen: Ausführen, Debuggen, Ausgabe zeigen, Filter „nur fehlgeschlagene“.
   - Randspalte: Symbol an jedem Test mit Quellstelle (`ruler.rs`). Klick führt aus, ⌥-Klick debuggt, Rechtsklick
     öffnet das Menü.

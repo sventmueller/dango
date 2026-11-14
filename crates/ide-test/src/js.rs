@@ -1,12 +1,19 @@
 //! Vitest and Jest: `vitest list --json` lists tests with their place; Jest lists files only (`--listTests`), its
-//! tests come from the run. Both write the same JSON of results to a file, whose `assertionResults` name each test by
-//! its describe blocks and title, joined with ` > ` as Vitest's list writes them.
+//! tests come from the run. A run loads Dango's reporter beside the tool's own, which writes each test's start and
+//! result as a JSON line as it happens, naming a test by its describe blocks and title joined with ` > ` as Vitest's
+//! list writes them.
 
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
 use crate::{Command, DebugTarget, Location, Report, Scope, State, Test, TestId, command, escaped};
+
+/// Dango's Vitest reporter.
+const VITEST_REPORTER: &str = include_str!("dango_vitest.mjs");
+
+/// Dango's Jest reporter.
+const JEST_REPORTER: &str = include_str!("dango_jest.cjs");
 
 #[derive(Deserialize)]
 struct Listed {
@@ -22,31 +29,16 @@ struct Place {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Results {
+struct Event {
+    event: String,
+    file: PathBuf,
+    name: String,
     #[serde(default)]
-    test_results: Vec<FileResult>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct FileResult {
-    name: PathBuf,
+    line: Option<u32>,
     #[serde(default)]
-    assertion_results: Vec<Assertion>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Assertion {
+    outcome: Option<String>,
     #[serde(default)]
-    ancestor_titles: Vec<String>,
-    title: String,
-    status: String,
-    #[serde(default)]
-    failure_messages: Vec<String>,
-    #[serde(default)]
-    location: Option<Place>,
+    text: Option<String>,
 }
 
 /// The runner's own program in the project, run with node so that its version is the project's.
@@ -62,15 +54,22 @@ pub(crate) fn jest_list(root: &Path) -> Command {
     command("npx", &["jest", "--listTests"], root)
 }
 
-fn with_results(mut run: Command, flag: &str, scratch: &Path) -> Command {
-    let results = scratch.join("dango-js-results.json");
-    run.args.push(format!("{flag}={}", results.display()));
-    run.files.push((results.clone(), String::new()));
-    run.results = Some(results);
+/// The run with Dango's reporter `file` holding `source` named last by `flag`, which writes its events to a file in
+/// `scratch`; Jest would take test files after its flag as further reporters.
+fn with_reporter(mut run: Command, flag: &str, file: &str, source: &str, scratch: &Path) -> Command {
+    let reporter = scratch.join(file);
+    let events = scratch.join("dango-js-events.jsonl");
+    run.args.push(format!("{flag}={}", reporter.display()));
+    run.files.push((reporter, source.into()));
+    run.files.push((events.clone(), String::new()));
+    run.env.push(("DANGO_JS_EVENTS".into(), events.display().to_string()));
+    run.results = Some(events);
     run
 }
 
-fn filter(run: &mut Command, scope: &Scope, flag: &str) {
+/// Narrows `run` to `scope`; Vitest matches a name filter against the name with ` > ` between its parts, Jest
+/// against the parts joined with spaces.
+fn filter(run: &mut Command, scope: &Scope, joined: &str) {
     match scope {
         Scope::All | Scope::Package(_) => {}
         Scope::File(file) => run.args.push(file.display().to_string()),
@@ -78,37 +77,23 @@ fn filter(run: &mut Command, scope: &Scope, flag: &str) {
             if let Some(file) = &test.file {
                 run.args.push(file.display().to_string());
             }
-            let title = test
-                .name
-                .rsplit(" > ")
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect::<Vec<_>>()
-                .join(" ");
-            run.args.extend([flag.to_string(), format!("^{}$", escaped(&title))]);
+            let title = test.name.split(" > ").collect::<Vec<_>>().join(joined);
+            run.args.extend(["-t".to_string(), format!("^{}$", escaped(&title))]);
         }
     }
 }
 
 pub(crate) fn vitest_run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
-    let mut run = with_results(
-        command("npx", &["vitest", "run", "--reporter=json"], root),
-        "--outputFile",
-        scratch,
-    );
-    filter(&mut run, scope, "-t");
-    run
+    let mut run = command("npx", &["vitest", "run", "--reporter=default"], root);
+    filter(&mut run, scope, " > ");
+    with_reporter(run, "--reporter", "dango_vitest.mjs", VITEST_REPORTER, scratch)
 }
 
 pub(crate) fn jest_run(root: &Path, scope: &Scope, scratch: &Path) -> Command {
-    let mut run = with_results(
-        command("npx", &["jest", "--json", "--testLocationInResults"], root),
-        "--outputFile",
-        scratch,
-    );
-    filter(&mut run, scope, "-t");
-    run
+    let mut run = command("npx", &["jest", "--testLocationInResults"], root);
+    filter(&mut run, scope, " ");
+    run.args.push("--reporters=default".into());
+    with_reporter(run, "--reporters", "dango_jest.cjs", JEST_REPORTER, scratch)
 }
 
 pub(crate) fn vitest_tests(output: &str) -> Vec<Test> {
@@ -147,43 +132,40 @@ pub(crate) fn jest_tests(output: &str) -> Vec<Test> {
         .collect()
 }
 
+/// The reports in the events of Dango's reporters, the last event of a test giving its state.
 pub(crate) fn reports(output: &str) -> Vec<Report> {
-    let Ok(results) = serde_json::from_str::<Results>(output) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for file in results.test_results {
-        for assertion in file.assertion_results {
-            let mut parts = assertion.ancestor_titles.clone();
-            parts.push(assertion.title.clone());
-            let state = match assertion.status.as_str() {
-                "passed" => State::Passed,
-                "failed" => State::Failed,
-                "pending" | "skipped" | "todo" | "disabled" => State::Skipped,
-                _ => State::NotRun,
-            };
-            let message = assertion.failure_messages.first().map(|m| first_lines(m));
-            let failure = assertion
-                .failure_messages
-                .iter()
-                .flat_map(|m| m.lines())
+    let mut out: Vec<Report> = Vec::new();
+    for event in output.lines().filter_map(|l| serde_json::from_str::<Event>(l).ok()) {
+        let state = match (event.event.as_str(), event.outcome.as_deref()) {
+            ("started", _) => State::Running,
+            (_, Some("passed")) => State::Passed,
+            (_, Some("failed")) => State::Failed,
+            (_, Some("skipped")) => State::Skipped,
+            _ => continue,
+        };
+        let failure = event.text.as_deref().and_then(|text| {
+            text.lines()
                 .filter(|l| l.trim_start().starts_with("at "))
                 .filter_map(|l| crate::place(l, Path::new("/")))
-                .find(|place| place.path == file.name);
-            out.push(Report {
-                id: TestId {
-                    package: String::new(),
-                    file: Some(file.name.clone()),
-                    name: parts.join(" > "),
-                },
-                state,
-                message,
-                failure,
-                location: assertion.location.map(|p| Location {
-                    path: file.name.clone(),
-                    line: p.line,
-                }),
-            });
+                .find(|place| place.path == event.file)
+        });
+        let report = Report {
+            location: event.line.map(|line| Location {
+                path: event.file.clone(),
+                line,
+            }),
+            id: TestId {
+                package: String::new(),
+                file: Some(event.file),
+                name: event.name,
+            },
+            state,
+            message: event.text.as_deref().map(first_lines),
+            failure,
+        };
+        match out.iter_mut().find(|r| r.id == report.id) {
+            Some(known) => *known = report,
+            None => out.push(report),
         }
     }
     out
@@ -203,7 +185,7 @@ fn first_lines(message: &str) -> String {
 pub(crate) fn vitest_debug(root: &Path, test: &TestId) -> DebugTarget {
     let mut args = vec!["run".to_string(), "--no-file-parallelism".to_string()];
     let mut run = command("", &[], root);
-    filter(&mut run, &Scope::Test(test.clone()), "-t");
+    filter(&mut run, &Scope::Test(test.clone()), " > ");
     args.extend(run.args);
     DebugTarget::Node {
         program: runner(root, "vitest/vitest.mjs"),
@@ -216,7 +198,7 @@ pub(crate) fn vitest_debug(root: &Path, test: &TestId) -> DebugTarget {
 pub(crate) fn jest_debug(root: &Path, test: &TestId) -> DebugTarget {
     let mut args = vec!["--runInBand".to_string()];
     let mut run = command("", &[], root);
-    filter(&mut run, &Scope::Test(test.clone()), "-t");
+    filter(&mut run, &Scope::Test(test.clone()), " ");
     args.extend(run.args);
     DebugTarget::Node {
         program: runner(root, "jest/bin/jest.js"),

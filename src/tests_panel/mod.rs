@@ -31,7 +31,7 @@ fn of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
     controller.context().tests_panels.of(controller.handle())
 }
 
-/// The window shows a folder: its panel lists the tests that list without building.
+/// The window shows a folder: its panel lists the tests, those of tools that list by building from the sources.
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);

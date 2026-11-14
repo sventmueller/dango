@@ -1,8 +1,9 @@
 //! The Tests panel's model (E111), without AppKit: the tests of a folder by tool, package and file with their state,
 //! the rows a tree of them shows, with failed ones only when asked, and where each test and failure is in the source
-//! for the gutter. A tool that lists tests by building, such as `cargo test`, lists on request only; until then the
-//! tests of open Rust and Go files are found by their source.
+//! for the gutter. A tool that lists tests by building, such as `cargo test`, lists on request only; until then its
+//! tests come from the sources, and a whole run that named any test drops those it did not name.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::{Location, Report, Scope, State, Test, TestId, Tool};
@@ -20,6 +21,8 @@ pub struct Entry {
     pub message: Option<String>,
     /// Where the failing assert is.
     pub failure: Option<Location>,
+    /// It was found in the sources, and no listing or run named it yet.
+    pub guessed: bool,
 }
 
 /// What a row of the tree is.
@@ -56,6 +59,8 @@ pub struct Board {
     pub open: std::collections::HashSet<Node>,
     /// The last run, for running it again.
     pub last_run: Option<(Tool, Scope)>,
+    /// The tools running every test, with whether they named one yet.
+    sweeping: HashMap<Tool, bool>,
 }
 
 impl Board {
@@ -79,13 +84,33 @@ impl Board {
                     location: test.location.or_else(|| known.and_then(|e| e.test.location.clone())),
                     id: test.id,
                 },
+                guessed: false,
             });
         }
+    }
+
+    /// The sources show `tests` of `tool`: they stand in for its list until a listing or a run comes, and only while
+    /// it has none.
+    pub fn guessed(&mut self, tool: Tool, tests: Vec<Test>) {
+        if self.entries.iter().any(|e| e.tool == tool) {
+            return;
+        }
+        self.entries.extend(tests.into_iter().map(|test| Entry {
+            tool,
+            test,
+            state: State::NotRun,
+            message: None,
+            failure: None,
+            guessed: true,
+        }));
     }
 
     /// A run of `scope` with `tool` started: its tests show as running where the tool reports no starts.
     pub fn started(&mut self, tool: Tool, scope: &Scope) {
         self.last_run = Some((tool, scope.clone()));
+        if *scope == Scope::All {
+            self.sweeping.insert(tool, false);
+        }
         if tool.reports_starts() {
             return;
         }
@@ -100,46 +125,102 @@ impl Board {
         }
     }
 
-    /// `tool` reported `reports`: known tests take them, tests seen first in a run join the list.
+    /// `tool` reported `reports`: known tests take them, tests seen first in a run join the list and take the place
+    /// of a test the sources showed by the same name.
     pub fn reported(&mut self, tool: Tool, reports: Vec<Report>) {
+        if !reports.is_empty()
+            && let Some(heard) = self.sweeping.get_mut(&tool)
+        {
+            *heard = true;
+        }
+        let mut by_name: HashMap<(String, String), Vec<usize>> = HashMap::new();
+        for (i, e) in self.entries.iter().enumerate().filter(|(_, e)| e.tool == tool) {
+            by_name
+                .entry((e.test.id.package.clone(), e.test.id.name.clone()))
+                .or_default()
+                .push(i);
+        }
+        let mut dropped = vec![false; self.entries.len()];
+        let mut placeholders: Vec<Option<PathBuf>> = Vec::new();
         for report in reports {
             if report.id.name.is_empty() {
                 continue;
             }
-            match self
-                .entries
-                .iter_mut()
-                .find(|e| e.tool == tool && same(&e.test.id, &report.id))
-            {
-                Some(entry) => {
+            let key = (report.id.package.clone(), report.id.name.clone());
+            let found = by_name
+                .get(&key)
+                .and_then(|at| at.iter().copied().find(|i| same(&self.entries[*i].test.id, &report.id)));
+            match found {
+                Some(i) => {
+                    let entry = &mut self.entries[i];
                     entry.state = report.state;
                     entry.message = report.message;
                     entry.failure = report.failure;
+                    entry.guessed = false;
                     if report.location.is_some() {
                         entry.test.location = report.location;
                     }
                 }
                 None => {
-                    // A file Jest listed stands for its tests until they are known.
-                    self.entries
-                        .retain(|e| !(e.tool == tool && e.test.id.name.is_empty() && e.test.id.file == report.id.file));
+                    placeholders.push(report.id.file.clone());
+                    let stand_in = self.stand_in(tool, &report.id, &dropped);
+                    let location = report
+                        .location
+                        .or_else(|| stand_in.and_then(|i| self.entries[i].test.location.clone()));
+                    if let Some(i) = stand_in {
+                        dropped[i] = true;
+                    }
+                    by_name.entry(key).or_default().push(self.entries.len());
+                    dropped.push(false);
                     self.entries.push(Entry {
                         tool,
                         test: Test {
                             id: report.id,
-                            location: report.location,
+                            location,
                         },
                         state: report.state,
                         message: report.message,
                         failure: report.failure,
+                        guessed: false,
                     });
                 }
             }
         }
+        // A file Jest listed stands for its tests until they are known.
+        let mut index = 0;
+        self.entries.retain(|e| {
+            let keep = !dropped[index]
+                && !(e.tool == tool && e.test.id.name.is_empty() && placeholders.contains(&e.test.id.file));
+            index += 1;
+            keep
+        });
     }
 
-    /// The run of `tool` ended: tests it did not report are no longer running.
-    pub fn finished(&mut self, tool: Tool) {
+    /// The test the sources showed that `id` is, named otherwise by the run: one of `tool` with the same function
+    /// name, of the same package where there is one.
+    fn stand_in(&self, tool: Tool, id: &TestId, dropped: &[bool]) -> Option<usize> {
+        let last = |name: &str| name.rsplit("::").next().unwrap_or(name).to_string();
+        let wanted = last(&id.name);
+        let candidates: Vec<usize> = (0..self.entries.len())
+            .filter(|i| {
+                let e = &self.entries[*i];
+                e.tool == tool && e.guessed && !dropped[*i] && last(&e.test.id.name) == wanted
+            })
+            .collect();
+        candidates
+            .iter()
+            .copied()
+            .find(|i| self.entries[*i].test.id.package == id.package)
+            .or_else(|| candidates.first().copied())
+    }
+
+    /// The run of `tool` ended, `complete` where it was not stopped: tests it did not report are no longer running,
+    /// and after a whole run that named any test, the tests only the sources showed go.
+    pub fn finished(&mut self, tool: Tool, complete: bool) {
+        let heard = self.sweeping.remove(&tool).unwrap_or(false);
+        if complete && heard {
+            self.entries.retain(|e| !(e.tool == tool && e.guessed));
+        }
         for entry in self
             .entries
             .iter_mut()
@@ -304,36 +385,27 @@ impl Board {
     }
 }
 
-/// The tests that `text` of `path` defines, by name and line from 1: Rust functions under `#[test]` or
-/// `#[tokio::test]`, Go functions `Test…`; a static stand-in until a tool lists them.
+/// The tests that `text` of `path` defines, by function name and line from 1: Rust functions under `#[test]` or
+/// `#[tokio::test]`, Go functions `Test…`; for the lines of tests a tool listed without them.
 pub fn in_source(path: &Path, text: &str) -> Vec<(String, u32)> {
-    let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default();
-    let mut out = Vec::new();
-    let mut marked = false;
-    for (n, line) in text.lines().enumerate() {
-        let trimmed = line.trim();
-        let line_number = u32::try_from(n + 1).unwrap_or(u32::MAX);
-        match extension {
-            "rs" => {
-                if trimmed.starts_with("#[") && trimmed.contains("test]") && !trimmed.contains("cfg(") {
-                    marked = true;
-                } else if marked && let Some(name) = function_name(trimmed, "fn ") {
-                    out.push((name, line_number));
-                    marked = false;
-                }
-            }
-            "go" => {
-                if let Some(name) = function_name(trimmed, "func ").filter(|n| n.starts_with("Test")) {
-                    out.push((name, line_number));
-                }
-            }
-            _ => {}
-        }
+    match path.extension().and_then(|e| e.to_str()).unwrap_or_default() {
+        "rs" => crate::source::in_file(text)
+            .into_iter()
+            .filter_map(|(mut path, line)| Some((path.pop()?, line)))
+            .collect(),
+        "go" => text
+            .lines()
+            .enumerate()
+            .filter_map(|(n, line)| {
+                let name = function_name(line.trim(), "func ").filter(|n| n.starts_with("Test"))?;
+                Some((name, u32::try_from(n + 1).unwrap_or(u32::MAX)))
+            })
+            .collect(),
+        _ => Vec::new(),
     }
-    out
 }
 
-fn function_name(line: &str, keyword: &str) -> Option<String> {
+pub(crate) fn function_name(line: &str, keyword: &str) -> Option<String> {
     let rest = line.split(keyword).nth(1)?;
     let name: String = rest.chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
     (!name.is_empty()).then_some(name)
@@ -456,6 +528,75 @@ mod tests {
             "package a\n\nfunc TestOne(t *testing.T) {}\nfunc helper() {}\n",
         );
         assert_eq!(go, [("TestOne".to_string(), 3)]);
+    }
+
+    fn located(package: &str, name: &str, line: u32) -> Test {
+        let mut found = test(package, None, name);
+        found.location = Some(Location {
+            path: "/p/src/lib.rs".into(),
+            line,
+        });
+        found
+    }
+
+    #[test]
+    fn tests_from_the_sources_show_until_a_run_names_the_real_ones() {
+        let mut board = Board::default();
+        board.guessed(
+            Tool::Cargo,
+            vec![
+                located("sample", "tests::adds", 5),
+                located("sample", "tests::wrong_guess", 9),
+                located("sample", "helpers::works", 20),
+            ],
+        );
+        assert_eq!(board.rows().len(), 4, "the guessed tests show before any run");
+        assert!(
+            board.at(Path::new("/p/src/lib.rs"), 6).is_some(),
+            "and give the gutter its lines"
+        );
+        board.started(Tool::Cargo, &Scope::All);
+        board.reported(
+            Tool::Cargo,
+            vec![
+                report("sample", "tests::adds", State::Passed),
+                report("sample", "inner::helpers::works", State::Failed),
+            ],
+        );
+        let works = board
+            .entries()
+            .iter()
+            .find(|e| e.test.id.name.ends_with("works"))
+            .unwrap();
+        assert_eq!(
+            works.test.id.name, "inner::helpers::works",
+            "the run's name replaces the guess"
+        );
+        assert_eq!(works.test.location.as_ref().map(|l| l.line), Some(20));
+        assert_eq!(board.entries().len(), 3);
+        board.finished(Tool::Cargo, true);
+        let names: Vec<&str> = board.entries().iter().map(|e| e.test.id.name.as_str()).collect();
+        assert_eq!(
+            names,
+            ["tests::adds", "inner::helpers::works"],
+            "a whole run drops what it did not name"
+        );
+        board.guessed(Tool::Cargo, vec![located("sample", "tests::later", 30)]);
+        assert_eq!(
+            board.entries().len(),
+            2,
+            "the sources no longer stand in once a run named tests"
+        );
+        let mut stopped = Board::default();
+        stopped.guessed(Tool::Nextest, vec![located("sample", "tests::adds", 5)]);
+        stopped.started(Tool::Nextest, &Scope::All);
+        stopped.reported(Tool::Nextest, vec![report("sample", "tests::other", State::Running)]);
+        stopped.finished(Tool::Nextest, false);
+        assert_eq!(
+            stopped.entries().len(),
+            2,
+            "a stopped run keeps the tests it did not reach"
+        );
     }
 
     #[test]

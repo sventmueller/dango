@@ -135,3 +135,15 @@ pub(crate) fn panic_place(text: &str, root: &Path) -> Option<Location> {
         .find_map(|line| line.split(" panicked at ").nth(1))
         .and_then(|at| place(at, root))
 }
+
+/// The message of the first panic in `text`: the lines after its place, up to Rust's note on backtraces.
+pub(crate) fn panic_message(text: &str) -> Option<String> {
+    let mut lines = text.lines().skip_while(|line| !line.contains(" panicked at "));
+    lines.next()?;
+    let message = lines
+        .take_while(|line| !line.starts_with("note:"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let message = message.trim();
+    (!message.is_empty()).then(|| message.to_string())
+}

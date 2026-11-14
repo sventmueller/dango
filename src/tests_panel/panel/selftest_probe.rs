@@ -12,4 +12,13 @@ impl TestsPanel {
             .map(|r| (r.level, r.label.clone(), r.state))
             .collect()
     }
+
+    /// Whether the panel shows its tree rather than the hint that no test ran yet, for the self-test.
+    pub fn tree_shown(&self) -> bool {
+        self.ivars()
+            .scroll
+            .borrow()
+            .as_ref()
+            .is_some_and(|scroll| !scroll.isHidden())
+    }
 }

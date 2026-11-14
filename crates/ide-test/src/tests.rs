@@ -67,10 +67,21 @@ fn cargo_test_lists_by_test_program_and_reads_libtest_text_of_rust_1_99() {
         "{failed:?}"
     );
     assert!(!Tool::Cargo.reports_starts() && Tool::Cargo.lists_by_building());
+    let half: String = fixture("cargo", "run-1.99.txt")
+        .lines()
+        .take(6)
+        .map(|l| format!("{l}\n"))
+        .collect();
+    let so_far = Tool::Cargo.reports(&root, &half);
+    assert_eq!(
+        state(&so_far, "tests::adds"),
+        State::Passed,
+        "libtest's text reads as it comes"
+    );
 }
 
 #[test]
-fn nextest_lists_its_suites_and_reads_the_junit_report_of_0_9_151() {
+fn nextest_lists_its_suites_and_reads_the_libtest_json_of_0_9_152_as_it_goes() {
     let root = sample("rust");
     let tests = Tool::Nextest.tests(&root, &fixture("nextest", "list-0.9.151.json"));
     assert!(
@@ -83,10 +94,13 @@ fn nextest_lists_its_suites_and_reads_the_junit_report_of_0_9_151() {
             .iter()
             .any(|t| t.id.package == "sample" && t.id.name == "tests::nested::inner")
     );
-    let reports = Tool::Nextest.reports(&root, &fixture("nextest", "run-0.9.151.junit.xml"));
+    let run = fixture("nextest", "run-0.9.152.jsonl");
+    let reports = Tool::Nextest.reports(&root, &run);
     assert_eq!(state(&reports, "tests::adds"), State::Passed);
+    assert_eq!(state(&reports, "tests::slow"), State::Skipped);
+    assert_eq!(report(&reports, "api_works").id.package, "sample::api");
     let failed = report(&reports, "tests::fails");
-    assert_eq!(failed.state, State::Failed);
+    assert_eq!((failed.state, failed.id.package.as_str()), (State::Failed, "sample"));
     assert_eq!(
         failed.failure,
         Some(Location {
@@ -94,13 +108,36 @@ fn nextest_lists_its_suites_and_reads_the_junit_report_of_0_9_151() {
             line: 16
         })
     );
-    let run = Tool::Nextest.run(&root, &Scope::All, Some(Path::new("/tmp/s")));
+    assert!(
+        failed
+            .message
+            .as_deref()
+            .is_some_and(|m| m.contains("one and two") && !m.contains("note:")),
+        "{failed:?}"
+    );
+    let half: String = run.lines().take(6).map(|l| format!("{l}\n")).collect();
+    let so_far = Tool::Nextest.reports(&root, &half);
+    assert_eq!(state(&so_far, "tests::adds"), State::Running);
+    assert!(Tool::Nextest.reports_starts() && Tool::Nextest.lists_by_building());
+    let one = TestId {
+        package: "sample::api".into(),
+        file: None,
+        name: "api_works".into(),
+    };
+    let run = Tool::Nextest.run(&root, &Scope::Test(one), None);
     assert!(
         run.args
             .windows(2)
-            .any(|w| w[0] == "--tool-config-file" && w[1] == "dango:/tmp/s/dango-nextest.toml")
+            .any(|w| w == ["--message-format", "libtest-json-plus"])
     );
-    assert_eq!(run.files[0].1, nextest::CONFIG);
+    assert!(
+        run.args
+            .ends_with(&["-E".into(), "binary_id(sample::api) & test(=api_works)".into()])
+    );
+    assert!(
+        run.env
+            .contains(&("NEXTEST_EXPERIMENTAL_LIBTEST_JSON".into(), "1".into()))
+    );
 }
 
 #[test]
@@ -161,31 +198,72 @@ fn pytest_reads_collection_starts_and_results_from_dangos_plugin_with_pytest_9_2
 }
 
 #[test]
-fn vitest_lists_tests_with_their_place_and_reads_its_json_report_of_5_1() {
+fn vitest_lists_tests_with_their_place_and_reads_dangos_reporter_with_5_1() {
     let root = sample("vitest");
     let tests = Tool::Vitest.tests(&root, &fixture("vitest", "list-5.1.json"));
     let adds = tests.iter().find(|t| t.id.name == "math > adds").unwrap();
     assert_eq!(adds.location.as_ref().map(|l| l.line), Some(2));
-    let reports = Tool::Vitest.reports(&root, &fixture("vitest", "run-5.1.json"));
+    let run = fixture("vitest", "run-5.1.jsonl");
+    let reports = Tool::Vitest.reports(&root, &run);
     assert_eq!(state(&reports, "math > adds"), State::Passed);
     assert_eq!(state(&reports, "math > later"), State::Skipped);
     let failed = report(&reports, "math > fails");
     assert_eq!(failed.state, State::Failed);
     assert_eq!(failed.failure.as_ref().map(|f| f.line), Some(6));
+    assert_eq!(
+        failed.message.as_deref(),
+        Some("AssertionError: expected 3 to be 4 // Object.is equality")
+    );
+    assert_eq!(
+        failed.id.file, adds.id.file,
+        "the run names the file as the listing does"
+    );
+    let started: String = run.lines().take(3).map(|l| format!("{l}\n")).collect();
+    assert_eq!(
+        state(&Tool::Vitest.reports(&root, &started), "math > fails"),
+        State::Running
+    );
+    let scratch = Path::new("/tmp/s");
+    let one = Tool::Vitest.run(&root, &Scope::Test(adds.id.clone()), Some(scratch));
+    assert!(
+        one.args.windows(2).any(|w| w == ["-t", "^math > adds$"]),
+        "{:?}",
+        one.args
+    );
+    assert_eq!(
+        one.args.last().map(String::as_str),
+        Some("--reporter=/tmp/s/dango_vitest.mjs")
+    );
+    assert_eq!(
+        one.results.as_deref(),
+        Some(scratch.join("dango-js-events.jsonl").as_path())
+    );
+    assert!(Tool::Vitest.reports_starts());
 }
 
 #[test]
-fn jest_lists_files_and_takes_its_tests_from_the_json_of_30_5() {
+fn jest_lists_files_and_takes_its_tests_from_dangos_reporter_with_30_5() {
     let root = sample("jest");
     let files = Tool::Jest.tests(&root, &fixture("jest", "list-30.5.txt"));
     assert_eq!(files.len(), 1);
     assert!(files[0].id.name.is_empty());
-    let reports = Tool::Jest.reports(&root, &fixture("jest", "run-30.5.json"));
+    let reports = Tool::Jest.reports(&root, &fixture("jest", "run-30.5.jsonl"));
     assert_eq!(state(&reports, "math > adds"), State::Passed);
     assert_eq!(state(&reports, "math > later"), State::Skipped);
     let failed = report(&reports, "math > fails");
     assert_eq!(failed.failure.as_ref().map(|f| f.line), Some(6));
     assert_eq!(failed.location.as_ref().map(|l| l.line), Some(5));
+    let one = Tool::Jest.run(&root, &Scope::Test(failed.id.clone()), Some(Path::new("/tmp/s")));
+    let flags: Vec<&str> = one.args.iter().map(String::as_str).collect();
+    assert!(
+        flags.ends_with(&[
+            "-t",
+            "^math fails$",
+            "--reporters=default",
+            "--reporters=/tmp/s/dango_jest.cjs"
+        ]),
+        "the reporters come last, as Jest takes what follows its flag as reporters: {flags:?}"
+    );
 }
 
 #[test]
