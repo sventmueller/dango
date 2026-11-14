@@ -2,6 +2,8 @@
 //! agent hooks: a folder is trusted when it or a folder above it is.
 
 use ide_core::LockIgnoringPoison;
+use ide_core::stamp::Stamp;
+use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -18,6 +20,13 @@ const VERSION: u64 = 1;
 
 /// Keeps two windows that trust folders at the same moment from losing one of the two.
 static WRITING: Mutex<()> = Mutex::new(());
+
+/// The answers given for the file as it was at its stamp, by folder: the main thread asks on every caret rest and
+/// every redraw of some views, and each answer otherwise reads the file and resolves every path in it on disk.
+static ANSWERS: Mutex<Option<Answers>> = Mutex::new(None);
+
+/// The trust file, its stamp, and whether each folder asked about was trusted then.
+type Answers = (PathBuf, Stamp, HashMap<PathBuf, bool>);
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct Stored {
@@ -50,8 +59,40 @@ impl TrustStore {
 
     /// Whether `folder` or a folder above it is trusted; nothing is while the file cannot be read.
     pub fn is_trusted(&self, folder: &Path) -> bool {
+        let stamp = Stamp::of(&self.file);
+        if let Some(stamp) = stamp
+            && let Some((file, seen, answers)) = &*ANSWERS.lock_ignoring_poison()
+            && *file == self.file
+            && *seen == stamp
+            && let Some(&answer) = answers.get(folder)
+        {
+            return answer;
+        }
+        let answer = self.ask(folder);
+        if let Some(stamp) = stamp
+            && Stamp::of(&self.file) == Some(stamp)
+        {
+            let mut cached = ANSWERS.lock_ignoring_poison();
+            let fresh = cached
+                .as_ref()
+                .is_none_or(|(file, seen, _)| *file != self.file || *seen != stamp);
+            if fresh {
+                *cached = Some((self.file.clone(), stamp, HashMap::new()));
+            }
+            if let Some((_, _, answers)) = cached.as_mut() {
+                answers.insert(folder.to_path_buf(), answer);
+            }
+        }
+        answer
+    }
+
+    fn ask(&self, folder: &Path) -> bool {
+        let roots = self.roots();
+        if roots.is_empty() {
+            return false;
+        }
         let folder = canonical(folder);
-        self.roots().iter().any(|root| folder.starts_with(canonical(root)))
+        roots.iter().any(|root| folder.starts_with(canonical(root)))
     }
 
     /// Trusts `folder` and everything below it.

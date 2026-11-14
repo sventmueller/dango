@@ -5,6 +5,9 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
 
+use std::collections::HashMap;
+
+use crate::stamp::Stamp;
 use crate::sync::LockIgnoringPoison;
 use std::sync::Mutex;
 
@@ -12,6 +15,10 @@ const VERSION_FIELD: &str = "version";
 
 /// Held while a store reads, changes and writes its file, so two writers of one file never interleave.
 static WRITING: Mutex<()> = Mutex::new(());
+
+/// The files read last, as they were loaded, by path and stamp: the main thread asks for the settings on every caret
+/// rest and every language server event, and one `stat` answers instead of a read and a parse.
+static READ: Mutex<Option<HashMap<PathBuf, (Stamp, Store)>>> = Mutex::new(None);
 
 /// Turns an object of one version into the next.
 pub(crate) type Migration = fn(&mut Map<String, Value>);
@@ -40,6 +47,25 @@ pub enum Locked {
 impl Store {
     /// The object in `path` brought to the version `migrations` lead to; empty if the file is missing or unreadable.
     pub(crate) fn load(path: PathBuf, migrations: &[Migration]) -> Store {
+        let Some(stamp) = Stamp::of(&path) else {
+            return Store::read(path, migrations);
+        };
+        if let Some((seen, store)) = READ.lock_ignoring_poison().get_or_insert_default().get(&path)
+            && *seen == stamp
+        {
+            return store.clone();
+        }
+        let store = Store::read(path.clone(), migrations);
+        // A file that changed while it was read keeps no entry, so the next load reads it again.
+        if Stamp::of(&path) == Some(stamp) {
+            READ.lock_ignoring_poison()
+                .get_or_insert_default()
+                .insert(path, (stamp, store.clone()));
+        }
+        store
+    }
+
+    fn read(path: PathBuf, migrations: &[Migration]) -> Store {
         let (values, problem) = match std::fs::read(&path) {
             Err(error) if error.kind() == io::ErrorKind::NotFound => (Map::new(), None),
             Err(_) => (Map::new(), Some(Locked::Unreadable)),

@@ -15,6 +15,7 @@ pub mod layout;
 pub mod paths;
 pub mod settings;
 pub mod settings_sync;
+pub mod stamp;
 mod store;
 pub mod sync;
 #[cfg(any(test, feature = "testing"))]
