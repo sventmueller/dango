@@ -30,6 +30,7 @@ pub fn run() {
             check("an AI tab opens", false, "");
             return finish(NAME);
         };
+        tab.feed(&turn_starts());
         tab.feed(&state("running"));
         let title = tab.title();
         check(
@@ -165,6 +166,19 @@ fn choose_quit(mtm: MainThreadMarker) -> bool {
     };
     menu.performActionForItemAtIndex(index);
     true
+}
+
+/// The first frame of an answer in the main conversation, which starts a turn; a state of "running" alone may be
+/// background agents after the turn ended.
+fn turn_starts() -> String {
+    json!({
+        "type": "stream_event",
+        "event": {"type": "message_start", "message": {"id": "m", "type": "message", "role": "assistant", "content": []}},
+        "parent_tool_use_id": null,
+        "session_id": "s",
+        "uuid": "u",
+    })
+    .to_string()
 }
 
 /// A frame that sets the session's state, as the CLI reports it.
