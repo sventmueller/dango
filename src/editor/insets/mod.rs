@@ -831,7 +831,7 @@ mod tests {
             utf32: 0,
         };
         Change {
-            revision: 1,
+            revision: ide_document::Revision::new(1),
             bytes: utf16.clone(),
             utf16,
             start: point,

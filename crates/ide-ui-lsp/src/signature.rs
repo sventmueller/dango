@@ -3,6 +3,7 @@
 //! trigger characters and "Editor ▸ Parameter zeigen" open it; ↑ and ↓ page through overloads while no completion list
 //! shows; Esc closes it, and so does leaving the call, when the server no longer names a signature.
 
+use ide_document::Revision;
 use std::cell::{Cell, RefCell};
 use std::ops::Range;
 
@@ -40,7 +41,7 @@ struct Help {
     /// Counts questions, so that an answer to an older one is dropped.
     asked: Cell<u64>,
     /// The revision and cursor the last question was about, so a cursor that rests is not asked about twice.
-    about: Cell<(u64, usize)>,
+    about: Cell<(Revision, usize)>,
     /// The parameter VoiceOver read last.
     announced: RefCell<String>,
 }
@@ -98,7 +99,7 @@ fn build(mtm: MainThreadMarker) -> Help {
         shown: RefCell::new(None),
         active: Cell::new(0),
         asked: Cell::new(0),
-        about: Cell::new((u64::MAX, usize::MAX)),
+        about: Cell::new((Revision::new(u64::MAX), usize::MAX)),
         announced: RefCell::new(String::new()),
     }
 }

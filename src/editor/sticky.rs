@@ -136,7 +136,7 @@ pub struct StickyIvars {
     row: Cell<f64>,
     scrolled: OnceCell<crate::util::Observation>,
     /// The blocks found last, with the document's revision then, which scrolling uses again.
-    scopes: RefCell<Option<(u64, super::fold::Lines)>>,
+    scopes: RefCell<Option<(ide_document::Revision, super::fold::Lines)>>,
 }
 
 define_class!(

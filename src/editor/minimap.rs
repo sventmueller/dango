@@ -94,7 +94,7 @@ pub fn redraw(view: &EditorTextView) {
 }
 
 /// The lines no fold hides, with the revision and the folded ranges they belong to.
-type Unfolded = (u64, Vec<Range<usize>>, Rc<[usize]>);
+type Unfolded = (ide_document::Revision, Vec<Range<usize>>, Rc<[usize]>);
 
 pub struct MinimapIvars {
     editor: Weak<EditorTextView>,

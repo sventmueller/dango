@@ -3,6 +3,7 @@
 //! the revision it was asked for, as one undo step.
 
 use crate::EditorSerial;
+use ide_document::Revision;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -131,7 +132,7 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
 
 /// Applies what Prettier answered to the editor `serial`, if its text is still the one of `revision`, then runs what
 /// waited for the formatting.
-fn finished(serial: EditorSerial, id: u64, revision: u64, outcome: Outcome) {
+fn finished(serial: EditorSerial, id: u64, revision: Revision, outcome: Outcome) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };

@@ -217,11 +217,11 @@ pub fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State> {
 #[derive(Default)]
 pub struct Marks {
     /// The document's revision `found` was read at.
-    read: Option<u64>,
+    read: Option<ide_document::Revision>,
     /// The tests the text shows, by function name and line from 1.
     found: Vec<(String, u32)>,
     /// The revisions of the board and the document `by_line` is of.
-    shown: Option<(u64, u64)>,
+    shown: Option<(u64, ide_document::Revision)>,
     /// The state of the test at each line from 1.
     by_line: std::collections::HashMap<u32, State>,
 }

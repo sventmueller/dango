@@ -239,7 +239,7 @@ pub fn request(view: &EditorTextView) {
             path,
             language: language(view).0,
             text: String::new(),
-            revision: document.revision(),
+            revision: document.revision().get(),
             selection: selection(view),
             indent: if indent.starts_with('\t') {
                 Indent::Tabs
@@ -255,7 +255,7 @@ pub fn request(view: &EditorTextView) {
         old.cancel();
     }
     let serial = view.ivars().serial;
-    let (revision, asked) = (request.revision, request.selection.clone());
+    let (revision, asked) = (ide_document::Revision::new(request.revision), request.selection.clone());
     let from = provider.clone();
     let reply: ide_predict::Reply = Box::new(move |answer| {
         main_soon(move || arrived(serial, id, revision, asked, from, answer));
@@ -300,7 +300,7 @@ fn checked(serial: ide_ui_lsp::EditorSerial, verdict: &guard::Verdict) {
 fn arrived(
     serial: ide_ui_lsp::EditorSerial,
     id: u64,
-    revision: u64,
+    revision: ide_document::Revision,
     asked: Range<usize>,
     provider: Arc<dyn Provider>,
     answer: Result<Vec<Prediction>, Error>,

@@ -183,7 +183,7 @@ fn ghost_shown() {
         "a pause in typing asks the provider once, with the document's text, revision and caret",
         asked.len() == 1
             && asked[0].text == text(&view)
-            && asked[0].revision == view.document().revision()
+            && asked[0].revision == view.document().revision().get()
             && asked[0].language == "rust",
         format!("{asked:?}"),
     );

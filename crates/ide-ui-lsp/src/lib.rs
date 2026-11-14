@@ -50,7 +50,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use ide_core::settings::{Key, Settings};
-use ide_document::Change;
+use ide_document::{Change, Revision};
 use ide_lsp::lsp_types::{Diagnostic, MessageType, TextDocumentContentChangeEvent, Uri, WorkDoneProgress};
 use ide_lsp::{Cancel, CustomServer, Event, Language, NotFound, Refresh, Registry, Server, ServerConfig, Status, uri};
 use ide_process::Supervisor;
@@ -112,7 +112,7 @@ pub struct ViewState {
     crumbs: Vec<outline::Crumb>,
     actions: actions::State,
     /// `marks` by line for a revision of the document, until the marks change.
-    line_marks: Option<(u64, Rc<decorate::LineMarks>)>,
+    line_marks: Option<(Revision, Rc<decorate::LineMarks>)>,
     /// A passing remark in the status bar, such as why a save went without formatting.
     note: Option<String>,
 }
@@ -480,7 +480,7 @@ fn server_by_id(view: &dyn Editor, id: u64) -> Option<(Server, Uri)> {
 }
 
 fn version(view: &dyn Editor) -> i32 {
-    i32::try_from(view.document().revision()).unwrap_or(i32::MAX)
+    i32::try_from(view.document().revision().get()).unwrap_or(i32::MAX)
 }
 
 /// An editor opened, or its file got a new name: it is opened on the server of its language.

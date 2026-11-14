@@ -6,6 +6,7 @@ use std::ops::Range;
 use std::path::Path;
 
 use ide_core::settings::Key;
+use ide_document::Revision;
 use ide_predict::Prediction;
 use serde::{Deserialize, Serialize};
 
@@ -149,7 +150,7 @@ pub enum Kind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Proposal {
     /// The revision of the document the text belongs to (E24).
-    pub revision: u64,
+    pub revision: Revision,
     /// The selection it was made for, in bytes.
     pub selection: Range<usize>,
     /// The bytes it replaces, without what the provider repeated of the text around them.
@@ -222,7 +223,12 @@ pub fn kind(text: &str, selection: &Range<usize>, range: &Range<usize>, new: &st
 
 impl Proposal {
     /// The first of `predictions` that changes something in `text`, as asked at `revision` with `selection`.
-    pub fn first(text: &str, revision: u64, selection: Range<usize>, predictions: Vec<Prediction>) -> Option<Proposal> {
+    pub fn first(
+        text: &str,
+        revision: Revision,
+        selection: Range<usize>,
+        predictions: Vec<Prediction>,
+    ) -> Option<Proposal> {
         predictions.into_iter().find_map(|prediction| {
             let (range, new) = normalize(text, &prediction)?;
             Some(Proposal {
@@ -238,7 +244,7 @@ impl Proposal {
     }
 
     /// Whether it still fits the document: the same revision and selection, and its range holding what it held.
-    pub fn holds(&self, revision: u64, selection: &Range<usize>, text: &str) -> bool {
+    pub fn holds(&self, revision: Revision, selection: &Range<usize>, text: &str) -> bool {
         self.revision == revision && self.selection == *selection && text.get(self.range.clone()) == Some(&self.old)
     }
 
@@ -258,7 +264,7 @@ impl Proposal {
 
     /// What is left of an insertion after its first `taken` bytes went into the text, which made `text` of revision
     /// `revision`; `None` when nothing is left.
-    pub fn rest(&self, taken: usize, text: &str, revision: u64) -> Option<Proposal> {
+    pub fn rest(&self, taken: usize, text: &str, revision: Revision) -> Option<Proposal> {
         let left = self.text.get(taken..).filter(|rest| !rest.is_empty())?;
         let at = self.range.start + taken;
         let selection = at..at;
@@ -367,7 +373,7 @@ mod tests {
     #[test]
     fn an_insertion_at_the_caret_splits_into_its_line_and_the_lines_below() {
         let text = "fn main() {\n    \n}\n";
-        let one = Proposal::first(text, 3, 16..16, vec![prediction(16..16, "run();")]).unwrap();
+        let one = Proposal::first(text, Revision::new(3), 16..16, vec![prediction(16..16, "run();")]).unwrap();
         assert_eq!(
             one.kind,
             Kind::Insert {
@@ -375,7 +381,13 @@ mod tests {
                 rest: None
             }
         );
-        let more = Proposal::first(text, 3, 16..16, vec![prediction(16..16, "let a = 1;\n    run(a);")]).unwrap();
+        let more = Proposal::first(
+            text,
+            Revision::new(3),
+            16..16,
+            vec![prediction(16..16, "let a = 1;\n    run(a);")],
+        )
+        .unwrap();
         assert_eq!(
             more.kind,
             Kind::Insert {
@@ -388,12 +400,12 @@ mod tests {
     #[test]
     fn replacing_and_deleting_near_the_caret_is_a_change_and_further_away_a_jump() {
         let text = "let a = 1;\nlet b = 2;\nlet c = a + b;\n";
-        let replace = Proposal::first(text, 1, 4..4, vec![prediction(4..5, "x")]).unwrap();
+        let replace = Proposal::first(text, Revision::new(1), 4..4, vec![prediction(4..5, "x")]).unwrap();
         assert_eq!(replace.kind, Kind::Change);
         assert_eq!(replace.old, "a");
-        let delete = Proposal::first(text, 1, 0..0, vec![prediction(8..10, "")]).unwrap();
+        let delete = Proposal::first(text, Revision::new(1), 0..0, vec![prediction(8..10, "")]).unwrap();
         assert_eq!((delete.kind, delete.text.as_str()), (Kind::Change, ""));
-        let away = Proposal::first(text, 1, 0..0, vec![prediction(30..35, "a * b")]).unwrap();
+        let away = Proposal::first(text, Revision::new(1), 0..0, vec![prediction(30..35, "a * b")]).unwrap();
         assert_eq!(away.kind, Kind::Elsewhere { line: 2 });
         let there = away.moved(text, 30..30);
         assert_eq!(there.kind, Kind::Change, "after the jump the caret is on its line");
@@ -403,16 +415,16 @@ mod tests {
     #[test]
     fn a_proposal_holds_only_for_its_revision_selection_and_text() {
         let text = "let a = 1;\n";
-        let proposal = Proposal::first(text, 7, 10..10, vec![prediction(10..10, " // one")]).unwrap();
-        assert!(proposal.holds(7, &(10..10), text));
+        let proposal = Proposal::first(text, Revision::new(7), 10..10, vec![prediction(10..10, " // one")]).unwrap();
+        assert!(proposal.holds(Revision::new(7), &(10..10), text));
         assert!(
-            !proposal.holds(8, &(10..10), text),
+            !proposal.holds(Revision::new(8), &(10..10), text),
             "an answer that arrives after a further edit is dropped"
         );
-        assert!(!proposal.holds(7, &(9..9), text), "the caret moved");
-        let replace = Proposal::first(text, 7, 4..4, vec![prediction(4..5, "b")]).unwrap();
+        assert!(!proposal.holds(Revision::new(7), &(9..9), text), "the caret moved");
+        let replace = Proposal::first(text, Revision::new(7), 4..4, vec![prediction(4..5, "b")]).unwrap();
         assert!(
-            !replace.holds(7, &(4..4), "let x = 1;\n"),
+            !replace.holds(Revision::new(7), &(4..4), "let x = 1;\n"),
             "its range no longer holds what it replaces"
         );
     }
@@ -424,17 +436,17 @@ mod tests {
         assert_eq!(first_word("\n    x"), "\n");
         assert_eq!(first_word("größe"), "größe");
         let text = "let t = sc\n";
-        let proposal = Proposal::first(text, 1, 10..10, vec![prediction(10..10, "ale(21, 2)")]).unwrap();
+        let proposal = Proposal::first(text, Revision::new(1), 10..10, vec![prediction(10..10, "ale(21, 2)")]).unwrap();
         assert_eq!(proposal.word(), Some("ale"));
         let after = "let t = scale\n";
-        let rest = proposal.rest(3, after, 2).unwrap();
+        let rest = proposal.rest(3, after, Revision::new(2)).unwrap();
         assert_eq!(
             (rest.range.clone(), rest.text.as_str(), rest.revision),
-            (13..13, "(21, 2)", 2)
+            (13..13, "(21, 2)", Revision::new(2))
         );
-        assert!(rest.holds(2, &(13..13), after));
-        assert_eq!(proposal.rest(10, "", 2), None, "nothing left");
-        let replace = Proposal::first("let a;\n", 1, 4..4, vec![prediction(4..5, "b")]).unwrap();
+        assert!(rest.holds(Revision::new(2), &(13..13), after));
+        assert_eq!(proposal.rest(10, "", Revision::new(2)), None, "nothing left");
+        let replace = Proposal::first("let a;\n", Revision::new(1), 4..4, vec![prediction(4..5, "b")]).unwrap();
         assert_eq!(replace.word(), None);
     }
 }

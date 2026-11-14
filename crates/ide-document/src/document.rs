@@ -78,13 +78,38 @@ impl LineEndings {
     }
 }
 
+/// How many changes a document's text has had: every edit raises it by one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Revision(u64);
+
+impl Revision {
+    /// The revision of a document no edit changed yet.
+    pub const FIRST: Revision = Revision(0);
+
+    /// The revision `number` changes in, as a language server or a recovery copy names it.
+    pub const fn new(number: u64) -> Revision {
+        Revision(number)
+    }
+
+    /// The number of changes.
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+
+    /// The revision after one more edit.
+    #[must_use]
+    pub const fn next(self) -> Revision {
+        Revision(self.0 + 1)
+    }
+}
+
 /// The version of its file the document last read or wrote.
 #[derive(Debug, Clone)]
 struct OnDisk {
     /// The text the file held.
     base: Text,
     /// The revision whose text is `base`, if one is known.
-    revision: Option<u64>,
+    revision: Option<Revision>,
     stamp: Stamp,
     fingerprint: Fingerprint,
     /// The file is gone.
@@ -108,7 +133,7 @@ fn agreeing(text: &Text, same: bool) -> (usize, usize) {
 #[derive(Debug, Clone)]
 pub struct Document {
     text: Text,
-    revision: u64,
+    revision: Revision,
     path: Option<PathBuf>,
     format: FileFormat,
     line_endings: LineEndings,
@@ -129,7 +154,7 @@ impl Default for Document {
 #[derive(Debug, Clone)]
 pub struct Snapshot {
     pub(crate) text: Text,
-    pub(crate) revision: u64,
+    pub(crate) revision: Revision,
     pub(crate) path: Option<PathBuf>,
     pub(crate) format: FileFormat,
     pub(crate) base: Option<(Text, u64)>,
@@ -142,7 +167,7 @@ impl Snapshot {
     }
 
     /// The document's revision when the copy was taken.
-    pub fn revision(&self) -> u64 {
+    pub fn revision(&self) -> Revision {
         self.revision
     }
 
@@ -191,7 +216,7 @@ pub struct SaveJob {
     path: PathBuf,
     text: Text,
     format: FileFormat,
-    revision: u64,
+    revision: Revision,
     /// What the file held when the document last looked, unless the save may overwrite whatever is there.
     known: Option<(Stamp, Fingerprint)>,
 }
@@ -226,7 +251,7 @@ impl SaveJob {
 pub struct Saved {
     path: PathBuf,
     text: Text,
-    revision: u64,
+    revision: Revision,
     stamp: Stamp,
     fingerprint: Fingerprint,
 }
@@ -312,7 +337,7 @@ impl Document {
         let text = Text::new(&content.text);
         let disk = OnDisk {
             base: text.clone(),
-            revision: Some(0),
+            revision: Some(Revision::FIRST),
             stamp: content.stamp,
             fingerprint: content.fingerprint,
             removed: false,
@@ -353,7 +378,7 @@ impl Document {
             line_endings: LineEndings::of(&text),
             syntax: Syntax::new(language, text.line_count()),
             text,
-            revision: 0,
+            revision: Revision::FIRST,
             path,
             format,
             read_only,
@@ -371,7 +396,7 @@ impl Document {
     }
 
     /// Counts the changes of the text; every edit raises it by one.
-    pub fn revision(&self) -> u64 {
+    pub fn revision(&self) -> Revision {
         self.revision
     }
 
@@ -521,7 +546,7 @@ impl Document {
         rope.insert(first, &text);
         let new_end = self.text.point(range.start + text.len())?;
         let text_utf16 = self.text.byte_to_utf16(range.start + text.len())? - utf16.start;
-        self.revision += 1;
+        self.revision = self.revision.next();
         // A lone CR in front of the edit and an LF behind it become one line break, ending a line earlier.
         let first = start.line.min(self.text.line_of(range.start));
         let removed = old_end.line - first + 1;

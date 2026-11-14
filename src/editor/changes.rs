@@ -53,12 +53,12 @@ pub struct Marks {
     /// The lines of the text the hunks were found in, to place a removal behind the last line.
     lines: usize,
     /// The document's revision the hunks were found in.
-    revision: Option<u64>,
+    revision: Option<ide_document::Revision>,
     /// Counts questions, so that the answer to an older one is dropped.
     asked: u64,
     popover: Option<Retained<NSPopover>>,
     /// The hunk the popover shows, with the document revision it was found in.
-    shown: Option<(Hunk, u64)>,
+    shown: Option<(Hunk, ide_document::Revision)>,
 }
 
 /// How a line is marked.
@@ -109,7 +109,7 @@ fn read_head(path: &Path, known: Option<Oid>) -> Option<Result<Head, Oid>> {
     Some(Ok(Head { commit, text }))
 }
 
-fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, u64) {
+fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, ide_document::Revision) {
     let text = snapshot.text().to_string();
     let lines = text.split_inclusive('\n').count();
     (splat_git::diff::hunks(head, &text), lines, snapshot.revision())
@@ -188,8 +188,8 @@ enum Answer {
     Gone,
     /// The commit is the one known, so only the text is compared again.
     Same,
-    Head(Head, Vec<Hunk>, usize, u64),
-    Hunks(Vec<Hunk>, usize, u64),
+    Head(Head, Vec<Hunk>, usize, ide_document::Revision),
+    Hunks(Vec<Hunk>, usize, ide_document::Revision),
 }
 
 fn deliver(serial: ide_ui_lsp::EditorSerial, asked: u64, answer: Answer) {

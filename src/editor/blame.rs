@@ -56,7 +56,7 @@ pub struct State {
     reading: Option<String>,
     /// The last mapping of lines to committed lines, with the revision it belongs to, which the column keeps using
     /// while the marks catch up with typing; built once per answer of the marks, which takes the revision away.
-    mapping: Option<(Option<u64>, Mapping)>,
+    mapping: Option<(Option<ide_document::Revision>, Mapping)>,
     /// Whether the column before the line numbers shows.
     pub(super) column: bool,
     popover: Option<Retained<NSPopover>>,

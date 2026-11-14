@@ -28,7 +28,7 @@ pub struct Folds {
     /// The ranges the language server offers, as the first line and the last hidden line.
     server: Option<Lines>,
     /// The indentation's ranges for a revision of the document.
-    indented: Option<(u64, Lines)>,
+    indented: Option<(ide_document::Revision, Lines)>,
     /// The folded ranges: UTF-16 code units from the start of the second line to the start of the line after the last
     /// hidden one, or the end of the text; sorted by start.
     hidden: Vec<Range<usize>>,

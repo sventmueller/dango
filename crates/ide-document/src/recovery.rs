@@ -163,7 +163,7 @@ impl Recovery {
             title: title.map(str::to_string),
             encoding: encoding_name(snapshot.format.encoding).to_string(),
             bom: snapshot.format.bom,
-            revision: snapshot.revision,
+            revision: snapshot.revision.get(),
             saved: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |time| time.as_secs()),

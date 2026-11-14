@@ -107,7 +107,7 @@ proptest! {
         let edit = Edit { range_utf16: inside..inside, text: "x".into() };
         prop_assert!(document.apply(edit).is_err());
         prop_assert_eq!(document.text().to_string(), start);
-        prop_assert_eq!(document.revision(), 0);
+        prop_assert_eq!(document.revision(), ide_document::Revision::FIRST);
     }
 
     #[test]

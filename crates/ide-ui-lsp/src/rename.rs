@@ -1,6 +1,7 @@
 //! Renaming a symbol across the files of the folder, and formatting a document, on request or when it is saved.
 
 use crate::EditorSerial;
+use ide_document::Revision;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -145,7 +146,7 @@ pub type Then = Box<dyn FnOnce(&dyn Editor)>;
 /// Formatting requests waiting for their answer, by the editor's serial.
 struct Pending {
     id: u64,
-    revision: u64,
+    revision: Revision,
     then: Option<Then>,
 }
 

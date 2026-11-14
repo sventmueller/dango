@@ -74,7 +74,7 @@ fn a_change_says_where_it_happened_in_every_unit() {
         }
     );
     assert_eq!((change.new_bytes(), change.new_utf16()), (3..6, 2..5));
-    assert_eq!(change.revision, 1);
+    assert_eq!(change.revision, Revision::new(1));
     assert_eq!(document.text().to_string(), "aäx\ny\r\nzweite Zeile");
 }
 

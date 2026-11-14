@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use similar::{Algorithm, DiffOp};
 
 use crate::disk::ReadOnly;
+use crate::document::Revision;
 use crate::text::{Point, PositionError};
 
 /// How long the line comparison behind `Document::replace_all` may search before it settles for larger edits.
@@ -27,7 +28,7 @@ pub struct Edit {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Change {
     /// The document's revision after the edit.
-    pub revision: u64,
+    pub revision: Revision,
     /// The bytes replaced.
     pub bytes: Range<usize>,
     /// The UTF-16 code units replaced.

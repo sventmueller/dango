@@ -3,6 +3,7 @@
 //! after scrolling and when the server asks for a refresh. On by default, off for all editors or for one language.
 
 use crate::EditorSerial;
+use ide_document::Revision;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
@@ -36,7 +37,7 @@ pub struct InlayRequests {
     next: Cell<u64>,
     /// The document revision the hints of each editor by serial belong to. While it holds, an answer for the lines on
     /// screen keeps the hints elsewhere, so scrolling back neither waits for them nor moves the text again.
-    shown: RefCell<HashMap<crate::EditorSerial, u64>>,
+    shown: RefCell<HashMap<crate::EditorSerial, Revision>>,
 }
 
 fn with_asked<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, u64>>) -> R) -> R {
@@ -47,7 +48,7 @@ fn with_next<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
     f(&crate::host::state().inlay_requests.next)
 }
 
-fn with_shown<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, u64>>) -> R) -> R {
+fn with_shown<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, Revision>>) -> R) -> R {
     f(&crate::host::state().inlay_requests.shown)
 }
 
@@ -191,7 +192,7 @@ pub fn forget(view: &dyn Editor) {
 
 fn arrived(
     serial: EditorSerial,
-    revision: u64,
+    revision: Revision,
     asked: u64,
     lines: std::ops::Range<usize>,
     answer: Result<Vec<InlayHint>, ide_lsp::Error>,

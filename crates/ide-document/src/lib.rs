@@ -22,7 +22,7 @@ mod text;
 
 pub use disk::{FileContent, FileKey, MAX_FILE_BYTES, ReadOnly, save_target, stamp};
 pub use document::{
-    DiskCheck, DiskProbe, Document, LineEnding, LineEndings, Outcome, SaveError, SaveJob, Saved, Snapshot,
+    DiskCheck, DiskProbe, Document, LineEnding, LineEndings, Outcome, Revision, SaveError, SaveJob, Saved, Snapshot,
 };
 pub use edit::{Change, Edit, EditError};
 pub use splat_file_state::{Encoding, FileFormat, Fingerprint, Stamp};

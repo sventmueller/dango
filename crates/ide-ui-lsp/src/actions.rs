@@ -4,6 +4,7 @@
 //! bound to the revision it was made for (R21), and runs its command on the server.
 
 use crate::EditorSerial;
+use ide_document::Revision;
 use std::cell::RefCell;
 use std::ops::Range;
 use std::time::Duration;
@@ -59,7 +60,7 @@ impl Kind {
 
 /// The actions found for a place of the document.
 struct Found {
-    revision: u64,
+    revision: Revision,
     line: usize,
     range: Range<usize>,
     actions: Vec<CodeActionOrCommand>,
@@ -83,7 +84,7 @@ pub struct State {
 /// A menu of actions on screen, with what its items stand for.
 struct Shown {
     serial: EditorSerial,
-    revision: u64,
+    revision: Revision,
     actions: Vec<CodeActionOrCommand>,
     origins: Vec<u64>,
     menu: Retained<NSMenu>,
@@ -310,7 +311,7 @@ fn request(view: &dyn Editor, kind: Kind, show: bool) {
 fn arrived(
     serial: EditorSerial,
     asked: u64,
-    revision: u64,
+    revision: Revision,
     (kind, show, line, range): (Kind, bool, usize, Range<usize>),
     origin: u64,
     answer: Result<Vec<CodeActionOrCommand>, ide_lsp::Error>,
@@ -494,7 +495,7 @@ fn choose(index: usize) {
 }
 
 /// Asks the server for the edit of `action`, which it computes only once chosen, and performs it.
-fn resolve(view: &dyn Editor, origin: u64, revision: u64, action: CodeAction) {
+fn resolve(view: &dyn Editor, origin: u64, revision: Revision, action: CodeAction) {
     let Some((server, uri)) = server_by_id(view, origin).or_else(|| server_of(view)) else {
         return;
     };
@@ -519,7 +520,7 @@ fn resolve(view: &dyn Editor, origin: u64, revision: u64, action: CodeAction) {
 }
 
 /// Applies the edit of `action`, made for `revision` of `view`'s text, then runs its command.
-fn perform(view: &dyn Editor, origin: u64, revision: u64, action: &CodeAction) {
+fn perform(view: &dyn Editor, origin: u64, revision: Revision, action: &CodeAction) {
     if view.document().revision() != revision {
         failed(t("Die Datei hat sich inzwischen geändert").to_string());
         return;

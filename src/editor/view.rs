@@ -78,7 +78,7 @@ pub struct ViewIvars {
     /// The notifications the editor follows, its scroll view's size and scrolling, which end with it.
     pub(crate) watches: RefCell<Vec<crate::util::Observation>>,
     /// The revision and frame size at which TextKit last laid out the whole text.
-    pub(super) laid_out: Cell<Option<(u64, NSSize)>>,
+    pub(super) laid_out: Cell<Option<(ide_document::Revision, NSSize)>>,
     /// Counts the looks at the file on disk, so that only the answer to the latest is followed.
     pub(super) disk_asked: Cell<u64>,
     /// The line number column, the minimap and the sticky headers draw again on the next turn of the run loop.
