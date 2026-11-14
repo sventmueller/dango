@@ -54,6 +54,11 @@ pub struct ListIvars {
     asked: Cell<u64>,
     resolved: RefCell<HashMap<usize, CompletionItem>>,
     resolving: RefCell<Option<Ticket>>,
+    /// Each item's filter text in lower case, by its place in `items`.
+    keys: RefCell<Vec<String>>,
+    /// The last filtering: what was typed, how many items it looked at and which of them matched; typing on only
+    /// looks at those again and at items that came since.
+    matched: RefCell<(String, usize, Vec<usize>)>,
 }
 
 define_class!(
@@ -124,6 +129,8 @@ fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
                     asked: Cell::new(0),
                     resolved: RefCell::new(HashMap::new()),
                     resolving: RefCell::new(None),
+                    keys: RefCell::new(vec![]),
+                    matched: RefCell::new((String::new(), 0, vec![])),
                 };
                 // SAFETY: NSObject's initializer, called once on the newly allocated object.
                 unsafe { msg_send![super(CompletionList::alloc(mtm).set_ivars(ivars)), init] }
@@ -373,6 +380,8 @@ impl CompletionList {
             .unwrap_or_else(|| word_start(view, cursor));
         self.ivars().view.set(Some(view.serial()));
         *self.ivars().items.borrow_mut() = completions.items;
+        self.ivars().keys.borrow_mut().clear();
+        *self.ivars().matched.borrow_mut() = (String::new(), 0, vec![]);
         self.ivars().origins.borrow_mut().clear();
         self.ivars().resolved.borrow_mut().clear();
         self.ivars().start.set(start);
@@ -398,14 +407,26 @@ impl CompletionList {
             .to_string()
             .to_lowercase();
         let items = self.ivars().items.borrow();
-        let mut ranked: Vec<(u8, &str, usize)> = items
-            .iter()
-            .enumerate()
-            .filter_map(|(index, item)| {
-                let key = item.filter_text.as_deref().unwrap_or(&item.label).to_lowercase();
+        let mut keys = self.ivars().keys.borrow_mut();
+        let known = keys.len();
+        keys.extend(
+            items[known.min(items.len())..]
+                .iter()
+                .map(|item| item.filter_text.as_deref().unwrap_or(&item.label).to_lowercase()),
+        );
+        let mut matched = self.ivars().matched.borrow_mut();
+        let candidates: Vec<usize> = if typed.starts_with(matched.0.as_str()) && matched.1 <= items.len() {
+            matched.2.iter().copied().chain(matched.1..items.len()).collect()
+        } else {
+            (0..items.len()).collect()
+        };
+        let mut ranked: Vec<(u8, &str, usize)> = candidates
+            .into_iter()
+            .filter_map(|index| {
+                let (item, key) = (&items[index], &keys[index]);
                 let rank = if key.starts_with(&typed) {
                     0
-                } else if subsequence(&typed, &key) {
+                } else if subsequence(&typed, key) {
                     1
                 } else {
                     return None;
@@ -413,6 +434,10 @@ impl CompletionList {
                 Some((rank, item.sort_text.as_deref().unwrap_or(&item.label), index))
             })
             .collect();
+        let mut hits: Vec<usize> = ranked.iter().map(|(_, _, index)| *index).collect();
+        hits.sort_unstable();
+        *matched = (typed, items.len(), hits);
+        drop((matched, keys));
         ranked.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
         let shown: Vec<usize> = ranked.into_iter().take(MOST).map(|(_, _, index)| index).collect();
         drop(items);

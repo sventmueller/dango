@@ -74,6 +74,9 @@ pub struct State {
     tickets: Vec<Ticket>,
     found: Option<Found>,
     bulb: Option<Retained<NSButton>>,
+    /// When the cursor will have rested long enough to ask, while a timer waits for it; one timer per editor,
+    /// however often the cursor moves.
+    rest_until: Option<std::time::Instant>,
 }
 
 /// A menu of actions on screen, with what its items stand for.
@@ -164,7 +167,7 @@ fn place(view: &dyn Editor) -> (Range<usize>, usize) {
 pub fn moved(view: &dyn Editor) {
     let (_, line) = place(view);
     let revision = view.document().revision();
-    let (serial, asked, gone) = {
+    let (serial, waiting, gone) = {
         let Ok(mut state) = view.lsp().try_borrow_mut() else {
             // Moved from inside code that holds the state: the move counts once that code is done.
             view.later(objc2::sel!(ideActionsMoved), 0.0);
@@ -173,6 +176,7 @@ pub fn moved(view: &dyn Editor) {
         let serial = state.serial;
         let actions = &mut state.actions;
         actions.asked += 1;
+        let waiting = actions.rest_until.replace(std::time::Instant::now() + REST).is_some();
         for ticket in actions.tickets.drain(..) {
             ticket.cancel();
         }
@@ -180,21 +184,36 @@ pub fn moved(view: &dyn Editor) {
             .found
             .take_if(|found| found.revision != revision || found.line != line)
             .is_some();
-        (serial, actions.asked, gone)
+        (serial, waiting, gone)
     };
     if gone {
         view.redraw_gutter();
     }
     if server_of(view).is_none() {
+        view.lsp().borrow_mut().actions.rest_until = None;
         return;
     }
-    main_after(REST, move || {
-        if let Some(view) = editor::find_editor(serial)
-            && view.lsp().borrow().actions.asked == asked
-        {
-            request(&*view, Kind::Fixes, false);
-        }
-    });
+    if !waiting {
+        main_after(REST, move || rested(serial));
+    }
+}
+
+/// The timer of the editor `serial` fired: it asks for the fixes of the cursor's place once the cursor rested, and
+/// waits on while it still moves.
+fn rested(serial: u64) {
+    let Some(view) = editor::find_editor(serial) else {
+        return;
+    };
+    let Some(until) = view.lsp().borrow().actions.rest_until else {
+        return;
+    };
+    let now = std::time::Instant::now();
+    if now < until {
+        main_after(until - now, move || rested(serial));
+        return;
+    }
+    view.lsp().borrow_mut().actions.rest_until = None;
+    request(&*view, Kind::Fixes, false);
 }
 
 /// The diagnostics of the server of slot `source` that touch `range`, with their ranges where their text is now.

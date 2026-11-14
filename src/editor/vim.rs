@@ -44,6 +44,8 @@ pub struct State {
     label: Option<Retained<NSTextField>>,
     /// The system clipboard's change count Vim's registers last took.
     clipboard: isize,
+    /// The document's lines end in CRLF, as its whole text showed when Vim last took it.
+    crlf: bool,
 }
 
 fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
@@ -93,12 +95,16 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
 pub fn attach(view: &EditorTextView) {
     close_group(view);
     let vim = enabled().then(|| {
-        let mut vim = Vim::new(&view.document().text().to_string());
+        let text = view.document().text().to_string();
+        let mut vim = Vim::new(&text);
         let (line, column) = line_column(view, view.selectedRange().location);
         vim.set_cursor(line, column);
-        vim
+        (vim, text.contains("\r\n"))
     });
-    view.ivars().vim.borrow_mut().vim = vim;
+    let mut state = view.ivars().vim.borrow_mut();
+    state.crlf = vim.as_ref().is_some_and(|(_, crlf)| *crlf);
+    state.vim = vim.map(|(vim, _)| vim);
+    drop(state);
     show(view);
 }
 
@@ -285,7 +291,9 @@ fn leave_insert(view: &EditorTextView) {
 fn sync_copy(view: &EditorTextView) {
     let text = view.document().text().to_string();
     let (line, column) = line_column(view, view.selectedRange().location);
-    if let Some(vim) = view.ivars().vim.borrow_mut().vim.as_mut() {
+    let mut state = view.ivars().vim.borrow_mut();
+    state.crlf = text.contains("\r\n");
+    if let Some(vim) = state.vim.as_mut() {
         let _ = vim.resync(&text);
         vim.set_cursor(line, column);
     }
@@ -338,11 +346,7 @@ fn apply(view: &EditorTextView, outcome: &Outcome) {
     if outcome.replacements.is_empty() {
         return;
     }
-    let ending = if view.document().text().to_string().contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
+    let ending = if view.ivars().vim.borrow().crlf { "\r\n" } else { "\n" };
     view.ivars().vim.borrow_mut().applying = true;
     for replacement in &outcome.replacements {
         let start = utf16_of(view, replacement.start);
@@ -371,7 +375,9 @@ fn perform(view: &EditorTextView, effect: Effect) {
             }
             // Vim puts the cursor where the undone change began, AppKit after it.
             let text = view.document().text().to_string();
-            if let Some(vim) = view.ivars().vim.borrow_mut().vim.as_mut()
+            let mut state = view.ivars().vim.borrow_mut();
+            state.crlf = text.contains("\r\n");
+            if let Some(vim) = state.vim.as_mut()
                 && let Some((line, column)) = vim.resync(&text)
             {
                 vim.set_cursor(line, column);

@@ -224,6 +224,26 @@ fn edits_back_to_the_saved_text_make_the_document_clean_again() {
 }
 
 #[test]
+fn edits_at_both_ends_compare_only_what_lies_between_them() {
+    let dir = scratch("dirty-ends");
+    let path = dir.join("a.txt");
+    fs::write(&path, "head middle tail").unwrap();
+    let mut document = Document::open(&path).unwrap();
+    edit(&mut document, 0..4, "HEAD");
+    edit(&mut document, 12..16, "TAIL");
+    assert_eq!(document.disk.as_ref().map(|disk| disk.agrees), Some((0, 0)));
+    assert!(document.is_dirty());
+    edit(&mut document, 12..16, "tail");
+    assert!(document.is_dirty(), "the start still differs");
+    edit(&mut document, 0..4, "head");
+    assert!(!document.is_dirty(), "both ends are back");
+    edit(&mut document, 5..11, "MIDDLE");
+    assert_eq!(document.disk.as_ref().map(|disk| disk.agrees), Some((0, 0)));
+    edit(&mut document, 5..11, "middle");
+    assert!(!document.is_dirty());
+}
+
+#[test]
 fn a_save_writes_the_format_it_read_and_typing_during_it_stays_unsaved() {
     let dir = scratch("save");
     let path = dir.join("win.txt");

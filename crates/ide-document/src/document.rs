@@ -91,6 +91,16 @@ struct OnDisk {
     removed: bool,
     /// Tells this version from every other one the app has read or written, in this run or an earlier one.
     generation: u64,
+    /// How many bytes at the start and at the end of the text are known to be those of `base`, as edits since leave
+    /// them, so that telling the two apart compares only what lies between.
+    agrees: (usize, usize),
+}
+
+/// The bytes at the start and at the end of `text` known to be those of the file's text: all of them when it is the
+/// same text, none when it is not known.
+fn agreeing(text: &Text, same: bool) -> (usize, usize) {
+    let known = if same { text.len_bytes() } else { 0 };
+    (known, known)
 }
 
 /// The text of one file, shared by every view that shows it, with what is needed to save it, follow its file and
@@ -307,6 +317,7 @@ impl Document {
             fingerprint: content.fingerprint,
             removed: false,
             generation: fresh_generation(),
+            agrees: agreeing(&text, true),
         };
         Document::build(text, Some(path), content.format, content.read_only, Some(disk))
     }
@@ -322,6 +333,7 @@ impl Document {
                 fingerprint: Fingerprint::of(&disk::encode(format, base)),
                 removed: false,
                 generation: fresh_generation(),
+                agrees: (0, 0),
             }
         });
         let mut document = Document::build(Text::new(text), path, format, None, disk);
@@ -499,6 +511,10 @@ impl Document {
         let old_end = self.text.point(range.end)?;
         let utf16 = self.text.byte_to_utf16(range.start)?..self.text.byte_to_utf16(range.end)?;
         let old_lines = self.text.line_count();
+        if let Some(disk) = &mut self.disk {
+            let after = self.text.len_bytes() - range.end;
+            disk.agrees = (disk.agrees.0.min(range.start), disk.agrees.1.min(after));
+        }
         let rope = self.text.rope_mut();
         let first = rope.byte_to_char(range.start);
         rope.remove(first..rope.byte_to_char(range.end));
@@ -537,7 +553,7 @@ impl Document {
             None => !self.text.is_empty(),
             Some(disk) => {
                 disk.revision != Some(self.revision)
-                    && (disk.base.len_bytes() != self.text.len_bytes() || disk.base != self.text)
+                    && (disk.base.len_bytes() != self.text.len_bytes() || differs(disk, &self.text))
             }
         }
     }
@@ -596,6 +612,7 @@ impl Document {
             fingerprint: saved.fingerprint,
             removed: false,
             generation: fresh_generation(),
+            agrees: agreeing(&self.text, saved.revision == self.revision),
         });
         self.refresh_dirty();
     }
@@ -707,6 +724,7 @@ impl Document {
             fingerprint: disk.fingerprint,
             removed: false,
             generation: fresh_generation(),
+            agrees: agreeing(&self.text, same),
         });
         self.format = disk.format;
         self.read_only = match (disk.read_only, self.read_only) {
@@ -759,6 +777,20 @@ impl Document {
     /// The folds by indentation, with tabs reaching the next multiple of `tab_width`.
     pub fn folds(&mut self, tab_width: usize) -> Vec<Fold> {
         self.syntax.folds(&self.text, tab_width)
+    }
+}
+
+/// Whether `text`, as long as the file's text of `disk`, differs from it between the ends known to agree.
+fn differs(disk: &OnDisk, text: &Text) -> bool {
+    let length = text.len_bytes();
+    let (start, end) = disk.agrees;
+    if start.saturating_add(end) >= length {
+        return false;
+    }
+    let middle = start..length - end;
+    match (text.slice(middle.clone()), disk.base.slice(middle)) {
+        (Some(ours), Some(theirs)) => ours != theirs,
+        _ => disk.base != *text,
     }
 }
 
