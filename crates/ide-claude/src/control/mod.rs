@@ -104,7 +104,10 @@ impl Request {
                 "forwardSubagentText": forward_subagent_text,
                 "hooks": crate::hooks::registered(),
             }),
-            Request::Interrupt | Request::BackgroundTasks(None) => json!({}),
+            // A person's stop ends the turn only: background agents and workflows have their own stop, and the CLI
+            // otherwise ends them too whenever the declaration at initialize no longer holds.
+            Request::Interrupt => json!({ "reason": "user-cancel", "spare_background_tasks": true }),
+            Request::BackgroundTasks(None) => json!({}),
             // The app reads no `behaviors`, whose scan reads every transcript of the last seven days.
             Request::GetUsage => json!({ "skip_behaviors": true }),
             Request::SetPermissionMode(mode) => json!({ "mode": mode.as_str() }),
@@ -787,6 +790,14 @@ mod tests {
             "future_field": {"ignored": true}
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn a_stop_spares_the_background_agents() {
+        let body = Request::Interrupt.body();
+        assert_eq!(body["subtype"], "interrupt");
+        assert_eq!(body["spare_background_tasks"], true);
+        assert_eq!(body["reason"], "user-cancel");
     }
 
     #[test]
