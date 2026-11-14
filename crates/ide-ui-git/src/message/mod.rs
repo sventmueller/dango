@@ -18,7 +18,7 @@ use super::model::{Phase, Task};
 use super::panel::{GitPanel, with_panel};
 use super::text::Problem;
 use super::{sheets, work};
-use ide_ui_common::util::{main_soon, ns};
+use ide_ui_common::util::{OnDrop, main_soon, ns};
 
 /// The panel's part of the commit message a model writes.
 #[derive(Default)]
@@ -324,19 +324,20 @@ impl GitPanel {
 
     /// Puts `text` into the message without an undo step, as the model's answer streams in.
     fn show_text(&self, text: &str) {
-        self.state().message.applying = true;
+        let applying = self.applying();
         let undo = self.message_undo();
         undo.disableUndoRegistration();
+        let registering = OnDrop::new(|| undo.enableUndoRegistration());
         self.ui().message.setString(&ns(text));
-        undo.enableUndoRegistration();
-        self.state().message.applying = false;
+        drop(registering);
+        drop(applying);
         self.update_placeholder();
     }
 
     /// Replaces `before` with `text` as one step that undo takes back.
     fn put_text(&self, before: &str, text: &str) {
         self.show_text(before);
-        self.state().message.applying = true;
+        let _applying = self.applying();
         let view = &self.ui().message;
         let range = NSRange::new(0, view.string().length());
         let replacement = ns(text);
@@ -347,7 +348,12 @@ impl GitPanel {
         }
         view.breakUndoCoalescing();
         self.message_undo().setActionName(&ns(t("Commit-Nachricht von AI")));
-        self.state().message.applying = false;
+    }
+
+    /// Marks the message's changes as the panel's own, not the user's, until the guard drops.
+    fn applying(&self) -> OnDrop<impl FnOnce() + '_> {
+        self.state().message.applying = true;
+        OnDrop::new(|| self.state().message.applying = false)
     }
 }
 

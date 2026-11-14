@@ -20,7 +20,7 @@ use objc2_foundation::{NSArray, NSDictionary, NSPoint, NSRange, NSString};
 use splat_i18n::{t, tf};
 
 use super::view::EditorTextView;
-use crate::util::{constant, label, ns, set_action, tagged};
+use crate::util::{constant, label, ns, set_action, tagged, with_editing};
 
 /// The level when neither the file nor its lines say.
 const DEFAULT_WIDTH: usize = 4;
@@ -214,10 +214,10 @@ fn set_tab_width(view: &EditorTextView, columns: usize) {
     unsafe { view.setTypingAttributes(&typing) };
     if let Some(storage) = view.storage() {
         let whole = NSRange::new(0, storage.length());
-        storage.beginEditing();
-        // SAFETY: The key is AppKit's paragraph style key and the value a paragraph style.
-        unsafe { storage.addAttribute_value_range(key, &style, whole) };
-        storage.endEditing();
+        with_editing(&storage, || {
+            // SAFETY: The key is AppKit's paragraph style key and the value a paragraph style.
+            unsafe { storage.addAttribute_value_range(key, &style, whole) };
+        });
     }
 }
 

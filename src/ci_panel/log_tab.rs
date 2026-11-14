@@ -20,7 +20,7 @@ use splat_i18n::{t, tf};
 
 use super::{text, work};
 use crate::context::Registry;
-use crate::util::{constant, guarded, label, ns, pin_edges, set_action};
+use crate::util::{constant, guarded, label, ns, pin_edges, set_action, with_editing};
 use crate::window::{TabKind, WindowController};
 
 pub struct LogIvars {
@@ -221,26 +221,26 @@ impl LogTab {
         // SAFETY: The text view keeps its text storage for as long as it lives.
         if let Some(storage) = unsafe { ui.text.textStorage() } {
             let foreground = constant!(NSForegroundColorAttributeName);
-            storage.beginEditing();
-            let mut offset = 0usize;
-            for line in &lines {
-                let length = line.text.encode_utf16().count();
-                let color = match line.kind {
-                    LineKind::Error => Some(NSColor::systemRedColor()),
-                    LineKind::Warning => Some(NSColor::systemOrangeColor()),
-                    LineKind::Section => Some(NSColor::systemBlueColor()),
-                    LineKind::Plain => None,
-                };
-                if let Some(color) = color {
-                    // SAFETY: The range lies within the text just set, line by line; the value is a colour as the
-                    // attribute wants.
-                    unsafe {
-                        storage.addAttribute_value_range(foreground, &color, NSRange::new(offset, length));
+            with_editing(&storage, || {
+                let mut offset = 0usize;
+                for line in &lines {
+                    let length = line.text.encode_utf16().count();
+                    let color = match line.kind {
+                        LineKind::Error => Some(NSColor::systemRedColor()),
+                        LineKind::Warning => Some(NSColor::systemOrangeColor()),
+                        LineKind::Section => Some(NSColor::systemBlueColor()),
+                        LineKind::Plain => None,
+                    };
+                    if let Some(color) = color {
+                        // SAFETY: The range lies within the text just set, line by line; the value is a colour as
+                        // the attribute wants.
+                        unsafe {
+                            storage.addAttribute_value_range(foreground, &color, NSRange::new(offset, length));
+                        }
                     }
+                    offset += length + 1;
                 }
-                offset += length + 1;
-            }
-            storage.endEditing();
+            });
         }
         *self.ivars().lines.borrow_mut() = lines;
         if at_end || self.ivars().job.borrow().state == State::Failed {

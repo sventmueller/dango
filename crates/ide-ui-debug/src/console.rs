@@ -19,7 +19,7 @@ use splat_i18n::{t, tf};
 use super::model::console::Console;
 use super::panel::DebugPanel;
 use ide_ui_common::constant;
-use ide_ui_common::util::{label, ns, set_action};
+use ide_ui_common::util::{label, ns, set_action, with_editing};
 use ide_ui_common::window::{TabKind, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -139,19 +139,19 @@ impl ConsoleTab {
         let Some(storage) = (unsafe { self.text.textStorage() }) else {
             return;
         };
-        storage.beginEditing();
-        storage.setAttributedString(&NSAttributedString::new());
-        for line in model.lines() {
-            let mut text = match line.kind {
-                ConsoleKind::Input => format!("› {}", line.text),
-                _ => line.text.clone(),
-            };
-            if !text.ends_with('\n') {
-                text.push('\n');
+        with_editing(&storage, || {
+            storage.setAttributedString(&NSAttributedString::new());
+            for line in model.lines() {
+                let mut text = match line.kind {
+                    ConsoleKind::Input => format!("› {}", line.text),
+                    _ => line.text.clone(),
+                };
+                if !text.ends_with('\n') {
+                    text.push('\n');
+                }
+                storage.appendAttributedString(&styled(&text, line.kind));
             }
-            storage.appendAttributedString(&styled(&text, line.kind));
-        }
-        storage.endEditing();
+        });
         let end = storage.length();
         self.text.scrollRangeToVisible(NSRange::new(end, 0));
         self.input.setHidden(model.finished);

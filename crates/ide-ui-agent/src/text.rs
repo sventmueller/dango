@@ -13,7 +13,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize};
 
 use super::timeline::TimelineTable;
-use ide_ui_common::util::guarded;
+use ide_ui_common::util::{guarded, with_editing};
 
 pub struct TextIvars {
     /// Owns the text system; a text view made from a container does not retain its storage.
@@ -161,9 +161,10 @@ impl CardText {
         let storage = self.ivars().storage.borrow();
         let Some(storage) = storage.as_ref() else { return false };
         let selected = self.selectedRange();
-        storage.beginEditing();
-        storage.replaceCharactersInRange_withAttributedString(NSRange::new(prefix, storage.length() - prefix), &text);
-        storage.endEditing();
+        with_editing(storage, || {
+            storage
+                .replaceCharactersInRange_withAttributedString(NSRange::new(prefix, storage.length() - prefix), &text);
+        });
         let start = selected.location.min(storage.length());
         self.setSelectedRange(NSRange::new(start, selected.length.min(storage.length() - start)));
         self.measure();

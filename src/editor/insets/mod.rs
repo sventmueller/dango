@@ -21,7 +21,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSDictionary, NSNumber, NSObjectProtocol, NSRange, NSRect, NSString};
 
 use super::view::EditorTextView;
-use crate::util::constant;
+use crate::util::{constant, with_editing};
 #[cfg(feature = "selftest")]
 use draw::fill;
 use rotor::Rotor;
@@ -578,16 +578,16 @@ fn apply(storage: &NSTextStorage, remove: &[Range<usize>], wanted: &[Kerned], ol
         return;
     }
     let key = constant!(NSKernAttributeName);
-    storage.beginEditing();
-    for range in remove {
-        storage.removeAttribute_range(key, NSRange::new(range.start, range.end - range.start));
-    }
-    for kern in add {
-        let range = NSRange::new(kern.range.start, kern.range.end - kern.range.start);
-        // SAFETY: The kern key takes a number.
-        unsafe { storage.addAttribute_value_range(key, &NSNumber::new_f64(kern.width), range) };
-    }
-    storage.endEditing();
+    with_editing(storage, || {
+        for range in remove {
+            storage.removeAttribute_range(key, NSRange::new(range.start, range.end - range.start));
+        }
+        for kern in add {
+            let range = NSRange::new(kern.range.start, kern.range.end - kern.range.start);
+            // SAFETY: The kern key takes a number.
+            unsafe { storage.addAttribute_value_range(key, &NSNumber::new_f64(kern.width), range) };
+        }
+    });
 }
 
 /// The text of `view` was put in whole, without its attributes: every gap needs its kern again.

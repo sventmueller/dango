@@ -16,7 +16,7 @@ use objc2_foundation::{NSNumber, NSPoint, NSRange};
 
 use super::style::{palette_color, styled_code_font, token_color};
 use super::view::EditorTextView;
-use crate::util::constant;
+use crate::util::{constant, with_editing};
 
 /// How long one slice of background colouring may hold the main thread.
 const SLICE: Duration = Duration::from_millis(4);
@@ -189,17 +189,4 @@ fn paint_styles(storage: &NSTextStorage, line: NSRange, styles: &[Styled], size:
             }
         }
     }
-}
-
-/// Runs `f` as one edit of `storage`, ended also when `f` panics.
-fn with_editing(storage: &NSTextStorage, f: impl FnOnce()) {
-    struct End<'a>(&'a NSTextStorage);
-    impl Drop for End<'_> {
-        fn drop(&mut self) {
-            self.0.endEditing();
-        }
-    }
-    storage.beginEditing();
-    let _end = End(storage);
-    f();
 }
