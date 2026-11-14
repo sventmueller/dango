@@ -22,7 +22,7 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
-use crate::util::{guarded, label, main_after, ns, set_action};
+use crate::util::{guarded, main_after, ns, set_action};
 
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
@@ -46,6 +46,8 @@ pub struct PanelIvars {
     empty: RefCell<Option<Retained<NSView>>>,
     spinner: RefCell<Option<Retained<NSProgressIndicator>>>,
     status: RefCell<Option<Retained<NSTextField>>>,
+    /// The row of the spinner and the status, hidden while neither has anything to show.
+    status_row: RefCell<Option<Retained<NSStackView>>>,
     failed: RefCell<Option<Retained<NSButton>>>,
     polling: Cell<bool>,
     /// The output of the last run of each test, by entry index, for "show output".
@@ -215,6 +217,7 @@ impl TestsPanel {
             empty: RefCell::new(None),
             spinner: RefCell::new(None),
             status: RefCell::new(None),
+            status_row: RefCell::new(None),
             failed: RefCell::new(None),
             polling: Cell::new(false),
             output: RefCell::new(String::new()),
@@ -273,25 +276,7 @@ impl TestsPanel {
         menu.setDelegate(Some(ProtocolObject::from_ref(self)));
         // SAFETY: The table keeps the menu; its delegate, the panel, outlives the table through the registry.
         unsafe { table.setMenu(Some(&menu)) };
-        let status = label(mtm, "");
-        status.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
-            ide_ui_common::style::SMALL,
-        )));
-        let spinner = NSProgressIndicator::new(mtm);
-        spinner.setStyle(NSProgressIndicatorStyle::Spinning);
-        spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
-        spinner.setHidden(true);
-        let footer = NSStackView::new(mtm);
-        footer.setSpacing(ide_ui_common::style::space::S);
-        footer.addArrangedSubview(&spinner);
-        footer.addArrangedSubview(&status);
-        footer.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-            top: 0.0,
-            left: ide_ui_common::panel::MARGIN,
-            bottom: 0.0,
-            right: ide_ui_common::panel::MARGIN,
-        });
+        let (status_row, status, spinner) = status_row(mtm);
         let empty = crate::window::panels::empty_state(
             mtm,
             "checklist",
@@ -306,10 +291,10 @@ impl TestsPanel {
         }
         let page = ide_ui_common::panel::panel_page(mtm);
         scroll.setHidden(true);
+        page.addView_inGravity(&status_row, NSStackViewGravity::Top);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         page.addView_inGravity(&empty, NSStackViewGravity::Center);
-        page.addView_inGravity(&footer, NSStackViewGravity::Bottom);
-        footer
+        status_row
             .widthAnchor()
             .constraintEqualToAnchor(&page.widthAnchor())
             .setActive(true);
@@ -318,6 +303,7 @@ impl TestsPanel {
         *self.ivars().empty.borrow_mut() = Some(empty.into_super());
         *self.ivars().spinner.borrow_mut() = Some(spinner);
         *self.ivars().status.borrow_mut() = Some(status);
+        *self.ivars().status_row.borrow_mut() = Some(status_row);
         *self.ivars().failed.borrow_mut() = Some(failed);
         (Retained::into_super(page), header)
     }
@@ -483,6 +469,7 @@ impl TestsPanel {
                 }
             }
         }
+        self.show_status_row();
         let Some(table) = self.ivars().table.borrow().clone() else {
             return;
         };
@@ -549,6 +536,25 @@ impl TestsPanel {
     fn say(&self, text: &str) {
         if let Some(status) = self.ivars().status.borrow().as_ref() {
             status.setStringValue(&ns(text));
+        }
+        self.show_status_row();
+    }
+
+    fn show_status_row(&self) {
+        let said = self
+            .ivars()
+            .status
+            .borrow()
+            .as_ref()
+            .is_some_and(|status| status.stringValue().length() > 0);
+        let busy = self
+            .ivars()
+            .spinner
+            .borrow()
+            .as_ref()
+            .is_some_and(|spinner| !spinner.isHidden());
+        if let Some(row) = self.ivars().status_row.borrow().as_ref() {
+            row.setHidden(!said && !busy);
         }
     }
 
@@ -706,6 +712,39 @@ pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSCol
 /// What stands for `row` in the outline: its node, which stays when the tree is built again.
 fn key_of(row: &Row) -> String {
     format!("{:?}", row.node)
+}
+
+/// The line between the header and the list: a spinner while tests run, then what the panel last said, wrapped to
+/// the sidebar's width so it never holds the sidebar wider.
+fn status_row(
+    mtm: MainThreadMarker,
+) -> (
+    Retained<NSStackView>,
+    Retained<NSTextField>,
+    Retained<NSProgressIndicator>,
+) {
+    let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
+    status.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
+        ide_ui_common::style::SMALL,
+    )));
+    status.setContentCompressionResistancePriority_forOrientation(
+        objc2_app_kit::NSLayoutPriorityDefaultLow,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    status.setContentHuggingPriority_forOrientation(
+        objc2_app_kit::NSLayoutPriorityDefaultLow,
+        objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
+    );
+    let spinner = NSProgressIndicator::new(mtm);
+    spinner.setStyle(NSProgressIndicatorStyle::Spinning);
+    spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
+    spinner.setHidden(true);
+    let row = ide_ui_common::panel::padded(mtm, &status);
+    row.setSpacing(ide_ui_common::style::space::S);
+    row.insertArrangedSubview_atIndex(&spinner, 0);
+    row.setHidden(true);
+    (row, status, spinner)
 }
 
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
