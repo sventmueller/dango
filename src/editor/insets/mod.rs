@@ -5,6 +5,7 @@
 //! precedes it on its line, it goes to the line's end.
 
 mod draw;
+mod measure;
 mod rotor;
 
 use std::ops::Range;
@@ -15,13 +16,12 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{AnyThread, DefinedClass, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSColor, NSFontAttributeName, NSForegroundColorAttributeName, NSKernAttributeName, NSStringDrawing,
-    NSTextInputClient, NSTextStorage,
+    NSColor, NSFontAttributeName, NSForegroundColorAttributeName, NSKernAttributeName, NSTextInputClient, NSTextStorage,
 };
 use objc2_foundation::{NSDictionary, NSNumber, NSObjectProtocol, NSRange, NSRect, NSString};
 
 use super::view::EditorTextView;
-use crate::util::{constant, ns};
+use crate::util::constant;
 #[cfg(feature = "selftest")]
 use draw::fill;
 use rotor::Rotor;
@@ -146,6 +146,7 @@ pub struct Insets {
     rotor: Option<Retained<Rotor>>,
     /// The text layout's delegate that makes the fragments that draw the insets; the layout holds it weakly.
     layout: Option<Retained<super::inset_fragment::InsetLayout>>,
+    widths: measure::Widths,
 }
 
 /// Room around an inset's text inside its box.
@@ -204,19 +205,6 @@ fn ghost_attributes(font_size: f64) -> Retained<NSDictionary<NSString, AnyObject
     )
 }
 
-fn measure(inset: &Inset, attributes: &NSDictionary<NSString, AnyObject>, font_size: f64) -> f64 {
-    if inset.ghost {
-        // SAFETY: The attributes hold a font and a colour, as the method expects.
-        return unsafe { ns(&inset.text).sizeWithAttributes(Some(&ghost_attributes(font_size))) }
-            .width
-            .ceil();
-    }
-    // SAFETY: The attributes hold a font and a colour, as the method expects.
-    let text = unsafe { ns(&shown_text(inset)).sizeWithAttributes(Some(attributes)) }.width;
-    let pads = f64::from(u8::from(inset.pad_left) + u8::from(inset.pad_right)) * PADDING;
-    (text + 2.0 * MARGIN + pads).ceil()
-}
-
 /// The text an inset shows, its severity's symbol first.
 fn shown_text(inset: &Inset) -> String {
     match inset.severity {
@@ -229,14 +217,16 @@ fn shown_text(inset: &Inset) -> String {
 pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
     let font_size = view.ivars().font_size.get();
     let attributes = attributes(font_size, &NSColor::secondaryLabelColor());
-    for inset in &mut insets {
-        inset.width = measure(inset, &attributes, font_size);
+    {
+        let widths = &mut view.ivars().insets.borrow_mut().widths;
+        for inset in &mut insets {
+            inset.width = widths.of(inset, &attributes, font_size);
+        }
     }
     insets.sort_by_key(|inset| inset.at);
     let changed = {
         let state = view.ivars().insets.borrow();
-        let old = layer_insets(&state, layer).cloned().unwrap_or_default();
-        changed_span(&old, &insets)
+        measure::changed_span(layer_insets(&state, layer).map_or(&[], Vec::as_slice), &insets)
     };
     {
         let mut state = view.ivars().insets.borrow_mut();
@@ -260,19 +250,6 @@ pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
         redraw_text(view, span);
     }
     super::overlay::redraw(view);
-}
-
-/// The offsets from the first to the last inset that differs between `old` and `new`, both ordered by offset.
-fn changed_span(old: &[Inset], new: &[Inset]) -> Option<Range<usize>> {
-    let same = |a: &Inset, b: &Inset| a.at == b.at && a.text == b.text && a.place == b.place && a.ghost == b.ghost;
-    let differs = old
-        .iter()
-        .filter(|a| !new.iter().any(|b| same(a, b)))
-        .chain(new.iter().filter(|b| !old.iter().any(|a| same(a, b))))
-        .map(|inset| inset.at);
-    differs.fold(None, |span: Option<Range<usize>>, at| {
-        Some(span.map_or(at..at + 1, |s| s.start.min(at)..s.end.max(at + 1)))
-    })
 }
 
 /// Has TextKit lay out and draw the paragraphs of `span` again, which draw their insets.
