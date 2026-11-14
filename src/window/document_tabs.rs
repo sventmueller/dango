@@ -1,12 +1,13 @@
 //! The documents of a window and the native tabs they stand in: adding, placing beside another, selecting, keeping a
 //! preview, closing, and which tab is in front.
 
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::rc::Rc;
 
 use objc2::DefinedClass;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSColor, NSView, NSWindow, NSWindowOrderingMode};
+use objc2_app_kit::{NSColor, NSView, NSWindow, NSWindowOrderingMode, NSWindowTabGroup};
 use objc2_foundation::NSNotification;
 
 use super::tabs::{Document, TabWindow};
@@ -304,22 +305,28 @@ impl WindowController {
     /// The window tabs in the order of their tab bars, tab group by tab group.
     pub(super) fn ordered_tabs(&self) -> Vec<Rc<TabWindow>> {
         let tabs = self.ivars().tabs.borrow().clone();
+        let by_window: HashMap<*const NSWindow, &Rc<TabWindow>> =
+            tabs.iter().map(|tab| (Retained::as_ptr(&tab.window), tab)).collect();
+        let mut placed: HashSet<*const NSWindow> = HashSet::with_capacity(tabs.len());
         let mut ordered: Vec<Rc<TabWindow>> = Vec::with_capacity(tabs.len());
         for tab in &tabs {
+            if placed.contains(&Retained::as_ptr(&tab.window)) {
+                continue;
+            }
             let group: Vec<Retained<NSWindow>> = tab
                 .window
                 .tabbedWindows()
                 .map(|tabbed| tabbed.iter().collect())
                 .unwrap_or_else(|| vec![tab.window.clone()]);
             for window in group {
-                let found = tabs.iter().find(|t| std::ptr::eq(&*t.window, &*window));
-                if let Some(found) = found
-                    && !ordered.iter().any(|o| Rc::ptr_eq(o, found))
+                let at = Retained::as_ptr(&window);
+                if let Some(found) = by_window.get(&at)
+                    && placed.insert(at)
                 {
-                    ordered.push(found.clone());
+                    ordered.push((*found).clone());
                 }
             }
-            if !ordered.iter().any(|o| Rc::ptr_eq(o, tab)) {
+            if placed.insert(Retained::as_ptr(&tab.window)) {
                 ordered.push(tab.clone());
             }
         }
@@ -463,16 +470,19 @@ impl WindowController {
     /// Lists only the tab in front of each tab group in the Window menu and the Dock's menu, so a folder appears once
     /// there however many tabs it has; a tab dragged out into a window of its own stays listed.
     fn list_front_tabs(&self) {
-        let current = self.current_tab();
+        let current = self.current_tab().map(|current| Retained::as_ptr(&current.window));
+        // Each group's size and the window in front of it, asked of AppKit once per group.
+        let mut fronts: HashMap<*const NSWindowTabGroup, (usize, Option<*const NSWindow>)> = HashMap::new();
         for tab in self.ivars().tabs.borrow().iter() {
             let hidden = tab.window.tabGroup().is_some_and(|group| {
-                let windows = group.windows();
-                let front = current
-                    .as_ref()
-                    .map(|current| current.window.clone())
-                    .filter(|window| windows.iter().any(|w| std::ptr::eq(&*w, &**window)))
-                    .or_else(|| group.selectedWindow());
-                windows.len() > 1 && front.is_some_and(|front| !std::ptr::eq(&*front, &*tab.window))
+                let (count, front) = *fronts.entry(Retained::as_ptr(&group)).or_insert_with(|| {
+                    let windows = group.windows();
+                    let front = current
+                        .filter(|current| windows.iter().any(|w| Retained::as_ptr(&w) == *current))
+                        .or_else(|| group.selectedWindow().map(|w| Retained::as_ptr(&w)));
+                    (windows.len(), front)
+                });
+                count > 1 && front.is_some_and(|front| front != Retained::as_ptr(&tab.window))
             });
             tab.window.setExcludedFromWindowsMenu(hidden);
         }
