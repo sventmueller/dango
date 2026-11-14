@@ -53,7 +53,7 @@ impl AgentTab {
         if has_text {
             self.submit();
         } else if self.status() != Status::Idle
-            && !super::stop::too_soon_after_send(self.state.borrow().sent_at, std::time::Instant::now())
+            && !super::stop::too_soon_after_send(self.state.borrow().sent_at(), std::time::Instant::now())
         {
             self.stop_turn(super::Stop::Button);
         }
@@ -70,7 +70,7 @@ impl AgentTab {
 
     /// Takes a checkpoint of the folder (I6), then sends `message`.
     pub(super) fn send_message(&self, message: UserMessage) {
-        self.state.borrow_mut().sending = true;
+        self.state.borrow_mut().begin_send();
         self.refresh_composer();
         let key = self.key;
         let label = format::first_line(&message.text, 80);
@@ -97,9 +97,7 @@ impl AgentTab {
         let sent = self.state.borrow().source.send(message);
         match sent {
             Ok(uuid) => {
-                let mut state = self.state.borrow_mut();
-                state.sent(uuid.or(own_id), checkpoint);
-                state.sent_at = Some(std::time::Instant::now());
+                self.state.borrow_mut().sent(uuid.or(own_id), checkpoint);
             }
             Err(error) => {
                 ide_ui_common::diag::report("sending to the agent", &error);
@@ -534,7 +532,7 @@ impl AgentTab {
         let restart = {
             let mut state = self.state.borrow_mut();
             state.sandbox = !state.sandbox;
-            state.source.is_live() && state.status == Status::Idle
+            state.source.is_live() && state.status() == Status::Idle
         };
         self.refresh_composer();
         if restart {

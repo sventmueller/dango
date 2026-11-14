@@ -191,7 +191,7 @@ impl AgentTab {
     pub(super) fn refresh_own_composer(&self) {
         self.refresh_own_pills();
         let state = self.state.borrow();
-        let placeholder = if state.sending {
+        let placeholder = if state.is_sending() {
             t("Sicherungspunkt wird angelegt …").to_string()
         } else {
             t("⌘Esc zum Fokussieren oder Verlassen").to_string()
@@ -361,7 +361,7 @@ impl AgentTab {
 
     /// Starts the session again, as another endpoint or the sandbox needs; the conversation goes on from its store.
     fn restart_own(&self) {
-        if self.state.borrow().status != ide_thread::Status::Idle {
+        if self.state.borrow().status() != ide_thread::Status::Idle {
             return;
         }
         let source = std::mem::replace(&mut self.state.borrow_mut().source, Source::Idle);

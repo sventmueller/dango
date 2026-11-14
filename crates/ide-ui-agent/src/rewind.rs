@@ -113,18 +113,17 @@ impl AgentTab {
             let old = std::mem::replace(&mut state.source, Source::Idle);
             let replaying = old.is_replay();
             old.end();
-            state.thread = Rc::new(kept.clone());
-            state.status = ide_thread::Status::Idle;
-            state.turn = None;
-            state.resume = None;
-            state.attachments.clone_from(&message.attachments);
-            state.fork = Some(Fork {
-                session,
-                rewind,
-                before: thread.clone(),
-                prompted: false,
-                kept_entry,
-            });
+            state.rewound(
+                kept.clone(),
+                &message.attachments,
+                Fork {
+                    session,
+                    rewind,
+                    before: thread.clone(),
+                    prompted: false,
+                    kept_entry,
+                },
+            );
             replaying
         };
         self.timeline().apply(Rc::new(kept), &[Change::Cleared]);
@@ -140,10 +139,7 @@ impl AgentTab {
     /// The agent refused the rewind: the whole conversation comes back, the session resumes without the rewind, and
     /// the prompt that met the refusal goes out again. The same rewind would fail again, so it is not retried.
     pub(super) fn rewind_refused(&self, why: &str) {
-        let (fork, message) = {
-            let mut state = self.state.borrow_mut();
-            (state.fork.take(), state.last_sent.take())
-        };
+        let (fork, message) = { self.state.borrow_mut().take_refused_rewind() };
         let Some(fork) = fork else { return };
         if let Some(id) = &fork.kept_entry {
             crate::agent_panel::remove(id);
@@ -161,12 +157,7 @@ impl AgentTab {
             let mut state = self.state.borrow_mut();
             let old = std::mem::replace(&mut state.source, Source::Idle);
             old.end();
-            state.thread = Rc::new(before.clone());
-            state.status = ide_thread::Status::Idle;
-            state.turn = None;
-            if let Some(message) = message {
-                state.queue.insert(0, message);
-            }
+            state.rewind_undone(before.clone(), message);
         }
         self.timeline().apply(Rc::new(before), &[Change::Cleared]);
         self.refresh_queue();

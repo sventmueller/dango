@@ -35,7 +35,7 @@ impl AgentTab {
     pub(super) fn rewind_items(&self, entry: &Entry, uuid: &str) -> objc2::rc::Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let resting = self.status() == Status::Idle && !self.state.borrow().sending;
+        let resting = self.status() == Status::Idle && !self.state.borrow().is_sending();
         for (title, what, possible) in self.rewind_choices(entry, uuid) {
             let item = self.menu_item(&menu, title, sel!(ideAgentRewindPick:), pack(entry.id, what));
             item.setEnabled(possible && resting);

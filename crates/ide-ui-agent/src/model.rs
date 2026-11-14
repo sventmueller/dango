@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Instant;
 
 use ide_claude::Capabilities;
 use ide_git::Checkpoint;
@@ -45,22 +46,32 @@ pub struct State {
     pub resume: Option<Resume>,
     /// The checkpoint taken before each user message, by the CLI's id for the message.
     pub checkpoints: HashMap<String, Checkpoint>,
-    /// The checkpoint of the turn that runs.
-    pub turn: Option<Checkpoint>,
-    pub status: Status,
-    /// A checkpoint is being taken before a prompt goes out.
-    pub sending: bool,
-    /// When the last message went out, which the stop button waits a moment after.
-    pub sent_at: Option<std::time::Instant>,
+    turn: Turn,
     pub offered: Offered,
-    /// The rewind the session started with, until the agent accepted it.
-    pub fork: Option<Fork>,
-    /// The prompt sent last, which goes out again when the agent refuses a rewind.
-    pub last_sent: Option<UserMessage>,
+    rewind: Rewind,
     /// The editor's selection, offered as context while the composer has the focus.
     pub offer: Option<Attachment>,
     /// The session runs with the model and mode the user picked last for its agent, where it offers them.
     pub choice_applied: bool,
+}
+
+/// The turn in flight: how the session stands, the prompt on its way and the checkpoint taken before it.
+struct Turn {
+    status: Status,
+    /// A checkpoint is being taken before a prompt goes out.
+    sending: bool,
+    /// When the last message went out, which the stop button waits a moment after.
+    sent_at: Option<Instant>,
+    /// The checkpoint of the turn that runs.
+    checkpoint: Option<Checkpoint>,
+}
+
+/// The rewind the session started with, until the agent accepted it.
+#[derive(Default)]
+struct Rewind {
+    fork: Option<Fork>,
+    /// The prompt sent last, which goes out again when the agent refuses the rewind.
+    last_sent: Option<UserMessage>,
 }
 
 /// How the sandbox button looks.
@@ -93,13 +104,14 @@ impl State {
             bookmarked: false,
             resume: None,
             checkpoints: HashMap::new(),
-            turn: None,
-            status: Status::Idle,
-            sending: false,
-            sent_at: None,
+            turn: Turn {
+                status: Status::Idle,
+                sending: false,
+                sent_at: None,
+                checkpoint: None,
+            },
             offered: Offered::default(),
-            fork: None,
-            last_sent: None,
+            rewind: Rewind::default(),
             offer: None,
             choice_applied: false,
         }
@@ -125,34 +137,107 @@ impl State {
 
     /// Takes the first queued message off the queue, once the session rests and nothing else is on its way.
     pub fn next_queued(&mut self) -> Option<UserMessage> {
-        if self.status != Status::Idle || self.sending || !self.source.is_live() || self.queue.is_empty() {
+        if self.running() || !self.source.is_live() || self.queue.is_empty() {
             return None;
         }
         Some(self.queue.remove(0))
     }
 
-    /// Notes that `message` goes out now that its checkpoint is taken.
-    pub fn delivering(&mut self, message: &UserMessage) {
-        self.sending = false;
-        // A refusal comes with the result of the first prompt on the rewound session, so by the second the rewind
-        // holds.
-        if self.fork.as_ref().is_some_and(|f| f.prompted) {
-            self.fork = None;
-        } else if let Some(fork) = self.fork.as_mut() {
-            fork.prompted = true;
-        }
-        self.last_sent = Some(message.clone());
+    pub fn status(&self) -> Status {
+        self.turn.status
     }
 
-    /// Notes that the message went out with `checkpoint` taken before it; `id` is the message's id, the agent's or
-    /// the app's own.
+    /// Whether a checkpoint is being taken before a prompt goes out.
+    pub fn is_sending(&self) -> bool {
+        self.turn.sending
+    }
+
+    /// When the last message went out.
+    pub fn sent_at(&self) -> Option<Instant> {
+        self.turn.sent_at
+    }
+
+    /// The rewind the session starts with, until the agent accepted it.
+    pub fn fork(&self) -> Option<&Fork> {
+        self.rewind.fork.as_ref()
+    }
+
+    /// Takes in the thread as the session reports it, with its status.
+    pub fn absorbed(&mut self, thread: Rc<Thread>) {
+        self.turn.status = thread.status();
+        self.thread = thread;
+    }
+
+    /// Notes that a checkpoint is being taken before a prompt goes out.
+    pub fn begin_send(&mut self) {
+        self.turn.sending = true;
+    }
+
+    /// Notes that `message` goes out now that its checkpoint is taken.
+    pub fn delivering(&mut self, message: &UserMessage) {
+        self.turn.sending = false;
+        // A refusal comes with the result of the first prompt on the rewound session, so by the second the rewind
+        // holds.
+        if self.rewind.fork.as_ref().is_some_and(|f| f.prompted) {
+            self.rewind.fork = None;
+        } else if let Some(fork) = self.rewind.fork.as_mut() {
+            fork.prompted = true;
+        }
+        self.rewind.last_sent = Some(message.clone());
+    }
+
+    /// Notes that the message went out now with `checkpoint` taken before it; `id` is the message's id, the agent's
+    /// or the app's own.
     pub fn sent(&mut self, id: Option<String>, checkpoint: Option<Checkpoint>) {
         if let Some(checkpoint) = checkpoint {
             if let Some(id) = id {
                 self.checkpoints.insert(id, checkpoint.clone());
             }
-            self.turn = Some(checkpoint);
+            self.turn.checkpoint = Some(checkpoint);
         }
+        self.turn.sent_at = Some(Instant::now());
+    }
+
+    /// Takes the checkpoint of the turn that just ended.
+    pub fn turn_ended(&mut self) -> Option<Checkpoint> {
+        self.turn.checkpoint.take()
+    }
+
+    /// Puts `finished` in place of the kept checkpoints whose commit is `started`.
+    pub fn checkpoint_finished(&mut self, started: &str, finished: &Checkpoint) {
+        for kept in self.checkpoints.values_mut() {
+            if kept.commit == started {
+                *kept = finished.clone();
+            }
+        }
+    }
+
+    /// Goes on with `kept`, the thread before a prompt, and that prompt's `attachments`, until the agent accepts
+    /// `fork`.
+    pub fn rewound(&mut self, kept: Thread, attachments: &[Attachment], fork: Fork) {
+        self.restart_with(kept);
+        self.resume = None;
+        self.attachments = attachments.to_vec();
+        self.rewind.fork = Some(fork);
+    }
+
+    /// Takes the rewind the agent refused, with the prompt that met the refusal.
+    pub fn take_refused_rewind(&mut self) -> (Option<Fork>, Option<UserMessage>) {
+        (self.rewind.fork.take(), self.rewind.last_sent.take())
+    }
+
+    /// Goes back to `before`, the thread of a refused rewind, with `message` first in the queue.
+    pub fn rewind_undone(&mut self, before: Thread, message: Option<UserMessage>) {
+        self.restart_with(before);
+        if let Some(message) = message {
+            self.queue.insert(0, message);
+        }
+    }
+
+    fn restart_with(&mut self, thread: Thread) {
+        self.thread = Rc::new(thread);
+        self.turn.status = Status::Idle;
+        self.turn.checkpoint = None;
     }
 
     pub fn remove_queued(&mut self, index: usize) {
@@ -169,7 +254,7 @@ impl State {
 
     /// Whether a turn runs or a prompt is on its way, so the send button stops instead.
     pub fn running(&self) -> bool {
-        self.status != Status::Idle || self.sending
+        self.turn.status != Status::Idle || self.turn.sending
     }
 
     /// Whether there is something to send with `text` in the composer.
@@ -179,7 +264,7 @@ impl State {
 
     /// What the empty composer says.
     pub fn placeholder(&self) -> &'static str {
-        if self.sending {
+        if self.turn.sending {
             t("Sicherungspunkt wird angelegt …")
         } else {
             t("⌘Esc zum Fokussieren oder Verlassen")
@@ -338,13 +423,13 @@ mod tests {
     #[test]
     fn a_checkpoint_keys_the_message_it_was_taken_before() {
         let mut state = state();
-        state.sending = true;
+        state.begin_send();
         assert!(state.running());
         state.delivering(&message("hi"));
         assert!(!state.running());
-        assert_eq!(state.last_sent.as_ref().map(|m| m.text.as_str()), Some("hi"));
+        assert_eq!(state.rewind.last_sent.as_ref().map(|m| m.text.as_str()), Some("hi"));
         state.sent(Some("m1".into()), None);
-        assert!(state.checkpoints.is_empty() && state.turn.is_none());
+        assert!(state.checkpoints.is_empty() && state.turn.checkpoint.is_none());
     }
 
     #[test]

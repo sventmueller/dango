@@ -400,7 +400,7 @@ impl AgentTab {
     }
 
     pub fn status(&self) -> Status {
-        self.state.borrow().status
+        self.state.borrow().status()
     }
 
     /// Whether the tab is the one showing in its window.
@@ -450,16 +450,12 @@ impl AgentTab {
         let _interval = ide_process::signpost::begin(ide_process::signpost::name!("agent update"));
         let snapshot = Rc::new(snapshot);
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
-        let before = self.state.borrow().status;
+        let before = self.state.borrow().status();
         let now = snapshot.status();
         let delegated_before = delegates(&self.state.borrow().thread);
         let delegated_now = delegates(&snapshot);
         let title_changed = snapshot.title() != self.state.borrow().thread.title();
-        {
-            let mut state = self.state.borrow_mut();
-            state.thread = snapshot.clone();
-            state.status = now;
-        }
+        self.state.borrow_mut().absorbed(snapshot.clone());
         let had_rows = self.timeline.count() > 0;
         self.timeline.apply(snapshot, changes);
         if refresh.controls
@@ -579,7 +575,7 @@ impl AgentTab {
     /// the user, none when idle.
     pub fn tab_mark(&self) -> Option<Retained<NSColor>> {
         let state = self.state.borrow();
-        match state.status {
+        match state.status() {
             Status::Running => Some(NSColor::systemGreenColor()),
             Status::RequiresAction => Some(NSColor::systemRedColor()),
             Status::Idle if delegates(&state.thread) => Some(NSColor::systemGreenColor()),

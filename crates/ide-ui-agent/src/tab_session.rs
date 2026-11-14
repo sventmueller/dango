@@ -95,7 +95,7 @@ impl AgentTab {
             launch.model.clone_from(&state.model);
             launch.effort.clone_from(&state.effort);
             launch.file_checkpoints = true;
-            match &state.fork {
+            match state.fork() {
                 Some(Fork {
                     session,
                     rewind: Some(rewind),
@@ -211,18 +211,14 @@ impl AgentTab {
                 if let Some(controller) = self.controller() {
                     crate::host::host().turn_ended(controller.id(), &self.cwd);
                 }
-                let turn = self.state.borrow_mut().turn.take();
+                let turn = self.state.borrow_mut().turn_ended();
                 if let Some(checkpoint) = turn {
                     let key = self.key;
                     let started = checkpoint.commit.clone();
                     self.store.finish(checkpoint, move |finished| {
                         main_soon(move || {
                             if let Some(tab) = super::get(key) {
-                                for kept in tab.state.borrow_mut().checkpoints.values_mut() {
-                                    if kept.commit == started {
-                                        *kept = finished.clone();
-                                    }
-                                }
+                                tab.state.borrow_mut().checkpoint_finished(&started, &finished);
                             }
                         });
                     });

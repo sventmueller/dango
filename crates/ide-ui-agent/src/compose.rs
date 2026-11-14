@@ -169,8 +169,8 @@ impl AgentTab {
             let state = self.state.borrow();
             let claude = state.source.session().is_some() && state.source.is_live();
             (
-                state.status != Status::Idle || state.sending || !state.source.is_live(),
-                reaches_turn(state.status, state.sending, claude),
+                state.running() || !state.source.is_live(),
+                reaches_turn(state.status(), state.is_sending(), claude),
             )
         };
         if into_turn {

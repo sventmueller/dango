@@ -296,7 +296,7 @@ impl AgentTab {
 
     /// Whether a rewind waits for the agent to accept it.
     pub fn rewind_pending(&self) -> bool {
-        self.state.borrow().fork.is_some()
+        self.state.borrow().fork().is_some()
     }
 
     /// How many checkpoints were taken before prompts.
