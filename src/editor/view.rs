@@ -29,8 +29,8 @@ pub struct ViewIvars {
     pub(crate) indent: RefCell<String>,
     /// The dirty state the tab shows, to update it only on a change.
     pub(super) shown_dirty: Cell<bool>,
-    /// Edits whose lines wait for colours.
-    pub(super) recolor_from: Cell<Option<usize>>,
+    /// The lines whose colours wait to be painted into the storage.
+    pub(super) unpainted: RefCell<super::highlight::Unpainted>,
     /// Markdown's font traits were painted into the storage, which another language takes out again.
     pub(super) styled: Cell<bool>,
     /// The line number column, redrawn when lines change.
@@ -818,7 +818,7 @@ impl EditorTextView {
             font_size: Cell::new(13.0),
             indent: RefCell::new("    ".into()),
             shown_dirty: Cell::new(false),
-            recolor_from: Cell::new(None),
+            unpainted: RefCell::new(Default::default()),
             styled: Cell::new(false),
             gutter: RefCell::new(None),
             lsp: RefCell::new(ide_ui_lsp::ViewState::new(serial)),
@@ -886,14 +886,7 @@ impl EditorTextView {
 
     /// What follows an edit of the document, from the view or from the model.
     pub(super) fn changed(&self, change: &Change) {
-        let line = change.start.line;
-        let from = self
-            .ivars()
-            .recolor_from
-            .get()
-            .map_or(line, |earlier| earlier.min(line));
-        self.ivars().recolor_from.set(Some(from));
-        super::highlight::schedule(self);
+        super::highlight::edited(self, change);
         super::recovery::changed(self);
         super::conflict::text_changed(self);
         super::update_dirty(self);
