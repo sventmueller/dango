@@ -2,6 +2,7 @@
 //! the adapters of `ide_test`; a symbol in the gutter at each test, a mark at each failed assert, and the commands in
 //! the Debug menu's Tests section.
 
+mod outline;
 mod panel;
 mod run;
 
@@ -82,18 +83,30 @@ fn caret_line(editor: &EditorTextView) -> u32 {
     u32::try_from(text.line_of(byte) + 1).unwrap_or(u32::MAX)
 }
 
-/// Gives the panel's tests the lines `editor`'s text shows them on.
+/// Gives the panel's tests the lines `editor`'s text shows them on, the text read once per revision of it.
 fn locate(panel: &TestsPanel, editor: &EditorTextView) {
-    let Some(path) = editor.document().path().map(Path::to_path_buf) else {
+    let Some((path, document)) = editor
+        .document()
+        .path()
+        .map(|path| (path.to_path_buf(), editor.document().revision()))
+    else {
         return;
     };
-    let text = editor.document().text().to_string();
-    let found = ide_test::board::in_source(&path, &text);
+    let found = {
+        let mut marks = panel.ivars().marks.borrow_mut();
+        let marks = marks.entry(path.clone()).or_default();
+        if marks.read != Some(document) {
+            let text = editor.document().text().to_string();
+            marks.found = ide_test::board::in_source(&path, &text);
+            marks.read = Some(document);
+        }
+        marks.found.clone()
+    };
     if found.is_empty() {
         return;
     }
     let known = !panel.ivars().board.borrow().tests_in(&path).is_empty();
-    panel.ivars().board.borrow_mut().locate(&path, &text);
+    panel.ivars().board.borrow_mut().place(&path, &found);
     if !known {
         panel.show();
     }
@@ -170,17 +183,47 @@ fn marks_changed(panel: &TestsPanel) {
 pub fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State> {
     let controller = editor.controller()?;
     let panel = of(&controller)?;
-    let path = editor.document().path()?.to_path_buf();
-    if panel.ivars().board.borrow().tests_in(&path).is_empty() {
-        locate(&panel, editor);
+    let (path, document) = {
+        let document = editor.document();
+        (document.path()?.to_path_buf(), document.revision())
+    };
+    let board = panel.ivars().board.borrow().revision();
+    let fresh = panel
+        .ivars()
+        .marks
+        .borrow()
+        .get(&path)
+        .is_some_and(|m| m.shown == Some((board, document)));
+    if !fresh {
+        if panel.ivars().board.borrow().tests_in(&path).is_empty() {
+            locate(&panel, editor);
+        }
+        let board = panel.ivars().board.borrow();
+        let mut by_line = std::collections::HashMap::new();
+        for (line, entry) in board.tests_in(&path) {
+            by_line.entry(line).or_insert(entry.state);
+        }
+        let mut marks = panel.ivars().marks.borrow_mut();
+        let marks = marks.entry(path.clone()).or_default();
+        marks.shown = Some((board.revision(), document));
+        marks.by_line = by_line;
     }
     let line = u32::try_from(line + 1).ok()?;
-    let board = panel.ivars().board.borrow();
-    board
-        .tests_in(&path)
-        .into_iter()
-        .find(|(l, _)| *l == line)
-        .map(|(_, e)| e.state)
+    let marks = panel.ivars().marks.borrow();
+    marks.get(&path)?.by_line.get(&line).copied()
+}
+
+/// One file's tests for the gutter, so it looks up each line it draws instead of going through every test.
+#[derive(Default)]
+pub struct Marks {
+    /// The document's revision `found` was read at.
+    read: Option<u64>,
+    /// The tests the text shows, by function name and line from 1.
+    found: Vec<(String, u32)>,
+    /// The revisions of the board and the document `by_line` is of.
+    shown: Option<(u64, u64)>,
+    /// The state of the test at each line from 1.
+    by_line: std::collections::HashMap<u32, State>,
 }
 
 /// A click on the gutter's test symbol at `line` of `editor`, from 0: runs the test, or debugs it with ⌥; whether

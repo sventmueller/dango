@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::reading::Changes;
 use crate::{Command, Report, Scope, State, Test, TestId, command};
 
 #[derive(Deserialize)]
@@ -95,23 +96,31 @@ pub(crate) fn tests(output: &str) -> Vec<Test> {
     out
 }
 
-/// The outcomes in what a run printed so far, its human output among them skipped.
-pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
-    let mut kinds: HashMap<(String, String), String> = HashMap::new();
-    let mut out: Vec<Report> = Vec::new();
-    let mut at: HashMap<TestId, usize> = HashMap::new();
-    for line in output.lines().filter_map(|l| serde_json::from_str::<Line>(l).ok()) {
+/// A run's libtest JSON as it comes, its human output among it skipped: the kind of each test binary, and the
+/// report of each test.
+#[derive(Debug, Default)]
+pub(crate) struct Lines {
+    kinds: HashMap<(String, String), String>,
+    at: HashMap<TestId, usize>,
+}
+
+impl Lines {
+    pub(crate) fn line(&mut self, root: &Path, line: &str, out: &mut Vec<Report>, changes: &mut Changes) {
+        let Ok(line) = serde_json::from_str::<Line>(line) else {
+            return;
+        };
         if line.kind == "suite" {
             if let Some(suite) = line.nextest {
-                kinds.insert((suite.package, suite.test_binary), suite.kind);
+                self.kinds.insert((suite.package, suite.test_binary), suite.kind);
             }
-            continue;
+            return;
         }
         let Some((binary, name)) = line.name.as_deref().and_then(|n| n.split_once('$')) else {
-            continue;
+            return;
         };
         let (package, binary) = binary.split_once("::").unwrap_or((binary, binary));
-        let kind = kinds
+        let kind = self
+            .kinds
             .get(&(package.to_string(), binary.to_string()))
             .map_or("lib", String::as_str);
         let state = match line.event.as_str() {
@@ -119,7 +128,7 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
             "ok" => State::Passed,
             "failed" => State::Failed,
             "ignored" => State::Skipped,
-            _ => continue,
+            _ => return,
         };
         let id = TestId {
             package: binary_id(package, kind, binary),
@@ -139,13 +148,17 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
             failure: crate::cargo::panic_place(output, root),
             location: None,
         };
-        match at.get(&id) {
-            Some(index) => out[*index] = report,
-            None => {
-                at.insert(id, out.len());
-                out.push(report);
+        let index = match self.at.get(&id) {
+            Some(index) => {
+                out[*index] = report;
+                *index
             }
-        }
+            None => {
+                self.at.insert(id, out.len());
+                out.push(report);
+                out.len() - 1
+            }
+        };
+        changes.mark(index);
     }
-    out
 }

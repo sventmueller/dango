@@ -1,10 +1,12 @@
 //! pytest with Dango's plugin, which writes each collected test, start and result as a JSON line with its node id.
 //! The plugin lies in a scratch folder put on `PYTHONPATH`; the interpreter is the project's `.venv` where it has one.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::reading::Changes;
 use crate::{Command, DebugTarget, Location, PYTEST_PLUGIN, Report, Scope, State, Test, TestId, command};
 
 #[derive(Deserialize)]
@@ -73,41 +75,61 @@ fn file_of(root: &Path, id: &str) -> PathBuf {
 pub(crate) fn tests(root: &Path, output: &str) -> Vec<Test> {
     lines(output)
         .filter(|l| l.event == "collected")
-        .map(|l| {
-            let file = file_of(root, &l.id);
-            Test {
-                location: l.line.map(|line| Location {
-                    path: l.path.as_deref().map_or_else(|| file.clone(), |p| root.join(p)),
-                    line,
-                }),
-                id: TestId {
-                    package: file
-                        .parent()
-                        .and_then(|d| d.strip_prefix(root).ok())
-                        .map(|d| d.display().to_string())
-                        .unwrap_or_default(),
-                    file: Some(file),
-                    name: l.id,
-                },
-            }
-        })
+        .map(|l| collected(root, l))
         .collect()
 }
 
-pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
-    let collected = tests(root, output);
-    let mut out: Vec<Report> = Vec::new();
-    for line in lines(output) {
+fn collected(root: &Path, l: Line) -> Test {
+    let file = file_of(root, &l.id);
+    Test {
+        location: l.line.map(|line| Location {
+            path: l.path.as_deref().map_or_else(|| file.clone(), |p| root.join(p)),
+            line,
+        }),
+        id: TestId {
+            package: file
+                .parent()
+                .and_then(|d| d.strip_prefix(root).ok())
+                .map(|d| d.display().to_string())
+                .unwrap_or_default(),
+            file: Some(file),
+            name: l.id,
+        },
+    }
+}
+
+/// The plugin's lines as they come: the tests collected, and the report of each node id.
+#[derive(Debug, Default)]
+pub(crate) struct Lines {
+    collected: HashMap<String, Test>,
+    known: HashMap<String, usize>,
+}
+
+impl Lines {
+    pub(crate) fn line(&mut self, root: &Path, line: &str, out: &mut Vec<Report>, changes: &mut Changes) {
+        let Ok(line) = serde_json::from_str::<Line>(line) else {
+            return;
+        };
         if line.event == "collected" {
-            continue;
+            if self.collected.contains_key(&line.id) {
+                return;
+            }
+            let test = collected(root, line);
+            // A test reported before its collection takes who and where it is from the collection.
+            if let Some(&index) = self.known.get(&test.id.name) {
+                out[index].id = test.id.clone();
+                out[index].location = test.location.clone();
+                changes.mark(index);
+            }
+            self.collected.insert(test.id.name.clone(), test);
+            return;
         }
-        let known = collected.iter().find(|t| t.id.name == line.id);
-        let index = out.iter().position(|r| r.id.name == line.id).unwrap_or_else(|| {
-            let file = file_of(root, &line.id);
+        let index = *self.known.entry(line.id.clone()).or_insert_with(|| {
+            let known = self.collected.get(&line.id);
             out.push(Report {
                 id: known.map(|t| t.id.clone()).unwrap_or(TestId {
                     package: String::new(),
-                    file: Some(file),
+                    file: Some(file_of(root, &line.id)),
                     name: line.id.clone(),
                 }),
                 state: State::NotRun,
@@ -117,6 +139,7 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
             });
             out.len() - 1
         });
+        changes.mark(index);
         let report = &mut out[index];
         report.state = match (line.event.as_str(), line.outcome.as_deref()) {
             ("started", _) => State::Running,
@@ -135,7 +158,6 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
             });
         }
     }
-    out
 }
 
 /// pytest as a module through debugpy, on the test's node id.

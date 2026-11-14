@@ -3,7 +3,7 @@
 //! for the gutter. A tool that lists tests by building, such as `cargo test`, lists on request only; until then its
 //! tests come from the sources, and a whole run that named any test drops those it did not name.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::{Location, Report, Scope, State, Test, TestId, Tool};
@@ -23,6 +23,18 @@ pub struct Entry {
     pub failure: Option<Location>,
     /// It was found in the sources, and no listing or run named it yet.
     pub guessed: bool,
+}
+
+impl Entry {
+    fn take(&mut self, report: Report) {
+        self.state = report.state;
+        self.message = report.message;
+        self.failure = report.failure;
+        self.guessed = false;
+        if report.location.is_some() {
+            self.test.location = report.location;
+        }
+    }
 }
 
 /// What a row of the tree is.
@@ -61,6 +73,49 @@ pub struct Board {
     pub last_run: Option<(Tool, Scope)>,
     /// The tools running every test, with whether they named one yet.
     sweeping: HashMap<Tool, bool>,
+    /// Counts the changes of the entries.
+    revision: u64,
+    /// Counts the changes of each tool's entries.
+    revisions: HashMap<Tool, u64>,
+    /// Built again after entries went or moved.
+    index: Option<Index>,
+}
+
+/// The entries by tool, package and name, and the guessed ones by tool and function name, so a report finds its
+/// entry without a search through all of them.
+#[derive(Debug, Clone, Default)]
+struct Index {
+    by_name: HashMap<(Tool, String, String), Vec<usize>>,
+    guessed: HashMap<(Tool, String), Vec<usize>>,
+    /// The tools with an entry that stands for a file whose tests are not known yet.
+    blanks: HashSet<Tool>,
+}
+
+impl Index {
+    fn of(entries: &[Entry]) -> Index {
+        let mut index = Index::default();
+        for (at, entry) in entries.iter().enumerate() {
+            index.add(at, entry);
+        }
+        index
+    }
+
+    fn add(&mut self, at: usize, entry: &Entry) {
+        let id = &entry.test.id;
+        self.by_name
+            .entry((entry.tool, id.package.clone(), id.name.clone()))
+            .or_default()
+            .push(at);
+        if entry.guessed {
+            self.guessed
+                .entry((entry.tool, function(&id.name).to_string()))
+                .or_default()
+                .push(at);
+        }
+        if id.name.is_empty() {
+            self.blanks.insert(entry.tool);
+        }
+    }
 }
 
 impl Board {
@@ -69,12 +124,39 @@ impl Board {
         &self.entries
     }
 
+    /// A number that changes whenever an entry does.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    /// A number that changes whenever an entry of `tool` does.
+    pub fn tool_revision(&self, tool: Tool) -> u64 {
+        self.revisions.get(&tool).copied().unwrap_or_default()
+    }
+
+    fn changed(&mut self, tool: Tool) {
+        self.revision += 1;
+        *self.revisions.entry(tool).or_default() += 1;
+    }
+
     /// `tool` listed `tests`: they replace its earlier list, keeping what runs said of the same tests.
     pub fn listed(&mut self, tool: Tool, tests: Vec<Test>) {
+        self.changed(tool);
+        self.index = None;
         let old: Vec<Entry> = self.entries.iter().filter(|e| e.tool == tool).cloned().collect();
+        let mut by_name: HashMap<(&str, &str), Vec<&Entry>> = HashMap::new();
+        for entry in &old {
+            by_name
+                .entry((&entry.test.id.package, &entry.test.id.name))
+                .or_default()
+                .push(entry);
+        }
         self.entries.retain(|e| e.tool != tool);
         for test in tests {
-            let known = old.iter().find(|e| same(&e.test.id, &test.id));
+            let known = by_name
+                .get(&(test.id.package.as_str(), test.id.name.as_str()))
+                .and_then(|found| found.iter().find(|e| same(&e.test.id, &test.id)))
+                .copied();
             self.entries.push(Entry {
                 tool,
                 state: known.map_or(State::NotRun, |e| e.state),
@@ -95,6 +177,8 @@ impl Board {
         if self.entries.iter().any(|e| e.tool == tool) {
             return;
         }
+        self.changed(tool);
+        self.index = None;
         self.entries.extend(tests.into_iter().map(|test| Entry {
             tool,
             test,
@@ -114,6 +198,7 @@ impl Board {
         if tool.reports_starts() {
             return;
         }
+        self.changed(tool);
         for entry in self
             .entries
             .iter_mut()
@@ -128,84 +213,79 @@ impl Board {
     /// `tool` reported `reports`: known tests take them, tests seen first in a run join the list and take the place
     /// of a test the sources showed by the same name.
     pub fn reported(&mut self, tool: Tool, reports: Vec<Report>) {
-        if !reports.is_empty()
-            && let Some(heard) = self.sweeping.get_mut(&tool)
-        {
+        if reports.is_empty() {
+            return;
+        }
+        if let Some(heard) = self.sweeping.get_mut(&tool) {
             *heard = true;
         }
-        let mut by_name: HashMap<(String, String), Vec<usize>> = HashMap::new();
-        for (i, e) in self.entries.iter().enumerate().filter(|(_, e)| e.tool == tool) {
-            by_name
-                .entry((e.test.id.package.clone(), e.test.id.name.clone()))
-                .or_default()
-                .push(i);
-        }
-        let mut dropped = vec![false; self.entries.len()];
-        let mut placeholders: Vec<Option<PathBuf>> = Vec::new();
+        self.changed(tool);
+        let mut index = self.index.take().unwrap_or_else(|| Index::of(&self.entries));
+        let mut dropped: HashSet<usize> = HashSet::new();
+        let mut placeholders: HashSet<Option<PathBuf>> = HashSet::new();
         for report in reports {
             if report.id.name.is_empty() {
                 continue;
             }
-            let key = (report.id.package.clone(), report.id.name.clone());
-            let found = by_name
+            let key = (tool, report.id.package.clone(), report.id.name.clone());
+            let found = index
+                .by_name
                 .get(&key)
                 .and_then(|at| at.iter().copied().find(|i| same(&self.entries[*i].test.id, &report.id)));
-            match found {
-                Some(i) => {
-                    let entry = &mut self.entries[i];
-                    entry.state = report.state;
-                    entry.message = report.message;
-                    entry.failure = report.failure;
-                    entry.guessed = false;
-                    if report.location.is_some() {
-                        entry.test.location = report.location;
-                    }
-                }
-                None => {
-                    placeholders.push(report.id.file.clone());
-                    let stand_in = self.stand_in(tool, &report.id, &dropped);
-                    let location = report
-                        .location
-                        .or_else(|| stand_in.and_then(|i| self.entries[i].test.location.clone()));
-                    if let Some(i) = stand_in {
-                        dropped[i] = true;
-                    }
-                    by_name.entry(key).or_default().push(self.entries.len());
-                    dropped.push(false);
-                    self.entries.push(Entry {
-                        tool,
-                        test: Test {
-                            id: report.id,
-                            location,
-                        },
-                        state: report.state,
-                        message: report.message,
-                        failure: report.failure,
-                        guessed: false,
-                    });
-                }
+            if let Some(i) = found {
+                self.entries[i].take(report);
+                continue;
             }
+            if index.blanks.contains(&tool) {
+                placeholders.insert(report.id.file.clone());
+            }
+            let stand_in = self.stand_in(&index, tool, &report.id, &dropped);
+            let location = report
+                .location
+                .or_else(|| stand_in.and_then(|i| self.entries[i].test.location.clone()));
+            if let Some(i) = stand_in {
+                dropped.insert(i);
+            }
+            let entry = Entry {
+                tool,
+                test: Test {
+                    id: report.id,
+                    location,
+                },
+                state: report.state,
+                message: report.message,
+                failure: report.failure,
+                guessed: false,
+            };
+            index.add(self.entries.len(), &entry);
+            self.entries.push(entry);
+        }
+        if dropped.is_empty() && placeholders.is_empty() {
+            self.index = Some(index);
+            return;
         }
         // A file Jest listed stands for its tests until they are known.
-        let mut index = 0;
+        let mut at = 0;
         self.entries.retain(|e| {
-            let keep = !dropped[index]
+            let keep = !dropped.contains(&at)
                 && !(e.tool == tool && e.test.id.name.is_empty() && placeholders.contains(&e.test.id.file));
-            index += 1;
+            at += 1;
             keep
         });
+        if dropped.is_empty() && self.entries.len() == at {
+            self.index = Some(index);
+        }
     }
 
     /// The test the sources showed that `id` is, named otherwise by the run: one of `tool` with the same function
     /// name, of the same package where there is one.
-    fn stand_in(&self, tool: Tool, id: &TestId, dropped: &[bool]) -> Option<usize> {
-        let last = |name: &str| name.rsplit("::").next().unwrap_or(name).to_string();
-        let wanted = last(&id.name);
-        let candidates: Vec<usize> = (0..self.entries.len())
-            .filter(|i| {
-                let e = &self.entries[*i];
-                e.tool == tool && e.guessed && !dropped[*i] && last(&e.test.id.name) == wanted
-            })
+    fn stand_in(&self, index: &Index, tool: Tool, id: &TestId, dropped: &HashSet<usize>) -> Option<usize> {
+        let candidates: Vec<usize> = index
+            .guessed
+            .get(&(tool, function(&id.name).to_string()))?
+            .iter()
+            .copied()
+            .filter(|i| self.entries[*i].guessed && !dropped.contains(i))
             .collect();
         candidates
             .iter()
@@ -217,9 +297,14 @@ impl Board {
     /// The run of `tool` ended, `complete` where it was not stopped: tests it did not report are no longer running,
     /// and after a whole run that named any test, the tests only the sources showed go.
     pub fn finished(&mut self, tool: Tool, complete: bool) {
+        self.changed(tool);
         let heard = self.sweeping.remove(&tool).unwrap_or(false);
         if complete && heard {
+            let before = self.entries.len();
             self.entries.retain(|e| !(e.tool == tool && e.guessed));
+            if self.entries.len() != before {
+                self.index = None;
+            }
         }
         for entry in self
             .entries
@@ -234,47 +319,26 @@ impl Board {
     /// failed and the rows above it.
     pub fn rows(&self) -> Vec<Row> {
         let mut rows = Vec::new();
-        let shown: Vec<usize> = (0..self.entries.len())
-            .filter(|i| !self.failed_only || self.entries[*i].state == State::Failed)
-            .collect();
-        let mut packages: Vec<(Tool, String)> = Vec::new();
-        for i in &shown {
-            let e = &self.entries[*i];
-            if !packages.contains(&(e.tool, e.test.id.package.clone())) {
-                packages.push((e.tool, e.test.id.package.clone()));
-            }
-        }
-        for (tool, package) in packages {
-            let members: Vec<usize> = shown
-                .iter()
-                .copied()
-                .filter(|i| self.entries[*i].tool == tool && self.entries[*i].test.id.package == package)
-                .collect();
+        let shown = (0..self.entries.len()).filter(|i| !self.failed_only || self.entries[*i].state == State::Failed);
+        let packages = grouped(shown, |i| {
+            let e = &self.entries[i];
+            (e.tool, e.test.id.package.as_str())
+        });
+        for ((tool, package), members) in packages {
             let label = if package.is_empty() {
                 tool.name().to_string()
             } else {
-                package.clone()
+                package.to_string()
             };
             rows.push(Row {
                 level: 0,
                 label,
                 state: summary(members.iter().map(|i| self.entries[*i].state)),
-                node: Node::Package(tool, package.clone()),
+                node: Node::Package(tool, package.to_string()),
             });
-            let mut files: Vec<Option<PathBuf>> = Vec::new();
-            for i in &members {
-                let file = self.entries[*i].test.id.file.clone();
-                if !files.contains(&file) {
-                    files.push(file);
-                }
-            }
-            for file in files {
-                let in_file: Vec<usize> = members
-                    .iter()
-                    .copied()
-                    .filter(|i| self.entries[*i].test.id.file == file)
-                    .collect();
-                let level = match &file {
+            let files = grouped(members.iter().copied(), |i| self.entries[i].test.id.file.as_deref());
+            for (file, in_file) in files {
+                let level = match file {
                     Some(path) => {
                         rows.push(Row {
                             level: 1,
@@ -282,7 +346,7 @@ impl Board {
                                 .file_name()
                                 .map_or_else(String::new, |n| n.to_string_lossy().into()),
                             state: summary(in_file.iter().map(|i| self.entries[*i].state)),
-                            node: Node::File(tool, package.clone(), path.clone()),
+                            node: Node::File(tool, package.to_string(), path.to_path_buf()),
                         });
                         2
                     }
@@ -355,23 +419,36 @@ impl Board {
     /// Gives the tests of `path` the places that its `text` shows for `tool`'s tests, where the tool gave none:
     /// a Rust function under `#[test]`, a Go function `Test…`.
     pub fn locate(&mut self, path: &Path, text: &str) {
-        let found = in_source(path, text);
+        self.place(path, &in_source(path, text));
+    }
+
+    /// Gives the tests of `path` the places of `found`, what [`in_source`] read in its text, where they have none.
+    pub fn place(&mut self, path: &Path, found: &[(String, u32)]) {
         if found.is_empty() {
             return;
         }
+        let mut first: HashMap<&str, (usize, u32)> = HashMap::new();
+        for (at, (name, line)) in found.iter().enumerate() {
+            first.entry(name.as_str()).or_insert((at, *line));
+        }
+        let mut moved = false;
         for entry in &mut self.entries {
             if entry.test.location.is_some() {
                 continue;
             }
             let name = &entry.test.id.name;
-            let last = name.rsplit("::").next().unwrap_or(name);
             let top = name.split('/').next().unwrap_or(name);
-            if let Some((_, line)) = found.iter().find(|(f, _)| f == last || f == top) {
+            let hit = [first.get(function(name)), first.get(top)].into_iter().flatten().min();
+            if let Some((_, line)) = hit {
                 entry.test.location = Some(Location {
                     path: path.to_path_buf(),
                     line: *line,
                 });
+                moved = true;
             }
+        }
+        if moved {
+            self.revision += 1;
         }
     }
 
@@ -409,6 +486,29 @@ pub(crate) fn function_name(line: &str, keyword: &str) -> Option<String> {
     let rest = line.split(keyword).nth(1)?;
     let name: String = rest.chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
     (!name.is_empty()).then_some(name)
+}
+
+/// The last part of a test's name, the function a Rust test is.
+fn function(name: &str) -> &str {
+    name.rsplit("::").next().unwrap_or(name)
+}
+
+/// `items` in groups by `key`, the groups in the order their first item came, each in the order its items came.
+fn grouped<K: std::hash::Hash + Eq + Copy>(
+    items: impl Iterator<Item = usize>,
+    key: impl Fn(usize) -> K,
+) -> Vec<(K, Vec<usize>)> {
+    let mut groups: Vec<(K, Vec<usize>)> = Vec::new();
+    let mut slot: HashMap<K, usize> = HashMap::new();
+    for item in items {
+        let k = key(item);
+        let at = *slot.entry(k).or_insert_with(|| {
+            groups.push((k, Vec::new()));
+            groups.len() - 1
+        });
+        groups[at].1.push(item);
+    }
+    groups
 }
 
 /// The state a package or file shows: failed over running over not run, passed only when all passed or skipped.
@@ -596,6 +696,43 @@ mod tests {
             stopped.entries().len(),
             2,
             "a stopped run keeps the tests it did not reach"
+        );
+    }
+
+    #[test]
+    fn reports_in_pieces_find_their_tests_across_listings_and_count_as_changes() {
+        let mut board = Board::default();
+        board.listed(Tool::Go, vec![test("m", None, "TestA"), test("m", None, "TestB")]);
+        let listed = (board.revision(), board.tool_revision(Tool::Go));
+        board.reported(Tool::Go, vec![report("m", "TestA/one", State::Running)]);
+        board.reported(Tool::Cargo, vec![report("sample", "tests::adds", State::Passed)]);
+        board.reported(Tool::Go, vec![report("m", "TestA/one", State::Passed)]);
+        assert!(board.revision() > listed.0 && board.tool_revision(Tool::Go) > listed.1);
+        board.reported(Tool::Go, Vec::new());
+        let quiet = board.tool_revision(Tool::Go);
+        board.reported(Tool::Go, Vec::new());
+        assert_eq!(board.tool_revision(Tool::Go), quiet, "no reports change nothing");
+        board.listed(Tool::Go, vec![test("m", None, "TestB"), test("m", None, "TestA")]);
+        board.reported(
+            Tool::Go,
+            vec![
+                report("m", "TestA", State::Failed),
+                report("m", "TestA/two", State::Passed),
+            ],
+        );
+        let states: Vec<(&str, State)> = board
+            .entries()
+            .iter()
+            .map(|e| (e.test.id.name.as_str(), e.state))
+            .collect();
+        assert_eq!(
+            states,
+            [
+                ("tests::adds", State::Passed),
+                ("TestB", State::NotRun),
+                ("TestA", State::Failed),
+                ("TestA/two", State::Passed),
+            ]
         );
     }
 

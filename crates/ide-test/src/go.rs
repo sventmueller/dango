@@ -2,10 +2,12 @@
 //! only; subtests such as `TestTable/case_one` come from the run. With `-fullpath` the output names a failure's file
 //! by module path, which `go.mod`'s `module` line turns into a file of the project.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::reading::Changes;
 use crate::{Command, DebugTarget, Location, Report, Scope, State, Test, TestId, command, escaped};
 
 #[derive(Deserialize)]
@@ -93,28 +95,45 @@ fn file_of(root: &Path, module: Option<&str>, named: &str) -> PathBuf {
     }
 }
 
-pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
-    let module = module(root);
-    let mut out: Vec<Report> = Vec::new();
-    for event in events(output) {
-        let Some(name) = event.test.clone() else { continue };
-        let index = out
-            .iter()
-            .position(|r| r.id.name == name && r.id.package == event.package);
-        let index = index.unwrap_or_else(|| {
-            out.push(Report {
-                id: TestId {
-                    package: event.package.clone(),
-                    file: None,
-                    name,
-                },
-                state: State::NotRun,
-                message: None,
-                failure: None,
-                location: None,
+/// The events of a run as they come, gathered per test.
+#[derive(Debug)]
+pub(crate) struct Lines {
+    module: Option<String>,
+    /// The report of each package and test.
+    known: HashMap<(String, String), usize>,
+}
+
+impl Lines {
+    pub(crate) fn new(root: &Path) -> Lines {
+        Lines {
+            module: module(root),
+            known: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn line(&mut self, root: &Path, line: &str, out: &mut Vec<Report>, changes: &mut Changes) {
+        let Ok(event) = serde_json::from_str::<Event>(line) else {
+            return;
+        };
+        let Some(name) = event.test else { return };
+        let index = *self
+            .known
+            .entry((event.package.clone(), name.clone()))
+            .or_insert_with(|| {
+                out.push(Report {
+                    id: TestId {
+                        package: event.package,
+                        file: None,
+                        name,
+                    },
+                    state: State::NotRun,
+                    message: None,
+                    failure: None,
+                    location: None,
+                });
+                out.len() - 1
             });
-            out.len() - 1
-        });
+        changes.mark(index);
         let report = &mut out[index];
         match event.action.as_str() {
             "run" => report.state = State::Running,
@@ -125,14 +144,14 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
                 let line = event.output.unwrap_or_default();
                 let trimmed = line.trim();
                 if trimmed.starts_with("=== ") || trimmed.starts_with("--- ") || trimmed.is_empty() {
-                    continue;
+                    return;
                 }
                 if let Some((place, message)) = trimmed.split_once(": ")
                     && let Some((file, number)) = place.rsplit_once(':')
                     && let Ok(line) = number.parse::<u32>()
                     && file.ends_with(".go")
                 {
-                    let path = file_of(root, module.as_deref(), file);
+                    let path = file_of(root, self.module.as_deref(), file);
                     report.failure.get_or_insert(Location { path, line });
                     push(&mut report.message, message);
                 } else {
@@ -142,16 +161,19 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
             _ => {}
         }
     }
-    for report in &mut out {
-        if report.state != State::Failed && report.state != State::Skipped {
-            report.failure = None;
-            report.message = None;
-        }
-        if report.state == State::Skipped {
-            report.failure = None;
-        }
+}
+
+/// `report` as the panel shows it: a message and a failure only for a failed test, a message for a skipped one.
+pub(crate) fn shown(report: &Report) -> Report {
+    let mut report = report.clone();
+    if report.state != State::Failed && report.state != State::Skipped {
+        report.failure = None;
+        report.message = None;
     }
-    out
+    if report.state == State::Skipped {
+        report.failure = None;
+    }
+    report
 }
 
 fn push(message: &mut Option<String>, line: &str) {

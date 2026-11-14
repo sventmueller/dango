@@ -19,14 +19,19 @@ use objc2_app_kit::{
     NSOutlineViewDataSource, NSOutlineViewDelegate, NSProgressIndicator, NSProgressIndicatorStyle, NSStackView,
     NSStackViewGravity, NSTableColumn, NSTextField, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect};
 use splat_i18n::{t, tf};
 
+use super::outline::{self, Outline};
 use super::run::{self, Running};
 use crate::util::{guarded, main_after, main_soon, ns, set_action};
 
+mod poll;
+
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
+/// The most changed rows redrawn one by one; past it the whole outline loads again.
+const RELOADED_ROWS: usize = 100;
 
 pub struct PanelIvars {
     id: u64,
@@ -37,8 +42,15 @@ pub struct PanelIvars {
     runs: RefCell<Vec<(Tool, Running)>>,
     /// Every row of the tree, packages before their files and tests.
     rows: RefCell<Vec<Row>>,
-    /// The object that stands for each row in the outline, by its node, the same one for as long as the panel lives.
-    items: RefCell<std::collections::HashMap<String, Retained<NSString>>>,
+    outline: RefCell<Outline>,
+    /// The key the next run gets.
+    next_run: Cell<u64>,
+    /// The runs handed to the disk lane to start.
+    starting: Cell<usize>,
+    /// The board's revision the editors' marks were last shown for.
+    marked: Cell<Option<u64>>,
+    /// The gutter's test states of each file it drew.
+    pub(super) marks: RefCell<std::collections::HashMap<PathBuf, super::Marks>>,
     /// Set while the panel opens rows itself, so that does not count as the user's choice.
     unfolding: Cell<bool>,
     table: RefCell<Option<Retained<NSOutlineView>>>,
@@ -100,22 +112,30 @@ define_class!(
     unsafe impl NSOutlineViewDataSource for TestsPanel {
         #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
         fn children_count(&self, _view: &NSOutlineView, item: Option<&AnyObject>) -> isize {
-            guarded(0, || isize::try_from(self.children(item).len()).unwrap_or(0))
+            guarded(0, || {
+                let outline = self.ivars().outline.borrow();
+                outline
+                    .children_of(item)
+                    .map_or(0, |rows| isize::try_from(rows.len()).unwrap_or(0))
+            })
         }
 
         #[unsafe(method_id(outlineView:child:ofItem:))]
         fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
             let found = guarded(None, || {
-                let at = *self.children(item).get(usize::try_from(index).ok()?)?;
-                let row = self.ivars().rows.borrow().get(at)?.clone();
-                Some(self.item_for(&row))
+                let outline = self.ivars().outline.borrow();
+                let at = *outline.children_of(item)?.get(usize::try_from(index).ok()?)?;
+                outline.item(at)
             });
             found.map_or_else(|| ns("").into(), Into::into)
         }
 
         #[unsafe(method(outlineView:isItemExpandable:))]
         fn expandable(&self, _view: &NSOutlineView, item: &AnyObject) -> bool {
-            guarded(false, || !self.children(Some(item)).is_empty())
+            guarded(false, || {
+                let outline = self.ivars().outline.borrow();
+                outline.children_of(Some(item)).is_some_and(|rows| !rows.is_empty())
+            })
         }
     }
 
@@ -211,7 +231,11 @@ impl TestsPanel {
             tools: RefCell::new(Vec::new()),
             runs: RefCell::new(Vec::new()),
             rows: RefCell::new(Vec::new()),
-            items: RefCell::new(std::collections::HashMap::new()),
+            outline: RefCell::new(Outline::default()),
+            next_run: Cell::new(0),
+            starting: Cell::new(0),
+            marked: Cell::new(None),
+            marks: RefCell::new(std::collections::HashMap::new()),
             unfolding: Cell::new(false),
             table: RefCell::new(None),
             scroll: RefCell::new(None),
@@ -311,14 +335,12 @@ impl TestsPanel {
 
     /// Finds the folder's tools and lists their tests; with `all`, also those that list by building.
     pub fn list(&self, all: bool) {
-        if !crate::project::is_trusted(self.root()) {
-            self.say(t("Tests nur in vertrauten Ordnern"));
-            return;
-        }
-        let env = ide_ui_common::window::try_environment(Duration::ZERO).unwrap_or_default();
-        let path = env.iter().find(|(k, _)| k == "PATH").map(|(_, v)| v.as_str());
-        let tools = ide_test::tools(self.root(), path);
-        *self.ivars().tools.borrow_mut() = tools.clone();
+        self.find_tools(move |panel| panel.list_found(all));
+    }
+
+    /// Lists the tests of the tools found; with `all`, also those that list by building.
+    fn list_found(&self, all: bool) {
+        let tools = self.ivars().tools.borrow().clone();
         if tools.is_empty() {
             self.say(t("Keine Tests gefunden"));
             return;
@@ -377,8 +399,16 @@ impl TestsPanel {
     /// Runs every test of every tool.
     pub fn run_everything(&self) {
         if self.ivars().tools.borrow().is_empty() {
-            self.list(false);
+            self.find_tools(|panel| {
+                panel.list_found(false);
+                panel.run_known();
+            });
+        } else {
+            self.run_known();
         }
+    }
+
+    fn run_known(&self) {
         let tools = self.ivars().tools.borrow().clone();
         for tool in tools {
             self.run(tool, Scope::All);
@@ -394,86 +424,58 @@ impl TestsPanel {
         }
     }
 
-    /// Starts `command` of `tool`, a listing without `scope`, and reads it until it ends.
-    fn launch(&self, tool: Tool, command: ide_test::Command, scope: Option<Scope>) {
-        let env = ide_ui_common::window::try_environment(Duration::ZERO).unwrap_or_default();
-        let label = if scope.is_some() {
-            tf("{} ausführen", &[tool.name()])
-        } else {
-            tf("{} auflisten", &[tool.name()])
-        };
-        match run::start(&command, &env, &label, scope.is_none()) {
-            Ok(running) => {
-                self.ivars().runs.borrow_mut().push((tool, running));
-                self.say(&label);
-                self.poll_later(scope.is_none());
-            }
-            Err(error) => {
-                self.ivars().board.borrow_mut().finished(tool, false);
-                self.say(&tf("{} startet nicht: {}", &[tool.name(), &error.to_string()]));
-            }
-        }
-    }
-
-    fn poll_later(&self, listing: bool) {
-        if self.ivars().polling.replace(true) {
-            return;
-        }
-        let id = self.id();
-        main_after(POLL, move || {
-            super::with_panel(id, |panel| panel.poll(listing));
-        });
-    }
-
-    /// Reads the runs again: the tools that report starts as they go, every tool once it ended.
-    fn poll(&self, listing: bool) {
-        self.ivars().polling.set(false);
-        let mut ended = Vec::new();
-        for (index, (tool, running)) in self.ivars().runs.borrow().iter().enumerate() {
-            let ending = run::ended(running, Duration::ZERO);
-            let done = ending.is_some();
-            if done || !running.listing {
-                let said = run::said(running);
-                if done && listing_command(running) {
-                    let tests = tool.tests(self.root(), &said);
-                    self.ivars().board.borrow_mut().listed(*tool, tests);
-                } else {
-                    let reports = tool.reports(self.root(), &said);
-                    self.ivars().board.borrow_mut().reported(*tool, reports);
-                }
-            }
-            if done {
-                *self.ivars().output.borrow_mut() = running.output.lock().map(|o| o.clone()).unwrap_or_default();
-                ended.push((index, matches!(ending, Some(Ending::Code(_)))));
-            }
-        }
-        let still = {
-            let mut runs = self.ivars().runs.borrow_mut();
-            for (index, complete) in ended.iter().rev() {
-                let (tool, running) = runs.remove(*index);
-                if !running.listing {
-                    self.ivars().board.borrow_mut().finished(tool, *complete);
-                }
-            }
-            !runs.is_empty()
-        };
-        self.show();
-        super::marks_changed(self);
-        let summary = summary(&self.ivars().board.borrow());
-        if still {
-            if !listing {
-                self.say(&tf("Läuft … {}", &[&summary]));
-            }
-            self.poll_later(listing);
-        } else {
-            self.say(&tf("Fertig: {}", &[&summary]));
-        }
-    }
-
-    /// Draws the tree as the board is now.
+    /// Draws the tree as the board is now: only the rows that changed where the tree kept its shape.
     pub fn show(&self) {
         let rows = self.ivars().board.borrow().rows();
+        let redrawn = {
+            let old = self.ivars().rows.borrow();
+            outline::same_shape(&old, &rows).then(|| {
+                (0..rows.len())
+                    .filter(|&i| old[i].label != rows[i].label || old[i].state != rows[i].state)
+                    .collect::<Vec<_>>()
+            })
+        };
+        if redrawn.is_none() {
+            self.ivars().outline.borrow_mut().index(&rows);
+        }
         *self.ivars().rows.borrow_mut() = rows;
+        self.show_state();
+        let Some(table) = self.ivars().table.borrow().clone() else {
+            return;
+        };
+        let item = |row: usize| self.ivars().outline.borrow().item(row);
+        match &redrawn {
+            Some(redrawn) if redrawn.len() <= RELOADED_ROWS => {
+                for item in redrawn.iter().filter_map(|row| item(*row)) {
+                    // SAFETY: The item is one the data source handed the outline for this row.
+                    unsafe { table.reloadItem(Some(&item)) };
+                }
+            }
+            _ => table.reloadData(),
+        }
+        let open: Vec<_> = {
+            let board = self.ivars().board.borrow();
+            let rows = self.ivars().rows.borrow();
+            let outline = self.ivars().outline.borrow();
+            (0..rows.len())
+                .filter(|&row| !outline.children(Some(row)).is_empty() && board.is_open(&rows[row].node))
+                .filter_map(|row| outline.item(row))
+                .collect()
+        };
+        self.ivars().unfolding.set(true);
+        for item in open {
+            // SAFETY: The item is one the data source handed the outline for this row.
+            unsafe {
+                if !table.isItemExpanded(Some(&item)) {
+                    table.expandItem(Some(&item));
+                }
+            }
+        }
+        self.ivars().unfolding.set(false);
+    }
+
+    /// Shows the tree or the hint before the first run, and the spinner while tests run.
+    fn show_state(&self) {
         let known = {
             let board = self.ivars().board.borrow();
             board.last_run.is_some() || !board.entries().is_empty()
@@ -498,51 +500,11 @@ impl TestsPanel {
             }
         }
         self.show_status_row();
-        let Some(table) = self.ivars().table.borrow().clone() else {
-            return;
-        };
-        table.reloadData();
-        self.ivars().unfolding.set(true);
-        let rows = self.ivars().rows.borrow().clone();
-        for row in rows.iter().filter(|r| self.ivars().board.borrow().is_open(&r.node)) {
-            // SAFETY: The item is one the data source handed the outline for this row.
-            unsafe { table.expandItem(Some(&self.item_for(row))) };
-        }
-        self.ivars().unfolding.set(false);
-    }
-
-    /// The rows one level under the row `item` stands for, or the packages for none, as indices into `rows`.
-    fn children(&self, item: Option<&AnyObject>) -> Vec<usize> {
-        let rows = self.ivars().rows.borrow();
-        let Some(item) = item else {
-            return (0..rows.len()).filter(|&i| rows[i].level == 0).collect();
-        };
-        let Some(parent) = self.index_of(item) else {
-            return Vec::new();
-        };
-        let level = rows[parent].level;
-        rows.iter()
-            .enumerate()
-            .skip(parent + 1)
-            .take_while(|(_, row)| row.level > level)
-            .filter(|(_, row)| row.level == level + 1)
-            .map(|(i, _)| i)
-            .collect()
     }
 
     /// The index in `rows` of the row `item` stands for.
     fn index_of(&self, item: &AnyObject) -> Option<usize> {
-        let key = item.downcast_ref::<NSString>()?.to_string();
-        self.ivars().rows.borrow().iter().position(|row| key_of(row) == key)
-    }
-
-    fn item_for(&self, row: &Row) -> Retained<NSString> {
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(key_of(row))
-            .or_insert_with_key(|key| ns(key))
-            .clone()
+        self.ivars().outline.borrow().row_of(item)
     }
 
     /// Notes that the user opened or closed a package or file, which stays so when the tree is built again.
@@ -712,11 +674,6 @@ fn scope_of(board: &Board, node: &Node) -> Option<(Tool, Scope)> {
     }
 }
 
-/// Whether `running` lists rather than runs, which only a listing's command line says.
-fn listing_command(running: &Running) -> bool {
-    running.listing
-}
-
 /// What the status line says after the runs ended.
 fn summary(board: &Board) -> String {
     let count = |state: State| board.entries().iter().filter(|e| e.state == state).count().to_string();
@@ -735,11 +692,6 @@ pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSCol
         State::Failed => ("xmark.octagon.fill", t("Fehlgeschlagen"), NSColor::systemRedColor()),
         State::Skipped => ("minus.circle", t("Übersprungen"), NSColor::secondaryLabelColor()),
     }
-}
-
-/// What stands for `row` in the outline: its node, which stays when the tree is built again.
-fn key_of(row: &Row) -> String {
-    format!("{:?}", row.node)
 }
 
 /// The line between the header and the list: a spinner while tests run, then what the panel last said, wrapped to

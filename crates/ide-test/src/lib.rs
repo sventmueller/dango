@@ -2,7 +2,8 @@
 //! Vitest and Jest — that says which commands to run and reads what they print. A test's identity (package, file,
 //! name with its parameters) is kept apart from where it is in the source, which a test may not have. Only stable
 //! outputs are read, but for nextest's libtest JSON, which nextest still calls experimental; the crate starts no
-//! processes itself, the app runs the commands through its supervisor.
+//! processes itself, the app runs the commands through its supervisor. A run's output that grows is read with a
+//! [`Reading`], which parses each line once and names the reports that changed.
 //!
 //! ```
 //! use ide_test::{Scope, Tool};
@@ -23,9 +24,12 @@ mod go;
 mod js;
 mod nextest;
 mod pytest;
+mod reading;
 mod source;
 
 use std::path::{Path, PathBuf};
+
+pub use reading::Reading;
 
 /// A tool that runs tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -277,15 +281,13 @@ impl Tool {
         }
     }
 
-    /// The outcomes in what a run printed, or in its results file where [`Command::results`] names one.
+    /// The outcomes in what a run printed, or in its results file where [`Command::results`] names one; a
+    /// [`Reading`] reads the same as it grows.
     pub fn reports(self, root: &Path, output: &str) -> Vec<Report> {
-        match self {
-            Tool::Cargo => cargo::reports(root, output),
-            Tool::Nextest => nextest::reports(root, output),
-            Tool::Go => go::reports(root, output),
-            Tool::Pytest => pytest::reports(root, output),
-            Tool::Vitest | Tool::Jest => js::reports(output),
-        }
+        let mut reading = Reading::new(self, root);
+        reading.feed(output);
+        reading.end();
+        reading.reports()
     }
 
     /// How to debug `test` of the project at `root`.

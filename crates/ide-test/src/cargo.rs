@@ -2,8 +2,10 @@
 //! stable, so a run shows as running as a whole. Each test program's section starts with Cargo's `Running` line, which
 //! names the program the tests below belong to.
 
+use std::collections::HashMap;
 use std::path::Path;
 
+use crate::reading::Changes;
 use crate::{Command, DebugTarget, Location, Report, Scope, State, Test, TestId, command, place};
 
 pub(crate) fn list(root: &Path) -> Command {
@@ -55,15 +57,21 @@ pub(crate) fn tests(output: &str) -> Vec<Test> {
     out
 }
 
-pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
-    let mut package = String::new();
-    let mut out: Vec<Report> = Vec::new();
-    let mut failing: Option<usize> = None;
-    for line in output.lines() {
+/// libtest's text as it comes: the test program of the section, and the failed test whose output follows.
+#[derive(Debug, Default)]
+pub(crate) struct Lines {
+    package: String,
+    failing: Option<usize>,
+    /// The last report of each package and name.
+    last: HashMap<(String, String), usize>,
+}
+
+impl Lines {
+    pub(crate) fn line(&mut self, root: &Path, line: &str, out: &mut Vec<Report>, changes: &mut Changes) {
         if let Some(found) = program(line) {
-            package = found;
-            failing = None;
-            continue;
+            self.package = found;
+            self.failing = None;
+            return;
         }
         if let Some(rest) = line.strip_prefix("test ")
             && let Some((name, outcome)) = rest.rsplit_once(" ... ")
@@ -72,11 +80,11 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
                 "ok" => State::Passed,
                 "FAILED" => State::Failed,
                 o if o.starts_with("ignored") => State::Skipped,
-                _ => continue,
+                _ => return,
             };
             out.push(Report {
                 id: TestId {
-                    package: package.clone(),
+                    package: self.package.clone(),
                     file: None,
                     name: name.to_string(),
                 },
@@ -85,16 +93,20 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
                 failure: None,
                 location: None,
             });
-            continue;
+            self.last
+                .insert((self.package.clone(), name.to_string()), out.len() - 1);
+            changes.mark(out.len() - 1);
+            return;
         }
         if let Some(name) = line.strip_prefix("---- ").and_then(|l| l.strip_suffix(" stdout ----")) {
-            failing = out.iter().rposition(|r| r.id.name == name && r.id.package == package);
-            continue;
+            self.failing = self.last.get(&(self.package.clone(), name.to_string())).copied();
+            return;
         }
-        let Some(index) = failing else { continue };
+        let Some(index) = self.failing else { return };
         if let Some(at) = line.split(" panicked at ").nth(1) {
             out[index].failure = place(at, root);
-            continue;
+            changes.mark(index);
+            return;
         }
         let report = &mut out[index];
         if report.failure.is_some() && !line.is_empty() && !line.starts_with("note:") {
@@ -103,9 +115,9 @@ pub(crate) fn reports(root: &Path, output: &str) -> Vec<Report> {
                 message.push('\n');
             }
             message.push_str(line);
+            changes.mark(index);
         }
     }
-    out
 }
 
 /// The test program built in the profile `ide-debug` into a folder of its own, as the debugger builds Rust, run with

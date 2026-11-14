@@ -334,3 +334,47 @@ fn the_tools_of_a_project_follow_its_files() {
     let path = root.join("bin").display().to_string();
     assert_eq!(tools(&root, Some(&path))[0], Tool::Nextest);
 }
+
+#[test]
+fn a_run_read_in_pieces_ends_with_the_reports_of_the_whole() {
+    for (tool, dir, name) in [
+        (Tool::Cargo, "cargo", "run-1.99.txt"),
+        (Tool::Nextest, "nextest", "run-0.9.152.jsonl"),
+        (Tool::Go, "go", "run-1.27.jsonl"),
+        (Tool::Pytest, "pytest", "run-9.2.jsonl"),
+        (Tool::Vitest, "vitest", "run-5.1.jsonl"),
+        (Tool::Jest, "jest", "run-30.5.jsonl"),
+    ] {
+        let text = fixture(dir, name);
+        let root = ide_core::testing::scratch(&format!("test-{dir}-in-pieces"));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("go.mod"), "module example.com/sample\n\ngo 1.27\n").unwrap();
+        let whole = tool.reports(&root, &text);
+        let mut reading = Reading::new(tool, &root);
+        let mut merged: Vec<Option<Report>> = Vec::new();
+        let mut take = |changed: Vec<(usize, Report)>| {
+            for (index, report) in changed {
+                if merged.len() <= index {
+                    merged.resize(index + 1, None);
+                }
+                merged[index] = Some(report);
+            }
+        };
+        let mut rest = text.as_str();
+        while !rest.is_empty() {
+            let mut cut = rest.len().min(97);
+            while !rest.is_char_boundary(cut) {
+                cut += 1;
+            }
+            reading.feed(&rest[..cut]);
+            rest = &rest[cut..];
+            take(reading.changed());
+        }
+        reading.end();
+        take(reading.changed());
+        assert!(reading.changed().is_empty(), "{dir}: nothing came after the last look");
+        let merged: Vec<Report> = merged.into_iter().map(Option::unwrap).collect();
+        assert!(!whole.is_empty(), "{dir}");
+        assert_eq!(merged, whole, "{dir}");
+    }
+}

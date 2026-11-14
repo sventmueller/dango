@@ -3,10 +3,12 @@
 //! result as a JSON line as it happens, naming a test by its describe blocks and title joined with ` > ` as Vitest's
 //! list writes them.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::reading::Changes;
 use crate::{Command, DebugTarget, Location, Report, Scope, State, Test, TestId, command, escaped};
 
 /// Dango's Vitest reporter.
@@ -132,16 +134,23 @@ pub(crate) fn jest_tests(output: &str) -> Vec<Test> {
         .collect()
 }
 
-/// The reports in the events of Dango's reporters, the last event of a test giving its state.
-pub(crate) fn reports(output: &str) -> Vec<Report> {
-    let mut out: Vec<Report> = Vec::new();
-    for event in output.lines().filter_map(|l| serde_json::from_str::<Event>(l).ok()) {
+/// The events of Dango's reporters as they come, the last event of a test giving its state.
+#[derive(Debug, Default)]
+pub(crate) struct Lines {
+    at: HashMap<TestId, usize>,
+}
+
+impl Lines {
+    pub(crate) fn line(&mut self, line: &str, out: &mut Vec<Report>, changes: &mut Changes) {
+        let Ok(event) = serde_json::from_str::<Event>(line) else {
+            return;
+        };
         let state = match (event.event.as_str(), event.outcome.as_deref()) {
             ("started", _) => State::Running,
             (_, Some("passed")) => State::Passed,
             (_, Some("failed")) => State::Failed,
             (_, Some("skipped")) => State::Skipped,
-            _ => continue,
+            _ => return,
         };
         let failure = event.text.as_deref().and_then(|text| {
             text.lines()
@@ -163,12 +172,19 @@ pub(crate) fn reports(output: &str) -> Vec<Report> {
             message: event.text.as_deref().map(first_lines),
             failure,
         };
-        match out.iter_mut().find(|r| r.id == report.id) {
-            Some(known) => *known = report,
-            None => out.push(report),
-        }
+        let index = match self.at.get(&report.id) {
+            Some(index) => {
+                out[*index] = report;
+                *index
+            }
+            None => {
+                self.at.insert(report.id.clone(), out.len());
+                out.push(report);
+                out.len() - 1
+            }
+        };
+        changes.mark(index);
     }
-    out
 }
 
 /// The message up to its stack trace.
