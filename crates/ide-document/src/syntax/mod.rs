@@ -170,14 +170,8 @@ impl Syntax {
         self.frontier >= self.lines.len() && self.markdown.as_ref().is_none_or(markdown::Markdown::is_complete)
     }
 
-    /// Lexes what `lines` needs, and returns the lines whose colours changed. Catching up on the lines above them
-    /// stops at `deadline`, and those of `lines` it did not reach are lexed from a guessed state.
-    pub(crate) fn highlight(
-        &mut self,
-        text: &Text,
-        lines: Range<usize>,
-        deadline: Option<Instant>,
-    ) -> Option<Range<usize>> {
+    /// Lexes what `lines` needs, and returns the lines whose colours changed.
+    pub(crate) fn highlight(&mut self, text: &Text, lines: Range<usize>) -> Option<Range<usize>> {
         let end = lines.end.min(self.lines.len());
         let start = lines.start.min(end);
         if start == end {
@@ -185,17 +179,10 @@ impl Syntax {
         }
         let mut changed = Changed::default();
         if start <= self.frontier.saturating_add(CATCH_UP_LINES) {
-            self.advance(text, end, &mut changed, deadline);
-        }
-        let first = self.frontier.max(start);
-        if first < end {
-            let known = (first == self.frontier).then(|| first.checked_sub(1)).flatten();
-            let mut state = match known {
-                Some(previous) => self.lines[previous].as_ref().map(|l| l.end.clone()),
-                None => self.lines[first].as_ref().map(|l| l.start.clone()),
-            }
-            .unwrap_or_default();
-            for n in first..end {
+            self.advance(text, end, &mut changed, None);
+        } else {
+            let mut state = self.lines[start].as_ref().map(|l| l.start.clone()).unwrap_or_default();
+            for n in start..end {
                 state = self.relex(text, n, state, &mut changed);
             }
         }
@@ -266,7 +253,7 @@ impl Syntax {
     pub(crate) fn matching_bracket(&mut self, text: &Text, offset: usize) -> Option<BracketPair> {
         let byte = text.utf16_to_byte(offset).ok()?;
         let line = text.line_of(byte);
-        self.highlight(text, line..line + 1, None);
+        self.highlight(text, line..line + 1);
         let line_start = text.byte_to_utf16(text.line_bytes(line)?.start).ok()?;
         let column = u32::try_from(offset - line_start).ok()?;
         let brackets = &self.lines[line].as_ref()?.brackets;
@@ -336,7 +323,7 @@ impl Syntax {
             } else {
                 rest.end.saturating_sub(LINES_PER_STEP).max(rest.start)..rest.end
             };
-            self.highlight(text, step.clone(), None);
+            self.highlight(text, step.clone());
             let mut order: Vec<usize> = step.clone().collect();
             if !forward {
                 order.reverse();

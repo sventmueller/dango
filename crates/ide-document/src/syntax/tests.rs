@@ -194,37 +194,13 @@ fn a_range_far_below_is_guessed_first_and_corrected_once_lexing_reaches_it() {
 }
 
 #[test]
-fn catching_up_within_a_budget_guesses_the_lines_it_did_not_reach() {
-    let rust = Language::named("rust").unwrap();
-    let mut text = String::from("/* open\n");
-    text.extend((0..CATCH_UP_LINES).map(|n| format!("let x{n} = 1;\n")));
-    text.push_str("*/\n");
-    let mut document = Document::untitled(&text);
-    document.set_language(Some(rust));
-    let near = CATCH_UP_LINES - 100;
-    assert!(
-        document
-            .highlight_within(near..near + 5, std::time::Duration::ZERO)
-            .is_some_and(|changed| changed.contains(&near))
-    );
-    assert!(
-        document.spans(near).iter().any(|s| s.kind == CodeToken::Keyword),
-        "guessed: outside the comment"
-    );
-    while !document.is_highlighted() {
-        document.highlight_more(std::time::Duration::from_millis(50));
-    }
-    assert!(document.spans(near).iter().all(|s| s.kind == CodeToken::Comment));
-}
-
-#[test]
 fn a_long_first_line_of_a_comment_shortens_to_its_ends() {
     let rust = Language::named("rust").unwrap();
     let long = "x".repeat(LONG_OPENING * 2);
     let text = format!("let a = 1; /* {long}\nstill */ let b = 2;\n");
     let lines = Text::new(&text);
     let mut syntax = Syntax::new(Some(rust), lines.line_count());
-    syntax.highlight(&lines, 0..3, None);
+    syntax.highlight(&lines, 0..3);
     let open = syntax.lines[0].as_ref().unwrap().end.open.clone().unwrap();
     assert!(open.len() < 40, "{open:?}");
     assert_eq!(all_spans(&lexed(rust, &text)), whole_text(rust, &text));
