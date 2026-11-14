@@ -46,3 +46,9 @@ pub fn card_marks(tab: &AgentTab, id: u64) -> Option<usize> {
     let storage = unsafe { text.textStorage() }?;
     Some(count_marks(&storage))
 }
+
+/// Whether plan `id`'s card is in the window, which a card only measured is not yet.
+pub fn card_shown(tab: &AgentTab, id: u64) -> bool {
+    let text = tab.timeline().inputs().borrow().plan_text.get(&id).cloned();
+    text.is_some_and(|text| text.window().is_some())
+}

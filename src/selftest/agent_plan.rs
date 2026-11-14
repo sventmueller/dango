@@ -122,7 +122,7 @@ pub fn run(root: PathBuf, requests: u64, first: u64, then: fn(PathBuf, u64, u64)
         return finish(NAME);
     };
     let key = tab.key;
-    let shown = move || tab_of(key).is_some_and(|tab| plan::card_marks(&tab, id).is_some());
+    let shown = move || tab_of(key).is_some_and(|tab| plan::card_shown(&tab, id));
     helpers::wait_until(shown, move |_| in_card(root, key, id, (requests, first, then)));
 }
 
