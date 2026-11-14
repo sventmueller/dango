@@ -181,7 +181,7 @@ fn pairs_and_indent() {
 
 /// The point of the given offset's caret in `view`, at the middle of its line.
 fn column_point(view: &EditorTextView, offset: usize) -> Option<NSPoint> {
-    let rect = crate::lsp::rect_of(view, offset..offset)?;
+    let rect = ide_ui_lsp::rect_of(view, offset..offset)?;
     Some(NSPoint::new(rect.origin.x, rect.origin.y + rect.size.height / 2.0))
 }
 
@@ -219,7 +219,7 @@ fn folds() {
         .find("c = 3")
         .map(|b| text(&view)[..b].encode_utf16().count());
     if let Some(inside) = inside {
-        crate::lsp::apply_text_edits(&*view, vec![(inside..inside, "x".into())]);
+        ide_ui_lsp::apply_text_edits(&*view, vec![(inside..inside, "x".into())]);
     }
     helpers::wait_until(
         || open("fold.py").is_some_and(|view| edit::folded(&view) == 1),
@@ -252,7 +252,7 @@ fn edit_after_typing() {
     view.setSelectedRange(NSRange::new(3, 0));
     editor::type_text(&view, "!");
     let open = view.undoManager().map(|undo| undo.groupingLevel());
-    crate::lsp::apply_text_edits(&*view, vec![(0..0, "// ".into())]);
+    ide_ui_lsp::apply_text_edits(&*view, vec![(0..0, "// ".into())]);
     let edited = text(&view);
     let first = view.undoManager().map(|undo| {
         undo.undo();

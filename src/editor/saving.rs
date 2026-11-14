@@ -158,11 +158,11 @@ fn saved(view: &EditorTextView, new_path: Option<&Path>) {
         let language = ide_document::syntax::Language::detect(Some(path), "");
         view.document_mut().set_language(language);
         super::highlight::recolor_all(view);
-        crate::lsp::opened(view);
+        ide_ui_lsp::opened(view);
         indent::configure(view);
         super::changes::reload(view, true);
     }
-    crate::lsp::saved(view);
+    ide_ui_lsp::saved(view);
     if let (Some(path), Some(controller)) = (view.document().path().map(Path::to_path_buf), view.controller()) {
         crate::worktrees::file_saved(&controller, &path);
     }

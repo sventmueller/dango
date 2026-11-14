@@ -1537,6 +1537,7 @@ dependencies = [
  "ide-ui-export",
  "ide-ui-git",
  "ide-ui-icons",
+ "ide-ui-lsp",
  "ide-ui-terminal",
  "ide-vim",
  "image",
@@ -1937,6 +1938,29 @@ dependencies = [
  "objc2-app-kit",
  "objc2-core-graphics",
  "objc2-foundation",
+ "splat-markdown",
+]
+
+[[package]]
+name = "ide-ui-lsp"
+version = "0.0.0"
+dependencies = [
+ "block2",
+ "dispatch2",
+ "ide-agent",
+ "ide-core",
+ "ide-document",
+ "ide-lsp",
+ "ide-net",
+ "ide-process",
+ "ide-project",
+ "ide-ui-common",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "serde_json",
+ "splat-i18n",
  "splat-markdown",
 ]
 

@@ -14,8 +14,8 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::{server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::{guarded, main_after, main_soon, ns};
 
 /// How long saving waits for the server's formatting before it saves the text as it is.
@@ -174,7 +174,7 @@ impl Formatting {
 }
 
 fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Pending>>) -> R) -> R {
-    f(&crate::lsp::host::state().formatting.formatting)
+    f(&crate::host::state().formatting.formatting)
 }
 
 /// Formats the document with its server, as one undoable step; `then`, such as saving, runs afterwards, also when

@@ -496,7 +496,7 @@ pub fn revert(view: &EditorTextView) {
             with_breaks(&committed_lines(&head, &hunk.old_lines), ending),
         )
     };
-    crate::lsp::apply_text_edits(view, vec![edit]);
+    ide_ui_lsp::apply_text_edits(view, vec![edit]);
     compare(view);
 }
 

@@ -37,7 +37,7 @@ define_class!(
         #[unsafe(method(ideToggleInlayHints:))]
         fn toggle_hints(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                crate::lsp::inlay::toggle();
+                ide_ui_lsp::inlay::toggle();
                 self.reload();
             });
         }
@@ -48,7 +48,7 @@ define_class!(
                 let tag = sender.and_then(|s| s.downcast_ref::<NSMenuItem>()).map_or(-1, |item| item.tag());
                 let language = usize::try_from(tag).ok().and_then(|i| ide_lsp::BUILT_IN.get(i));
                 if let Some(language) = language {
-                    crate::lsp::inlay::toggle_language(language.name());
+                    ide_ui_lsp::inlay::toggle_language(language.name());
                 }
                 self.reload();
             });
@@ -97,13 +97,13 @@ impl EditorSettings {
     fn reload(&self) {
         let views = self.ivars().views.borrow();
         let Some(views) = views.as_ref() else { return };
-        let on = crate::lsp::inlay::enabled();
+        let on = ide_ui_lsp::inlay::enabled();
         views.hints.setState(state(on));
         views.languages.setEnabled(on);
         let items = views.languages.itemArray();
         for (index, language) in ide_lsp::BUILT_IN.iter().enumerate() {
             if let Some(item) = items.iter().nth(index + 1) {
-                item.setState(state(crate::lsp::inlay::enabled_for(language.name())));
+                item.setState(state(ide_ui_lsp::inlay::enabled_for(language.name())));
             }
         }
         views.blame.setState(state(crate::editor::blame_at_line_end()));

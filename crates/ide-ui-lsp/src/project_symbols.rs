@@ -71,13 +71,13 @@ pub struct Leases {
 }
 
 fn with_leases<R>(f: impl FnOnce(&RefCell<HashMap<PathBuf, Lease>>) -> R) -> R {
-    f(&crate::lsp::host::state().server_leases.leases)
+    f(&crate::host::state().server_leases.leases)
 }
 
 /// Searches the symbols of the window folder `folder` for `query`; `answer` hears what was found each time a server
 /// answers, on the main thread, until the next search of the folder.
 pub fn search_symbols(folder: &Path, query: &str, answer: impl Fn(SymbolAnswer) + 'static) {
-    if !crate::lsp::host::is_trusted(folder) {
+    if !crate::host::is_trusted(folder) {
         answer(SymbolAnswer {
             symbols: vec![],
             indexing: false,

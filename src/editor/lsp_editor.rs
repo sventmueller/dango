@@ -1,4 +1,4 @@
-//! The editor as the language servers reach it (`crate::lsp::editor::Editor`), and their inlay hints as its insets.
+//! The editor as the language servers reach it (`ide_ui_lsp::editor::Editor`), and their inlay hints as its insets.
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::{Deref, Range};
@@ -13,8 +13,8 @@ use objc2_app_kit::{NSStackView, NSTextStorage, NSTextView};
 
 use super::EditorTextView;
 use super::insets::{self, Inset, Layer, Place};
-use crate::lsp::ViewState;
-use crate::lsp::editor::{Editor, Hint};
+use ide_ui_lsp::ViewState;
+use ide_ui_lsp::editor::{Editor, Hint};
 
 /// `view` as a language server's editor that it holds on to.
 pub fn lsp_editor(view: Retained<EditorTextView>) -> Box<dyn Editor> {
@@ -151,7 +151,7 @@ fn inset(hint: Hint) -> Inset {
     if let Some((path, range)) = hint.target {
         inset.action = Some(Rc::new(move |view: &EditorTextView| {
             if let Some(window) = Editor::window_id(view) {
-                crate::lsp::open_at(window, &path, range);
+                ide_ui_lsp::open_at(window, &path, range);
             }
         }));
     }

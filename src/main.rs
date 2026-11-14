@@ -10,7 +10,6 @@ mod diag;
 mod editor;
 mod environment;
 mod host;
-mod lsp;
 mod markdown;
 mod menu;
 mod navigation;
@@ -53,6 +52,7 @@ fn main() {
     ide_ui_agent::install(&host::AppHost);
     ide_ui_browser::install(&host::AppHost);
     ide_ui_terminal::install(&host::AppHost);
+    ide_ui_lsp::install(&host::AppHost);
     #[cfg(feature = "dictation")]
     ide_ui_dictation::install(&host::AppHost);
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {

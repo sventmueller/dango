@@ -17,8 +17,8 @@ use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::{server_by_id, server_of, servers_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::{guarded, main_after, main_on_run_loop, main_soon, ns};
 
 /// How long the cursor rests before the server is asked whether the place has actions.
@@ -93,11 +93,11 @@ pub struct CodeActions {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
-    f(&crate::lsp::host::state().code_actions.shown)
+    f(&crate::host::state().code_actions.shown)
 }
 
 fn with_chooser<R>(f: impl FnOnce(&RefCell<Option<Retained<Chooser>>>) -> R) -> R {
-    f(&crate::lsp::host::state().code_actions.chooser)
+    f(&crate::host::state().code_actions.chooser)
 }
 
 define_class!(
@@ -629,7 +629,7 @@ pub mod selftest {
 
     use objc2_app_kit::NSAccessibility;
 
-    use crate::lsp::editor::Editor;
+    use crate::editor::Editor;
 
     /// The titles of the menu of actions on screen for `view`, in order.
     pub fn shown(view: &dyn Editor) -> Option<Vec<String>> {

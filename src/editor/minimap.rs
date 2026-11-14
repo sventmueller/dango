@@ -250,9 +250,9 @@ impl Minimap {
         let first = index(rows.offset / ROW);
         let last = index(((rows.offset + size.height) / ROW).ceil());
         let paused = crate::debug::paused_line(&editor);
-        let diagnostics = crate::lsp::line_marks(&*editor);
+        let diagnostics = ide_ui_lsp::line_marks(&*editor);
         let lsp = editor.ivars().lsp.borrow();
-        let painted = crate::lsp::painted(&lsp);
+        let painted = ide_ui_lsp::painted(&lsp);
         let document = editor.document();
         let columns = index((size.width - LEFT - MARK) / COLUMN);
         for (row, &line) in rows
@@ -352,7 +352,7 @@ fn editor_line_start(document: &ide_document::Document, line: usize) -> usize {
 fn runs(
     text: &str,
     spans: &[ide_document::syntax::Span],
-    painted: &[crate::lsp::Painted],
+    painted: &[ide_ui_lsp::Painted],
     start: usize,
     columns: usize,
 ) -> Vec<(Range<usize>, Retained<NSColor>)> {

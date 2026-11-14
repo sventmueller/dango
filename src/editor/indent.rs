@@ -349,7 +349,7 @@ pub fn before_save(view: &EditorTextView, target: Option<&Path>) {
         tidy_edits(&document.text().to_string(), &format, convert, last)
     };
     if !edits.is_empty() {
-        crate::lsp::apply_text_edits(view, edits);
+        ide_ui_lsp::apply_text_edits(view, edits);
     }
 }
 

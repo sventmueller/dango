@@ -9,8 +9,8 @@ use ide_lsp::lsp_types::{DocumentSymbol, Uri};
 use objc2::sel;
 
 use super::ViewState;
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::main_soon;
 
 /// A symbol of the document and where it is, in UTF-16 code units.

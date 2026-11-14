@@ -271,7 +271,7 @@ impl LineNumbers {
     }
 
     /// Draws a diagnostic's dot in `row` and gives it the message as its tooltip.
-    fn mark(&self, row: NSRect, severity: crate::lsp::Severity, message: &str) {
+    fn mark(&self, row: NSRect, severity: ide_ui_lsp::Severity, message: &str) {
         let size = 5.0;
         let dot = NSRect::new(
             NSPoint::new(
@@ -376,9 +376,9 @@ impl LineNumbers {
         let width = self.bounds().size.width;
         self.removeAllToolTips();
         self.ivars().tips.borrow_mut().clear();
-        let marks = crate::lsp::line_marks(&*editor);
+        let marks = ide_ui_lsp::line_marks(&*editor);
         let folds = super::fold::gutter(&editor);
-        let bulb = crate::lsp::bulb_line(&*editor);
+        let bulb = ide_ui_lsp::bulb_line(&*editor);
         let bulb_row = std::cell::Cell::new(None);
         let bottom = visible.origin.y + visible.size.height;
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
@@ -452,7 +452,7 @@ impl LineNumbers {
             NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
             &block,
         );
-        crate::lsp::place_bulb(&*editor, self, bulb_row.get());
+        ide_ui_lsp::place_bulb(&*editor, self, bulb_row.get());
     }
 }
 

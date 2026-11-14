@@ -74,7 +74,7 @@ impl EditorTextView {
         let (Some(layout), Some(content)) = (self.textLayoutManager(), self.textContentStorage()) else {
             return;
         };
-        let Some(range) = crate::lsp::text_range(&content, &found) else {
+        let Some(range) = ide_ui_lsp::text_range(&content, &found) else {
             return;
         };
         let marker: Retained<AnyObject> = objc2_app_kit::NSColor::findHighlightColor().into();
@@ -95,7 +95,7 @@ impl EditorTextView {
         let (Some(layout), Some(content)) = (self.textLayoutManager(), self.textContentStorage()) else {
             return;
         };
-        let Some(range) = crate::lsp::text_range(&content, &found) else {
+        let Some(range) = ide_ui_lsp::text_range(&content, &found) else {
             return;
         };
         layout.removeRenderingAttribute_forTextRange(
@@ -107,7 +107,7 @@ impl EditorTextView {
             &range,
         );
         if self.ivars().lsp.try_borrow_mut().is_ok() {
-            crate::lsp::paint(self);
+            ide_ui_lsp::paint(self);
         } else {
             self.later(objc2::sel!(ideDecorate), 0.0);
         }

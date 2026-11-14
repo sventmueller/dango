@@ -155,7 +155,7 @@ fn unchanged(ok: bool, untrusted: bool) {
     let one = at("    1\n");
     let two = at("    2\n") + "    2\n".len();
     let three = at("    3\n");
-    crate::lsp::apply_text_edits(
+    ide_ui_lsp::apply_text_edits(
         &*view,
         vec![
             (one..one + 5, "    10".into()),

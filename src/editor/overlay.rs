@@ -242,7 +242,7 @@ impl Overlay {
         }
         editor.insertionPointColor().setFill();
         for range in &carets {
-            if let Some(rect) = crate::lsp::rect_of(editor, range.end..range.end) {
+            if let Some(rect) = ide_ui_lsp::rect_of(editor, range.end..range.end) {
                 NSBezierPath::fillRect(NSRect::new(rect.origin, NSSize::new(1.5, rect.size.height)));
             }
         }

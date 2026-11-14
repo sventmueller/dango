@@ -119,7 +119,7 @@ fn in_editor(view: &EditorTextView, options: &SearchOptions, with: &str, only: &
     let found = chosen(replacements(&text, options, with).map_err(Failure::Search)?, only);
     let count = found.len();
     if count > 0 {
-        crate::lsp::apply_text_edits(view, found.into_iter().map(|r| (r.range_utf16, r.text)).collect());
+        ide_ui_lsp::apply_text_edits(view, found.into_iter().map(|r| (r.range_utf16, r.text)).collect());
     }
     Ok(count)
 }

@@ -31,7 +31,7 @@ const RETRY: f64 = 1.0;
 /// What the list shows.
 enum Rows {
     Files(Vec<Hit>),
-    Symbols(Vec<crate::lsp::FoundSymbol>),
+    Symbols(Vec<ide_ui_lsp::FoundSymbol>),
 }
 
 impl Rows {
@@ -291,7 +291,7 @@ impl QuickOpenPanel {
             return;
         };
         let this = Weak::from(self);
-        crate::lsp::search_symbols(&root, &symbols, move |answer| {
+        ide_ui_lsp::search_symbols(&root, &symbols, move |answer| {
             if let Some(this) = this.load() {
                 this.symbols_answered(asked, answer);
             }
@@ -310,7 +310,7 @@ impl QuickOpenPanel {
 
     /// Shows the symbols found for query number `asked`; while nothing is found and a server still indexes, the list
     /// says so and asks again shortly.
-    fn symbols_answered(&self, asked: u64, answer: crate::lsp::SymbolAnswer) {
+    fn symbols_answered(&self, asked: u64, answer: ide_ui_lsp::SymbolAnswer) {
         if asked != self.ivars().asked.get() {
             return;
         }
@@ -407,7 +407,7 @@ impl QuickOpenPanel {
         };
         self.close();
         if let Some(symbol) = symbol {
-            crate::lsp::open_symbol(&self.ivars().root, &symbol);
+            ide_ui_lsp::open_symbol(&self.ivars().root, &symbol);
         } else if let (Some(hit), Some(controller)) = (hit, self.ivars().controller.load()) {
             controller.open_file(&self.ivars().root.join(&hit.path));
         }
@@ -424,7 +424,7 @@ impl QuickOpenPanel {
 }
 
 /// A symbol: the kind's symbol, the name with what contains it, and below them its file and line.
-fn symbol_view(mtm: MainThreadMarker, found: &crate::lsp::FoundSymbol, root: &std::path::Path) -> Retained<NSView> {
+fn symbol_view(mtm: MainThreadMarker, found: &ide_ui_lsp::FoundSymbol, root: &std::path::Path) -> Retained<NSView> {
     let symbol = &found.symbol;
     let mut title = symbol.name.clone();
     if let Some(container) = symbol.container.as_deref().filter(|c| !c.is_empty()) {
@@ -448,7 +448,7 @@ fn symbol_view(mtm: MainThreadMarker, found: &crate::lsp::FoundSymbol, root: &st
     place.setTextColor(Some(&NSColor::secondaryLabelColor()));
     place.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingHead);
     let icon = objc2_app_kit::NSImageView::new(mtm);
-    icon.setImage(crate::util::symbol(crate::lsp::kind_symbol(symbol.kind), "").as_deref());
+    icon.setImage(crate::util::symbol(ide_ui_lsp::kind_symbol(symbol.kind), "").as_deref());
     icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     icon.setAccessibilityElement(false);
     let cell = NSView::new(mtm);

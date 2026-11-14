@@ -205,12 +205,13 @@ vibeedit/
     ide-predict, ide-dap  Vorhersage-Anbieter (B4), Debug Adapter Protocol (B1)
     ide-ui-common      AppKit-Helfer, Diagnose, Farbregeln (E66), Fenster-Handle und Register; Grundlage der UI-Crates (E99)
     ide-ui-icons, ide-ui-export, ide-ui-browser, ide-ui-terminal, ide-ui-dictation, ide-ui-debug, ide-ui-git,
-    ide-ui-agent       vom App-Crate abgetrennte Oberflächenteile (E99); Zustand nur über ihren `Host`, Fenster nur
-                       über `ide_ui_common::window` (Handle nach Id, `WindowHost`)
+    ide-ui-agent, ide-ui-lsp  vom App-Crate abgetrennte Oberflächenteile (E99); Zustand nur über ihren `Host`, Fenster
+                       nur über `ide_ui_common::window` (Handle nach Id, `WindowHost`); `ide-ui-lsp` erreicht den
+                       Editor nur über seine Schnittstelle `Editor` (E144)
   src/                  AppKit: main, app, menu, settings/, window/, sidebar/, editor/, preview/, activity/, diff/;
-                        `host.rs` setzt `WindowHost` und die `Host`s der UI-Crates um; agent.rs, agent_panel.rs,
-                        own_agent.rs, git_panel.rs, worktrees/, debug/ (mit den Teilen im Editor), terminal/,
-                        browser.rs, dictation.rs und util/ sind dünne Fassaden über ihnen
+                        `host.rs` setzt `WindowHost` und die `Host`s der UI-Crates um; worktrees/, debug/ (mit den
+                        Teilen im Editor), terminal/, browser.rs und util/ halten die App-Seite ihrer UI-Crates, alle
+                        übrigen erreicht der Code über ihren eigenen Pfad
   resources/<35>.lproj  Localizable.strings, InfoPlist.strings
   xtask/                bundle, sign, universal, dmg, notarize, Sparkle, Cask, Acknowledgements
   docs/development.md  ACCESSIBILITY.md  README.md
@@ -626,6 +627,11 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   zurückruft (E97). Zwei Ratchets in `cargo xtask rules` zählen die Zugriffe über `app()`/`try_app()` und über
   `state()` der UI-Crates; die Zahl sinkt, steigt aber nie. Geheimnisse liest die App nur aus dem übergebenen Speicher;
   vorher lehnt der Zugriff ab, statt still in den Arbeitsspeicher auszuweichen.
+- **E144 Sprachserver als eigene UI-Crate `ide-ui-lsp`** *(erweitert E99)*: Sie erreicht einen Editor nur über die
+  Schnittstelle `Editor` (Textansicht, Dokument, Ordner, Fenster-ID und die wenigen Dinge, die eine Serverantwort im
+  Editor ändert) und die App über ihren `Host`; Einblendungshinweise liefert sie als eigene Daten, die der Editor in
+  seine Einblendungen (E81) übersetzt. Der Editor führt seine Nummer selbst und beobachtet sein Scrollen selbst.
+  Selbsttest-Funktionen liegen in den `selftest_probe`-Modulen ihrer Datei, nie im Produktivcode.
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen

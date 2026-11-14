@@ -397,7 +397,7 @@ fn lines_on_screen(view: &EditorTextView) -> Vec<usize> {
         .filter(|line| !(folds.contains(&(line - line % LINES)) && (1..=3).contains(&(line % LINES))))
         .filter(|line| {
             view.line_start(*line)
-                .and_then(|at| crate::lsp::rect_of(view, at..at))
+                .and_then(|at| ide_ui_lsp::rect_of(view, at..at))
                 .is_some_and(|r| inside(area, r))
         })
         .collect()
@@ -417,7 +417,7 @@ fn compare_folds(view: &EditorTextView, picture: &Picture, label: &str, lines: &
         let Some(end) = view.line_start(line + 1).map(|at| at - 1) else {
             continue;
         };
-        let Some(caret) = crate::lsp::rect_of(view, end..end) else {
+        let Some(caret) = ide_ui_lsp::rect_of(view, end..end) else {
             continue;
         };
         let block = line / LINES;
@@ -505,7 +505,7 @@ fn compare_carets(view: &EditorTextView, picture: &Picture, label: &str, lines: 
             let Some(at) = view.line_start(line).map(|s| s + 2) else {
                 continue;
             };
-            let Some(r) = crate::lsp::rect_of(view, at..at) else {
+            let Some(r) = ide_ui_lsp::rect_of(view, at..at) else {
                 continue;
             };
             let strip = picture.ink(
@@ -529,7 +529,7 @@ fn compare_carets(view: &EditorTextView, picture: &Picture, label: &str, lines: 
         }
         if kind == 3 {
             let Some(word) = gamma(view, block) else { continue };
-            let Some(r) = crate::lsp::rect_of(view, word.clone()) else {
+            let Some(r) = ide_ui_lsp::rect_of(view, word.clone()) else {
                 continue;
             };
             let tinted = picture.tint(

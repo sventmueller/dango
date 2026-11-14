@@ -61,10 +61,10 @@ const PARTS: &[Part] = &[
         closed: crate::debug::window_closed,
     },
     Part {
-        trust_changed: crate::lsp::trust_changed,
+        trust_changed: ide_ui_lsp::trust_changed,
         closed: |controller| {
             if let Some(root) = controller.project_root() {
-                crate::lsp::window_closed(&root);
+                ide_ui_lsp::window_closed(&root);
             }
         },
         ..Part::NONE

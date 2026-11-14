@@ -81,20 +81,20 @@ needs a row here first, and a reason from the list above.
 | `crates/ide-ui-git/src/diff.rs` | `TABS` | the diff tabs of every window by id | from opening to closing | AppContext: `git.diff_tabs` |
 | `crates/ide-ui-git/src/panel.rs` | `PANELS` | the Git panels of every window | from creation until replaced | AppContext: `git.panels` |
 | `crates/ide-ui-git/src/toolbar.rs` | `SHOWN` | the toolbars' branch items with their window | while the toolbar exists | AppContext: `git.toolbar_items` |
-| `src/lsp/actions.rs` | `CHOOSER` | the menu that offers them | while it is open | AppContext: `code_actions` |
-| `src/lsp/actions.rs` | `SHOWN` | the code actions on view | while the menu is open | AppContext: `code_actions` |
-| `src/lsp/complete.rs` | `LIST` | the completion list on view | while it shows | AppContext: `completion` |
-| `src/lsp/inlay.rs` | `ASKED` | the last inlay hint request of each editor | until the answer comes | AppContext: `inlay_requests` |
-| `src/lsp/inlay.rs` | `CHOSEN` | the inlay hint settings as last chosen | app | stays: cache (of the setting) |
-| `src/lsp/inlay.rs` | `NEXT` | the next id for them | app | AppContext: `inlay_requests` |
-| `src/lsp/inlay.rs` | `SHOWN` | the document revision of the hints shown, by editor | while the editor is open | AppContext: `inlay_requests` |
-| `src/lsp/mod.rs` | `CUSTOM` | the language servers the user set up, read from the settings | until `servers_changed` | stays: cache (of the setting) |
-| `src/lsp/mod.rs` | `NEXT_ID` | the next id for them | app | AppContext: `lsp_workspaces` |
-| `src/lsp/mod.rs` | `WORKSPACES` | the language server workspaces of every window | until their window closes | AppContext: `lsp_workspaces` |
-| `src/lsp/navigate.rs` | `SHEET` | the sheet of locations on view | while it shows | AppContext: `location_sheet` |
-| `src/lsp/project_symbols.rs` | `LEASES` | the servers lent to the project symbol search, by folder | until the lease runs out (5 min) | AppContext: `server_leases` |
-| `src/lsp/rename.rs` | `FORMATTING` | running format-on-save requests by editor | until the answer | AppContext: `formatting` |
-| `src/lsp/signature.rs` | `HELP` | the signature help on view | while it shows | AppContext: `signature_help` |
+| `crates/ide-ui-lsp/src/actions.rs` | `CHOOSER` | the menu that offers them | while it is open | AppContext: `code_actions` |
+| `crates/ide-ui-lsp/src/actions.rs` | `SHOWN` | the code actions on view | while the menu is open | AppContext: `code_actions` |
+| `crates/ide-ui-lsp/src/complete.rs` | `LIST` | the completion list on view | while it shows | AppContext: `completion` |
+| `crates/ide-ui-lsp/src/inlay.rs` | `ASKED` | the last inlay hint request of each editor | until the answer comes | AppContext: `inlay_requests` |
+| `crates/ide-ui-lsp/src/inlay.rs` | `CHOSEN` | the inlay hint settings as last chosen | app | stays: cache (of the setting) |
+| `crates/ide-ui-lsp/src/inlay.rs` | `NEXT` | the next id for them | app | AppContext: `inlay_requests` |
+| `crates/ide-ui-lsp/src/inlay.rs` | `SHOWN` | the document revision of the hints shown, by editor | while the editor is open | AppContext: `inlay_requests` |
+| `crates/ide-ui-lsp/src/lib.rs` | `CUSTOM` | the language servers the user set up, read from the settings | until `servers_changed` | stays: cache (of the setting) |
+| `crates/ide-ui-lsp/src/lib.rs` | `NEXT_ID` | the next id for them | app | AppContext: `lsp_workspaces` |
+| `crates/ide-ui-lsp/src/lib.rs` | `WORKSPACES` | the language server workspaces of every window | until their window closes | AppContext: `lsp_workspaces` |
+| `crates/ide-ui-lsp/src/navigate.rs` | `SHEET` | the sheet of locations on view | while it shows | AppContext: `location_sheet` |
+| `crates/ide-ui-lsp/src/project_symbols.rs` | `LEASES` | the servers lent to the project symbol search, by folder | until the lease runs out (5 min) | AppContext: `server_leases` |
+| `crates/ide-ui-lsp/src/rename.rs` | `FORMATTING` | running format-on-save requests by editor | until the answer | AppContext: `formatting` |
+| `crates/ide-ui-lsp/src/signature.rs` | `HELP` | the signature help on view | while it shows | AppContext: `signature_help` |
 | `src/markdown/splat_app.rs` | `TARGET` | action target of the "open in splat" menu items, without state | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `src/navigation.rs` | `GROUPS` | the toolbars' arrow groups with their window | while the toolbar exists | AppContext: `navigation` |
 | `src/navigation.rs` | `HISTORIES` | the back and forward history of each window | while the window is open | AppContext: `navigation` |
@@ -154,6 +154,7 @@ whose static is gone.
 | `crates/ide-ui-browser/src/web.rs` | `NAME` | Safari's part of the user agent | cache |
 | `crates/ide-ui-common/src/window.rs` | `HOST` | the `WindowHost` the feature crates reach windows through | install-once hook |
 | `crates/ide-ui-debug/src/host.rs` | `HOST` | the debugger's `Host` | install-once hook |
+| `crates/ide-ui-lsp/src/host.rs` | `HOST` | the language servers' `Host` | install-once hook |
 | `crates/ide-ui-dictation/src/hub.rs` | `HOST` | the dictation's `Host` | install-once hook |
 | `crates/ide-ui-export/src/lib.rs` | `HOST` | the export's `Host` | install-once hook |
 | `crates/ide-ui-git/src/host.rs` | `HOST` | the Git panel's `Host` | install-once hook |
@@ -172,7 +173,7 @@ whose static is gone.
 | `src/ci_panel/work.rs` | `NETWORK` | the CI panel's HTTP transport | once per process |
 | `src/ci_panel/work.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the tokens are | once per process |
 | `src/editor/recovery.rs` | `COPIES` | the thread that writes copies of unsaved text | worker threads |
-| `src/lsp/edits.rs` | `EDITS` | the thread that applies a server's workspace edits | worker threads |
+| `crates/ide-ui-lsp/src/edits.rs` | `EDITS` | the thread that applies a server's workspace edits | worker threads |
 | `src/environment.rs` | `ENVIRONMENT` | the login shell's environment | once per process |
 | `src/environment.rs` | `READY` | whether that environment is read, for threads that wait for it | once per process |
-| `src/lsp/mod.rs` | `REGISTRY` | the language server registry, built once the environment is known | once per process |
+| `crates/ide-ui-lsp/src/lib.rs` | `REGISTRY` | the language server registry, built once the environment is known | once per process |

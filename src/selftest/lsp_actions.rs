@@ -135,7 +135,7 @@ fn picture(name: &str) {
 
 fn quiet() -> bool {
     main_view()
-        .and_then(|v| crate::lsp::quiet_for(&*v))
+        .and_then(|v| ide_ui_lsp::quiet_for(&*v))
         .is_some_and(|q| q >= SETTLE)
 }
 
@@ -169,7 +169,7 @@ fn opened(controller: Retained<WindowController>) {
     controller.open_file(&root().join(chosen.main));
     END.poll(
         WAIT,
-        || main_view().is_some_and(|v| crate::lsp::server_running(&*v) != Ok(false)),
+        || main_view().is_some_and(|v| ide_ui_lsp::server_running(&*v) != Ok(false)),
         |_, _| started(),
     );
 }
@@ -180,7 +180,7 @@ fn started() {
         finish(case().scenario);
         return;
     };
-    match crate::lsp::server_running(&*view) {
+    match ide_ui_lsp::server_running(&*view) {
         Err(why) if why == "missing" => {
             check("skipped: the language server is missing", true, case().server);
             done();
@@ -212,10 +212,10 @@ fn rest_on_name(settled: Duration) {
         .unwrap_or(0);
     END.poll(
         ANSWER,
-        move || main_view().is_some_and(|v| crate::lsp::bulb_line(&*v) == Some(line)),
+        move || main_view().is_some_and(|v| ide_ui_lsp::bulb_line(&*v) == Some(line)),
         move |ok, took| {
             let Some(view) = main_view() else { return };
-            let bulb = crate::lsp::code_action_menu::bulb(&*view);
+            let bulb = ide_ui_lsp::code_action_menu::bulb(&*view);
             check(
                 "a lightbulb shows on the cursor's line once it rests",
                 ok && bulb.is_some(),
@@ -241,7 +241,7 @@ fn typing_hides_the_bulb(view: &EditorTextView) {
     let before = view.document().text().to_string();
     let cursor = view.selectedRange().location;
     editor::type_text(view, "x");
-    let gone = crate::lsp::bulb_line(view).is_none();
+    let gone = ide_ui_lsp::bulb_line(view).is_none();
     if let Some(undo) = view.undoManager() {
         undo.undo();
     }
@@ -251,20 +251,20 @@ fn typing_hides_the_bulb(view: &EditorTextView) {
         gone && view.document().text().to_string() == before,
         "",
     );
-    crate::lsp::code_action_menu::forget();
+    ide_ui_lsp::code_action_menu::forget();
     let wanted = case().fix_title;
     END.poll(
         ANSWER,
-        || main_view().is_some_and(|v| crate::lsp::bulb_line(&*v).is_some()),
+        || main_view().is_some_and(|v| ide_ui_lsp::bulb_line(&*v).is_some()),
         move |_, _| {
             if let Some(view) = main_view() {
-                crate::lsp::code_actions(&*view, crate::lsp::ActionKind::Fixes);
+                ide_ui_lsp::code_actions(&*view, ide_ui_lsp::ActionKind::Fixes);
             }
             END.poll(
                 ANSWER,
                 move || {
                     main_view()
-                        .and_then(|v| crate::lsp::code_action_menu::shown(&*v))
+                        .and_then(|v| ide_ui_lsp::code_action_menu::shown(&*v))
                         .is_some_and(|titles| titles.iter().any(|t| wanted.iter().any(|w| t.starts_with(w))))
                 },
                 listed,
@@ -275,7 +275,7 @@ fn typing_hides_the_bulb(view: &EditorTextView) {
 
 fn listed(ok: bool, took: Duration) {
     let Some(view) = main_view() else { return };
-    let titles = crate::lsp::code_action_menu::shown(&*view).unwrap_or_default();
+    let titles = ide_ui_lsp::code_action_menu::shown(&*view).unwrap_or_default();
     check(
         "the quick fix menu at the cursor lists the import",
         ok,
@@ -286,7 +286,7 @@ fn listed(ok: bool, took: Duration) {
         .fix_title
         .iter()
         .find(|w| titles.iter().any(|t| t.starts_with(**w)))
-        .is_some_and(|w| crate::lsp::code_action_menu::choose(w));
+        .is_some_and(|w| ide_ui_lsp::code_action_menu::choose(w));
     END.poll(
         ANSWER,
         || main_view().is_some_and(|v| v.document().text().to_string().contains(case().fixed)),
@@ -329,10 +329,10 @@ fn call() {
     }
     END.poll(
         ANSWER,
-        || main_view().and_then(|v| crate::lsp::signatures::shown(&*v)).is_some(),
+        || main_view().and_then(|v| ide_ui_lsp::signatures::shown(&*v)).is_some(),
         |ok, took| {
             let Some(view) = main_view() else { return };
-            let shown = crate::lsp::signatures::shown(&*view);
+            let shown = ide_ui_lsp::signatures::shown(&*view);
             check(
                 "typing the call's parenthesis shows its signature",
                 ok,
@@ -343,7 +343,7 @@ fn call() {
                 shown.as_ref().is_some_and(|(_, active)| active == case().first),
                 format!("{shown:?}"),
             );
-            if let Some(panel) = crate::lsp::signatures::panel() {
+            if let Some(panel) = ide_ui_lsp::signatures::panel() {
                 snapshot(&panel, &format!("{}-signature-window", case().scenario));
             }
             picture(&format!("{}-signature", case().scenario));
@@ -355,7 +355,7 @@ fn call() {
                 ANSWER,
                 move || {
                     main_view()
-                        .and_then(|v| crate::lsp::signatures::shown(&*v))
+                        .and_then(|v| ide_ui_lsp::signatures::shown(&*v))
                         .is_some_and(|(_, active)| active == second)
                 },
                 second_parameter,
@@ -366,22 +366,22 @@ fn call() {
 
 fn second_parameter(ok: bool, took: Duration) {
     let Some(view) = main_view() else { return };
-    let shown = crate::lsp::signatures::shown(&*view);
+    let shown = ide_ui_lsp::signatures::shown(&*view);
     check(
         "after a comma the second parameter is set apart",
         ok,
         format!("waited {:.1} s: {shown:?}", took.as_secs_f64()),
     );
-    let took_esc = crate::lsp::command(&*view, sel!(cancelOperation:));
+    let took_esc = ide_ui_lsp::command(&*view, sel!(cancelOperation:));
     check(
         "Esc closes the signature window",
-        took_esc && crate::lsp::signatures::shown(&*view).is_none(),
+        took_esc && ide_ui_lsp::signatures::shown(&*view).is_none(),
         "",
     );
-    crate::lsp::signature_help(&*view);
+    ide_ui_lsp::signature_help(&*view);
     END.poll(
         ANSWER,
-        || main_view().and_then(|v| crate::lsp::signatures::shown(&*v)).is_some(),
+        || main_view().and_then(|v| ide_ui_lsp::signatures::shown(&*v)).is_some(),
         |ok, _| {
             check("the menu item shows the signature again", ok, "");
             let Some(view) = main_view() else { return };
@@ -390,7 +390,7 @@ fn second_parameter(ok: bool, took: Duration) {
             }
             END.poll(
                 ANSWER,
-                || main_view().is_some_and(|v| crate::lsp::signatures::shown(&*v).is_none()),
+                || main_view().is_some_and(|v| ide_ui_lsp::signatures::shown(&*v).is_none()),
                 |ok, took| {
                     check(
                         "leaving the call closes the signature window",

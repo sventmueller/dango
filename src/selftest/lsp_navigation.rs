@@ -169,7 +169,7 @@ fn found_symbol() -> bool {
     }
     hits()
         .iter()
-        .any(|h| h.starts_with("ViewState ") && h.ends_with("src/lsp/mod.rs"))
+        .any(|h| h.starts_with("ViewState ") && h.ends_with("crates/ide-ui-lsp/src/lib.rs"))
 }
 
 /// Types the query again when the server answered with nothing while it was not yet loaded.
@@ -183,7 +183,7 @@ fn search_again() {
 
 fn symbol_found(ok: bool, took: Duration) {
     let said = SAID.lock_ignoring_poison().clone();
-    let held = crate::lsp::symbol_servers(&root());
+    let held = ide_ui_lsp::symbol_servers(&root());
     if !ok && held.iter().any(|(language, running, _)| language == "Rust" && !running) {
         check(
             "skipped: rust-analyzer missing",
@@ -194,7 +194,7 @@ fn symbol_found(ok: bool, took: Duration) {
         return;
     }
     check(
-        "`#ViewState` in Open Quickly finds the struct in src/lsp/mod.rs",
+        "`#ViewState` in Open Quickly finds the struct in crates/ide-ui-lsp/src/lib.rs",
         ok,
         format!(
             "after {:.1} s: {:?}",
@@ -225,7 +225,7 @@ fn symbol_found(ok: bool, took: Duration) {
     );
     let row = hits()
         .iter()
-        .position(|h| h.starts_with("ViewState ") && h.ends_with("src/lsp/mod.rs"));
+        .position(|h| h.starts_with("ViewState ") && h.ends_with("crates/ide-ui-lsp/src/lib.rs"));
     if let (Some(controller), Some(row)) = (controller(), row) {
         controller.quick_open_row(row);
     }
@@ -243,11 +243,11 @@ fn selected(view: &EditorTextView) -> String {
 }
 
 fn symbol_opened() -> bool {
-    view("src/lsp/mod.rs").is_some_and(|v| selected(&v) == "ViewState")
+    view("crates/ide-ui-lsp/src/lib.rs").is_some_and(|v| selected(&v) == "ViewState")
 }
 
 fn opened_symbol() {
-    let shown = view("src/lsp/mod.rs").map(|v| selected(&v));
+    let shown = view("crates/ide-ui-lsp/src/lib.rs").map(|v| selected(&v));
     check(
         "choosing the symbol opens its file with its name selected",
         shown.as_deref() == Some("ViewState"),
@@ -267,17 +267,17 @@ fn ask_implementations() {
     };
     let at = text[..byte].encode_utf16().count() + "trait Pos".len();
     view.setSelectedRange(NSRange::new(at, 0));
-    if crate::lsp::listed().is_empty() {
-        crate::lsp::go_to(&*view, crate::lsp::Goto::Implementation);
+    if ide_ui_lsp::listed().is_empty() {
+        ide_ui_lsp::go_to(&*view, ide_ui_lsp::Goto::Implementation);
     }
 }
 
 fn implementations_listed() -> bool {
-    crate::lsp::listed().len() >= 10
+    ide_ui_lsp::listed().len() >= 10
 }
 
 fn implementations(ok: bool, took: Duration) {
-    let listed = crate::lsp::listed();
+    let listed = ide_ui_lsp::listed();
     let in_files = listed
         .iter()
         .all(|line| line.starts_with(TRAIT_FILE) || line.starts_with("crates/ide-lsp/src/navigation.rs"));
@@ -292,7 +292,7 @@ fn implementations(ok: bool, took: Duration) {
         ),
     );
     picture("lsp-navigation-implementations");
-    crate::lsp::close_list();
+    ide_ui_lsp::close_list();
     let Some(controller) = controller() else { return done() };
     controller.open_file(&root().join(CALLS_FILE));
     poll(
@@ -312,7 +312,7 @@ fn ask_calls() {
     let at = text[..byte].encode_utf16().count() + "fn stat".len();
     view.setSelectedRange(NSRange::new(at, 0));
     if rows().is_empty() {
-        crate::lsp::call_hierarchy(&*view);
+        ide_ui_lsp::call_hierarchy(&*view);
     }
 }
 
@@ -443,7 +443,7 @@ fn ask_callees() {
     let at = text[..byte].encode_utf16().count() + "pub(crate) fn ca".len();
     view.setSelectedRange(NSRange::new(at, 0));
     if !level(0, "call") {
-        crate::lsp::call_hierarchy(&*view);
+        ide_ui_lsp::call_hierarchy(&*view);
     }
 }
 
@@ -462,8 +462,8 @@ fn callees(ok: bool, took: Duration) {
         );
     }
     if let Some(view) = view(CALLS_FILE) {
-        let types = crate::lsp::validate(&*view, Some(objc2::sel!(ideTypeHierarchy:)));
-        let declaration = crate::lsp::validate(&*view, Some(objc2::sel!(ideDeclaration:)));
+        let types = ide_ui_lsp::validate(&*view, Some(objc2::sel!(ideTypeHierarchy:)));
+        let declaration = ide_ui_lsp::validate(&*view, Some(objc2::sel!(ideDeclaration:)));
         check(
             "commands the server does not offer are greyed out, not hidden",
             types.is_some() && declaration.is_some(),

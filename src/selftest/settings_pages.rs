@@ -688,22 +688,22 @@ fn general(f: Fixture) {
     let general_shown =
         || tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 0) && crate::settings::editor_switches().is_some();
     wait_until(general_shown, move |_| {
-        let hints = crate::lsp::inlay::enabled();
+        let hints = ide_ui_lsp::inlay::enabled();
         let flipped = press(sel!(ideToggleInlayHints:));
         let switched = crate::settings::editor_switches();
         check(
             "the inlay hints' switch turns them over and shows it",
-            flipped && crate::lsp::inlay::enabled() != hints && switched.as_ref().is_some_and(|s| s.0 != hints),
+            flipped && ide_ui_lsp::inlay::enabled() != hints && switched.as_ref().is_some_and(|s| s.0 != hints),
             format!("{switched:?}"),
         );
-        if !crate::lsp::inlay::enabled() {
+        if !ide_ui_lsp::inlay::enabled() {
             press(sel!(ideToggleInlayHints:));
         }
         let language = ide_lsp::BUILT_IN
             .first()
             .map(|l| l.name().to_string())
             .unwrap_or_default();
-        let before = crate::lsp::inlay::enabled_for(&language);
+        let before = ide_ui_lsp::inlay::enabled_for(&language);
         let menu = window().and_then(|w| {
             all_in::<NSPopUpButton>(&w).into_iter().find(|p| {
                 p.itemArray()
@@ -716,7 +716,7 @@ fn general(f: Fixture) {
         }
         check(
             "the languages' pull-down turns one language's hints over",
-            crate::lsp::inlay::enabled_for(&language) != before,
+            ide_ui_lsp::inlay::enabled_for(&language) != before,
             language,
         );
         let blame = crate::editor::blame_at_line_end();

@@ -355,7 +355,7 @@ fn mouse_at(
     at: usize,
     dx: f64,
 ) -> Option<Retained<objc2_app_kit::NSEvent>> {
-    let rect = crate::lsp::rect_of(view, at..at + 1)?;
+    let rect = ide_ui_lsp::rect_of(view, at..at + 1)?;
     let point = objc2_foundation::NSPoint::new(rect.origin.x + dx + 1.0, rect.origin.y + rect.size.height / 2.0);
     objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
         kind,
@@ -519,7 +519,7 @@ fn press(view: &EditorTextView, command: Sel) {
 /// The keyboard in the completion list, opened as a server's answer would: arrows choose, Return takes, typing
 /// filters, deleting widens again, Esc and other keys close it; and Tab through a snippet's stops.
 fn completion_keys() {
-    use crate::lsp::completion;
+    use ide_ui_lsp::completion;
     let Some(view) = open("list.rs") else {
         return finish(SCENARIO);
     };
@@ -740,7 +740,7 @@ fn file_operations() {
         )])),
         change_annotations: None,
     };
-    crate::lsp::apply_workspace_edit(&root(), &edit, |applied| {
+    ide_ui_lsp::apply_workspace_edit(&root(), &edit, |applied| {
         let titles = controller().map(|c| c.tab_titles()).unwrap_or_default();
         let renamed = root().join("renamed.txt");
         let follows = controller().and_then(|c| editor::editor_for(&c, &renamed)).is_some();
@@ -767,7 +767,7 @@ fn server_question() {
         title: title.to_string(),
         properties: Default::default(),
     });
-    crate::lsp::server_question(&root(), "The build failed.", actions.to_vec(), move |answer| {
+    ide_ui_lsp::server_question(&root(), "The build failed.", actions.to_vec(), move |answer| {
         heard.set(Some(answer.map(|a| a.title)));
     });
     let buttons: Vec<String> = window

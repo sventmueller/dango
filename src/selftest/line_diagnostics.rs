@@ -109,7 +109,7 @@ fn at_line_ends() {
         check("the file opens in an editor", false, "");
         return finish(SCENARIO);
     };
-    crate::lsp::show_diagnostics(&*view, &diagnostics());
+    ide_ui_lsp::show_diagnostics(&*view, &diagnostics());
     let off = insets::of(&view, Layer::Diagnostics).len();
     toggle(&view);
     let shown = shown_text(&view);
@@ -247,12 +247,12 @@ fn budget() {
             let at = view.line_start(5_001).unwrap_or(0) + 10;
             view.scrollRangeToVisible(NSRange::new(at, 0));
             view.setSelectedRange(NSRange::new(at, 0));
-            crate::lsp::show_diagnostics(&*view, &many);
+            ide_ui_lsp::show_diagnostics(&*view, &many);
             let count = insets::of(&view, Layer::Diagnostics).len();
             let ((median, slowest), (plain, plain_slowest)) = super::insets::compare(
                 &view,
-                || crate::lsp::show_diagnostics(&*view, &many),
-                || crate::lsp::show_diagnostics(&*view, &[]),
+                || ide_ui_lsp::show_diagnostics(&*view, &many),
+                || ide_ui_lsp::show_diagnostics(&*view, &[]),
             );
             check(
                 "E25 with diagnostics at line ends: 500 of them in 10 000 lines keep a keystroke under 5 ms and add \

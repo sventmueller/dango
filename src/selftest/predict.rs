@@ -280,7 +280,7 @@ fn escape() {
         .into_iter()
         .find(|s| s.layer == Layer::Prediction && s.in_gap);
     let at = view.selectedRange().location;
-    let caret = crate::lsp::rect_of(&*view, at..at);
+    let caret = ide_ui_lsp::rect_of(&*view, at..at);
     check(
         "in the middle of a line the ghost text opens a gap, with the caret at its left edge",
         gap.as_ref()
@@ -334,8 +334,8 @@ fn list_first() {
         return finish(SCENARIO);
     };
     let had = kind(&view).is_some();
-    crate::lsp::completion::show(&*view, &["scale_factor"]);
-    let listed = crate::lsp::completion::shown(&*view);
+    ide_ui_lsp::completion::show(&*view, &["scale_factor"]);
+    let listed = ide_ui_lsp::completion::shown(&*view);
     press(&view, sel!(insertTab:));
     check(
         "an open completion list takes Tab before the proposal",
@@ -360,7 +360,7 @@ fn snippet_first() {
     };
     let had = kind(&view).is_some();
     let before = text(&view);
-    crate::lsp::completion::snippet(&*view, std::iter::once(4..6).collect());
+    ide_ui_lsp::completion::snippet(&*view, std::iter::once(4..6).collect());
     press(&view, sel!(insertTab:));
     let selected = view.selectedRange();
     check(

@@ -254,7 +254,7 @@ fn sandbox_folders(tab: &crate::settings::AgentSettings, root: &std::path::Path)
         root,
         &choice,
         true,
-        crate::lsp::agent_diagnostics(root),
+        ide_ui_lsp::agent_diagnostics(root),
     )
     .map(|config| {
         let workspace = &config.workspace;

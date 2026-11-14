@@ -15,7 +15,7 @@ pub(super) fn editor_container(
 ) -> (Retained<objc2_app_kit::NSView>, Retained<ruler::LineNumbers>) {
     let gutter = ruler::LineNumbers::new(mtm, scroll, view);
     let blame = blame_column::BlameColumn::new(mtm, scroll, view);
-    let status = crate::lsp::status::bar(mtm, view);
+    let status = ide_ui_lsp::status::bar(mtm, view);
     let bar = conflict::Bar::new(mtm);
     let map = minimap::Minimap::new(mtm, scroll, view);
     let container = objc2_app_kit::NSView::new(mtm);
@@ -68,7 +68,7 @@ pub(super) fn editor_container(
         status.bottomAnchor().constraintEqualToAnchor(&container.bottomAnchor()),
         status
             .heightAnchor()
-            .constraintEqualToConstant(crate::lsp::status::HEIGHT),
+            .constraintEqualToConstant(ide_ui_lsp::status::HEIGHT),
     ] {
         constraint.setActive(true);
     }

@@ -407,7 +407,7 @@ impl ide_ui_agent::Host for AppHost {
     }
 
     fn agent_diagnostics(&self, root: &Path) -> std::sync::Arc<dyn ide_agent::Diagnostics> {
-        crate::lsp::agent_diagnostics(root)
+        ide_ui_lsp::agent_diagnostics(root)
     }
 
     fn query_files(
@@ -471,5 +471,67 @@ impl ide_ui_agent::Host for AppHost {
         if let Some(c) = self::window(window) {
             crate::activity::show_tab(&c, key, part, anchor);
         }
+    }
+}
+
+impl ide_ui_lsp::Host for AppHost {
+    fn state(&self) -> Rc<ide_ui_lsp::LspState> {
+        crate::context::app().lsp.clone()
+    }
+
+    fn find_editor(&self, serial: u64) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {
+        crate::editor::find_editor(serial).map(crate::editor::lsp_editor)
+    }
+
+    fn all_editors(&self) -> Vec<Box<dyn ide_ui_lsp::editor::Editor>> {
+        crate::editor::all_editors()
+            .into_iter()
+            .map(crate::editor::lsp_editor)
+            .collect()
+    }
+
+    fn editor_in(&self, window: u64, path: &Path) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {
+        let controller = self::window(window)?;
+        crate::editor::editor_for(&controller, path).map(crate::editor::lsp_editor)
+    }
+
+    fn open_file(&self, window: u64, path: &Path) {
+        if let Some(controller) = self::window(window) {
+            controller.open_file(path);
+        }
+    }
+
+    fn show_hierarchy(&self, window: u64, hierarchy: ide_ui_lsp::Hierarchy) {
+        if let Some(controller) = self::window(window) {
+            controller.show_hierarchy(hierarchy);
+        }
+    }
+
+    fn window_of(&self, root: &Path) -> Option<u64> {
+        crate::window::for_project(root).map(|controller| controller.id())
+    }
+
+    fn window(&self, window: u64) -> Option<Retained<objc2_app_kit::NSWindow>> {
+        self::window(window)?.window()
+    }
+
+    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str) {
+        crate::editor::show_alert(mtm, message, detail);
+    }
+
+    fn code_font(&self, size: f64) -> Retained<objc2_app_kit::NSFont> {
+        crate::editor::code_font(size)
+    }
+
+    fn palette_color(&self, token: splat_markdown::highlight::Token) -> Retained<objc2_app_kit::NSColor> {
+        crate::editor::palette_color(token)
+    }
+
+    fn is_trusted(&self, folder: &Path) -> bool {
+        crate::project::is_trusted(folder)
+    }
+
+    fn display_path(&self, path: &Path) -> String {
+        crate::app::display_path(path)
     }
 }

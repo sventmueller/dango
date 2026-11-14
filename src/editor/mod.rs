@@ -170,7 +170,7 @@ pub fn path_changed(view: &EditorTextView) {
     if let (Some(path), Some(controller)) = (view.document().path().map(Path::to_path_buf), view.controller()) {
         controller.set_tab_title(view.ivars().tab.get(), &tab_title(&path));
     }
-    crate::lsp::opened(view);
+    ide_ui_lsp::opened(view);
     changes::reload(view, true);
 }
 
@@ -282,7 +282,7 @@ pub fn closing(controller: &WindowController, id: isize) {
         .into_iter()
         .find(|v| v.ivars().tab.get() == id && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
     if let Some(view) = view {
-        crate::lsp::closed(&*view);
+        ide_ui_lsp::closed(&*view);
         crate::markdown::closing(&view);
         crate::context::app()
             .editors
@@ -497,7 +497,7 @@ fn add_tab(
     scroll.setHasHorizontalScroller(!wraps(&view));
     follow_width(&scroll, &view);
     let (container, gutter) = container::editor_container(mtm, &scroll, &view);
-    crate::lsp::attach(&*view);
+    ide_ui_lsp::attach(&*view);
     follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
     vim::attach(&view);
@@ -513,7 +513,7 @@ fn add_tab(
     view.ivars().tab.set(id);
     crate::context::app().editors.borrow_mut().push(Weak::from(&*view));
     highlight::recolor_all(&view);
-    crate::lsp::opened(&*view);
+    ide_ui_lsp::opened(&*view);
     changes::reload(&view, true);
     if !preview && let Some(window) = view.window() {
         window.makeFirstResponder(Some(&view));
@@ -588,7 +588,7 @@ pub(crate) fn update_dirty(view: &EditorTextView) {
 
 /// What other parts of the app follow: the language server and a project search that shows unsaved text.
 fn notify_change(view: &EditorTextView, change: &Change) {
-    crate::lsp::changed(view, change);
+    ide_ui_lsp::changed(view, change);
     predict::changed(view);
     crate::preview::edited(view);
     crate::debug::edited(view, change);
@@ -914,7 +914,7 @@ fn follow_scrolling(scroll: &NSScrollView, view: &Retained<EditorTextView>) {
     let name = constant!(objc2_app_kit::NSViewBoundsDidChangeNotification);
     let watch = crate::util::observe(view.mtm(), name, Some(&clip), move |_| {
         if let Some(editor) = editor.load() {
-            crate::lsp::scrolled(&*editor);
+            ide_ui_lsp::scrolled(&*editor);
         }
     });
     view.ivars().watches.borrow_mut().push(watch);

@@ -20,8 +20,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use super::{ViewState, server_by_id, server_of, servers_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::{label, main_soon, ns};
 
 const WIDTH: f64 = 440.0;
@@ -104,7 +104,7 @@ pub struct Completion {
 }
 
 fn with_list<R>(f: impl FnOnce(&RefCell<Option<Retained<CompletionList>>>) -> R) -> R {
-    f(&crate::lsp::host::state().completion.list)
+    f(&crate::host::state().completion.list)
 }
 
 fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
@@ -634,7 +634,7 @@ fn insert(view: &dyn Editor, item: &CompletionItem, start: usize) {
 
 fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
     let name = label(mtm, &item.label);
-    name.setFont(Some(&crate::lsp::host::code_font(12.0)));
+    name.setFont(Some(&crate::host::code_font(12.0)));
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     let detail_text = item
         .label_details
@@ -677,7 +677,7 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
 pub mod selftest {
     use objc2::{DefinedClass, MainThreadOnly};
 
-    use crate::lsp::editor::Editor;
+    use crate::editor::Editor;
 
     /// The labels the list shows for `view`, best first; empty when it is closed.
     pub fn shown(view: &dyn Editor) -> Vec<String> {

@@ -133,7 +133,7 @@ define_class!(
                     .and_then(|s| s.downcast_ref::<NSButton>())
                     .is_some_and(|b| b.state() == NSControlStateValueOn);
                 self.store(|settings| settings.set(&keys::EMMET, &on));
-                crate::lsp::servers_changed();
+                ide_ui_lsp::servers_changed();
             });
         }
 

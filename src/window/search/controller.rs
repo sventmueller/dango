@@ -41,7 +41,7 @@ impl SearchPanel {
     }
 
     /// Shows `hierarchy` in place of the text search, which keeps what it holds.
-    pub fn show_hierarchy(&self, hierarchy: crate::lsp::Hierarchy) {
+    pub fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
         if let Some(views) = self.ivars().views.get() {
             views.set_text_shown(false);
         }

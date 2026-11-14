@@ -12,8 +12,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSRectEdge, NSSize};
 
 use super::{server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::main_soon;
 
 /// How long the mouse rests before the server is asked.

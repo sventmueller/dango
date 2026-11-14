@@ -35,7 +35,7 @@ fn action_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
     let Some(main) = NSApplication::sharedApplication(view.mtm()).mainMenu() else {
         return vec![];
     };
-    if crate::lsp::validate(view, Some(sel!(ideQuickFix:))) != Some(true) {
+    if ide_ui_lsp::validate(view, Some(sel!(ideQuickFix:))) != Some(true) {
         return vec![];
     }
     [sel!(ideQuickFix:), sel!(ideRefactor:), sel!(ideSourceActions:)]
@@ -50,7 +50,7 @@ fn navigation(view: &EditorTextView, menu: &NSMenu) {
     let Some(main) = NSApplication::sharedApplication(view.mtm()).mainMenu() else {
         return;
     };
-    if crate::lsp::validate(view, Some(sel!(ideDefinition:))) != Some(true) {
+    if ide_ui_lsp::validate(view, Some(sel!(ideDefinition:))) != Some(true) {
         return;
     }
     let actions = [
@@ -85,7 +85,7 @@ fn format_item(view: &EditorTextView) -> Option<Retained<NSMenuItem>> {
         copy.setSubmenu(Some(&format.submenu()?.copy()));
         return Some(copy);
     }
-    if crate::lsp::validate(view, Some(sel!(ideFormat:))) != Some(true) {
+    if ide_ui_lsp::validate(view, Some(sel!(ideFormat:))) != Some(true) {
         return None;
     }
     find(&main, sel!(ideFormat:)).map(|item| item.copy())

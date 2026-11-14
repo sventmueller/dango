@@ -9,8 +9,8 @@ use std::path::Path;
 
 use super::helpers::wait_until;
 use super::{check, finish, snapshot};
-use crate::lsp::{LANGUAGE_SERVERS, language_name};
 use crate::settings::servers_selftest as tab;
+use ide_ui_lsp::{LANGUAGE_SERVERS, language_name};
 
 const NAME: &str = "language-servers";
 

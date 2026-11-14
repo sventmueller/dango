@@ -10,7 +10,7 @@ use ide_process::Supervisor;
 use splat_i18n::{t, tf};
 
 use super::{Slot, State, find, language_of, refresh_slot, registry, slot, status, trusted_root};
-use crate::lsp::editor::Editor;
+use crate::editor::Editor;
 use ide_ui_common::util::main_soon;
 
 /// What the status bar of `view` says about its server, and the action its button offers.
@@ -27,7 +27,7 @@ pub(crate) fn server_status(view: &dyn Editor) -> (String, status::Action) {
     }
     let text = match root {
         None => t("Sprachserver nur in einem Ordner"),
-        Some(root) if !crate::lsp::host::is_trusted(&root) => t("Sprachserver aus: Ordner nicht vertraut"),
+        Some(root) if !crate::host::is_trusted(&root) => t("Sprachserver aus: Ordner nicht vertraut"),
         Some(_) => "",
     };
     (text.to_string(), status::Action::None)
@@ -150,7 +150,7 @@ pub fn status_action(view: &dyn Editor) {
 /// Asks once for the app whether to install the second server `language`: install, never ask again, or not now.
 fn ask_companion(view: &dyn Editor, language: &ide_lsp::Language) -> bool {
     use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
-    let alert = NSAlert::new(crate::lsp::editor::marker(view));
+    let alert = NSAlert::new(crate::editor::marker(view));
     alert.setMessageText(&ide_ui_common::util::ns(&tf("{} installieren?", &[language.name()])));
     alert.setInformativeText(&ide_ui_common::util::ns(&tf(
         "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte.",

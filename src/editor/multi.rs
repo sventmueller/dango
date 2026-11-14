@@ -71,7 +71,7 @@ pub fn shift(view: &EditorTextView, change: &Change) {
         return;
     }
     for range in &mut carets.extra {
-        crate::lsp::follow(range, change);
+        ide_ui_lsp::follow(range, change);
     }
 }
 
@@ -374,7 +374,7 @@ pub fn column(view: &EditorTextView, from: NSPoint, to: NSPoint) {
     let mut ranges = vec![];
     for line in lines {
         let Some(start) = view.line_start(line) else { continue };
-        let Some(row) = crate::lsp::rect_of(view, start..start) else {
+        let Some(row) = ide_ui_lsp::rect_of(view, start..start) else {
             continue;
         };
         let y = row.origin.y + row.size.height / 2.0;
@@ -436,7 +436,7 @@ pub fn rects(view: &EditorTextView, range: Range<usize>) -> Vec<NSRect> {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return vec![];
     };
-    let Some(text_range) = crate::lsp::text_range(&content, &range) else {
+    let Some(text_range) = ide_ui_lsp::text_range(&content, &range) else {
         return vec![];
     };
     let origin = view.textContainerOrigin();

@@ -115,19 +115,19 @@ fn servers_ready(file: &'static str, name: &'static str, then: fn()) {
         ANSWER,
         move || {
             view(file).is_some_and(|v| {
-                crate::lsp::companion_running(&*v, name).is_err_and(|e| e == "missing")
-                    || crate::lsp::companion_running(&*v, name).is_ok()
+                ide_ui_lsp::companion_running(&*v, name).is_err_and(|e| e == "missing")
+                    || ide_ui_lsp::companion_running(&*v, name).is_ok()
             })
         },
         move |_| {
             if let Some(view) = view(file) {
-                crate::lsp::install_companions(&*view);
+                ide_ui_lsp::install_companions(&*view);
             }
             wait_within(
                 INSTALL,
-                move || view(file).is_some_and(|v| crate::lsp::companion_running(&*v, name) == Ok(true)),
+                move || view(file).is_some_and(|v| ide_ui_lsp::companion_running(&*v, name) == Ok(true)),
                 move |running| {
-                    let state = view(file).map(|v| crate::lsp::companion_running(&*v, name));
+                    let state = view(file).map(|v| ide_ui_lsp::companion_running(&*v, name));
                     check(
                         if name == "ESLint" {
                             "ESLint is installed and runs beside the file's own server"
@@ -147,9 +147,9 @@ fn servers_ready(file: &'static str, name: &'static str, then: fn()) {
 fn eslint_error() {
     wait_within(
         ANSWER,
-        || view(SCRIPT).is_some_and(|v| crate::lsp::marks_of(&*v).iter().any(|(_, m)| m.contains("no-debugger"))),
+        || view(SCRIPT).is_some_and(|v| ide_ui_lsp::marks_of(&*v).iter().any(|(_, m)| m.contains("no-debugger"))),
         |found| {
-            let marks = view(SCRIPT).map(|v| crate::lsp::marks_of(&*v)).unwrap_or_default();
+            let marks = view(SCRIPT).map(|v| ide_ui_lsp::marks_of(&*v)).unwrap_or_default();
             check(
                 "ESLint's error shows among the diagnostics, from a flat eslint.config.ts",
                 found,
@@ -158,14 +158,14 @@ fn eslint_error() {
             if let Some(view) = view(SCRIPT) {
                 let at = view.line_start(1).unwrap_or(0) + 3;
                 view.setSelectedRange(NSRange::new(at, 0));
-                crate::lsp::code_action_menu::forget();
-                crate::lsp::code_actions(&*view, crate::lsp::ActionKind::Fixes);
+                ide_ui_lsp::code_action_menu::forget();
+                ide_ui_lsp::code_actions(&*view, ide_ui_lsp::ActionKind::Fixes);
             }
             wait_within(
                 ANSWER,
                 || {
                     view(SCRIPT)
-                        .and_then(|v| crate::lsp::code_action_menu::shown(&*v))
+                        .and_then(|v| ide_ui_lsp::code_action_menu::shown(&*v))
                         .is_some_and(|titles| titles.iter().any(|t| t.contains("no-debugger")))
                 },
                 |_| quick_fix(),
@@ -176,13 +176,13 @@ fn eslint_error() {
 
 fn quick_fix() {
     let titles = view(SCRIPT)
-        .and_then(|v| crate::lsp::code_action_menu::shown(&*v))
+        .and_then(|v| ide_ui_lsp::code_action_menu::shown(&*v))
         .unwrap_or_default();
     let wanted = titles
         .iter()
         .find(|t| t.contains("no-debugger") && t.starts_with("Disable"))
         .cloned();
-    let chosen = wanted.as_deref().is_some_and(crate::lsp::code_action_menu::choose);
+    let chosen = wanted.as_deref().is_some_and(ide_ui_lsp::code_action_menu::choose);
     wait_within(
         ANSWER,
         || view(SCRIPT).is_some_and(|v| v.document().text().to_string().contains("eslint-disable")),
@@ -211,12 +211,12 @@ fn emmet() {
     let at = view.line_start(2).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));
     editor::type_text(&view, "ul>li");
-    crate::lsp::complete(&*view);
+    ide_ui_lsp::complete(&*view);
     wait_within(
         ANSWER,
-        || view_page().is_some_and(|v| crate::lsp::completion::shown(&*v).iter().any(|l| l == "ul>li")),
+        || view_page().is_some_and(|v| ide_ui_lsp::completion::shown(&*v).iter().any(|l| l == "ul>li")),
         |offered| {
-            let accepted = view_page().is_some_and(|v| crate::lsp::completion::accept(&*v, "ul>li"));
+            let accepted = view_page().is_some_and(|v| ide_ui_lsp::completion::accept(&*v, "ul>li"));
             let text = view_page().map(|v| v.document().text().to_string()).unwrap_or_default();
             check(
                 "Emmet offers the abbreviation in completion and taking it writes the elements",

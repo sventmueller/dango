@@ -13,8 +13,8 @@ use ide_project::prettier::{self, Formatter, Outcome};
 use splat_i18n::{t, tf};
 
 use super::rename::Then;
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::main_soon;
 
 /// How long Prettier may take before the document is saved without it.
@@ -31,7 +31,7 @@ struct Run {
 fn run_for(view: &dyn Editor) -> Option<Run> {
     let file = view.document().path()?.to_path_buf();
     let root = view.project_root()?;
-    if !crate::lsp::host::is_trusted(&root) {
+    if !crate::host::is_trusted(&root) {
         return None;
     }
     let language = view
@@ -64,7 +64,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>>
     let revision = view.document().revision();
     let text = view.document().text().to_string();
     let id = super::new_serial();
-    crate::lsp::host::state().formatting.wait(serial, id, then);
+    crate::host::state().formatting.wait(serial, id, then);
     let spawned = ide_ui_common::util::spawn("prettier", move || {
         let env = ide_ui_common::window::environment(Duration::from_secs(10));
         let outcome = format_text(&run, &text, &env);
@@ -134,7 +134,7 @@ fn finished(serial: u64, id: u64, revision: u64, outcome: Outcome) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };
-    let then = crate::lsp::host::state().formatting.take(serial, id);
+    let then = crate::host::state().formatting.take(serial, id);
     let Some(then) = then else { return };
     match outcome {
         Outcome::Formatted(text) if view.document().revision() == revision => {

@@ -34,7 +34,7 @@ impl WindowController {
     }
 
     /// Shows `hierarchy` in the search panel in place of the text search (E85).
-    pub fn show_hierarchy(&self, hierarchy: crate::lsp::Hierarchy) {
+    pub fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
         let Some(search) = self.ivars().search.borrow().clone() else {
             return;
         };

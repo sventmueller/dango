@@ -41,7 +41,7 @@ const APP_LOOKUPS: usize = 58;
 
 /// How many times the UI crates may look their state up through their host's `state()` instead of being handed it, a
 /// ratchet like `APP_LOOKUPS` (E143).
-const STATE_LOOKUPS: usize = 61;
+const STATE_LOOKUPS: usize = 79;
 
 /// A static by the file it is in, relative to the workspace, and its name.
 type Static = (String, String);

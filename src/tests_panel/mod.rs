@@ -161,7 +161,7 @@ fn marks_changed(panel: &TestsPanel) {
             continue;
         }
         let failures = panel.ivars().board.borrow().failures_in(&path);
-        crate::lsp::show_failures(&*editor, SOURCE, &failures);
+        ide_ui_lsp::show_failures(&*editor, SOURCE, &failures);
         crate::editor::redraw_gutter(&editor);
     }
 }

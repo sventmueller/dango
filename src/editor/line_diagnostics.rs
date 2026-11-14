@@ -111,7 +111,7 @@ pub fn refresh(view: &EditorTextView) {
         (busy, edits.0.iter().any(|(_, at)| !resting(at)))
     };
     let caret_line = typing.then(|| caret_line(view)).flatten();
-    let wanted: Vec<Inset> = crate::lsp::line_messages(view)
+    let wanted: Vec<Inset> = ide_ui_lsp::line_messages(view)
         .into_iter()
         .filter(|(line, _)| !busy.contains(line) && caret_line != Some(*line))
         .filter_map(|(_, (at, messages))| inset(at, &messages))
@@ -138,7 +138,7 @@ fn caret_line(view: &EditorTextView) -> Option<usize> {
 }
 
 /// The inset of a line with `messages`, the most serious first, starting at UTF-16 offset `at`.
-fn inset(at: usize, messages: &[(crate::lsp::Severity, String)]) -> Option<Inset> {
+fn inset(at: usize, messages: &[(ide_ui_lsp::Severity, String)]) -> Option<Inset> {
     let (severity, first) = messages.first()?;
     let one_line: String = first.lines().next().unwrap_or_default().chars().take(LONGEST).collect();
     let text = if messages.len() > 1 {

@@ -108,7 +108,7 @@ fn poll(
             && asked.get().elapsed() >= ASK_AGAIN
             && let Some(view) = view(root, file)
         {
-            crate::lsp::inlay::request(&*view);
+            ide_ui_lsp::inlay::request(&*view);
             asked.set(Instant::now());
         }
         false
@@ -156,11 +156,11 @@ fn rust_hints(ok: bool, waited: Duration) {
     let Some(view) = view(&root, "src/main.rs") else {
         return finish(SCENARIO);
     };
-    if !ok && crate::lsp::server_running(&*view).is_err() {
+    if !ok && ide_ui_lsp::server_running(&*view).is_err() {
         check(
             "skipped: rust-analyzer missing",
             true,
-            format!("{:?}", crate::lsp::server_running(&*view)),
+            format!("{:?}", ide_ui_lsp::server_running(&*view)),
         );
         return go();
     }
@@ -336,7 +336,7 @@ fn switches() {
                 .is_some_and(|(title, ticked, _)| title.contains("Rust") && *ticked),
         format!("{on:?}, {language:?}"),
     );
-    crate::lsp::inlay::toggle();
+    ide_ui_lsp::inlay::toggle();
     crate::settings::show(mtm);
     let settings = crate::settings::editor_switches();
     let off = menu_state(&view, objc2::sel!(ideToggleInlayHints:));
@@ -348,8 +348,8 @@ fn switches() {
             && settings.as_ref().is_some_and(|(hints, _, _)| !hints),
         format!("{:?}, settings {settings:?}", hints(&view)),
     );
-    crate::lsp::inlay::toggle();
-    crate::lsp::inlay::toggle_language("Rust");
+    ide_ui_lsp::inlay::toggle();
+    ide_ui_lsp::inlay::toggle_language("Rust");
     crate::settings::show(mtm);
     let settings = crate::settings::editor_switches();
     let language = menu_state(&view, objc2::sel!(ideToggleInlayHintsLanguage:));
@@ -362,7 +362,7 @@ fn switches() {
             }),
         format!("{settings:?}"),
     );
-    crate::lsp::inlay::toggle_language("Rust");
+    ide_ui_lsp::inlay::toggle_language("Rust");
     if let Some(window) = crate::settings::window() {
         window.orderOut(None);
     }
@@ -554,11 +554,11 @@ fn go() {
             let Some(view) = view(&root, "main.go") else {
                 return done();
             };
-            if !ok && crate::lsp::server_running(&*view).is_err() {
+            if !ok && ide_ui_lsp::server_running(&*view).is_err() {
                 check(
                     "skipped: gopls missing",
                     true,
-                    format!("{:?}", crate::lsp::server_running(&*view)),
+                    format!("{:?}", ide_ui_lsp::server_running(&*view)),
                 );
                 return done();
             }

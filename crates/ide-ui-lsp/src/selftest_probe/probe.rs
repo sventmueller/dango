@@ -4,8 +4,8 @@ use std::path::Path;
 
 use ide_lsp::Status;
 
-use crate::lsp::editor::Editor;
-use crate::lsp::{State, language_of, slot};
+use crate::editor::Editor;
+use crate::{State, language_of, slot};
 
 /// The diagnostics by path, for the self-test.
 pub fn marks_of(view: &dyn Editor) -> Vec<(std::ops::Range<usize>, String)> {
@@ -88,7 +88,7 @@ pub fn install_companions(view: &dyn Editor) {
         if let Some(slot) = slot(&root, id)
             && matches!(&*slot.state.borrow(), State::Missing(_))
         {
-            crate::lsp::install::install_now(&root, &slot);
+            crate::install::install_now(&root, &slot);
         }
     }
 }

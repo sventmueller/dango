@@ -10,7 +10,7 @@ use objc2_app_kit::{
 use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
-use crate::lsp::editor::Editor;
+use crate::editor::Editor;
 use ide_ui_common::util::{label, ns, set_action, symbol};
 
 /// The height of the bar.
@@ -183,7 +183,7 @@ pub fn note(view: &dyn Editor, text: &str) {
     let serial = view.lsp().borrow().serial;
     let said = text.to_string();
     ide_ui_common::util::main_after(std::time::Duration::from_secs(6), move || {
-        if let Some(view) = crate::lsp::host::find_editor(serial) {
+        if let Some(view) = crate::host::find_editor(serial) {
             let same = view.lsp().borrow().note.as_deref() == Some(said.as_str());
             if same {
                 view.lsp().borrow_mut().note = None;

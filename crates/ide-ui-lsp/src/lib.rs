@@ -1,6 +1,19 @@
 //! Language servers for the editors of a window (E10): started only in folders the user trusts (E22), through the
 //! supervisor with the login shell's environment (E23), and told about every edit without making typing wait (E25).
-//! A missing server is offered for installation in the editor's status bar, never installed silently.
+//! A missing server is offered for installation in the editor's status bar, never installed silently. The crate
+//! reaches an editor only through its `Editor` trait and the app through its `Host` (E144).
+//!
+//! A diagnostic's range follows the edits made before the server speaks again:
+//!
+//! ```
+//! use ide_document::{Document, Edit};
+//!
+//! let mut document = Document::untitled("let a = b;");
+//! let change = document.apply(Edit { range_utf16: 0..0, text: "// x\n".into() }).unwrap();
+//! let mut range = 8..9;
+//! assert!(ide_ui_lsp::follow(&mut range, &change));
+//! assert_eq!(range, 13..14);
+//! ```
 
 mod actions;
 mod agent;
@@ -11,7 +24,7 @@ pub mod editor;
 mod edits;
 mod events;
 mod hierarchy;
-mod host;
+pub mod host;
 mod hover;
 pub mod inlay;
 mod install;
@@ -50,6 +63,7 @@ use ide_ui_common::util::{main_after, main_soon};
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
 pub use decorate::{Painted, Severity, follow, line_marks, line_messages, paint, text_range};
+pub use host::{Host, State as LspState, install};
 
 /// The semantic tokens of an editor's language server state, by position.
 pub fn painted(state: &ViewState) -> &[Painted] {
@@ -149,11 +163,11 @@ impl Default for Workspaces {
 }
 
 fn with_workspaces<R>(f: impl FnOnce(&RefCell<Vec<Rc<Workspace>>>) -> R) -> R {
-    f(&crate::lsp::host::state().lsp_workspaces.workspaces)
+    f(&crate::host::state().lsp_workspaces.workspaces)
 }
 
 fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::lsp::host::state().lsp_workspaces.next_id)
+    f(&crate::host::state().lsp_workspaces.next_id)
 }
 
 static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
@@ -210,7 +224,7 @@ pub fn survey(done: fn(Vec<(String, String)>)) {
 
 fn survey_text(found: Result<PathBuf, NotFound>) -> String {
     match found {
-        Ok(program) => crate::lsp::host::display_path(&program),
+        Ok(program) => crate::host::display_path(&program),
         Err(missing) if missing.install.is_some() && missing.missing.is_none() => {
             tf("{} fehlt – im Editor installierbar", &[&missing.program])
         }
@@ -399,7 +413,7 @@ fn slot(root: &Path, id: u64) -> Option<Rc<Slot>> {
 /// The window folder of `view`, if the user trusts it.
 fn trusted_root(view: &dyn Editor) -> Option<PathBuf> {
     let root = view.project_root()?;
-    crate::lsp::host::is_trusted(&root).then_some(root)
+    crate::host::is_trusted(&root).then_some(root)
 }
 
 /// The slot `view` belongs to and the running server in it.

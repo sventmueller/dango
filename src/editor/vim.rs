@@ -377,13 +377,13 @@ fn perform(view: &EditorTextView, effect: Effect) {
                 vim.set_cursor(line, column);
             }
         }
-        Effect::Save => crate::lsp::save(view),
+        Effect::Save => ide_ui_lsp::save(view),
         Effect::Close(_) => {
             let app = objc2_app_kit::NSApplication::sharedApplication(view.mtm());
             // SAFETY: The window's close command with no sender, as the menu item sends it to the first responder.
             unsafe { app.sendAction_to_from(sel!(performClose:), None, None) };
         }
-        Effect::Message(text) => crate::lsp::status::note(view, &text),
+        Effect::Message(text) => ide_ui_lsp::status::note(view, &text),
         Effect::Copy(text) => {
             let pasteboard = objc2_app_kit::NSPasteboard::generalPasteboard();
             pasteboard.clearContents();
@@ -499,9 +499,9 @@ pub fn draw_block(view: &EditorTextView) {
     }
     let length = view.document().text().len_utf16();
     let rect = if at.location < length {
-        crate::lsp::rect_of(view, at.location..at.location + 1)
+        ide_ui_lsp::rect_of(view, at.location..at.location + 1)
     } else {
-        crate::lsp::rect_of(view, at.location..at.location)
+        ide_ui_lsp::rect_of(view, at.location..at.location)
     };
     let Some(mut rect) = rect else { return };
     if rect.size.width < 2.0 {

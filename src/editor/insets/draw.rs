@@ -193,7 +193,7 @@ fn lay_out(
                 )
             }
             Spot::End { line_end } => {
-                let Some(caret) = caret(view, *line_end).or_else(|| crate::lsp::rect_of(view, *line_end..*line_end))
+                let Some(caret) = caret(view, *line_end).or_else(|| ide_ui_lsp::rect_of(view, *line_end..*line_end))
                 else {
                     continue;
                 };

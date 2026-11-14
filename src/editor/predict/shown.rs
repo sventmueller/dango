@@ -120,7 +120,7 @@ fn mark(view: &EditorTextView, range: Range<usize>) {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return;
     };
-    let Some(text_range) = crate::lsp::text_range(&content, &range) else {
+    let Some(text_range) = ide_ui_lsp::text_range(&content, &range) else {
         return;
     };
     let color: Retained<AnyObject> = NSColor::systemOrangeColor().colorWithAlphaComponent(0.3).into();
@@ -143,7 +143,7 @@ fn unmark(view: &EditorTextView, range: Range<usize>) {
     };
     let length = view.document().text().len_utf16();
     let range = range.start.min(length)..range.end.min(length);
-    if let Some(text_range) = crate::lsp::text_range(&content, &range) {
+    if let Some(text_range) = ide_ui_lsp::text_range(&content, &range) {
         layout.removeRenderingAttribute_forTextRange(constant!(NSBackgroundColorAttributeName), &text_range);
         layout.removeRenderingAttribute_forTextRange(constant!(NSUnderlineStyleAttributeName), &text_range);
     }
@@ -213,7 +213,7 @@ fn before_after(view: &EditorTextView, old: &str, new: &str) -> Retained<NSMutab
 
 /// Puts the box with `text` under the line that holds UTF-16 offset `at`, at the left edge of the text.
 fn show_box(view: &EditorTextView, at: usize, text: &NSMutableAttributedString) {
-    let Some(line) = crate::lsp::rect_of(view, at..at) else {
+    let Some(line) = ide_ui_lsp::rect_of(view, at..at) else {
         return;
     };
     let mtm = view.mtm();

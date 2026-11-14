@@ -19,8 +19,8 @@ use splat_i18n::{t, tf};
 
 use super::decorate::Severity;
 use super::{server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::{guarded, item, label, main_soon, ns, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -254,7 +254,7 @@ fn symbol_menu(view: &dyn Editor, symbols: &[DocumentSymbol]) {
     // (docs/development.md); the scenario chooses from the menu it built instead.
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        crate::lsp::host::state().location_sheet.symbols.replace(Some(menu));
+        crate::host::state().location_sheet.symbols.replace(Some(menu));
         return;
     }
     let cursor = view.selectedRange().location;
@@ -332,7 +332,7 @@ define_class!(
                 let entries = self.ivars().entries.borrow();
                 let entry = entries.get(usize::try_from(row).ok()?)?;
                 let field = label(self.mtm(), &entry.title);
-                field.setFont(Some(&crate::lsp::host::code_font(12.0)));
+                field.setFont(Some(&crate::host::code_font(12.0)));
                 field.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
                 Some(field.into_super().into_super())
             })
@@ -362,7 +362,7 @@ pub struct LocationSheets {
 }
 
 fn with_sheet<R>(f: impl FnOnce(&RefCell<Option<Retained<LocationSheet>>>) -> R) -> R {
-    f(&crate::lsp::host::state().location_sheet.sheet)
+    f(&crate::host::state().location_sheet.sheet)
 }
 
 /// The line `line` of `path`, from `files`, which holds the texts of the open editors; another file is read once,

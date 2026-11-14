@@ -97,7 +97,7 @@ pub fn height(view: &EditorTextView) -> f64 {
 
 /// The blocks of `view` as their header line and last line: the server's symbols, else the folds by indentation.
 fn scopes(view: &EditorTextView) -> Vec<(usize, usize)> {
-    if let Some(symbols) = crate::lsp::symbol_scopes(view) {
+    if let Some(symbols) = ide_ui_lsp::symbol_scopes(view) {
         return symbols;
     }
     let language = view.document().language();

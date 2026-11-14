@@ -21,8 +21,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSPoint, NSRange, NSRect, NSSize};
 
 use super::{server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::constant;
 use ide_ui_common::util::{main_soon, ns};
 
@@ -52,7 +52,7 @@ pub struct ShownSignature {
 }
 
 fn with_help<R>(f: impl FnOnce(&RefCell<Option<std::rc::Rc<Help>>>) -> R) -> R {
-    f(&crate::lsp::host::state().signature_help.help)
+    f(&crate::host::state().signature_help.help)
 }
 
 fn help(mtm: MainThreadMarker) -> std::rc::Rc<Help> {
@@ -371,7 +371,7 @@ fn styled(
     active: usize,
     note: Option<String>,
 ) -> Retained<NSMutableAttributedString> {
-    let code = crate::lsp::host::code_font(12.0);
+    let code = crate::host::code_font(12.0);
     let (font_key, color_key) = (
         constant!(NSFontAttributeName),
         constant!(NSForegroundColorAttributeName),
@@ -460,7 +460,7 @@ pub fn validate(view: &dyn Editor, action: Sel) -> Option<bool> {
 /// What the self-test reads from the window.
 #[cfg(feature = "selftest")]
 pub mod selftest {
-    use crate::lsp::editor::Editor;
+    use crate::editor::Editor;
 
     /// The text the window shows for `view`, and the part set apart as the active parameter; `None` when closed.
     pub fn shown(view: &dyn Editor) -> Option<(String, String)> {

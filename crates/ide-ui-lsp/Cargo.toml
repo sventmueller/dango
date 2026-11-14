@@ -1,0 +1,33 @@
+[package]
+name = "ide-ui-lsp"
+version = "0.0.0"
+description = "Language servers for the editors: diagnostics, colours, completion, hover, navigation, code actions, renaming, formatting and inlay hints"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-agent.workspace = true
+ide-core.workspace = true
+ide-document.workspace = true
+ide-lsp.workspace = true
+ide-net.workspace = true
+ide-process.workspace = true
+ide-project.workspace = true
+ide-ui-common.workspace = true
+splat-i18n.workspace = true
+splat-markdown.workspace = true
+block2.workspace = true
+dispatch2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+objc2-quartz-core.workspace = true
+serde_json.workspace = true
+
+[features]
+# What the self-test reads of the language servers and does with them.
+selftest = []

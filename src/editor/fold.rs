@@ -157,7 +157,7 @@ pub fn relayout(view: &EditorTextView) {
     super::redraw_gutter(view);
     super::overlay::redraw(view);
     super::whitespace::redraw(view);
-    crate::lsp::paint(view);
+    ide_ui_lsp::paint(view);
 }
 
 /// Has every view that draws a paragraph draw again: TextKit keeps the drawing of a paragraph whose own text did not
@@ -218,7 +218,7 @@ pub fn shift(view: &EditorTextView, change: &Change) {
         let before = folds.hidden.len();
         folds
             .hidden
-            .retain_mut(|r| !reaches_into(&change.utf16, r) && crate::lsp::follow(r, change));
+            .retain_mut(|r| !reaches_into(&change.utf16, r) && ide_ui_lsp::follow(r, change));
         folds.hidden.len() != before
     };
     if touched {
@@ -287,7 +287,7 @@ pub fn placeholders(view: &EditorTextView) -> Vec<(NSRect, Range<usize>)> {
         .filter(|r| r.start >= visible.start.saturating_sub(1) && r.start <= visible.end)
         .filter_map(|hidden| {
             let header_end = hidden.start.saturating_sub(newline_before(view, hidden.start));
-            let rect = crate::lsp::rect_of(view, header_end..header_end)?;
+            let rect = ide_ui_lsp::rect_of(view, header_end..header_end)?;
             let at = NSRect::new(
                 NSPoint::new(rect.origin.x + 4.0, rect.origin.y + 1.0),
                 NSSize::new(PLACEHOLDER_WIDTH, (rect.size.height - 2.0).max(8.0)),

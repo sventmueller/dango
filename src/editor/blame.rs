@@ -511,7 +511,7 @@ pub fn context_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
 pub fn show_for_cursor(view: &EditorTextView) {
     let number = cursor_line(view);
     let at = view.selectedRange().location;
-    let Some(caret) = crate::lsp::rect_of(view, at..at) else {
+    let Some(caret) = ide_ui_lsp::rect_of(view, at..at) else {
         return;
     };
     if line(view, number, false).is_none() {

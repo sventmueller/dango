@@ -124,7 +124,7 @@ pub fn click_change(view: &EditorTextView, line: usize) -> bool {
     let Some(start) = view.line_start(line) else {
         return false;
     };
-    let Some(row) = crate::lsp::rect_of(view, start..start + 1) else {
+    let Some(row) = ide_ui_lsp::rect_of(view, start..start + 1) else {
         return false;
     };
     let row = gutter.convertRect_fromView(row, Some(view));
@@ -194,7 +194,7 @@ pub fn gutter_mouse(
     use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType};
     let gutter = view.ivars().gutter.borrow().as_ref().and_then(Weak::load)?;
     let start = view.line_start(line)?;
-    let row = gutter.convertRect_fromView(crate::lsp::rect_of(view, start..start + 1)?, Some(view));
+    let row = gutter.convertRect_fromView(ide_ui_lsp::rect_of(view, start..start + 1)?, Some(view));
     let at = NSPoint::new(
         gutter.bounds().size.width - from_right,
         row.origin.y + row.size.height / 2.0,

@@ -100,7 +100,7 @@ pub(super) fn poll(within: Duration, ready: impl Fn() -> bool + 'static, then: i
 /// Whether the server has reported no work for `quiet`.
 fn quiet(quiet: Duration) -> bool {
     main_view()
-        .and_then(|v| crate::lsp::quiet_for(&*v))
+        .and_then(|v| ide_ui_lsp::quiet_for(&*v))
         .is_some_and(|q| q >= quiet)
 }
 
@@ -126,7 +126,7 @@ pub(super) fn ask(
 }
 
 /// Puts the cursor of main.rs at `at` and runs `command` there.
-fn at_main<R: 'static>(at: usize, command: fn(&dyn crate::lsp::editor::Editor) -> R) -> impl FnOnce() + 'static {
+fn at_main<R: 'static>(at: usize, command: fn(&dyn ide_ui_lsp::editor::Editor) -> R) -> impl FnOnce() + 'static {
     move || {
         if let Some(view) = main_view() {
             put_cursor(&view, at);
@@ -136,7 +136,7 @@ fn at_main<R: 'static>(at: usize, command: fn(&dyn crate::lsp::editor::Editor) -
 }
 
 pub(super) fn has_mark(code: &'static str) -> impl Fn() -> bool + 'static {
-    move || main_view().is_some_and(|v| crate::lsp::marks_of(&*v).iter().any(|(_, m)| m.contains(code)))
+    move || main_view().is_some_and(|v| ide_ui_lsp::marks_of(&*v).iter().any(|(_, m)| m.contains(code)))
 }
 
 /// The text of the editor before a step, to compare with after its undo.
@@ -184,7 +184,7 @@ fn opened(controller: Retained<WindowController>) {
     controller.open_file(&root().join(MAIN));
     poll(
         WAIT,
-        || main_view().is_some_and(|v| crate::lsp::server_running(&*v) != Ok(false)),
+        || main_view().is_some_and(|v| ide_ui_lsp::server_running(&*v) != Ok(false)),
         started,
     );
 }
@@ -195,7 +195,7 @@ fn started(waited: Waited) {
         finish(SCENARIO);
         return;
     };
-    match crate::lsp::server_running(&*view) {
+    match ide_ui_lsp::server_running(&*view) {
         Err(why) if why == "missing" => {
             check(
                 "skipped: rust-analyzer missing",
@@ -208,7 +208,7 @@ fn started(waited: Waited) {
             check(
                 "rust-analyzer starts for the trusted folder",
                 true,
-                format!("{waited}: {}", crate::lsp::status::shown(&*view).1),
+                format!("{waited}: {}", ide_ui_lsp::status::shown(&*view).1),
             );
             let typed = has_mark("E0308");
             poll(WAIT, move || typed() || quiet(SILENCE), diagnosed);
@@ -226,7 +226,7 @@ fn started(waited: Waited) {
 
 fn diagnosed(waited: Waited) {
     let Some(view) = main_view() else { return };
-    let marks = crate::lsp::marks_of(&*view);
+    let marks = ide_ui_lsp::marks_of(&*view);
     let wrong = offset_of(&view, "\"text\"", 0, 0).unwrap_or(0);
     check(
         "a type error is underlined where it is",
@@ -235,19 +235,19 @@ fn diagnosed(waited: Waited) {
             .any(|(range, m)| range.contains(&wrong) && m.contains("E0308")),
         format!("{waited}: {marks:?}"),
     );
-    let lines = crate::lsp::line_marks(&*view);
+    let lines = ide_ui_lsp::line_marks(&*view);
     check(
         "the line number column marks its line",
         lines.contains_key(&4),
         format!("{:?}", lines.keys().collect::<Vec<_>>()),
     );
-    let (problems, server) = crate::lsp::status::shown(&*view);
+    let (problems, server) = ide_ui_lsp::status::shown(&*view);
     check(
         "the status bar counts the problems",
         problems.contains(splat_i18n::t("1 Fehler")) || problems.contains("Fehler") || problems.contains("error"),
         format!("{problems} · {server}"),
     );
-    let wrong_rect = crate::lsp::rect_of(&*view, wrong..wrong + 1);
+    let wrong_rect = ide_ui_lsp::rect_of(&*view, wrong..wrong + 1);
     let hit = wrong_rect.map(|r| {
         let center = objc2_foundation::NSPoint::new(r.origin.x + r.size.width / 2.0, r.origin.y + r.size.height / 2.0);
         view.characterIndexForInsertionAtPoint(center)
@@ -267,22 +267,22 @@ fn diagnosed(waited: Waited) {
         return;
     };
     ask(
-        at_main(at, crate::lsp::hover_at_cursor),
-        || main_view().is_some_and(|v| crate::lsp::hover_text(&*v).is_some()),
+        at_main(at, ide_ui_lsp::hover_at_cursor),
+        || main_view().is_some_and(|v| ide_ui_lsp::hover_text(&*v).is_some()),
         hovered,
     );
 }
 
 fn hovered(waited: Waited) {
     let Some(view) = main_view() else { return };
-    let text = crate::lsp::hover_text(&*view).unwrap_or_default();
+    let text = ide_ui_lsp::hover_text(&*view).unwrap_or_default();
     check(
         "hovering shows the function's signature",
         waited.ok && text.contains("fn double"),
         format!("{waited}: {}", text.lines().take(4).collect::<Vec<_>>().join(" / ")),
     );
     picture("lsp-hover");
-    let tokens = crate::lsp::token_count(&*view);
+    let tokens = ide_ui_lsp::token_count(&*view);
     check(
         "semantic tokens colour what the lexer cannot tell",
         tokens > 0,
@@ -298,10 +298,10 @@ fn hovered(waited: Waited) {
     }
     let cursor = view.selectedRange().location;
     ask(
-        at_main(cursor, crate::lsp::complete),
+        at_main(cursor, ide_ui_lsp::complete),
         || {
             main_view().is_some_and(|v| {
-                crate::lsp::completion::shown(&*v)
+                ide_ui_lsp::completion::shown(&*v)
                     .iter()
                     .any(|l| l.starts_with("double"))
             })
@@ -312,7 +312,7 @@ fn hovered(waited: Waited) {
 
 fn completed(waited: Waited) {
     let Some(view) = main_view() else { return };
-    let shown = crate::lsp::completion::shown(&*view);
+    let shown = ide_ui_lsp::completion::shown(&*view);
     check(
         "completion lists the module's function",
         waited.ok,
@@ -321,12 +321,12 @@ fn completed(waited: Waited) {
             shown.iter().take(5).cloned().collect::<Vec<_>>().join(", ")
         ),
     );
-    if let Some(panel) = crate::lsp::completion::panel() {
+    if let Some(panel) = ide_ui_lsp::completion::panel() {
         snapshot(&panel, "lsp-completion-list");
     }
     picture("lsp-completion");
     let typed = view.document().text().to_string();
-    let accepted = crate::lsp::completion::accept(&*view, "double");
+    let accepted = ide_ui_lsp::completion::accept(&*view, "double");
     let text = view.document().text().to_string();
     check(
         "accepting inserts the call",
@@ -347,7 +347,7 @@ fn completed(waited: Waited) {
         return;
     };
     ask(
-        at_main(at, crate::lsp::definition),
+        at_main(at, ide_ui_lsp::definition),
         || {
             project_window().is_some_and(|c| {
                 editor::editor_for(&c, &root().join(UTIL)).is_some_and(|v| v.selectedRange().location == 7)
@@ -371,14 +371,14 @@ fn defined(waited: Waited) {
         return;
     };
     ask(
-        at_main(at, crate::lsp::references),
-        || !crate::lsp::listed().is_empty(),
+        at_main(at, ide_ui_lsp::references),
+        || !ide_ui_lsp::listed().is_empty(),
         referenced,
     );
 }
 
 fn referenced(waited: Waited) {
-    let listed = crate::lsp::listed();
+    let listed = ide_ui_lsp::listed();
     check(
         "find uses lists both files",
         waited.ok
@@ -387,7 +387,7 @@ fn referenced(waited: Waited) {
         format!("{waited}: {}", listed.join(" | ")),
     );
     picture("lsp-references");
-    crate::lsp::close_list();
+    ide_ui_lsp::close_list();
     let Some(controller) = project_window() else { return };
     if controller.select_tab(&root().join(UTIL).to_string_lossy())
         && let Some(id) = controller.selected_tab()
@@ -400,7 +400,7 @@ fn referenced(waited: Waited) {
         return;
     };
     ask(
-        at_main(at, crate::lsp::rename),
+        at_main(at, ide_ui_lsp::rename),
         || project_window().is_some_and(|c| c.has_sheet()),
         rename_asked,
     );
@@ -426,7 +426,7 @@ fn rename_asked(waited: Waited) {
     ask(
         move || {
             if let Some(view) = main_view() {
-                crate::lsp::rename_to(&*view, at, "twice");
+                ide_ui_lsp::rename_to(&*view, at, "twice");
             }
         },
         || {
@@ -462,7 +462,7 @@ fn renamed(waited: Waited) {
     if let Some(call) = offset_of(&view, "util::twice(n)", 0, 14) {
         edits.push((call..call, ";".into()));
     }
-    crate::lsp::apply_text_edits(&*view, edits);
+    ide_ui_lsp::apply_text_edits(&*view, edits);
     helpers::after(UNDO_TURN, format);
 }
 
@@ -473,7 +473,7 @@ fn format() {
     ask(
         || {
             if let Some(view) = main_view() {
-                crate::lsp::format(&*view, None);
+                ide_ui_lsp::format(&*view, None);
             }
         },
         || main_view().is_some_and(|v| v.document().text().to_string().contains("fn ugly() {}")),
@@ -504,7 +504,7 @@ fn formatted(waited: Waited) {
         || {},
         || {
             main_view().is_some_and(|v| {
-                crate::editor::selftest::from_server(&v) && crate::lsp::status::crumbs(&*v).contains("main")
+                crate::editor::selftest::from_server(&v) && ide_ui_lsp::status::crumbs(&*v).contains("main")
             })
         },
         outlined,
@@ -513,7 +513,7 @@ fn formatted(waited: Waited) {
 
 fn outlined(waited: Waited) {
     let Some(view) = main_view() else { return };
-    let crumbs = crate::lsp::status::crumbs(&*view);
+    let crumbs = ide_ui_lsp::status::crumbs(&*view);
     check(
         "the breadcrumbs name the function around the cursor",
         waited.ok,
@@ -528,7 +528,7 @@ fn outlined(waited: Waited) {
     );
     picture("lsp-folded");
     crate::editor::selftest::unfold_all(&view);
-    crate::lsp::apply_text_edits(&*view, vec![(0..0, "mod extra;\n".into())]);
+    ide_ui_lsp::apply_text_edits(&*view, vec![(0..0, "mod extra;\n".into())]);
     poll(WAIT, has_mark("E0583"), unresolved);
 }
 
@@ -544,7 +544,7 @@ fn unresolved(waited: Waited) {
 }
 
 fn watched(waited: Waited) {
-    let marks = main_view().map(|v| crate::lsp::marks_of(&*v)).unwrap_or_default();
+    let marks = main_view().map(|v| ide_ui_lsp::marks_of(&*v)).unwrap_or_default();
     check(
         "a file made on disk reaches the server through the folder's watcher",
         waited.ok,

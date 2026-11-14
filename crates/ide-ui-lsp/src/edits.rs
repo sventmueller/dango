@@ -15,8 +15,8 @@ use objc2_foundation::{NSFileManager, NSRange, NSURL};
 use splat_i18n::t;
 
 use super::apply::{Failure, StepError};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::{guarded, ns};
 
 /// Replaces `edits`, UTF-16 ranges of the text as it is now that do not overlap, as one undoable step that flows into
@@ -186,7 +186,7 @@ pub fn question(
     actions: Vec<MessageActionItem>,
     answered: impl FnOnce(Option<MessageActionItem>) + 'static,
 ) {
-    let Some(window) = crate::lsp::host::window_of(folder).and_then(crate::lsp::host::window) else {
+    let Some(window) = crate::host::window_of(folder).and_then(crate::host::window) else {
         return;
     };
     let alert = NSAlert::new(window.mtm());

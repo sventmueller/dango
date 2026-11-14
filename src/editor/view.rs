@@ -36,7 +36,7 @@ pub struct ViewIvars {
     /// The line number column, redrawn when lines change.
     pub(super) gutter: RefCell<Option<Weak<super::ruler::LineNumbers>>>,
     /// Its language server's diagnostics, colours, popovers and status.
-    pub(crate) lsp: RefCell<crate::lsp::ViewState>,
+    pub(crate) lsp: RefCell<ide_ui_lsp::ViewState>,
     /// Tells editors apart in callbacks from other threads, which cannot hold a view.
     pub(crate) serial: u64,
     /// Names the copy of the unsaved text against a crash, the one a restored view came from.
@@ -139,7 +139,7 @@ define_class!(
                 let _: () = unsafe { msg_send![super(self), insertText: text, replacementRange: range] };
             }
             if !super::multi::replaying(self) {
-                guarded((), || crate::lsp::typed(self, text));
+                guarded((), || ide_ui_lsp::typed(self, text));
             }
         }
 
@@ -154,7 +154,7 @@ define_class!(
                     self.clear_found();
                     super::multi::selection_changed(self);
                     super::predict::moved(self);
-                    crate::lsp::selection_moved(self);
+                    ide_ui_lsp::selection_moved(self);
                     crate::navigation::moved(self, false);
                 });
             }
@@ -261,7 +261,7 @@ define_class!(
 
         #[unsafe(method(ideBreadcrumbs))]
         fn breadcrumbs(&self) {
-            guarded((), || crate::lsp::status::refresh(self));
+            guarded((), || ide_ui_lsp::status::refresh(self));
         }
 
         #[unsafe(method(doCommandBySelector:))]
@@ -273,7 +273,7 @@ define_class!(
                 return;
             }
             if guarded(false, || {
-                crate::lsp::command(self, command)
+                ide_ui_lsp::command(self, command)
                     || super::predict::command(self, command)
                     || super::multi::command(self, command)
                     || super::vim::command(self, command)
@@ -283,12 +283,12 @@ define_class!(
             guarded((), || super::predict::before_command(self, command));
             // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), doCommandBySelector: command] };
-            guarded((), || crate::lsp::after_command(self, command));
+            guarded((), || ide_ui_lsp::after_command(self, command));
         }
 
         #[unsafe(method(complete:))]
         fn complete(&self, sender: Option<&AnyObject>) {
-            if !guarded(false, || crate::lsp::complete(self)) {
+            if !guarded(false, || ide_ui_lsp::complete(self)) {
                 // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
                 let _: () = unsafe { msg_send![super(self), complete: sender] };
             }
@@ -306,7 +306,7 @@ define_class!(
             // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), mouseMoved: event] };
             guarded((), || {
-                crate::lsp::mouse_moved(self, event);
+                ide_ui_lsp::mouse_moved(self, event);
                 super::blame::mouse_moved(self, event);
                 // The text view has just set its I-beam; over a hint that leads somewhere the hand wins.
                 let point = self.convertPoint_fromView(event.locationInWindow(), None);
@@ -338,7 +338,7 @@ define_class!(
                 super::fold::click(self, point)
                     || super::multi::option_mouse(self, event)
                     || super::insets::click_gap(self, event)
-                    || crate::lsp::command_click(self, event)
+                    || ide_ui_lsp::command_click(self, event)
             });
             if handled {
                 return;
@@ -409,19 +409,19 @@ define_class!(
 
         #[unsafe(method(ideInlayHints))]
         fn inlay_hints(&self) {
-            guarded((), || crate::lsp::inlay::request(self));
+            guarded((), || ide_ui_lsp::inlay::request(self));
         }
 
         #[unsafe(method(ideToggleInlayHints:))]
         fn toggle_inlay_hints(&self, _sender: Option<&AnyObject>) {
-            guarded((), crate::lsp::inlay::toggle);
+            guarded((), ide_ui_lsp::inlay::toggle);
         }
 
         #[unsafe(method(ideToggleInlayHintsLanguage:))]
         fn toggle_inlay_hints_language(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                if let Some(language) = crate::lsp::inlay::language(self) {
-                    crate::lsp::inlay::toggle_language(&language);
+                if let Some(language) = ide_ui_lsp::inlay::language(self) {
+                    ide_ui_lsp::inlay::toggle_language(&language);
                 }
             });
         }
@@ -447,11 +447,11 @@ define_class!(
                         })
                     })
                     .or_else(|| super::predict::validate(self, item))
-                    .or_else(|| crate::lsp::inlay::validate(self, item))
+                    .or_else(|| ide_ui_lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
                     .or_else(|| crate::preview::validate(self, item.action()))
                     .or_else(|| crate::markdown::validate(self, item))
-                    .or_else(|| crate::lsp::validate(self, item.action()))
+                    .or_else(|| ide_ui_lsp::validate(self, item.action()))
             });
             match answer {
                 Some(enabled) => enabled,
@@ -462,104 +462,104 @@ define_class!(
 
         #[unsafe(method(ideSave:))]
         fn save_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::save(self));
+            guarded((), || ide_ui_lsp::save(self));
         }
 
         #[unsafe(method(ideComplete:))]
         fn complete_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                crate::lsp::complete(self);
+                ide_ui_lsp::complete(self);
             });
         }
 
         #[unsafe(method(ideHover:))]
         fn hover_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::hover_at_cursor(self));
+            guarded((), || ide_ui_lsp::hover_at_cursor(self));
         }
 
         #[unsafe(method(ideDefinition:))]
         fn definition_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::definition(self));
+            guarded((), || ide_ui_lsp::definition(self));
         }
 
         #[unsafe(method(ideReferences:))]
         fn references_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::references(self));
+            guarded((), || ide_ui_lsp::references(self));
         }
 
         #[unsafe(method(ideImplementation:))]
         fn implementation_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::Implementation));
+            guarded((), || ide_ui_lsp::go_to(self, ide_ui_lsp::Goto::Implementation));
         }
 
         #[unsafe(method(ideTypeDefinition:))]
         fn type_definition_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::TypeDefinition));
+            guarded((), || ide_ui_lsp::go_to(self, ide_ui_lsp::Goto::TypeDefinition));
         }
 
         #[unsafe(method(ideDeclaration:))]
         fn declaration_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::go_to(self, crate::lsp::Goto::Declaration));
+            guarded((), || ide_ui_lsp::go_to(self, ide_ui_lsp::Goto::Declaration));
         }
 
         #[unsafe(method(ideCallHierarchy:))]
         fn call_hierarchy_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::call_hierarchy(self));
+            guarded((), || ide_ui_lsp::call_hierarchy(self));
         }
 
         #[unsafe(method(ideTypeHierarchy:))]
         fn type_hierarchy_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::type_hierarchy(self));
+            guarded((), || ide_ui_lsp::type_hierarchy(self));
         }
 
         #[unsafe(method(ideSymbols:))]
         fn symbols_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::symbols(self));
+            guarded((), || ide_ui_lsp::symbols(self));
         }
 
         #[unsafe(method(ideRename:))]
         fn rename_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::rename(self));
+            guarded((), || ide_ui_lsp::rename(self));
         }
 
         #[unsafe(method(ideFormat:))]
         fn format_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::format(self, None));
+            guarded((), || ide_ui_lsp::format(self, None));
         }
 
         #[unsafe(method(ideQuickFix:))]
         fn quick_fix_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Fixes));
+            guarded((), || ide_ui_lsp::code_actions(self, ide_ui_lsp::ActionKind::Fixes));
         }
 
         #[unsafe(method(ideRefactor:))]
         fn refactor_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Refactor));
+            guarded((), || ide_ui_lsp::code_actions(self, ide_ui_lsp::ActionKind::Refactor));
         }
 
         #[unsafe(method(ideSourceActions:))]
         fn source_actions(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::code_actions(self, crate::lsp::ActionKind::Source));
+            guarded((), || ide_ui_lsp::code_actions(self, ide_ui_lsp::ActionKind::Source));
         }
 
         #[unsafe(method(ideSignatureHelp:))]
         fn signature_help_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::signature_help(self));
+            guarded((), || ide_ui_lsp::signature_help(self));
         }
 
         #[unsafe(method(ideNextProblem:))]
         fn next_problem_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::next_problem(self, true));
+            guarded((), || ide_ui_lsp::next_problem(self, true));
         }
 
         #[unsafe(method(idePreviousProblem:))]
         fn previous_problem_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::next_problem(self, false));
+            guarded((), || ide_ui_lsp::next_problem(self, false));
         }
 
         #[unsafe(method(ideLspAction:))]
         fn lsp_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::lsp::status_action(self));
+            guarded((), || ide_ui_lsp::status_action(self));
         }
 
         #[unsafe(method(ideJumpToOffset:))]
@@ -568,28 +568,28 @@ define_class!(
                 let tag = sender
                     .and_then(|s| s.downcast_ref::<objc2_app_kit::NSMenuItem>())
                     .map_or(0, |item| item.tag());
-                crate::lsp::jump_to(self, usize::try_from(tag).unwrap_or(0));
+                ide_ui_lsp::jump_to(self, usize::try_from(tag).unwrap_or(0));
             });
         }
 
         #[unsafe(method(ideHoverRest))]
         fn hover_rest(&self) {
-            guarded((), || crate::lsp::hover_rest(self));
+            guarded((), || ide_ui_lsp::hover_rest(self));
         }
 
         #[unsafe(method(ideDecorate))]
         fn decorate(&self) {
-            guarded((), || crate::lsp::paint(self));
+            guarded((), || ide_ui_lsp::paint(self));
         }
 
         #[unsafe(method(ideActionsMoved))]
         fn actions_moved(&self) {
-            guarded((), || crate::lsp::actions_moved(self));
+            guarded((), || ide_ui_lsp::actions_moved(self));
         }
 
         #[unsafe(method(ideLspRefresh))]
         fn lsp_refresh(&self) {
-            guarded((), || crate::lsp::refresh(self));
+            guarded((), || ide_ui_lsp::refresh(self));
         }
 
         #[unsafe(method(ideSaveAs:))]
@@ -806,7 +806,7 @@ impl EditorTextView {
         let container = NSTextContainer::initWithSize(NSTextContainer::alloc(), NSSize::new(1.0e7, 1.0e7));
         container.setWidthTracksTextView(false);
         layout.setTextContainer(Some(&container));
-        let serial = crate::lsp::new_serial();
+        let serial = ide_ui_lsp::new_serial();
         let ivars = ViewIvars {
             document: RefCell::new(document),
             _content: RefCell::new(Some(content)),
@@ -819,7 +819,7 @@ impl EditorTextView {
             recolor_from: Cell::new(None),
             styled: Cell::new(false),
             gutter: RefCell::new(None),
-            lsp: RefCell::new(crate::lsp::ViewState::new(serial)),
+            lsp: RefCell::new(ide_ui_lsp::ViewState::new(serial)),
             serial,
             recovery,
             marks: RefCell::new(super::changes::Marks::default()),

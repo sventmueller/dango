@@ -18,7 +18,7 @@ pub struct Project {
 
 impl Project {
     /// Reads the top of `root` and starts watching it; changed folders reach `crate::window::tree_changed` and the
-    /// project search, changed files `crate::lsp::files_changed`, every change `ide_ui_git::changed` and
+    /// project search, changed files `ide_ui_lsp::files_changed`, every change `ide_ui_git::changed` and
     /// `crate::ci_panel::changed`, and a change in `.git` the editors' change marks, all on the main thread.
     pub fn open(root: &Path) -> std::io::Result<Project> {
         let options = TreeOptions {
@@ -53,7 +53,7 @@ impl Project {
                 {
                     let (root, files) = (window_root.clone(), changes.files.clone());
                     main_soon(move || {
-                        crate::lsp::files_changed(&root, &files);
+                        ide_ui_lsp::files_changed(&root, &files);
                         if let Some(mtm) = objc2::MainThreadMarker::new() {
                             let paths: Vec<std::path::PathBuf> = files.keys().cloned().collect();
                             crate::site_preview::files_changed(mtm, &root, &paths);

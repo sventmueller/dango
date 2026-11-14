@@ -14,9 +14,9 @@ use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 use splat_i18n::tf;
 
 use super::{CONTENT_MODIFIED, language_of, server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::editor::Hint;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::editor::Hint;
+use crate::host as editor;
 use ide_ui_common::util::main_soon;
 
 /// How long scrolling pauses before the hints of the lines that came into view are asked for.
@@ -39,15 +39,15 @@ pub struct InlayRequests {
 }
 
 fn with_asked<R>(f: impl FnOnce(&RefCell<HashMap<u64, u64>>) -> R) -> R {
-    f(&crate::lsp::host::state().inlay_requests.asked)
+    f(&crate::host::state().inlay_requests.asked)
 }
 
 fn with_next<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::lsp::host::state().inlay_requests.next)
+    f(&crate::host::state().inlay_requests.next)
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<HashMap<u64, u64>>) -> R) -> R {
-    f(&crate::lsp::host::state().inlay_requests.shown)
+    f(&crate::host::state().inlay_requests.shown)
 }
 
 fn chosen() -> (bool, Vec<String>) {

@@ -7,8 +7,8 @@ use ide_lsp::lsp_types::{Range, SymbolKind};
 use ide_lsp::{Calls, HierarchyItem, Neighbour, Server, Ticket, Types};
 
 use super::{server_of, text};
-use crate::lsp::editor::Editor;
-use crate::lsp::host as editor;
+use crate::editor::Editor;
+use crate::host as editor;
 use ide_ui_common::util::main_soon;
 
 /// Which hierarchy.

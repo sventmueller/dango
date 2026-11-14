@@ -21,8 +21,8 @@ use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, 
 use splat_i18n::{t, tf};
 
 use super::SearchPanel;
-use crate::lsp::{Direction, Hierarchy, HierarchyKind};
 use crate::util::{guarded, label, ns, set_action, set_label, symbol};
+use ide_ui_lsp::{Direction, Hierarchy, HierarchyKind};
 
 /// How many hierarchies the menu keeps.
 const HISTORY: usize = 10;
@@ -549,7 +549,7 @@ fn row(mtm: MainThreadMarker, name: &str, kind: SymbolKind, place: &str) -> Reta
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     stack.setSpacing(ide_ui_common::style::space::SNUG);
-    if let Some(image) = symbol(crate::lsp::kind_symbol(kind), "") {
+    if let Some(image) = symbol(ide_ui_lsp::kind_symbol(kind), "") {
         let icon = NSImageView::imageViewWithImage(&image, mtm);
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         icon.setAccessibilityElement(false);

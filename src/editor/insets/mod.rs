@@ -79,7 +79,7 @@ pub struct Inset {
     /// at a line's end it follows the text without a space.
     pub ghost: bool,
     /// How serious it is, shown with a symbol before the text in the severity's colour.
-    pub severity: Option<crate::lsp::Severity>,
+    pub severity: Option<ide_ui_lsp::Severity>,
     /// Its width on screen, with its margins, measured when it is set.
     width: f64,
 }

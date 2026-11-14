@@ -24,7 +24,7 @@ use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect};
 use splat_markdown::highlight::Token;
 
 use super::ViewState;
-use crate::lsp::editor::Editor;
+use crate::editor::Editor;
 use ide_ui_common::constant;
 
 /// How serious a diagnostic is.
@@ -274,7 +274,7 @@ pub fn paint(view: &dyn Editor) {
     let inside = |range: &Range<usize>| range.end > visible.start && range.start < visible.end;
     for painted in state.tokens.iter().filter(|p| inside(&p.range)) {
         if let Some(range) = text_range(&content, &painted.range) {
-            let color: Retained<AnyObject> = crate::lsp::host::palette_color(painted.token).into();
+            let color: Retained<AnyObject> = crate::host::palette_color(painted.token).into();
             // SAFETY: The value of the foreground colour attribute is a colour.
             unsafe { layout.addRenderingAttribute_value_forTextRange(foreground, Some(&color), &range) };
         }
@@ -322,7 +322,7 @@ define_class!(
 impl Squiggles {
     /// The overlay of `editor`, covering it and following its size.
     pub fn attach(editor: &dyn Editor) {
-        let this = Squiggles::alloc(crate::lsp::editor::marker(editor)).set_ivars(SquiggleIvars {
+        let this = Squiggles::alloc(crate::editor::marker(editor)).set_ivars(SquiggleIvars {
             editor: editor.serial(),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -336,7 +336,7 @@ impl Squiggles {
     }
 
     fn draw(&self, dirty: NSRect) {
-        let Some(editor) = crate::lsp::host::find_editor(self.ivars().editor) else {
+        let Some(editor) = crate::host::find_editor(self.ivars().editor) else {
             return;
         };
         let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {

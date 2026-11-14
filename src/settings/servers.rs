@@ -18,8 +18,8 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize
 use splat_i18n::t;
 
 use super::{form, list_bar};
-use crate::lsp::LANGUAGE_SERVERS;
 use crate::util::{guarded, ns};
+use ide_ui_lsp::LANGUAGE_SERVERS;
 
 const BUILT_IN_HEIGHT: f64 = 190.0;
 const CUSTOM_HEIGHT: f64 = 110.0;
@@ -106,7 +106,7 @@ impl ServersSettings {
             views.custom.reloadData();
         }
         self.update_buttons();
-        crate::lsp::survey(super::servers_found);
+        ide_ui_lsp::survey(super::servers_found);
     }
 
     /// The built-in languages and where their servers are, from a survey that came back.
@@ -173,7 +173,7 @@ impl ServersSettings {
             views.custom.reloadData();
         }
         self.update_buttons();
-        crate::lsp::servers_changed();
+        ide_ui_lsp::servers_changed();
     }
 
     fn remove_selected(&self) {
