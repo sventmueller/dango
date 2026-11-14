@@ -376,10 +376,7 @@ fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {
 
 /// The first lines of the blocks folded now.
 fn folded_now(view: &EditorTextView) -> std::collections::BTreeSet<usize> {
-    edit::gutter(view)
-        .into_iter()
-        .filter_map(|(line, folded)| folded.then_some(line))
-        .collect()
+    edit::gutter(view).folded().collect()
 }
 
 /// The lines shown in full on screen, without those a fold hides.

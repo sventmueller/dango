@@ -11,7 +11,7 @@ use splat_file_state::{FileFormat, Fingerprint, Stamp};
 use crate::disk::{self, FileContent, ReadOnly};
 use crate::edit::{ByteEdit, Change, Edit, EditError, edits_between};
 use crate::merge::{self, Conflict, Reconciliation};
-use crate::syntax::{self, BracketPair, Fold, Language, Span, Styled, Syntax};
+use crate::syntax::{BracketPair, Fold, Language, Span, Styled, Syntax};
 use crate::text::{PositionError, Text};
 
 /// A kind of line break.
@@ -757,8 +757,8 @@ impl Document {
     }
 
     /// The folds by indentation, with tabs reaching the next multiple of `tab_width`.
-    pub fn folds(&self, tab_width: usize) -> Vec<Fold> {
-        syntax::indentation_folds(&self.text, tab_width)
+    pub fn folds(&mut self, tab_width: usize) -> Vec<Fold> {
+        self.syntax.folds(&self.text, tab_width)
     }
 }
 

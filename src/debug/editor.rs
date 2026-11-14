@@ -81,6 +81,33 @@ pub fn gutter_mark(editor: &EditorTextView, line: usize) -> (Option<Look>, bool)
     ide_ui_debug::gutter::mark(controller.handle(), &path, line)
 }
 
+/// How the lines of an editor are marked in the gutter.
+#[derive(Default)]
+pub struct GutterMarks {
+    looks: std::collections::HashMap<usize, Look>,
+    paused: Option<usize>,
+}
+
+impl GutterMarks {
+    /// The breakpoint of `line`, and whether the program is paused there.
+    pub fn at(&self, line: usize) -> (Option<Look>, bool) {
+        (self.looks.get(&line).copied(), self.paused == Some(line))
+    }
+}
+
+/// How the lines of `editor` are marked in the gutter, for drawing all lines on screen at once.
+pub fn gutter_marks(editor: &EditorTextView) -> GutterMarks {
+    let Some(controller) = editor.controller() else {
+        return GutterMarks::default();
+    };
+    let document = editor.document();
+    let Some(path) = document.path() else {
+        return GutterMarks::default();
+    };
+    let (looks, paused) = ide_ui_debug::gutter::marks(controller.handle(), path);
+    GutterMarks { looks, paused }
+}
+
 /// An edit of `editor`'s text moves the breakpoints of its file.
 pub fn edited(editor: &EditorTextView, change: &Change) {
     if let Some((panel, path)) = panel_and_path(editor) {

@@ -62,7 +62,7 @@ use ide_ui_common::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
-pub use decorate::{Painted, Severity, follow, line_marks, line_messages, paint, text_range};
+pub use decorate::{LineMarks, Painted, Severity, follow, line_marks, line_messages, paint, text_range};
 pub use host::{Host, State as LspState, install};
 
 /// The semantic tokens of an editor's language server state, by position.
@@ -106,6 +106,8 @@ pub struct ViewState {
     squiggles: Option<objc2::rc::Weak<decorate::Squiggles>>,
     crumbs: Vec<outline::Crumb>,
     actions: actions::State,
+    /// `marks` by line for a revision of the document, until the marks change.
+    line_marks: Option<(u64, Rc<decorate::LineMarks>)>,
     /// A passing remark in the status bar, such as why a save went without formatting.
     note: Option<String>,
 }

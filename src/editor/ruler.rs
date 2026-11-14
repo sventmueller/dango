@@ -378,6 +378,7 @@ impl LineNumbers {
         self.ivars().tips.borrow_mut().clear();
         let marks = ide_ui_lsp::line_marks(&*editor);
         let folds = super::fold::gutter(&editor);
+        let breakpoints = crate::debug::gutter_marks(&editor);
         let bulb = ide_ui_lsp::bulb_line(&*editor);
         let bulb_row = std::cell::Cell::new(None);
         let bottom = visible.origin.y + visible.size.height;
@@ -403,7 +404,7 @@ impl LineNumbers {
                     let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
                     let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
                     let height = fragment.layoutFragmentFrame().size.height;
-                    let (look, paused) = crate::debug::gutter_mark(&editor, line - 1);
+                    let (look, paused) = breakpoints.at(line - 1);
                     let fold_strip =
                         NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
                     let mut tagged = false;
@@ -429,8 +430,8 @@ impl LineNumbers {
                     }
                     if paused && !tagged {
                         crate::debug::draw_paused_arrow(fold_strip);
-                    } else if let Some(folded) = folds.get(&(line - 1)) {
-                        self.fold_mark(fold_strip, *folded, tagged);
+                    } else if let Some(folded) = folds.get(line - 1) {
+                        self.fold_mark(fold_strip, folded, tagged);
                     }
                     let margin = NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height));
                     if let Some((severity, message)) = marks.get(&(line - 1)) {

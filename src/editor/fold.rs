@@ -2,8 +2,8 @@
 //! lines are left out of TextKit 2's enumeration of paragraphs, so they take no room and line numbers skip them; its
 //! first line stays and ends in a placeholder that unfolds it. Editing inside a fold unfolds it.
 
-use std::collections::BTreeMap;
 use std::ops::Range;
+use std::rc::Rc;
 
 use ide_document::Change;
 use objc2::DefinedClass;
@@ -19,25 +19,28 @@ pub use selftest_probe::*;
 /// The width of a fold's placeholder after its first line.
 pub const PLACEHOLDER_WIDTH: f64 = 26.0;
 
+/// Blocks of lines as their first line and their last line, ordered by first line.
+pub type Lines = Rc<[(usize, usize)]>;
+
 /// What a view knows about folds.
 #[derive(Debug, Default)]
 pub struct Folds {
     /// The ranges the language server offers, as the first line and the last hidden line.
-    server: Option<Vec<(usize, usize)>>,
+    server: Option<Lines>,
     /// The indentation's ranges for a revision of the document.
-    indented: Option<(u64, Vec<(usize, usize)>)>,
+    indented: Option<(u64, Lines)>,
     /// The folded ranges: UTF-16 code units from the start of the second line to the start of the line after the last
     /// hidden one, or the end of the text; sorted by start.
     hidden: Vec<Range<usize>>,
 }
 
 /// The ranges that can fold, from the server or the indentation, as first line and last hidden line.
-pub fn indent_ranges(view: &EditorTextView) -> Vec<(usize, usize)> {
+pub fn indent_ranges(view: &EditorTextView) -> Lines {
     available(view)
 }
 
 /// The ranges that can fold, as first line and last hidden line, ordered by first line.
-fn available(view: &EditorTextView) -> Vec<(usize, usize)> {
+fn available(view: &EditorTextView) -> Lines {
     let revision = view.document().revision();
     let mut folds = view.ivars().folds.borrow_mut();
     if let Some(server) = &folds.server {
@@ -49,8 +52,8 @@ fn available(view: &EditorTextView) -> Vec<(usize, usize)> {
         return ranges.clone();
     }
     let tab_width = tab_width(view.ivars().indent.borrow().as_str());
-    let ranges: Vec<(usize, usize)> = view
-        .document()
+    let ranges: Lines = view
+        .document_mut()
         .folds(tab_width)
         .into_iter()
         .filter(|f| f.end > f.start)
@@ -74,7 +77,7 @@ fn usable(mut ranges: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
 
 /// Takes the language server's folding ranges, or `None` to go back to the indentation.
 pub fn set_server_ranges(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
-    view.ivars().folds.borrow_mut().server = ranges.map(usable);
+    view.ivars().folds.borrow_mut().server = ranges.map(|ranges| usable(ranges).into());
     super::redraw_gutter(view);
 }
 
@@ -177,8 +180,8 @@ pub fn fold_at_cursor(view: &EditorTextView) {
         .iter()
         .filter(|(start, end)| *start <= line && line <= *end)
         .min_by_key(|(start, end)| (usize::from(*start != line), end - start));
-    if let Some((start, end)) = found {
-        fold(view, *start, *end);
+    if let Some(&(start, end)) = found {
+        fold(view, start, end);
     }
 }
 
@@ -191,7 +194,7 @@ pub fn unfold_at_cursor(view: &EditorTextView) {
 }
 
 pub fn fold_all(view: &EditorTextView) {
-    for (start, end) in available(view) {
+    for &(start, end) in available(view).iter() {
         fold(view, start, end);
     }
 }
@@ -206,7 +209,7 @@ pub fn toggle(view: &EditorTextView, line: usize) {
     if unfold_where(view, |r| r.start == next) {
         return;
     }
-    if let Some((start, end)) = available(view).into_iter().find(|(start, _)| *start == line) {
+    if let Some(&(start, end)) = available(view).iter().find(|(start, _)| *start == line) {
         fold(view, start, end);
     }
 }
@@ -311,14 +314,36 @@ pub fn click(view: &EditorTextView, point: NSPoint) -> bool {
     }
 }
 
-/// The lines that can fold, with whether they are folded, for the line number column.
-pub fn gutter(view: &EditorTextView) -> BTreeMap<usize, bool> {
-    let mut lines: BTreeMap<usize, bool> = available(view).into_iter().map(|(start, _)| (start, false)).collect();
-    let hidden: Vec<Range<usize>> = view.ivars().folds.borrow().hidden.clone();
-    for range in hidden {
-        lines.insert(line_of(view, range.start).saturating_sub(1), true);
+/// The lines that can fold and those folded, for the line number column.
+#[derive(Debug)]
+pub struct Gutter {
+    ranges: Lines,
+    folded: Vec<usize>,
+}
+
+impl Gutter {
+    /// Whether `line` is folded, if it can fold.
+    pub fn get(&self, line: usize) -> Option<bool> {
+        if self.folded.contains(&line) {
+            return Some(true);
+        }
+        let at = self.ranges.partition_point(|(start, _)| *start < line);
+        self.ranges
+            .get(at)
+            .is_some_and(|(start, _)| *start == line)
+            .then_some(false)
     }
-    lines
+}
+
+/// The lines that can fold, with whether they are folded, for the line number column.
+pub fn gutter(view: &EditorTextView) -> Gutter {
+    let ranges = available(view);
+    let hidden: Vec<Range<usize>> = view.ivars().folds.borrow().hidden.clone();
+    let folded = hidden
+        .iter()
+        .map(|range| line_of(view, range.start).saturating_sub(1))
+        .collect();
+    Gutter { ranges, folded }
 }
 
 #[cfg(test)]

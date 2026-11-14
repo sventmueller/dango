@@ -148,6 +148,13 @@ impl Breakpoints {
         })
     }
 
+    /// How each breakpoint of `path` shows, by line.
+    pub fn looks(&self, path: &Path) -> std::collections::HashMap<usize, Look> {
+        self.of(path)
+            .filter_map(|b| Some((b.line, self.look(path, b.line)?)))
+            .collect()
+    }
+
     /// The breakpoints an adapter gets for `path`: none while they are switched off, and only the enabled ones.
     pub fn for_adapter(&self, path: &Path) -> Vec<Breakpoint> {
         if !self.active {

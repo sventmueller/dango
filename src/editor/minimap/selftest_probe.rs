@@ -27,7 +27,7 @@ impl Minimap {
         let rows = self.rows(&editor, height);
         let first = index(rows.offset / ROW);
         let count = index((height / ROW).ceil());
-        let lines = rows.lines.iter().skip(first).take(count).copied().collect();
+        let lines = (first..first + count).map_while(|row| rows.lines.get(row)).collect();
         (rows.visible.start, lines)
     }
 }

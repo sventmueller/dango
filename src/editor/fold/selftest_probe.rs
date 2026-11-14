@@ -6,6 +6,13 @@
 )]
 use super::*;
 
+impl Gutter {
+    /// The folded lines, for the self-test.
+    pub fn folded(&self) -> impl Iterator<Item = usize> + '_ {
+        self.folded.iter().copied()
+    }
+}
+
 /// Whether the folds come from the language server, for the self-test.
 pub fn from_server(view: &EditorTextView) -> bool {
     view.ivars().folds.borrow().server.is_some()

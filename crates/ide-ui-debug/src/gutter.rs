@@ -226,6 +226,20 @@ pub fn mark(window: Window, path: &Path, line: usize) -> (Option<Look>, bool) {
     (model.breakpoints.look(path, line), paused)
 }
 
+/// How the lines of `path` in `window` are marked in the gutter: their breakpoints by line, and the line the program
+/// is paused at.
+pub fn marks(window: Window, path: &Path) -> (std::collections::HashMap<usize, Look>, Option<usize>) {
+    let Some(panel) = super::panel::of(&window) else {
+        return Default::default();
+    };
+    let model = panel.read();
+    let paused = model
+        .paused_at()
+        .filter(|frame| frame.path.as_deref() == Some(path))
+        .map(|frame| frame.line);
+    (model.breakpoints.looks(path), paused)
+}
+
 /// Draws a line's breakpoint as a tag across `rect`, the gutter up to the change strip; whether the number should be
 /// drawn light on it.
 pub fn draw(look: Option<Look>, rect: NSRect) -> bool {

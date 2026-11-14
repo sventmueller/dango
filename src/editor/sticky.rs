@@ -3,6 +3,7 @@
 //! document symbols, else from the folds by indentation; Markdown and plain text have none.
 
 use std::cell::{Cell, OnceCell, RefCell};
+use std::rc::Rc;
 
 use ide_core::settings::{Settings, keys};
 use objc2::rc::{Retained, Weak};
@@ -83,10 +84,10 @@ fn of(view: &EditorTextView) -> Option<Retained<Sticky>> {
     view.ivars().sticky.borrow().as_ref().and_then(Weak::load)
 }
 
-/// Finds the headers of `view` again and draws them.
+/// Finds the blocks and headers of `view` again and draws them.
 pub fn refresh(view: &EditorTextView) {
     if let Some(sticky) = of(view) {
-        sticky.update();
+        sticky.update(true);
     }
 }
 
@@ -95,29 +96,33 @@ pub fn height(view: &EditorTextView) -> f64 {
     of(view).map_or(0.0, |sticky| sticky.frame().size.height)
 }
 
-/// The blocks of `view` as their header line and last line: the server's symbols, else the folds by indentation.
-fn scopes(view: &EditorTextView) -> Vec<(usize, usize)> {
-    if let Some(symbols) = ide_ui_lsp::symbol_scopes(view) {
-        return symbols;
+/// The blocks of `view` as their header line and last line, ordered by header line: the server's symbols, else the
+/// folds by indentation.
+fn scopes(view: &EditorTextView) -> super::fold::Lines {
+    if let Some(mut symbols) = ide_ui_lsp::symbol_scopes(view) {
+        symbols.sort_unstable();
+        return symbols.into();
     }
     let language = view.document().language();
     match language {
         Some(language) if !language.is_markdown() => super::fold::indent_ranges(view),
-        _ => Vec::new(),
+        _ => Rc::new([]),
     }
 }
 
 /// The header lines over `top`, the first line under them: the blocks that start above it and end on or after it,
-/// outermost first, at most `most`, one per line.
+/// outermost first, at most `most`, one per line; `scopes` are ordered by header line.
 pub fn headers_over(scopes: &[(usize, usize)], top: usize, most: usize) -> Vec<usize> {
-    let mut lines: Vec<usize> = scopes
-        .iter()
-        .filter(|(head, end)| *head < top && *end >= top)
-        .map(|(head, _)| *head)
-        .collect();
-    lines.sort_unstable();
-    lines.dedup();
-    lines.truncate(most);
+    let above = scopes.partition_point(|(head, _)| *head < top);
+    let mut lines: Vec<usize> = Vec::new();
+    for (head, _) in scopes[..above].iter().filter(|(_, end)| *end >= top) {
+        if lines.len() == most {
+            break;
+        }
+        if lines.last() != Some(head) {
+            lines.push(*head);
+        }
+    }
     lines
 }
 
@@ -130,6 +135,8 @@ pub struct StickyIvars {
     /// The height of one line, as the editor laid out its first line.
     row: Cell<f64>,
     scrolled: OnceCell<crate::util::Observation>,
+    /// The blocks found last, with the document's revision then, which scrolling uses again.
+    scopes: RefCell<Option<(u64, super::fold::Lines)>>,
 }
 
 define_class!(
@@ -170,6 +177,7 @@ impl Sticky {
             shown: RefCell::new(Vec::new()),
             row: Cell::new(0.0),
             scrolled: OnceCell::new(),
+            scopes: RefCell::new(None),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -185,7 +193,7 @@ impl Sticky {
             Some(&clip),
             move |_| {
                 if let Some(sticky) = sticky.load() {
-                    sticky.update();
+                    sticky.update(false);
                 }
             },
         );
@@ -199,8 +207,23 @@ impl Sticky {
         *self.ivars().height.borrow_mut() = Some(constraint);
     }
 
-    /// Finds the headers for what the editor shows now, sizes the view to them and draws them.
-    fn update(&self) {
+    /// The blocks of `editor`, found again when `fresh` or after an edit, else those found last.
+    fn scopes(&self, editor: &EditorTextView, fresh: bool) -> super::fold::Lines {
+        let revision = editor.document().revision();
+        if !fresh
+            && let Some((seen, scopes)) = self.ivars().scopes.borrow().as_ref()
+            && *seen == revision
+        {
+            return scopes.clone();
+        }
+        let scopes = scopes(editor);
+        *self.ivars().scopes.borrow_mut() = Some((revision, scopes.clone()));
+        scopes
+    }
+
+    /// Finds the headers for what the editor shows now, sizes the view to them and draws them; the blocks are found
+    /// again when `fresh`.
+    fn update(&self, fresh: bool) {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
@@ -210,7 +233,7 @@ impl Sticky {
         let shown = if most == 0 || row <= 0.0 {
             Vec::new()
         } else {
-            let scopes = scopes(&editor);
+            let scopes = self.scopes(&editor, fresh);
             let top = editor.visibleRect().origin.y;
             // The headers cover lines themselves, so the line under them decides, found again as they grow.
             let mut headers = Vec::new();

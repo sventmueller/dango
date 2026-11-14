@@ -20,7 +20,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 pub use folding::Fold;
-pub(crate) use folding::indentation_folds;
 pub use language::Language;
 pub use markdown::{Style, Styled, Token};
 pub use splat_markdown::code::CodeToken;
@@ -99,6 +98,7 @@ pub(crate) struct Syntax {
     frontier: usize,
     input: String,
     markdown: Option<markdown::Markdown>,
+    indents: folding::Indents,
 }
 
 /// The lines whose colours or brackets changed.
@@ -127,6 +127,7 @@ impl Syntax {
             markdown: language
                 .filter(|l| l.is_markdown())
                 .map(|_| markdown::Markdown::new(line_count)),
+            indents: folding::Indents::default(),
         }
     }
 
@@ -142,6 +143,12 @@ impl Syntax {
         if let Some(markdown) = &mut self.markdown {
             markdown.edited(first, removed, added);
         }
+        self.indents.edited(first, removed, added);
+    }
+
+    /// The folds by indentation of `text`, which is the text the edits so far led to.
+    pub(crate) fn folds(&mut self, text: &Text, tab_width: usize) -> Vec<Fold> {
+        self.indents.folds(text, tab_width)
     }
 
     pub(crate) fn spans(&self, line: usize) -> &[Span] {

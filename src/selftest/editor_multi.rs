@@ -197,7 +197,7 @@ fn folds() {
     );
     check(
         "the folded line shows a triangle and a placeholder",
-        edit::gutter(&view).get(&0) == Some(&true) && edit::placeholders(&view).len() == 1,
+        edit::gutter(&view).get(0) == Some(true) && edit::placeholders(&view).len() == 1,
         format!("{:?}", edit::gutter(&view)),
     );
     picture("editor-multi-folded");

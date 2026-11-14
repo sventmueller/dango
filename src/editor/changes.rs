@@ -248,9 +248,10 @@ fn hunk_at(hunks: &[Hunk], lines: usize, line: usize) -> Option<(&Hunk, Mark)> {
         return Some((hunk, mark));
     }
     let removed = |at: usize| {
-        hunks
+        hunks[hunks.partition_point(|h| h.change.lines.start < at)..]
             .iter()
-            .find(|h| h.change.kind == ChangeKind::Removed && h.change.lines.start == at)
+            .take_while(|h| h.change.lines.start == at)
+            .find(|h| h.change.kind == ChangeKind::Removed)
     };
     if let Some(hunk) = removed(line) {
         return Some((hunk, Mark::RemovedAbove));

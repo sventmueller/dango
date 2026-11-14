@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 use std::ptr::NonNull;
+use std::rc::Rc;
 
 use block2::RcBlock;
 
@@ -162,7 +163,11 @@ pub fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: &[Diagn
     let old = view.lsp().borrow().marks.clone();
     marks = replaced(old, source, marks);
     marks.sort_by_key(|m| (m.range.start, std::cmp::Reverse(m.severity)));
-    view.lsp().borrow_mut().marks = marks;
+    {
+        let mut state = view.lsp().borrow_mut();
+        state.marks = marks;
+        state.line_marks = None;
+    }
     paint(view);
     view.redraw_gutter();
     view.diagnostics_changed();
@@ -229,12 +234,29 @@ pub fn line_messages(view: &dyn Editor) -> BTreeMap<usize, (usize, Vec<(Severity
     lines
 }
 
-/// The diagnostics by the line they start on, the most serious first, for the line number column.
-pub fn line_marks(view: &dyn Editor) -> BTreeMap<usize, (Severity, String)> {
+/// The diagnostics of at least `Info` by the line they start on, with the most serious one's severity and every
+/// message.
+pub type LineMarks = BTreeMap<usize, (Severity, String)>;
+
+/// The diagnostics by the line they start on, the most serious first, for the line number column and the minimap;
+/// found once per revision of the document and set of diagnostics.
+pub fn line_marks(view: &dyn Editor) -> Rc<LineMarks> {
+    let revision = view.document().revision();
+    if let Some((seen, lines)) = &view.lsp().borrow().line_marks
+        && *seen == revision
+    {
+        return lines.clone();
+    }
+    let lines = Rc::new(find_line_marks(view));
+    view.lsp().borrow_mut().line_marks = Some((revision, lines.clone()));
+    lines
+}
+
+fn find_line_marks(view: &dyn Editor) -> LineMarks {
     let state = view.lsp().borrow();
     let document = view.document();
     let text = document.text();
-    let mut lines: BTreeMap<usize, (Severity, String)> = BTreeMap::new();
+    let mut lines = LineMarks::new();
     for mark in state.marks.iter().filter(|m| m.severity >= Severity::Info) {
         let Ok(byte) = text.utf16_to_byte(mark.range.start.min(text.len_utf16())) else {
             continue;

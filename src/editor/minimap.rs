@@ -4,6 +4,7 @@
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::ops::Range;
+use std::rc::Rc;
 
 use ide_core::settings::{Settings, keys};
 use objc2::rc::{Retained, Weak};
@@ -92,12 +93,17 @@ pub fn redraw(view: &EditorTextView) {
     }
 }
 
+/// The lines no fold hides, with the revision and the folded ranges they belong to.
+type Unfolded = (u64, Vec<Range<usize>>, Rc<[usize]>);
+
 pub struct MinimapIvars {
     editor: Weak<EditorTextView>,
     scroll: Weak<NSScrollView>,
     width: RefCell<Option<Retained<NSLayoutConstraint>>>,
     /// The scrolling and resizing it follows, which end with the column.
     watching: OnceCell<[crate::util::Observation; 2]>,
+    /// The lines no fold hides as last found.
+    unfolded: RefCell<Option<Unfolded>>,
 }
 
 define_class!(
@@ -133,10 +139,40 @@ define_class!(
     }
 );
 
+/// The logical line of each row: every line, or those no fold hides.
+enum Lines {
+    All(usize),
+    Unfolded(Rc<[usize]>),
+}
+
+impl Lines {
+    fn len(&self) -> usize {
+        match self {
+            Lines::All(count) => *count,
+            Lines::Unfolded(lines) => lines.len(),
+        }
+    }
+
+    fn get(&self, row: usize) -> Option<usize> {
+        match self {
+            Lines::All(count) => (row < *count).then_some(row),
+            Lines::Unfolded(lines) => lines.get(row).copied(),
+        }
+    }
+
+    /// The row of the first line at or after `line`.
+    fn row_of(&self, line: usize) -> usize {
+        match self {
+            Lines::All(count) => line.min(*count),
+            Lines::Unfolded(lines) => lines.partition_point(|&l| l < line),
+        }
+    }
+}
+
 /// What the column shows: the rows of the lines no fold hides and where it starts in them.
 struct Rows {
     /// The logical line of each row.
-    lines: Vec<usize>,
+    lines: Lines,
     /// How far the rows are moved up, in points, so that a file longer than the column follows the scrolling.
     offset: f64,
     /// The rows the editor shows.
@@ -151,6 +187,7 @@ impl Minimap {
             scroll: Weak::from(scroll),
             width: RefCell::new(None),
             watching: OnceCell::new(),
+            unfolded: RefCell::new(None),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -216,12 +253,12 @@ impl Minimap {
 
     /// The rows of `editor` and how they sit in a column `height` high.
     fn rows(&self, editor: &EditorTextView, height: f64) -> Rows {
-        let lines = shown_lines(editor);
+        let lines = self.shown_lines(editor);
         let visible_rect = editor.visibleRect();
         let top = super::highlight::line_at(editor, visible_rect.origin).unwrap_or(0);
         let bottom_point = NSPoint::new(0.0, visible_rect.origin.y + visible_rect.size.height - 1.0);
         let bottom = super::highlight::line_at(editor, bottom_point).unwrap_or(top);
-        let row_of = |line: usize| lines.partition_point(|&l| l < line);
+        let row_of = |line: usize| lines.row_of(line);
         let visible = row_of(top)..(row_of(bottom) + 1).min(lines.len()).max(row_of(top));
         let content = lines.len() as f64 * ROW;
         let offset = if content <= height {
@@ -255,13 +292,10 @@ impl Minimap {
         let painted = ide_ui_lsp::painted(&lsp);
         let document = editor.document();
         let columns = index((size.width - LEFT - MARK) / COLUMN);
-        for (row, &line) in rows
-            .lines
-            .iter()
-            .enumerate()
-            .take(last.min(rows.lines.len()))
-            .skip(first)
-        {
+        for row in first..last.min(rows.lines.len()) {
+            let Some(line) = rows.lines.get(row) else {
+                break;
+            };
             let y = row as f64 * ROW - rows.offset;
             if paused == Some(line) {
                 NSColor::systemGreenColor().colorWithAlphaComponent(0.35).setFill();
@@ -317,26 +351,43 @@ impl Minimap {
         };
         let rows = self.rows(&editor, self.bounds().size.height);
         let row = index((y + rows.offset) / ROW).min(rows.lines.len().saturating_sub(1));
-        if let Some(&line) = rows.lines.get(row) {
+        if let Some(line) = rows.lines.get(row) {
             center_line(&editor, line);
         }
     }
+
+    /// The logical lines no fold hides, in order, found again only after an edit or a change of the folds.
+    fn shown_lines(&self, editor: &EditorTextView) -> Lines {
+        let hidden = super::fold::hidden_ranges(editor);
+        let document = editor.document();
+        let count = document.text().line_count();
+        if hidden.is_empty() {
+            return Lines::All(count);
+        }
+        let revision = document.revision();
+        if let Some((seen, folds, lines)) = self.ivars().unfolded.borrow().as_ref()
+            && *seen == revision
+            && *folds == hidden
+        {
+            return Lines::Unfolded(lines.clone());
+        }
+        let lines: Rc<[usize]> = unfolded(&hidden, (0..count).map(|line| editor_line_start(&document, line))).collect();
+        *self.ivars().unfolded.borrow_mut() = Some((revision, hidden, lines.clone()));
+        Lines::Unfolded(lines)
+    }
 }
 
-/// The logical lines no fold hides, in order.
-fn shown_lines(editor: &EditorTextView) -> Vec<usize> {
-    let hidden = super::fold::hidden_ranges(editor);
-    let document = editor.document();
-    let count = document.text().line_count();
-    if hidden.is_empty() {
-        return (0..count).collect();
-    }
-    (0..count)
-        .filter(|&line| {
-            let start = editor_line_start(&document, line);
-            !hidden.iter().any(|r| r.contains(&start))
-        })
-        .collect()
+/// The lines whose starts, in order, `starts` gives that none of `hidden`, sorted by start, contains.
+fn unfolded(hidden: &[Range<usize>], starts: impl Iterator<Item = usize>) -> impl Iterator<Item = usize> {
+    let mut next = 0;
+    let mut covered = 0;
+    starts.enumerate().filter_map(move |(line, start)| {
+        while let Some(range) = hidden.get(next).filter(|r| r.start <= start) {
+            covered = covered.max(range.end);
+            next += 1;
+        }
+        (start >= covered).then_some(line)
+    })
 }
 
 fn editor_line_start(document: &ide_document::Document, line: usize) -> usize {
@@ -373,9 +424,10 @@ fn runs(
                 .find(|p| p.range.contains(&at))
                 .map(|p| Kind::Semantic(p.token))
                 .or_else(|| {
+                    let span = spans.partition_point(|s| (s.end as usize) <= unit);
                     spans
-                        .iter()
-                        .find(|s| (s.start as usize..s.end as usize).contains(&unit))
+                        .get(span)
+                        .filter(|s| (s.start as usize..s.end as usize).contains(&unit))
                         .map(|s| Kind::Lexer(s.kind))
                 })
                 .unwrap_or(Kind::Plain);
@@ -440,6 +492,19 @@ pub fn fit(view: &EditorTextView) {
 )]
 fn index(value: f64) -> usize {
     value.floor().clamp(0.0, f64::from(u32::MAX)) as usize
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unfolded;
+
+    #[test]
+    fn lines_a_fold_hides_get_no_row_also_inside_a_fold_in_a_fold() {
+        let starts = [0, 10, 20, 30, 40, 50, 60];
+        let hidden = [10..40, 20..30, 50..60];
+        assert_eq!(unfolded(&hidden, starts.into_iter()).collect::<Vec<_>>(), [0, 4, 6]);
+        assert_eq!(unfolded(&[], starts.into_iter()).count(), starts.len());
+    }
 }
 
 #[cfg(feature = "selftest")]

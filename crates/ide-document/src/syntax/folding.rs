@@ -13,13 +13,19 @@ pub struct Fold {
 
 /// The folds of `text`, ordered by their first line, with a tab reaching the next multiple of `tab_width`. Blank lines
 /// belong to the fold around them, but no fold ends in one.
+#[cfg(test)]
 pub(crate) fn indentation_folds(text: &Text, tab_width: usize) -> Vec<Fold> {
     let tab_width = tab_width.max(1);
+    folds_of(text.rope().lines().map(|line| indentation(line.chars(), tab_width)))
+}
+
+/// The folds of lines with the indentation `indents`, `None` for a blank line, as `indentation_folds` finds them.
+fn folds_of(indents: impl Iterator<Item = Option<usize>>) -> Vec<Fold> {
     let mut folds = Vec::new();
     let mut open: Vec<(usize, usize)> = Vec::new();
     let mut last_content = 0;
-    for (n, line) in text.rope().lines().enumerate() {
-        let Some(indent) = indentation(line.chars(), tab_width) else {
+    for (n, indent) in indents.enumerate() {
+        let Some(indent) = indent else {
             continue;
         };
         while let Some(&(depth, start)) = open.last()
@@ -46,6 +52,42 @@ pub(crate) fn indentation_folds(text: &Text, tab_width: usize) -> Vec<Fold> {
     }
     folds.sort_by_key(|fold| fold.start);
     folds
+}
+
+/// The indentation of every line, kept across edits, so that the folds after an edit look again only at the lines it
+/// touched.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Indents {
+    tab_width: usize,
+    /// Each line's column of content, `Some(None)` for a blank line, `None` until looked at.
+    lines: Vec<Option<Option<usize>>>,
+}
+
+impl Indents {
+    /// Lines `first..first + removed` were replaced by `added` lines.
+    pub(crate) fn edited(&mut self, first: usize, removed: usize, added: usize) {
+        let end = (first + removed).min(self.lines.len());
+        self.lines.splice(first.min(end)..end, std::iter::repeat_n(None, added));
+    }
+
+    /// The folds of `text`, as `indentation_folds` finds them.
+    pub(crate) fn folds(&mut self, text: &Text, tab_width: usize) -> Vec<Fold> {
+        let tab_width = tab_width.max(1);
+        if self.tab_width != tab_width || self.lines.len() != text.line_count() {
+            self.tab_width = tab_width;
+            self.lines = vec![None; text.line_count()];
+        }
+        for (n, indent) in self.lines.iter_mut().enumerate() {
+            if indent.is_none() {
+                *indent = Some(
+                    text.rope()
+                        .get_line(n)
+                        .and_then(|line| indentation(line.chars(), tab_width)),
+                );
+            }
+        }
+        folds_of(self.lines.iter().map(|indent| indent.flatten()))
+    }
 }
 
 /// The column the content of a line starts at, or `None` for a line of nothing but blanks.
@@ -77,6 +119,22 @@ mod tests {
     fn deeper_lines_fold_into_the_line_above_them() {
         let text = "fn a() {\n    if x {\n        y();\n    }\n\n    z();\n}\nfn b() {}\n";
         assert_eq!(folds(text), [(0, 5), (1, 2)]);
+    }
+
+    #[test]
+    fn folds_kept_across_edits_are_those_of_the_text_after_them() {
+        let mut text = Text::new("fn a() {\n    if x {\n        y();\n    }\n}\nb\n");
+        let mut indents = Indents::default();
+        assert_eq!(indents.folds(&text, 4), indentation_folds(&text, 4));
+        for (line, typed) in [(2, "\n    w();"), (0, "x\n  "), (5, "\n\n")] {
+            let at = text.line_content(line).map_or(text.len_bytes(), |content| content.end);
+            let added = typed.matches('\n').count();
+            let rope = text.rope_mut();
+            let char_at = rope.byte_to_char(at);
+            rope.insert(char_at, typed);
+            indents.edited(line, 1, 1 + added);
+            assert_eq!(indents.folds(&text, 4), indentation_folds(&text, 4), "after {typed:?}");
+        }
     }
 
     #[test]
