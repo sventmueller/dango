@@ -82,6 +82,17 @@ pub enum Error {
     Malformed(String),
 }
 
+impl ide_core::explain::Explain for Error {
+    fn explain(&self) -> String {
+        match self {
+            Error::Cancelled => splat_i18n::t("Abgebrochen").to_string(),
+            Error::SignIn => splat_i18n::t("Copilot: Anmeldung nötig").to_string(),
+            Error::Unavailable(text) => text.clone(),
+            Error::Malformed(text) => splat_i18n::tf("Unerwartete Antwort: {}", &[text]),
+        }
+    }
+}
+
 /// Stops a request; the provider drops its answer and replies [`Error::Cancelled`].
 ///
 /// ```

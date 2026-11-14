@@ -410,20 +410,14 @@ impl PredictionSettings {
                         *this.ivars().models.borrow_mut() = models;
                         this.fill_model_note();
                     }
-                    Err(error) => show_note(
-                        &views.model_note,
-                        &match error {
-                            ide_predict::Error::Unavailable(text) => text,
-                            other => format!("{other:?}"),
-                        },
-                    ),
+                    Err(error) => show_note(&views.model_note, &ide_core::explain::Explain::explain(&error)),
                 }
             });
         });
         if let Err(why) = started
             && let Some(views) = self.ivars().views.get()
         {
-            show_note(&views.model_note, &why);
+            show_note(&views.model_note, &why.0);
         }
     }
 }

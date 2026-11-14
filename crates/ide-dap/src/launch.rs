@@ -142,6 +142,18 @@ pub enum LaunchError {
     Syntax(String),
 }
 
+impl ide_core::explain::Explain for LaunchError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            LaunchError::Untrusted => t("Der Ordner ist nicht vertrauenswürdig.").to_string(),
+            LaunchError::Missing => t("Es gibt keine .vscode/launch.json.").to_string(),
+            LaunchError::Io(why) => tf(".vscode/launch.json ließ sich nicht lesen: {}", &[why]),
+            LaunchError::Syntax(why) => tf(".vscode/launch.json ist ungültig: {}", &[why]),
+        }
+    }
+}
+
 impl fmt::Display for LaunchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

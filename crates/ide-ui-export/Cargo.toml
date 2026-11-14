@@ -10,6 +10,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+ide-core.workspace = true
 ide-ui-common.workspace = true
 splat-decoder.workspace = true
 splat-file-state.workspace = true

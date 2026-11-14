@@ -103,6 +103,20 @@ impl std::fmt::Display for SessionError {
     }
 }
 
+impl ide_core::explain::Explain for SessionError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            SessionError::NotFound(path) => tf("{} wurde nicht gefunden.", &[&path.display().to_string()]),
+            SessionError::Start(why) => tf("Claude Code ist nicht gestartet: {}", &[why]),
+            SessionError::SignInRequired(why) => tf("Melde dich an, indem du claude im Terminal startest: {}", &[why]),
+            SessionError::RewindRejected(why) => tf("Claude Code hat das Zurückspulen abgelehnt: {}", &[why]),
+            SessionError::UnknownRequest(_) => t("Diese Anfrage wartet nicht mehr auf eine Antwort.").to_string(),
+            SessionError::Closed => t("Claude Code ist beendet.").to_string(),
+        }
+    }
+}
+
 impl std::error::Error for SessionError {}
 
 enum Outgoing {

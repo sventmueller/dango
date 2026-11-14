@@ -46,6 +46,12 @@ pub fn problem(error: &Error) -> Problem {
     problem
 }
 
+impl ide_core::explain::Explain for Error {
+    fn explain(&self) -> String {
+        described(self).message
+    }
+}
+
 fn described(error: &Error) -> Problem {
     match error {
         Error::GitMissing => Problem::plain(t(

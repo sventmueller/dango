@@ -8,6 +8,7 @@
 mod cancel;
 pub mod debugging;
 pub mod diag;
+pub mod explain;
 pub mod keymap;
 pub mod lane;
 pub mod layout;

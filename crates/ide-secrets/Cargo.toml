@@ -11,4 +11,5 @@ workspace = true
 
 [dependencies]
 ide-core.workspace = true
+splat-i18n.workspace = true
 security-framework = "3.7.0"

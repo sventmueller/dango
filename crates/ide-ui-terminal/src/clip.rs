@@ -103,7 +103,10 @@ impl TerminalView {
                 "Kein Bild eingefügt: „{}“ läuft auf einem anderen Rechner, der den Pfad nicht kennt.",
                 &[program],
             )),
-            Err(error) => self.notify(&tf("Das Bild ließ sich nicht einfügen: {}", &[&error.to_string()])),
+            Err(error) => self.notify(&tf(
+                "Das Bild ließ sich nicht einfügen: {}",
+                &[&ide_core::explain::Explain::explain(error)],
+            )),
             Ok(_) => {}
         }
         pasted.ok()

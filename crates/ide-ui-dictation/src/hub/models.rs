@@ -26,7 +26,7 @@ struct Running {
 
 enum Step {
     Progress(f64),
-    Done(Result<(), String>),
+    Done(Result<(), engine::EngineError>),
 }
 
 fn with<R>(f: impl FnOnce(&mut Downloads) -> R) -> R {
@@ -65,7 +65,7 @@ pub fn download(model: LocalModel, changed: impl Fn() + 'static) {
             main_soon(move || step(model, Step::Done(result)));
         });
     if let Err(error) = spawned {
-        step(model, Step::Done(Err(error.to_string())));
+        step(model, Step::Done(Err(engine::EngineError::Lowspeak(error.to_string()))));
     }
 }
 

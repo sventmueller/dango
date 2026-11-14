@@ -415,6 +415,25 @@ impl fmt::Display for InstallError {
     }
 }
 
+impl ide_core::explain::Explain for InstallError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            InstallError::NotConfirmed => t("Die Installation wurde nicht bestätigt.").to_string(),
+            InstallError::Runtime(name, Some(major)) => {
+                tf("{} {} oder neuer wird gebraucht", &[*name, &major.to_string()])
+            }
+            InstallError::Runtime(name, None) => tf("{} wird gebraucht", &[name]),
+            InstallError::Net(error) => tf("Der Download ist fehlgeschlagen: {}", &[&error.explain()]),
+            InstallError::Checksum { .. } => {
+                t("Der Download stimmt nicht mit seiner Prüfsumme überein und wurde verworfen").to_string()
+            }
+            InstallError::Tool(said) | InstallError::Unusable(said) => said.clone(),
+            InstallError::Io(error) => error.explain(),
+        }
+    }
+}
+
 impl std::error::Error for InstallError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

@@ -5,7 +5,9 @@ use std::io::{BufRead, BufReader, Read};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+use ide_core::explain::Explain;
 use ide_process::{Ending, Kind, Supervisor};
+use splat_i18n::t;
 
 /// How long a single call may take.
 const LIMIT: Duration = Duration::from_secs(120);
@@ -34,13 +36,37 @@ fn command(program: &std::path::Path, args: &ide_docker::Command, env: &[(String
     process
 }
 
-/// Runs `args` to its end on the calling thread: its output, or its error output as the error.
-pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<String, String> {
-    let program = program(env).ok_or_else(|| "docker".to_string())?;
+/// Why a docker command gave no answer.
+#[derive(Debug)]
+pub enum DockerError {
+    /// No `docker` on the user's PATH.
+    Missing,
+    /// It did not start, or no thread could wait for it.
+    Start(std::io::Error),
+    /// It ran past its time limit and was stopped.
+    TimedOut,
+    /// It ended with an error, which it printed in its own words.
+    Failed(String),
+}
+
+impl Explain for DockerError {
+    fn explain(&self) -> String {
+        match self {
+            DockerError::Missing => t("Docker ist nicht installiert.").to_string(),
+            DockerError::Start(error) => error.explain(),
+            DockerError::TimedOut => t("Docker hat nicht rechtzeitig geantwortet.").to_string(),
+            DockerError::Failed(said) => said.clone(),
+        }
+    }
+}
+
+/// Runs `args` to its end on the calling thread: its output, or what went wrong.
+pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<String, DockerError> {
+    let program = program(env).ok_or(DockerError::Missing)?;
     let label = format!("docker {}", args.args.get(2).cloned().unwrap_or_default());
     let mut spawned = Supervisor::global()
         .spawn(command(&program, args, env), Kind::Tool, label)
-        .map_err(|e| e.to_string())?;
+        .map_err(DockerError::Start)?;
     let read = |pipe: Option<Box<dyn Read + Send>>| {
         std::thread::spawn(move || {
             let mut out = String::new();
@@ -59,7 +85,10 @@ pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<Strin
     let (out, err) = (stdout.join().unwrap_or_default(), stderr.join().unwrap_or_default());
     match ending {
         Some(Ending::Code(0)) => Ok(out),
-        _ => Err(if err.trim().is_empty() { out } else { err }.trim().to_string()),
+        None => Err(DockerError::TimedOut),
+        Some(_) => Err(DockerError::Failed(
+            if err.trim().is_empty() { out } else { err }.trim().to_string(),
+        )),
     }
 }
 
@@ -69,11 +98,11 @@ pub fn watch(
     env: &[(String, String)],
     line: impl Fn(&str) + Send + 'static,
     ended: impl FnOnce(String) + Send + 'static,
-) -> Result<ide_process::ProcessId, String> {
-    let program = program(env).ok_or_else(|| "docker".to_string())?;
+) -> Result<ide_process::ProcessId, DockerError> {
+    let program = program(env).ok_or(DockerError::Missing)?;
     let mut spawned = Supervisor::global()
         .spawn(command(&program, args, env), Kind::Tool, "docker events")
-        .map_err(|e| e.to_string())?;
+        .map_err(DockerError::Start)?;
     let id = spawned.id;
     let stdout = spawned.stdout.take();
     let mut stderr = spawned.stderr.take();
@@ -95,6 +124,6 @@ pub fn watch(
             }
             ended(error.trim().to_string());
         })
-        .map_err(|e| e.to_string())?;
+        .map_err(DockerError::Start)?;
     Ok(id)
 }

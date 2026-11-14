@@ -250,7 +250,7 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
     }) {
         let (id, name) = failed;
         with_progress(|p| p.borrow_mut().remove(&id));
-        alert(mtm, &tf("{} wurde nicht installiert", &[&name]), &why);
+        alert(mtm, &tf("{} wurde nicht installiert", &[&name]), &why.0);
         super::agents_changed();
     }
 }
@@ -277,7 +277,7 @@ fn fetch() {
     }) {
         with_progress(|p| p.borrow_mut().remove(""));
         if let Some(mtm) = MainThreadMarker::new() {
-            alert(mtm, t("Das Register wurde nicht geladen"), &why);
+            alert(mtm, t("Das Register wurde nicht geladen"), &why.0);
         }
         super::agents_changed();
     }

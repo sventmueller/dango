@@ -13,6 +13,7 @@
 mod disk;
 mod document;
 mod edit;
+mod explain;
 pub mod merge;
 pub mod recovery;
 pub mod spacing;

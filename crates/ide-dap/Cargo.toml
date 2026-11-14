@@ -24,6 +24,7 @@ doc = false
 required-features = ["testing"]
 
 [dependencies]
+splat-i18n.workspace = true
 ide-core = { path = "../ide-core" }
 ide-document = { path = "../ide-document" }
 ide-net = { path = "../ide-net" }

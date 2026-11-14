@@ -13,9 +13,9 @@ use objc2::MainThreadOnly;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse};
 use objc2_foundation::{NSFileManager, NSRange, NSURL};
-use splat_i18n::{t, tf};
+use splat_i18n::t;
 
-use super::apply::Failure;
+use super::apply::{Failure, StepError};
 use crate::editor::{self, EditorTextView};
 use crate::util::{guarded, ns};
 
@@ -115,7 +115,7 @@ impl super::apply::Editors for FromLane {
         on_main(|| OpenEditors.version(path))
     }
 
-    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), String>> {
+    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), StepError>> {
         on_main(|| OpenEditors.edit(path, edits))
     }
 
@@ -123,7 +123,7 @@ impl super::apply::Editors for FromLane {
         on_main(|| OpenEditors.moved(from, to));
     }
 
-    fn trash(&mut self, path: &Path) -> Result<(), String> {
+    fn trash(&mut self, path: &Path) -> Result<(), StepError> {
         OpenEditors.trash(path)
     }
 }
@@ -133,9 +133,9 @@ impl super::apply::Editors for OpenEditors {
         editor_at(path).map(|view| super::version(&view))
     }
 
-    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), String>> {
+    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), StepError>> {
         let view = editor_at(path)?;
-        let refused = || tf("{} lässt sich nicht ändern", &[&path.display().to_string()]);
+        let refused = || StepError::Refused(path.to_path_buf());
         if view.document().read_only().is_some() {
             return Some(Err(refused()));
         }
@@ -156,11 +156,14 @@ impl super::apply::Editors for OpenEditors {
         }
     }
 
-    fn trash(&mut self, path: &Path) -> Result<(), String> {
+    fn trash(&mut self, path: &Path) -> Result<(), StepError> {
         let url = NSURL::fileURLWithPath(&ns(&path.to_string_lossy()));
         NSFileManager::defaultManager()
             .trashItemAtURL_resultingItemURL_error(&url, None)
-            .map_err(|e| format!("{}: {}", path.display(), e.localizedDescription()))
+            .map_err(|e| StepError::Trash {
+                path: path.to_path_buf(),
+                why: e.localizedDescription().to_string(),
+            })
     }
 }
 

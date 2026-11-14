@@ -17,3 +17,4 @@ testing = []
 ide-product.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+splat-i18n.workspace = true

@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 ide-core = { path = "../ide-core" }
+splat-i18n.workspace = true
 splat-file-state = { path = "../../../splat/crates/splat-file-state" }
 splat-markdown = { path = "../../../splat/crates/splat-markdown" }
 # Language servers count lines at LF, CRLF and CR only, so Ropey's Unicode line breaks stay off.

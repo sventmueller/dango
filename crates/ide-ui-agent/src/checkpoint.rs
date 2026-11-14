@@ -24,15 +24,16 @@ impl Store {
         }
     }
 
-    fn with<R>(&self, f: impl FnOnce(&Checkpoints) -> ide_git::Result<R>) -> Result<R, String> {
+    fn with<R>(&self, f: impl FnOnce(&Checkpoints) -> ide_git::Result<R>) -> ide_git::Result<R> {
         let mut open = self.open.lock_ignoring_poison();
-        if open.is_none() {
-            let env = ide_ui_common::window::environment(Duration::from_secs(10));
-            let git = Git::new(Supervisor::global(), env);
-            *open = Some(Checkpoints::open(&git, &self.folder).map_err(|e| e.to_string())?);
-        }
-        let checkpoints = open.as_ref().ok_or_else(String::new)?;
-        f(checkpoints).map_err(|e| e.to_string())
+        let checkpoints = match open.take() {
+            Some(checkpoints) => checkpoints,
+            None => {
+                let env = ide_ui_common::window::environment(Duration::from_secs(10));
+                Checkpoints::open(&Git::new(Supervisor::global(), env), &self.folder)?
+            }
+        };
+        f(open.insert(checkpoints))
     }
 
     /// Takes a checkpoint for `thread` with the unsaved `buffers` on a worker thread and hands it to `done` there;
@@ -79,11 +80,11 @@ impl Store {
         &self,
         checkpoint: Checkpoint,
         options: RestoreOptions,
-        done: impl FnOnce(Result<Restore, String>) + Send + 'static,
+        done: impl FnOnce(Result<Restore, RestoreError>) + Send + 'static,
     ) {
         let store = self.clone();
         if let Err((done, why)) = ide_ui_common::util::spawn_with("checkpoint", done, move |done| {
-            done(store.with(|c| {
+            let restored = store.with(|c| {
                 let mut restore = c.restore(&checkpoint, &options)?;
                 if let Restore::Restored(done) = &mut restore {
                     for (path, _) in &mut done.buffers {
@@ -91,9 +92,28 @@ impl Store {
                     }
                 }
                 Ok(restore)
-            }));
+            });
+            done(restored.map_err(RestoreError::Git));
         }) {
-            done(Err(why));
+            done(Err(RestoreError::NoThread(why)));
+        }
+    }
+}
+
+/// Why a checkpoint did not come back.
+#[derive(Debug)]
+pub enum RestoreError {
+    /// git refused.
+    Git(ide_git::Error),
+    /// No thread could do it.
+    NoThread(ide_core::explain::Explained),
+}
+
+impl ide_core::explain::Explain for RestoreError {
+    fn explain(&self) -> String {
+        match self {
+            RestoreError::Git(error) => ide_core::explain::Explain::explain(error),
+            RestoreError::NoThread(why) => why.0.clone(),
         }
     }
 }

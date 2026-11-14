@@ -83,7 +83,7 @@ pub fn run(
     cancel: &Cancel,
     on: &mut dyn FnMut(&str),
 ) -> Result<String, Failure> {
-    let folder = empty_folder().map_err(|e| Failure::Failed(e.to_string()))?;
+    let folder = empty_folder().map_err(|e| Failure::Failed(ide_core::explain::Explain::explain(&e)))?;
     let result = run_in(program, environment, &folder, text, cancel, on);
     let _ = std::fs::remove_dir_all(&folder);
     result
@@ -109,13 +109,18 @@ fn run_in(
     let supervisor = Supervisor::global();
     let spawned = supervisor
         .spawn(command, Kind::Agent, "claude -p (commit message)")
-        .map_err(|e| Failure::Failed(tf("claude ließ sich nicht starten: {}", &[&e.to_string()])))?;
+        .map_err(|e| {
+            Failure::Failed(tf(
+                "claude ließ sich nicht starten: {}",
+                &[&ide_core::explain::Explain::explain(&e)],
+            ))
+        })?;
     let id = spawned.id;
     if let Some(mut stdin) = spawned.stdin {
         let input = text.as_bytes().to_vec();
         if let Err(why) = ide_ui_common::util::spawn("claude-message-stdin", move || drop(stdin.write_all(&input))) {
             supervisor.stop(id, STOP_GRACE);
-            return Err(Failure::Failed(why));
+            return Err(Failure::Failed(why.0));
         }
     }
     let said = Arc::new(Mutex::new(String::new()));
@@ -127,7 +132,7 @@ fn run_in(
             *said.lock_ignoring_poison() = text;
         }) {
             supervisor.stop(id, STOP_GRACE);
-            return Err(Failure::Failed(why));
+            return Err(Failure::Failed(why.0));
         }
     }
     let finished = Arc::new(AtomicBool::new(false));
@@ -145,7 +150,7 @@ fn run_in(
             }
         }) {
             supervisor.stop(id, STOP_GRACE);
-            return Err(Failure::Failed(why));
+            return Err(Failure::Failed(why.0));
         }
     }
     let mut outcome: Option<Result<String, Failure>> = None;

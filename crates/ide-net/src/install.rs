@@ -96,6 +96,32 @@ impl fmt::Display for InstallError {
     }
 }
 
+impl ide_core::explain::Explain for InstallError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            InstallError::Cancelled => t("Die Installation wurde abgebrochen.").to_string(),
+            InstallError::Missing(program) => tf("{} ist nicht installiert.", &[program]),
+            InstallError::Failed {
+                program, ending: None, ..
+            } => tf("{} hat zu lange gebraucht und wurde beendet.", &[program]),
+            InstallError::Failed { program, output, .. } => tf("{} ist fehlgeschlagen: {}", &[program, output.trim()]),
+            InstallError::Network(why) => tf("Der Download ist fehlgeschlagen: {}", &[why]),
+            InstallError::Checksum { .. } => {
+                t("Der Download stimmt nicht mit seiner Prüfsumme überein und wurde verworfen").to_string()
+            }
+            InstallError::Unverifiable => {
+                t("Das Release veröffentlicht keine Prüfsumme, gegen die sich der Download prüfen ließe.").to_string()
+            }
+            InstallError::Unusable(why) => tf("Das installierte Programm startet nicht: {}", &[why]),
+            InstallError::Io(error) => tf(
+                "Der Ordner für Werkzeuge ließ sich nicht schreiben: {}",
+                &[&error.explain()],
+            ),
+        }
+    }
+}
+
 impl std::error::Error for InstallError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

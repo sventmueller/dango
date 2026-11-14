@@ -34,7 +34,10 @@ impl TerminalView {
             }
             Err(error) => {
                 ide_ui_common::diag::report("starting a terminal", &error);
-                self.notify(&tf("Das Terminal konnte nicht starten: {}", &[&error.to_string()]));
+                self.notify(&tf(
+                    "Das Terminal konnte nicht starten: {}",
+                    &[&ide_core::explain::Explain::explain(&error)],
+                ));
             }
         }
     }

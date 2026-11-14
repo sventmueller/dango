@@ -427,7 +427,9 @@ impl GitPanel {
                 self.set_problem(Some(Problem::plain(t("Ein Worktree braucht einen ersten Commit."))));
             }
             Some(Err(TreeError::Git(error))) => self.report(&error),
-            Some(Err(TreeError::Io(error))) => self.set_problem(Some(Problem::plain(error.to_string()))),
+            Some(Err(TreeError::Io(error))) => {
+                self.set_problem(Some(Problem::plain(ide_core::explain::Explain::explain(&error))))
+            }
             None => self.set_problem(Some(Problem::plain(t("Git ist unerwartet abgebrochen.")))),
         }
     }

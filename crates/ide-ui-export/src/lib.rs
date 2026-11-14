@@ -10,6 +10,7 @@ mod pdf;
 mod pictures;
 mod sheet;
 
+use ide_core::explain::Explained;
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
@@ -332,9 +333,10 @@ impl Job {
         if self.is_cancelled() {
             return Outcome::Cancelled;
         }
-        match data.and_then(|data| std::fs::write(&self.path, data).map_err(|e| e.to_string())) {
+        let written = data.and_then(|data| std::fs::write(&self.path, data).map_err(|e| Explained::of(&e)));
+        match written {
             Ok(()) => Outcome::Written,
-            Err(reason) => Outcome::Failed(reason),
+            Err(Explained(reason)) => Outcome::Failed(reason),
         }
     }
 
@@ -433,7 +435,7 @@ fn html(job: &Job) -> String {
 }
 
 /// The Word file of the export; on the export's thread.
-fn word(job: &Job) -> Result<Vec<u8>, String> {
+fn word(job: &Job) -> Result<Vec<u8>, Explained> {
     let source = &job.source;
     let doc = splat_markdown::reader::parse(&source.text);
     let macros = js::wanted(&doc, false).macros;
@@ -468,7 +470,7 @@ fn word(job: &Job) -> Result<Vec<u8>, String> {
             title: None,
         },
     )
-    .map_err(|_| t("Das Dokument ist zu groß für eine Word-Datei.").to_string())
+    .map_err(|_| Explained(t("Das Dokument ist zu groß für eine Word-Datei.").to_string()))
 }
 
 /// What the self-test reads of a running or failed export.

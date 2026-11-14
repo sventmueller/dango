@@ -186,15 +186,35 @@ fn read(serial: u64, path: PathBuf, head: String) {
     }
 }
 
-fn blame_of(path: &Path, head: &str) -> Result<Loaded, String> {
-    let git = crate::git_panel::git().ok_or("git is not ready")?;
-    let repository = git.discover(path).map_err(|e| e.to_string())?;
-    let canonical = path.canonicalize().map_err(|e| e.to_string())?;
+/// Why the blame of a file could not be read; it goes to the system log only.
+#[derive(Debug)]
+enum BlameError {
+    GitNotReady,
+    Git(ide_git::Error),
+    Io(std::io::Error),
+    OutsideRepository,
+}
+
+impl std::fmt::Display for BlameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BlameError::GitNotReady => f.write_str("git is not ready"),
+            BlameError::Git(error) => write!(f, "{error}"),
+            BlameError::Io(error) => write!(f, "{error}"),
+            BlameError::OutsideRepository => f.write_str("the file is outside its repository"),
+        }
+    }
+}
+
+fn blame_of(path: &Path, head: &str) -> Result<Loaded, BlameError> {
+    let git = crate::git_panel::git().ok_or(BlameError::GitNotReady)?;
+    let repository = git.discover(path).map_err(BlameError::Git)?;
+    let canonical = path.canonicalize().map_err(BlameError::Io)?;
     let relative = canonical
         .strip_prefix(repository.root())
-        .map_err(|e| e.to_string())?
+        .map_err(|_| BlameError::OutsideRepository)?
         .to_path_buf();
-    let blame = repository.blame(head, &relative).map_err(|e| e.to_string())?;
+    let blame = repository.blame(head, &relative).map_err(BlameError::Git)?;
     Ok(Loaded {
         repo_root: repository.root().to_path_buf(),
         relative,
@@ -202,7 +222,7 @@ fn blame_of(path: &Path, head: &str) -> Result<Loaded, String> {
     })
 }
 
-fn arrived(serial: u64, path: PathBuf, head: String, loaded: Result<Loaded, String>) {
+fn arrived(serial: u64, path: PathBuf, head: String, loaded: Result<Loaded, BlameError>) {
     let loaded = match loaded {
         Ok(loaded) => Rc::new(loaded),
         Err(error) => {

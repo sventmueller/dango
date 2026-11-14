@@ -325,7 +325,7 @@ pub fn sign_in_sheet(root: &Path) {
                 Err(error) => {
                     let alert = NSAlert::new(window.mtm());
                     alert.setMessageText(&ns(t("Anmeldung bei Copilot fehlgeschlagen")));
-                    alert.setInformativeText(&ns(&format!("{error:?}")));
+                    alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
                     sheet(&alert, &window, |_| {});
                 }
             }

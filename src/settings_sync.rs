@@ -10,6 +10,7 @@ use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 
 use block2::RcBlock;
+use ide_core::explain::Explain;
 use ide_core::settings::{Key, Settings};
 use ide_core::settings_sync::{DeviceFile, Inputs, Round};
 use objc2::rc::Retained;
@@ -170,7 +171,7 @@ fn start(mtm: MainThreadMarker) {
     if cx.settings_sync.presenter.borrow().is_none() {
         let folder = folder();
         if let Err(error) = std::fs::create_dir_all(&folder) {
-            *cx.settings_sync.status.borrow_mut() = Status::Failed(error.to_string());
+            *cx.settings_sync.status.borrow_mut() = Status::Failed(error.explain());
             return;
         }
         let presenter = Presenter::new(&folder);
@@ -217,20 +218,42 @@ fn run_round(folder: PathBuf, device: String) {
     let waited = std::thread::Builder::new()
         .name("settings-sync-wait".into())
         .spawn(move || {
-            let outcome = received
-                .recv_timeout(LIMIT)
-                .unwrap_or_else(|_| Err(t("iCloud Drive hat nicht rechtzeitig geantwortet").to_string()));
+            let outcome = received.recv_timeout(LIMIT).unwrap_or(Err(SyncError::TimedOut));
             crate::util::main_soon(move || finished(outcome));
         });
     if let Err(error) = worker.and(waited) {
-        finished(Err(error.to_string()));
+        finished(Err(SyncError::Io(error)));
     }
 }
 
-fn round_in(folder: &Path, device: &str) -> Result<Round, String> {
+/// Why a round of syncing did not finish.
+#[derive(Debug)]
+enum SyncError {
+    TimedOut,
+    Io(std::io::Error),
+    Encode(serde_json::Error),
+    /// The file coordinator refused, in the system's words.
+    Coordinator(String),
+    /// The coordinator never handed the file over.
+    NotWritten,
+}
+
+impl Explain for SyncError {
+    fn explain(&self) -> String {
+        match self {
+            SyncError::TimedOut => t("iCloud Drive hat nicht rechtzeitig geantwortet").to_string(),
+            SyncError::Io(error) => error.explain(),
+            SyncError::Encode(error) => error.to_string(),
+            SyncError::Coordinator(why) => why.clone(),
+            SyncError::NotWritten => t("iCloud Drive hat die Datei nicht zum Schreiben freigegeben").to_string(),
+        }
+    }
+}
+
+fn round_in(folder: &Path, device: &str) -> Result<Round, SyncError> {
     let mut own = None;
     let mut others = Vec::new();
-    let entries = std::fs::read_dir(folder).map_err(|e| e.to_string())?;
+    let entries = std::fs::read_dir(folder).map_err(SyncError::Io)?;
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "json") {
@@ -261,7 +284,7 @@ fn round_in(folder: &Path, device: &str) -> Result<Round, String> {
         now,
     };
     let round = ide_core::settings_sync::round(own, &inputs);
-    let bytes = serde_json::to_vec_pretty(&round.own).map_err(|e| e.to_string())?;
+    let bytes = serde_json::to_vec_pretty(&round.own).map_err(SyncError::Encode)?;
     coordinated_write(&folder.join(format!("{device}.json")), &bytes)?;
     Ok(round)
 }
@@ -308,18 +331,16 @@ fn coordinated_read(path: &Path) -> Option<Vec<u8>> {
     read.into_inner()
 }
 
-fn coordinated_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
+fn coordinated_write(path: &Path, bytes: &[u8]) -> Result<(), SyncError> {
     let url = NSURL::fileURLWithPath(&crate::util::ns(&path.to_string_lossy()));
-    let outcome: RefCell<Result<(), String>> = RefCell::new(Err("not written".into()));
+    let outcome: RefCell<Result<(), SyncError>> = RefCell::new(Err(SyncError::NotWritten));
     let block = RcBlock::new(|at: NonNull<NSURL>| {
         crate::util::guarded((), || {
             // SAFETY: The coordinator hands a valid URL for the call.
             let at = unsafe { at.as_ref() };
-            let written = at
-                .path()
-                .ok_or_else(|| "no path".to_string())
-                .and_then(|p| std::fs::write(p.to_string(), bytes).map_err(|e| e.to_string()));
-            *outcome.borrow_mut() = written;
+            if let Some(path) = at.path() {
+                *outcome.borrow_mut() = std::fs::write(path.to_string(), bytes).map_err(SyncError::Io);
+            }
         });
     });
     let coordinator = NSFileCoordinator::initWithFilePresenter(NSFileCoordinator::alloc(), None);
@@ -332,20 +353,20 @@ fn coordinated_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     );
     drop(block);
     if let Some(error) = error {
-        return Err(error.localizedDescription().to_string());
+        return Err(SyncError::Coordinator(error.localizedDescription().to_string()));
     }
     outcome.into_inner()
 }
 
 /// Applies what a round decided, through the settings' writer, which tells the windows.
-fn finished(outcome: Result<Round, String>) {
+fn finished(outcome: Result<Round, SyncError>) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let cx = context(mtm);
     cx.settings_sync.running.set(false);
     let round = match outcome {
         Ok(round) => round,
         Err(why) => {
-            *cx.settings_sync.status.borrow_mut() = Status::Failed(why);
+            *cx.settings_sync.status.borrow_mut() = Status::Failed(why.explain());
             return;
         }
     };

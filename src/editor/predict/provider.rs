@@ -335,11 +335,14 @@ fn start(root: &Path) {
             Ok(copilot) => set_slot(&root, Slot::Running(Arc::new(copilot))),
             Err(error) => set_slot(
                 &root,
-                Slot::Failed(tf("Copilot startet nicht: {}", &[&error.to_string()])),
+                Slot::Failed(tf(
+                    "Copilot startet nicht: {}",
+                    &[&ide_core::explain::Explain::explain(&error)],
+                )),
             ),
         });
     }) {
-        set_slot(&failed, Slot::Failed(why));
+        set_slot(&failed, Slot::Failed(why.0));
     }
 }
 
@@ -398,12 +401,15 @@ pub fn install(root: &Path) {
                 crate::diag::report("installing Copilot", error.to_string());
                 set_slot(
                     &root,
-                    Slot::Failed(tf("Installation fehlgeschlagen: {}", &[&error.to_string()])),
+                    Slot::Failed(tf(
+                        "Installation fehlgeschlagen: {}",
+                        &[&ide_core::explain::Explain::explain(&error)],
+                    )),
                 );
             }
         });
     }) {
-        set_slot(&failed, Slot::Failed(why));
+        set_slot(&failed, Slot::Failed(why.0));
     }
 }
 

@@ -58,6 +58,33 @@ pub fn microphones() -> Vec<Device> {
     lowspeak::audio::recorder::microphones()
 }
 
+/// Why Lowspeak's model store or keychain item refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EngineError {
+    /// The download was cancelled.
+    Cancelled,
+    /// Lowspeak failed, in its own words.
+    Lowspeak(String),
+}
+
+impl std::fmt::Display for EngineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EngineError::Cancelled => f.write_str("cancelled"),
+            EngineError::Lowspeak(why) => f.write_str(why),
+        }
+    }
+}
+
+impl ide_core::explain::Explain for EngineError {
+    fn explain(&self) -> String {
+        match self {
+            EngineError::Cancelled => splat_i18n::t("Abgebrochen").to_string(),
+            EngineError::Lowspeak(why) => splat_i18n::tf("Lowspeak meldet: {}", &[why]),
+        }
+    }
+}
+
 /// The local models on this Mac.
 pub fn installed_models() -> HashSet<LocalModel> {
     #[cfg(feature = "selftest")]
@@ -68,12 +95,12 @@ pub fn installed_models() -> HashSet<LocalModel> {
 }
 
 /// Downloads `model` into the folders Lowspeak uses, reporting the fraction done; ends early once `cancel` is set.
-pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), String> {
+pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), EngineError> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::download(model, cancel, progress);
     }
-    model_store::download(model, cancel, progress).map_err(|error| format!("{error:#}"))
+    model_store::download(model, cancel, progress).map_err(|error| EngineError::Lowspeak(format!("{error:#}")))
 }
 
 /// Whether Lowspeak keeps a key for `provider`, found without reading it.
@@ -86,12 +113,12 @@ pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
 }
 
 /// Lowspeak's key for `provider`; macOS asks the user first.
-pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String> {
+pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, EngineError> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::lowspeak_key(provider);
     }
-    lowspeak::dictation::read_lowspeak_key(provider).map_err(|error| format!("{error:#}"))
+    lowspeak::dictation::read_lowspeak_key(provider).map_err(|error| EngineError::Lowspeak(format!("{error:#}")))
 }
 
 /// The microphone and the engine of the self-test: the microphone opens at once and hears sound unless the scenario
@@ -159,9 +186,9 @@ pub mod fake {
         LIMIT_SECONDS.store(limit.as_secs(), Ordering::SeqCst);
     }
 
-    pub fn lowspeak_key(provider: ApiProvider) -> Result<Option<String>, String> {
+    pub fn lowspeak_key(provider: ApiProvider) -> Result<Option<String>, super::EngineError> {
         if KEY_UNREADABLE.load(Ordering::SeqCst) {
-            return Err("the user did not allow it".to_string());
+            return Err(super::EngineError::Lowspeak("the user did not allow it".to_string()));
         }
         let prefix = match provider {
             ApiProvider::OpenAi => "sk-",
@@ -205,11 +232,15 @@ pub mod fake {
     }
 
     /// Five steps a tenth of a second apart, then the model counts as installed.
-    pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), String> {
+    pub fn download(
+        model: LocalModel,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(f64),
+    ) -> Result<(), super::EngineError> {
         for step in 1..=5 {
             std::thread::sleep(Duration::from_millis(100));
             if cancel.load(Ordering::SeqCst) {
-                return Err("cancelled".into());
+                return Err(super::EngineError::Cancelled);
             }
             progress(f64::from(step) / 5.0);
         }

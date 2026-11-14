@@ -5,6 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
+use ide_core::explain::Explain;
+
 use crate::{Cancel, FileResult, LineResult, SearchError, SearchOptions, Summary};
 use splat_i18n::{t, tf};
 
@@ -408,11 +410,7 @@ impl Model {
     /// What the status line says about the matches so far, and whether it reports a problem.
     pub fn status(&self) -> (String, bool) {
         match &self.outcome {
-            Some(Outcome::Failed(SearchError::Pattern(why))) => {
-                return (tf("Ungültiges Suchmuster: {}", &[why]), true);
-            }
-            Some(Outcome::Failed(SearchError::Glob(why))) => return (tf("Ungültiges Dateimuster: {}", &[why]), true),
-            Some(Outcome::Failed(SearchError::Root(why))) => return (why.clone(), true),
+            Some(Outcome::Failed(error)) => return (error.explain(), true),
             Some(Outcome::Done(summary)) if summary.limit_reached => {
                 return (
                     tf("Mehr als {} Treffer — Suche eingrenzen", &[&LIMIT.to_string()]),

@@ -57,20 +57,61 @@ impl Keys {
     }
 
     /// Keeps `key` for the provider its prefix names; the provider, or why not.
-    pub fn save(&self, key: &str) -> Result<ApiProvider, String> {
+    pub fn save(&self, key: &str) -> Result<ApiProvider, KeyError> {
         let key = key.trim();
-        let provider = ApiProvider::from_api_key(key).ok_or_else(|| "unknown key format".to_string())?;
-        self.store.set(account(provider), key).map_err(|e| e.to_string())?;
+        let provider = ApiProvider::from_api_key(key).ok_or(KeyError::UnknownFormat)?;
+        self.store.set(account(provider), key).map_err(KeyError::Keychain)?;
         self.known
             .lock_ignoring_poison()
             .insert(provider, Some(key.to_string()));
         Ok(provider)
     }
 
-    pub fn remove(&self, provider: ApiProvider) -> Result<(), String> {
-        self.store.delete(account(provider)).map_err(|e| e.to_string())?;
+    pub fn remove(&self, provider: ApiProvider) -> Result<(), KeyError> {
+        self.store.delete(account(provider)).map_err(KeyError::Keychain)?;
         self.known.lock_ignoring_poison().insert(provider, None);
         Ok(())
+    }
+}
+
+/// Why a key was not kept, read or removed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeyError {
+    /// Its prefix names no provider.
+    UnknownFormat,
+    /// The keychain refused.
+    Keychain(ide_secrets::SecretError),
+    /// Lowspeak keeps no key for the provider any more.
+    NotInLowspeak,
+    /// Lowspeak's item could not be read.
+    Lowspeak(super::engine::EngineError),
+    /// The dictation is busy with something else.
+    Busy,
+}
+
+impl std::fmt::Display for KeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyError::UnknownFormat => f.write_str("unknown key format"),
+            KeyError::Keychain(error) => write!(f, "{error}"),
+            KeyError::NotInLowspeak => f.write_str("Lowspeak has no key any more"),
+            KeyError::Lowspeak(error) => write!(f, "{error}"),
+            KeyError::Busy => f.write_str("busy"),
+        }
+    }
+}
+
+impl ide_core::explain::Explain for KeyError {
+    fn explain(&self) -> String {
+        match self {
+            KeyError::UnknownFormat => {
+                splat_i18n::t("Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…).").to_string()
+            }
+            KeyError::Keychain(error) => error.explain(),
+            KeyError::NotInLowspeak => splat_i18n::t("Lowspeak hat keinen Schlüssel mehr.").to_string(),
+            KeyError::Lowspeak(error) => error.explain(),
+            KeyError::Busy => splat_i18n::t("Das Diktat ist gerade beschäftigt.").to_string(),
+        }
     }
 }
 
@@ -115,22 +156,22 @@ pub fn question(
 pub enum TakeOver {
     Done(ApiProvider),
     /// Lowspeak's item was gone, or macOS did not hand it out; the user may enter a key instead.
-    Unread(String),
+    Unread(KeyError),
 }
 
 /// Reads Lowspeak's key for `provider` once, through `read`, and keeps it as the app's own.
 pub fn take_over(
     keys: &Keys,
     provider: ApiProvider,
-    read: impl FnOnce(ApiProvider) -> Result<Option<String>, String>,
+    read: impl FnOnce(ApiProvider) -> Result<Option<String>, super::engine::EngineError>,
 ) -> TakeOver {
     match read(provider) {
         Ok(Some(key)) => match keys.save(&key) {
             Ok(saved) => TakeOver::Done(saved),
             Err(error) => TakeOver::Unread(error),
         },
-        Ok(None) => TakeOver::Unread("Lowspeak has no key any more".to_string()),
-        Err(error) => TakeOver::Unread(error),
+        Ok(None) => TakeOver::Unread(KeyError::NotInLowspeak),
+        Err(error) => TakeOver::Unread(KeyError::Lowspeak(error)),
     }
 }
 
@@ -185,8 +226,10 @@ mod tests {
     #[test]
     fn a_refused_or_missing_key_leaves_the_store_alone() {
         let keys = keys();
-        let refused = take_over(&keys, ApiProvider::OpenAi, |_| Err("user denied".to_string()));
-        assert!(matches!(refused, TakeOver::Unread(reason) if reason.contains("denied")));
+        let refused = take_over(&keys, ApiProvider::OpenAi, |_| {
+            Err(super::super::engine::EngineError::Lowspeak("user denied".to_string()))
+        });
+        assert!(matches!(refused, TakeOver::Unread(reason) if reason.to_string().contains("denied")));
         assert!(matches!(
             take_over(&keys, ApiProvider::OpenAi, |_| Ok(None)),
             TakeOver::Unread(_)

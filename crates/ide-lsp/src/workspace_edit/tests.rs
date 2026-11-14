@@ -46,7 +46,7 @@ impl Editors for Mock {
         self.shown.get(path).map(|s| s.version)
     }
 
-    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), String>> {
+    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), StepError>> {
         let shown = self.shown.get_mut(path)?;
         let mut document = Document::untitled(&shown.text);
         let ranges = edits
@@ -73,8 +73,11 @@ impl Editors for Mock {
         }
     }
 
-    fn trash(&mut self, path: &Path) -> Result<(), String> {
-        std::fs::remove_file(path).map_err(|e| e.to_string())
+    fn trash(&mut self, path: &Path) -> Result<(), StepError> {
+        std::fs::remove_file(path).map_err(|error| StepError::Io {
+            path: path.to_path_buf(),
+            error,
+        })
     }
 }
 

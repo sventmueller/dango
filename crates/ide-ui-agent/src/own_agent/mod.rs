@@ -7,6 +7,7 @@
 mod words;
 
 use ide_core::LockIgnoringPoison;
+use ide_core::explain::{Explain, Explained};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -121,14 +122,14 @@ pub fn key(endpoint: &Endpoint) -> Option<ApiKey> {
 }
 
 /// Keeps `text` as the key of `endpoint`, or forgets its key when `text` is blank.
-pub fn set_key(endpoint: &Endpoint, text: &str) -> Result<(), String> {
+pub fn set_key(endpoint: &Endpoint, text: &str) -> Result<(), ide_agent::SecretError> {
     let account = ide_agent::keys::account(endpoint);
     let result = match ApiKey::new(text) {
         Some(key) => secrets().set(&account, key.expose()),
         None => secrets().delete(&account),
     };
     forget_models(&endpoint.id);
-    result.map_err(|e| e.to_string())
+    result
 }
 
 /// Whether `endpoint` can be asked: it has a key, or needs none.
@@ -155,7 +156,7 @@ fn forget_models(endpoint: &str) {
 }
 
 /// Asks `endpoint` for its models off the main thread and tells `done` on it.
-pub fn load_models(endpoint: Endpoint, done: impl FnOnce(Result<Vec<ModelInfo>, String>) + Send + 'static) {
+pub fn load_models(endpoint: Endpoint, done: impl FnOnce(Result<Vec<ModelInfo>, Explained>) + Send + 'static) {
     let key = key(&endpoint);
     if let Err((done, why)) = ide_ui_common::util::spawn_with("agent-models", done, move |done| {
         let result = Provider::new(endpoint.clone(), key, Http::new()).models();
@@ -164,7 +165,7 @@ pub fn load_models(endpoint: Endpoint, done: impl FnOnce(Result<Vec<ModelInfo>, 
                 .lock_ignoring_poison()
                 .insert(endpoint.id.clone(), models.clone());
         }
-        main_soon(move || done(result.map_err(|e| provider_error(&e))));
+        main_soon(move || done(result.map_err(|e| Explained(provider_error(&e)))));
     }) {
         done(Err(why));
     }
@@ -258,13 +259,17 @@ pub fn config(
     choice: &ModelChoice,
     sandbox: bool,
     diagnostics: Arc<dyn ide_agent::Diagnostics>,
-) -> Result<Config, String> {
-    let endpoint = endpoint(&choice.endpoint)
-        .ok_or_else(|| splat_i18n::tf("Den Endpunkt „{}“ gibt es nicht mehr.", &[&choice.endpoint]))?;
+) -> Result<Config, Explained> {
+    let endpoint = endpoint(&choice.endpoint).ok_or_else(|| {
+        Explained(splat_i18n::tf(
+            "Den Endpunkt „{}“ gibt es nicht mehr.",
+            &[&choice.endpoint],
+        ))
+    })?;
     let environment = ide_ui_common::window::environment(Duration::from_secs(15));
     let http = Http::new();
     let workspace = Workspace::new(root, environment.clone(), Supervisor::global().clone(), http.clone())
-        .map_err(|e| format!("{}: {e}", root.display()))?
+        .map_err(|e| Explained(format!("{}: {}", root.display(), e.explain())))?
         .allow(&allowed_folders(&environment))
         .with_diagnostics(diagnostics);
     let listed = models(&endpoint.id).into_iter().find(|m| m.id == choice.model);

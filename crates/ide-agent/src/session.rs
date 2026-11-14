@@ -94,6 +94,17 @@ impl std::fmt::Display for SessionError {
     }
 }
 
+impl ide_core::explain::Explain for SessionError {
+    fn explain(&self) -> String {
+        splat_i18n::t(match self {
+            SessionError::Busy => "Der Agent arbeitet noch.",
+            SessionError::NoRequest => "Diese Anfrage wartet nicht mehr auf eine Antwort.",
+            SessionError::Closed => "Die Sitzung ist beendet.",
+        })
+        .to_string()
+    }
+}
+
 impl std::error::Error for SessionError {}
 
 /// What changes while the session lives.

@@ -277,7 +277,7 @@ impl AgentTab {
             });
         }) {
             self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why)));
+            self.set_problem(Some(Problem::Start(why.0)));
         }
     }
 
@@ -315,7 +315,7 @@ impl AgentTab {
             }
             Err(error) => {
                 self.state.borrow_mut().source = Source::Idle;
-                self.set_problem(Some(Problem::Start(error.to_string())));
+                self.set_problem(Some(Problem::Start(ide_core::explain::Explain::explain(&error))));
             }
         }
     }

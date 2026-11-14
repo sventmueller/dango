@@ -105,7 +105,7 @@ impl AgentTab {
         });
     }
 
-    fn restored(&self, checkpoint: ide_git::Checkpoint, outcome: Result<Restore, String>) {
+    fn restored(&self, checkpoint: ide_git::Checkpoint, outcome: Result<Restore, super::checkpoint::RestoreError>) {
         let alert = NSAlert::new(self.mtm);
         match outcome {
             Ok(Restore::UserChanges(files)) => {
@@ -146,7 +146,7 @@ impl AgentTab {
             }
             Err(error) => {
                 alert.setMessageText(&ns(t("Zurückspulen fehlgeschlagen")));
-                alert.setInformativeText(&ns(&error));
+                alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
             }
         }
         run_alert(&alert);
@@ -179,7 +179,7 @@ impl AgentTab {
                     }
                     Err(error) => {
                         alert.setMessageText(&ns(t("Zurückspulen fehlgeschlagen")));
-                        alert.setInformativeText(&ns(&error.to_string()));
+                        alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
                     }
                 }
                 alert.runModal();

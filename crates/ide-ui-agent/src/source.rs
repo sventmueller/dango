@@ -3,6 +3,7 @@
 
 #[cfg(feature = "selftest")]
 use ide_core::LockIgnoringPoison;
+use ide_core::explain::{Explain, Explained};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 #[cfg(feature = "selftest")]
@@ -152,12 +153,12 @@ impl Source {
     }
 
     /// Sends `message` as a prompt; the CLI's id for it, which an ACP agent does not give.
-    pub fn send(&self, message: UserMessage) -> Result<Option<String>, String> {
+    pub fn send(&self, message: UserMessage) -> Result<Option<String>, Explained> {
         match self {
-            Source::Live(session) => session.send(message).map(Some).map_err(|e| e.to_string()),
-            Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| e.to_string()),
-            Source::Own(session) => session.send(message).map(|()| None).map_err(|e| e.to_string()),
-            _ => Err(SessionError::Closed.to_string()),
+            Source::Live(session) => session.send(message).map(Some).map_err(|e| Explained::of(&e)),
+            Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
+            Source::Own(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
+            _ => Err(Explained::of(&SessionError::Closed)),
         }
     }
 
@@ -213,7 +214,7 @@ impl Source {
                 .set_permission_mode(ide_claude::PermissionMode::from(mode))
                 .then(move |answer| {
                     if let Err(error) = answer {
-                        refused(error.to_string());
+                        refused(error.explain());
                     }
                 });
         }

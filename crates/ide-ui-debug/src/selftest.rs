@@ -116,7 +116,7 @@ pub fn start_fake(controller: &(impl AsWindow + ?Sized), script: ide_dap::fake::
                 setup,
                 events,
             )
-            .map_err(|e| e.to_string())
+            .map_err(|e| ide_core::explain::Explained(e.to_string()))
         },
     );
     panel.adapter_asked();

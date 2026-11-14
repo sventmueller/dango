@@ -7,6 +7,7 @@ use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::time::Duration;
 
+use ide_core::explain::Explain;
 use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
 use objc2::rc::Retained;
@@ -355,7 +356,7 @@ impl ContainersPanel {
         match started {
             Ok(id) => self.ivars().events.set(Some(id)),
             Err(error) => {
-                *self.ivars().reach.borrow_mut() = Reach::NotRunning(error);
+                *self.ivars().reach.borrow_mut() = Reach::NotRunning(error.explain());
                 self.retry_later();
             }
         }
@@ -504,7 +505,7 @@ impl ContainersPanel {
                 if let Err(error) = outcome
                     && let Some(mtm) = MainThreadMarker::new()
                 {
-                    crate::editor::show_alert(mtm, t("Docker-Befehl fehlgeschlagen"), &error);
+                    crate::editor::show_alert(mtm, t("Docker-Befehl fehlgeschlagen"), &error.explain());
                 }
                 let _ = super::with_panel(window, ContainersPanel::refresh);
             });
@@ -602,7 +603,7 @@ fn read_all(env: &[(String, String)], context: &str, root: &std::path::Path) -> 
         Err(error) => {
             return Read {
                 contexts,
-                reach: Reach::NotRunning(error),
+                reach: Reach::NotRunning(error.explain()),
                 board: None,
             };
         }

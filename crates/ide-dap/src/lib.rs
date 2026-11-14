@@ -33,6 +33,7 @@ mod convert;
 mod current;
 mod discover;
 mod error;
+mod explain;
 #[cfg(any(test, feature = "testing"))]
 pub mod fake;
 mod filters;

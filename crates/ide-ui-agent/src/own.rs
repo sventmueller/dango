@@ -3,6 +3,7 @@
 //! sandbox (E19); and answering its permission requests.
 
 use ide_agent::{Approval, Choice, Profile, Session};
+use ide_core::explain::Explained;
 use ide_thread::{Change, EntryKind, PermissionOption, RequestState};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -138,7 +139,7 @@ impl AgentTab {
             let session = choice.clone().map(|choice| {
                 let config = own_agent::config(thread_id, &cwd, &choice, sandbox, diagnostics)?;
                 if store.exists() {
-                    Session::resume(config, sink).map_err(|e| own_agent::load_error(&e))
+                    Session::resume(config, sink).map_err(|e| Explained(own_agent::load_error(&e)))
                 } else {
                     Ok(Session::start(config, sink))
                 }
@@ -150,14 +151,14 @@ impl AgentTab {
             });
         }) {
             self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why)));
+            self.set_problem(Some(Problem::Start(why.0)));
         }
     }
 
-    fn launch_own(&self, choice: Option<ModelChoice>, session: Option<Result<Session, String>>) {
+    fn launch_own(&self, choice: Option<ModelChoice>, session: Option<Result<Session, Explained>>) {
         let session = match session {
             Some(Ok(session)) => session,
-            Some(Err(why)) => {
+            Some(Err(Explained(why))) => {
                 self.state.borrow_mut().source = Source::Idle;
                 return self.set_problem(Some(Problem::Start(why)));
             }

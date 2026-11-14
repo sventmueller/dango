@@ -16,6 +16,7 @@ testing = []
 fuzzing = []
 
 [dependencies]
+splat-i18n.workspace = true
 ide-secrets = { path = "../ide-secrets" }
 ide-net = { path = "../ide-net" }
 base64 = "0.23.1"

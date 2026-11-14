@@ -4,6 +4,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use ide_core::explain::Explained;
 use ide_lsp::{Cancel, NotFound, Status};
 use ide_process::Supervisor;
 use objc2::DefinedClass;
@@ -207,7 +208,7 @@ fn install(folder: &Path, slot: &Slot) {
         };
         let mut report = report;
         let result = installer.install(what, &cancel, &mut report);
-        main_soon(move || installed(&folder, id, result.map(|_| ()).map_err(|e| e.to_string())));
+        main_soon(move || installed(&folder, id, result.map(|_| ()).map_err(|e| Explained::of(&e))));
     }) {
         installed(&failed, id, Err(why));
     }
@@ -247,14 +248,14 @@ fn progress_text(progress: &ide_lsp::Progress) -> Option<String> {
     })
 }
 
-fn installed(folder: &Path, id: u64, result: Result<(), String>) {
+fn installed(folder: &Path, id: u64, result: Result<(), Explained>) {
     let Some(slot) = slot(folder, id) else { return };
     match result {
         Ok(()) => {
             *slot.state.borrow_mut() = State::Finding;
             find(folder, &slot);
         }
-        Err(error) => {
+        Err(Explained(error)) => {
             crate::diag::report("installing a language server", &error);
             *slot.state.borrow_mut() = State::Failed(tf("Installation fehlgeschlagen: {}", &[&error]));
         }

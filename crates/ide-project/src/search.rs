@@ -133,6 +133,16 @@ pub enum SearchError {
     Root(String),
 }
 
+impl ide_core::explain::Explain for SearchError {
+    fn explain(&self) -> String {
+        match self {
+            SearchError::Pattern(why) => splat_i18n::tf("Ungültiges Suchmuster: {}", &[why]),
+            SearchError::Glob(why) => splat_i18n::tf("Ungültiges Dateimuster: {}", &[why]),
+            SearchError::Root(why) => why.clone(),
+        }
+    }
+}
+
 impl fmt::Display for SearchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

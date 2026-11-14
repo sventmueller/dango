@@ -55,17 +55,38 @@ pub fn shared() -> Option<Rc<Gpu>> {
     })
 }
 
+/// Why terminals draw without Metal; for the system log.
+#[derive(Debug)]
+enum GpuError {
+    NoDevice,
+    NoQueue,
+    /// Metal refused the shader or the pipeline, in its words.
+    Refused(String),
+    MissingFunction(&'static str),
+}
+
+impl std::fmt::Display for GpuError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GpuError::NoDevice => f.write_str("no Metal device"),
+            GpuError::NoQueue => f.write_str("no command queue"),
+            GpuError::Refused(why) => f.write_str(why),
+            GpuError::MissingFunction(name) => write!(f, "the shader lacks {name}"),
+        }
+    }
+}
+
 impl Gpu {
-    fn new() -> Result<Gpu, String> {
-        let device = MTLCreateSystemDefaultDevice().ok_or("no Metal device")?;
-        let queue = device.newCommandQueue().ok_or("no command queue")?;
+    fn new() -> Result<Gpu, GpuError> {
+        let device = MTLCreateSystemDefaultDevice().ok_or(GpuError::NoDevice)?;
+        let queue = device.newCommandQueue().ok_or(GpuError::NoQueue)?;
         let library = device
             .newLibraryWithSource_options_error(&NSString::from_str(SHADER), None)
-            .map_err(|error| error.localizedDescription().to_string())?;
-        let function = |name: &str| {
+            .map_err(|error| GpuError::Refused(error.localizedDescription().to_string()))?;
+        let function = |name: &'static str| {
             library
                 .newFunctionWithName(&NSString::from_str(name))
-                .ok_or_else(|| format!("the shader lacks {name}"))
+                .ok_or(GpuError::MissingFunction(name))
         };
         let descriptor = MTLRenderPipelineDescriptor::new();
         descriptor.setVertexFunction(Some(&*function("quad_vertex")?));
@@ -80,7 +101,7 @@ impl Gpu {
         attachment.setDestinationAlphaBlendFactor(MTLBlendFactor::OneMinusSourceAlpha);
         let pipeline = device
             .newRenderPipelineStateWithDescriptor_error(&descriptor)
-            .map_err(|error| error.localizedDescription().to_string())?;
+            .map_err(|error| GpuError::Refused(error.localizedDescription().to_string()))?;
         Ok(Gpu {
             device,
             queue,

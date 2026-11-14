@@ -5,8 +5,8 @@ use std::path::Path;
 use ide_lsp::Status;
 use objc2::DefinedClass;
 
-use super::{State, language_of, slot};
 use crate::editor::EditorTextView;
+use crate::lsp::{State, language_of, slot};
 
 /// The diagnostics by path, for the self-test.
 pub fn marks_of(view: &EditorTextView) -> Vec<(std::ops::Range<usize>, String)> {
@@ -90,7 +90,7 @@ pub fn install_companions(view: &EditorTextView) {
         if let Some(slot) = slot(&root, id)
             && matches!(&*slot.state.borrow(), State::Missing(_))
         {
-            super::install::install_now(&root, &slot);
+            crate::lsp::install::install_now(&root, &slot);
         }
     }
 }

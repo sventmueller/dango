@@ -39,6 +39,12 @@ impl fmt::Display for SecretError {
     }
 }
 
+impl ide_core::explain::Explain for SecretError {
+    fn explain(&self) -> String {
+        splat_i18n::tf("Der Schlüsselbund lehnt ab: {}", &[&self.message])
+    }
+}
+
 impl std::error::Error for SecretError {}
 
 impl From<security_framework::base::Error> for SecretError {

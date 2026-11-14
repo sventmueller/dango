@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
-use ide_document::{Document, Edit};
+use ide_core::explain::Explain;
+use ide_document::{Document, Edit, EditError, SaveError};
 use lsp_types::{DocumentChangeOperation, DocumentChanges, OneOf, ResourceOp, TextEdit, Uri, WorkspaceEdit};
 use splat_i18n::{t, tf};
 
@@ -31,16 +32,64 @@ impl Failure {
     }
 }
 
+/// Why one change of a workspace edit failed.
+#[derive(Debug)]
+pub enum StepError {
+    /// The editor that shows the file did not take the change, as a read-only one does not.
+    Refused(PathBuf),
+    /// The file system refused.
+    Io {
+        /// The file or folder concerned.
+        path: PathBuf,
+        /// What the system answered.
+        error: std::io::Error,
+    },
+    /// The change named no place in the file's text, or the file may not be changed.
+    Edit {
+        /// The file concerned.
+        path: PathBuf,
+        /// Why the change did not fit.
+        error: EditError,
+    },
+    /// The changed file could not be written.
+    Save {
+        /// The file concerned.
+        path: PathBuf,
+        /// Why it was not written.
+        error: SaveError,
+    },
+    /// The Trash did not take the file.
+    Trash {
+        /// The file concerned.
+        path: PathBuf,
+        /// The system's words for why, already in the user's language.
+        why: String,
+    },
+}
+
+impl Explain for StepError {
+    fn explain(&self) -> String {
+        let (path, why) = match self {
+            StepError::Refused(path) => return tf("{} lässt sich nicht ändern", &[&path.display().to_string()]),
+            StepError::Io { path, error } => (path, error.explain()),
+            StepError::Edit { path, error } => (path, error.explain()),
+            StepError::Save { path, error } => (path, error.explain()),
+            StepError::Trash { path, why } => (path, why.clone()),
+        };
+        format!("{}: {why}", path.display())
+    }
+}
+
 /// The open editors a workspace edit reaches.
 pub trait Editors {
     /// The version the server knows of the document an editor shows for `path`; `None` when none shows it.
     fn version(&self, path: &Path) -> Option<i32>;
     /// Makes `edits` in the editor that shows `path` as one undo step; `None` when none shows it.
-    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), String>>;
+    fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), StepError>>;
     /// The file at `from` is at `to` now; its editors follow.
     fn moved(&mut self, from: &Path, to: &Path);
     /// Moves `path` to the Trash.
-    fn trash(&mut self, path: &Path) -> Result<(), String>;
+    fn trash(&mut self, path: &Path) -> Result<(), StepError>;
 }
 
 /// One change of a workspace edit.
@@ -326,7 +375,7 @@ fn execute(folder: &Path, planned: Vec<(usize, Step)>, editors: &mut impl Editor
     let mut changed: Vec<Changed> = vec![];
     for (index, step) in planned {
         if let Err(error) = run(&step, editors, &mut changed) {
-            return Err(Failure::at(index, partial(folder, &error, &changed)));
+            return Err(Failure::at(index, partial(folder, &error.explain(), &changed)));
         }
     }
     Ok(())
@@ -342,7 +391,7 @@ fn note(changed: &mut Vec<Changed>, path: &Path, open: bool) {
     }
 }
 
-fn run(step: &Step, editors: &mut impl Editors, changed: &mut Vec<Changed>) -> Result<(), String> {
+fn run(step: &Step, editors: &mut impl Editors, changed: &mut Vec<Changed>) -> Result<(), StepError> {
     match step {
         Step::Edit { path, edits, .. } => {
             let open = match editors.edit(path, edits) {
@@ -353,16 +402,16 @@ fn run(step: &Step, editors: &mut impl Editors, changed: &mut Vec<Changed>) -> R
         }
         Step::Create { path, .. } => {
             if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                std::fs::create_dir_all(parent).map_err(|error| io(parent, error))?;
             }
-            std::fs::write(path, "").map_err(|e| format!("{}: {e}", path.display()))?;
+            std::fs::write(path, "").map_err(|error| io(path, error))?;
             note(changed, path, false);
         }
         Step::Rename { from, to, .. } => {
             if let Some(parent) = to.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                std::fs::create_dir_all(parent).map_err(|error| io(parent, error))?;
             }
-            std::fs::rename(from, to).map_err(|e| format!("{}: {e}", from.display()))?;
+            std::fs::rename(from, to).map_err(|error| io(from, error))?;
             editors.moved(from, to);
             match changed.iter_mut().find(|c| &c.path == from) {
                 Some(known) => to.clone_into(&mut known.path),
@@ -375,6 +424,13 @@ fn run(step: &Step, editors: &mut impl Editors, changed: &mut Vec<Changed>) -> R
         }
     }
     Ok(())
+}
+
+fn io(path: &Path, error: std::io::Error) -> StepError {
+    StepError::Io {
+        path: path.to_path_buf(),
+        error,
+    }
 }
 
 /// The message for `error` after `changed` changed already.
@@ -403,9 +459,8 @@ pub fn back_to_front(edits: Vec<(Range<usize>, String)>) -> Vec<(Range<usize>, S
 }
 
 /// Edits a file no editor shows through the document model, which keeps its encoding and line breaks, and saves it.
-fn edit_file(path: &Path, edits: &[TextEdit]) -> Result<(), String> {
-    let failed = |error: String| format!("{}: {error}", path.display());
-    let mut document = Document::open(path).map_err(|e| failed(e.to_string()))?;
+fn edit_file(path: &Path, edits: &[TextEdit]) -> Result<(), StepError> {
+    let mut document = Document::open(path).map_err(|error| io(path, error))?;
     let ranges = edits
         .iter()
         .map(|e| (crate::offsets::range(document.text(), e.range), e.new_text.clone()))
@@ -416,9 +471,15 @@ fn edit_file(path: &Path, edits: &[TextEdit]) -> Result<(), String> {
                 range_utf16: range,
                 text,
             })
-            .map_err(|e| failed(format!("{e:?}")))?;
+            .map_err(|error| StepError::Edit {
+                path: path.to_path_buf(),
+                error,
+            })?;
     }
-    document.save().map_err(|e| failed(e.to_string()))
+    document.save().map_err(|error| StepError::Save {
+        path: path.to_path_buf(),
+        error,
+    })
 }
 
 #[cfg(test)]

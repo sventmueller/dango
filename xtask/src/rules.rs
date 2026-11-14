@@ -1,9 +1,12 @@
 //! The checks that keep the app's AppKit code to the rules CLAUDE.md names and the compiler cannot see: no state in
 //! statics that bypass the app context unless docs/thread-locals.md lists them (E97), no leaked objects, system
-//! callbacks inside `guarded`, sizes from `style.rs`, and no thread whose failure to start goes unnoticed.
+//! callbacks inside `guarded`, sizes from `style.rs`, no thread whose failure to start goes unnoticed, and errors the
+//! user reads in their own words.
 
 use std::collections::BTreeSet;
 use std::path::Path;
+
+mod errors;
 
 use crate::root;
 use crate::thread_locals::rust_files;
@@ -61,6 +64,9 @@ pub(crate) fn check() -> Result<(), String> {
                 if !relative.ends_with(SELFTEST_PROBE) {
                     found.extend(statics(&text).into_iter().map(|name| (relative.clone(), name)));
                 }
+                if in_production(&relative) {
+                    problems.extend(errors::problems(&relative, &text));
+                }
             }
         }
     }
@@ -115,6 +121,14 @@ fn in_app(relative: &str) -> bool {
     let app = relative.starts_with(&format!("{APP}/")) && !relative.starts_with(&format!("{SELFTEST}/"));
     let ui_crate = relative.starts_with("crates/ide-ui-");
     (app || ui_crate) && relative != format!("{SELFTEST}.rs")
+}
+
+/// Whether the app file at `relative` is built into the app, not only into its self-test.
+fn in_production(relative: &str) -> bool {
+    !relative.ends_with(SELFTEST_PROBE)
+        && !relative.ends_with("/selftest.rs")
+        && !relative.contains("/selftest/")
+        && !relative.contains("/selftest_probe/")
 }
 
 /// What breaks a rule in the app file at `relative` with the content `text`, but for its statics.
@@ -491,6 +505,9 @@ mod tests {
                 let text = std::fs::read_to_string(&file).unwrap();
                 problems.extend(file_problems(&relative, &text));
                 problems.extend(discarded_threads(&relative, &text));
+                if in_production(&relative) {
+                    problems.extend(errors::problems(&relative, &text));
+                }
                 if !relative.ends_with(SELFTEST_PROBE) {
                     found.extend(statics(&text).into_iter().map(|name| (relative.clone(), name)));
                 }

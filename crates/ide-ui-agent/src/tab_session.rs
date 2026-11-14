@@ -71,7 +71,7 @@ impl AgentTab {
             });
         }) {
             self.state.borrow_mut().source = Source::Idle;
-            self.set_problem(Some(Problem::Start(why)));
+            self.set_problem(Some(Problem::Start(why.0)));
         }
     }
 
@@ -262,7 +262,7 @@ fn acp_problem_of(name: &str, ready: bool, error: &ide_acp::SessionError) -> Opt
             "{} spricht die Protokollversion {}, diese App Version 1",
             &[name, &v.to_string()],
         ))),
-        other if !ready => Some(Problem::Start(other.to_string())),
+        other if !ready => Some(Problem::Start(ide_core::explain::Explain::explain(other))),
         _ => None,
     }
 }

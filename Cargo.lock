@@ -1481,6 +1481,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1501,6 +1502,7 @@ dependencies = [
  "serde",
  "serde_json",
  "similar",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1589,6 +1591,7 @@ dependencies = [
  "ide-thread",
  "serde",
  "serde_json",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1598,6 +1601,7 @@ dependencies = [
  "ide-product",
  "serde",
  "serde_json",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1615,6 +1619,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1637,6 +1642,7 @@ dependencies = [
  "serde_json",
  "similar",
  "splat-file-state",
+ "splat-i18n",
  "splat-markdown",
 ]
 
@@ -1679,6 +1685,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "sha2",
+ "splat-i18n",
  "ureq",
 ]
 
@@ -1741,6 +1748,7 @@ version = "0.0.0"
 dependencies = [
  "ide-core",
  "security-framework",
+ "splat-i18n",
 ]
 
 [[package]]
@@ -1882,6 +1890,7 @@ name = "ide-ui-export"
 version = "0.0.0"
 dependencies = [
  "block2",
+ "ide-core",
  "ide-ui-common",
  "image",
  "objc2",

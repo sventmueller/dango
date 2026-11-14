@@ -1,7 +1,8 @@
 use ide_core::LockIgnoringPoison;
+use ide_core::explain::{Explain, Explained};
 
 /// Runs `f` on a new thread called `name`; the error says, in the user's words, why the thread did not start.
-pub fn spawn(name: &str, f: impl FnOnce() + Send + 'static) -> Result<(), String> {
+pub fn spawn(name: &str, f: impl FnOnce() + Send + 'static) -> Result<(), Explained> {
     spawn_with(name, (), move |()| f()).map_err(|((), why)| why)
 }
 
@@ -11,7 +12,7 @@ pub fn spawn_with<T: Send + 'static>(
     name: &str,
     payload: T,
     f: impl FnOnce(T) + Send + 'static,
-) -> Result<(), (T, String)> {
+) -> Result<(), (T, Explained)> {
     let slot = std::sync::Arc::new(std::sync::Mutex::new(Some(payload)));
     let theirs = slot.clone();
     let started = std::thread::Builder::new().name(name.into()).spawn(move || {
@@ -27,6 +28,6 @@ pub fn spawn_with<T: Send + 'static>(
         .expect("a thread that never started took nothing");
     Err((
         payload,
-        splat_i18n::tf("Konnte keinen Thread starten: {}", &[&error.to_string()]),
+        Explained(splat_i18n::tf("Konnte keinen Thread starten: {}", &[&error.explain()])),
     ))
 }

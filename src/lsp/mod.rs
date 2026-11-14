@@ -21,8 +21,6 @@ mod prettier;
 pub use outline::scopes as symbol_scopes;
 #[cfg(feature = "selftest")]
 pub use status::note_of as status_note;
-#[cfg(feature = "selftest")]
-mod probe;
 mod project_symbols;
 mod rename;
 mod signature;
@@ -203,7 +201,7 @@ pub fn survey(done: fn(Vec<(String, String)>)) {
         done(
             ide_lsp::BUILT_IN
                 .iter()
-                .map(|l| (l.name().to_string(), why.clone()))
+                .map(|l| (l.name().to_string(), why.0.clone()))
                 .collect(),
         );
     }
@@ -590,7 +588,7 @@ fn find(folder: &Path, slot: &Slot) {
             .map(|launch| registry.config(&launch, &root));
         main_soon(move || found_server(&folder, id, found));
     }) {
-        *slot.state.borrow_mut() = State::Failed(why);
+        *slot.state.borrow_mut() = State::Failed(why.0);
     }
 }
 

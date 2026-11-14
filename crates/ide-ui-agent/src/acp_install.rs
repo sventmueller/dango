@@ -57,14 +57,7 @@ fn plan_text(plan: &Plan) -> String {
 }
 
 fn install_error_text(error: &InstallError) -> String {
-    match error {
-        InstallError::Runtime(name, Some(major)) => tf("{} {} oder neuer wird gebraucht", &[name, &major.to_string()]),
-        InstallError::Runtime(name, None) => tf("{} wird gebraucht", &[name]),
-        InstallError::Checksum { .. } => {
-            t("Der Download stimmt nicht mit seiner Prüfsumme überein und wurde verworfen").to_string()
-        }
-        other => other.to_string(),
-    }
+    ide_core::explain::Explain::explain(error)
 }
 
 fn progress_text(name: &str, progress: Progress) -> String {
@@ -127,7 +120,7 @@ impl AgentTab {
                 }
             });
         }) {
-            self.set_problem(Some(Problem::Start(why)));
+            self.set_problem(Some(Problem::Start(why.0)));
         }
     }
 }

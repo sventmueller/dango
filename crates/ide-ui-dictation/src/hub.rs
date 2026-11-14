@@ -676,8 +676,8 @@ pub fn take_over_key(provider: ApiProvider) {
     }
 }
 
-pub fn remove_key(provider: ApiProvider) -> Result<(), String> {
-    with_hub(|hub| hub.keys.remove(provider)).unwrap_or_else(|| Err("busy".into()))
+pub fn remove_key(provider: ApiProvider) -> Result<(), keys::KeyError> {
+    with_hub(|hub| hub.keys.remove(provider)).unwrap_or(Err(keys::KeyError::Busy))
 }
 
 /// Lowspeak's choices as its menu left them, for the settings to offer taking them over.

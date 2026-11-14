@@ -258,7 +258,6 @@ fn request(view: &EditorTextView, kind: Kind, show: bool) {
             kind.only(),
             move |answer| {
                 main_soon(move || {
-                    let answer = answer.map_err(|e| e.to_string());
                     arrived(
                         serial,
                         asked,
@@ -293,7 +292,7 @@ fn arrived(
     revision: u64,
     (kind, show, line, range): (Kind, bool, usize, Range<usize>),
     origin: u64,
-    answer: Result<Vec<CodeActionOrCommand>, String>,
+    answer: Result<Vec<CodeActionOrCommand>, ide_lsp::Error>,
     gathered: &std::sync::Arc<std::sync::Mutex<Gathered>>,
 ) {
     use ide_core::LockIgnoringPoison;

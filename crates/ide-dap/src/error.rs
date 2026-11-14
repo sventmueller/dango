@@ -40,6 +40,21 @@ impl fmt::Display for Error {
     }
 }
 
+impl ide_core::explain::Explain for Error {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            Error::Adapter { message, .. } => message.clone(),
+            Error::Timeout => t("Der Debug-Adapter hat nicht rechtzeitig geantwortet.").to_string(),
+            Error::Ended => t("Die Debug-Sitzung ist beendet.").to_string(),
+            Error::Unsupported => t("Der Debug-Adapter kann das nicht.").to_string(),
+            Error::NotStopped => t("Das Programm ist nicht angehalten.").to_string(),
+            Error::Congested => t("Der Debug-Adapter liest nicht mehr.").to_string(),
+            Error::Malformed(why) => tf("Unerwartete Antwort: {}", &[why]),
+        }
+    }
+}
+
 impl std::error::Error for Error {}
 
 #[cfg(test)]

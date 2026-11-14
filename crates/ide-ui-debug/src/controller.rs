@@ -151,7 +151,11 @@ impl DebugPanel {
         let panel = self.id();
         let failed = move |result: Result<(), ide_dap::Error>| {
             if let Err(error) = result {
-                main_soon(move || with_panel(panel, |p| p.note_failure(id, &error.to_string())));
+                main_soon(move || {
+                    with_panel(panel, |p| {
+                        p.note_failure(id, &ide_core::explain::Explain::explain(&error))
+                    })
+                });
             }
         };
         match command {
@@ -299,7 +303,7 @@ impl DebugPanel {
                         node.kind = e.type_name;
                         node
                     })
-                    .map_err(|e| e.to_string());
+                    .map_err(|e| ide_core::explain::Explain::explain(&e));
                 main_soon(move || {
                     with_panel(panel, |p| {
                         if p.model().variables.set_watch(generation, &expression, value) {
@@ -330,7 +334,10 @@ impl DebugPanel {
                         if let Some(console) = p.console_for(id) {
                             match answer {
                                 Ok(value) => console.push(ide_core::debugging::ConsoleKind::Result, &value.result),
-                                Err(error) => console.push(ide_core::debugging::ConsoleKind::Error, &error.to_string()),
+                                Err(error) => console.push(
+                                    ide_core::debugging::ConsoleKind::Error,
+                                    &ide_core::explain::Explain::explain(&error),
+                                ),
                             }
                         }
                     });

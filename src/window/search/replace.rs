@@ -2,12 +2,13 @@
 //! file (E24); a closed file is read, changed and written through the document model as saving writes it, keeping its
 //! encoding, byte order mark and line endings, on a thread of its own.
 
+use std::io;
 use std::path::{Path, PathBuf};
 
-use ide_document::{Document, Edit};
-use ide_project::{Replacement, SearchOptions, replacements};
+use ide_core::explain::Explain;
+use ide_document::{Document, Edit, EditError, ReadOnly, SaveError};
+use ide_project::{Replacement, SearchError, SearchOptions, replacements};
 use objc2::rc::Retained;
-use splat_i18n::t;
 
 use super::model::Only;
 use crate::editor::EditorTextView;
@@ -22,14 +23,37 @@ pub(super) struct Done {
 }
 
 impl Done {
-    fn count(&mut self, path: &Path, result: Result<usize, String>) {
+    fn count(&mut self, path: &Path, result: Result<usize, Failure>) {
         match result {
             Ok(0) => {}
             Ok(n) => {
                 self.replaced += n;
                 self.files += 1;
             }
-            Err(error) => self.problems.push(format!("{}: {error}", path.display())),
+            Err(error) => self.problems.push(format!("{}: {}", path.display(), error.explain())),
+        }
+    }
+}
+
+/// Why a file kept its matches.
+#[derive(Debug)]
+enum Failure {
+    /// Its editor does not let the user change it.
+    ReadOnly,
+    Search(SearchError),
+    Open(io::Error),
+    Edit(EditError),
+    Save(SaveError),
+}
+
+impl Explain for Failure {
+    fn explain(&self) -> String {
+        match self {
+            Failure::ReadOnly => ReadOnly::Protected.explain(),
+            Failure::Search(error) => error.explain(),
+            Failure::Open(error) => error.explain(),
+            Failure::Edit(error) => error.explain(),
+            Failure::Save(error) => error.explain(),
         }
     }
 }
@@ -87,12 +111,12 @@ fn chosen(found: Vec<Replacement>, only: &Only) -> Vec<Replacement> {
 }
 
 /// Replaces in the text of an open document, as one undo step of its editor.
-fn in_editor(view: &EditorTextView, options: &SearchOptions, with: &str, only: &Only) -> Result<usize, String> {
+fn in_editor(view: &EditorTextView, options: &SearchOptions, with: &str, only: &Only) -> Result<usize, Failure> {
     if !view.isEditable() {
-        return Err(t("Die Datei ist schreibgeschützt.").to_string());
+        return Err(Failure::ReadOnly);
     }
     let text = view.document().text().to_string();
-    let found = chosen(replacements(&text, options, with).map_err(|e| e.to_string())?, only);
+    let found = chosen(replacements(&text, options, with).map_err(Failure::Search)?, only);
     let count = found.len();
     if count > 0 {
         crate::lsp::apply_text_edits(view, found.into_iter().map(|r| (r.range_utf16, r.text)).collect());
@@ -101,10 +125,10 @@ fn in_editor(view: &EditorTextView, options: &SearchOptions, with: &str, only: &
 }
 
 /// Replaces in a file no editor shows and saves it.
-fn in_file(path: &Path, options: &SearchOptions, with: &str, only: &Only) -> Result<usize, String> {
-    let mut document = Document::open(path).map_err(|e| e.to_string())?;
+fn in_file(path: &Path, options: &SearchOptions, with: &str, only: &Only) -> Result<usize, Failure> {
+    let mut document = Document::open(path).map_err(Failure::Open)?;
     let text = document.text().to_string();
-    let found = chosen(replacements(&text, options, with).map_err(|e| e.to_string())?, only);
+    let found = chosen(replacements(&text, options, with).map_err(Failure::Search)?, only);
     if found.is_empty() {
         return Ok(0);
     }
@@ -114,9 +138,9 @@ fn in_file(path: &Path, options: &SearchOptions, with: &str, only: &Only) -> Res
                 range_utf16: replacement.range_utf16.clone(),
                 text: replacement.text.clone(),
             })
-            .map_err(|e| format!("{e:?}"))?;
+            .map_err(Failure::Edit)?;
     }
-    document.save().map_err(|e| format!("{e:?}"))?;
+    document.save().map_err(Failure::Save)?;
     Ok(found.len())
 }
 
@@ -168,9 +192,9 @@ mod tests {
         let mut done = Done::default();
         done.count(Path::new("/a"), Ok(2));
         done.count(Path::new("/b"), Ok(0));
-        done.count(Path::new("/c"), Err("locked".into()));
+        done.count(Path::new("/c"), Err(Failure::ReadOnly));
         assert_eq!((done.replaced, done.files), (2, 1));
-        assert_eq!(done.problems, ["/c: locked"]);
+        assert_eq!(done.problems, [format!("/c: {}", Failure::ReadOnly.explain())]);
     }
 
     #[test]

@@ -32,6 +32,7 @@ mod whitespace;
 use std::path::{Path, PathBuf};
 
 use ide_document::recovery::{Recovered, RecoveryId};
+use ide_core::explain::Explain;
 use ide_document::{Change, Document, SaveError};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
@@ -627,11 +628,11 @@ pub(crate) fn save(view: &EditorTextView, save_as: bool) {
                         view.document_mut().end_save(done);
                         saved(view, None);
                     }
-                    Err(error) => alert(mtm, t("Sichern fehlgeschlagen"), &format!("{error:?}")),
+                    Err(error) => alert(mtm, t("Sichern fehlgeschlagen"), &error.explain()),
                 }
             }
         }
-        Err(error) => alert(view.mtm(), t("Sichern fehlgeschlagen"), &format!("{error:?}")),
+        Err(error) => alert(view.mtm(), t("Sichern fehlgeschlagen"), &error.explain()),
     }
 }
 

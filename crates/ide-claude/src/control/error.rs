@@ -27,4 +27,17 @@ impl std::fmt::Display for ControlError {
     }
 }
 
+impl ide_core::explain::Explain for ControlError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            ControlError::Refused(why) => tf("Claude Code lehnt ab: {}", &[why]),
+            ControlError::Timeout => t("Claude Code hat nicht rechtzeitig geantwortet.").to_string(),
+            ControlError::Closed => t("Claude Code ist beendet.").to_string(),
+            ControlError::Unexpected(why) => tf("Unerwartete Antwort: {}", &[why]),
+            ControlError::Unwaited(why) => why.clone(),
+        }
+    }
+}
+
 impl std::error::Error for ControlError {}

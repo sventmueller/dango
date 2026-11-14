@@ -95,6 +95,24 @@ impl std::fmt::Display for SessionError {
     }
 }
 
+impl ide_core::explain::Explain for SessionError {
+    fn explain(&self) -> String {
+        use splat_i18n::{t, tf};
+        match self {
+            SessionError::NotFound(path) => tf("{} wurde nicht gefunden.", &[&path.display().to_string()]),
+            SessionError::Start(why) => tf("Der Agent ist nicht gestartet: {}", &[why]),
+            SessionError::SignIn => t("Der Agent verlangt eine Anmeldung.").to_string(),
+            SessionError::Version(version) => tf(
+                "Der Agent spricht die Protokollversion {}, diese App Version 1",
+                &[&version.to_string()],
+            ),
+            SessionError::Agent(why) => why.clone(),
+            SessionError::Timeout(method) => tf("Der Agent hat auf {} nicht rechtzeitig geantwortet.", &[method]),
+            SessionError::Closed => t("Die Sitzung ist beendet.").to_string(),
+        }
+    }
+}
+
 impl std::error::Error for SessionError {}
 
 /// The user's answer to a permission request.

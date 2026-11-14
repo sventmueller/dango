@@ -3,6 +3,7 @@
 //! adds and which can be removed here; the folders the thread's sandbox lets the agent reach besides the project
 //! (E19); and the model for commit messages with the permissions given for it (E88).
 
+use ide_core::explain::Explain;
 use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
 
@@ -497,7 +498,10 @@ impl AgentSettings {
     fn store_key(&self, endpoint: &Endpoint, key: &str) {
         match own_agent::set_key(endpoint, key) {
             Ok(()) => self.set_status(None, false),
-            Err(error) => self.set_status(Some(&tf("Der Schlüssel ließ sich nicht sichern: {}", &[&error])), true),
+            Err(error) => self.set_status(
+                Some(&tf("Der Schlüssel ließ sich nicht sichern: {}", &[&error.explain()])),
+                true,
+            ),
         }
         self.reload();
     }
@@ -647,7 +651,7 @@ impl AgentSettings {
                     };
                     this.set_status(Some(&offered), false);
                 }
-                Err(error) => this.set_status(Some(&tf("Die Modelle ließen sich nicht laden: {}", &[&error])), true),
+                Err(error) => this.set_status(Some(&tf("Die Modelle ließen sich nicht laden: {}", &[&error.0])), true),
             }
         });
     }
