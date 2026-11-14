@@ -38,11 +38,16 @@ pub fn attach(controller: &WindowController) {
     panels.insert(panel.id(), panel.clone());
     if controller.shown_panel() == Some(Panel::Containers) {
         panel.start();
+    } else {
+        let id = panel.id();
+        crate::util::main_after(PRELOAD_AFTER, move || with_panel(id, ContainersPanel::preload));
     }
 }
 
-/// The window shows its Containers panel: the panel reads Docker the first time, so a window that never shows it
-/// runs no `docker`.
+/// How long after its window opens a hidden panel reads Docker, so the launch has finished first.
+const PRELOAD_AFTER: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// The window shows its Containers panel: the panel watches Docker from now on.
 pub fn shown(controller: &WindowController) {
     if let Some(panel) = of(controller) {
         panel.start();

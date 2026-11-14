@@ -1,5 +1,5 @@
-//! The `containers-panel` scenario (B33): with a stand-in `docker` on the panel's PATH, the Containers panel shows an
-//! empty state without `docker`, "Docker läuft nicht" while the daemon does not answer and tries again by itself, then
+//! The `containers-panel` scenario (B33): with a stand-in `docker` on the panel's PATH, a hidden Containers panel reads
+//! Docker once without watching it; the panel shows an empty state without `docker`, "Docker läuft nicht" while the daemon does not answer and tries again by itself, then
 //! the tree of the folder's Compose project, single containers, images and volumes; its commands stop a container, open
 //! its port in a browser tab and its logs in a terminal tab that does not come back after a restart; Compose commands
 //! only in a trusted folder; deleting a volume asks with a sheet whose destructive button is not the default.
@@ -131,13 +131,40 @@ pub fn run() {
                 check("the stand-in docker is made", false, error);
                 return finish(SCENARIO);
             }
-            let idle = panel::panel_of(&controller).is_some_and(|p| !p.started());
-            controller.activate_panel(Panel::Containers);
+            preloaded(&controller);
+        },
+    );
+}
+
+/// Hidden, the panel reads Docker once without watching it, and opens with its list.
+fn preloaded(window: &WindowController) {
+    let Some(panel) = panel::panel_of(window) else {
+        check("the window has a Containers panel", false, String::new());
+        return finish(SCENARIO);
+    };
+    if let Err(error) = std::fs::write(tools().join("state"), "up\n") {
+        check("the stand-in daemon starts", false, error.to_string());
+        return finish(SCENARIO);
+    }
+    panel.preload_with(&tools());
+    wait_within(
+        Duration::from_secs(10),
+        || row("web-proxy").is_some(),
+        |found| {
+            let hidden = the_panel().is_some_and(|p| !p.started() && !p.watching());
+            let watched = calls().lines().any(|l| l.contains("events"));
+            if let Some(window) = controller() {
+                window.activate_panel(Panel::Containers);
+            }
             check(
-                "a window runs no docker before it shows its Containers panel, and reads once it does",
-                idle && panel::panel_of(&controller).is_some_and(|p| p.started()),
-                String::new(),
+                "a hidden panel reads Docker once in the background without watching it, and opens with its list",
+                found && hidden && !watched && row("web-proxy").is_some() && the_panel().is_some_and(|p| p.started()),
+                calls(),
             );
+            if let Err(error) = std::fs::write(tools().join("state"), "down\n") {
+                check("the stand-in daemon stops", false, error.to_string());
+                return finish(SCENARIO);
+            }
             missing();
         },
     );

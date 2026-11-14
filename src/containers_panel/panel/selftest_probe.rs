@@ -7,6 +7,17 @@ impl ContainersPanel {
         self.ivars().path.borrow().clone()
     }
 
+    /// The self-test's build never runs the real `docker` in the background, only a stand-in on the panel's PATH.
+    pub(crate) fn may_preload(&self) -> bool {
+        self.path().is_some()
+    }
+
+    /// Preloads with `path` in place of the login shell's PATH, while the panel stays hidden, for the self-test.
+    pub fn preload_with(&self, path: &std::path::Path) {
+        *self.ivars().path.borrow_mut() = Some(format!("{}:/usr/bin:/bin", path.display()));
+        self.preload();
+    }
+
     /// Gives the panel `path` in place of the login shell's PATH, for the self-test.
     pub fn set_path(&self, path: &std::path::Path) {
         self.ivars().started.set(true);

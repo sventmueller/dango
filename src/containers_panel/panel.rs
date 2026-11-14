@@ -315,6 +315,13 @@ impl ContainersPanel {
         }
     }
 
+    /// Reads Docker once while the panel is hidden, so it opens with its list; watching starts only when it shows.
+    pub fn preload(&self) {
+        if !self.ivars().started.get() && self.may_preload() {
+            self.refresh();
+        }
+    }
+
     /// Whether its window shows the panel now.
     fn shown_now(&self) -> bool {
         crate::context::AppContext::get(self.mtm())
@@ -364,13 +371,16 @@ impl ContainersPanel {
             mine.images = board.images;
             mine.volumes = board.volumes;
         }
+        let started = self.ivars().started.get();
         match read.reach {
             Reach::Ready => {
                 self.ivars().failures.set(0);
-                self.watch();
+                if started {
+                    self.watch();
+                }
             }
-            Reach::NotRunning(_) => self.retry_later(),
-            Reach::Unknown | Reach::Missing | Reach::TooOld(_) => {}
+            Reach::NotRunning(_) if started => self.retry_later(),
+            Reach::NotRunning(_) | Reach::Unknown | Reach::Missing | Reach::TooOld(_) => {}
         }
         self.show();
     }
@@ -455,6 +465,12 @@ impl ContainersPanel {
     #[expect(clippy::unused_self, reason = "the self-test's build reads the panel's PATH")]
     fn path(&self) -> Option<String> {
         None
+    }
+
+    #[cfg(not(feature = "selftest"))]
+    #[expect(clippy::unused_self, reason = "the self-test needs a stand-in docker")]
+    fn may_preload(&self) -> bool {
+        true
     }
 
     pub fn stop_watching(&self) {
