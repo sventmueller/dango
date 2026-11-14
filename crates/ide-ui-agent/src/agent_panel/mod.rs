@@ -20,7 +20,7 @@ use splat_i18n::t;
 
 use crate::Resume;
 use ide_ui_common::panel::ACCESSORY_INSET;
-use ide_ui_common::util::{main_after, ns};
+use ide_ui_common::util::{main_after, main_soon, ns};
 use ide_ui_common::window::{AsWindow, Panel, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
@@ -44,6 +44,8 @@ pub struct AgentPanel {
     sessions_source: Retained<Source>,
     show_archived: Cell<bool>,
     scheduled: Cell<bool>,
+    /// The latest reading of the lists, so that an older one a worker answers late is dropped.
+    reading: Cell<u64>,
     agents: agents::Agents,
 }
 
@@ -85,7 +87,7 @@ pub fn attach(controller: &(impl AsWindow + ?Sized)) {
     let panel = AgentPanel::new(controller, root);
     controller.set_panel_page(Panel::Agents, &panel.view);
     with_panels(|panels| panels.borrow_mut().push(panel.clone()));
-    panel.reload();
+    panel.reload_soon();
 }
 
 /// Shows what changed in the window's sessions, at most a few times a second.
@@ -99,7 +101,7 @@ pub fn refresh(controller: &(impl AsWindow + ?Sized)) {
     main_after(Duration::from_millis(400), move || {
         if let Some(panel) = panel_by_key(key) {
             panel.scheduled.set(false);
-            panel.reload();
+            panel.reload_soon();
         }
     });
 }
@@ -224,6 +226,7 @@ impl AgentPanel {
             sessions_source,
             show_archived: Cell::new(false),
             scheduled: Cell::new(false),
+            reading: Cell::new(0),
             agents,
         });
         panel.sessions_source.set_panel(panel.id);
@@ -241,29 +244,68 @@ impl AgentPanel {
 
     /// Reads the index and the open tabs again and shows them.
     fn reload(&self) {
+        self.reading.set(self.reading.get() + 1);
+        self.show(Lists::read(&self.root, self.show_archived.get()));
+    }
+
+    /// `reload` with the files read on a worker thread, as the transcripts of a folder take long to read; the newest
+    /// reading wins.
+    fn reload_soon(&self) {
+        let reading = self.reading.get() + 1;
+        self.reading.set(reading);
+        let (key, root, archived) = (self.id, self.root.clone(), self.show_archived.get());
+        let spawned = ide_ui_common::util::spawn("agent-panel", move || {
+            let lists = Lists::read(&root, archived);
+            main_soon(move || {
+                if let Some(panel) = panel_by_key(key)
+                    && panel.reading.get() == reading
+                {
+                    panel.show(lists);
+                }
+            });
+        });
+        if spawned.is_err() {
+            self.reload();
+        }
+    }
+
+    fn show(&self, lists: Lists) {
         let Some(controller) = self.controller.load() else {
             return;
         };
         let tabs = crate::of_window(&controller);
-        let index = ThreadIndex::open(&ThreadIndex::default_dir());
-        let archived = self.show_archived.get();
         let model = sessions::Model::build(&sessions::Inputs {
-            index: &index,
+            index: &lists.index,
             root: &self.root,
             tabs: &tabs,
-            archived,
-            terminal: if archived {
-                Vec::new()
-            } else {
-                terminal_sessions(&self.root)
-            },
-            bookmarks: &bookmarks(),
+            archived: lists.archived,
+            terminal: lists.terminal,
+            bookmarks: &lists.bookmarks,
         });
         self.sessions_source.show(&self.sessions, model);
     }
 
     fn controller(&self) -> Option<Window> {
         self.controller.load()
+    }
+}
+
+/// What the panel lists besides the open tabs, as read from the disk.
+struct Lists {
+    index: ThreadIndex,
+    archived: bool,
+    terminal: Vec<ide_claude::history::PastSession>,
+    bookmarks: BTreeSet<String>,
+}
+
+impl Lists {
+    fn read(root: &Path, archived: bool) -> Lists {
+        Lists {
+            index: ThreadIndex::open(&ThreadIndex::default_dir()),
+            archived,
+            terminal: if archived { Vec::new() } else { terminal_sessions(root) },
+            bookmarks: bookmarks(),
+        }
     }
 }
 

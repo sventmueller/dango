@@ -1,11 +1,14 @@
 //! Past sessions from the CLI's own transcripts in `~/.claude/projects`; experimental, because the format is the
 //! CLI's internal one. Every function tolerates files it cannot read and leaves them out.
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
 use std::time::SystemTime;
 
+use ide_core::LockIgnoringPoison;
 use serde_json::Value;
 
 use ide_thread::Thread;
@@ -66,18 +69,39 @@ pub fn project_folder(cwd: &Path) -> String {
         .collect()
 }
 
+/// A transcript's summary as it was read, with the length and time of change the file had then.
+type Summaries = HashMap<PathBuf, (u64, SystemTime, Option<PastSession>)>;
+
+/// The summaries read so far, by folder, so that a listing reads only the transcripts that changed since.
+static SUMMARIES: LazyLock<Mutex<HashMap<PathBuf, Summaries>>> = LazyLock::new(Mutex::default);
+
 /// The sessions saved for `cwd`, most recent first.
 pub fn list(config_dir: &Path, cwd: &Path) -> Vec<PastSession> {
     let folder = config_dir.join("projects").join(project_folder(cwd));
     let Ok(entries) = std::fs::read_dir(&folder) else {
         return Vec::new();
     };
-    let mut sessions: Vec<PastSession> = entries
+    let mut known = SUMMARIES.lock_ignoring_poison().remove(&folder).unwrap_or_default();
+    let mut read = Summaries::new();
+    for path in entries
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
-        .filter_map(|p| read_summary(&p))
-        .collect();
+    {
+        let Some((length, modified)) = std::fs::metadata(&path)
+            .ok()
+            .and_then(|m| Some((m.len(), m.modified().ok()?)))
+        else {
+            continue;
+        };
+        let summary = match known.remove(&path) {
+            Some((was, at, summary)) if was == length && at == modified => summary,
+            _ => read_summary(&path),
+        };
+        read.insert(path, (length, modified, summary));
+    }
+    let mut sessions: Vec<PastSession> = read.values().filter_map(|(_, _, s)| s.clone()).collect();
+    SUMMARIES.lock_ignoring_poison().insert(folder, read);
     sessions.sort_by_key(|s| std::cmp::Reverse(s.modified));
     sessions
 }
@@ -398,6 +422,39 @@ mod tests {
                 (String::new(), vec![("image/jpeg".to_string(), vec![0xff, 0xd8, 0xff])]),
             ]
         );
+    }
+
+    #[test]
+    fn a_listing_follows_transcripts_that_change_appear_and_go() {
+        let config = scratch("list-again");
+        let cwd = Path::new("/work/again");
+        let folder = config.join("projects").join(project_folder(cwd));
+        std::fs::create_dir_all(&folder).unwrap();
+        let prompt = |text: &str| {
+            format!(
+                r#"{{"type":"user","uuid":"u","message":{{"role":"user","content":[{{"type":"text","text":"{text}"}}]}}}}"#
+            )
+        };
+        std::fs::write(folder.join("a.jsonl"), prompt("First")).unwrap();
+        let titles = |sessions: Vec<PastSession>| -> Vec<(String, Option<String>)> {
+            let mut titles: Vec<_> = sessions.into_iter().map(|s| (s.id, s.title)).collect();
+            titles.sort();
+            titles
+        };
+        assert_eq!(titles(list(&config, cwd)), [("a".to_string(), None)]);
+        let renamed = format!(
+            "{}\n{}",
+            prompt("First"),
+            r#"{"type":"custom-title","customTitle":"Renamed"}"#
+        );
+        std::fs::write(folder.join("a.jsonl"), renamed).unwrap();
+        std::fs::write(folder.join("b.jsonl"), prompt("Second")).unwrap();
+        assert_eq!(
+            titles(list(&config, cwd)),
+            [("a".to_string(), Some("Renamed".to_string())), ("b".to_string(), None)]
+        );
+        std::fs::remove_file(folder.join("a.jsonl")).unwrap();
+        assert_eq!(titles(list(&config, cwd)), [("b".to_string(), None)]);
     }
 
     #[test]

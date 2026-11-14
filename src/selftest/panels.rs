@@ -272,7 +272,8 @@ fn closing(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let expected = controller.window_tabs();
     let share = controller.tab_shares().into_iter().flatten().next();
-    controller.close_all_tabs();
+    let clicked = controller.click_close_button();
+    check("the window has a close button", clicked, "");
     let (probe, count) = (root.clone(), expected.len());
     let shell = SHELL.load(Ordering::SeqCst);
     helpers::wait_until(
@@ -299,7 +300,7 @@ fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     );
     let saved = ide_core::layout::load(&root);
     check(
-        "closing the window saves its tabs",
+        "closing the window with its close button saves all its tabs",
         saved.as_ref().is_some_and(|layout| {
             layout.tabs.len() == expected.len()
                 && layout.has(&ide_core::layout::Tab::Agent {

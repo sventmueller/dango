@@ -203,6 +203,19 @@ impl WindowController {
         self.close_window();
     }
 
+    /// Clicks the close button of the window in front with the mouse, which closes its whole tab group; whether it
+    /// had one.
+    pub fn click_close_button(&self) -> bool {
+        let Some(window) = self.window() else { return false };
+        let Some(button) = window.standardWindowButton(objc2_app_kit::NSWindowButton::CloseButton) else {
+            return false;
+        };
+        let bounds = button.bounds();
+        let center = objc2_foundation::NSPoint::new(bounds.size.width / 2.0, bounds.size.height / 2.0);
+        post_click(&window, button.convertPoint_toView(center, None));
+        true
+    }
+
     /// Sets the left document's share of the tab that shows the document `id` beside another.
     pub fn set_share_of(&self, id: isize, share: f64) {
         if let Some(tab) = self.tab_of_document(id) {
@@ -296,27 +309,7 @@ impl WindowController {
         };
         let bounds = button.bounds();
         let center = objc2_foundation::NSPoint::new(bounds.size.width / 2.0, bounds.size.height / 2.0);
-        let at = button.convertPoint_toView(center, None);
-        let app = objc2_app_kit::NSApplication::sharedApplication(self.mtm());
-        for kind in [
-            objc2_app_kit::NSEventType::LeftMouseDown,
-            objc2_app_kit::NSEventType::LeftMouseUp,
-        ] {
-            let event = objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
-                kind,
-                at,
-                objc2_app_kit::NSEventModifierFlags::empty(),
-                0.0,
-                window.windowNumber(),
-                None,
-                0,
-                1,
-                1.0,
-            );
-            if let Some(event) = event {
-                app.postEvent_atStart(&event, false);
-            }
-        }
+        post_click(&window, button.convertPoint_toView(center, None));
         true
     }
 
@@ -503,4 +496,28 @@ pub struct Inspection {
     pub tabs: usize,
     pub new_tab_items: Vec<String>,
     pub sidebar_width: f64,
+}
+
+/// A press and a release of the left mouse button at `at` in `window`, queued as the window server delivers them.
+fn post_click(window: &objc2_app_kit::NSWindow, at: objc2_foundation::NSPoint) {
+    let app = objc2_app_kit::NSApplication::sharedApplication(objc2::MainThreadOnly::mtm(window));
+    for kind in [
+        objc2_app_kit::NSEventType::LeftMouseDown,
+        objc2_app_kit::NSEventType::LeftMouseUp,
+    ] {
+        let event = objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+            kind,
+            at,
+            objc2_app_kit::NSEventModifierFlags::empty(),
+            0.0,
+            window.windowNumber(),
+            None,
+            0,
+            1,
+            1.0,
+        );
+        if let Some(event) = event {
+            app.postEvent_atStart(&event, false);
+        }
+    }
 }
