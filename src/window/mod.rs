@@ -16,12 +16,12 @@ mod lifecycle;
 mod new_tab_button;
 mod notice;
 pub mod panels;
-#[cfg(feature = "selftest")]
-mod probe;
 mod quick_open;
 mod registry;
 mod replace;
 mod search;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
 mod sidebar;
 mod tabs;
 pub mod toolbar;
@@ -139,7 +139,7 @@ define_class!(
                     self.make_current(&tab);
                     tab.clear_above_sidebar(true);
                 }
-                crate::agent::show_pending(self);
+                ide_ui_agent::show_pending(self);
             });
         }
 
@@ -393,8 +393,8 @@ define_class!(
             guarded((), || {
                 let item = sender.and_then(|s| s.downcast_ref::<NSMenuItem>());
                 let represented = item.and_then(|i| i.representedObject()?.downcast::<objc2_foundation::NSString>().ok());
-                let choice = represented.and_then(|r| crate::agent::own_menu_choice(&r.to_string()));
-                if let Some(tab) = crate::agent::open_own(self, choice) {
+                let choice = represented.and_then(|r| ide_ui_agent::own_menu_choice(&r.to_string()));
+                if let Some(tab) = ide_ui_agent::open_own(self, choice) {
                     tab.focus_composer();
                 }
             });
@@ -414,7 +414,7 @@ define_class!(
         fn new_acp_thread_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 let index = usize::try_from(tag_of(sender)).unwrap_or(usize::MAX);
-                if let Some(tab) = crate::agent::open_preset(self, index) {
+                if let Some(tab) = ide_ui_agent::open_preset(self, index) {
                     tab.focus_composer();
                 }
             });
@@ -423,7 +423,7 @@ define_class!(
         #[unsafe(method(ideNewClaudeThread:))]
         fn new_claude_thread_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                if let Some(tab) = crate::agent::open_tab(self, None) {
+                if let Some(tab) = ide_ui_agent::open_tab(self, None) {
                     tab.focus_composer();
                 }
             });
@@ -439,22 +439,22 @@ define_class!(
 
         #[unsafe(method(ideFocusClaude:))]
         fn focus_claude_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::agent::toggle_focus(self));
+            guarded((), || ide_ui_agent::toggle_focus(self));
         }
 
         #[unsafe(method(ideShowSessionSubagents:))]
         fn show_session_subagents_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::agent::show_work(self, crate::activity::Part::Subagents));
+            guarded((), || ide_ui_agent::show_work(self, crate::activity::Part::Subagents));
         }
 
         #[unsafe(method(ideShowSessionBackground:))]
         fn show_session_background_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::agent::show_work(self, crate::activity::Part::Background));
+            guarded((), || ide_ui_agent::show_work(self, crate::activity::Part::Background));
         }
 
         #[unsafe(method(idePlanComment:))]
         fn plan_comment_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::agent::plan::comment_from_keyboard(self));
+            guarded((), || ide_ui_agent::plan::comment_from_keyboard(self));
         }
     }
 );

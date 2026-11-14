@@ -27,9 +27,9 @@ use serde_json::json;
 use super::helpers::{self, answer_alert, answer_alert_saying, in_any_mode_after, wait_until};
 use super::{check, finish};
 use crate::editor::predict::model::{self as predict, Choice, Local};
-use crate::own_agent;
 use crate::settings::{AgentList as List, agent_selftest as agent};
 use crate::util::ns;
+use ide_ui_agent::own_agent;
 
 const NAME: &str = "settings-pages";
 const MODEL: &str = "stub-coder";
@@ -119,7 +119,7 @@ fn prepare(root: &Path, elsewhere: &Path, url: &str) {
         model: model.to_string(),
     };
     let stored = [
-        settings.set(&crate::git_panel::message::source::CONSENT, &vec![werkbank.id.clone()]),
+        settings.set(&ide_ui_git::message::source::CONSENT, &vec![werkbank.id.clone()]),
         settings.set(&predict::OLLAMA, &local("")),
         settings.set(&predict::LM_STUDIO, &local("weird-model")),
     ];
@@ -572,7 +572,7 @@ fn commit_messages(f: Fixture) {
     let werkbank = own_agent::endpoints().into_iter().position(|e| e.name == "Werkbank");
     let chosen =
         werkbank.is_some_and(|row| choose(sel!(ideCommitMessageEndpoint:), isize::try_from(row + 1).unwrap_or(0)));
-    let commit_model = || Settings::load_user().get(&crate::git_panel::message::source::MODEL);
+    let commit_model = || Settings::load_user().get(&ide_ui_git::message::source::MODEL);
     wait_until(
         move || commit_model().is_some_and(|m| m.model == MODEL),
         move |loaded| {

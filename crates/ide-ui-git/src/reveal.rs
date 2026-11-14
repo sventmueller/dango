@@ -77,15 +77,7 @@ fn select(panel: &GitPanel, hash: &str) {
     }
 }
 
-/// The hash of the commit selected in the Git panel of `controller`, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn selected_commit(controller: &(impl AsWindow + ?Sized)) -> Option<String> {
-    let controller = &controller.as_window();
-    let panel = panel::of(controller)?;
-    let outline = &panel.ui().outline;
-    let item = outline.itemAtRow(outline.selectedRow())?;
-    match panel::key_of(&item)? {
-        RowKey::Commit(hash) => Some(hash),
-        _ => None,
-    }
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

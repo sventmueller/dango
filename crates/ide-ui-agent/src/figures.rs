@@ -165,8 +165,7 @@ impl Viewer for Answers {
     }
 }
 
-/// Whether the answers asked for `key`, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn asked_for(key: &Key) -> bool {
-    with_asked(|asked| asked.borrow().as_ref().is_some_and(|asked| asked.keys.contains(key)))
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

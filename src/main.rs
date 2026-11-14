@@ -1,6 +1,4 @@
 mod activity;
-mod agent;
-mod agent_panel;
 mod app;
 mod browser;
 mod ci_panel;
@@ -9,17 +7,13 @@ mod containers_panel;
 mod context;
 mod debug;
 mod diag;
-#[cfg(feature = "dictation")]
-mod dictation;
 mod editor;
 mod environment;
-mod git_panel;
 mod host;
 mod lsp;
 mod markdown;
 mod menu;
 mod navigation;
-mod own_agent;
 mod preview;
 mod project;
 mod quit;
@@ -60,7 +54,7 @@ fn main() {
     ide_ui_browser::install(&host::AppHost);
     ide_ui_terminal::install(&host::AppHost);
     #[cfg(feature = "dictation")]
-    dictation::install(&host::AppHost);
+    ide_ui_dictation::install(&host::AppHost);
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {
         ide_core::paths::set_identity(&id.to_string());
     }
@@ -81,7 +75,7 @@ fn main() {
     let delegate = app::AppDelegate::new(mtm);
     app.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
     #[cfg(feature = "dictation")]
-    dictation::prepare();
+    ide_ui_dictation::prepare();
     updates::start(mtm);
     menu::install(&app, &delegate, mtm);
     environment::start();

@@ -31,7 +31,7 @@ const SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000bb";
 
 /// Opens an AI tab that plays the start of the session `session`.
 pub(super) fn replay_agent(controller: &WindowController, session: &str) -> bool {
-    let Some(tab) = crate::agent::open_replay(controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(controller) else {
         return false;
     };
     let cwd = controller.project_root().unwrap_or_default();
@@ -45,7 +45,7 @@ pub(super) fn replay_agent(controller: &WindowController, session: &str) -> bool
 
 /// Whether an AI tab of the window shows the session `session`.
 fn has_session(controller: &WindowController, session: &str) -> bool {
-    crate::agent::of_window(controller)
+    ide_ui_agent::of_window(controller)
         .iter()
         .any(|tab| tab.session_id().as_deref() == Some(session))
 }

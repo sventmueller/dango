@@ -461,12 +461,6 @@ fn server_by_id(view: &EditorTextView, id: u64) -> Option<(Server, Uri)> {
         .map(|(_, server, uri)| (server, uri))
 }
 
-/// The id of the main slot of `view`, the source of its own diagnostics.
-#[cfg(feature = "selftest")]
-fn main_slot(view: &EditorTextView) -> u64 {
-    view.ivars().lsp.borrow().slot.unwrap_or(0)
-}
-
 fn version(view: &EditorTextView) -> i32 {
     i32::try_from(view.document().revision()).unwrap_or(i32::MAX)
 }
@@ -905,12 +899,6 @@ pub fn show_failures(view: &EditorTextView, source: u64, failures: &[(u32, Strin
         })
         .collect();
     decorate::set_diagnostics_from(view, source, &diagnostics);
-}
-
-/// Shows `diagnostics` in `view` as if its server had sent them, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn show_diagnostics(view: &EditorTextView, diagnostics: &[ide_lsp::lsp_types::Diagnostic]) {
-    decorate::set_diagnostics(view, diagnostics);
 }
 
 #[cfg(test)]

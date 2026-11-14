@@ -378,13 +378,7 @@ fn loosen(view: &NSView) {
     }
 }
 
-/// The size the open picture takes, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn shown() -> Option<NSSize> {
-    with_shown(|shown| {
-        let shade = shown.borrow().clone()?;
-        // SAFETY: Asking for the superview only reads.
-        unsafe { shade.superview() }?.layoutSubtreeIfNeeded();
-        Some(shade.ivars().picture.frame().size)
-    })
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

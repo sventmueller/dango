@@ -12,7 +12,7 @@ pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
         return (Vec::new(), String::new());
     };
     activity.show();
-    let tabs = crate::agent::of_window(controller);
+    let tabs = ide_ui_agent::of_window(controller);
     let lines: Vec<String> = agent_lines(&tabs, SystemTime::now(), false)
         .into_iter()
         .chain(process_lines(controller, &processes(), SystemTime::now()))
@@ -45,7 +45,7 @@ pub fn overview_lines(controller: &WindowController) -> Vec<String> {
     let Some(activity) = of(controller) else {
         return Vec::new();
     };
-    let tabs = crate::agent::of_window(controller);
+    let tabs = ide_ui_agent::of_window(controller);
     let now = SystemTime::now();
     match activity.ivars().only.get() {
         Some((key, part)) => session_lines(&tabs, key, part, now),

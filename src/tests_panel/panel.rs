@@ -425,17 +425,6 @@ impl TestsPanel {
         };
         crate::editor::show_text(self.mtm(), t("Ausgabe des Testlaufs"), &message);
     }
-
-    /// The panel's rows as their indentation, label and state, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn shown(&self) -> Vec<(usize, String, State)> {
-        self.ivars()
-            .rows
-            .borrow()
-            .iter()
-            .map(|r| (r.level, r.label.clone(), r.state))
-            .collect()
-    }
 }
 
 impl WindowPart for TestsPanel {
@@ -559,3 +548,6 @@ mod tests {
         assert_eq!(scope_of(&board, &Node::Test(3)), None);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

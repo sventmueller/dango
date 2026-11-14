@@ -13,9 +13,9 @@ use super::{
     SCENARIO, answer_sheet, fixture_git, has, in_background, sheet_default_button, sheet_ready, sheet_text, wait_for,
     window_of, write,
 };
-use crate::git_panel::selftest as panel;
 use crate::selftest::{check, finish};
 use crate::window::WindowController;
+use ide_ui_git::selftest as panel;
 
 const HOOKED: &str = "hooked.txt";
 const HOOK_SAYS: &str = "lint: 2 problems in hooked.txt";

@@ -15,7 +15,7 @@ pub(super) fn rewind(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     tab.feed(QUESTION);

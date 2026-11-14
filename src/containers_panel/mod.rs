@@ -328,33 +328,6 @@ fn prune(controller: &WindowController, panel: &ContainersPanel) {
     );
 }
 
-/// The panel of `controller`'s window, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn panel_of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
-    of(controller)
-}
-
-/// Does the command titled `title`, for the self-test; whether there is one.
-#[cfg(feature = "selftest")]
-pub fn perform_titled(controller: &WindowController, title: &str) -> bool {
-    match COMMANDS.iter().find(|c| c.title() == title) {
-        Some(command) => {
-            perform(controller, command.tag());
-            true
-        }
-        None => false,
-    }
-}
-
-/// Whether the Containers menu's item titled `title` is enabled in `controller`'s window, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn enabled(controller: &WindowController, title: &str) -> bool {
-    COMMANDS
-        .iter()
-        .find(|c| c.title() == title)
-        .is_some_and(|c| validate(controller, &command_item(controller.mtm(), *c)))
-}
-
 #[cfg(test)]
 mod tests {
     use ide_docker::board::Look;
@@ -475,3 +448,8 @@ mod tests {
         );
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

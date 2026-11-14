@@ -18,9 +18,9 @@ use objc2_foundation::{NSRunLoop, NSRunLoopCommonModes, NSTimer};
 use super::super::git::sheet_ready;
 use super::super::helpers::{wait_until, wait_within};
 use super::{end, keys, walk, window_of};
-use crate::git_panel::selftest as git;
 use crate::selftest::check;
 use crate::window::{Panel, WindowController};
+use ide_ui_git::selftest as git;
 
 pub const CREDENTIALS: &str = "credentials.txt";
 /// An access key in the shape gitleaks' `aws-access-token` rule looks for; it opens nothing.
@@ -387,15 +387,15 @@ fn test_launch(root: &std::path::Path) -> Option<ide_acp::Launch> {
 fn prompt(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
-        crate::agent::set_test_register(register);
+        ide_ui_agent::set_test_register(register);
     }
-    crate::agent::set_test_launch(test_launch(&root));
-    let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
+    ide_ui_agent::set_test_launch(test_launch(&root));
+    let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
         check("an AI tab with the test agent opens", false, "");
         return open_folder(root);
     };
     let key = tab.key;
-    let live = move || crate::agent::all().into_iter().any(|t| t.key == key && t.is_live());
+    let live = move || ide_ui_agent::all().into_iter().any(|t| t.key == key && t.is_live());
     wait_until(live, move |ok| {
         check("the test agent's session opens", ok, "");
         let Some(controller) = window_of(&root) else { return };
@@ -410,7 +410,7 @@ fn prompt(root: PathBuf) {
         keys::type_keys(&window, PROMPT);
         let _ = keys::press(&window, RETURN.0, RETURN.1, NONE);
         let sent = move || {
-            crate::agent::all().into_iter().any(|t| {
+            ide_ui_agent::all().into_iter().any(|t| {
                 t.key == key
                     && t.snapshot()
                         .entries(&ide_thread::Lane::Main)

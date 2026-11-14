@@ -427,20 +427,6 @@ fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64) {
     CGContext::restore_g_state(c);
 }
 
-/// The header lines `view` shows, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown(view: &EditorTextView) -> Vec<usize> {
-    of(view).map(|s| s.ivars().shown.borrow().clone()).unwrap_or_default()
-}
-
-/// Clicks the header row of `view` at `y` from the top, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn click(view: &EditorTextView, y: f64) {
-    if let Some(sticky) = of(view) {
-        sticky.click_row(y);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::headers_over;
@@ -455,3 +441,8 @@ mod tests {
         assert_eq!(headers_over(&[(3, 9), (3, 6)], 4, 5), vec![3]);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

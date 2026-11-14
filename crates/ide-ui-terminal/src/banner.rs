@@ -91,9 +91,7 @@ impl Banner {
     pub fn hide(&self) {
         self.root.setHidden(true);
     }
-
-    #[cfg(feature = "selftest")]
-    pub fn shown(&self) -> Option<String> {
-        (!self.root.isHidden()).then(|| self.message.stringValue().to_string())
-    }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

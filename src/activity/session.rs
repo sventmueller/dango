@@ -38,9 +38,9 @@ pub(super) fn subagent_line(key: u64, sub: &Subagent, now: SystemTime, indent: b
     if sub.status != TaskStatus::Running {
         parts.push(task_status(sub.status).to_string());
     }
-    parts.push(crate::agent::elapsed(ran.max(sub.elapsed)));
+    parts.push(ide_ui_agent::elapsed(ran.max(sub.elapsed)));
     if sub.tokens > 0 {
-        parts.push(tf("{} Tokens", &[&crate::agent::tokens(sub.tokens)]));
+        parts.push(tf("{} Tokens", &[&ide_ui_agent::tokens(sub.tokens)]));
     }
     if let Some(tool) = &sub.last_tool {
         parts.push(tf("zuletzt {}", &[tool]));
@@ -73,7 +73,7 @@ pub(super) fn background_line(key: u64, item: &BackgroundItem, now: SystemTime, 
     let mut parts = vec![task_status(item.status).to_string()];
     let until = if ended { item.ended } else { Some(now) };
     if let Some((started, until)) = item.started.zip(until) {
-        parts.push(crate::agent::elapsed(until.duration_since(started).unwrap_or_default()));
+        parts.push(ide_ui_agent::elapsed(until.duration_since(started).unwrap_or_default()));
     }
     if let Some(last) = item
         .output

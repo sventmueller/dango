@@ -58,7 +58,7 @@ pub struct AppContext {
     pub browser: Rc<ide_ui_browser::State>,
     pub secrets: Secrets,
     #[cfg(feature = "dictation")]
-    pub dictation: Rc<crate::dictation::State>,
+    pub dictation: Rc<ide_ui_dictation::State>,
 }
 
 impl AppContext {

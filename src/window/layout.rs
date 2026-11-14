@@ -73,7 +73,7 @@ fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Opti
         }),
         TabKind::Agent => {
             let key = key?;
-            crate::agent::of_window(controller)
+            ide_ui_agent::of_window(controller)
                 .into_iter()
                 .find(|tab| tab.tab_key() == key)
                 .and_then(|tab| tab.session_id())
@@ -197,13 +197,13 @@ fn resume_agent(controller: &WindowController, root: &Path, session: &str) -> bo
         return crate::selftest::replay_agent(controller, session);
     }
     past_session(root, session)
-        .is_some_and(|(agent, resume)| crate::agent::open_agent(controller, agent, Some(resume)).is_some())
+        .is_some_and(|(agent, resume)| ide_ui_agent::open_agent(controller, agent, Some(resume)).is_some())
 }
 
 /// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
 /// sessions started in a terminal have no thread.
-pub(crate) fn past_session(root: &Path, session: &str) -> Option<(crate::agent::Agent, crate::agent::Resume)> {
-    let (resume, _) = crate::agent_panel::past_sessions(root, 500)
+pub(crate) fn past_session(root: &Path, session: &str) -> Option<(ide_ui_agent::Agent, ide_ui_agent::Resume)> {
+    let (resume, _) = ide_ui_agent::agent_panel::past_sessions(root, 500)
         .into_iter()
         .find(|(resume, _)| resume.session == session)?;
     let index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
@@ -211,8 +211,8 @@ pub(crate) fn past_session(root: &Path, session: &str) -> Option<(crate::agent::
         .thread
         .as_ref()
         .and_then(|id| index.get(id))
-        .map_or(crate::agent::Agent::Claude, |entry| {
-            crate::agent::Agent::of_thread(&entry.agent)
+        .map_or(ide_ui_agent::Agent::Claude, |entry| {
+            ide_ui_agent::Agent::of_thread(&entry.agent)
         });
     Some((agent, resume))
 }

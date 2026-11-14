@@ -7,7 +7,7 @@ use std::time::Duration;
 use super::agent::tab_of;
 use super::agent_actions::{index_of, titles};
 use super::{check, finish, helpers};
-use crate::agent::TabMenu;
+use ide_ui_agent::TabMenu;
 
 const NAME: &str = "own-agent";
 

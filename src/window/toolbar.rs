@@ -21,7 +21,7 @@ pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
         constant!(NSToolbarToggleSidebarItemIdentifier).to_owned(),
         constant!(NSToolbarSidebarTrackingSeparatorItemIdentifier).to_owned(),
         ns(crate::navigation::TOOLBAR_ID),
-        ns(crate::git_panel::TOOLBAR_ID),
+        ns(ide_ui_git::TOOLBAR_ID),
         constant!(NSToolbarFlexibleSpaceItemIdentifier).to_owned(),
         ns(QUICK_OPEN),
         ns(ACTIVITY),
@@ -34,7 +34,7 @@ pub fn make(controller: &WindowController, id: &str) -> Option<Retained<NSToolba
         ACTIVITY => Some(crate::activity::toolbar_item(controller)),
         QUICK_OPEN => Some(quick_open(controller)),
         _ if id == crate::navigation::TOOLBAR_ID => Some(crate::navigation::toolbar_item(controller)),
-        _ if id == crate::git_panel::TOOLBAR_ID => Some(crate::git_panel::toolbar_item(controller)),
+        _ if id == ide_ui_git::TOOLBAR_ID => Some(ide_ui_git::toolbar_item(controller)),
         _ => None,
     }
 }

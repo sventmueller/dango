@@ -22,7 +22,7 @@ struct Losses {
 
 impl Losses {
     fn of(controller: &WindowController) -> Losses {
-        let mut running = crate::agent::running_in(controller);
+        let mut running = ide_ui_agent::running_in(controller);
         running.extend(crate::terminal::running_in(controller));
         Losses {
             unsaved: crate::editor::unsaved_in(controller),

@@ -7,9 +7,9 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::ThreadTree;
-use crate::agent::{AcpAgent, Agent};
 use crate::util::ns;
 use crate::window::WindowController;
+use ide_ui_agent::{AcpAgent, Agent};
 
 /// The agents a worktree thread can run, in the order of the "In eigenem Worktree" menu, and whether each can be
 /// opened now, as the agents of the "+" menu are: the own agent once it has a model. The menu, its check and the
@@ -17,10 +17,10 @@ use crate::window::WindowController;
 pub fn agents() -> Vec<(Agent, bool)> {
     let presets = AcpAgent::presets()
         .into_iter()
-        .zip(crate::agent::preset_menu())
+        .zip(ide_ui_agent::preset_menu())
         .filter(|(agent, _)| agent.offered())
         .map(|(agent, (_, usable))| (Agent::Acp(agent), usable));
-    let own = (Agent::Own, crate::own_agent::default_choice().is_some());
+    let own = (Agent::Own, ide_ui_agent::own_agent::default_choice().is_some());
     std::iter::once((Agent::Claude, true))
         .chain(presets)
         .chain(std::iter::once(own))
@@ -34,7 +34,7 @@ pub fn agent_usable(index: usize) -> bool {
 
 /// Whether the window can start a worktree thread: its folder is trusted and a repository with a commit.
 pub fn can_start(controller: &WindowController) -> bool {
-    controller.is_trusted() && crate::git_panel::has_commit(controller)
+    controller.is_trusted() && ide_ui_git::has_commit(controller)
 }
 
 /// Asks for the title of a thread of the agent at `index` of [`agents`], then makes its worktree and opens the
@@ -77,7 +77,7 @@ fn start(controller: &WindowController, title: &str, agent: &Agent) {
     } else {
         title.to_string()
     };
-    crate::git_panel::create_tree(controller, title, agent.id().to_string());
+    ide_ui_git::create_tree(controller, title, agent.id().to_string());
 }
 
 /// Opens an AI tab whose session runs the thread's agent in the worktree of `tree`.
@@ -85,10 +85,10 @@ pub fn open_thread(controller: &WindowController, tree: &ThreadTree) {
     let agent = Agent::of_thread(&tree.agent);
     #[cfg(feature = "selftest")]
     if agent == Agent::Claude && std::env::var_os("IDE_SELFTEST").is_some() {
-        crate::agent::open_replay_in(controller, tree.path.clone(), &tree.title);
+        ide_ui_agent::open_replay_in(controller, tree.path.clone(), &tree.title);
         return;
     }
-    if let Some(tab) = crate::agent::open_agent_in(controller, agent, tree.path.clone(), Some(&tree.title)) {
+    if let Some(tab) = ide_ui_agent::open_agent_in(controller, agent, tree.path.clone(), Some(&tree.title)) {
         tab.focus_composer();
     }
 }

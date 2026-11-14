@@ -48,12 +48,7 @@ pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<
     Some(view)
 }
 
-/// The number of pages the PDF tab `view` shows, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn page_count(view: &NSView) -> usize {
-    // SAFETY: Only sent to a PDFView, whose document answers its page count.
-    unsafe {
-        let document: Option<Retained<AnyObject>> = msg_send![view, document];
-        document.map_or(0, |document| msg_send![&*document, pageCount])
-    }
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

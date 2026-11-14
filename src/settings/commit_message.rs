@@ -14,9 +14,9 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
-use crate::git_panel::message::source::{self, CLAUDE, CONSENT, MODEL};
-use crate::own_agent::{self, ModelChoice};
 use crate::util::{guarded, ns, set_action};
+use ide_ui_agent::own_agent::{self, ModelChoice};
+use ide_ui_git::message::source::{self, CLAUDE, CONSENT, MODEL};
 
 /// The width of the model field, as in the row for new threads.
 const MODEL_WIDTH: f64 = 260.0;
@@ -188,7 +188,7 @@ impl CommitMessageSettings {
             .setStringValue(&ns(choice.as_ref().map_or("", |c| c.model.as_str())));
         views.model.setEnabled(index > 0);
         // Without a provider, claude writes with this model; the field says so instead of standing empty.
-        let automatic = (index == 0).then(|| ns(crate::git_panel::message::CLAUDE_MODEL));
+        let automatic = (index == 0).then(|| ns(ide_ui_git::message::CLAUDE_MODEL));
         views.model.setPlaceholderString(automatic.as_deref());
         let consent = settings.get(&CONSENT);
         views.allowed.setStringValue(&ns(&allowed_text(&consent, &endpoints)));
@@ -299,7 +299,7 @@ pub mod selftest {
     /// Takes every permission back, as the button does.
     pub fn revoke() {
         if let Some(shown) = super::with_shown(|shown| shown.borrow().clone()) {
-            crate::git_panel::message::source::revoke_all();
+            ide_ui_git::message::source::revoke_all();
             shown.fill();
         }
     }

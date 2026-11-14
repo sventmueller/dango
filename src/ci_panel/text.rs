@@ -47,12 +47,12 @@ pub fn word(state: State) -> &'static str {
 /// How long ago `seconds` since 1970 was.
 pub fn ago(seconds: i64) -> String {
     let at = UNIX_EPOCH + Duration::from_secs(u64::try_from(seconds).unwrap_or(0));
-    crate::agent::age(at.min(SystemTime::now()))
+    ide_ui_agent::age(at.min(SystemTime::now()))
 }
 
 /// How long something took that ran for `seconds`.
 pub fn took(seconds: i64) -> String {
-    crate::agent::elapsed(Duration::from_secs(u64::try_from(seconds).unwrap_or(0)))
+    ide_ui_agent::elapsed(Duration::from_secs(u64::try_from(seconds).unwrap_or(0)))
 }
 
 /// Where the token came from, in words.

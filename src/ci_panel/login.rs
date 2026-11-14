@@ -147,12 +147,6 @@ fn copy(text: &str) {
     pasteboard.setString_forType(&ns(text), constant!(NSPasteboardTypeString));
 }
 
-/// What the self-test would have opened or copied, in order.
-#[cfg(feature = "selftest")]
-pub fn opened() -> Vec<String> {
-    crate::context::app().ci_panels.noted.borrow().clone()
-}
-
 /// Waits `duration` in small steps; false once `cancel` is set.
 fn wait(duration: Duration, cancel: &AtomicBool) -> bool {
     let mut left = duration;
@@ -454,3 +448,8 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(1));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

@@ -236,16 +236,6 @@ impl BlameColumn {
             blame::show_popover(&editor, entry.line, self, rect);
         }
     }
-
-    /// The entries on screen as their first line and text, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn shown(&self) -> Vec<(usize, String)> {
-        self.ivars()
-            .editor
-            .load()
-            .map(|editor| self.entries(&editor).into_iter().map(|e| (e.line, e.text)).collect())
-            .unwrap_or_default()
-    }
 }
 
 /// An entry's text: the author and the age, or that the lines are not committed.
@@ -279,8 +269,7 @@ pub fn redraw(view: &EditorTextView) {
     }
 }
 
-/// The column of `view`, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn of(view: &EditorTextView) -> Option<Retained<BlameColumn>> {
-    column_of(view)
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

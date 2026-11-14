@@ -13,9 +13,9 @@ use splat_i18n::t;
 
 use super::agent::{DRAWN, appearance, controller_of, picture, tab_of, view_picture};
 use super::{check, finish, helpers};
-use crate::agent::AgentTab;
-use crate::agent::plan::{self, PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
 use crate::util::constant;
+use ide_ui_agent::AgentTab;
+use ide_ui_agent::plan::{self, PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
 
 const NAME: &str = "agent";
 const SESSION: &str = "22222222-2222-4222-8222-222222222222";
@@ -111,7 +111,7 @@ pub fn run(root: PathBuf, requests: u64, first: u64, then: fn(PathBuf, u64, u64)
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     tab.feed(&start_frames());

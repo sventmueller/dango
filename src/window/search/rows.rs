@@ -134,12 +134,6 @@ impl ResultCell {
     }
 }
 
-/// The replace button of a row the self-test asks for.
-#[cfg(feature = "selftest")]
-pub(super) fn button_of(view: &NSView) -> Option<Retained<NSButton>> {
-    view.downcast_ref::<ResultCell>()?.ivars().button.borrow().clone()
-}
-
 /// A file row: its icon, name, folder and how many matches it has. VoiceOver reads the name with the count and folder.
 pub(super) fn file_row(
     mtm: MainThreadMarker,
@@ -387,11 +381,7 @@ fn strike(
     text.insertAttributedString_atIndex(&added, range.location + range.length);
 }
 
-/// What VoiceOver reads for a row made here: the one text of the row that has a label of its own.
 #[cfg(feature = "selftest")]
-pub(super) fn spoken(view: &NSView) -> Option<String> {
-    view.subviews().iter().find_map(|subview| {
-        let field = subview.downcast_ref::<NSTextField>()?;
-        field.accessibilityLabel().map(|label| label.to_string())
-    })
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;

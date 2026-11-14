@@ -23,16 +23,16 @@ pub(super) fn panel(root: PathBuf, key: u64) {
     };
     controller.activate_panel(Panel::Agents);
     let row_of = |title: &str| {
-        crate::agent_panel::inspect(&controller)
+        ide_ui_agent::agent_panel::inspect(&controller)
             .and_then(|seen| seen.rows.iter().position(|(_, _, t)| t == title))
             .and_then(|n| isize::try_from(n).ok())
     };
-    let tabs = crate::agent::all().len();
+    let tabs = ide_ui_agent::all().len();
     let Some(row) = row_of(&tab.title()) else {
         check("the AI panel lists the session", false, tab.title());
         return finish(NAME);
     };
-    let menu = crate::agent_panel::session_menu(&controller, row);
+    let menu = ide_ui_agent::agent_panel::session_menu(&controller, row);
     let shown = menu.as_ref().map(|m| titles(m)).unwrap_or_default();
     check(
         "the context menu of a bookmarked session renames, removes the bookmark, archives and shows the archive",
@@ -51,20 +51,20 @@ pub(super) fn panel(root: PathBuf, key: u64) {
     }
     answer_when_shown(NSAlertFirstButtonReturn, Some("Im Panel benannt"));
     let row = row_of(&tab.title()).unwrap_or(row);
-    if let Some(menu) = crate::agent_panel::session_menu(&controller, row) {
+    if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, row) {
         menu.performActionForItemAtIndex(0);
     }
     check(
         "the panel's menu takes the bookmark away and renames the open session",
-        !crate::agent_panel::is_bookmarked(tab.thread_id()) && tab.title() == "Im Panel benannt",
+        !ide_ui_agent::agent_panel::is_bookmarked(tab.thread_id()) && tab.title() == "Im Panel benannt",
         tab.title(),
     );
     let row = row_of("Im Panel benannt").unwrap_or(row);
-    if let Some(menu) = crate::agent_panel::session_menu(&controller, row) {
+    if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, row) {
         menu.performActionForItemAtIndex(2);
     }
     let was_archived = archived(tab.thread_id());
-    if let Some(menu) = crate::agent_panel::session_menu(&controller, -1) {
+    if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, -1) {
         let only = titles(&menu);
         menu.performActionForItemAtIndex(0);
         check(
@@ -74,22 +74,22 @@ pub(super) fn panel(root: PathBuf, key: u64) {
         );
     }
     if let Some(row) = row_of("Im Panel benannt") {
-        let back = crate::agent_panel::session_menu(&controller, row)
+        let back = ide_ui_agent::agent_panel::session_menu(&controller, row)
             .map(|m| titles(&m))
             .unwrap_or_default();
-        if let Some(menu) = crate::agent_panel::session_menu(&controller, row) {
+        if let Some(menu) = ide_ui_agent::agent_panel::session_menu(&controller, row) {
             menu.performActionForItemAtIndex(2);
         }
-        crate::agent_panel::open_session_row(&controller, usize::try_from(row).unwrap_or(0));
+        ide_ui_agent::agent_panel::open_session_row(&controller, usize::try_from(row).unwrap_or(0));
         check(
             "the archive's menu brings a session back, and a click on an open session shows its tab",
             back.get(2).map(String::as_str) == Some("Aus dem Archiv holen")
                 && !archived(tab.thread_id())
-                && crate::agent::all().len() == tabs,
+                && ide_ui_agent::all().len() == tabs,
             format!("{back:?}"),
         );
     }
-    let leave = crate::agent_panel::session_menu(&controller, -1);
+    let leave = ide_ui_agent::agent_panel::session_menu(&controller, -1);
     let shown = leave.as_ref().map(|m| titles(m)).unwrap_or_default();
     if let Some(menu) = &leave {
         menu.performActionForItemAtIndex(0);
@@ -108,7 +108,7 @@ fn no_model(root: PathBuf, key: u64) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(own) = crate::agent::open_own(&controller, None) else {
+    let Some(own) = ide_ui_agent::open_own(&controller, None) else {
         return finish(NAME);
     };
     let own = own.key;
@@ -136,12 +136,12 @@ fn signed_out(root: PathBuf, key: u64) {
         &answer,
         r#"{"commands": [], "models": [], "account": {"tokenSource": "none"}}"#,
     );
-    let before = crate::agent::all().len();
+    let before = ide_ui_agent::all().len();
     tab.new_session();
-    let Some(new) = crate::agent::all()
+    let Some(new) = ide_ui_agent::all()
         .last()
         .map(|t| t.key)
-        .filter(|_| crate::agent::all().len() > before)
+        .filter(|_| ide_ui_agent::all().len() > before)
     else {
         check("a new session opens a tab", false, "");
         return finish(NAME);
@@ -186,7 +186,7 @@ fn reopen(root: PathBuf, key: u64) {
     if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
         controller.close_tab(id);
     }
-    let project = crate::agent_panel::claude_config_dir()
+    let project = ide_ui_agent::agent_panel::claude_config_dir()
         .join("projects")
         .join(ide_claude::history::project_folder(&root));
     let _ = std::fs::create_dir_all(&project);
@@ -198,7 +198,7 @@ fn reopen(root: PathBuf, key: u64) {
     let listed = move || {
         controller_of(&folder).is_some_and(|controller| {
             controller.activate_panel(Panel::Agents);
-            let rows = crate::agent_panel::inspect(&controller)
+            let rows = ide_ui_agent::agent_panel::inspect(&controller)
                 .map(|seen| seen.rows)
                 .unwrap_or_default();
             rows.iter()
@@ -211,7 +211,7 @@ fn reopen(root: PathBuf, key: u64) {
             return finish(NAME);
         };
         controller.activate_panel(Panel::Agents);
-        let rows = crate::agent_panel::inspect(&controller)
+        let rows = ide_ui_agent::agent_panel::inspect(&controller)
             .map(|seen| seen.rows)
             .unwrap_or_default();
         let ours = rows
@@ -227,19 +227,19 @@ fn reopen(root: PathBuf, key: u64) {
             return finish(NAME);
         };
         let _ = std::fs::remove_file(stand_in().dir.join("args.txt"));
-        crate::agent_panel::open_session_row(&controller, ours);
+        ide_ui_agent::agent_panel::open_session_row(&controller, ours);
         soon(
             "the closed session opens again from the panel",
             || {
                 stand_in().args().iter().any(|a| *a == format!("--resume={SESSION}"))
-                    && crate::agent::all()
+                    && ide_ui_agent::all()
                         .iter()
                         .any(|t| t.session_id().as_deref() == Some(SESSION) && t.is_live())
             },
             move || {
                 let _ = std::fs::remove_file(stand_in().dir.join("args.txt"));
                 if let Some(controller) = controller_of(&root) {
-                    crate::agent_panel::open_session_row(&controller, terminal);
+                    ide_ui_agent::agent_panel::open_session_row(&controller, terminal);
                 }
                 soon(
                     "the terminal's session opens with its conversation",
@@ -248,7 +248,7 @@ fn reopen(root: PathBuf, key: u64) {
                             .args()
                             .iter()
                             .any(|a| *a == format!("--resume={TERMINAL_SESSION}"))
-                            && crate::agent::all().iter().any(|t| {
+                            && ide_ui_agent::all().iter().any(|t| {
                                 t.is_live()
                                     && t.entry_ids(
                                         |k| matches!(k, EntryKind::UserMessage(m) if m.text == "Aus dem Terminal"),
@@ -273,7 +273,7 @@ fn reopen(root: PathBuf, key: u64) {
 
 /// The code of a prompt the app took no checkpoint before goes back through the CLI's own file history.
 fn cli_rewind() {
-    let tab = crate::agent::all()
+    let tab = ide_ui_agent::all()
         .into_iter()
         .find(|t| t.session_id().as_deref() == Some(TERMINAL_SESSION));
     let prompt = tab.as_ref().and_then(|t| {
@@ -321,7 +321,7 @@ fn untrusted() {
         check("the untrusted folder opens beside", false, "");
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_tab(&controller, None) else {
+    let Some(tab) = ide_ui_agent::open_tab(&controller, None) else {
         return finish(NAME);
     };
     let shown = tab.problem_texts();

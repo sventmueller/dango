@@ -369,20 +369,7 @@ pub(super) fn forget(folder: &Path) {
     });
 }
 
-/// The servers the symbol search of `folder` holds, each with its language, whether it runs, and how many editors use
-/// it, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn held(folder: &Path) -> Vec<(String, bool, usize)> {
-    let ids = with_leases(|leases| leases.borrow().get(folder).map(|l| l.slots.clone()).unwrap_or_default());
-    ids.into_iter()
-        .filter_map(|id| slot(folder, id))
-        .map(|slot| {
-            let running = matches!(&*slot.state.borrow(), State::Running(server) if server.status() == Status::Running);
-            (
-                slot.language.name().to_string(),
-                running,
-                super::views_of(folder, slot.id).len(),
-            )
-        })
-        .collect()
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

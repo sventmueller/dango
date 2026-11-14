@@ -24,9 +24,9 @@ use splat_i18n::t;
 
 use super::helpers::wait_until;
 use super::{check, finish, helpers, snapshot};
-use crate::dictation::selftest::{self as dictation, Answer};
 use crate::util::{constant, main_on_run_loop};
 use crate::window::{self, WindowController};
+use ide_ui_dictation::selftest::{self as dictation, Answer};
 
 const SCENARIO: &str = "dictation";
 const NOTES: &str = "notes.md";
@@ -162,7 +162,7 @@ fn first_dictation() {
 fn editor_listening(ok: bool, target: Target) {
     check(
         "the key Lowspeak keeps is taken over once and kept as the app's own",
-        crate::dictation::has_key(ApiProvider::OpenAi),
+        ide_ui_dictation::has_key(ApiProvider::OpenAi),
         "",
     );
     let seen = dictation::seen(target);
@@ -223,7 +223,7 @@ fn composer() {
     let Some(controller) = controller() else {
         return finish(SCENARIO);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         check("an AI tab opens", false, "");
         return finish(SCENARIO);
     };
@@ -358,7 +358,7 @@ fn failure() {
                         format!("{seen:?}, {language}: {lowspeak:?}"),
                     );
                     picture("dictation-editor-failed-dark");
-                    super::dictation_more::run(target, settings);
+                    super::dictation_fn::run(target, settings);
                 },
             );
         },
@@ -385,10 +385,10 @@ fn settings() {
                 if let Some(window) = crate::settings::window() {
                     snapshot(&window, "dictation-settings-dark");
                 }
-                super::dictation_more::settings_buttons();
+                super::dictation_failures::settings_buttons();
             });
         } else {
-            super::dictation_more::settings_buttons();
+            super::dictation_failures::settings_buttons();
         }
     });
 }

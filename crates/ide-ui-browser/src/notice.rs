@@ -144,9 +144,7 @@ impl Notice {
                 .activateFileViewerSelectingURLs(&NSArray::from_retained_slice(std::slice::from_ref(file)));
         }
     }
-
-    #[cfg(feature = "selftest")]
-    pub fn text(&self) -> Option<String> {
-        (!self.view.isHidden()).then(|| self.text.stringValue().to_string())
-    }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

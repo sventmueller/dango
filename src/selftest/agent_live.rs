@@ -9,7 +9,7 @@ use splat_i18n::t;
 
 use super::agent::{DRAWN, controller_of, picture, tab_of};
 use super::{check, finish, helpers};
-use crate::agent::AgentTab;
+use ide_ui_agent::AgentTab;
 
 const NAME: &str = "agent-live";
 /// How long a real turn of haiku may take.
@@ -20,7 +20,7 @@ const TURN: Duration = Duration::from_secs(100);
 pub fn live() {
     helpers::open_project(NAME, "live-project", &[], |controller| {
         let root = helpers::root("live-project");
-        let Some(tab) = crate::agent::open_tab(&controller, None) else {
+        let Some(tab) = ide_ui_agent::open_tab(&controller, None) else {
             return finish(NAME);
         };
         tab.use_model("haiku");
@@ -46,7 +46,7 @@ fn allowed_and_done(key: u64) -> bool {
     let Some(tab) = tab_of(key) else { return true };
     let thread = tab.snapshot();
     if let Some(request) = thread.pending_requests().first() {
-        tab.permission(request.id.get(), crate::agent::ALLOW_ONCE, None);
+        tab.permission(request.id.get(), ide_ui_agent::ALLOW_ONCE, None);
         return false;
     }
     answered_with(&tab, "done")
@@ -149,7 +149,7 @@ fn live_rewind(root: PathBuf, key: u64) {
 }
 
 fn rewind_late() {
-    let seen = crate::agent::all().first().map(|tab| tab.inspect().visible.join(" | "));
+    let seen = ide_ui_agent::all().first().map(|tab| tab.inspect().visible.join(" | "));
     check("a live rewind finishes in time", false, seen.unwrap_or_default());
     finish(NAME);
 }
@@ -190,7 +190,7 @@ fn live_rewound(root: &Path, tab: &AgentTab, original: &str) {
     helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             picture(&controller, "agent-live-rewind");
-            crate::agent::window_closed(&controller);
+            ide_ui_agent::window_closed(&controller);
         }
         live_end();
     });

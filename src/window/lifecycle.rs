@@ -28,8 +28,8 @@ impl Part {
 
 const PARTS: &[Part] = &[
     Part {
-        attached: crate::git_panel::attach,
-        trust_changed: crate::git_panel::trust_changed,
+        attached: ide_ui_git::attach,
+        trust_changed: ide_ui_git::trust_changed,
         ..Part::NONE
     },
     Part {
@@ -38,11 +38,11 @@ const PARTS: &[Part] = &[
         closed: crate::ci_panel::window_closed,
     },
     Part {
-        attached: crate::agent_panel::attach,
+        attached: ide_ui_agent::agent_panel::attach,
         ..Part::NONE
     },
     Part {
-        closed: crate::agent::window_closed,
+        closed: ide_ui_agent::window_closed,
         ..Part::NONE
     },
     Part {

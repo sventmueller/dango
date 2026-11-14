@@ -61,19 +61,19 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
 
 pub fn run() {
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
-        crate::agent::set_test_register(register);
+        ide_ui_agent::set_test_register(register);
     }
     let made = helpers::make_project(PROJECT, &[("README.md", "# ACP project\n")]);
-    crate::agent::set_test_launch(made.ok().and_then(|root| test_launch("basic", &root)));
+    ide_ui_agent::set_test_launch(made.ok().and_then(|root| test_launch("basic", &root)));
     helpers::open_project(NAME, PROJECT, &[], |controller| {
         let root = helpers::root(PROJECT);
-        let names: Vec<String> = crate::agent::preset_menu().into_iter().map(|(n, _)| n).collect();
+        let names: Vec<String> = ide_ui_agent::preset_menu().into_iter().map(|(n, _)| n).collect();
         check(
             "the new tab menu offers the ACP agents",
             names == ["Codex", "Gemini", "Antigravity", "OpenCode"],
             names.join(", "),
         );
-        let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
+        let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
             return finish(NAME);
         };
         let key = tab.key;
@@ -157,7 +157,7 @@ fn permission(root: PathBuf, key: u64) {
             return finish(NAME);
         };
         picture(&controller, "acp-permission");
-        tab.permission(id, crate::agent::ALLOW_ONCE, None);
+        tab.permission(id, ide_ui_agent::ALLOW_ONCE, None);
         soon(
             "the turn ends after the permission",
             move || {
@@ -172,7 +172,7 @@ fn permission(root: PathBuf, key: u64) {
     drop(controller);
 }
 
-fn tool_status(tab: &crate::agent::AgentTab, id: &str) -> Option<(ToolStatus, Option<ToolOutput>)> {
+fn tool_status(tab: &ide_ui_agent::AgentTab, id: &str) -> Option<(ToolStatus, Option<ToolOutput>)> {
     tab.snapshot().entries(&Lane::Main).iter().find_map(|e| match &e.kind {
         EntryKind::ToolCall(call) if call.call_id == id => Some((call.status, call.output.clone())),
         _ => None,
@@ -263,15 +263,15 @@ fn code_rewind(root: PathBuf, key: u64) {
         move || {
             let readme = root.join("README.md");
             let _ = std::fs::write(&readme, "# Changed by hand\n");
-            crate::agent::answer_alerts(&[NSAlertFirstButtonReturn, NSAlertFirstButtonReturn]);
+            ide_ui_agent::answer_alerts(&[NSAlertFirstButtonReturn, NSAlertFirstButtonReturn]);
             if let Some(tab) = tab_of(key) {
                 tab.rewind(prompt, 2);
             }
             soon(
                 "the agent's edit is taken back",
-                move || !edited.exists() && crate::agent::alerts_seen().len() == 2,
+                move || !edited.exists() && ide_ui_agent::alerts_seen().len() == 2,
                 move || {
-                    let seen = crate::agent::alerts_seen();
+                    let seen = ide_ui_agent::alerts_seen();
                     check(
                         "rewinding asks about the user's own changes",
                         seen.first().is_some_and(|q| q.contains("selbst geändert"))
@@ -316,7 +316,7 @@ fn remembered(root: PathBuf, key: u64) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(second) = crate::agent::open_preset(&controller, GEMINI) else {
+    let Some(second) = ide_ui_agent::open_preset(&controller, GEMINI) else {
         return finish(NAME);
     };
     let other = second.key;
@@ -354,7 +354,7 @@ fn cancel(root: PathBuf, key: u64) {
         },
         move || {
             if let Some(tab) = tab_of(key) {
-                tab.stop_turn(crate::agent::Stop::Button);
+                tab.stop_turn(ide_ui_agent::Stop::Button);
             }
             soon(
                 "the turn stops",
@@ -382,7 +382,7 @@ fn panel(root: PathBuf) {
         return finish(NAME);
     };
     controller.activate_panel(Panel::Agents);
-    let seen = crate::agent_panel::inspect(&controller);
+    let seen = ide_ui_agent::agent_panel::inspect(&controller);
     let rows = seen.as_ref().map(|s| s.rows.clone()).unwrap_or_default();
     check(
         "the session list shows the agent's session as an AI session, without the agent's name",
@@ -456,8 +456,8 @@ fn sign_in(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    crate::agent::set_test_launch(test_launch("auth", &root));
-    let Some(tab) = crate::agent::open_preset(&controller, CODEX) else {
+    ide_ui_agent::set_test_launch(test_launch("auth", &root));
+    let Some(tab) = ide_ui_agent::open_preset(&controller, CODEX) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -493,8 +493,8 @@ fn usage(root: PathBuf, index: usize) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    crate::agent::set_test_launch(test_launch(scenario, &root));
-    let Some(tab) = crate::agent::open_preset(&controller, CODEX) else {
+    ide_ui_agent::set_test_launch(test_launch(scenario, &root));
+    let Some(tab) = ide_ui_agent::open_preset(&controller, CODEX) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -521,7 +521,7 @@ fn usage(root: PathBuf, index: usize) {
                         },
                         status,
                     );
-                    let tip = crate::agent::token_text(tab.snapshot().usage()).map(|(_, tip)| tip);
+                    let tip = ide_ui_agent::token_text(tab.snapshot().usage()).map(|(_, tip)| tip);
                     check(
                         "ACP token totals keep their reported breakdown in the tooltip",
                         tip.as_deref().is_some_and(|s| {
@@ -546,8 +546,8 @@ fn missing(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    crate::agent::set_test_launch(None);
-    let Some(tab) = crate::agent::open_preset(&controller, OPENCODE) else {
+    ide_ui_agent::set_test_launch(None);
+    let Some(tab) = ide_ui_agent::open_preset(&controller, OPENCODE) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -567,7 +567,7 @@ fn missing(root: PathBuf) {
                     return finish(NAME);
                 };
                 picture(&controller, "acp-missing");
-                crate::agent::window_closed(&controller);
+                ide_ui_agent::window_closed(&controller);
                 end();
             });
         },

@@ -206,7 +206,7 @@ impl StoredRules {
                 vec![
                     crate::app::display_path(&row.project),
                     row.rule.clone(),
-                    crate::agent::scope_name(row.scope.destination()),
+                    ide_ui_agent::scope_name(row.scope.destination()),
                 ]
             })
             .collect()

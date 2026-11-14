@@ -211,7 +211,7 @@ impl WindowController {
         if let Some(tab) = self.tab_of_document(id) {
             tab.mark_focused(id);
             self.select(&tab);
-            crate::agent::show_pending(self);
+            ide_ui_agent::show_pending(self);
         }
     }
 

@@ -116,12 +116,6 @@ impl Sheet {
         self.spinner.setHidden(true);
         self.button.setTitle(&ns(t("OK")));
     }
-
-    /// What the sheet says now.
-    #[cfg(feature = "selftest")]
-    pub fn text(&self) -> String {
-        self.label.stringValue().to_string()
-    }
 }
 
 fn panel(mtm: MainThreadMarker) -> Retained<NSWindow> {
@@ -140,3 +134,6 @@ fn panel(mtm: MainThreadMarker) -> Retained<NSWindow> {
     unsafe { panel.setReleasedWhenClosed(false) };
     panel
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

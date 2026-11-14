@@ -27,7 +27,7 @@ pub(super) fn squeezed(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     tab.feed(&squeezed_frame(
@@ -84,7 +84,7 @@ fn long(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     let recording = long_session();
@@ -120,8 +120,8 @@ fn long(root: PathBuf) {
     );
     check(
         "a finished session would notify while unseen",
-        crate::agent::notifications_posted() > 0,
-        format!("{}", crate::agent::notifications_posted()),
+        ide_ui_agent::notifications_posted() > 0,
+        format!("{}", ide_ui_agent::notifications_posted()),
     );
     finish(NAME);
 }

@@ -119,12 +119,6 @@ impl Suggestions {
         Some((item, self.range.borrow().clone()))
     }
 
-    /// The labels shown, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn labels(&self) -> Vec<String> {
-        self.items.borrow().iter().map(|i| i.label.clone()).collect()
-    }
-
     fn draw(&self) {
         for view in self.column.arrangedSubviews().iter() {
             self.column.removeArrangedSubview(&view);
@@ -169,3 +163,6 @@ impl Suggestions {
         ui::view(&frame)
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

@@ -100,22 +100,6 @@ impl Agents {
         button.setContentTintColor(Some(&NSColor::linkColor()));
         button
     }
-
-    /// The titles of the "new session" menu, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn menu_titles(&self) -> Vec<String> {
-        session_menu(&self.target)
-            .itemArray()
-            .iter()
-            .map(|i| {
-                if i.isSeparatorItem() {
-                    "—".to_string()
-                } else {
-                    i.title().to_string()
-                }
-            })
-            .collect()
-    }
 }
 
 /// Whether Claude's own program is there; while the login shell's environment is still read, it counts as there.
@@ -171,3 +155,6 @@ fn session_menu(target: &Target) -> Retained<NSMenu> {
     menu.addItem(&manage);
     menu
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

@@ -680,18 +680,7 @@ impl DiffTab {
     }
 }
 
-/// The diff tab showing `key` in `controller`'s window.
 #[cfg(feature = "selftest")]
-pub fn find(controller: &(impl AsWindow + ?Sized), key: &str) -> Option<Retained<DiffTab>> {
-    let controller = &controller.as_window();
-    live_tabs().into_iter().find(|tab| {
-        let ivars = tab.ivars();
-        let own = match (&ivars.since, &ivars.commit) {
-            (_, Some(Fixed::Commit(hash))) => commit_key(hash, &ivars.path),
-            (_, Some(Fixed::Stash(hash, _))) => stash_key(hash, &ivars.path),
-            (Some(_), None) => since_key(&ivars.repo_root, &ivars.path),
-            (None, None) => self::key(&ivars.path, ivars.staged),
-        };
-        own == key && ivars.controller == *controller
-    })
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

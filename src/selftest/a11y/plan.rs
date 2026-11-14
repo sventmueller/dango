@@ -10,10 +10,10 @@ use objc2_app_kit::{NSEventModifierFlags, NSView, NSWindow};
 
 use super::super::agent_plan::start_frames;
 use super::{keys, window_of};
-use crate::agent::AgentTab;
-use crate::agent::plan;
 use crate::selftest::check;
 use crate::selftest::helpers::after;
+use ide_ui_agent::AgentTab;
+use ide_ui_agent::plan;
 
 /// How long the timeline takes to build a card it was just fed, which it tells nothing about.
 const SETTLE: Duration = Duration::from_millis(600);
@@ -24,7 +24,7 @@ const CARD: &str = "Card passage by keyboard";
 /// Opens an AI tab that waits for a plan's approval, then the comments, then `then`.
 pub fn start(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = window_of(&root) else { return };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         check("an AI tab with a plan opens", false, "");
         return then(root);
     };
@@ -35,7 +35,7 @@ pub fn start(root: PathBuf, then: fn(PathBuf)) {
 }
 
 fn tab_of(key: u64) -> Option<std::rc::Rc<AgentTab>> {
-    crate::agent::all().into_iter().find(|tab| tab.key == key)
+    ide_ui_agent::all().into_iter().find(|tab| tab.key == key)
 }
 
 /// The plan of the tab's card, and its comments: what each quotes and says.

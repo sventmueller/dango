@@ -136,12 +136,6 @@ pub fn shift(state: &mut ViewState, change: &Change) {
     state.tokens.retain_mut(|painted| follow(&mut painted.range, change));
 }
 
-#[cfg(feature = "selftest")]
-pub fn set_diagnostics(view: &EditorTextView, diagnostics: &[Diagnostic]) {
-    let source = super::main_slot(view);
-    set_diagnostics_from(view, source, diagnostics);
-}
-
 /// Shows `diagnostics` of the server of slot `source` in `view`, in place of what that server sent before; the other
 /// servers' stay.
 pub fn set_diagnostics_from(view: &EditorTextView, source: u64, diagnostics: &[Diagnostic]) {
@@ -486,3 +480,8 @@ mod tests {
         assert_eq!(token_of("keyword"), None);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

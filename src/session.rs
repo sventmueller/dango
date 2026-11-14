@@ -91,12 +91,6 @@ pub fn remember() {
     }
 }
 
-/// What the record holds now, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn recorded() -> Vec<WindowRecord> {
-    State::load_user().get(&OPEN_WINDOWS)
-}
-
 /// Opens the windows of the last run with their tabs if the user wants them back, and in any case every document a
 /// crash left unsaved, each window with a note of how many came back; how many windows opened.
 pub fn restore(mtm: MainThreadMarker) -> usize {
@@ -467,3 +461,8 @@ mod tests {
         assert_eq!(restored_text(3), tf("{} Dokumente wiederhergestellt", &["3"]));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

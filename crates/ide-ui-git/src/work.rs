@@ -32,16 +32,6 @@ pub fn git() -> Option<Git> {
     Some(GIT.get_or_init(|| Git::new(Supervisor::global(), environment)).clone())
 }
 
-/// Keeps the user's own git configuration, such as signing or hooks paths, out of a self-test.
-#[cfg(feature = "selftest")]
-fn for_selftest(mut environment: Vec<(String, String)>) -> Vec<(String, String)> {
-    if std::env::var_os("IDE_SELFTEST").is_some() {
-        environment.push(("GIT_CONFIG_GLOBAL".into(), "/dev/null".into()));
-        environment.push(("GIT_CONFIG_NOSYSTEM".into(), "1".into()));
-    }
-    environment
-}
-
 #[cfg(not(feature = "selftest"))]
 fn for_selftest(environment: Vec<(String, String)>) -> Vec<(String, String)> {
     environment
@@ -78,3 +68,8 @@ pub fn long<T: Send + 'static, D: FnOnce(Option<T>) + Send + 'static>(
         }
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;

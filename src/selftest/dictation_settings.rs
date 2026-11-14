@@ -11,10 +11,10 @@ use objc2_foundation::{NSArray, NSString};
 use super::check;
 use super::helpers::wait_until;
 use super::settings_pages::{act, control};
-use crate::dictation::choices;
-use crate::dictation::selftest as dictation;
 use crate::settings::dictation::LOCAL;
 use crate::util::ns;
+use ide_ui_dictation::choices;
+use ide_ui_dictation::selftest as dictation;
 
 const MODEL: LocalModel = LocalModel::Tiny;
 const LANGUAGE: Language = Language::Fr;
@@ -25,7 +25,7 @@ pub fn run() {
     let (offered, _) = crate::settings::dictation_rows();
     let took = control(sel!(ideDictationLowspeakChoices:), Some(1)).is_some_and(|b| act(&b));
     let (still_offered, _) = crate::settings::dictation_rows();
-    let lowspeak = crate::dictation::lowspeak_choices();
+    let lowspeak = ide_ui_dictation::lowspeak_choices();
     check(
         "the settings offer Lowspeak's choices once and take them over",
         offered && took && !still_offered && choices::current() == lowspeak,
@@ -94,15 +94,15 @@ fn set_each() {
 fn download() {
     let (_, shown) = crate::settings::dictation_rows();
     let started =
-        !crate::dictation::installed(MODEL) && control(sel!(ideDictationDownload:), None).is_some_and(|b| act(&b));
-    let shows = || crate::dictation::downloading().is_some() || crate::dictation::installed(MODEL);
+        !ide_ui_dictation::installed(MODEL) && control(sel!(ideDictationDownload:), None).is_some_and(|b| act(&b));
+    let shows = || ide_ui_dictation::downloading().is_some() || ide_ui_dictation::installed(MODEL);
     super::helpers::wait_until(shows, move |_| {
         if let Some(window) = crate::settings::window() {
             super::snapshot(&window, "dictation-settings-download");
         }
-        let running = crate::dictation::downloading().is_some();
+        let running = ide_ui_dictation::downloading().is_some();
         wait_until(
-            || crate::dictation::installed(MODEL) && !crate::settings::dictation_rows().1,
+            || ide_ui_dictation::installed(MODEL) && !crate::settings::dictation_rows().1,
             move |ok| {
                 check(
                     "a missing local model is offered for download in the settings and installed from there",

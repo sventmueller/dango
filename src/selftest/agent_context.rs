@@ -20,7 +20,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     let lines: Vec<&str> = CONTEXT.lines().collect();
@@ -31,7 +31,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     tab.feed(&lines[..first_end].join("\n"));
     let key = tab.key;
     let thread = tab.snapshot();
-    let (cost, _) = crate::agent::cost_text(thread.usage());
+    let (cost, _) = ide_ui_agent::cost_text(thread.usage());
     let status = tab.inspect().status;
     check(
         "after a turn the status line shows the session's and the turn's cost",
@@ -40,15 +40,15 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     );
     check(
         "without the CLI's context answer the gauge opens no breakdown",
-        !crate::agent::context_seen(key).offered,
+        !ide_ui_agent::context_seen(key).offered,
         "",
     );
     tab.feed(&lines[first_end..].join("\n"));
-    let seen = crate::agent::context_seen(key);
+    let seen = ide_ui_agent::context_seen(key);
     check("the CLI's answer lets the gauge open the breakdown", seen.offered, "");
-    let clicked = crate::agent::click_context(key);
+    let clicked = ide_ui_agent::click_context(key);
     helpers::wait_until(
-        move || crate::agent::context_seen(key).rows.len() == 8,
+        move || ide_ui_agent::context_seen(key).rows.len() == 8,
         move |_| opened(root, key, clicked, then),
     );
 }
@@ -57,7 +57,7 @@ fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let seen = crate::agent::context_seen(key);
+    let seen = ide_ui_agent::context_seen(key);
     let names = seen.rows.join(" | ");
     check(
         "a click on the gauge shows every row of the breakdown",
@@ -68,10 +68,10 @@ fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
     if let Some(view) = &seen.view {
         view_picture(view, "agent-context-popover");
     }
-    crate::agent::close_context();
+    ide_ui_agent::close_context();
     controller.activate_panel(Panel::Agents);
-    let details = crate::agent_panel::session_details(&controller);
-    let cost = crate::agent::all()
+    let details = ide_ui_agent::agent_panel::session_details(&controller);
+    let cost = ide_ui_agent::all()
         .into_iter()
         .find(|t| t.key == key)
         .and_then(|t| t.snapshot().usage().cost_usd);
@@ -89,19 +89,19 @@ fn dark(root: PathBuf, key: u64, then: fn(PathBuf)) {
         return finish(NAME);
     };
     controller.activate_panel(Panel::Files);
-    let clicked = crate::agent::click_context(key);
+    let clicked = ide_ui_agent::click_context(key);
     helpers::wait_until(
-        move || crate::agent::context_seen(key).view.is_some(),
+        move || ide_ui_agent::context_seen(key).view.is_some(),
         move |_| {
             if let Some(controller) = controller_of(&root) {
                 picture(&controller, "agent-context-dark");
-                let seen = crate::agent::context_seen(key);
+                let seen = ide_ui_agent::context_seen(key);
                 check(
                     "the breakdown opens in dark appearance too",
                     clicked && seen.view.is_some(),
                     "",
                 );
-                crate::agent::close_context();
+                ide_ui_agent::close_context();
                 appearance(&controller, constant!(NSAppearanceNameAqua));
             }
             then(root);

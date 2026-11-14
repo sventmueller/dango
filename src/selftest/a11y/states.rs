@@ -14,9 +14,9 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSButton, NSEventModifierFlags, NS
 use super::super::git::{answer_sheet, sheet_ready};
 use super::super::helpers::{after, wait_until};
 use super::{flows, keys, name, picture, walk, window_of};
-use crate::git_panel::selftest as git;
 use crate::selftest::{check, finish};
 use crate::window::{Panel, search_selftest};
+use ide_ui_git::selftest as git;
 
 /// The file of the editor state, in a language whose server is not installed, so its status bar offers it.
 pub const SCRIPT: &str = "src/app.ts";
@@ -195,7 +195,7 @@ fn ci_log(root: PathBuf, ok: bool) {
 
 fn ai(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         check("an AI tab opens", false, "");
         return finish(name());
     };

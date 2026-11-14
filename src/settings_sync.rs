@@ -459,8 +459,7 @@ impl Presenter {
     }
 }
 
-/// The folder and this Mac's id, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn where_and_who() -> (PathBuf, String) {
-    (folder(), device_id())
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

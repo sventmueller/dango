@@ -374,12 +374,6 @@ impl TerminalView {
         }
     }
 
-    /// Whether the pointing hand shows, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub(super) fn pointing_hand(&self) -> bool {
-        self.ivars().mouse.hand.get()
-    }
-
     /// Whether ⌘-click at `point` opens something.
     fn link_at(&self, point: Point) -> bool {
         let (url, word) = {
@@ -437,3 +431,6 @@ mod tests {
         assert_eq!(whole_lines(1e9), 10_000);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

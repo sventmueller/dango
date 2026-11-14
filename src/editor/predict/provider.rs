@@ -122,27 +122,6 @@ pub fn next_question() -> u64 {
     })
 }
 
-/// Answers every editor from `provider` instead of the settings' provider, or from the settings' again with `None`;
-/// for the self-test.
-#[cfg(feature = "selftest")]
-pub fn force(provider: Option<Arc<dyn Provider>>) {
-    with(|p| {
-        if provider.is_none() {
-            p.forced_outside.set(false);
-        }
-        *p.forced.borrow_mut() = provider;
-    });
-    super::follow_settings();
-}
-
-/// Answers every editor from `provider` as from one outside the Mac, whose requests the secrets check sees first; for
-/// the self-test.
-#[cfg(feature = "selftest")]
-pub fn force_outside(provider: Arc<dyn Provider>) {
-    with(|p| p.forced_outside.set(true));
-    force(Some(provider));
-}
-
 /// Whether requests leave the Mac: the chosen provider needs consent, or the self-test's counts as outside.
 pub fn outside() -> bool {
     if forced() {
@@ -553,3 +532,8 @@ mod tests {
         assert_eq!(name(Choice::Off), t("Aus"));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

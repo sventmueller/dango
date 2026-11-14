@@ -10,16 +10,16 @@ impl WindowController {
         let action = item.action();
         let ivars = self.ivars();
         if action == Some(sel!(idePlanComment:)) {
-            return crate::agent::plan::keyboard_target(self).is_some();
+            return ide_ui_agent::plan::keyboard_target(self).is_some();
         }
         if action == Some(sel!(ideContainerCommand:)) {
             return crate::containers_panel::validate(self, item);
         }
         if action == Some(sel!(ideShowSessionSubagents:)) {
-            return crate::agent::can_show_work(self, crate::activity::Part::Subagents);
+            return ide_ui_agent::can_show_work(self, crate::activity::Part::Subagents);
         }
         if action == Some(sel!(ideShowSessionBackground:)) {
-            return crate::agent::can_show_work(self, crate::activity::Part::Background);
+            return ide_ui_agent::can_show_work(self, crate::activity::Part::Background);
         }
         if action == Some(sel!(ideShowPanel:)) {
             let current = ivars.panel_open.get().then(|| ivars.panel.get()).flatten();
@@ -58,7 +58,7 @@ impl WindowController {
         }
         if action == Some(sel!(ideNewAcpThread:)) {
             let index = usize::try_from(item.tag()).unwrap_or(usize::MAX);
-            return crate::agent::preset_menu()
+            return ide_ui_agent::preset_menu()
                 .get(index)
                 .is_some_and(|(_, usable)| *usable);
         }

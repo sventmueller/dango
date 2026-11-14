@@ -147,12 +147,6 @@ fn shown_in(view: &EditorTextView, rect: NSRect) -> Option<Vec<Shown>> {
     Some(lay_out(view, &storage, &state, placed, &lines))
 }
 
-/// How many insets the overlay draws when AppKit asks it for `rect`, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn drawn_in(view: &EditorTextView, rect: NSRect) -> usize {
-    shown_in(view, rect).map_or(0, |shown| shown.len())
-}
-
 /// The rectangles of the insets on screen: gaps from the kerned code point's box, line ends after the line's last
 /// character and any fold placeholder there, one after the other.
 fn lay_out(
@@ -263,7 +257,7 @@ fn caret(view: &EditorTextView, at: usize) -> Option<NSRect> {
     let local = isize::try_from(at).ok()? - paragraph;
     let frame = fragment.layoutFragmentFrame();
     let origin = view.textContainerOrigin();
-    let lines = fragment.textLineFragments();
+    let lines = line_fragments(&fragment)?;
     let count = lines.count();
     lines.iter().enumerate().find_map(|(index, line)| {
         let range = line.characterRange();
@@ -459,4 +453,18 @@ pub fn retarget(view: &EditorTextView, event: &NSEvent) -> Option<Retained<NSEve
         event.clickCount(),
         event.pressure(),
     )
+}
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
+
+/// The line fragments of `fragment`; none before TextKit laid it out, when it answers nil although its header says it
+/// never does.
+pub(in crate::editor) fn line_fragments(
+    fragment: &objc2_app_kit::NSTextLayoutFragment,
+) -> Option<objc2::rc::Retained<objc2_foundation::NSArray<objc2_app_kit::NSTextLineFragment>>> {
+    // SAFETY: `textLineFragments` takes no arguments and returns an array of line fragments, or nil before layout.
+    unsafe { objc2::msg_send![fragment, textLineFragments] }
 }

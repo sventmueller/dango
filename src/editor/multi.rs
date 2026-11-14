@@ -466,21 +466,6 @@ pub fn rects(view: &EditorTextView, range: Range<usize>) -> Vec<NSRect> {
     out.into_inner()
 }
 
-/// Puts carets at UTF-16 offsets `at`, the last one the view's own, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn set(view: &EditorTextView, mut at: Vec<Range<usize>>) {
-    let Some(primary) = at.pop() else { return };
-    view.ivars().carets.borrow_mut().extra = at;
-    select(view, &primary);
-    normalize(view);
-}
-
-/// Every caret, sorted, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn carets(view: &EditorTextView) -> Vec<Range<usize>> {
-    all(view).0
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -503,3 +488,8 @@ mod tests {
         assert_eq!(merge(0..3, vec![touching]), (vec![0..3, 3..5], 0));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

@@ -13,9 +13,9 @@ use splat_i18n::t;
 use super::{
     README, SCENARIO, answer_sheet, fixture_git, has, in_background, names, pictures, wait_for, window_of, write,
 };
-use crate::git_panel::selftest::{self as panel, Control, Seen};
 use crate::selftest::{check, finish};
 use crate::window::WindowController;
+use ide_ui_git::selftest::{self as panel, Control, Seen};
 
 const BRANCH: &str = "feature/selftest";
 /// The most a cancelled fetch may take to end.
@@ -65,7 +65,7 @@ fn branch_made(root: PathBuf, ok: bool) {
         return finish(SCENARIO);
     };
     check("the new branch is checked out", ok, describe(&controller));
-    let shown = crate::git_panel::toolbar_seen(&controller);
+    let shown = ide_ui_git::toolbar_seen(&controller);
     check(
         "the toolbar names the branch beside the title and offers the others and a new one",
         !shown.is_empty()
@@ -78,7 +78,7 @@ fn branch_made(root: PathBuf, ok: bool) {
             }),
         format!("{shown:?}"),
     );
-    let offered = crate::git_panel::toolbar_choose(&controller, "master");
+    let offered = ide_ui_git::toolbar_choose(&controller, "master");
     check("the toolbar's branch lists master", offered, "");
     wait_for(root, |c| on_branch(c, "master"), switched_back);
 }

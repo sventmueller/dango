@@ -84,12 +84,6 @@ impl State {
         Bell::Flash(until)
     }
 
-    /// Whether a bell rang since the view opened.
-    #[cfg(feature = "selftest")]
-    pub fn has_rung(&self) -> bool {
-        self.last_bell.get().is_some()
-    }
-
     pub fn flashing(&self, now: Instant) -> bool {
         self.flash_until.get().is_some_and(|until| now < until)
     }
@@ -315,3 +309,6 @@ mod tests {
         assert_eq!(label(None), t("Terminal"));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

@@ -8,7 +8,9 @@ use super::*;
 
 pub use super::overlay::LAID_OUT;
 
-pub use super::probe::*;
+mod probe;
+
+pub use probe::*;
 
 /// Scrolls `view` so that the line holding byte `byte` is the first on screen.
 pub fn scroll_to_byte(view: &EditorTextView, byte: usize) {

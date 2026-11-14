@@ -243,11 +243,6 @@ impl Timeline {
         &self.scroll
     }
 
-    #[cfg(feature = "selftest")]
-    pub fn table(&self) -> &NSTableView {
-        &self.table
-    }
-
     pub fn inputs(&self) -> &RefCell<Inputs> {
         &self.inputs
     }
@@ -974,3 +969,6 @@ fn show_scroller_away_from_end(scroll: &NSScrollView) -> Retained<ProtocolObject
 #[cfg(test)]
 #[path = "timeline_tests.rs"]
 mod tests;
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

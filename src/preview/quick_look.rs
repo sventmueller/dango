@@ -50,9 +50,7 @@ pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<
     Some(view)
 }
 
-/// Whether `view` is a Quick Look view, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn shows(view: &NSView) -> bool {
-    use objc2_foundation::NSObjectProtocol;
-    AnyClass::get(c"QLPreviewView").is_some_and(|class| view.isKindOfClass(class))
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

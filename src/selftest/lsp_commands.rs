@@ -1,4 +1,4 @@
-//! The second half of the `lsp` scenario, with rust-analyzer still serving the project, through the commands as the
+//! The `lsp` scenario's commands, with rust-analyzer still serving the project from its first part, as the
 //! menu bar and the keyboard send them: the next and previous problem with its message, hover from the mouse resting
 //! and leaving, the context menu's places to go and formatting, the file's symbols and a jump to one, renaming through
 //! the sheet, formatting on save, the fixes of a type error from the menu and the bulb and one chosen after the text

@@ -321,20 +321,6 @@ impl Minimap {
             center_line(&editor, line);
         }
     }
-
-    /// The first row the editor shows and the logical lines of the rows the column shows, for the self-test.
-    #[cfg(feature = "selftest")]
-    fn shown_rows(&self) -> (usize, Vec<usize>) {
-        let Some(editor) = self.ivars().editor.load() else {
-            return (0, Vec::new());
-        };
-        let height = self.bounds().size.height;
-        let rows = self.rows(&editor, height);
-        let first = index(rows.offset / ROW);
-        let count = index((height / ROW).ceil());
-        let lines = rows.lines.iter().skip(first).take(count).copied().collect();
-        (rows.visible.start, lines)
-    }
 }
 
 /// The logical lines no fold hides, in order.
@@ -439,23 +425,6 @@ fn center_line(editor: &EditorTextView, line: usize) {
     scroll.reflectScrolledClipView(&clip);
 }
 
-/// The minimap of `view` as its width, the first row the editor shows and the logical lines of the rows it shows, for
-/// the self-test.
-#[cfg(feature = "selftest")]
-pub fn probe(view: &EditorTextView) -> Option<(f64, usize, Vec<usize>)> {
-    let map = of(view)?;
-    let (first, lines) = map.shown_rows();
-    Some((map.frame().size.width, first, lines))
-}
-
-/// Clicks the minimap of `view` at `y` from its top, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn click(view: &EditorTextView, y: f64) {
-    if let Some(map) = of(view) {
-        map.jump_to(y);
-    }
-}
-
 /// Fits the minimap of `view` to the editor's width.
 pub fn fit(view: &EditorTextView) {
     if let Some(map) = of(view) {
@@ -472,3 +441,8 @@ pub fn fit(view: &EditorTextView) {
 fn index(value: f64) -> usize {
     value.floor().clamp(0.0, f64::from(u32::MAX)) as usize
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

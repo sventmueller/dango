@@ -71,7 +71,7 @@ fn feed(key: u64, lines: Range<usize>) {
         .take(lines.len())
         .map(|line| format!("{line}\n"))
         .collect();
-    if let Some(tab) = crate::agent::all().into_iter().find(|tab| tab.key == key) {
+    if let Some(tab) = ide_ui_agent::all().into_iter().find(|tab| tab.key == key) {
         tab.feed(&frames);
     }
 }
@@ -105,7 +105,7 @@ pub fn rows_change(root: PathBuf, key: u64, then: fn(PathBuf)) {
                 after < before && label.contains("countdown"),
                 format!("{before} then {after} buttons, focus on {label:?}"),
             );
-            let title = crate::agent::all()
+            let title = ide_ui_agent::all()
                 .into_iter()
                 .find(|tab| tab.key == key)
                 .map(|tab| tab.title());

@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 
 use super::agent::{controller_of, picture, tab_of};
 use super::{check, finish, helpers};
-use crate::own_agent::{self, ModelChoice};
+use ide_ui_agent::own_agent::{self, ModelChoice};
 
 const NAME: &str = "own-agent";
 const MODEL: &str = "claude-opus-5-5";
@@ -272,7 +272,7 @@ fn sandbox_folders(tab: &crate::settings::AgentSettings, root: &std::path::Path)
 fn plus_menu() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let menu = NSMenu::new(mtm);
-    crate::agent::fill_own_menu(mtm, &menu);
+    ide_ui_agent::fill_own_menu(mtm, &menu);
     let entries: Vec<(String, bool, bool)> = menu
         .itemArray()
         .iter()
@@ -312,7 +312,7 @@ fn open(root: PathBuf) {
         let Some(controller) = controller else {
             return finish(NAME);
         };
-        let Some(tab) = crate::agent::open_own(&controller, None) else {
+        let Some(tab) = ide_ui_agent::open_own(&controller, None) else {
             check("an own-agent tab opens", false, "");
             return finish(NAME);
         };
@@ -366,7 +366,7 @@ fn approve(root: PathBuf, key: u64) {
         format!("{} {:?}", asked.tool_name, asked.options),
     );
     picture(&controller, "own-agent-permission");
-    tab.permission(id, crate::agent::ALLOW_ONCE, None);
+    tab.permission(id, ide_ui_agent::ALLOW_ONCE, None);
     soon(
         "the turn ends",
         move || tab_of(key).is_some_and(|t| t.snapshot().status() == Status::Idle),
@@ -420,7 +420,7 @@ fn done(root: PathBuf, key: u64) {
         format!("{:?}", thread.usage()),
     );
     let turn = thread.usage().last_turn().cloned();
-    let (cost, _) = crate::agent::cost_text(thread.usage());
+    let (cost, _) = ide_ui_agent::cost_text(thread.usage());
     check(
         "the turn's cost comes from the user's price",
         turn.as_ref()
@@ -457,7 +457,7 @@ fn code_rewind(root: PathBuf, key: u64) {
         "the turn's checkpoint is finished",
         move || tab_of(key).is_some_and(|t| t.finished_checkpoints() == 1),
         move || {
-            crate::agent::answer_alerts(&[NSAlertFirstButtonReturn]);
+            ide_ui_agent::answer_alerts(&[NSAlertFirstButtonReturn]);
             set_notes(&root, "typed after the prompt\n");
             if let Some(tab) = tab_of(key) {
                 tab.rewind(prompt, 2);
@@ -466,10 +466,10 @@ fn code_rewind(root: PathBuf, key: u64) {
                 "the code is back as before the prompt",
                 move || {
                     std::fs::read_to_string(&lib).is_ok_and(|text| text.contains("41"))
-                        && !crate::agent::alerts_seen().is_empty()
+                        && !ide_ui_agent::alerts_seen().is_empty()
                 },
                 move || {
-                    let seen = crate::agent::alerts_seen();
+                    let seen = ide_ui_agent::alerts_seen();
                     check(
                         "rewinding the own agent's turn restores the file",
                         seen.first().is_some_and(|q| q == "Code zurückgespult"),
@@ -533,13 +533,13 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let resume = crate::agent::Resume {
+    let resume = ide_ui_agent::Resume {
         session: thread_id.as_str().to_string(),
         thread: Some(thread_id),
         title: None,
         transcript: None,
     };
-    let Some(tab) = crate::agent::open_agent(&controller, crate::agent::Agent::Own, Some(resume)) else {
+    let Some(tab) = ide_ui_agent::open_agent(&controller, ide_ui_agent::Agent::Own, Some(resume)) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -588,7 +588,7 @@ fn compact(root: PathBuf, key: u64) {
         move || {
             let notice = tab_of(key).and_then(|t| {
                 t.snapshot().entries(&Lane::Main).iter().find_map(|e| match &e.kind {
-                    EntryKind::Notice(notice @ Notice::Compaction { .. }) => Some(crate::agent::notice_text(notice)),
+                    EntryKind::Notice(notice @ Notice::Compaction { .. }) => Some(ide_ui_agent::notice_text(notice)),
                     _ => None,
                 })
             });

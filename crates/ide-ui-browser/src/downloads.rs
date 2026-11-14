@@ -155,19 +155,6 @@ impl Downloads {
         }
     }
 
-    /// Saves into `Downloads` of the self-test's home, since nobody is there to answer a save panel.
-    #[cfg(feature = "selftest")]
-    fn save_without_asking(&self, download: &WKDownload, suggested: &str, handler: &RcBlock<dyn Fn(*mut NSURL)>) {
-        let folder = ide_core::paths::home().join("Downloads");
-        let _ = std::fs::create_dir_all(&folder);
-        let file = NSURL::fileURLWithPath(&ns(&folder.join(suggested).to_string_lossy()));
-        self.ivars()
-            .running
-            .borrow_mut()
-            .push((objc2::Message::retain(download), file.clone()));
-        handler.call((Retained::as_ptr(&file).cast_mut(),));
-    }
-
     /// Forgets `download`, and returns the file it wrote.
     fn take(&self, download: &WKDownload) -> Option<Retained<NSURL>> {
         let mut running = self.ivars().running.borrow_mut();
@@ -222,3 +209,6 @@ fn report_failure(download: &WKDownload, error: &NSError) {
     alert.setInformativeText(&error.localizedDescription());
     alert.beginSheetModalForWindow_completionHandler(&window, None);
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

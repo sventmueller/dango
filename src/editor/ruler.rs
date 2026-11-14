@@ -242,12 +242,6 @@ impl LineNumbers {
         }
     }
 
-    /// Whether the mouse is over the column, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub(super) fn hovered(&self) -> bool {
-        self.ivars().hovered.get()
-    }
-
     fn set_hovered(&self, hovered: bool) {
         self.ivars().hovered.set(hovered);
         self.setNeedsDisplay(true);
@@ -486,3 +480,6 @@ fn draw_test_mark(row: NSRect, state: ide_test::State) {
     let image = image.imageWithSymbolConfiguration(&palette).unwrap_or(image);
     image.drawInRect(rect);
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

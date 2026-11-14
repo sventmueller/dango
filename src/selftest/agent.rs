@@ -13,9 +13,9 @@ use serde_json::json;
 
 use super::{check, finish, helpers, snapshot};
 use crate::activity::Part;
-use crate::agent::AgentTab;
 use crate::util::constant;
 use crate::window::{self, Panel, WindowController};
+use ide_ui_agent::AgentTab;
 
 const SUBAGENT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_subagent_background.ndjson");
 const EDIT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_edit_diff.ndjson");
@@ -105,7 +105,7 @@ pub(super) fn long_session() -> String {
 pub(super) const DRAWN: Duration = Duration::from_millis(400);
 
 pub(super) fn tab_of(key: u64) -> Option<Rc<AgentTab>> {
-    crate::agent::all().into_iter().find(|t| t.key == key)
+    ide_ui_agent::all().into_iter().find(|t| t.key == key)
 }
 
 pub(super) fn controller_of(root: &PathBuf) -> Option<objc2::rc::Retained<WindowController>> {
@@ -187,7 +187,7 @@ fn opened(controller: objc2::rc::Retained<WindowController>) {
     let root = helpers::root("agent-project");
     check("a trusted folder does not ask again", !controller.has_sheet(), "");
     let before = controller.window().map(|w| w.frame());
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         check("an AI tab opens", false, "");
         finish(NAME);
         return;
@@ -288,7 +288,7 @@ fn asks_on_card(key: u64) -> bool {
 
 /// A subagent whose tool waits for permission, its timeline folded: the request shows on its card all the same.
 fn subagent_asks(controller: &WindowController, root: PathBuf, then: impl FnOnce() + Send + 'static) {
-    let Some(tab) = crate::agent::open_replay(controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(controller) else {
         check("a second AI tab opens", false, "");
         return then();
     };
@@ -432,14 +432,14 @@ fn follows_window(controller: &WindowController, tab: &AgentTab) {
         format!("{first:?} in {start:?}; wider {wider:?}, narrower {narrower:?}"),
     );
     type Seen = (f64, f64, f64, f64, (f64, f64));
-    let fills = |(_, _, root, column, _): Seen| same(column, root - 2.0 * crate::agent::SIDE_MARGIN);
+    let fills = |(_, _, root, column, _): Seen| same(column, root - 2.0 * ide_ui_agent::SIDE_MARGIN);
     check(
         "the conversation's column grows with the AI tab, with the same margin at any width",
         fills(first) && fills(wider) && fills(narrower),
         format!("{first:?}, wider {wider:?}, narrower {narrower:?}"),
     );
     let held = |(_, _, _, column, (width, off)): Seen| {
-        let wanted = (column - 2.0 * crate::agent::INPUT_INSET).min(crate::agent::INPUT_WIDTH);
+        let wanted = (column - 2.0 * ide_ui_agent::INPUT_INSET).min(ide_ui_agent::INPUT_WIDTH);
         same(width, wanted) && same(off, 0.0)
     };
     check(
@@ -506,7 +506,7 @@ fn running(root: PathBuf, key: u64) {
     let (_, rest) = split(SUBAGENT, 56);
     let (to_running, _) = split(&rest, 174 - 56);
     tab.feed(&to_running);
-    tab.open_all(crate::agent::Part::Subagent);
+    tab.open_all(ide_ui_agent::Part::Subagent);
     tab.timeline().scroll_to_end();
     let seen = tab.inspect();
     check(
@@ -538,7 +538,7 @@ fn running(root: PathBuf, key: u64) {
     check(
         "on a subscription the status line shows the plan's limits instead of dollars",
         tab.snapshot().usage().subscription
-            && seen.status.iter().any(|s| s.contains(&crate::agent::percent(0.79)))
+            && seen.status.iter().any(|s| s.contains(&ide_ui_agent::percent(0.79)))
             && !seen.status.iter().any(|s| s.contains('$')),
         seen.status.join(" | "),
     );
@@ -588,23 +588,23 @@ fn panel(root: PathBuf, key: u64) {
     tab.timeline().table().scrollRowToVisible(0);
     controller.activate_panel(Panel::Agents);
     if let Ok(report) = <ide_claude::control::UsageReport as ide_claude::control::Answer>::read(usage_answer()) {
-        crate::agent::inject_usage(report);
+        ide_ui_agent::inject_usage(report);
     }
     let status = tab.inspect().status;
     let wanted = format!(
         "{} · {} {} · {} {}",
         splat_i18n::t("Abo"),
-        crate::agent::window_name("seven_day"),
-        crate::agent::percent(0.79),
-        crate::agent::window_name("five_hour"),
-        crate::agent::percent(0.42),
+        ide_ui_agent::window_name("seven_day"),
+        ide_ui_agent::percent(0.79),
+        ide_ui_agent::window_name("five_hour"),
+        ide_ui_agent::percent(0.42),
     );
     check(
         "the status line names the plan with its week and five hours from get_usage",
         status.last() == Some(&wanted),
         status.join(" | "),
     );
-    let rows = crate::agent_panel::inspect(&controller)
+    let rows = ide_ui_agent::agent_panel::inspect(&controller)
         .map(|seen| seen.rows)
         .unwrap_or_default();
     check(
@@ -613,7 +613,7 @@ fn panel(root: PathBuf, key: u64) {
             .any(|(kind, open, title)| *kind == "AI" && *open && *title == tab.title()),
         format!("{rows:?}"),
     );
-    let edges = crate::agent_panel::edges(&controller);
+    let edges = ide_ui_agent::agent_panel::edges(&controller);
     let title = controller.panel_title_row();
     check(
         "the AI panel's title offers a new session, its list begins where the title does and ends where the button does",
@@ -683,7 +683,7 @@ fn requests(root: PathBuf, first: u64) {
     let (Some(controller), Some(first)) = (controller_of(&root), tab_of(first)) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     tab.feed(COMPACTION);
@@ -713,8 +713,8 @@ fn requests(root: PathBuf, first: u64) {
     });
     check(
         "two AI tabs are open in the window",
-        crate::agent::of_window(&controller).len() == 2,
-        format!("{}", crate::agent::of_window(&controller).len()),
+        ide_ui_agent::of_window(&controller).len() == 2,
+        format!("{}", ide_ui_agent::of_window(&controller).len()),
     );
     first.feed(RETRY);
     let first = first.key;
@@ -819,7 +819,7 @@ fn mentions(root: PathBuf, key: u64, first: u64) {
             picture(&controller, "agent-context");
         }
         let shell = root.clone();
-        let output = move || controller_of(&shell).is_some_and(|c| crate::agent::terminal_context(&c));
+        let output = move || controller_of(&shell).is_some_and(|c| ide_ui_agent::terminal_context(&c));
         helpers::wait_until(output, move |_| terminal(root, first));
     });
 }
@@ -854,7 +854,7 @@ fn terminal(root: PathBuf, first: u64) {
     );
     check(
         "@terminal hands over the terminal's output",
-        crate::agent::terminal_context(&controller),
+        ide_ui_agent::terminal_context(&controller),
         "",
     );
     let Some(first) = tab_of(first) else {
@@ -965,7 +965,7 @@ fn browser(root: PathBuf) {
         let Some(controller) = controller_of(&root) else {
             return finish(NAME);
         };
-        crate::agent::browser_context(&controller, move |text| {
+        ide_ui_agent::browser_context(&controller, move |text| {
             let text = text.unwrap_or_default();
             check(
                 "@browser hands over the page's address, title and selection",

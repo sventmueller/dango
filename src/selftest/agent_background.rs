@@ -7,14 +7,14 @@ use serde_json::{Value, json};
 
 use super::agent::tab_of;
 use super::{check, finish, helpers, snapshot};
-use crate::agent::AgentTab;
+use ide_ui_agent::AgentTab;
 
 const NAME: &str = "agent-background";
 
 pub fn run() {
     helpers::open_project(NAME, "background-project", &[], |controller| {
         let root = helpers::root("background-project");
-        let Some(tab) = crate::agent::open_replay(&controller) else {
+        let Some(tab) = ide_ui_agent::open_replay(&controller) else {
             check("an AI tab opens", false, "");
             return finish(NAME);
         };

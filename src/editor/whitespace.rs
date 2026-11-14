@@ -202,7 +202,9 @@ impl Overlay {
 
 /// Draws the whitespace of one paragraph, whose layout fragment's top left corner is at `corner` in the editor.
 fn draw_fragment(fragment: &NSTextLayoutFragment, corner: NSPoint) {
-    let lines = fragment.textLineFragments();
+    let Some(lines) = super::insets::line_fragments(fragment) else {
+        return;
+    };
     let Some(first) = lines.firstObject() else { return };
     let units: Vec<u16> = first.attributedString().string().to_string().encode_utf16().collect();
     let end = units
@@ -277,13 +279,7 @@ fn arrow(left: f64, right: f64, y: f64) {
     path.stroke();
 }
 
-/// Whether the overlay of `view` is showing, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn visible(view: &EditorTextView) -> bool {
-    view.ivars()
-        .whitespace
-        .borrow()
-        .as_ref()
-        .and_then(Weak::load)
-        .is_some_and(|overlay| !overlay.isHidden())
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

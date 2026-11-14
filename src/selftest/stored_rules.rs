@@ -46,7 +46,7 @@ fn listed(root: PathBuf) {
         return finish(NAME);
     };
     let cells = rules.cells();
-    let local = crate::agent::scope_name("localSettings");
+    let local = ide_ui_agent::scope_name("localSettings");
     let ours: Vec<&Vec<String>> = cells
         .iter()
         .filter(|row| row.first().is_some_and(|p| p.ends_with("rules-project")))

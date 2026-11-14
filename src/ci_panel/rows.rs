@@ -363,16 +363,6 @@ impl CiPanel {
         }
     }
 
-    /// The titles of `key`'s context menu and whether each can be chosen, separators left out.
-    #[cfg(feature = "selftest")]
-    pub fn menu_titles(&self, key: Key) -> Vec<(String, bool)> {
-        self.menu_entries(key)
-            .into_iter()
-            .filter(|(_, action, _)| action.is_some())
-            .map(|(title, _, enabled)| (title.to_string(), enabled))
-            .collect()
-    }
-
     fn menu_entries(&self, key: Key) -> Vec<(&'static str, Option<Sel>, bool)> {
         let busy = self.read().busy;
         match key {
@@ -569,3 +559,6 @@ fn styled_cell(
     unsafe { cell.setTextField(Some(&name)) };
     cell.into_super()
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

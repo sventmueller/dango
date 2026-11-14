@@ -257,8 +257,8 @@ fn agents() {
 
 /// The own agent's rules and endpoints as its settings tab and its threads keep and forget them.
 fn own_agent() {
-    use crate::own_agent;
     use ide_agent::{Endpoint, ProviderKind, Rule};
+    use ide_ui_agent::own_agent;
 
     let root = ide_core::paths::home().join("rules-of-settings");
     let fetch = Rule::Fetch { host: "docs.rs".into() };

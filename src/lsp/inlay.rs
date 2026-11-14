@@ -274,15 +274,6 @@ fn inset(text: &ide_document::Text, hint: InlayHint) -> Inset {
     inset
 }
 
-/// The hints `view` shows, as their offsets and texts, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown(view: &EditorTextView) -> Vec<(usize, String, bool)> {
-    insets::of(view, Layer::Inlay)
-        .into_iter()
-        .map(|inset| (inset.at, inset.text, inset.action.is_some()))
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -356,3 +347,8 @@ mod tests {
         assert!(shown.action.is_some());
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

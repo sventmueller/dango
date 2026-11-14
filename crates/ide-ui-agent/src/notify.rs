@@ -59,12 +59,6 @@ fn request(id: &str, title: &str, body: &str) -> Retained<UNNotificationRequest>
     UNNotificationRequest::requestWithIdentifier_content_trigger(&ns(id), &content, None)
 }
 
-/// How many notifications were posted, or would have been where posting is not allowed.
-#[cfg(feature = "selftest")]
-pub fn posted() -> usize {
-    NOTIFIED.load(Ordering::Relaxed)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,3 +82,8 @@ mod tests {
         assert!(NOTIFIED.load(Ordering::Relaxed) > before);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

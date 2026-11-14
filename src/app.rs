@@ -59,7 +59,7 @@ define_class!(
                 crate::settings_sync::launched(mtm);
                 open_initial_windows(mtm);
                 #[cfg(feature = "dictation")]
-                crate::dictation::launched();
+                ide_ui_dictation::launched();
                 #[cfg(feature = "selftest")]
                 crate::selftest::after_launch(mtm);
             });
@@ -187,7 +187,7 @@ define_class!(
 impl AppDelegate {
     pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
-        crate::own_agent::use_secrets(context.secrets.store());
+        ide_ui_agent::own_agent::use_secrets(context.secrets.store());
         crate::ci_panel::use_secrets(context.secrets.store());
         let this = Self::alloc(mtm).set_ivars(context);
         // SAFETY: NSObject's initializer, called once on the newly allocated object.

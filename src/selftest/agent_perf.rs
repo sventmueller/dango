@@ -11,7 +11,7 @@ use objc2_foundation::{NSAttributedString, NSRange, NSURL};
 use serde_json::{Value, json};
 
 use super::{check, finish, helpers, snapshot};
-use crate::agent::AgentTab;
+use ide_ui_agent::AgentTab;
 
 const NAME: &str = "agent-perf";
 
@@ -19,7 +19,7 @@ pub fn run() {
     helpers::open_project(NAME, "stream-project", &[], |controller| {
         let mut tabs = Vec::new();
         for entries in [1000, 10_000, 1000, 1000] {
-            let tab = crate::agent::open_replay(&controller).expect("replay tab");
+            let tab = ide_ui_agent::open_replay(&controller).expect("replay tab");
             tab.feed(&history(entries));
             begin(&tab);
             tabs.push(tab);
@@ -88,7 +88,7 @@ fn comparison(tab: &AgentTab, view: &NSTextView) -> Result<(), String> {
     let ide_thread::EntryKind::AgentMessage(message) = &entry.kind else {
         return Err("no answer".into());
     };
-    let full = crate::agent::answer_text(view.mtm(), &message.markdown);
+    let full = ide_ui_agent::answer_text(view.mtm(), &message.markdown);
     let expected = objc2_app_kit::NSTextStorage::new();
     expected.setAttributedString(&full);
     // The live storage substitutes fonts for emoji and other missing glyphs as it fixes attributes.
@@ -331,7 +331,7 @@ fn finish_samples(bench: Bench) {
     }) = thread.entries(&ide_thread::Lane::Main).last().map(|entry| &**entry)
     {
         let started = ide_core::testing::thread_time();
-        let expected = crate::agent::answer_height(view.mtm(), &message.markdown, view.frame().size.width);
+        let expected = ide_ui_agent::answer_height(view.mtm(), &message.markdown, view.frame().size.width);
         let built = ide_core::testing::thread_time().saturating_sub(started);
         check(
             "E25: a finished answer's card is rendered and laid out in under 200 ms",

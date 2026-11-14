@@ -112,11 +112,6 @@ impl Preview {
         self.automatic
     }
 
-    #[cfg(feature = "selftest")]
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
     pub fn tab(&self) -> isize {
         self.tab.get()
     }
@@ -423,3 +418,6 @@ impl Viewer for Hears {
         self.0.upgrade().is_none_or(|preview| preview.is_closed())
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

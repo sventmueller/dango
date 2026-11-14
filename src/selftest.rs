@@ -58,7 +58,9 @@ mod debug_restore;
 #[cfg(feature = "dictation")]
 mod dictation;
 #[cfg(feature = "dictation")]
-mod dictation_more;
+mod dictation_failures;
+#[cfg(feature = "dictation")]
+mod dictation_fn;
 #[cfg(feature = "dictation")]
 mod dictation_settings;
 mod editor_commands;
@@ -77,7 +79,7 @@ mod insets;
 mod line_diagnostics;
 mod lsp;
 mod lsp_actions;
-mod lsp_more;
+mod lsp_commands;
 mod lsp_navigation;
 mod minimap;
 mod own_agent;

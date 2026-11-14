@@ -18,8 +18,8 @@ use objc2_foundation::{NSArray, NSNumber, NSNumberFormatter, NSNumberFormatterSt
 use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
-use crate::dictation::{self, FnState, PROVIDERS, choices};
 use crate::util::{guarded, label, ns, set_action};
+use ide_ui_dictation::{self as dictation, FnState, PROVIDERS, choices};
 
 /// Tags of the transcription menu: an online model's index in `OnlineModel::ALL` above the first, a local one's in
 /// `LocalModel::ALL` above the second.
@@ -630,33 +630,7 @@ fn layout(mtm: MainThreadMarker, views: &Views, offer: &[&NSButton], texts: &Tex
     form::page(mtm, &views.grid)
 }
 
-/// The keys the tab shows, for the self-test: one line per provider.
 #[cfg(feature = "selftest")]
-pub fn key_lines(settings: &DictationSettings) -> Vec<String> {
-    settings
-        .ivars()
-        .views
-        .get()
-        .map(|views| {
-            views
-                .keys
-                .iter()
-                .map(|row| row.state.stringValue().to_string())
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-/// Whether the tab offers Lowspeak's choices and shows a missing model's download, for the self-test.
+mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub fn rows_shown(settings: &DictationSettings) -> (bool, bool) {
-    settings
-        .ivars()
-        .views
-        .get()
-        .map(|views| {
-            let shown = |row: usize| !views.grid.rowAtIndex(tag(row)).isHidden();
-            (shown(OFFER_ROWS[0]), shown(MODEL_ROW))
-        })
-        .unwrap_or_default()
-}
+pub use selftest_probe::*;

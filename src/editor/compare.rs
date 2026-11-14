@@ -141,20 +141,6 @@ fn background(change: LineChange) -> Retained<NSColor> {
     .colorWithAlphaComponent(alpha)
 }
 
-/// The text of the comparison tab for `path`, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown(path: &Path) -> Option<String> {
-    let key = format!("compare:{}", path.display());
-    with_shown(|shown| {
-        shown
-            .borrow()
-            .iter()
-            .find(|(k, _)| *k == key)
-            .and_then(|(_, view)| view.load())
-            .map(|view| view.string().to_string())
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -169,3 +155,8 @@ mod tests {
         assert!(text.contains("          2 + B\n"), "{text}");
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

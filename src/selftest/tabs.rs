@@ -270,7 +270,7 @@ fn navigation(root: PathBuf) {
         "the toolbar holds back and forward, the branch and Open Quickly beside the activity",
         [
             crate::navigation::TOOLBAR_ID,
-            crate::git_panel::TOOLBAR_ID,
+            ide_ui_git::TOOLBAR_ID,
             "ide.quickOpen",
             "ide.activity",
         ]
@@ -406,11 +406,11 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
                 .is_none_or(|(agent, worktree)| worktree > agent),
         format!("{entries:?}"),
     );
-    let installed: Vec<String> = crate::agent::installed(&crate::agent::Agent::Claude)
+    let installed: Vec<String> = ide_ui_agent::installed(&ide_ui_agent::Agent::Claude)
         .then(|| "Claude".to_string())
         .into_iter()
-        .chain(crate::agent::installed_presets().into_iter().map(|(_, name)| name))
-        .chain(crate::agent::installed(&crate::agent::Agent::Own).then(|| t("Eigener Agent").to_string()))
+        .chain(ide_ui_agent::installed_presets().into_iter().map(|(_, name)| name))
+        .chain(ide_ui_agent::installed(&ide_ui_agent::Agent::Own).then(|| t("Eigener Agent").to_string()))
         .collect();
     check(
         "the menu lists only installed agents, the own agent last",

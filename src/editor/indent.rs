@@ -368,19 +368,6 @@ pub fn formatting(view: &EditorTextView) -> (u32, bool) {
     (u32::try_from(size).unwrap_or(4), !format.tabs)
 }
 
-/// The status bar's indentation title and charset warning of `view`, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown(view: &EditorTextView) -> (String, Option<String>) {
-    let state = view.ivars().spacing.borrow();
-    let title = state.button.as_ref().map(|b| b.title().to_string()).unwrap_or_default();
-    let warning = state
-        .warning
-        .as_ref()
-        .filter(|w| !w.isHidden())
-        .map(|w| w.stringValue().to_string());
-    (title, warning)
-}
-
 /// Indents `lines` of `view`, counted from 0, by `levels` of its own indentation, or takes as many away where negative,
 /// as one undo step; for Vim's `>>`, `<<` and `>` (E106).
 pub fn shift_lines(view: &EditorTextView, lines: std::ops::Range<usize>, levels: isize) {
@@ -518,3 +505,8 @@ mod tests {
         assert!(tidy_edits("a  \n", &Format::default(), None, LineEnding::Lf).is_empty());
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

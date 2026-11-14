@@ -25,8 +25,8 @@ use objc2_app_kit::{
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use crate::agent::AcpAgent;
 use crate::util::{guarded, main_soon, ns, set_action};
+use ide_ui_agent::AcpAgent;
 
 use super::form::{self, MARGIN, WIDTH};
 #[cfg(feature = "selftest")]
@@ -138,7 +138,7 @@ define_class!(
         fn install_entry_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 let id = with_shown(|s| usize::try_from(tag(sender)).ok().and_then(|n| s.borrow().get(n).cloned()));
-                let entry = id.and_then(|id| crate::agent::cached_register().and_then(|(r, _)| r.entry(&id).cloned()));
+                let entry = id.and_then(|id| ide_ui_agent::cached_register().and_then(|(r, _)| r.entry(&id).cloned()));
                 if let Some(entry) = entry
                     && let Ok(plan) = Plan::of_entry(&entry)
                 {
@@ -174,7 +174,7 @@ fn link(mtm: MainThreadMarker, title: &str, target: &AgentsSettings, action: Sel
     let button = crate::util::borderless_button(mtm, title, None, action);
     set_action(&button, target, action);
     button.setTag(tag);
-    button.setFont(Some(&crate::agent::style::small()));
+    button.setFont(Some(&ide_ui_agent::style::small()));
     button.setContentTintColor(Some(&NSColor::linkColor()));
     button
 }
@@ -206,7 +206,7 @@ fn mark_view(mtm: MainThreadMarker, mark: Mark) -> Retained<NSView> {
             Mark::Absent => NSColor::tertiaryLabelColor(),
             Mark::Busy | Mark::Blank => NSColor::clearColor(),
         };
-        let dot = crate::agent::icon(mtm, "circle.fill", "", 8.0, &color);
+        let dot = ide_ui_agent::icon(mtm, "circle.fill", "", 8.0, &color);
         // The state beside it says in words what the dot shows.
         crate::util::hide_from_voiceover(&dot);
         Retained::into_super(Retained::into_super(dot))
@@ -219,7 +219,7 @@ fn mark_view(mtm: MainThreadMarker, mark: Mark) -> Retained<NSView> {
 
 /// Installs `plan` after the user agreed, showing how far it got in the tab.
 fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
-    if with_progress(|p| p.borrow().contains_key(id)) || !crate::agent::confirm_install(mtm, name, &plan) {
+    if with_progress(|p| p.borrow().contains_key(id)) || !ide_ui_agent::confirm_install(mtm, name, &plan) {
         return;
     }
     let (id, name) = (id.to_string(), name.to_string());
@@ -290,7 +290,7 @@ fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (Mar
     if let Some(progress) = with_progress(|p| p.borrow().get(preset.id).cloned()) {
         return (Mark::Busy, progress, Vec::new());
     }
-    let launch = crate::agent::launch_of(&AcpAgent::of_preset(preset), env, std::path::Path::new("/"));
+    let launch = ide_ui_agent::launch_of(&AcpAgent::of_preset(preset), env, std::path::Path::new("/"));
     let installs = installs();
     let mut actions = Vec::new();
     let mut mark = Mark::Ready;
@@ -312,7 +312,7 @@ fn preset_state(preset: &Preset, index: isize, env: &[(String, String)]) -> (Mar
         }
         Some(_) => t("Bereit").to_string(),
         None => {
-            let claude = preset.id == "claude-acp" && crate::agent::claude_program(env).is_some();
+            let claude = preset.id == "claude-acp" && ide_ui_agent::claude_program(env).is_some();
             let cli = preset.cli_on_path(env).is_some();
             let (state, button) = missing(preset, cli, claude);
             mark = if cli && !claude && preset.cli.is_some() {
@@ -348,7 +348,7 @@ fn missing(preset: &Preset, cli: bool, claude: bool) -> (String, &'static str) {
 
 /// What the tab says about Claude's own connection (E21).
 fn claude_state(env: &[(String, String)]) -> (Mark, String) {
-    match crate::agent::claude_program(env) {
+    match ide_ui_agent::claude_program(env) {
         Some(path) => (Mark::Ready, tf("Bereit · {}", &[&crate::app::display_path(&path)])),
         None => (
             Mark::Absent,
@@ -361,13 +361,13 @@ fn claude_state(env: &[(String, String)]) -> (Mark, String) {
 fn register_state() -> (String, Vec<Action>) {
     match (
         with_progress(|p| p.borrow().get("").cloned()),
-        crate::agent::cached_register(),
+        ide_ui_agent::cached_register(),
     ) {
         (Some(progress), _) => (progress, Vec::new()),
         (None, Some((register, at))) => (
             tf(
                 "{} Agenten, Stand {}",
-                &[&register.entries.len().to_string(), &crate::agent::age(at)],
+                &[&register.entries.len().to_string(), &ide_ui_agent::age(at)],
             ),
             vec![
                 (t("Anzeigen …").to_string(), sel!(ideAgentsShowRegister:), 0),
@@ -383,7 +383,7 @@ fn register_state() -> (String, Vec<Action>) {
 
 /// The agents installed from the registry beyond the presets, with their versions.
 fn registry_installed() -> Vec<(String, String)> {
-    let Some((register, _)) = crate::agent::cached_register() else {
+    let Some((register, _)) = ide_ui_agent::cached_register() else {
         return Vec::new();
     };
     let installs = installs();
@@ -429,13 +429,13 @@ impl AgentsSettings {
         let groups: Vec<Retained<NSView>> = [agents, register]
             .into_iter()
             .map(|lines| {
-                let group = crate::agent::framed(
+                let group = ide_ui_agent::framed(
                     mtm,
                     lines,
                     &NSColor::separatorColor(),
                     Some(&NSColor::quaternarySystemFillColor()),
                     8.0,
-                    crate::agent::insets(0.0, 0.0, 0.0, 0.0),
+                    ide_ui_agent::insets(0.0, 0.0, 0.0, 0.0),
                 );
                 group.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
                 group.into_super()
@@ -445,7 +445,7 @@ impl AgentsSettings {
         views.extend(self.ivars().rules.views());
         let content = form::stack(mtm, &views);
         content.setCustomSpacing_afterView(ide_ui_common::style::space::XL, &groups[0]);
-        content.setEdgeInsets(crate::agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
+        content.setEdgeInsets(ide_ui_agent::insets(MARGIN, MARGIN, MARGIN, MARGIN));
         scrolling(mtm, &content)
     }
 
@@ -523,9 +523,9 @@ impl AgentsSettings {
             room -= MARK + SPACING;
         }
         let title = NSTextField::labelWithString(&ns(name), mtm);
-        title.setFont(Some(&crate::agent::style::body()));
+        title.setFont(Some(&ide_ui_agent::style::body()));
         let detail = NSTextField::wrappingLabelWithString(&ns(state), mtm);
-        detail.setFont(Some(&crate::agent::style::small()));
+        detail.setFont(Some(&ide_ui_agent::style::small()));
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
         detail.setPreferredMaxLayoutWidth(room - SPACING);
         let text = NSStackView::new(mtm);
@@ -536,13 +536,13 @@ impl AgentsSettings {
         text.addArrangedSubview(&detail);
         let text: Retained<NSView> = Retained::into_super(text);
         views.push(text.clone());
-        views.push(crate::agent_panel::spacer(mtm));
+        views.push(ide_ui_agent::agent_panel::spacer(mtm));
         views.extend(buttons);
         let line = NSStackView::new(mtm);
         line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         line.setAlignment(NSLayoutAttribute::CenterY);
         line.setSpacing(SPACING);
-        line.setEdgeInsets(crate::agent::insets(INSET, PADDING, INSET, PADDING));
+        line.setEdgeInsets(ide_ui_agent::insets(INSET, PADDING, INSET, PADDING));
         for view in &views {
             line.addArrangedSubview(view);
         }
@@ -580,7 +580,7 @@ fn fill(group: &NSStackView, lines: &[Retained<NSView>]) {
     }
     for (n, line) in lines.iter().enumerate() {
         if n > 0 {
-            let rule = crate::agent::separator(group.mtm());
+            let rule = ide_ui_agent::separator(group.mtm());
             group.addArrangedSubview(&rule);
             rule.widthAnchor()
                 .constraintEqualToConstant(WIDTH - 2.0 * PADDING)
@@ -592,7 +592,7 @@ fn fill(group: &NSStackView, lines: &[Retained<NSView>]) {
 
 /// `content` in a scroll view that is as tall as it, up to `MAX_HEIGHT`.
 fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
-    let document = crate::agent_panel::flipped(mtm);
+    let document = ide_ui_agent::agent_panel::flipped(mtm);
     document.addSubview(content);
     content.setTranslatesAutoresizingMaskIntoConstraints(false);
     let scroll = NSScrollView::new(mtm);
@@ -673,12 +673,12 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
     let mut shown = Vec::new();
     for (n, entry) in register.entries.iter().enumerate() {
         let name = NSTextField::labelWithString(&ns(&entry.name), mtm);
-        name.setFont(Some(&crate::agent::style::bold(13.0)));
+        name.setFont(Some(&ide_ui_agent::style::bold(13.0)));
         let description = NSTextField::wrappingLabelWithString(&ns(&entry.description), mtm);
-        description.setFont(Some(&crate::agent::style::small()));
+        description.setFont(Some(&ide_ui_agent::style::small()));
         description.setPreferredMaxLayoutWidth(460.0);
         let (offer, installable) = offer_text(entry);
-        let state = crate::agent_panel::small_label(mtm, &offer);
+        let state = ide_ui_agent::agent_panel::small_label(mtm, &offer);
         let install = link(
             mtm,
             t("Installieren …"),
@@ -692,7 +692,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
         let head = NSStackView::stackViewWithViews(
             &objc2_foundation::NSArray::from_retained_slice(&[
                 Retained::into_super(Retained::into_super(name)),
-                crate::agent_panel::spacer(mtm),
+                ide_ui_agent::agent_panel::spacer(mtm),
                 Retained::into_super(Retained::into_super(install)),
             ]),
             mtm,
@@ -727,7 +727,7 @@ fn register_rows(target: &AgentsSettings, register: &Register) -> Retained<NSSta
 /// Opens the window with the registry's entries.
 fn show_register(target: &AgentsSettings) {
     let mtm = target.mtm();
-    let Some((register, _)) = crate::agent::cached_register() else {
+    let Some((register, _)) = ide_ui_agent::cached_register() else {
         return;
     };
     let panel = with_window(|w| {
@@ -750,7 +750,7 @@ fn show_register(target: &AgentsSettings) {
             .clone()
     });
     let rows = register_rows(target, &register);
-    let document = crate::agent_panel::flipped(mtm);
+    let document = ide_ui_agent::agent_panel::flipped(mtm);
     document.addSubview(&rows);
     rows.setTranslatesAutoresizingMaskIntoConstraints(false);
     for constraint in [

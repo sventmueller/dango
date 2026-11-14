@@ -10,9 +10,9 @@ use objc2::sel;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSPasteboard};
 
 use super::{SCENARIO, answer_sheet, fixture_git, in_background, wait_for, window_of, write};
-use crate::git_panel::selftest::{self as panel, HISTORY_PAGE};
 use crate::selftest::{check, finish};
 use crate::window::WindowController;
+use ide_ui_git::selftest::{self as panel, HISTORY_PAGE};
 
 /// Commits made on top, so the first one is older than a page.
 const ADDED: usize = HISTORY_PAGE + 5;
@@ -98,10 +98,10 @@ fn paged(root: PathBuf, ok: bool) {
         ok,
         format!("{commits} commits"),
     );
-    crate::git_panel::reveal_commit(&controller, &root_commit());
+    ide_ui_git::reveal_commit(&controller, &root_commit());
     wait_for(
         root,
-        |c| crate::git_panel::selected_commit(c).is_some_and(|hash| hash == root_commit()),
+        |c| ide_ui_git::selected_commit(c).is_some_and(|hash| hash == root_commit()),
         revealed,
     );
 }
@@ -116,7 +116,7 @@ fn revealed(root: PathBuf, ok: bool) {
         ok && commits > HISTORY_PAGE,
         format!(
             "{commits} commits, selected {:?}",
-            crate::git_panel::selected_commit(&controller)
+            ide_ui_git::selected_commit(&controller)
         ),
     );
     let hash = root_commit();

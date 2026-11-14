@@ -18,10 +18,10 @@ use objc2_app_kit::{
 use objc2_foundation::{NSObjectProtocol, NSSize};
 use splat_i18n::{t, tf};
 
-use crate::agent::AgentTab;
 use crate::util::{guarded, main_after, main_soon, ns, set_action, symbol};
 use crate::window::WindowController;
 use crate::window::toolbar::kind_name;
+use ide_ui_agent::AgentTab;
 
 mod session;
 
@@ -476,7 +476,7 @@ impl Activity {
 
     fn update_count(&self) {
         let Some(controller) = self.controller() else { return };
-        let tabs = crate::agent::of_window(&controller);
+        let tabs = ide_ui_agent::of_window(&controller);
         let count = count(&tabs, &processes());
         for item in self.items() {
             item.setToolTip(Some(&ns(&tf("Was gerade läuft: {}", &[&count.to_string()]))));
@@ -563,7 +563,7 @@ impl Activity {
     /// What runs now, by section, or the session's own list.
     fn sections(&self, controller: &WindowController) -> Vec<(&'static str, Vec<Line>)> {
         let now = SystemTime::now();
-        let tabs = crate::agent::of_window(controller);
+        let tabs = ide_ui_agent::of_window(controller);
         match self.ivars().only.get() {
             Some((key, part)) => vec![(part.heading(), session_lines(&tabs, key, part, now))],
             None => vec![
@@ -608,7 +608,7 @@ impl Activity {
             right: 12.0,
         });
         for (title, lines) in sections.iter().filter(|(_, lines)| !lines.is_empty()) {
-            let heading = crate::agent_panel::section_label(mtm, title);
+            let heading = ide_ui_agent::agent_panel::section_label(mtm, title);
             stack.addArrangedSubview(&heading);
             for line in lines {
                 let (view, views) = self.line_view(mtm, line, &mut actions);
@@ -672,7 +672,7 @@ impl Activity {
         scroll.setHasVerticalScroller(true);
         scroll.setAutohidesScrollers(true);
         scroll.setDrawsBackground(false);
-        let document = crate::agent_panel::flipped(mtm);
+        let document = ide_ui_agent::agent_panel::flipped(mtm);
         document.addSubview(stack);
         crate::util::pin_edges(stack, &document);
         scroll.setDocumentView(Some(&document));
@@ -713,7 +713,7 @@ impl Activity {
         )));
         let detail = objc2_app_kit::NSTextField::labelWithString(&ns(&line.detail), mtm);
         detail.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
-        detail.setFont(Some(&crate::agent::style::small()));
+        detail.setFont(Some(&ide_ui_agent::style::small()));
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
         for label in [&title, &detail] {
             label.setContentCompressionResistancePriority_forOrientation(
@@ -750,7 +750,7 @@ impl Activity {
             button.setTag(isize::try_from(actions.len()).unwrap_or(-1));
             button.setControlSize(objc2_app_kit::NSControlSize::Small);
             button.setBezelStyle(objc2_app_kit::NSBezelStyle::Push);
-            button.setFont(Some(&crate::agent::style::small()));
+            button.setFont(Some(&ide_ui_agent::style::small()));
             crate::util::set_label(&button, Some(&format!("{title}: {}", line.title)));
             actions.push(action.clone());
             row.addArrangedSubview(&button);
@@ -768,7 +768,7 @@ impl Activity {
 
     fn perform(&self, action: Action) {
         let Some(controller) = self.controller() else { return };
-        let tab = |key: u64| crate::agent::of_window(&controller).into_iter().find(|t| t.key == key);
+        let tab = |key: u64| ide_ui_agent::of_window(&controller).into_iter().find(|t| t.key == key);
         match action {
             Action::ShowTab(key) => {
                 if let Some(tab) = tab(key) {
@@ -777,7 +777,7 @@ impl Activity {
             }
             Action::StopTurn(key) => {
                 if let Some(tab) = tab(key) {
-                    tab.stop_turn(crate::agent::Stop::Activity);
+                    tab.stop_turn(ide_ui_agent::Stop::Activity);
                 }
             }
             Action::Reveal(key, sub) => {

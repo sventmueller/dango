@@ -582,21 +582,6 @@ fn ascii_key(c: char) -> char {
     c
 }
 
-/// The mode label of `view`'s status bar and whether the system caret is hidden for the block, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn shown(view: &EditorTextView) -> (String, bool) {
-    let label = view
-        .ivars()
-        .vim
-        .borrow()
-        .label
-        .as_ref()
-        .map(|l| l.stringValue().to_string())
-        .unwrap_or_default();
-    let hidden = view.insertionPointColor().alphaComponent() == 0.0;
-    (label, hidden)
-}
-
 #[cfg(test)]
 mod tests {
     use super::ascii_key;
@@ -616,3 +601,8 @@ mod tests {
         assert_eq!(ascii_key('^'), '^');
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

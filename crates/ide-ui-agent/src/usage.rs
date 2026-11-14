@@ -88,15 +88,6 @@ pub fn fetch(session: &Session) {
     });
 }
 
-/// Takes `report` as the latest answer to `get_usage`, as the self-test hands one over without a session.
-#[cfg(feature = "selftest")]
-pub fn inject(report: UsageReport) {
-    *crate::host::state().usage.report.borrow_mut() = Some((SystemTime::now(), Some(report)));
-    for tab in super::all() {
-        tab.refresh();
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use ide_thread::{LimitStatus, RateLimit, ThreadId, Update};
@@ -125,3 +116,8 @@ mod tests {
         assert_eq!(windows_of(&claude, Some(report))[0].used, 0.8);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

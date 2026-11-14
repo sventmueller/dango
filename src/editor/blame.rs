@@ -207,7 +207,7 @@ impl std::fmt::Display for BlameError {
 }
 
 fn blame_of(path: &Path, head: &str) -> Result<Loaded, BlameError> {
-    let git = crate::git_panel::git().ok_or(BlameError::GitNotReady)?;
+    let git = ide_ui_git::git().ok_or(BlameError::GitNotReady)?;
     let repository = git.discover(path).map_err(BlameError::Git)?;
     let canonical = path.canonicalize().map_err(BlameError::Io)?;
     let relative = canonical
@@ -310,7 +310,7 @@ pub fn age(time: i64) -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX));
-    crate::git_panel::ago(now.saturating_sub(time))
+    ide_ui_git::ago(now.saturating_sub(time))
 }
 
 /// The line the cursor of `view` is on.
@@ -639,7 +639,7 @@ fn read_message(view: &EditorTextView, hash: String) {
     let root = loaded.repo_root.clone();
     let serial = view.ivars().lsp.borrow().serial;
     let job = move || {
-        let message = crate::git_panel::git()
+        let message = ide_ui_git::git()
             .and_then(|git| git.discover(&root).ok())
             .and_then(|repository| repository.commit_message(&hash).ok());
         main_soon(move || {
@@ -681,7 +681,7 @@ pub fn show_in_graph(view: &EditorTextView) {
     let shown = view.ivars().blame.borrow().shown.clone();
     if let (Some((_, commit)), Some(controller)) = (shown, view.controller()) {
         dismiss(view);
-        crate::git_panel::reveal_commit(&controller, &commit.hash);
+        ide_ui_git::reveal_commit(&controller, &commit.hash);
     }
 }
 
@@ -690,31 +690,8 @@ pub fn show_diff(view: &EditorTextView) {
     let shown = view.ivars().blame.borrow().shown.clone();
     if let (Some((loaded, commit)), Some(controller)) = (shown, view.controller()) {
         dismiss(view);
-        crate::git_panel::show_commit_diff(&controller, &loaded.repo_root, &commit.hash, &loaded.relative);
+        ide_ui_git::show_commit_diff(&controller, &loaded.repo_root, &commit.hash, &loaded.relative);
     }
-}
-
-/// The text of the open popover's labels, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn popover_texts(view: &EditorTextView) -> Option<Vec<String>> {
-    fn collect(view: &NSView, out: &mut Vec<String>) {
-        if let Some(field) = view.downcast_ref::<NSTextField>() {
-            out.push(field.stringValue().to_string());
-        }
-        if let Some(button) = view.downcast_ref::<NSButton>() {
-            out.push(button.title().to_string());
-        }
-        for child in view.subviews().iter() {
-            collect(&child, out);
-        }
-    }
-    let popover = view.ivars().blame.borrow().popover.clone()?;
-    if !popover.isShown() {
-        return None;
-    }
-    let mut out = Vec::new();
-    collect(&popover.contentViewController()?.view(), &mut out);
-    Some(out)
 }
 
 #[cfg(test)]
@@ -738,3 +715,8 @@ mod tests {
         );
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

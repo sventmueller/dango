@@ -26,7 +26,7 @@ pub fn run() {
             crate::quit::running().is_empty(),
             crate::quit::running().join(", "),
         );
-        let Some(tab) = crate::agent::open_replay(&controller) else {
+        let Some(tab) = ide_ui_agent::open_replay(&controller) else {
             check("an AI tab opens", false, "");
             return finish(NAME);
         };
@@ -90,7 +90,7 @@ fn quit_while_running(root: PathBuf, title: String) {
 /// Ends the turn; then nothing runs, and quitting may go on without a question.
 fn after_the_turn(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let tab = helpers::window_of(&root).and_then(|controller| crate::agent::of_window(&controller).into_iter().next());
+    let tab = helpers::window_of(&root).and_then(|controller| ide_ui_agent::of_window(&controller).into_iter().next());
     if let Some(tab) = &tab {
         tab.feed(&state("idle"));
     }

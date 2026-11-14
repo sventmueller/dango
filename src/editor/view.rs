@@ -266,7 +266,7 @@ define_class!(
         fn do_command(&self, command: Sel) {
             #[cfg(feature = "dictation")]
             if (command == objc2::sel!(cancelOperation:) || command == objc2::sel!(complete:))
-                && guarded(false, || crate::dictation::cancel_in(self))
+                && guarded(false, || ide_ui_dictation::cancel_in(self))
             {
                 return;
             }

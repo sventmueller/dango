@@ -130,19 +130,6 @@ fn aim(menu: &NSMenu, controller: &WindowController) {
     }
 }
 
-/// Makes the menu only recorded from now on, never shown, and forgets the one shown last.
-#[cfg(feature = "selftest")]
-pub(super) fn record_only() {
-    with_record_only(|record| record.set(true));
-    with_below_plus(|below| below.set(None));
-}
-
-/// Whether the menu was asked for since `record_only`, and whether below the "+"; forgets it.
-#[cfg(feature = "selftest")]
-pub(super) fn take_recorded() -> Option<bool> {
-    with_below_plus(Cell::take)
-}
-
 fn controller_of(window: &NSWindow) -> Option<Retained<WindowController>> {
     crate::context::app()
         .windows
@@ -164,3 +151,8 @@ pub(super) fn plus_button(window: &NSWindow) -> Option<Retained<NSView>> {
         .and_then(|content| unsafe { content.superview() })?;
     find(&frame)
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;

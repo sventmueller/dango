@@ -10,7 +10,7 @@ use crate::util::ns;
 /// What quitting would stop, by name: AI tabs with a turn, a subagent or background work that runs, and coding agents
 /// in terminals.
 pub fn running() -> Vec<String> {
-    let mut running = crate::agent::running();
+    let mut running = ide_ui_agent::running();
     running.extend(crate::terminal::agents_running());
     running
 }
@@ -47,8 +47,7 @@ fn question(mtm: MainThreadMarker, running: &[String]) -> objc2::rc::Retained<NS
     alert
 }
 
-/// Every self-test quits at its end with whatever its tabs left running; only the scenario about this question asks.
 #[cfg(feature = "selftest")]
-fn asks_in_selftest() -> bool {
-    std::env::var("IDE_SELFTEST").map_or(true, |scenario| scenario == "quit")
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;

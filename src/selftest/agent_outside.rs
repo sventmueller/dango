@@ -74,7 +74,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let Some(tab) = crate::agent::open_replay(&controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         return finish(NAME);
     };
     let notes = ide_core::paths::home().join("outside-notes.md");
@@ -200,7 +200,7 @@ fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
 }
 
 /// A click on the pasted picture's tile opens it large over the tab, and Escape closes it.
-fn enlarge(controller: &crate::window::WindowController, tab: &crate::agent::AgentTab) {
+fn enlarge(controller: &crate::window::WindowController, tab: &ide_ui_agent::AgentTab) {
     let sidebar = controller.inspect().sidebar_width;
     let enlarged = tab.enlarge_thumbnail();
     check(

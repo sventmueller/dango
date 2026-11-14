@@ -121,11 +121,6 @@ impl Mic {
         let alpha = if bright { 1.0 } else { 0.35 };
         self.button.animator().setAlphaValue(alpha);
     }
-
-    #[cfg(feature = "selftest")]
-    pub fn spinning(&self) -> bool {
-        !self.spinner.isHidden()
-    }
 }
 
 /// The line that says what dictation does, in the field's status bar.
@@ -160,3 +155,6 @@ pub fn show_line(line: &NSTextField, shown: &Shown) {
 pub fn reduce_motion() -> bool {
     NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

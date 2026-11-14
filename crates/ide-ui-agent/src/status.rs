@@ -189,16 +189,6 @@ impl StatusLine {
         // SAFETY: A string is a valid accessibility value of a group.
         unsafe { self.view.setAccessibilityValue(Some(&value)) };
     }
-
-    /// The texts the status line shows, for the self-test.
-    #[cfg(feature = "selftest")]
-    pub fn texts(&self) -> Vec<String> {
-        [&self.context, &self.cost, &self.activity, &self.problem]
-            .iter()
-            .map(|l| l.stringValue().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
-    }
 }
 
 /// What the current turn is doing beyond its answer, and its last error: from the notices since the last message the
@@ -238,3 +228,6 @@ fn turn_notes(thread: &Thread) -> (String, String) {
     }
     (activity.join(" · "), problem)
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

@@ -169,14 +169,7 @@ fn secret() -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// The running servers' folders, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn running(mtm: MainThreadMarker) -> Vec<(PathBuf, String, String)> {
-    previews(mtm)
-        .site_previews
-        .sites
-        .borrow()
-        .iter()
-        .map(|site| (site.root().to_path_buf(), site.origin(), site.secret().to_string()))
-        .collect()
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

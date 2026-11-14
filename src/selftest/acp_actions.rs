@@ -11,7 +11,7 @@ use objc2_app_kit::{NSAlertSecondButtonReturn, NSControlStateValueOn};
 use super::agent::{controller_of, tab_of};
 use super::agent_actions::{answer_when_shown, answered, index_of, titles};
 use super::{check, finish, helpers};
-use crate::agent::TabMenu;
+use ide_ui_agent::TabMenu;
 
 const NAME: &str = "acp-actions";
 const PROJECT: &str = "acp-actions-project";
@@ -52,13 +52,13 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
 
 pub fn run() {
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
-        crate::agent::set_test_register(register);
+        ide_ui_agent::set_test_register(register);
     }
     let made = helpers::make_project(PROJECT, &[("README.md", "# ACP actions\n")]);
-    crate::agent::set_test_launch(made.ok().and_then(|root| test_launch(&root)));
+    ide_ui_agent::set_test_launch(made.ok().and_then(|root| test_launch(&root)));
     helpers::open_project(NAME, PROJECT, &[], |controller| {
         let root = helpers::root(PROJECT);
-        let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
+        let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
             return finish(NAME);
         };
         let key = tab.key;
@@ -153,9 +153,9 @@ fn missing(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    crate::agent::set_test_launch(None);
+    ide_ui_agent::set_test_launch(None);
     register_agents(&root);
-    let Some(tab) = crate::agent::open_preset(&controller, OPENCODE) else {
+    let Some(tab) = ide_ui_agent::open_preset(&controller, OPENCODE) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -172,7 +172,7 @@ fn missing(root: PathBuf) {
                     && tab.problem_name() == Some("missing"),
                 format!("{:?}", answered()),
             );
-            crate::agent::set_test_launch(test_launch(&root));
+            ide_ui_agent::set_test_launch(test_launch(&root));
             tab.retry();
             soon(
                 "the agent starts once it is there",
@@ -257,7 +257,7 @@ fn dead_start(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    crate::agent::set_test_launch(Some(ide_acp::Launch::new(
+    ide_ui_agent::set_test_launch(Some(ide_acp::Launch::new(
         "test",
         "Test",
         PathBuf::from("/bin/sh"),
@@ -265,7 +265,7 @@ fn dead_start(root: PathBuf) {
         vec![("PATH".into(), "/usr/bin:/bin".into())],
         &root,
     )));
-    let Some(tab) = crate::agent::open_preset(&controller, GEMINI) else {
+    let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
         return finish(NAME);
     };
     let key = tab.key;
@@ -288,7 +288,7 @@ fn dead_start(root: PathBuf) {
                 format!("{shown:?}"),
             );
             if let Some(controller) = controller_of(&root) {
-                crate::agent::window_closed(&controller);
+                ide_ui_agent::window_closed(&controller);
             }
             helpers::wait_until(
                 || {
@@ -306,7 +306,7 @@ fn dead_start(root: PathBuf) {
 /// Agents only the registry knows: named as it names them, installable where it pins a version this Mac can use,
 /// else unavailable with the reason.
 fn register_agents(root: &std::path::Path) {
-    use crate::agent::{AcpAgent, Availability, agent_name, availability};
+    use ide_ui_agent::{AcpAgent, Availability, agent_name, availability};
     let of = |id: &str| AcpAgent::find(id).map(|agent| availability(&agent, &[], root));
     let names = ["fast-agent", "unpinned-agent"].map(agent_name);
     let uv = of("fast-agent");

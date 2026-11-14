@@ -18,7 +18,7 @@ pub struct Project {
 
 impl Project {
     /// Reads the top of `root` and starts watching it; changed folders reach `crate::window::tree_changed` and the
-    /// project search, changed files `crate::lsp::files_changed`, every change `crate::git_panel::changed` and
+    /// project search, changed files `crate::lsp::files_changed`, every change `ide_ui_git::changed` and
     /// `crate::ci_panel::changed`, and a change in `.git` the editors' change marks, all on the main thread.
     pub fn open(root: &Path) -> std::io::Result<Project> {
         let options = TreeOptions {
@@ -62,7 +62,7 @@ impl Project {
                 }
                 let root = window_root.clone();
                 main_soon(move || {
-                    crate::git_panel::changed(&root);
+                    ide_ui_git::changed(&root);
                     crate::ci_panel::changed(&root);
                 });
                 let (git, files) = match &event {
@@ -111,16 +111,13 @@ pub fn is_trusted(folder: &Path) -> bool {
     TrustStore::open().is_trusted(folder)
 }
 
-/// Takes the trust in `folder` back, so a self-test can open an AI tab without its agent starting.
-#[cfg(feature = "selftest")]
-pub fn distrust(folder: &Path) {
-    if let Err(error) = TrustStore::open().revoke(folder) {
-        crate::diag::report("taking back the trust in a folder", error);
-    }
-}
-
 pub fn trust(folder: &Path) {
     if let Err(error) = TrustStore::open().trust(folder) {
         crate::diag::report("trusting a folder", error);
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

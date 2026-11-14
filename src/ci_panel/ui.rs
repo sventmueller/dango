@@ -173,7 +173,7 @@ impl Ui {
                 )
             }
         };
-        let state = crate::git_panel::empty_state(mtm, panel, symbol_name, title, detail, button);
+        let state = ide_ui_git::empty_state(mtm, panel, symbol_name, title, detail, button);
         self.place_empty(&state);
     }
 
@@ -190,7 +190,7 @@ impl Ui {
                     )
                 },
             );
-            let state = crate::git_panel::empty_state(
+            let state = ide_ui_git::empty_state(
                 mtm,
                 panel,
                 "globe",
@@ -221,7 +221,7 @@ impl Ui {
                 (t("Im Browser anmelden"), sel!(ideCiBrowserLogin:)),
             )
         };
-        let state = crate::git_panel::empty_state(
+        let state = ide_ui_git::empty_state(
             mtm,
             panel,
             "person.badge.key",

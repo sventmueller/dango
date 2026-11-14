@@ -8,21 +8,21 @@ use objc2::rc::{Retained, Weak};
 use objc2_app_kit::{NSColor, NSFontAttributeName, NSForegroundColorAttributeName};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 
-use super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
+use super::super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
 use crate::util::{constant, ns};
 use crate::window::WindowController;
 
-pub use super::line_diagnostics::busy_lines;
-pub use super::minimap::{click as click_minimap, probe as minimap};
-pub use super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
-pub use super::vim::{mode as vim_mode, shown as vim_shown, toggle as toggle_vim};
+pub use super::super::line_diagnostics::busy_lines;
+pub use super::super::minimap::{click as click_minimap, probe as minimap};
+pub use super::super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
+pub use super::super::vim::{mode as vim_mode, shown as vim_shown, toggle as toggle_vim};
 
 /// The logical lines `view` shows, the first to the last on screen, for the self-test.
 pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
     let rect = view.visibleRect();
-    let top = super::highlight::line_at(view, rect.origin).unwrap_or(0);
-    let bottom =
-        super::highlight::line_at(view, NSPoint::new(0.0, rect.origin.y + rect.size.height - 1.0)).unwrap_or(top);
+    let top = super::super::highlight::line_at(view, rect.origin).unwrap_or(0);
+    let bottom = super::super::highlight::line_at(view, NSPoint::new(0.0, rect.origin.y + rect.size.height - 1.0))
+        .unwrap_or(top);
     top..bottom + 1
 }
 
@@ -68,19 +68,19 @@ pub fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<
 
 /// What the self-test does with folds and carets, through the code the commands run.
 pub mod selftest {
-    pub use super::super::fold::{
+    pub use super::super::super::fold::{
         click as click_fold, fold_all, fold_at_cursor, folded, from_server, gutter, laid_out_lines, placeholders,
         toggle as toggle_fold, unfold_all,
     };
-    pub use super::super::multi::{
+    pub use super::super::super::multi::{
         add_next_occurrence, add_vertical, carets, column, copied, paste_text, set as set_carets,
     };
 }
 
 /// What the self-test does with blame, through the code the commands run.
 pub mod blame_probe {
-    pub use super::super::blame::{dismiss, line, popover_texts, show_for_cursor};
-    pub use super::super::blame_column::of as column;
+    pub use super::super::super::blame::{dismiss, line, popover_texts, show_for_cursor};
+    pub use super::super::super::blame_column::of as column;
 }
 
 /// Types `text` as the keyboard would, through the view's input path.
@@ -107,14 +107,14 @@ pub fn save_view(view: &EditorTextView) {
 
 /// Whether a save of `view` still writes its file on the disk lane.
 pub fn writing(view: &EditorTextView) -> bool {
-    view.ivars().writing.get() != super::saving::Writing::Idle
+    view.ivars().writing.get() != super::super::saving::Writing::Idle
 }
 
-pub use super::changes::{
+pub use super::super::changes::{
     Mark as ChangeMark, Seen as ChangesSeen, popover_parts as change_popover, seen as changes_seen,
 };
-pub use super::indent::{menu as indent_menu, shown as indent_shown};
-pub use super::whitespace::visible as whitespace_visible;
+pub use super::super::indent::{menu as indent_menu, shown as indent_shown};
+pub use super::super::whitespace::visible as whitespace_visible;
 
 /// Clicks the change mark of `line`, counted from 0, in `view`'s line number column, as the mouse would.
 pub fn click_change(view: &EditorTextView, line: usize) -> bool {

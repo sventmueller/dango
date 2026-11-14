@@ -176,27 +176,6 @@ fn problems_text(errors: usize, warnings: usize) -> String {
     }
 }
 
-/// The breadcrumbs the bar of `view` shows, for the self-test.
-#[cfg(feature = "selftest")]
-pub fn crumbs(view: &EditorTextView) -> String {
-    let state = view.ivars().lsp.borrow();
-    state
-        .status
-        .as_ref()
-        .filter(|bar| !bar.crumbs.isHidden())
-        .map(|bar| bar.crumbs.title().to_string())
-        .unwrap_or_default()
-}
-
-/// What the bar of `view` shows, for the self-test: the problems and the server's line.
-#[cfg(feature = "selftest")]
-pub fn shown(view: &EditorTextView) -> (String, String) {
-    let state = view.ivars().lsp.borrow();
-    state.status.as_ref().map_or_else(Default::default, |bar| {
-        (bar.problems.title().to_string(), bar.server.stringValue().to_string())
-    })
-}
-
 /// Says `text` in the status bar of `view` for a few seconds, in place of the server's state.
 pub fn note(view: &EditorTextView, text: &str) {
     view.ivars().lsp.borrow_mut().note = Some(text.to_string());
@@ -214,8 +193,7 @@ pub fn note(view: &EditorTextView, text: &str) {
     });
 }
 
-/// The passing remark the status bar of `view` shows, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn note_of(view: &EditorTextView) -> Option<String> {
-    view.ivars().lsp.borrow().note.clone()
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

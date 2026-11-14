@@ -49,8 +49,8 @@ impl ide_ui_terminal::Host for AppHost {
 }
 
 #[cfg(feature = "dictation")]
-impl crate::dictation::Host for AppHost {
-    fn state(&self) -> Rc<crate::dictation::State> {
+impl ide_ui_dictation::Host for AppHost {
+    fn state(&self) -> Rc<ide_ui_dictation::State> {
         context().dictation.clone()
     }
 }
@@ -341,7 +341,7 @@ impl ide_ui_git::Host for AppHost {
     }
 
     fn select_thread_in(&self, folder: &Path) -> bool {
-        let Some(tab) = crate::agent::all().into_iter().find(|tab| tab.cwd() == folder) else {
+        let Some(tab) = ide_ui_agent::all().into_iter().find(|tab| tab.cwd() == folder) else {
             return false;
         };
         tab.select();
@@ -349,7 +349,7 @@ impl ide_ui_git::Host for AppHost {
     }
 
     fn thread_works_in(&self, folder: &Path) -> bool {
-        crate::agent::working_in(folder)
+        ide_ui_agent::working_in(folder)
     }
 
     fn open_thread(&self, window: u64, tree: &ide_git::ThreadTree) {
@@ -359,19 +359,19 @@ impl ide_ui_git::Host for AppHost {
     }
 
     fn claude_program(&self, env: &[(String, String)]) -> Option<PathBuf> {
-        crate::agent::claude_program(env)
+        ide_ui_agent::claude_program(env)
     }
 
     fn endpoint(&self, id: &str) -> Option<ide_agent::Endpoint> {
-        crate::own_agent::endpoint(id)
+        ide_ui_agent::own_agent::endpoint(id)
     }
 
     fn key(&self, endpoint: &ide_agent::Endpoint) -> Option<ide_agent::ApiKey> {
-        crate::own_agent::key(endpoint)
+        ide_ui_agent::own_agent::key(endpoint)
     }
 
     fn provider_error(&self, error: &ide_agent::ProviderError) -> String {
-        crate::own_agent::provider_error(error)
+        ide_ui_agent::own_agent::provider_error(error)
     }
 }
 

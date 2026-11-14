@@ -36,7 +36,7 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
         crate::editor::with_view_items(mtm, view_menu(mtm, &keys)),
         go_menu(mtm, &keys),
         crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
-        crate::git_panel::menu(mtm),
+        ide_ui_git::menu(mtm),
         crate::tests_panel::with_menu_items(mtm, crate::debug::menu(mtm, &|command| keys.get(command)), &|command| {
             keys.get(command)
         }),
@@ -175,7 +175,7 @@ fn edit_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
         items,
         vec![
             separator(mtm),
-            crate::dictation::menu_item(mtm, &keys.get("dictation.toggle")),
+            ide_ui_dictation::menu_item(mtm, &keys.get("dictation.toggle")),
         ],
     ]
     .concat();

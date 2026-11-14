@@ -282,7 +282,7 @@ fn checked(serial: u64, verdict: &guard::Verdict) {
     let warning = match verdict {
         guard::Verdict::NotInstalled if !crate::context::app().predictions.told_missing.replace(true) => Some(tf(
             "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
-            &[crate::git_panel::message::INSTALL_GITLEAKS],
+            &[ide_ui_git::message::INSTALL_GITLEAKS],
         )),
         guard::Verdict::Failed(problem) => Some(tf("Die Secrets-Prüfung ist fehlgeschlagen: {}", &[problem])),
         _ => None,

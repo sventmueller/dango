@@ -14,7 +14,7 @@ const RUNS_WITH_JOBS: usize = 10;
 
 /// HEAD's commit and branch, or why there is none.
 pub fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
-    let Some(git) = crate::git_panel::git() else {
+    let Some(git) = ide_ui_git::git() else {
         return Err(Box::new(Loaded::NoGit));
     };
     let repo = match git.discover(root) {

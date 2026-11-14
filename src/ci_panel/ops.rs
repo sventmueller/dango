@@ -227,7 +227,7 @@ impl CiPanel {
         let excerpt = ide_ci::log::excerpt(&ide_ci::log::lines(raw), EXCERPT_LINES);
         if let Some(tab) = open_agent(&controller) {
             tab.set_draft(&draft(&job.name, run, place));
-            tab.attach_outside(crate::agent::ci_log(&job.name, run, excerpt));
+            tab.attach_outside(ide_ui_agent::ci_log(&job.name, run, excerpt));
         }
     }
 
@@ -355,12 +355,12 @@ pub fn draft(job: &str, run: &str, place: &str) -> String {
 }
 
 /// A new AI tab; the self-test's plays recordings instead of starting `claude`.
-fn open_agent(controller: &crate::window::WindowController) -> Option<Rc<crate::agent::AgentTab>> {
+fn open_agent(controller: &crate::window::WindowController) -> Option<Rc<ide_ui_agent::AgentTab>> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        return crate::agent::open_replay(controller);
+        return ide_ui_agent::open_replay(controller);
     }
-    crate::agent::open_tab(controller, None)
+    ide_ui_agent::open_tab(controller, None)
 }
 
 /// Shows `alert` as a sheet on `window`; `then` gets the button that ended it.

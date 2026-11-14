@@ -18,8 +18,6 @@ mod minimap;
 mod multi;
 mod overlay;
 pub mod predict;
-#[cfg(feature = "selftest")]
-mod probe;
 mod sticky;
 pub use overlay::follow as follow_overlay;
 pub(crate) use saving::{save, save_soon};
@@ -258,7 +256,7 @@ pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_
     indent::status_items(mtm, view, stack);
     predict::status_items(mtm, view, stack);
     #[cfg(feature = "dictation")]
-    crate::dictation::editor_items(mtm, std::rc::Rc::new(EditorField(Weak::from(view))), view, stack);
+    ide_ui_dictation::editor_items(mtm, std::rc::Rc::new(EditorField(Weak::from(view))), view, stack);
 }
 
 /// An editor as a field that dictation goes into.
@@ -266,7 +264,7 @@ pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_
 struct EditorField(Weak<EditorTextView>);
 
 #[cfg(feature = "dictation")]
-impl crate::dictation::DictationField for EditorField {
+impl ide_ui_dictation::DictationField for EditorField {
     fn notice(&self, text: &str) -> bool {
         let controller = self.0.load().and_then(|editor| editor.controller());
         controller.inspect(|controller| controller.show_notice(text)).is_some()

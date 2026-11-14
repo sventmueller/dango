@@ -225,14 +225,7 @@ pub fn dismiss(view: &EditorTextView) {
     }
 }
 
-/// The text of the popover shown on `view`, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn shown_text(view: &EditorTextView) -> Option<String> {
-    let state = view.ivars().lsp.borrow();
-    state
-        .hover
-        .popover
-        .as_ref()
-        .filter(|p| p.isShown())
-        .map(|_| state.hover.shown.clone())
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

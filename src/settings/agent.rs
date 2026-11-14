@@ -23,8 +23,8 @@ use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
 use super::list_bar;
-use crate::own_agent::{self, ModelChoice};
 use crate::util::{guarded, ns, set_action};
+use ide_ui_agent::own_agent::{self, ModelChoice};
 
 /// The height of the endpoints' table, which lists the services and the user's endpoints.
 const TABLE_HEIGHT: f64 = 120.0;
@@ -802,7 +802,7 @@ fn section(mtm: MainThreadMarker, title: &str, text: &str) -> Vec<Retained<NSVie
 /// The views one under another, in a scroll view no taller than a small screen shows whole.
 fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView> {
     let stack = form::stack(mtm, views);
-    let document = crate::agent_panel::flipped(mtm);
+    let document = ide_ui_agent::agent_panel::flipped(mtm);
     document.addSubview(&stack);
     stack.setTranslatesAutoresizingMaskIntoConstraints(false);
     for constraint in [

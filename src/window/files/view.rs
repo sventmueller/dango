@@ -226,14 +226,6 @@ impl FileTreeSource {
         self.ivars().items.borrow().get(path).cloned()
     }
 
-    /// The row of `path` in `view`, -1 if it shows none.
-    #[cfg(feature = "selftest")]
-    pub(super) fn row_of(&self, view: &NSOutlineView, path: &Path) -> isize {
-        let Some(item) = self.item_of(path) else { return -1 };
-        // SAFETY: The item is one the data source handed to this view, kept alive in `items`.
-        unsafe { view.rowForItem(Some(&item)) }
-    }
-
     fn children_of(&self, item: Option<&AnyObject>) -> Vec<Entry> {
         let project = &self.ivars().project;
         let dir = match item {
@@ -408,3 +400,6 @@ fn row_view(mtm: MainThreadMarker, path: &Path, ignored: bool, open: Option<bool
     cell.setToolTip(Some(&ns(&path.to_string_lossy())));
     cell.into_super()
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

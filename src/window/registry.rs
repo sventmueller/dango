@@ -122,8 +122,7 @@ pub fn records() -> Vec<crate::session::WindowRecord> {
         .collect()
 }
 
-/// The open windows, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn open_windows() -> Vec<Retained<WindowController>> {
-    windows()
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

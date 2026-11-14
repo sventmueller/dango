@@ -94,12 +94,6 @@ pub fn all_views() -> Vec<Retained<TerminalView>> {
     host().state().views.borrow().values().filter_map(Weak::load).collect()
 }
 
-/// The number of the terminal view opened last.
-#[cfg(feature = "selftest")]
-pub(super) fn latest_id() -> Option<u64> {
-    host().state().views.borrow().keys().max().copied()
-}
-
 /// Hands the session's events, which arrive on its reader thread, to the view on the main thread.
 pub(super) fn listener(id: u64) -> impl Fn(Event) + Send + Sync + 'static {
     move |event| {
@@ -110,3 +104,8 @@ pub(super) fn listener(id: u64) -> impl Fn(Event) + Send + Sync + 'static {
         });
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;

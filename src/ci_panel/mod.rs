@@ -287,7 +287,7 @@ pub mod selftest {
 
     /// The text in the composer of the window's newest AI tab, then the text it takes along from outside.
     pub fn agent_draft(controller: &WindowController) -> Option<String> {
-        crate::agent::of_window(controller).last().map(|tab| {
+        ide_ui_agent::of_window(controller).last().map(|tab| {
             let mut draft = tab.composer_text();
             for outside in tab.outside_texts() {
                 draft.push('\n');
@@ -299,7 +299,7 @@ pub mod selftest {
 
     /// Whether the window's newest AI tab takes text along from outside.
     pub fn agent_has_outside(controller: &WindowController) -> bool {
-        crate::agent::of_window(controller)
+        ide_ui_agent::of_window(controller)
             .last()
             .is_some_and(|tab| !tab.outside_texts().is_empty())
     }

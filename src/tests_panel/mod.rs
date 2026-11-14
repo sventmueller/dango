@@ -264,8 +264,7 @@ pub fn with_menu_items(
     debug_menu
 }
 
-/// The panel of `controller`'s window, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn panel_of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
-    of(controller)
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

@@ -158,16 +158,7 @@ fn inset(at: usize, messages: &[(crate::lsp::Severity, String)]) -> Option<Inset
     Some(inset)
 }
 
-/// The lines of `view` edited within the last second, for the self-test.
 #[cfg(feature = "selftest")]
-pub fn busy_lines(view: &EditorTextView) -> Vec<usize> {
-    let now = Instant::now();
-    view.ivars()
-        .line_edits
-        .borrow()
-        .0
-        .iter()
-        .filter(|(_, at)| now.duration_since(*at) < REST)
-        .map(|(line, _)| *line)
-        .collect()
-}
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

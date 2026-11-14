@@ -20,7 +20,7 @@ use super::agent::{controller_of, picture, tab_of};
 use super::agent_stand_in::{AREAS, COLOUR, EXTRAS, SESSION, StandIn, TESTS};
 use super::helpers::{alert_texts, answer_alert, in_any_mode_after};
 use super::{check, finish, helpers};
-use crate::agent::{AgentTab, TabMenu};
+use ide_ui_agent::{AgentTab, TabMenu};
 
 const NAME: &str = "agent-actions";
 /// Time for the timeline to build and lay out the cards that scrolling or a press changed; it reports no end.
@@ -155,7 +155,7 @@ pub fn run() {
         check("the stand-in is written", false, "");
         return finish(NAME);
     };
-    crate::agent::set_test_claude(prepared.program());
+    ide_ui_agent::set_test_claude(prepared.program());
     crate::app::open_project(mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
@@ -172,7 +172,7 @@ fn start(root: PathBuf) {
             return finish(NAME);
         };
         missing_program(&controller);
-        let Some(tab) = crate::agent::open_tab(&controller, None) else {
+        let Some(tab) = ide_ui_agent::open_tab(&controller, None) else {
             return finish(NAME);
         };
         tab.keep_remote_control_off();
@@ -192,7 +192,7 @@ fn start(root: PathBuf) {
 
 /// A tab whose program is not there says so instead of starting.
 fn missing_program(controller: &crate::window::WindowController) {
-    let Some(tab) = crate::agent::open_replay(controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(controller) else {
         return;
     };
     tab.launch_with(None);
@@ -223,7 +223,7 @@ fn missing_program(controller: &crate::window::WindowController) {
 
 /// Every kind of tool shows in a card of its own, folded and opened.
 fn tool_cards(root: PathBuf, controller: &crate::window::WindowController) {
-    let Some(tab) = crate::agent::open_replay(controller) else {
+    let Some(tab) = ide_ui_agent::open_replay(controller) else {
         return finish(NAME);
     };
     let frames: Vec<String> = super::agent_stand_in::tools_turn(&root)
@@ -240,7 +240,7 @@ fn tool_cards(root: PathBuf, controller: &crate::window::WindowController) {
             tab.timeline().scroll_to_end();
             tab.timeline().settle();
             let folded = tab.timeline().visible_summaries();
-            for part in [crate::agent::Part::Input, crate::agent::Part::Output] {
+            for part in [ide_ui_agent::Part::Input, ide_ui_agent::Part::Output] {
                 tab.open_all(part);
             }
             let seen = folded.clone();
@@ -537,11 +537,11 @@ fn keyboard_targets(root: &std::path::Path, tab: &AgentTab, id: u64) -> (bool, b
     };
     let text = tab.timeline().inputs().borrow().plan_text.get(&id).cloned();
     let target = |place: u8| {
-        crate::agent::plan::keyboard_target(&controller)
+        ide_ui_agent::plan::keyboard_target(&controller)
             .is_some_and(|(at, plan, where_)| at.key == tab.key && plan == id && where_ == place)
     };
     let in_card = text.as_ref().is_some_and(|text| {
-        crate::agent::plan::select(tab, id, 0, "Tests") && window.makeFirstResponder(Some(text)) && target(0)
+        ide_ui_agent::plan::select(tab, id, 0, "Tests") && window.makeFirstResponder(Some(text)) && target(0)
     });
     let leaves = text.as_ref().is_some_and(|text| {
         let focused = |w: &objc2_app_kit::NSWindow| {
@@ -690,7 +690,7 @@ fn names(root: PathBuf, key: u64) {
     tab.toggle_bookmark();
     check(
         "the bookmark marks the session in the tab and the AI panel",
-        tab.is_bookmarked() && crate::agent_panel::is_bookmarked(tab.thread_id()),
+        tab.is_bookmarked() && ide_ui_agent::agent_panel::is_bookmarked(tab.thread_id()),
         "",
     );
     let history = tab.menu(TabMenu::History);
@@ -700,11 +700,11 @@ fn names(root: PathBuf, key: u64) {
         past.iter().any(|t| t.starts_with("Aktionen im Test · ")),
         format!("{past:?}"),
     );
-    let before = crate::agent::all().len();
+    let before = ide_ui_agent::all().len();
     if let Some(index) = past.iter().position(|t| t.starts_with("Aktionen im Test · ")) {
         history.performActionForItemAtIndex(isize::try_from(index).unwrap_or(0));
     }
-    let open_tabs = crate::agent::all().len() - before;
+    let open_tabs = ide_ui_agent::all().len() - before;
     let pressed =
         call_entry(&tab, "toolu_write").is_some_and(|write| tab.timeline().press_on(write, "Im Editor öffnen"));
     let shown = controller_of(&root).map(|c| c.tab_titles()).unwrap_or_default();
@@ -714,9 +714,9 @@ fn names(root: PathBuf, key: u64) {
         format!("{open_tabs} tabs, {shown:?}"),
     );
     let ls = call_entry(&tab, "toolu_ls");
-    let closed = ls.is_some_and(|ls| tab.timeline().is_open(ls, crate::agent::Part::Output));
+    let closed = ls.is_some_and(|ls| tab.timeline().is_open(ls, ide_ui_agent::Part::Output));
     let keyed = ls.is_some_and(|ls| tab.timeline().key_on(ls, " "));
-    let opened = ls.is_some_and(|ls| tab.timeline().is_open(ls, crate::agent::Part::Output));
+    let opened = ls.is_some_and(|ls| tab.timeline().is_open(ls, ide_ui_agent::Part::Output));
     check(
         "Space on a selected command card opens its output",
         keyed && opened != closed,
@@ -798,12 +798,12 @@ fn focus(root: PathBuf, key: u64) {
     tab.type_in_composer("");
     tab.composer_key(48, "\t", objc2_app_kit::NSEventModifierFlags::Control);
     let before = tab.composer_has_focus();
-    crate::agent::toggle_focus(&controller);
+    ide_ui_agent::toggle_focus(&controller);
     let inside = tab.composer_has_focus() != before;
-    crate::agent::toggle_focus(&controller);
+    ide_ui_agent::toggle_focus(&controller);
     let left = tab.composer_has_focus() == before;
-    let shown = crate::agent::can_show_work(&controller, crate::activity::Part::Subagents);
-    crate::agent::show_work(&controller, crate::activity::Part::Subagents);
+    let shown = ide_ui_agent::can_show_work(&controller, crate::activity::Part::Subagents);
+    ide_ui_agent::show_work(&controller, crate::activity::Part::Subagents);
     check(
         "⌘Esc moves the focus into the composer and back, and the menu offers the session's subagents",
         inside && left && shown,
@@ -866,7 +866,7 @@ fn rewind(root: PathBuf, key: u64) {
     let menu = tab.rewind_menu_of(second);
     let had_checkpoint = tab.checkpoint_count() > 0;
     if had_checkpoint {
-        crate::agent::answer_alerts(&[NSAlertFirstButtonReturn, NSAlertFirstButtonReturn]);
+        ide_ui_agent::answer_alerts(&[NSAlertFirstButtonReturn, NSAlertFirstButtonReturn]);
     } else {
         answer_when_shown(NSAlertFirstButtonReturn, None);
     }
@@ -876,14 +876,14 @@ fn rewind(root: PathBuf, key: u64) {
     }
     soon(
         "the code rewind reports",
-        move || !crate::agent::alerts_seen().is_empty() || answered().len() > seen_before,
+        move || !ide_ui_agent::alerts_seen().is_empty() || answered().len() > seen_before,
         move || {
             check(
                 "the rewind menu offers the conversation, the code and both, and the code goes back",
                 offered.len() == 3 && (had_checkpoint || !stand_in().requests("rewind_files").is_empty()),
                 format!(
                     "{offered:?}, checkpoint {had_checkpoint}, {:?}",
-                    crate::agent::alerts_seen()
+                    ide_ui_agent::alerts_seen()
                 ),
             );
             let Some(tab) = tab_of(key) else { return finish(NAME) };

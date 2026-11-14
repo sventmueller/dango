@@ -31,7 +31,7 @@ static SHELL: AtomicU32 = AtomicU32::new(0);
 pub fn run() {
     helpers::open_project(NAME, "activity-project", &[], move |controller| {
         let root = helpers::root("activity-project");
-        let Some(tab) = crate::agent::open_replay(&controller) else {
+        let Some(tab) = ide_ui_agent::open_replay(&controller) else {
             check("an AI tab opens", false, "");
             return finish(NAME);
         };

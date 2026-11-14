@@ -178,7 +178,7 @@ impl Document {
         let four = self.four_colours.borrow().clone();
         let color = match (tint, self.kind) {
             (Some(tint), _) => tint,
-            (None, TabKind::Agent | TabKind::Plan) => crate::agent::Agent::Claude.colour(),
+            (None, TabKind::Agent | TabKind::Plan) => ide_ui_agent::Agent::Claude.colour(),
             (None, _) => NSColor::secondaryLabelColor(),
         };
         let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
@@ -752,7 +752,7 @@ fn worktree_menu(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
     let agents: Vec<Retained<NSMenuItem>> = crate::worktrees::agents()
         .into_iter()
         .enumerate()
-        .filter(|(_, (agent, _))| crate::agent::installed(agent))
+        .filter(|(_, (agent, _))| ide_ui_agent::installed(agent))
         .map(|(n, (agent, _))| {
             let entry = item(mtm, &tf("{} …", &[agent.name()]), Some(sel!(ideNewWorktreeThread:)), "");
             entry.setTag(isize::try_from(n).unwrap_or(-1));
@@ -788,17 +788,17 @@ pub fn new_tab_menu(mtm: MainThreadMarker) -> Retained<NSMenu> {
         menu.addItem(&entry);
     }
     // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
-    if crate::agent::installed(&crate::agent::Agent::Claude) {
+    if ide_ui_agent::installed(&ide_ui_agent::Agent::Claude) {
         menu.addItem(&entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
     }
-    let usable = crate::agent::preset_menu();
-    for (index, name) in crate::agent::installed_presets() {
+    let usable = ide_ui_agent::preset_menu();
+    for (index, name) in ide_ui_agent::installed_presets() {
         let agent = entry(&name, "sparkles", Some(sel!(ideNewAcpThread:)));
         agent.setTag(isize::try_from(index).unwrap_or(-1));
         agent.setEnabled(usable.get(index).is_some_and(|(_, usable)| *usable));
         menu.addItem(&agent);
     }
-    if crate::agent::installed(&crate::agent::Agent::Own) {
+    if ide_ui_agent::installed(&ide_ui_agent::Agent::Own) {
         let (own, _) = submenu(mtm, t("Eigener Agent"), Vec::new());
         own.setImage(symbol("brain", t("Eigener Agent")).as_deref());
         menu.addItem(&own);
@@ -826,7 +826,7 @@ pub fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
         .itemWithTitle(&ns(t("Eigener Agent")))
         .and_then(|item| item.submenu());
     if let Some(own) = own {
-        crate::agent::fill_own_menu(controller.mtm(), &own);
+        ide_ui_agent::fill_own_menu(controller.mtm(), &own);
     }
 }
 

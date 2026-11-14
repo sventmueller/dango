@@ -86,7 +86,7 @@ fn arrange(a: PathBuf, b: PathBuf) {
     first.open_file(&a.join("notes.md"));
     crate::terminal::open_tab(&first, Some(&a));
     let replayed = crate::selftest::replay_agent(&first, SESSION);
-    if let Some(tab) = crate::agent::of_window(&first).first() {
+    if let Some(tab) = ide_ui_agent::of_window(&first).first() {
         tab.pick_all(PICKS.0, PICKS.1, PICKS.2);
     }
     first.activate_panel(Panel::Git);
@@ -208,7 +208,7 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
 /// The AI thread that came back: its session, the panel's one row for it, the agent of another agent's session, the
 /// picks and the composer.
 fn ai_sessions(first: &crate::window::WindowController, a: &Path) {
-    let sessions = crate::agent::of_window(first)
+    let sessions = ide_ui_agent::of_window(first)
         .iter()
         .filter_map(|tab| tab.session_id())
         .collect::<Vec<_>>();
@@ -236,17 +236,17 @@ fn ai_sessions(first: &crate::window::WindowController, a: &Path) {
         Some(PICKS.1.to_string()),
         PICKS.2.to_string(),
     );
-    let restored = crate::agent::of_window(first)
+    let restored = ide_ui_agent::of_window(first)
         .iter()
         .find(|tab| tab.session_id().as_deref() == Some(SESSION))
         .map(|tab| tab.picks());
-    let fresh = crate::agent::open_replay(first).map(|tab| tab.picks());
+    let fresh = ide_ui_agent::open_replay(first).map(|tab| tab.picks());
     check(
         "the AI thread that came back and a new one start with the model, effort and mode picked last",
         restored.as_ref() == Some(&wanted) && fresh.as_ref() == Some(&wanted),
         format!("{restored:?} / {fresh:?}"),
     );
-    let hits = crate::agent::of_window(first)
+    let hits = ide_ui_agent::of_window(first)
         .iter()
         .find(|tab| tab.session_id().as_deref() == Some(SESSION))
         .map(|tab| {
@@ -266,7 +266,7 @@ fn continued_once(
     controller: &crate::window::WindowController,
     folder: &Path,
 ) -> Option<Vec<(&'static str, bool, String)>> {
-    let project = crate::agent_panel::claude_config_dir()
+    let project = ide_ui_agent::agent_panel::claude_config_dir()
         .join("projects")
         .join(ide_claude::history::project_folder(folder));
     std::fs::create_dir_all(&project).ok()?;
@@ -276,7 +276,7 @@ fn continued_once(
     )
     .ok()?;
     // As a tab whose session the index does not know yet: only the tab itself then tells the two apart.
-    crate::agent::of_window(controller)
+    ide_ui_agent::of_window(controller)
         .into_iter()
         .find(|tab| tab.session_id().as_deref() == Some(SESSION))?;
     let mut index = ide_thread::ThreadIndex::open(&ide_thread::ThreadIndex::default_dir());
@@ -291,7 +291,7 @@ fn continued_once(
     }
     let shown = controller.inspect().panel;
     controller.activate_panel(Panel::Agents);
-    let rows = crate::agent_panel::inspect(controller).map(|seen| seen.rows);
+    let rows = ide_ui_agent::agent_panel::inspect(controller).map(|seen| seen.rows);
     if let Some(panel) = shown {
         controller.activate_panel(panel);
     }
