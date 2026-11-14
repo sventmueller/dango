@@ -9,9 +9,9 @@ use std::ops::Range;
 use ide_lsp::lsp_types::{
     Documentation, ParameterLabel, SignatureHelp, SignatureHelpContext, SignatureHelpTriggerKind, SignatureInformation,
 };
-use objc2::rc::{Retained, Weak};
+use objc2::rc::Retained;
 use objc2::runtime::Sel;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
+use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSAccessibility, NSBackingStoreType, NSColor, NSFont, NSFontAttributeName, NSFontWeightSemibold,
     NSForegroundColorAttributeName, NSLineBreakMode, NSPanel, NSTextField, NSTextInputClient, NSTextView,
@@ -21,8 +21,10 @@ use objc2_app_kit::{
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSPoint, NSRange, NSRect, NSSize};
 
 use super::{server_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::{constant, main_soon, ns};
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::constant;
+use ide_ui_common::util::{main_soon, ns};
 
 const PADDING: f64 = 6.0;
 const MAX_WIDTH: f64 = 640.0;
@@ -31,7 +33,7 @@ const MAX_WIDTH: f64 = 640.0;
 struct Help {
     panel: Retained<NSPanel>,
     field: Retained<NSTextField>,
-    view: RefCell<Weak<EditorTextView>>,
+    view: Cell<Option<u64>>,
     shown: RefCell<Option<SignatureHelp>>,
     /// The signature shown, which ↑ and ↓ change.
     active: Cell<usize>,
@@ -50,7 +52,7 @@ pub struct ShownSignature {
 }
 
 fn with_help<R>(f: impl FnOnce(&RefCell<Option<std::rc::Rc<Help>>>) -> R) -> R {
-    f(&crate::context::app().signature_help.help)
+    f(&crate::lsp::host::state().signature_help.help)
 }
 
 fn help(mtm: MainThreadMarker) -> std::rc::Rc<Help> {
@@ -92,7 +94,7 @@ fn build(mtm: MainThreadMarker) -> Help {
     Help {
         panel,
         field,
-        view: RefCell::new(Weak::default()),
+        view: Cell::new(None),
         shown: RefCell::new(None),
         active: Cell::new(0),
         asked: Cell::new(0),
@@ -102,14 +104,14 @@ fn build(mtm: MainThreadMarker) -> Help {
 }
 
 /// The window, if it shows for `view`.
-fn open_for(view: &EditorTextView) -> Option<std::rc::Rc<Help>> {
+fn open_for(view: &dyn Editor) -> Option<std::rc::Rc<Help>> {
     let help = with_help(|cell| cell.borrow().clone())?;
-    let ours = help.view.borrow().load().is_some_and(|v| std::ptr::eq(&*v, view));
+    let ours = help.view.get() == Some(view.serial());
     (ours && help.panel.isVisible()).then_some(help)
 }
 
 /// The characters after which the server of `view` offers signatures, and those after which it updates them.
-fn triggers(view: &EditorTextView) -> (Vec<String>, Vec<String>) {
+fn triggers(view: &dyn Editor) -> (Vec<String>, Vec<String>) {
     let provider = server_of(view)
         .and_then(|(server, _)| server.capabilities())
         .and_then(|c| c.signature_help_provider);
@@ -122,7 +124,7 @@ fn triggers(view: &EditorTextView) -> (Vec<String>, Vec<String>) {
 }
 
 /// Asks for the signatures at the cursor, as the menu item does.
-pub fn show(view: &EditorTextView) {
+pub fn show(view: &dyn Editor) {
     let context = SignatureHelpContext {
         trigger_kind: SignatureHelpTriggerKind::INVOKED,
         trigger_character: None,
@@ -133,7 +135,7 @@ pub fn show(view: &EditorTextView) {
 }
 
 /// Text was typed into `view`: a trigger character opens the window, and while it shows, every keystroke updates it.
-pub fn typed(view: &EditorTextView, typed: &str) {
+pub fn typed(view: &dyn Editor, typed: &str) {
     let open = open_for(view);
     if open.is_none() && server_of(view).is_none() {
         return;
@@ -159,7 +161,7 @@ pub fn typed(view: &EditorTextView, typed: &str) {
 }
 
 /// The cursor moved or the text changed while the window shows: it follows, or closes once the cursor left the call.
-pub fn moved(view: &EditorTextView) {
+pub fn moved(view: &dyn Editor) {
     let Some(help) = open_for(view) else { return };
     let about = (view.document().revision(), view.selectedRange().location);
     if help.about.get() == about {
@@ -181,7 +183,7 @@ fn current(help: &Help) -> Option<SignatureHelp> {
     Some(shown)
 }
 
-fn request(view: &EditorTextView, context: SignatureHelpContext) {
+fn request(view: &dyn Editor, context: SignatureHelpContext) {
     let Some((server, uri)) = server_of(view) else { return };
     let cursor = view.selectedRange().location;
     let revision = view.document().revision();
@@ -192,7 +194,7 @@ fn request(view: &EditorTextView, context: SignatureHelpContext) {
     let asked = shared.asked.get() + 1;
     shared.asked.set(asked);
     shared.about.set((revision, cursor));
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let _ = server.signature_help(&uri, position, Some(context), move |answer| {
         main_soon(move || {
             let (Some(view), Some(mtm)) = (editor::find_editor(serial), MainThreadMarker::new()) else {
@@ -203,16 +205,16 @@ fn request(view: &EditorTextView, context: SignatureHelpContext) {
                 return;
             }
             match answer {
-                Ok(Some(found)) if !found.signatures.is_empty() => present(&help, &view, found),
+                Ok(Some(found)) if !found.signatures.is_empty() => present(&help, &*view, found),
                 Ok(_) => close(&help),
-                Err(error) => crate::diag::report("signature help", error),
+                Err(error) => ide_ui_common::diag::report("signature help", error),
             }
         });
     });
 }
 
 /// A command of the keyboard reached `view`; whether the window took it: ↑ and ↓ between overloads, Esc to close.
-pub fn command(view: &EditorTextView, command: Sel) -> bool {
+pub fn command(view: &dyn Editor, command: Sel) -> bool {
     let Some(help) = open_for(view) else {
         return false;
     };
@@ -235,7 +237,7 @@ pub fn command(view: &EditorTextView, command: Sel) -> bool {
 }
 
 /// Closes the window if it shows for `view`.
-pub fn dismiss_for(view: &EditorTextView) {
+pub fn dismiss_for(view: &dyn Editor) {
     if let Some(help) = open_for(view) {
         close(&help);
     }
@@ -251,8 +253,8 @@ fn close(help: &Help) {
     help.announced.borrow_mut().clear();
 }
 
-fn present(help: &Help, view: &EditorTextView, found: SignatureHelp) {
-    let same_view = help.view.borrow().load().is_some_and(|v| std::ptr::eq(&*v, view));
+fn present(help: &Help, view: &dyn Editor, found: SignatureHelp) {
+    let same_view = help.view.get() == Some(view.serial());
     let count = found.signatures.len();
     let active = match found.active_signature {
         Some(active) => usize::try_from(active).unwrap_or(0),
@@ -260,7 +262,7 @@ fn present(help: &Help, view: &EditorTextView, found: SignatureHelp) {
         None => 0,
     };
     help.active.set(active.min(count - 1));
-    *help.view.borrow_mut() = Weak::from(view);
+    help.view.set(Some(view.serial()));
     *help.shown.borrow_mut() = Some(found);
     render(help, view);
 }
@@ -308,7 +310,7 @@ fn note(signature: &SignatureInformation, parameter: Option<usize>) -> Option<St
 }
 
 /// Fills the window with the signature shown and puts it above the cursor.
-fn render(help: &Help, view: &EditorTextView) {
+fn render(help: &Help, view: &dyn Editor) {
     let Some(found) = help.shown.borrow().clone() else {
         return;
     };
@@ -348,9 +350,9 @@ fn render(help: &Help, view: &EditorTextView) {
         } else {
             format!("{}, {spoken}", signature.label)
         };
-        crate::window::announce(view.mtm(), &first);
+        ide_ui_common::panel::announce(view.mtm(), &first);
     } else if *announced != spoken && !spoken.is_empty() {
-        crate::window::announce(view.mtm(), &spoken);
+        ide_ui_common::panel::announce(view.mtm(), &spoken);
     }
     *announced = if spoken.is_empty() {
         signature.label.clone()
@@ -369,7 +371,7 @@ fn styled(
     active: usize,
     note: Option<String>,
 ) -> Retained<NSMutableAttributedString> {
-    let code = crate::editor::code_font(12.0);
+    let code = crate::lsp::host::code_font(12.0);
     let (font_key, color_key) = (
         constant!(NSFontAttributeName),
         constant!(NSForegroundColorAttributeName),
@@ -418,7 +420,7 @@ fn styled(
 }
 
 /// Puts the window of `size` just above the cursor, or below it where the screen ends.
-fn place(help: &Help, view: &EditorTextView, size: NSSize) {
+fn place(help: &Help, view: &dyn Editor, size: NSSize) {
     let Some(window) = view.window() else { return };
     let cursor = view.selectedRange().location;
     let text_view: &NSTextView = view;
@@ -445,7 +447,7 @@ fn place(help: &Help, view: &EditorTextView, size: NSSize) {
 }
 
 /// Whether the menu command `action` can run in `view`, for "Parameter zeigen"; `None` for every other one.
-pub fn validate(view: &EditorTextView, action: Sel) -> Option<bool> {
+pub fn validate(view: &dyn Editor, action: Sel) -> Option<bool> {
     (action == sel!(ideSignatureHelp:)).then(|| {
         server_of(view).is_some_and(|(server, _)| {
             server
@@ -458,10 +460,10 @@ pub fn validate(view: &EditorTextView, action: Sel) -> Option<bool> {
 /// What the self-test reads from the window.
 #[cfg(feature = "selftest")]
 pub mod selftest {
-    use crate::editor::EditorTextView;
+    use crate::lsp::editor::Editor;
 
     /// The text the window shows for `view`, and the part set apart as the active parameter; `None` when closed.
-    pub fn shown(view: &EditorTextView) -> Option<(String, String)> {
+    pub fn shown(view: &dyn Editor) -> Option<(String, String)> {
         let help = super::open_for(view)?;
         let text = help.field.stringValue().to_string();
         Some((text, help.announced.borrow().clone()))

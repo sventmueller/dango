@@ -156,7 +156,7 @@ fn unchanged(ok: bool, untrusted: bool) {
     let two = at("    2\n") + "    2\n".len();
     let three = at("    3\n");
     crate::lsp::apply_text_edits(
-        &view,
+        &*view,
         vec![
             (one..one + 5, "    10".into()),
             (two..two, "    // note\t  \n".into()),

@@ -11,14 +11,15 @@ use ide_lsp::Ticket;
 use ide_lsp::lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, Command, Diagnostic, Range as LspRange};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{NSButton, NSColor, NSMenu, NSMenuItem, NSView};
 use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::{server_by_id, server_of, servers_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::{guarded, main_after, main_on_run_loop, main_soon, ns};
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::{guarded, main_after, main_on_run_loop, main_soon, ns};
 
 /// How long the cursor rests before the server is asked whether the place has actions.
 const REST: Duration = Duration::from_millis(400);
@@ -92,11 +93,11 @@ pub struct CodeActions {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
-    f(&crate::context::app().code_actions.shown)
+    f(&crate::lsp::host::state().code_actions.shown)
 }
 
 fn with_chooser<R>(f: impl FnOnce(&RefCell<Option<Retained<Chooser>>>) -> R) -> R {
-    f(&crate::context::app().code_actions.chooser)
+    f(&crate::lsp::host::state().code_actions.chooser)
 }
 
 define_class!(
@@ -128,7 +129,7 @@ define_class!(
                     .and_then(|s| s.downcast_ref::<NSButton>())
                     .map_or(0, |button| button.tag());
                 if let Some(view) = u64::try_from(serial).ok().and_then(editor::find_editor) {
-                    open(&view, Kind::Fixes);
+                    open(&*view, Kind::Fixes);
                 }
             });
         }
@@ -147,7 +148,7 @@ fn chooser(mtm: MainThreadMarker) -> Retained<Chooser> {
 }
 
 /// The cursor's place: its selection in UTF-16 code units and the line it is on.
-fn place(view: &EditorTextView) -> (Range<usize>, usize) {
+fn place(view: &dyn Editor) -> (Range<usize>, usize) {
     let selection = view.selectedRange();
     let range = selection.location..selection.location + selection.length;
     let document = view.document();
@@ -160,11 +161,11 @@ fn place(view: &EditorTextView) -> (Range<usize>, usize) {
 
 /// The cursor moved or the text changed: questions under way end, the bulb goes unless it is still for the place,
 /// and a rest asks again.
-pub fn moved(view: &EditorTextView) {
+pub fn moved(view: &dyn Editor) {
     let (_, line) = place(view);
     let revision = view.document().revision();
     let (serial, asked, gone) = {
-        let Ok(mut state) = view.ivars().lsp.try_borrow_mut() else {
+        let Ok(mut state) = view.lsp().try_borrow_mut() else {
             // Moved from inside code that holds the state: the move counts once that code is done.
             view.later(objc2::sel!(ideActionsMoved), 0.0);
             return;
@@ -182,23 +183,23 @@ pub fn moved(view: &EditorTextView) {
         (serial, actions.asked, gone)
     };
     if gone {
-        editor::redraw_gutter(view);
+        view.redraw_gutter();
     }
     if server_of(view).is_none() {
         return;
     }
     main_after(REST, move || {
         if let Some(view) = editor::find_editor(serial)
-            && view.ivars().lsp.borrow().actions.asked == asked
+            && view.lsp().borrow().actions.asked == asked
         {
-            request(&view, Kind::Fixes, false);
+            request(&*view, Kind::Fixes, false);
         }
     });
 }
 
 /// The diagnostics of the server of slot `source` that touch `range`, with their ranges where their text is now.
-fn diagnostics(view: &EditorTextView, range: &Range<usize>, source: u64) -> Vec<Diagnostic> {
-    let state = view.ivars().lsp.borrow();
+fn diagnostics(view: &dyn Editor, range: &Range<usize>, source: u64) -> Vec<Diagnostic> {
+    let state = view.lsp().borrow();
     let document = view.document();
     let text = document.text();
     state
@@ -226,7 +227,7 @@ struct Gathered {
 }
 
 /// Asks every server of `view` for the actions of `kind` at the cursor; `show` lists them in a menu once all answered.
-fn request(view: &EditorTextView, kind: Kind, show: bool) {
+fn request(view: &dyn Editor, kind: Kind, show: bool) {
     let servers = servers_of(view);
     if servers.is_empty() {
         return;
@@ -239,7 +240,7 @@ fn request(view: &EditorTextView, kind: Kind, show: bool) {
     };
     let Some((start, end)) = span else { return };
     let (serial, asked) = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         (state.serial, state.actions.asked)
     };
     let gathered = std::sync::Arc::new(std::sync::Mutex::new(Gathered {
@@ -271,10 +272,10 @@ fn request(view: &EditorTextView, kind: Kind, show: bool) {
             },
         );
         match started {
-            Ok(ticket) => view.ivars().lsp.borrow_mut().actions.tickets.push(ticket),
+            Ok(ticket) => view.lsp().borrow_mut().actions.tickets.push(ticket),
             Err(error) => {
                 if show {
-                    crate::diag::report("code actions", error);
+                    ide_ui_common::diag::report("code actions", error);
                 }
                 {
                     use ide_core::LockIgnoringPoison;
@@ -304,7 +305,7 @@ fn arrived(
                 gathered.origins.extend(std::iter::repeat_n(origin, actions.len()));
                 gathered.actions.extend(actions);
             }
-            Err(error) if show => crate::diag::report("code actions", error),
+            Err(error) if show => ide_ui_common::diag::report("code actions", error),
             Err(_) => {}
         }
         gathered.waiting == 0
@@ -315,7 +316,7 @@ fn arrived(
     let Some(view) = editor::find_editor(serial) else {
         return;
     };
-    let current = view.ivars().lsp.borrow().actions.asked == asked;
+    let current = view.lsp().borrow().actions.asked == asked;
     if !current || view.document().revision() != revision {
         return;
     }
@@ -331,20 +332,20 @@ fn arrived(
             actions: actions.clone(),
             origins: origins.clone(),
         };
-        view.ivars().lsp.borrow_mut().actions.found = Some(found);
-        editor::redraw_gutter(&view);
+        view.lsp().borrow_mut().actions.found = Some(found);
+        view.redraw_gutter();
     }
     if show {
-        present(&view, kind, actions, origins);
+        present(&*view, kind, actions, origins);
     }
 }
 
 /// Lists the actions of `kind` at the cursor in a menu there, as ⌥⌘A, the menu items and the bulb do.
-pub fn open(view: &EditorTextView, kind: Kind) {
+pub fn open(view: &dyn Editor, kind: Kind) {
     let (range, _) = place(view);
     let revision = view.document().revision();
     let known = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         state
             .actions
             .found
@@ -385,7 +386,7 @@ fn title(action: &CodeActionOrCommand) -> &str {
 }
 
 /// Shows `actions` as a menu at the cursor of `view`; a menu with nothing to choose says so, greyed out.
-fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>, origins: Vec<u64>) {
+fn present(view: &dyn Editor, kind: Kind, actions: Vec<CodeActionOrCommand>, origins: Vec<u64>) {
     let mtm = view.mtm();
     let (origins, actions): (Vec<u64>, Vec<CodeActionOrCommand>) =
         ordered(kind, origins.into_iter().zip(actions).collect())
@@ -395,14 +396,14 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>,
     menu.setAutoenablesItems(false);
     let target = chooser(mtm);
     for (index, action) in actions.iter().enumerate() {
-        let item = crate::util::tagged(
+        let item = ide_ui_common::util::tagged(
             mtm,
             title(action),
             sel!(ideCodeAction:),
             "",
             isize::try_from(index).unwrap_or(-1),
         );
-        crate::util::set_target(&item, &target);
+        ide_ui_common::util::set_target(&item, &target);
         if let CodeActionOrCommand::CodeAction(CodeAction {
             disabled: Some(disabled),
             ..
@@ -414,7 +415,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>,
         menu.addItem(&item);
     }
     if actions.is_empty() {
-        let none = crate::util::item(mtm, t("Keine Aktionen"), None, "");
+        let none = ide_ui_common::util::item(mtm, t("Keine Aktionen"), None, "");
         none.setEnabled(false);
         menu.addItem(&none);
     }
@@ -423,7 +424,7 @@ fn present(view: &EditorTextView, kind: Kind, actions: Vec<CodeActionOrCommand>,
         NSPoint::new(rect.origin.x, rect.origin.y + rect.size.height)
     });
     let shown = Shown {
-        serial: view.ivars().lsp.borrow().serial,
+        serial: view.lsp().borrow().serial,
         revision: view.document().revision(),
         actions,
         origins,
@@ -464,20 +465,20 @@ fn choose(index: usize) {
         return;
     };
     match action {
-        CodeActionOrCommand::Command(command) => execute(&view, origin, &command),
+        CodeActionOrCommand::Command(command) => execute(&*view, origin, &command),
         CodeActionOrCommand::CodeAction(action) if action.edit.is_none() && action.data.is_some() => {
-            resolve(&view, origin, revision, action);
+            resolve(&*view, origin, revision, action);
         }
-        CodeActionOrCommand::CodeAction(action) => perform(&view, origin, revision, &action),
+        CodeActionOrCommand::CodeAction(action) => perform(&*view, origin, revision, &action),
     }
 }
 
 /// Asks the server for the edit of `action`, which it computes only once chosen, and performs it.
-fn resolve(view: &EditorTextView, origin: u64, revision: u64, action: CodeAction) {
+fn resolve(view: &dyn Editor, origin: u64, revision: u64, action: CodeAction) {
     let Some((server, uri)) = server_by_id(view, origin).or_else(|| server_of(view)) else {
         return;
     };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let unresolved = action.clone();
     let started = server.resolve_code_action(&uri, action, move |answer| {
         main_soon(move || {
@@ -485,7 +486,7 @@ fn resolve(view: &EditorTextView, origin: u64, revision: u64, action: CodeAction
                 return;
             };
             match answer {
-                Ok(action) => perform(&view, origin, revision, &action),
+                Ok(action) => perform(&*view, origin, revision, &action),
                 Err(error) => failed(error.to_string()),
             }
         });
@@ -498,7 +499,7 @@ fn resolve(view: &EditorTextView, origin: u64, revision: u64, action: CodeAction
 }
 
 /// Applies the edit of `action`, made for `revision` of `view`'s text, then runs its command.
-fn perform(view: &EditorTextView, origin: u64, revision: u64, action: &CodeAction) {
+fn perform(view: &dyn Editor, origin: u64, revision: u64, action: &CodeAction) {
     if view.document().revision() != revision {
         failed(t("Die Datei hat sich inzwischen geändert").to_string());
         return;
@@ -509,23 +510,23 @@ fn perform(view: &EditorTextView, origin: u64, revision: u64, action: &CodeActio
         }
         return;
     };
-    let Some(folder) = view.controller().and_then(|c| c.project_root()) else {
+    let Some(folder) = view.project_root() else {
         return;
     };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let command = action.command.clone();
     super::edits::apply_workspace_edit(&folder, edit, move |applied| match applied {
         Err(failure) => failed(failure.message),
         Ok(()) => {
             if let (Some(command), Some(view)) = (command, editor::find_editor(serial)) {
-                execute(&view, origin, &command);
+                execute(&*view, origin, &command);
             }
         }
     });
 }
 
 /// Runs `command` on the server; edits it makes come back as `workspace/applyEdit`.
-fn execute(view: &EditorTextView, origin: u64, command: &Command) {
+fn execute(view: &dyn Editor, origin: u64, command: &Command) {
     let Some((server, _)) = server_by_id(view, origin).or_else(|| server_of(view)) else {
         return;
     };
@@ -542,7 +543,7 @@ fn execute(view: &EditorTextView, origin: u64, command: &Command) {
 
 /// Tells the user that a server's change was not applied, and why.
 pub fn failed(message: String) {
-    crate::diag::report("code action", &message);
+    ide_ui_common::diag::report("code action", &message);
     main_on_run_loop(move || {
         if let Some(mtm) = MainThreadMarker::new() {
             editor::show_alert(mtm, t("Änderung nicht angewandt"), &message);
@@ -551,7 +552,7 @@ pub fn failed(message: String) {
 }
 
 /// Whether the menu command `action` can run in `view`, for the code action commands; `None` for every other one.
-pub fn validate(view: &EditorTextView, action: objc2::runtime::Sel) -> Option<bool> {
+pub fn validate(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
     [sel!(ideQuickFix:), sel!(ideRefactor:), sel!(ideSourceActions:)]
         .contains(&action)
         .then(|| {
@@ -561,8 +562,8 @@ pub fn validate(view: &EditorTextView, action: objc2::runtime::Sel) -> Option<bo
 }
 
 /// The line the bulb is on, if the place of the cursor has actions to offer.
-pub fn bulb_line(view: &EditorTextView) -> Option<usize> {
-    let state = view.ivars().lsp.try_borrow().ok()?;
+pub fn bulb_line(view: &dyn Editor) -> Option<usize> {
+    let state = view.lsp().try_borrow().ok()?;
     let found = state.actions.found.as_ref()?;
     let offers = found.actions.iter().any(|action| {
         Kind::Fixes.admits(action)
@@ -576,8 +577,8 @@ pub fn bulb_line(view: &EditorTextView) -> Option<usize> {
 
 /// Puts the bulb of `view` into `row` of the line number column `gutter`, the rectangle of the number it covers, or
 /// hides it without one; the column calls it whenever it draws.
-pub fn place_bulb(view: &EditorTextView, gutter: &NSView, row: Option<NSRect>) {
-    let existing = view.ivars().lsp.borrow().actions.bulb.clone();
+pub fn place_bulb(view: &dyn Editor, gutter: &NSView, row: Option<NSRect>) {
+    let existing = view.lsp().borrow().actions.bulb.clone();
     let Some(row) = row else {
         if let Some(bulb) = existing {
             bulb.setHidden(true);
@@ -586,7 +587,7 @@ pub fn place_bulb(view: &EditorTextView, gutter: &NSView, row: Option<NSRect>) {
     };
     let bulb = existing.unwrap_or_else(|| {
         let bulb = make_bulb(view);
-        view.ivars().lsp.borrow_mut().actions.bulb = Some(bulb.clone());
+        view.lsp().borrow_mut().actions.bulb = Some(bulb.clone());
         bulb
     });
     if !bulb.isDescendantOf(gutter) {
@@ -604,11 +605,11 @@ pub fn place_bulb(view: &EditorTextView, gutter: &NSView, row: Option<NSRect>) {
     bulb.setHidden(false);
 }
 
-fn make_bulb(view: &EditorTextView) -> Retained<NSButton> {
+fn make_bulb(view: &dyn Editor) -> Retained<NSButton> {
     let mtm = view.mtm();
     let target = chooser(mtm);
     let label = t("Aktionen für diese Stelle");
-    let bulb = crate::util::symbol_button(
+    let bulb = ide_ui_common::util::symbol_button(
         mtm,
         "lightbulb",
         label,
@@ -616,23 +617,23 @@ fn make_bulb(view: &EditorTextView) -> Retained<NSButton> {
         Some(&target),
         sel!(ideBulb:),
     );
-    crate::util::set_label(&bulb, Some(label));
+    ide_ui_common::util::set_label(&bulb, Some(label));
     bulb.setContentTintColor(Some(&NSColor::systemYellowColor()));
-    bulb.setTag(isize::try_from(view.ivars().lsp.borrow().serial).unwrap_or(0));
+    bulb.setTag(isize::try_from(view.lsp().borrow().serial).unwrap_or(0));
     bulb
 }
 
 /// What the self-test reads from and does with code actions.
 #[cfg(feature = "selftest")]
 pub mod selftest {
-    use objc2::DefinedClass;
+
     use objc2_app_kit::NSAccessibility;
 
-    use crate::editor::EditorTextView;
+    use crate::lsp::editor::Editor;
 
     /// The titles of the menu of actions on screen for `view`, in order.
-    pub fn shown(view: &EditorTextView) -> Option<Vec<String>> {
-        let serial = view.ivars().lsp.borrow().serial;
+    pub fn shown(view: &dyn Editor) -> Option<Vec<String>> {
+        let serial = view.lsp().borrow().serial;
         super::with_shown(|cell| {
             let shown = cell.borrow();
             let shown = shown.as_ref().filter(|s| s.serial == serial)?;
@@ -682,8 +683,8 @@ pub mod selftest {
     }
 
     /// Presses the bulb of `view` as a click does; whether it was on view.
-    pub fn press_bulb(view: &EditorTextView) -> bool {
-        let Some(bulb) = view.ivars().lsp.borrow().actions.bulb.clone() else {
+    pub fn press_bulb(view: &dyn Editor) -> bool {
+        let Some(bulb) = view.lsp().borrow().actions.bulb.clone() else {
             return false;
         };
         let (Some(action), Some(mtm)) = (bulb.action(), objc2::MainThreadMarker::new()) else {
@@ -707,8 +708,8 @@ pub mod selftest {
     }
 
     /// What VoiceOver calls the bulb of `view` while it shows, and its frame in the window.
-    pub fn bulb(view: &EditorTextView) -> Option<(String, objc2_foundation::NSRect)> {
-        let bulb = view.ivars().lsp.borrow().actions.bulb.clone()?;
+    pub fn bulb(view: &dyn Editor) -> Option<(String, objc2_foundation::NSRect)> {
+        let bulb = view.lsp().borrow().actions.bulb.clone()?;
         if bulb.isHidden() || bulb.window().is_none() {
             return None;
         }

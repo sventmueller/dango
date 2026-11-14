@@ -401,8 +401,8 @@ fn clicks(clicked: &Cell<u32>) {
         got == expected
     };
     let middle_y = |r: NSRect| r.origin.y + r.size.height / 2.0;
-    let anchor = crate::lsp::rect_of(&view, p.value - 1..p.value);
-    let next = crate::lsp::rect_of(&view, p.value..p.value + 1);
+    let anchor = crate::lsp::rect_of(&*view, p.value - 1..p.value);
+    let next = crate::lsp::rect_of(&*view, p.value..p.value + 1);
     let left_of_char = anchor.map(|r| NSPoint::new(r.origin.x + 1.5, middle_y(r)));
     let in_gap_left = gap
         .as_ref()
@@ -622,7 +622,7 @@ fn wrap() {
         };
         redraw(&view);
         let drawn = shown_at(&view, Layer::Inlay, 5);
-        let anchor = crate::lsp::rect_of(&view, p.wrapped - 1..p.wrapped);
+        let anchor = crate::lsp::rect_of(&*view, p.wrapped - 1..p.wrapped);
         let line_top = caret(&view, at("word", 0)).map(|r| r.origin.y);
         let visible = view.visibleRect();
         check(

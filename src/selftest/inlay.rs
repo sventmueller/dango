@@ -59,7 +59,7 @@ fn offset_of(view: &EditorTextView, needle: &str, into: usize) -> Option<usize> 
 }
 
 fn hints(view: &EditorTextView) -> Vec<(usize, String, bool)> {
-    crate::lsp::inlay::shown(view)
+    crate::editor::insets::inlay_shown(view)
 }
 
 fn has_hint(
@@ -108,7 +108,7 @@ fn poll(
             && asked.get().elapsed() >= ASK_AGAIN
             && let Some(view) = view(root, file)
         {
-            crate::lsp::inlay::request(&view);
+            crate::lsp::inlay::request(&*view);
             asked.set(Instant::now());
         }
         false
@@ -156,11 +156,11 @@ fn rust_hints(ok: bool, waited: Duration) {
     let Some(view) = view(&root, "src/main.rs") else {
         return finish(SCENARIO);
     };
-    if !ok && crate::lsp::server_running(&view).is_err() {
+    if !ok && crate::lsp::server_running(&*view).is_err() {
         check(
             "skipped: rust-analyzer missing",
             true,
-            format!("{:?}", crate::lsp::server_running(&view)),
+            format!("{:?}", crate::lsp::server_running(&*view)),
         );
         return go();
     }
@@ -554,11 +554,11 @@ fn go() {
             let Some(view) = view(&root, "main.go") else {
                 return done();
             };
-            if !ok && crate::lsp::server_running(&view).is_err() {
+            if !ok && crate::lsp::server_running(&*view).is_err() {
                 check(
                     "skipped: gopls missing",
                     true,
-                    format!("{:?}", crate::lsp::server_running(&view)),
+                    format!("{:?}", crate::lsp::server_running(&*view)),
                 );
                 return done();
             }

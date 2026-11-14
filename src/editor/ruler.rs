@@ -376,9 +376,9 @@ impl LineNumbers {
         let width = self.bounds().size.width;
         self.removeAllToolTips();
         self.ivars().tips.borrow_mut().clear();
-        let marks = crate::lsp::line_marks(&editor);
+        let marks = crate::lsp::line_marks(&*editor);
         let folds = super::fold::gutter(&editor);
-        let bulb = crate::lsp::bulb_line(&editor);
+        let bulb = crate::lsp::bulb_line(&*editor);
         let bulb_row = std::cell::Cell::new(None);
         let bottom = visible.origin.y + visible.size.height;
         let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
@@ -452,7 +452,7 @@ impl LineNumbers {
             NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
             &block,
         );
-        crate::lsp::place_bulb(&editor, self, bulb_row.get());
+        crate::lsp::place_bulb(&*editor, self, bulb_row.get());
     }
 }
 

@@ -29,11 +29,11 @@ pub use super::signature::selftest as signatures;
 pub use {navigate::close_list, navigate::listed, navigate::shown_symbols};
 
 /// The id of the main slot of `view`, the source of its own diagnostics.
-pub(crate) fn main_slot(view: &EditorTextView) -> u64 {
-    view.ivars().lsp.borrow().slot.unwrap_or(0)
+pub(crate) fn main_slot(view: &dyn Editor) -> u64 {
+    view.lsp().borrow().slot.unwrap_or(0)
 }
 
 /// Shows `diagnostics` in `view` as if its server had sent them, for the self-test.
-pub fn show_diagnostics(view: &EditorTextView, diagnostics: &[ide_lsp::lsp_types::Diagnostic]) {
+pub fn show_diagnostics(view: &dyn Editor, diagnostics: &[ide_lsp::lsp_types::Diagnostic]) {
     decorate::set_diagnostics(view, diagnostics);
 }

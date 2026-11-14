@@ -10,12 +10,12 @@ use std::time::Duration;
 use ide_core::settings::Settings;
 use ide_process::{Ending, Kind, Supervisor};
 use ide_project::prettier::{self, Formatter, Outcome};
-use objc2::DefinedClass;
 use splat_i18n::{t, tf};
 
 use super::rename::Then;
-use crate::editor::{self, EditorTextView};
-use crate::util::main_soon;
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::main_soon;
 
 /// How long Prettier may take before the document is saved without it.
 const WAIT: Duration = Duration::from_secs(5);
@@ -28,10 +28,10 @@ struct Run {
 }
 
 /// The run of Prettier for `view` when Prettier formats its file, else `None` and the server does.
-fn run_for(view: &EditorTextView) -> Option<Run> {
+fn run_for(view: &dyn Editor) -> Option<Run> {
     let file = view.document().path()?.to_path_buf();
-    let root = view.controller().and_then(|c| c.project_root())?;
-    if !crate::project::is_trusted(&root) {
+    let root = view.project_root()?;
+    if !crate::lsp::host::is_trusted(&root) {
         return None;
     }
     let language = view
@@ -52,22 +52,20 @@ fn run_for(view: &EditorTextView) -> Option<Run> {
 }
 
 /// Whether Prettier formats the document of `view`.
-pub fn formats(view: &EditorTextView) -> bool {
+pub fn formats(view: &dyn Editor) -> bool {
     run_for(view).is_some()
 }
 
 /// Formats `view` with Prettier and calls `then` afterwards, also when it failed, took too long or the text changed
 /// meanwhile; `false` when Prettier does not format this document, and `then` was not called.
-pub fn format(view: &EditorTextView, then: Option<Then>) -> Result<(), Option<Then>> {
+pub fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>> {
     let Some(run) = run_for(view) else { return Err(then) };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let text = view.document().text().to_string();
     let id = super::new_serial();
-    crate::context::AppContext::get(objc2::MainThreadOnly::mtm(view))
-        .formatting
-        .wait(serial, id, then);
-    let spawned = crate::util::spawn("prettier", move || {
+    crate::lsp::host::state().formatting.wait(serial, id, then);
+    let spawned = ide_ui_common::util::spawn("prettier", move || {
         let env = ide_ui_common::window::environment(Duration::from_secs(10));
         let outcome = format_text(&run, &text, &env);
         main_soon(move || finished(serial, id, revision, outcome));
@@ -97,13 +95,13 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
     };
     let input = text.as_bytes().to_vec();
     let stdin = spawned.stdin.take();
-    let writer = crate::util::spawn_joined("prettier-input", move || {
+    let writer = ide_ui_common::util::spawn_joined("prettier-input", move || {
         if let Some(mut stdin) = stdin {
             let _ = stdin.write_all(&input);
         }
     });
     let read = |pipe: Option<Box<dyn Read + Send>>| {
-        crate::util::spawn_joined("prettier-output", move || {
+        ide_ui_common::util::spawn_joined("prettier-output", move || {
             let mut out = Vec::new();
             if let Some(mut pipe) = pipe {
                 let _ = pipe.read_to_end(&mut out);
@@ -120,7 +118,8 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
     if let Ok(writer) = writer {
         writer.join();
     }
-    let output = |read: Result<crate::util::Joined<Vec<u8>>, _>| read.ok().and_then(|r| r.join()).unwrap_or_default();
+    let output =
+        |read: Result<ide_ui_common::util::Joined<Vec<u8>>, _>| read.ok().and_then(|r| r.join()).unwrap_or_default();
     let (out, err) = (output(stdout), output(stderr));
     let code = match ending {
         Ending::Code(code) => Some(code),
@@ -135,9 +134,7 @@ fn finished(serial: u64, id: u64, revision: u64, outcome: Outcome) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };
-    let then = crate::context::AppContext::get(objc2::MainThreadOnly::mtm(&*view))
-        .formatting
-        .take(serial, id);
+    let then = crate::lsp::host::state().formatting.take(serial, id);
     let Some(then) = then else { return };
     match outcome {
         Outcome::Formatted(text) if view.document().revision() == revision => {
@@ -145,16 +142,16 @@ fn finished(serial: u64, id: u64, revision: u64, outcome: Outcome) {
                 let changes = view.document_mut().replace_all(&text);
                 match changes {
                     Ok(changes) => view.apply_model_changes(&changes),
-                    Err(error) => crate::diag::report("applying Prettier's formatting", error),
+                    Err(error) => ide_ui_common::diag::report("applying Prettier's formatting", error),
                 }
             }
         }
         Outcome::Formatted(_) => {
-            super::status::note(&view, t("Ohne Formatieren: der Text hat sich inzwischen geändert"))
+            super::status::note(&*view, t("Ohne Formatieren: der Text hat sich inzwischen geändert"))
         }
-        Outcome::Failed(why) => super::status::note(&view, &tf("Prettier: {}", &[&why])),
+        Outcome::Failed(why) => super::status::note(&*view, &tf("Prettier: {}", &[&why])),
     }
     if let Some(then) = then {
-        then(&view);
+        then(&*view);
     }
 }

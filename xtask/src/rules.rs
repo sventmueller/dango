@@ -37,7 +37,7 @@ const STATEFUL: [&str; 13] = [
 
 /// How many times the app's code may look the app context up through `context::app()` or `try_app()` instead of being
 /// handed it or a window id (E97); a ratchet: lower it whenever the count drops, it never rises.
-const APP_LOOKUPS: usize = 73;
+const APP_LOOKUPS: usize = 58;
 
 /// How many times the UI crates may look their state up through their host's `state()` instead of being handed it, a
 /// ratchet like `APP_LOOKUPS` (E143).

@@ -128,7 +128,7 @@ pub fn reload(view: &EditorTextView, force: bool) {
         view.ivars().marks.borrow().head.as_ref().map(|h| h.commit)
     };
     let asked = next_question(view);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     spawn(move || {
         let answer = match read_head(&path, known) {
             None => Answer::Gone,
@@ -161,7 +161,7 @@ pub fn compare(view: &EditorTextView) {
     };
     let snapshot = view.document().snapshot();
     let asked = next_question(view);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     spawn(move || {
         let (hunks, lines, revision) = hunks_of(&text, &snapshot);
         main_soon(move || deliver(serial, asked, Answer::Hunks(hunks, lines, revision)));

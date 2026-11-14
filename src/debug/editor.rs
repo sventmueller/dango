@@ -53,7 +53,7 @@ pub fn refresh_editors(controller: &WindowController) {
 /// Closes the value popovers of `controller`'s editors, which speak of a frame that is gone once the program runs on.
 pub fn forget_values(controller: &WindowController) {
     for editor in editors_of(controller) {
-        crate::lsp::dismiss_hover(&editor);
+        crate::lsp::dismiss_hover(&*editor);
     }
 }
 
@@ -213,10 +213,10 @@ pub fn hover(editor: &EditorTextView, index: usize) -> bool {
     let Some((expression, range)) = expression_at(editor, index) else {
         return false;
     };
-    let serial = editor.ivars().lsp.borrow().serial;
+    let serial = editor.ivars().serial;
     panel.evaluate_for_hover(&expression.clone(), move |value| {
         if let Some(editor) = crate::editor::find_editor(serial) {
-            crate::lsp::show_hover(&editor, range, &format!("`{expression}` = `{value}`"));
+            crate::lsp::show_hover(&*editor, range, &format!("`{expression}` = `{value}`"));
         }
     })
 }

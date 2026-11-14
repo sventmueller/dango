@@ -525,8 +525,8 @@ fn completion_keys() {
     };
     const LABELS: [&str; 5] = ["alpha", "beta", "abc", "able", "array"];
     view.setSelectedRange(NSRange::new(9, 0));
-    completion::show(&view, &LABELS);
-    let ranked = completion::shown(&view);
+    completion::show(&*view, &LABELS);
+    let ranked = completion::shown(&*view);
     press(&view, sel!(moveDown:));
     press(&view, sel!(moveDown:));
     press(&view, sel!(moveUp:));
@@ -537,39 +537,39 @@ fn completion_keys() {
         format!("{ranked:?} → {:?}", text_of(&view)),
     );
     type_at(&view, NSRange::new(12, 0), " a");
-    completion::show(&view, &LABELS);
+    completion::show(&*view, &LABELS);
     type_at(&view, NSRange::new(14, 0), "b");
-    let narrowed = completion::shown(&view);
+    let narrowed = completion::shown(&*view);
     press(&view, sel!(deleteBackward:));
-    let widened = completion::shown(&view).len();
+    let widened = completion::shown(&*view).len();
     press(&view, sel!(pageDown:));
     press(&view, sel!(pageUp:));
     press(&view, sel!(cancelOperation:));
-    let closed = completion::shown(&view).is_empty();
+    let closed = completion::shown(&*view).is_empty();
     check(
         "typing narrows the list, deleting widens it again, and Esc closes it",
         narrowed == ["abc", "able"] && widened == 5 && closed,
         format!("{narrowed:?}, {widened}, closed {closed}"),
     );
-    completion::show(&view, &LABELS);
+    completion::show(&*view, &LABELS);
     press(&view, sel!(moveLeft:));
-    let left = (completion::shown(&view).is_empty(), selection(&view));
-    completion::show(&view, &LABELS);
+    let left = (completion::shown(&*view).is_empty(), selection(&view));
+    completion::show(&*view, &LABELS);
     type_at(&view, NSRange::new(13, 0), "-");
     check(
         "another key closes the list and does what it does, and so does a character that is no part of a word",
-        left == (true, (13, 0)) && completion::shown(&view).is_empty(),
+        left == (true, (13, 0)) && completion::shown(&*view).is_empty(),
         format!("{left:?}"),
     );
-    completion::snippet(&view, std::iter::once(4..5).collect());
+    completion::snippet(&*view, std::iter::once(4..5).collect());
     press(&view, sel!(insertTab:));
     let stop = selection(&view);
-    completion::snippet(&view, Vec::new());
+    completion::snippet(&*view, Vec::new());
     let before = utf16_len(&text_of(&view));
     view.setSelectedRange(NSRange::new(before, 0));
     press(&view, sel!(insertTab:));
     let tabbed = utf16_len(&text_of(&view)) - before;
-    completion::snippet(&view, std::iter::once(0..1).collect());
+    completion::snippet(&*view, std::iter::once(0..1).collect());
     press(&view, sel!(cancelOperation:));
     press(&view, sel!(insertTab:));
     check(

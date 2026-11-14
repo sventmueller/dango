@@ -7,9 +7,11 @@ mod agent;
 use ide_lsp::workspace_edit as apply;
 mod complete;
 mod decorate;
+pub mod editor;
 mod edits;
 mod events;
 mod hierarchy;
+mod host;
 mod hover;
 pub mod inlay;
 mod install;
@@ -39,12 +41,11 @@ use ide_document::Change;
 use ide_lsp::lsp_types::{Diagnostic, MessageType, TextDocumentContentChangeEvent, Uri, WorkDoneProgress};
 use ide_lsp::{Cancel, CustomServer, Event, Language, NotFound, Refresh, Registry, Server, ServerConfig, Status, uri};
 use ide_process::Supervisor;
-use objc2::rc::Retained;
-use objc2::{DefinedClass, sel};
+use objc2::sel;
 use splat_i18n::tf;
 
-use crate::editor::{self, EditorTextView};
-use crate::util::{main_after, main_soon};
+use editor::Editor;
+use ide_ui_common::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
@@ -56,7 +57,7 @@ pub fn painted(state: &ViewState) -> &[Painted] {
 }
 pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
 pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_moved, rect_of, show as show_hover};
-pub use navigate::{Goto, definition, go_to, jump_to, next_problem, references, symbols};
+pub use navigate::{Goto, definition, go_to, jump_to, next_problem, open_at, references, symbols};
 pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
 pub use {
@@ -148,11 +149,11 @@ impl Default for Workspaces {
 }
 
 fn with_workspaces<R>(f: impl FnOnce(&RefCell<Vec<Rc<Workspace>>>) -> R) -> R {
-    f(&crate::context::app().lsp_workspaces.workspaces)
+    f(&crate::lsp::host::state().lsp_workspaces.workspaces)
 }
 
 fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::context::app().lsp_workspaces.next_id)
+    f(&crate::lsp::host::state().lsp_workspaces.next_id)
 }
 
 static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
@@ -180,7 +181,7 @@ fn language_of(path: &Path) -> Option<(Language, String)> {
 /// Looks off the main thread for the server of every built-in language, as for a file in the home folder, and hands
 /// `done` each language's name with where its server is or what is missing, on the main thread.
 pub fn survey(done: fn(Vec<(String, String)>)) {
-    if let Err(why) = crate::util::spawn("lsp-survey", move || {
+    if let Err(why) = ide_ui_common::util::spawn("lsp-survey", move || {
         let registry = registry();
         let home = ide_core::paths::home();
         let found: Vec<(Language, Result<PathBuf, NotFound>)> = ide_lsp::BUILT_IN
@@ -209,7 +210,7 @@ pub fn survey(done: fn(Vec<(String, String)>)) {
 
 fn survey_text(found: Result<PathBuf, NotFound>) -> String {
     match found {
-        Ok(program) => crate::app::display_path(&program),
+        Ok(program) => crate::lsp::host::display_path(&program),
         Err(missing) if missing.install.is_some() && missing.missing.is_none() => {
             tf("{} fehlt – im Editor installierbar", &[&missing.program])
         }
@@ -220,8 +221,8 @@ fn survey_text(found: Result<PathBuf, NotFound>) -> String {
 /// The user changed their language servers: every editor goes to the server that serves its file now.
 pub fn servers_changed() {
     CUSTOM.with(|cell| cell.borrow_mut().take());
-    for view in editor::all_editors() {
-        opened(&view);
+    for view in host::all_editors() {
+        opened(&*view);
     }
 }
 
@@ -239,10 +240,10 @@ pub fn new_serial() -> u64 {
 }
 
 impl ViewState {
-    /// The state of a new editor, with a serial of its own.
-    pub fn new() -> ViewState {
+    /// The state of the new editor `serial`.
+    pub fn new(serial: u64) -> ViewState {
         ViewState {
-            serial: new_serial(),
+            serial,
             ..ViewState::default()
         }
     }
@@ -250,7 +251,7 @@ impl ViewState {
 
 /// Whether the menu command `action` can run in `view`: the code commands need a running server, the problem
 /// commands problems; `None` for every other command.
-pub fn validate(view: &EditorTextView, action: Option<objc2::runtime::Sel>) -> Option<bool> {
+pub fn validate(view: &dyn Editor, action: Option<objc2::runtime::Sel>) -> Option<bool> {
     let action = action?;
     let code = [
         sel!(ideComplete:),
@@ -271,13 +272,13 @@ pub fn validate(view: &EditorTextView, action: Option<objc2::runtime::Sel>) -> O
         return Some(offered);
     }
     if action == sel!(ideNextProblem:) || action == sel!(idePreviousProblem:) {
-        return Some(!view.ivars().lsp.borrow().marks.is_empty());
+        return Some(!view.lsp().borrow().marks.is_empty());
     }
     None
 }
 
 /// Asks for completions at the cursor; false when no server serves the editor, so the system's completion runs.
-pub fn complete(view: &EditorTextView) -> bool {
+pub fn complete(view: &dyn Editor) -> bool {
     if server_of(view).is_none() {
         return false;
     }
@@ -286,7 +287,7 @@ pub fn complete(view: &EditorTextView) -> bool {
 }
 
 /// Text was typed into `view`: the completion list follows it.
-pub fn typed(view: &EditorTextView, text: &objc2::runtime::AnyObject) {
+pub fn typed(view: &dyn Editor, text: &objc2::runtime::AnyObject) {
     let typed = if let Some(s) = text.downcast_ref::<objc2_foundation::NSString>() {
         s.to_string()
     } else if let Some(s) = text.downcast_ref::<objc2_foundation::NSAttributedString>() {
@@ -300,39 +301,39 @@ pub fn typed(view: &EditorTextView, text: &objc2::runtime::AnyObject) {
 }
 
 /// A command of the keyboard reached `view`; whether the completion list, a snippet or the signature window took it.
-pub fn command(view: &EditorTextView, command: objc2::runtime::Sel) -> bool {
+pub fn command(view: &dyn Editor, command: objc2::runtime::Sel) -> bool {
     complete::command(view, command) || signature::command(view, command)
 }
 
 /// After a command the editor ran itself, such as deleting backwards: the completion list follows or closes.
-pub fn after_command(view: &EditorTextView, command: objc2::runtime::Sel) {
+pub fn after_command(view: &dyn Editor, command: objc2::runtime::Sel) {
     complete::after_command(view, command);
 }
 
 /// The cursor moved: the breadcrumbs, the code actions and the signature window follow.
-pub fn selection_moved(view: &EditorTextView) {
+pub fn selection_moved(view: &dyn Editor) {
     outline::selection_moved(view);
     actions::moved(view);
     signature::moved(view);
 }
 
 /// The cursor of `view` moved earlier, while its state was in use: the code actions follow now.
-pub fn actions_moved(view: &EditorTextView) {
+pub fn actions_moved(view: &dyn Editor) {
     actions::moved(view);
 }
 
 /// Lists the code actions of `kind` at the cursor of `view` in a menu there (E82).
-pub fn code_actions(view: &EditorTextView, kind: ActionKind) {
+pub fn code_actions(view: &dyn Editor, kind: ActionKind) {
     actions::open(view, kind);
 }
 
 /// Shows the signature of the call around the cursor of `view` (E84).
-pub fn signature_help(view: &EditorTextView) {
+pub fn signature_help(view: &dyn Editor) {
     signature::show(view);
 }
 
 /// A click with ⌘ goes to the definition of what it hit; whether it was one.
-pub fn command_click(view: &EditorTextView, event: &objc2_app_kit::NSEvent) -> bool {
+pub fn command_click(view: &dyn Editor, event: &objc2_app_kit::NSEvent) -> bool {
     use objc2_app_kit::NSEventModifierFlags;
     let flags = event.modifierFlags() & NSEventModifierFlags::DeviceIndependentFlagsMask;
     if flags != NSEventModifierFlags::Command || server_of(view).is_none() {
@@ -345,42 +346,32 @@ pub fn command_click(view: &EditorTextView, event: &objc2_app_kit::NSEvent) -> b
     true
 }
 
-/// Puts the diagnostics' overlay over `view` and paints the server's decorations again when `scroll` shows other
-/// lines.
-pub fn follow_scrolling(scroll: &objc2_app_kit::NSScrollView, view: &EditorTextView) {
-    use objc2::MainThreadOnly;
-    use objc2_app_kit::NSViewBoundsDidChangeNotification;
-
+/// Puts the diagnostics' overlay over the new editor `view`.
+pub fn attach(view: &dyn Editor) {
     decorate::Squiggles::attach(view);
-    let clip = scroll.contentView();
-    clip.setPostsBoundsChangedNotifications(true);
-    let editor = objc2::rc::Weak::from(view);
-    let name = crate::util::constant!(NSViewBoundsDidChangeNotification);
-    let watch = crate::util::observe(view.mtm(), name, Some(&clip), move |_| {
-        if let Some(editor) = editor.load() {
-            let busy = {
-                let state = editor.ivars().lsp.borrow();
-                !state.marks.is_empty() || !state.tokens.is_empty()
-            };
-            if busy {
-                editor.later(sel!(ideDecorate), 0.05);
-            }
-            hover::dismiss(&editor);
-            signature::dismiss_for(&editor);
-            inlay::scrolled(&editor);
-            crate::editor::follow_overlay(&editor);
-        }
-    });
-    view.ivars().watches.borrow_mut().push(watch);
+}
+
+/// `view` shows other lines: the server's decorations are painted again for them, popovers go and the hints of the
+/// lines that came into view are asked for.
+pub fn scrolled(view: &dyn Editor) {
+    let busy = {
+        let state = view.lsp().borrow();
+        !state.marks.is_empty() || !state.tokens.is_empty()
+    };
+    if busy {
+        view.later(sel!(ideDecorate), 0.05);
+    }
+    hover::dismiss(view);
+    signature::dismiss_for(view);
+    inlay::scrolled(view);
+    view.follow_overlay();
 }
 
 /// The registry, built once the login shell's environment is known; blocks until then, so only off the main thread.
 fn registry() -> Arc<Registry> {
     REGISTRY
         .get_or_init(|| {
-            let environment = crate::environment::wait(Duration::from_secs(20))
-                .map(<[(String, String)]>::to_vec)
-                .unwrap_or_default();
+            let environment = ide_ui_common::window::environment(Duration::from_secs(20));
             Arc::new(Registry::new(Supervisor::global(), environment))
         })
         .clone()
@@ -406,16 +397,16 @@ fn slot(root: &Path, id: u64) -> Option<Rc<Slot>> {
 }
 
 /// The window folder of `view`, if the user trusts it.
-fn trusted_root(view: &EditorTextView) -> Option<PathBuf> {
-    let root = view.controller()?.project_root()?;
-    crate::project::is_trusted(&root).then_some(root)
+fn trusted_root(view: &dyn Editor) -> Option<PathBuf> {
+    let root = view.project_root()?;
+    crate::lsp::host::is_trusted(&root).then_some(root)
 }
 
 /// The slot `view` belongs to and the running server in it.
-fn server_of(view: &EditorTextView) -> Option<(Server, Uri)> {
-    let root = view.controller()?.project_root()?;
+fn server_of(view: &dyn Editor) -> Option<(Server, Uri)> {
+    let root = view.project_root()?;
     let (id, uri) = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         (state.slot?, state.uri.clone()?)
     };
     let slot = slot(&root, id)?;
@@ -427,12 +418,12 @@ fn server_of(view: &EditorTextView) -> Option<(Server, Uri)> {
 }
 
 /// The running servers of `view`, the main one first, each with its slot's id (E140).
-fn servers_of(view: &EditorTextView) -> Vec<(u64, Server, Uri)> {
-    let Some(root) = view.controller().and_then(|c| c.project_root()) else {
+fn servers_of(view: &dyn Editor) -> Vec<(u64, Server, Uri)> {
+    let Some(root) = view.project_root() else {
         return Vec::new();
     };
     let (ids, uri) = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         let ids: Vec<u64> = state
             .slot
             .into_iter()
@@ -454,30 +445,30 @@ fn servers_of(view: &EditorTextView) -> Vec<(u64, Server, Uri)> {
 }
 
 /// The running server of slot `id` for `view`, main or second.
-fn server_by_id(view: &EditorTextView, id: u64) -> Option<(Server, Uri)> {
+fn server_by_id(view: &dyn Editor, id: u64) -> Option<(Server, Uri)> {
     servers_of(view)
         .into_iter()
         .find(|(slot, _, _)| *slot == id)
         .map(|(_, server, uri)| (server, uri))
 }
 
-fn version(view: &EditorTextView) -> i32 {
+fn version(view: &dyn Editor) -> i32 {
     i32::try_from(view.document().revision()).unwrap_or(i32::MAX)
 }
 
 /// An editor opened, or its file got a new name: it is opened on the server of its language.
-pub fn opened(view: &EditorTextView) {
+pub fn opened(view: &dyn Editor) {
     let path = view.document().path().map(Path::to_path_buf);
     let servers = servers_of(view);
-    let previous = view.ivars().lsp.borrow_mut().uri.take();
+    let previous = view.lsp().borrow_mut().uri.take();
     if let Some(previous) = previous {
         for (_, server, _) in &servers {
             server.close(&previous);
         }
     }
     release(view);
-    view.ivars().lsp.borrow_mut().slot = None;
-    view.ivars().lsp.borrow_mut().companions.clear();
+    view.lsp().borrow_mut().slot = None;
+    view.lsp().borrow_mut().companions.clear();
     let Some((path, (language, language_id))) = path.and_then(|p| language_of(&p).map(|l| (p, l))) else {
         status::refresh(view);
         return;
@@ -492,7 +483,7 @@ pub fn opened(view: &EditorTextView) {
         return;
     };
     {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         state.slot = Some(slot.id);
         state.uri = Some(uri::from_path(&path));
     }
@@ -506,15 +497,14 @@ pub fn opened(view: &EditorTextView) {
 }
 
 /// Opens `view` on the second servers its file has beside the main one (E140), started if new.
-fn open_companions(view: &EditorTextView, workspace: &Rc<Workspace>, path: &Path, language_id: &str) {
+fn open_companions(view: &dyn Editor, workspace: &Rc<Workspace>, path: &Path, language_id: &str) {
     if !path.starts_with(&workspace.root) {
         return;
     }
     for companion in ide_lsp::companions(path, &workspace.root, emmet_on()) {
         let root = ide_lsp::root(&companion, path, &workspace.root);
         let (slot, _) = slot_at(workspace, &companion, root);
-        view.ivars()
-            .lsp
+        view.lsp()
             .borrow_mut()
             .companions
             .push((slot.id, language_id.to_string()));
@@ -575,7 +565,7 @@ fn slot_at(workspace: &Rc<Workspace>, language: &Language, root: PathBuf) -> (Rc
 /// Looks for the slot's server off the main thread and starts it when found.
 fn find(folder: &Path, slot: &Slot) {
     let (folder, id, language, root) = (folder.to_path_buf(), slot.id, slot.language.clone(), slot.root.clone());
-    if let Err(why) = crate::util::spawn("lsp-find", move || {
+    if let Err(why) = ide_ui_common::util::spawn("lsp-find", move || {
         let registry = registry();
         let found = registry
             .find(&language, &root, &folder)
@@ -608,12 +598,11 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
     if let State::Running(server) = &*slot.state.borrow() {
         agent::started(&slot.root, slot.language.clone());
         for view in views_of(folder, id) {
-            let Some(uri) = view.ivars().lsp.borrow().uri.clone() else {
+            let Some(uri) = view.lsp().borrow().uri.clone() else {
                 continue;
             };
             let companion = view
-                .ivars()
-                .lsp
+                .lsp()
                 .borrow()
                 .companions
                 .iter()
@@ -625,35 +614,35 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
                 continue;
             };
             let text = view.document().text().to_string();
-            server.open(&uri, &language_id, version(&view), &text);
+            server.open(&uri, &language_id, version(&*view), &text);
         }
     }
     refresh_slot(folder, id);
 }
 
 /// The open editors of the window of `folder` that belong to slot `id`.
-fn views_of(folder: &Path, id: u64) -> Vec<Retained<EditorTextView>> {
-    editor::all_editors()
+fn views_of(folder: &Path, id: u64) -> Vec<Box<dyn Editor>> {
+    host::all_editors()
         .into_iter()
         .filter(|v| {
-            let state = v.ivars().lsp.borrow();
+            let state = v.lsp().borrow();
             state.slot == Some(id) || state.companions.iter().any(|(slot, _)| *slot == id)
         })
-        .filter(|v| v.controller().and_then(|c| c.project_root()).as_deref() == Some(folder))
+        .filter(|v| v.project_root().as_deref() == Some(folder))
         .collect()
 }
 
 fn refresh_slot(folder: &Path, id: u64) {
     for view in views_of(folder, id) {
-        status::refresh(&view);
+        status::refresh(&*view);
     }
     project_symbols::pump(folder);
 }
 
 /// An edit of `view`'s document: passed on to its server at once, as the protocol's incremental change.
-pub fn changed(view: &EditorTextView, change: &Change) {
+pub fn changed(view: &dyn Editor, change: &Change) {
     {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         decorate::shift(&mut state, change);
         complete::shift(&mut state, change);
         outline::shift(&mut state, change);
@@ -666,14 +655,14 @@ pub fn changed(view: &EditorTextView, change: &Change) {
             text: change.text.clone(),
         };
         if let Err(error) = server.change(uri, version(view), &[event]) {
-            crate::diag::report("telling the language server about an edit", error);
+            ide_ui_common::diag::report("telling the language server about an edit", error);
         }
     }
     if !servers.is_empty() {
         view.later(sel!(ideLspRefresh), REFRESH_DELAY);
     }
     actions::moved(view);
-    if !view.ivars().lsp.borrow().marks.is_empty() || !view.ivars().lsp.borrow().tokens.is_empty() {
+    if !view.lsp().borrow().marks.is_empty() || !view.lsp().borrow().tokens.is_empty() {
         view.later(sel!(ideDecorate), 0.0);
     }
 }
@@ -689,21 +678,21 @@ pub fn files_changed(folder: &Path, files: &std::collections::BTreeMap<PathBuf, 
             }
             match server.watched_files_changed(events) {
                 Ok(()) | Err(ide_lsp::Error::NotRunning | ide_lsp::Error::ServerGone) => {}
-                Err(error) => crate::diag::report("telling the language server about changed files", error),
+                Err(error) => ide_ui_common::diag::report("telling the language server about changed files", error),
             }
         }
     }
 }
 
 /// The document was saved.
-pub fn saved(view: &EditorTextView) {
+pub fn saved(view: &dyn Editor) {
     for (_, server, uri) in servers_of(view) {
         server.save(&uri);
     }
 }
 
 /// The editor closes.
-pub fn closed(view: &EditorTextView) {
+pub fn closed(view: &dyn Editor) {
     for (_, server, uri) in servers_of(view) {
         server.close(&uri);
     }
@@ -715,9 +704,9 @@ pub fn closed(view: &EditorTextView) {
 
 /// The user trusts `root` now: its editors get their servers.
 pub fn trust_changed(root: &Path) {
-    for view in editor::all_editors() {
-        if view.controller().and_then(|c| c.project_root()).as_deref() == Some(root) {
-            opened(&view);
+    for view in host::all_editors() {
+        if view.project_root().as_deref() == Some(root) {
+            opened(&*view);
         }
     }
 }
@@ -745,12 +734,12 @@ fn end(slot: &Slot) {
 }
 
 /// `view` no longer uses its slot: the slot goes once no editor has used it for `IDLE_STOP` and no lease holds it.
-fn release(view: &EditorTextView) {
-    let Some(root) = view.controller().and_then(|c| c.project_root()) else {
+fn release(view: &dyn Editor) {
+    let Some(root) = view.project_root() else {
         return;
     };
     let ids: Vec<u64> = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         state
             .slot
             .into_iter()
@@ -797,8 +786,8 @@ fn end_if_unused(folder: &Path, id: u64) {
 }
 
 /// Asks again, after a pause in typing, for what the server computes over the whole document.
-pub fn refresh(view: &EditorTextView) {
-    let serial = view.ivars().lsp.borrow().serial;
+pub fn refresh(view: &dyn Editor) {
+    let serial = view.lsp().borrow().serial;
     if let Some((server, uri)) = server_of(view) {
         refresh_main(view, &server, &uri);
     }
@@ -806,18 +795,18 @@ pub fn refresh(view: &EditorTextView) {
 }
 
 /// What only the main server computes over the whole document: outline, inlay hints and semantic tokens.
-fn refresh_main(view: &EditorTextView, server: &Server, uri: &Uri) {
+fn refresh_main(view: &dyn Editor, server: &Server, uri: &Uri) {
     outline::refresh(view, server, uri);
     inlay::request(view);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let _ = server.semantic_tokens(uri, move |answer| {
         main_soon(move || {
-            let Some(view) = editor::find_editor(serial) else {
+            let Some(view) = host::find_editor(serial) else {
                 return;
             };
             match answer {
-                Ok(tokens) if view.document().revision() == revision => decorate::set_tokens(&view, &tokens),
+                Ok(tokens) if view.document().revision() == revision => decorate::set_tokens(&*view, &tokens),
                 Err(ide_lsp::Error::Server { code, .. }) if code == CONTENT_MODIFIED => {
                     view.later(sel!(ideLspRefresh), REFRESH_DELAY);
                 }
@@ -828,7 +817,7 @@ fn refresh_main(view: &EditorTextView, server: &Server, uri: &Uri) {
 }
 
 /// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
-fn pull_diagnostics(view: &EditorTextView, serial: u64) {
+fn pull_diagnostics(view: &dyn Editor, serial: u64) {
     for (source, server, uri) in servers_of(view) {
         if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
             continue;
@@ -836,8 +825,8 @@ fn pull_diagnostics(view: &EditorTextView, serial: u64) {
         let _ = server.pull_diagnostics(&uri, move |answer| {
             if let Ok(diagnostics) = answer {
                 main_soon(move || {
-                    if let Some(view) = editor::find_editor(serial) {
-                        decorate::set_diagnostics_from(&view, source, &diagnostics);
+                    if let Some(view) = host::find_editor(serial) {
+                        decorate::set_diagnostics_from(&*view, source, &diagnostics);
                     }
                 });
             }
@@ -864,9 +853,9 @@ fn progress_text(title: &str, message: Option<&str>, percentage: Option<u32>) ->
 }
 
 /// Counts of the problems `view` shows, errors first, or `None` when no server watches its document.
-pub(crate) fn problem_counts(view: &EditorTextView) -> Option<(usize, usize)> {
+pub(crate) fn problem_counts(view: &dyn Editor) -> Option<(usize, usize)> {
     server_of(view)?;
-    let state = view.ivars().lsp.borrow();
+    let state = view.lsp().borrow();
     let errors = state.marks.iter().filter(|m| m.severity == Severity::Error).count();
     let warnings = state.marks.iter().filter(|m| m.severity == Severity::Warning).count();
     Some((errors, warnings))
@@ -883,7 +872,7 @@ pub use selftest_probe::*;
 
 /// Shows `failures`, lines from 1 with their messages, as errors in `view` from `source`, beside the servers' own
 /// diagnostics (E111).
-pub fn show_failures(view: &EditorTextView, source: u64, failures: &[(u32, String)]) {
+pub fn show_failures(view: &dyn Editor, source: u64, failures: &[(u32, String)]) {
     use ide_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
     let diagnostics: Vec<Diagnostic> = failures
         .iter()

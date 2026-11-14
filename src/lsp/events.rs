@@ -16,15 +16,15 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
         }
         Event::Notice { method, .. } => {
             let text = notice_text(&slot.language, &method);
-            crate::diag::report("language server notice", &method);
+            ide_ui_common::diag::report("language server notice", &method);
             *slot.message.borrow_mut() = Some(text);
             for view in views_of(folder, id) {
-                status::refresh(&view);
+                status::refresh(&*view);
             }
         }
         Event::Status(Status::Running) => {
             for view in views_of(folder, id) {
-                refresh(&view);
+                refresh(&*view);
             }
         }
         Event::Progress { token, progress } => {
@@ -54,21 +54,21 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
             if level == MessageType::ERROR || level == MessageType::WARNING {
                 *slot.message.borrow_mut() = Some(message.clone());
             }
-            crate::diag::report("language server", message);
+            ide_ui_common::diag::report("language server", message);
         }
         Event::Crashed { stderr, restarting, .. } => {
             let tail: String = stderr.lines().rev().take(5).collect::<Vec<_>>().join(" | ");
-            crate::diag::report("language server crashed", format!("restarting: {restarting}; {tail}"));
+            ide_ui_common::diag::report("language server crashed", format!("restarting: {restarting}; {tail}"));
         }
         Event::Refresh(Refresh::SemanticTokens | Refresh::Diagnostics) => {
             for view in views_of(folder, id) {
-                refresh(&view);
+                refresh(&*view);
             }
         }
         Event::Refresh(Refresh::InlayHints) => {
             for view in views_of(folder, id) {
-                inlay::forget(&view);
-                inlay::request(&view);
+                inlay::forget(&*view);
+                inlay::request(&*view);
             }
         }
         Event::ApplyEdit { edit, reply, .. } => edits::apply_workspace_edit(folder, &edit, move |applied| {
@@ -106,11 +106,9 @@ fn diagnostics_arrived(folder: &Path, source: u64, uri: &Uri, diagnostics: &[Dia
     let _interval = ide_process::signpost::begin(ide_process::signpost::name!("diagnostics"));
     let Some(path) = uri::to_path(uri) else { return };
     agent::publish(&path, diagnostics);
-    for view in editor::all_editors() {
-        if view.document().path() == Some(&path)
-            && view.controller().and_then(|c| c.project_root()).as_deref() == Some(folder)
-        {
-            decorate::set_diagnostics_from(&view, source, diagnostics);
+    for view in super::host::all_editors() {
+        if view.document().path() == Some(&path) && view.project_root().as_deref() == Some(folder) {
+            decorate::set_diagnostics_from(&*view, source, diagnostics);
         }
     }
 }

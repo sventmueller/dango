@@ -3,8 +3,8 @@
 use super::*;
 
 /// The breadcrumbs the bar of `view` shows, for the self-test.
-pub fn crumbs(view: &EditorTextView) -> String {
-    let state = view.ivars().lsp.borrow();
+pub fn crumbs(view: &dyn Editor) -> String {
+    let state = view.lsp().borrow();
     state
         .status
         .as_ref()
@@ -14,14 +14,14 @@ pub fn crumbs(view: &EditorTextView) -> String {
 }
 
 /// What the bar of `view` shows, for the self-test: the problems and the server's line.
-pub fn shown(view: &EditorTextView) -> (String, String) {
-    let state = view.ivars().lsp.borrow();
+pub fn shown(view: &dyn Editor) -> (String, String) {
+    let state = view.lsp().borrow();
     state.status.as_ref().map_or_else(Default::default, |bar| {
         (bar.problems.title().to_string(), bar.server.stringValue().to_string())
     })
 }
 
 /// The passing remark the status bar of `view` shows, for the self-test.
-pub fn note_of(view: &EditorTextView) -> Option<String> {
-    view.ivars().lsp.borrow().note.clone()
+pub fn note_of(view: &dyn Editor) -> Option<String> {
+    view.lsp().borrow().note.clone()
 }

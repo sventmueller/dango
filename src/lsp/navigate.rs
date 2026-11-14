@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use ide_lsp::lsp_types::{DocumentSymbol, Location, Range as LspRange, SymbolKind};
-use objc2::rc::{Retained, Weak};
+use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
@@ -19,21 +19,21 @@ use splat_i18n::{t, tf};
 
 use super::decorate::Severity;
 use super::{server_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::{guarded, item, label, main_soon, ns, set_action};
-use crate::window::WindowController;
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::{guarded, item, label, main_soon, ns, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
 pub use selftest_probe::*;
 
 /// Goes to the definition of the symbol at the cursor.
-pub fn definition(view: &EditorTextView) {
+pub fn definition(view: &dyn Editor) {
     definition_at(view, view.selectedRange().location);
 }
 
 /// Goes to the definition of the symbol at UTF-16 offset `index`, or lists them when there are several.
-pub fn definition_at(view: &EditorTextView, index: usize) {
+pub fn definition_at(view: &dyn Editor, index: usize) {
     go_to_at(view, index, Goto::Definition);
 }
 
@@ -81,7 +81,7 @@ impl Goto {
 
 /// Whether the server of `view` offers what the menu command `action` asks for; `None` for the commands this module
 /// does not check.
-pub(super) fn offered(view: &EditorTextView, action: objc2::runtime::Sel) -> Option<bool> {
+pub(super) fn offered(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
     let goto = [Goto::Implementation, Goto::TypeDefinition, Goto::Declaration];
     let (capability, method) = match goto.into_iter().find(|g| g.action() == action) {
         Some(goto) => goto.capability(),
@@ -93,16 +93,16 @@ pub(super) fn offered(view: &EditorTextView, action: objc2::runtime::Sel) -> Opt
 }
 
 /// Goes to where `goto` leads from the symbol at the cursor.
-pub fn go_to(view: &EditorTextView, goto: Goto) {
+pub fn go_to(view: &dyn Editor, goto: Goto) {
     go_to_at(view, view.selectedRange().location, goto);
 }
 
-fn go_to_at(view: &EditorTextView, index: usize, goto: Goto) {
+fn go_to_at(view: &dyn Editor, index: usize, goto: Goto) {
     let Some((server, uri)) = server_of(view) else { return };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let reply = move |answer: Result<Vec<ide_lsp::lsp_types::LocationLink>, ide_lsp::Error>| {
         let links = answer.unwrap_or_default();
         main_soon(move || {
@@ -115,8 +115,8 @@ fn go_to_at(view: &EditorTextView, index: usize, goto: Goto) {
                 .collect();
             match locations.as_slice() {
                 [] => beep(),
-                [one] => go(&view, one),
-                _ => list(&view, &goto.title(locations.len()), locations),
+                [one] => go(&*view, one),
+                _ => list(&*view, &goto.title(locations.len()), locations),
             }
         });
     };
@@ -132,13 +132,13 @@ fn go_to_at(view: &EditorTextView, index: usize, goto: Goto) {
 }
 
 /// Lists the uses of the symbol at the cursor.
-pub fn references(view: &EditorTextView) {
+pub fn references(view: &dyn Editor) {
     let Some((server, uri)) = server_of(view) else { return };
     let index = view.selectedRange().location;
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let _ = server.references(&uri, position, true, move |answer| {
         let locations = answer.unwrap_or_default();
         main_soon(move || {
@@ -153,7 +153,7 @@ pub fn references(view: &EditorTextView) {
                 1 => t("1 Verwendung").to_string(),
                 n => tf("{} Verwendungen", &[&n.to_string()]),
             };
-            list(&view, &title, locations);
+            list(&*view, &title, locations);
         });
     });
 }
@@ -162,18 +162,18 @@ fn beep() {
     objc2_app_kit::NSBeep();
 }
 
-fn go(view: &EditorTextView, location: &Location) {
+fn go(view: &dyn Editor, location: &Location) {
     let Some(path) = ide_lsp::uri::to_path(&location.uri) else {
         return;
     };
-    let Some(controller) = view.controller() else { return };
-    open_at(&controller, &path, location.range);
+    let Some(window) = view.window_id() else { return };
+    open_at(window, &path, location.range);
 }
 
-/// Opens `path` in `controller`, or brings its editor forward, and selects `range`.
-pub(crate) fn open_at(controller: &WindowController, path: &Path, range: LspRange) -> bool {
-    controller.open_file(path);
-    let Some(target) = editor::editor_for(controller, path) else {
+/// Opens `path` in the window `window`, or brings its editor forward, and selects `range`.
+pub fn open_at(window: u64, path: &Path, range: LspRange) -> bool {
+    editor::open_file(window, path);
+    let Some(target) = editor::editor_in(window, path) else {
         return false;
     };
     let selection = text::range(target.document().text(), range);
@@ -188,17 +188,17 @@ pub(crate) fn open_at(controller: &WindowController, path: &Path, range: LspRang
 
 /// Shows `path` with `selection` in the window of `folder`, as a server may ask.
 pub fn show(folder: &Path, path: &Path, selection: Option<LspRange>) -> bool {
-    let Some(controller) = crate::window::for_project(folder) else {
+    let Some(window) = editor::window_of(folder) else {
         return false;
     };
-    open_at(&controller, path, selection.unwrap_or_default())
+    open_at(window, path, selection.unwrap_or_default())
 }
 
 /// Jumps to the next problem after the cursor, or the one before it, and shows its message.
-pub fn next_problem(view: &EditorTextView, forward: bool) {
+pub fn next_problem(view: &dyn Editor, forward: bool) {
     let cursor = view.selectedRange().location;
     let target = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         let marks: Vec<_> = state.marks.iter().filter(|m| m.severity >= Severity::Warning).collect();
         let found = if forward {
             marks.iter().find(|m| m.range.start > cursor).or(marks.first())
@@ -217,9 +217,9 @@ pub fn next_problem(view: &EditorTextView, forward: bool) {
 }
 
 /// The symbols of the file in a menu at the cursor; choosing one goes there.
-pub fn symbols(view: &EditorTextView) {
+pub fn symbols(view: &dyn Editor) {
     let Some((server, uri)) = server_of(view) else { return };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let _ = server.document_symbols(&uri, move |answer| {
         let symbols = answer.unwrap_or_default();
         main_soon(move || {
@@ -230,12 +230,12 @@ pub fn symbols(view: &EditorTextView) {
                 beep();
                 return;
             }
-            symbol_menu(&view, &symbols);
+            symbol_menu(&*view, &symbols);
         });
     });
 }
 
-fn symbol_menu(view: &EditorTextView, symbols: &[DocumentSymbol]) {
+fn symbol_menu(view: &dyn Editor, symbols: &[DocumentSymbol]) {
     let mtm = view.mtm();
     let menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(t("Symbole")));
     let mut entries = vec![];
@@ -254,7 +254,7 @@ fn symbol_menu(view: &EditorTextView, symbols: &[DocumentSymbol]) {
     // (docs/development.md); the scenario chooses from the menu it built instead.
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
-        crate::context::app().location_sheet.symbols.replace(Some(menu));
+        crate::lsp::host::state().location_sheet.symbols.replace(Some(menu));
         return;
     }
     let cursor = view.selectedRange().location;
@@ -286,7 +286,7 @@ fn kind_name(kind: SymbolKind) -> &'static str {
 }
 
 /// Selects UTF-16 offset `offset` of `view`, as a symbol's menu item asks.
-pub fn jump_to(view: &EditorTextView, offset: usize) {
+pub fn jump_to(view: &dyn Editor, offset: usize) {
     let range = NSRange::new(offset.min(view.document().text().len_utf16()), 0);
     view.setSelectedRange(range);
     view.scrollRangeToVisible(range);
@@ -299,7 +299,8 @@ struct Entry {
 }
 
 pub struct SheetIvars {
-    controller: Weak<WindowController>,
+    /// The window it shows over, by its id.
+    window: u64,
     entries: RefCell<Vec<Entry>>,
     sheet: RefCell<Option<Retained<NSPanel>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
@@ -331,7 +332,7 @@ define_class!(
                 let entries = self.ivars().entries.borrow();
                 let entry = entries.get(usize::try_from(row).ok()?)?;
                 let field = label(self.mtm(), &entry.title);
-                field.setFont(Some(&crate::editor::code_font(12.0)));
+                field.setFont(Some(&crate::lsp::host::code_font(12.0)));
                 field.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
                 Some(field.into_super().into_super())
             })
@@ -361,7 +362,7 @@ pub struct LocationSheets {
 }
 
 fn with_sheet<R>(f: impl FnOnce(&RefCell<Option<Retained<LocationSheet>>>) -> R) -> R {
-    f(&crate::context::app().location_sheet.sheet)
+    f(&crate::lsp::host::state().location_sheet.sheet)
 }
 
 /// The line `line` of `path`, from `files`, which holds the texts of the open editors; another file is read once,
@@ -402,8 +403,11 @@ fn entries(
 
 /// Lists `locations` in a sheet of `view`'s window; Return or a double click goes to one. The lines of files no
 /// editor shows are read on the disk lane first.
-fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
-    let Some(controller) = view.controller() else { return };
+fn list(view: &dyn Editor, title: &str, mut locations: Vec<Location>) {
+    if view.window_id().is_none() {
+        return;
+    }
+    let root = view.project_root().unwrap_or_default();
     locations.sort_by(|a, b| {
         (a.uri.as_str(), a.range.start.line, a.range.start.character).cmp(&(
             b.uri.as_str(),
@@ -411,7 +415,7 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
             b.range.start.character,
         ))
     });
-    let root = controller.project_root().unwrap_or_default();
+
     let mut open = HashMap::new();
     for path in locations.iter().filter_map(|l| ide_lsp::uri::to_path(&l.uri)) {
         if let Some(editor) = editor::all_editors()
@@ -421,7 +425,7 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
             open.insert(path, Some(editor.document().text().to_string()));
         }
     }
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let shown_title = title.to_string();
     let read = {
         let (root, locations, open) = (root.clone(), locations.clone(), open.clone());
@@ -430,7 +434,7 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
     let queued = ide_core::lane::DISK.ask(read, move |found| {
         main_soon(move || {
             if let (Some(view), Some(found)) = (editor::find_editor(serial), found) {
-                show_sheet(&view, &shown_title, found);
+                show_sheet(&*view, &shown_title, found);
             }
         });
     });
@@ -439,13 +443,13 @@ fn list(view: &EditorTextView, title: &str, mut locations: Vec<Location>) {
     }
 }
 
-fn show_sheet(view: &EditorTextView, title: &str, entries: Vec<Entry>) {
-    let (Some(controller), Some(window)) = (view.controller(), view.window()) else {
+fn show_sheet(view: &dyn Editor, title: &str, entries: Vec<Entry>) {
+    let (Some(id), Some(window)) = (view.window_id(), view.window()) else {
         return;
     };
     let mtm = view.mtm();
     let sheet = LocationSheet::alloc(mtm).set_ivars(SheetIvars {
-        controller: Weak::from(&*controller),
+        window: id,
         entries: RefCell::new(entries),
         sheet: RefCell::new(None),
         table: RefCell::new(None),
@@ -548,8 +552,8 @@ impl LocationSheet {
             .ok()
             .and_then(|i| self.ivars().entries.borrow().get(i).map(|e| (e.path.clone(), e.range)));
         self.close();
-        if let (Some((path, range)), Some(controller)) = (target, self.ivars().controller.load()) {
-            open_at(&controller, &path, range);
+        if let Some((path, range)) = target {
+            open_at(self.ivars().window, &path, range);
         }
     }
 

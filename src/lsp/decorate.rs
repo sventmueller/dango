@@ -24,8 +24,8 @@ use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect};
 use splat_markdown::highlight::Token;
 
 use super::ViewState;
-use crate::editor::EditorTextView;
-use crate::util::constant;
+use crate::lsp::editor::Editor;
+use ide_ui_common::constant;
 
 /// How serious a diagnostic is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -138,7 +138,7 @@ pub fn shift(state: &mut ViewState, change: &Change) {
 
 /// Shows `diagnostics` of the server of slot `source` in `view`, in place of what that server sent before; the other
 /// servers' stay.
-pub fn set_diagnostics_from(view: &EditorTextView, source: u64, diagnostics: &[Diagnostic]) {
+pub fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: &[Diagnostic]) {
     let mut marks: Vec<Mark> = {
         let document = view.document();
         diagnostics
@@ -159,17 +159,17 @@ pub fn set_diagnostics_from(view: &EditorTextView, source: u64, diagnostics: &[D
             })
             .collect()
     };
-    let old = view.ivars().lsp.borrow().marks.clone();
+    let old = view.lsp().borrow().marks.clone();
     marks = replaced(old, source, marks);
     marks.sort_by_key(|m| (m.range.start, std::cmp::Reverse(m.severity)));
-    view.ivars().lsp.borrow_mut().marks = marks;
+    view.lsp().borrow_mut().marks = marks;
     paint(view);
-    crate::editor::redraw_gutter(view);
-    crate::editor::diagnostics_changed(view);
+    view.redraw_gutter();
+    view.diagnostics_changed();
     super::status::refresh(view);
 }
 
-pub fn set_tokens(view: &EditorTextView, tokens: &SemanticTokens) {
+pub fn set_tokens(view: &dyn Editor, tokens: &SemanticTokens) {
     let painted: Vec<Painted> = {
         let document = view.document();
         let text = document.text();
@@ -193,9 +193,9 @@ pub fn set_tokens(view: &EditorTextView, tokens: &SemanticTokens) {
             })
             .collect()
     };
-    view.ivars().lsp.borrow_mut().tokens = painted;
+    view.lsp().borrow_mut().tokens = painted;
     paint(view);
-    crate::editor::redraw_minimap(view);
+    view.redraw_minimap();
 }
 
 /// The marks of `old` from other servers than `source` with `new`, the marks `source` sends now (E140).
@@ -206,8 +206,8 @@ fn replaced(old: Vec<Mark>, source: u64, mut new: Vec<Mark>) -> Vec<Mark> {
 
 /// The diagnostics of at least `Info` by the line they start on: the start of the line's most serious one and every
 /// message of the line with its severity, the most serious first.
-pub fn line_messages(view: &EditorTextView) -> BTreeMap<usize, (usize, Vec<(Severity, String)>)> {
-    let state = view.ivars().lsp.borrow();
+pub fn line_messages(view: &dyn Editor) -> BTreeMap<usize, (usize, Vec<(Severity, String)>)> {
+    let state = view.lsp().borrow();
     let document = view.document();
     let text = document.text();
     let mut lines: BTreeMap<usize, (usize, Vec<(Severity, String)>)> = BTreeMap::new();
@@ -230,8 +230,8 @@ pub fn line_messages(view: &EditorTextView) -> BTreeMap<usize, (usize, Vec<(Seve
 }
 
 /// The diagnostics by the line they start on, the most serious first, for the line number column.
-pub fn line_marks(view: &EditorTextView) -> BTreeMap<usize, (Severity, String)> {
-    let state = view.ivars().lsp.borrow();
+pub fn line_marks(view: &dyn Editor) -> BTreeMap<usize, (Severity, String)> {
+    let state = view.lsp().borrow();
     let document = view.document();
     let text = document.text();
     let mut lines: BTreeMap<usize, (Severity, String)> = BTreeMap::new();
@@ -260,34 +260,35 @@ pub fn text_range(content: &NSTextContentStorage, range: &Range<usize>) -> Optio
 }
 
 /// Sets the colours of the lines on screen from the view's tokens and redraws its diagnostics.
-pub fn paint(view: &EditorTextView) {
+pub fn paint(view: &dyn Editor) {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return;
     };
-    let visible = crate::editor::visible_utf16(view);
+    let visible = view.visible_utf16();
     let Some(whole) = text_range(&content, &visible) else {
         return;
     };
     let foreground = constant!(NSForegroundColorAttributeName);
     layout.removeRenderingAttribute_forTextRange(foreground, &whole);
-    let state = view.ivars().lsp.borrow();
+    let state = view.lsp().borrow();
     let inside = |range: &Range<usize>| range.end > visible.start && range.start < visible.end;
     for painted in state.tokens.iter().filter(|p| inside(&p.range)) {
         if let Some(range) = text_range(&content, &painted.range) {
-            let color: Retained<AnyObject> = crate::editor::palette_color(painted.token).into();
+            let color: Retained<AnyObject> = crate::lsp::host::palette_color(painted.token).into();
             // SAFETY: The value of the foreground colour attribute is a colour.
             unsafe { layout.addRenderingAttribute_value_forTextRange(foreground, Some(&color), &range) };
         }
     }
     drop(state);
     view.paint_found();
-    if let Some(overlay) = view.ivars().lsp.borrow().squiggles.as_ref().and_then(Weak::load) {
+    if let Some(overlay) = view.lsp().borrow().squiggles.as_ref().and_then(Weak::load) {
         overlay.setNeedsDisplay(true);
     }
 }
 
 pub struct SquiggleIvars {
-    editor: Weak<EditorTextView>,
+    /// The editor it covers, by its serial.
+    editor: u64,
 }
 
 define_class!(
@@ -313,16 +314,16 @@ define_class!(
 
         #[unsafe(method(drawRect:))]
         fn draw_rect(&self, dirty: NSRect) {
-            crate::util::guarded((), || self.draw(dirty));
+            ide_ui_common::util::guarded((), || self.draw(dirty));
         }
     }
 );
 
 impl Squiggles {
     /// The overlay of `editor`, covering it and following its size.
-    pub fn attach(editor: &EditorTextView) {
-        let this = Squiggles::alloc(editor.mtm()).set_ivars(SquiggleIvars {
-            editor: Weak::from(editor),
+    pub fn attach(editor: &dyn Editor) {
+        let this = Squiggles::alloc(crate::lsp::editor::marker(editor)).set_ivars(SquiggleIvars {
+            editor: editor.serial(),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Squiggles> = unsafe { msg_send![super(this), initWithFrame: editor.bounds()] };
@@ -331,29 +332,28 @@ impl Squiggles {
         );
         this.setAccessibilityElement(false);
         editor.addSubview_positioned_relativeTo(&this, NSWindowOrderingMode::Above, None);
-        editor.ivars().lsp.borrow_mut().squiggles = Some(Weak::from(&*this));
+        editor.lsp().borrow_mut().squiggles = Some(Weak::from(&*this));
     }
 
     fn draw(&self, dirty: NSRect) {
-        let Some(editor) = self.ivars().editor.load() else {
+        let Some(editor) = crate::lsp::host::find_editor(self.ivars().editor) else {
             return;
         };
         let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
             return;
         };
         let origin = editor.textContainerOrigin();
-        let visible = crate::editor::visible_utf16(&editor);
+        let visible = editor.visible_utf16();
         let length = editor.document().text().len_utf16();
         let marks: Vec<(Range<usize>, Severity)> = editor
-            .ivars()
-            .lsp
+            .lsp()
             .borrow()
             .marks
             .iter()
             .filter(|m| m.severity >= Severity::Info)
             .map(|m| (shown_range(&m.range, length), m.severity))
             .filter(|(range, _)| range.end > visible.start && range.start < visible.end)
-            .filter(|(range, _)| !crate::editor::hidden_by_fold(&editor, range.start))
+            .filter(|(range, _)| !editor.hidden_by_fold(range.start))
             .collect();
         for (range, severity) in marks {
             let Some(text_range) = text_range(&content, &range) else {
@@ -362,7 +362,7 @@ impl Squiggles {
             severity.color().setStroke();
             let block = RcBlock::new(
                 |_: *mut NSTextRange, frame: NSRect, _: f64, _: NonNull<NSTextContainer>| -> Bool {
-                    crate::util::guarded(Bool::NO, || {
+                    ide_ui_common::util::guarded(Bool::NO, || {
                         let frame = NSRect::new(
                             NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
                             frame.size,

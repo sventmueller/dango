@@ -2,7 +2,7 @@
 //! install a missing server.
 
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadMarker, sel};
+use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{
     NSBox, NSBoxType, NSButton, NSCellImagePosition, NSColor, NSControlSize, NSFont, NSLayoutConstraintOrientation,
     NSLineBreakMode, NSStackView, NSStackViewGravity, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
@@ -10,8 +10,8 @@ use objc2_app_kit::{
 use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
-use crate::editor::EditorTextView;
-use crate::util::{label, ns, set_action, symbol};
+use crate::lsp::editor::Editor;
+use ide_ui_common::util::{label, ns, set_action, symbol};
 
 /// The height of the bar.
 pub const HEIGHT: f64 = 24.0;
@@ -47,7 +47,7 @@ pub struct Bar {
 }
 
 /// The bar of `view`, with a line above it.
-pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
+pub fn bar(mtm: MainThreadMarker, view: &dyn Editor) -> Retained<NSView> {
     // SAFETY: A nil target until `set_action` below, which checks that the view answers the action.
     let problems = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     problems.setBordered(false);
@@ -88,7 +88,7 @@ pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
     stack.addView_inGravity(&crumbs, NSStackViewGravity::Leading);
     stack.addView_inGravity(&server, NSStackViewGravity::Leading);
     stack.addView_inGravity(&button, NSStackViewGravity::Trailing);
-    crate::editor::status_items(mtm, view, &stack);
+    view.status_items(&stack);
     let line = NSBox::new(mtm);
     line.setBoxType(NSBoxType::Separator);
     let container = NSView::new(mtm);
@@ -114,7 +114,7 @@ pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
     ] {
         constraint.setActive(true);
     }
-    view.ivars().lsp.borrow_mut().status = Some(Bar {
+    view.lsp().borrow_mut().status = Some(Bar {
         problems,
         crumbs,
         server,
@@ -125,14 +125,14 @@ pub fn bar(mtm: MainThreadMarker, view: &EditorTextView) -> Retained<NSView> {
 }
 
 /// Shows the current problem counts and the state of the server.
-pub fn refresh(view: &EditorTextView) {
+pub fn refresh(view: &dyn Editor) {
     let counts = super::problem_counts(view);
     let (mut text, action) = super::server_status(view);
-    if let Some(note) = view.ivars().lsp.borrow().note.clone() {
+    if let Some(note) = view.lsp().borrow().note.clone() {
         text = note;
     }
     let crumbs = super::outline::breadcrumbs(view).join(" › ");
-    let state = view.ivars().lsp.borrow();
+    let state = view.lsp().borrow();
     let Some(bar) = state.status.as_ref() else { return };
     match counts {
         None => bar.problems.setHidden(true),
@@ -177,17 +177,17 @@ fn problems_text(errors: usize, warnings: usize) -> String {
 }
 
 /// Says `text` in the status bar of `view` for a few seconds, in place of the server's state.
-pub fn note(view: &EditorTextView, text: &str) {
-    view.ivars().lsp.borrow_mut().note = Some(text.to_string());
+pub fn note(view: &dyn Editor, text: &str) {
+    view.lsp().borrow_mut().note = Some(text.to_string());
     refresh(view);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let said = text.to_string();
-    crate::util::main_after(std::time::Duration::from_secs(6), move || {
-        if let Some(view) = crate::editor::find_editor(serial) {
-            let same = view.ivars().lsp.borrow().note.as_deref() == Some(said.as_str());
+    ide_ui_common::util::main_after(std::time::Duration::from_secs(6), move || {
+        if let Some(view) = crate::lsp::host::find_editor(serial) {
+            let same = view.lsp().borrow().note.as_deref() == Some(said.as_str());
             if same {
-                view.ivars().lsp.borrow_mut().note = None;
-                refresh(&view);
+                view.lsp().borrow_mut().note = None;
+                refresh(&*view);
             }
         }
     });

@@ -15,7 +15,7 @@ use ide_lsp::{Language, ProjectSymbol, Server, Status, Ticket, uri};
 
 use super::lease::IDLE_STOP;
 use super::{State, custom_servers, end_later, slot, slot_at, workspace, workspace_or_new};
-use crate::util::main_soon;
+use ide_ui_common::util::main_soon;
 
 /// Servers that may start at the same time for a search.
 const STARTING_AT_ONCE: usize = 2;
@@ -71,13 +71,13 @@ pub struct Leases {
 }
 
 fn with_leases<R>(f: impl FnOnce(&RefCell<HashMap<PathBuf, Lease>>) -> R) -> R {
-    f(&crate::context::app().server_leases.leases)
+    f(&crate::lsp::host::state().server_leases.leases)
 }
 
 /// Searches the symbols of the window folder `folder` for `query`; `answer` hears what was found each time a server
 /// answers, on the main thread, until the next search of the folder.
 pub fn search_symbols(folder: &Path, query: &str, answer: impl Fn(SymbolAnswer) + 'static) {
-    if !crate::project::is_trusted(folder) {
+    if !crate::lsp::host::is_trusted(folder) {
         answer(SymbolAnswer {
             symbols: vec![],
             indexing: false,
@@ -130,11 +130,11 @@ fn start_survey(folder: &Path) {
     let custom = custom_servers();
     let folder = folder.to_path_buf();
     let failed = folder.clone();
-    if let Err(why) = crate::util::spawn("lsp-symbol-survey", move || {
+    if let Err(why) = ide_ui_common::util::spawn("lsp-symbol-survey", move || {
         let plan = ide_lsp::symbol_search::survey(&folder, &custom);
         main_soon(move || surveyed(&folder, plan));
     }) {
-        crate::diag::report("surveying a folder for symbol search", why);
+        ide_ui_common::diag::report("surveying a folder for symbol search", why);
         surveyed(&failed, Vec::new());
     }
 }
@@ -301,7 +301,7 @@ fn arrived(folder: &Path, generation: u64, server: &Server, answer: Result<Vec<P
             })),
             Err(ide_lsp::Error::Cancelled) => {}
             Err(ide_lsp::Error::Server { code, .. }) if code == CONTENT_MODIFIED => {}
-            Err(error) => crate::diag::report("searching the project's symbols", error),
+            Err(error) => ide_ui_common::diag::report("searching the project's symbols", error),
         }
         true
     });

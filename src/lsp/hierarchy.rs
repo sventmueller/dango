@@ -5,11 +5,11 @@ use std::path::PathBuf;
 
 use ide_lsp::lsp_types::{Range, SymbolKind};
 use ide_lsp::{Calls, HierarchyItem, Neighbour, Server, Ticket, Types};
-use objc2::DefinedClass;
 
 use super::{server_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::main_soon;
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::main_soon;
 
 /// Which hierarchy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,7 +59,7 @@ impl Hierarchy {
             if let Err(error) = &answer
                 && !matches!(error, ide_lsp::Error::Cancelled)
             {
-                crate::diag::report("asking for a hierarchy", error);
+                ide_ui_common::diag::report("asking for a hierarchy", error);
             }
             let found = answer.unwrap_or_default();
             main_soon(move || done(found));
@@ -80,24 +80,24 @@ impl Hierarchy {
 }
 
 /// Shows the call hierarchy of the function at the cursor in the search panel.
-pub fn call_hierarchy(view: &EditorTextView) {
+pub fn call_hierarchy(view: &dyn Editor) {
     prepare(view, HierarchyKind::Calls);
 }
 
 /// Shows the type hierarchy of the type at the cursor in the search panel.
-pub fn type_hierarchy(view: &EditorTextView) {
+pub fn type_hierarchy(view: &dyn Editor) {
     prepare(view, HierarchyKind::Types);
 }
 
-fn prepare(view: &EditorTextView, kind: HierarchyKind) {
+fn prepare(view: &dyn Editor, kind: HierarchyKind) {
     let Some((server, uri)) = server_of(view) else { return };
-    let Some(folder) = view.controller().and_then(|c| c.project_root()) else {
+    let Some(folder) = view.project_root() else {
         return;
     };
     let Some(position) = text::position(view.document().text(), view.selectedRange().location) else {
         return;
     };
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let asking = server.clone();
     let reply = move |answer: Result<Vec<HierarchyItem>, ide_lsp::Error>| {
         let roots = answer.unwrap_or_default();
@@ -109,13 +109,16 @@ fn prepare(view: &EditorTextView, kind: HierarchyKind) {
                 objc2_app_kit::NSBeep();
                 return;
             }
-            if let Some(controller) = view.controller() {
-                controller.show_hierarchy(Hierarchy {
-                    kind,
-                    roots,
-                    folder,
-                    server: asking,
-                });
+            if let Some(window) = view.window_id() {
+                editor::show_hierarchy(
+                    window,
+                    Hierarchy {
+                        kind,
+                        roots,
+                        folder,
+                        server: asking,
+                    },
+                );
             }
         });
     };

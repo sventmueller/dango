@@ -131,7 +131,7 @@ fn changed_meanwhile(controller: Retained<WindowController>) {
             Duration::from_secs(10),
             || disk("web/src/slow.js").ends_with("//"),
             move |saved| {
-                let note = crate::lsp::status_note(&view).unwrap_or_default();
+                let note = crate::lsp::status_note(&*view).unwrap_or_default();
                 check(
                     "an answer for a text that changed meanwhile is dropped: saved as it is, with a note",
                     saved && disk("web/src/slow.js") == format!("{MESSY}//") && !note.is_empty(),
@@ -154,7 +154,7 @@ fn fails(controller: Retained<WindowController>) {
             Duration::from_secs(10),
             || disk("web/src/bad.js").ends_with('x'),
             move |saved| {
-                let note = crate::lsp::status_note(&view).unwrap_or_default();
+                let note = crate::lsp::status_note(&*view).unwrap_or_default();
                 check(
                     "a file Prettier fails on is saved as it is, and the status bar says why",
                     saved && disk("web/src/bad.js") == format!("{MESSY}x") && note.contains("SyntaxError"),

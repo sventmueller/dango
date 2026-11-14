@@ -219,7 +219,7 @@ fn folds() {
         .find("c = 3")
         .map(|b| text(&view)[..b].encode_utf16().count());
     if let Some(inside) = inside {
-        crate::lsp::apply_text_edits(&view, vec![(inside..inside, "x".into())]);
+        crate::lsp::apply_text_edits(&*view, vec![(inside..inside, "x".into())]);
     }
     helpers::wait_until(
         || open("fold.py").is_some_and(|view| edit::folded(&view) == 1),
@@ -252,7 +252,7 @@ fn edit_after_typing() {
     view.setSelectedRange(NSRange::new(3, 0));
     editor::type_text(&view, "!");
     let open = view.undoManager().map(|undo| undo.groupingLevel());
-    crate::lsp::apply_text_edits(&view, vec![(0..0, "// ".into())]);
+    crate::lsp::apply_text_edits(&*view, vec![(0..0, "// ".into())]);
     let edited = text(&view);
     let first = view.undoManager().map(|undo| {
         undo.undo();

@@ -6,11 +6,12 @@ use std::ops::Range;
 use ide_document::Change;
 use ide_lsp::Server;
 use ide_lsp::lsp_types::{DocumentSymbol, Uri};
-use objc2::{DefinedClass, sel};
+use objc2::sel;
 
 use super::ViewState;
-use crate::editor::{self, EditorTextView};
-use crate::util::main_soon;
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::main_soon;
 
 /// A symbol of the document and where it is, in UTF-16 code units.
 #[derive(Debug, Clone)]
@@ -22,7 +23,7 @@ pub struct Crumb {
 }
 
 /// The symbols as a list in which every symbol follows the one it is inside.
-fn flatten(view: &EditorTextView, symbols: &[DocumentSymbol], out: &mut Vec<Crumb>) {
+fn flatten(view: &dyn Editor, symbols: &[DocumentSymbol], out: &mut Vec<Crumb>) {
     for symbol in symbols {
         let range = super::text::range(view.document().text(), symbol.range);
         let head = super::text::range(view.document().text(), symbol.selection_range);
@@ -38,8 +39,8 @@ fn flatten(view: &EditorTextView, symbols: &[DocumentSymbol], out: &mut Vec<Crum
 }
 
 /// Asks the server for the document's symbols and folding ranges.
-pub fn refresh(view: &EditorTextView, server: &Server, uri: &Uri) {
-    let serial = view.ivars().lsp.borrow().serial;
+pub fn refresh(view: &dyn Editor, server: &Server, uri: &Uri) {
+    let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let _ = server.document_symbols(uri, move |answer| {
         let Ok(symbols) = answer else { return };
@@ -51,10 +52,10 @@ pub fn refresh(view: &EditorTextView, server: &Server, uri: &Uri) {
                 return;
             }
             let mut crumbs = vec![];
-            flatten(&view, &symbols, &mut crumbs);
-            view.ivars().lsp.borrow_mut().crumbs = crumbs;
-            super::status::refresh(&view);
-            crate::editor::redraw_gutter(&view);
+            flatten(&*view, &symbols, &mut crumbs);
+            view.lsp().borrow_mut().crumbs = crumbs;
+            super::status::refresh(&*view);
+            view.redraw_gutter();
         });
     });
     let started = server.folding_ranges(uri, move |answer| {
@@ -67,11 +68,11 @@ pub fn refresh(view: &EditorTextView, server: &Server, uri: &Uri) {
                 .iter()
                 .filter_map(|r| Some((usize::try_from(r.start_line).ok()?, usize::try_from(r.end_line).ok()?)))
                 .collect();
-            editor::set_server_folds(&view, Some(lines));
+            view.set_server_folds(Some(lines));
         });
     });
     if started.is_err() {
-        editor::set_server_folds(view, None);
+        view.set_server_folds(None);
     }
 }
 
@@ -84,17 +85,16 @@ pub fn shift(state: &mut ViewState, change: &Change) {
 }
 
 /// The cursor moved: the breadcrumbs follow once it rests.
-pub fn selection_moved(view: &EditorTextView) {
-    if !view.ivars().lsp.borrow().crumbs.is_empty() {
+pub fn selection_moved(view: &dyn Editor) {
+    if !view.lsp().borrow().crumbs.is_empty() {
         view.later(sel!(ideBreadcrumbs), 0.05);
     }
 }
 
 /// The names of the symbols around the cursor, outermost first.
-pub fn breadcrumbs(view: &EditorTextView) -> Vec<String> {
+pub fn breadcrumbs(view: &dyn Editor) -> Vec<String> {
     let cursor = view.selectedRange().location;
-    view.ivars()
-        .lsp
+    view.lsp()
         .borrow()
         .crumbs
         .iter()
@@ -105,8 +105,8 @@ pub fn breadcrumbs(view: &EditorTextView) -> Vec<String> {
 
 /// The symbols of the document as the line of each name and the line its range ends on, in UTF-16 offsets turned into
 /// lines; `None` while the server sent none.
-pub fn scopes(view: &EditorTextView) -> Option<Vec<(usize, usize)>> {
-    let state = view.ivars().lsp.borrow();
+pub fn scopes(view: &dyn Editor) -> Option<Vec<(usize, usize)>> {
+    let state = view.lsp().borrow();
     if state.crumbs.is_empty() {
         return None;
     }

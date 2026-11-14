@@ -26,5 +26,5 @@ pub fn close_list() {
 
 /// The menu of symbols the last "Symbole" command built, for the self-test.
 pub fn shown_symbols() -> Option<Retained<NSMenu>> {
-    crate::context::app().location_sheet.symbols.borrow().clone()
+    crate::lsp::host::state().location_sheet.symbols.borrow().clone()
 }

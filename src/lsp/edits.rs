@@ -10,21 +10,21 @@ use block2::RcBlock;
 use ide_lsp::Reply;
 use ide_lsp::lsp_types::{MessageActionItem, TextEdit, WorkspaceEdit};
 use objc2::MainThreadOnly;
-use objc2::rc::Retained;
 use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse};
 use objc2_foundation::{NSFileManager, NSRange, NSURL};
 use splat_i18n::t;
 
 use super::apply::{Failure, StepError};
-use crate::editor::{self, EditorTextView};
-use crate::util::{guarded, ns};
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::{guarded, ns};
 
 /// Replaces `edits`, UTF-16 ranges of the text as it is now that do not overlap, as one undoable step that flows into
 /// the document model like typing; whether the view took every one.
-pub fn apply_text_edits(view: &EditorTextView, edits: Vec<(Range<usize>, String)>) -> bool {
+pub fn apply_text_edits(view: &dyn Editor, edits: Vec<(Range<usize>, String)>) -> bool {
     let Some(storage) = view.storage() else { return false };
     let mut took = true;
-    editor::undo_step(view, || {
+    ide_ui_common::util::undo_step(view, || {
         for (range, text) in super::apply::back_to_front(edits) {
             let range = NSRange::new(range.start, range.end - range.start);
             let text = ns(&text);
@@ -40,7 +40,7 @@ pub fn apply_text_edits(view: &EditorTextView, edits: Vec<(Range<usize>, String)
 }
 
 /// `edits` of the protocol as ranges of `view`'s current text.
-pub fn ranges(view: &EditorTextView, edits: &[TextEdit]) -> Vec<(Range<usize>, String)> {
+pub fn ranges(view: &dyn Editor, edits: &[TextEdit]) -> Vec<(Range<usize>, String)> {
     let document = view.document();
     edits
         .iter()
@@ -66,7 +66,7 @@ pub fn apply_workspace_edit(
         move || super::apply::apply(&folder, &edit, &mut FromLane),
         move |result| {
             let result = result.unwrap_or_else(|| Err(not_run()));
-            crate::util::main_soon(move || {
+            ide_ui_common::util::main_soon(move || {
                 if let Some(done) = answer.lock_ignoring_poison().take() {
                     done(result);
                 }
@@ -91,7 +91,7 @@ fn names(shown: &Path, path: &Path) -> bool {
 }
 
 /// The editor that shows the file at `path`, whose symlinks are resolved.
-fn editor_at(path: &Path) -> Option<Retained<EditorTextView>> {
+fn editor_at(path: &Path) -> Option<Box<dyn Editor>> {
     editor::all_editors()
         .into_iter()
         .find(|view| view.document().path().is_some_and(|shown| names(shown, path)))
@@ -136,7 +136,7 @@ impl super::apply::Editors for FromLane {
 
 impl super::apply::Editors for OpenEditors {
     fn version(&self, path: &Path) -> Option<i32> {
-        editor_at(path).map(|view| super::version(&view))
+        editor_at(path).map(|view| super::version(&*view))
     }
 
     fn edit(&mut self, path: &Path, edits: &[TextEdit]) -> Option<Result<(), StepError>> {
@@ -145,8 +145,8 @@ impl super::apply::Editors for OpenEditors {
         if view.document().read_only().is_some() {
             return Some(Err(refused()));
         }
-        let ranges = ranges(&view, edits);
-        Some(if apply_text_edits(&view, ranges) {
+        let ranges = ranges(&*view, edits);
+        Some(if apply_text_edits(&*view, ranges) {
             Ok(())
         } else {
             Err(refused())
@@ -157,7 +157,7 @@ impl super::apply::Editors for OpenEditors {
         for view in editor::all_editors() {
             if view.document().path().is_some_and(|shown| names(shown, from)) {
                 view.document_mut().set_path(to.to_path_buf());
-                editor::path_changed(&view);
+                view.path_changed();
             }
         }
     }
@@ -186,7 +186,7 @@ pub fn question(
     actions: Vec<MessageActionItem>,
     answered: impl FnOnce(Option<MessageActionItem>) + 'static,
 ) {
-    let Some(window) = crate::window::for_project(folder).and_then(|c| c.window()) else {
+    let Some(window) = crate::lsp::host::window_of(folder).and_then(crate::lsp::host::window) else {
         return;
     };
     let alert = NSAlert::new(window.mtm());

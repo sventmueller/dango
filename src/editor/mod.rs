@@ -14,11 +14,13 @@ mod indent;
 mod inset_fragment;
 pub mod insets;
 mod line_diagnostics;
+mod lsp_editor;
 mod minimap;
 mod multi;
 mod overlay;
 pub mod predict;
 mod sticky;
+pub use lsp_editor::lsp_editor;
 pub use overlay::follow as follow_overlay;
 pub(crate) use saving::{save, save_soon};
 pub mod recovery;
@@ -74,9 +76,7 @@ pub fn all_editors() -> Vec<Retained<EditorTextView>> {
 
 /// The open editor with `serial`, the number that other threads hold instead of the view.
 pub fn find_editor(serial: u64) -> Option<Retained<EditorTextView>> {
-    open_editors()
-        .into_iter()
-        .find(|v| v.ivars().lsp.borrow().serial == serial)
+    open_editors().into_iter().find(|v| v.ivars().serial == serial)
 }
 
 /// The editor of `path` in `controller`'s window.
@@ -282,7 +282,7 @@ pub fn closing(controller: &WindowController, id: isize) {
         .into_iter()
         .find(|v| v.ivars().tab.get() == id && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
     if let Some(view) = view {
-        crate::lsp::closed(&view);
+        crate::lsp::closed(&*view);
         crate::markdown::closing(&view);
         crate::context::app()
             .editors
@@ -497,7 +497,8 @@ fn add_tab(
     scroll.setHasHorizontalScroller(!wraps(&view));
     follow_width(&scroll, &view);
     let (container, gutter) = container::editor_container(mtm, &scroll, &view);
-    crate::lsp::follow_scrolling(&scroll, &view);
+    crate::lsp::attach(&*view);
+    follow_scrolling(&scroll, &view);
     whitespace::attach(&view, &scroll);
     vim::attach(&view);
     overlay::attach(&view);
@@ -512,7 +513,7 @@ fn add_tab(
     view.ivars().tab.set(id);
     crate::context::app().editors.borrow_mut().push(Weak::from(&*view));
     highlight::recolor_all(&view);
-    crate::lsp::opened(&view);
+    crate::lsp::opened(&*view);
     changes::reload(&view, true);
     if !preview && let Some(window) = view.window() {
         window.makeFirstResponder(Some(&view));
@@ -903,6 +904,20 @@ fn alert(mtm: MainThreadMarker, message: &str, detail: &str) {
     alert.setMessageText(&ns(message));
     alert.setInformativeText(&ns(detail));
     alert.runModal();
+}
+
+/// Tells the language servers when `scroll` shows other lines of `view`.
+fn follow_scrolling(scroll: &NSScrollView, view: &Retained<EditorTextView>) {
+    let clip = scroll.contentView();
+    clip.setPostsBoundsChangedNotifications(true);
+    let editor = Weak::from(&**view);
+    let name = constant!(objc2_app_kit::NSViewBoundsDidChangeNotification);
+    let watch = crate::util::observe(view.mtm(), name, Some(&clip), move |_| {
+        if let Some(editor) = editor.load() {
+            crate::lsp::scrolled(&*editor);
+        }
+    });
+    view.ivars().watches.borrow_mut().push(watch);
 }
 
 /// Whether long lines wrap at the view's edge.

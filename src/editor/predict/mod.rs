@@ -163,7 +163,7 @@ pub fn changed(view: &EditorTextView) {
     }
     if had {
         // TextKit is still processing the edit, which an attribute change of the insets must not disturb.
-        let serial = view.ivars().lsp.borrow().serial;
+        let serial = view.ivars().serial;
         main_soon(move || {
             if let Some(view) = super::find_editor(serial)
                 && view.ivars().predict.borrow().shown.is_none()
@@ -254,7 +254,7 @@ pub fn request(view: &EditorTextView) {
     if let Some((_, old)) = view.ivars().predict.borrow_mut().asking.replace((id, cancel.clone())) {
         old.cancel();
     }
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     let (revision, asked) = (request.revision, request.selection.clone());
     let from = provider.clone();
     let reply: ide_predict::Reply = Box::new(move |answer| {
@@ -444,7 +444,7 @@ fn ask_from_editor(view: &EditorTextView) {
     }
     let Some(window) = view.window() else { return };
     let name = provider::name(chosen().choice);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     ask_consent(&window, name, move || {
         provider::consent();
         if let Some(view) = super::find_editor(serial) {

@@ -115,12 +115,12 @@ fn below(shared: &Arc<AgentDiagnostics>, root: &Path) -> Arc<dyn ide_agent::Diag
 /// The diagnostics of the project at `root`, for the own agent's diagnostics tool; asked on the main thread, read on
 /// any.
 pub fn agent_diagnostics(root: &Path) -> Arc<dyn ide_agent::Diagnostics> {
-    below(&crate::context::app().lsp_diagnostics, root)
+    below(&crate::lsp::host::state().lsp_diagnostics, root)
 }
 
 /// The diagnostics the servers of the running app published.
 fn shared() -> Arc<AgentDiagnostics> {
-    crate::context::app().lsp_diagnostics.clone()
+    crate::lsp::host::state().lsp_diagnostics.clone()
 }
 
 pub(super) fn started(root: &Path, language: Language) {

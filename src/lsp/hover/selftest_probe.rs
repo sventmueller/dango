@@ -3,8 +3,8 @@
 use super::*;
 
 /// The text of the popover shown on `view`, for the self-test.
-pub fn shown_text(view: &EditorTextView) -> Option<String> {
-    let state = view.ivars().lsp.borrow();
+pub fn shown_text(view: &dyn Editor) -> Option<String> {
+    let state = view.lsp().borrow();
     state
         .hover
         .popover

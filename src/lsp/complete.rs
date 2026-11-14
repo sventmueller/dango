@@ -9,7 +9,7 @@ use std::ops::Range;
 use ide_document::Change;
 use ide_lsp::lsp_types::{CompletionContext, CompletionItem, CompletionTriggerKind};
 use ide_lsp::{Completions, Ticket};
-use objc2::rc::{Retained, Weak};
+use objc2::rc::Retained;
 use objc2::runtime::{NSObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
@@ -20,8 +20,9 @@ use objc2_app_kit::{
 use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use super::{ViewState, server_by_id, server_of, servers_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::{label, main_soon, ns};
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::{label, main_soon, ns};
 
 const WIDTH: f64 = 440.0;
 const ROW: f64 = 20.0;
@@ -36,7 +37,8 @@ pub struct Session {
 pub struct ListIvars {
     panel: RefCell<Option<Retained<NSPanel>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
-    view: RefCell<Weak<EditorTextView>>,
+    /// The editor it completes in, by its serial.
+    view: Cell<Option<u64>>,
     items: RefCell<Vec<CompletionItem>>,
     /// The slot of the server each item came from, which resolves it (E140).
     origins: RefCell<Vec<u64>>,
@@ -69,7 +71,7 @@ define_class!(
     unsafe impl NSTableViewDataSource for CompletionList {
         #[unsafe(method(numberOfRowsInTableView:))]
         fn rows(&self, _table: &NSTableView) -> isize {
-            crate::util::guarded(0, || isize::try_from(self.ivars().shown.borrow().len()).unwrap_or(0))
+            ide_ui_common::util::guarded(0, || isize::try_from(self.ivars().shown.borrow().len()).unwrap_or(0))
         }
     }
 
@@ -81,7 +83,7 @@ define_class!(
             _column: Option<&NSTableColumn>,
             row: isize,
         ) -> Option<Retained<NSView>> {
-            crate::util::guarded(None, || {
+            ide_ui_common::util::guarded(None, || {
                 let index = *self.ivars().shown.borrow().get(usize::try_from(row).ok()?)?;
                 let items = self.ivars().items.borrow();
                 Some(row_view(self.mtm(), items.get(index)?))
@@ -90,7 +92,7 @@ define_class!(
 
         #[unsafe(method(tableViewSelectionDidChange:))]
         fn selection_changed(&self, _notification: &NSNotification) {
-            crate::util::guarded((), || self.resolve_selected());
+            ide_ui_common::util::guarded((), || self.resolve_selected());
         }
     }
 );
@@ -102,7 +104,7 @@ pub struct Completion {
 }
 
 fn with_list<R>(f: impl FnOnce(&RefCell<Option<Retained<CompletionList>>>) -> R) -> R {
-    f(&crate::context::app().completion.list)
+    f(&crate::lsp::host::state().completion.list)
 }
 
 fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
@@ -112,7 +114,7 @@ fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
                 let ivars = ListIvars {
                     panel: RefCell::new(None),
                     table: RefCell::new(None),
-                    view: RefCell::new(Weak::default()),
+                    view: Cell::new(None),
                     items: RefCell::new(vec![]),
                     origins: RefCell::new(vec![]),
                     filled: Cell::new(0),
@@ -131,14 +133,9 @@ fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
 }
 
 /// The list, if it is shown for `view`.
-fn open_for(view: &EditorTextView) -> Option<Retained<CompletionList>> {
+fn open_for(view: &dyn Editor) -> Option<Retained<CompletionList>> {
     let list = with_list(|cell| cell.borrow().clone())?;
-    let showing = list
-        .ivars()
-        .view
-        .borrow()
-        .load()
-        .is_some_and(|v| std::ptr::eq(&*v, view))
+    let showing = list.ivars().view.get() == Some(view.serial())
         && list.ivars().panel.borrow().as_ref().is_some_and(|p| p.isVisible());
     showing.then_some(list)
 }
@@ -148,7 +145,7 @@ fn is_word(c: char) -> bool {
 }
 
 /// Where the word before UTF-16 offset `at` starts.
-fn word_start(view: &EditorTextView, at: usize) -> usize {
+fn word_start(view: &dyn Editor, at: usize) -> usize {
     let string = view.string();
     let mut start = at;
     while start > 0 {
@@ -162,7 +159,7 @@ fn word_start(view: &EditorTextView, at: usize) -> usize {
 }
 
 /// Asks the server for completions at the cursor, as the menu command and trigger characters do.
-pub fn complete(view: &EditorTextView) {
+pub fn complete(view: &dyn Editor) {
     request(view, None);
 }
 
@@ -176,7 +173,7 @@ fn addressed(trigger: Option<&str>, servers: &[(u64, Vec<String>)]) -> Vec<u64> 
         .collect()
 }
 
-fn request(view: &EditorTextView, trigger: Option<String>) {
+fn request(view: &dyn Editor, trigger: Option<String>) {
     let all = servers_of(view);
     let registered: Vec<(u64, Vec<String>)> = all
         .iter()
@@ -201,7 +198,7 @@ fn request(view: &EditorTextView, trigger: Option<String>) {
     let shared = list(view.mtm());
     let asked = shared.ivars().asked.get() + 1;
     shared.ivars().asked.set(asked);
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.lsp().borrow().serial;
     let context = CompletionContext {
         trigger_kind: if trigger.is_some() {
             CompletionTriggerKind::TRIGGER_CHARACTER
@@ -219,7 +216,7 @@ fn request(view: &EditorTextView, trigger: Option<String>) {
                 };
                 let list = list(view.mtm());
                 if list.ivars().asked.get() == asked {
-                    list.show_from(&view, origin, asked, completions);
+                    list.show_from(&*view, origin, asked, completions);
                 }
             });
         });
@@ -227,7 +224,7 @@ fn request(view: &EditorTextView, trigger: Option<String>) {
 }
 
 /// The user typed `typed` into `view`: the list filters or closes, a trigger character asks anew.
-pub fn typed(view: &EditorTextView, typed: &str) {
+pub fn typed(view: &dyn Editor, typed: &str) {
     if let Some(list) = open_for(view) {
         if typed.chars().all(is_word) {
             if list.ivars().incomplete.get() {
@@ -261,7 +258,7 @@ pub fn typed(view: &EditorTextView, typed: &str) {
 }
 
 /// A command of the keyboard reached `view`; whether the list or a snippet took it.
-pub fn command(view: &EditorTextView, command: Sel) -> bool {
+pub fn command(view: &dyn Editor, command: Sel) -> bool {
     if let Some(list) = open_for(view) {
         let step = |by: isize| list.step(by);
         match command {
@@ -283,13 +280,13 @@ pub fn command(view: &EditorTextView, command: Sel) -> bool {
         return next_stop(view);
     }
     if command == sel!(cancelOperation:) {
-        return view.ivars().lsp.borrow_mut().snippet.take().is_some();
+        return view.lsp().borrow_mut().snippet.take().is_some();
     }
     false
 }
 
 /// After a command the editor ran itself, such as deleting backwards: the list follows or closes.
-pub fn after_command(view: &EditorTextView, command: Sel) {
+pub fn after_command(view: &dyn Editor, command: Sel) {
     if let Some(list) = open_for(view)
         && command == sel!(deleteBackward:)
     {
@@ -302,7 +299,7 @@ pub fn after_command(view: &EditorTextView, command: Sel) {
 }
 
 /// Closes the list if it belongs to `view`.
-pub fn dismiss_for(view: &EditorTextView) {
+pub fn dismiss_for(view: &dyn Editor) {
     if let Some(list) = open_for(view) {
         list.close();
     }
@@ -318,9 +315,9 @@ pub fn shift(state: &mut ViewState, change: &Change) {
 }
 
 /// Selects the next tab stop of the snippet being filled in; whether there was one.
-fn next_stop(view: &EditorTextView) -> bool {
+fn next_stop(view: &dyn Editor) -> bool {
     let stop = {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         let Some(session) = &mut state.snippet else {
             return false;
         };
@@ -339,13 +336,13 @@ fn next_stop(view: &EditorTextView) -> bool {
 }
 
 impl CompletionList {
-    fn view(&self) -> Option<Retained<EditorTextView>> {
-        self.ivars().view.borrow().load()
+    fn view(&self) -> Option<Box<dyn Editor>> {
+        editor::find_editor(self.ivars().view.get()?)
     }
 
     /// Takes the answer of the server of slot `origin` to request `asked`: the first answer of a request puts its
     /// items in place, later ones join them.
-    fn show_from(&self, view: &EditorTextView, origin: u64, asked: u64, completions: Completions) {
+    fn show_from(&self, view: &dyn Editor, origin: u64, asked: u64, completions: Completions) {
         if self.ivars().filled.get() == asked && self.view().is_some() {
             let count = completions.items.len();
             self.ivars().items.borrow_mut().extend(completions.items);
@@ -365,7 +362,7 @@ impl CompletionList {
         *self.ivars().origins.borrow_mut() = vec![origin; count];
     }
 
-    fn show(&self, view: &EditorTextView, completions: Completions) {
+    fn show(&self, view: &dyn Editor, completions: Completions) {
         let cursor = view.selectedRange().location;
         let start = completions
             .items
@@ -374,7 +371,7 @@ impl CompletionList {
             .map(|range| text::offset(view.document().text(), range.start))
             .filter(|start| *start <= cursor)
             .unwrap_or_else(|| word_start(view, cursor));
-        *self.ivars().view.borrow_mut() = Weak::from(view);
+        self.ivars().view.set(Some(view.serial()));
         *self.ivars().items.borrow_mut() = completions.items;
         self.ivars().origins.borrow_mut().clear();
         self.ivars().resolved.borrow_mut().clear();
@@ -430,7 +427,7 @@ impl CompletionList {
             table.selectRowIndexes_byExtendingSelection(&NSIndexSet::indexSetWithIndex(0), false);
             table.scrollRowToVisible(0);
         }
-        self.place(&view);
+        self.place(&*view);
     }
 
     fn build(&self, mtm: MainThreadMarker) {
@@ -465,14 +462,14 @@ impl CompletionList {
         scroll.setDrawsBackground(false);
         if let Some(content) = panel.contentView() {
             content.addSubview(&scroll);
-            crate::util::pin_edges(&scroll, &content);
+            ide_ui_common::util::pin_edges(&scroll, &content);
         }
         *self.ivars().panel.borrow_mut() = Some(panel);
         *self.ivars().table.borrow_mut() = Some(table);
     }
 
     /// Puts the panel below the start of the word, or above it where the screen ends.
-    fn place(&self, view: &EditorTextView) {
+    fn place(&self, view: &dyn Editor) {
         let Some(panel) = self.ivars().panel.borrow().clone() else {
             return;
         };
@@ -528,8 +525,8 @@ impl CompletionList {
         }
         let origin = self.ivars().origins.borrow().get(index).copied();
         let found = match origin {
-            Some(origin) => server_by_id(&view, origin),
-            None => server_of(&view),
+            Some(origin) => server_by_id(&*view, origin),
+            None => server_of(&*view),
         };
         let Some((server, uri)) = found else { return };
         let Some(item) = self.ivars().items.borrow().get(index).cloned() else {
@@ -567,7 +564,7 @@ impl CompletionList {
         let start = self.ivars().start.get();
         self.close();
         if let Some(item) = item {
-            insert(&view, &item, start);
+            insert(&*view, &item, start);
         }
     }
 
@@ -597,7 +594,7 @@ fn utf16_len(text: &str) -> usize {
 
 /// Inserts `item` over the word from `start` to the cursor, with its extra edits, as one undoable step, and selects
 /// the snippet's first tab stop.
-fn insert(view: &EditorTextView, item: &CompletionItem, start: usize) {
+fn insert(view: &dyn Editor, item: &CompletionItem, start: usize) {
     let insertion = ide_lsp::insertion(item);
     let cursor = view.selectedRange().location;
     let main_start = insertion
@@ -632,12 +629,12 @@ fn insert(view: &EditorTextView, item: &CompletionItem, start: usize) {
     }
     let first = stops.remove(0);
     view.setSelectedRange(objc2_foundation::NSRange::new(first.start, first.end - first.start));
-    view.ivars().lsp.borrow_mut().snippet = (!stops.is_empty()).then_some(Session { stops });
+    view.lsp().borrow_mut().snippet = (!stops.is_empty()).then_some(Session { stops });
 }
 
 fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
     let name = label(mtm, &item.label);
-    name.setFont(Some(&crate::editor::code_font(12.0)));
+    name.setFont(Some(&crate::lsp::host::code_font(12.0)));
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     let detail_text = item
         .label_details
@@ -680,10 +677,10 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
 pub mod selftest {
     use objc2::{DefinedClass, MainThreadOnly};
 
-    use crate::editor::EditorTextView;
+    use crate::lsp::editor::Editor;
 
     /// The labels the list shows for `view`, best first; empty when it is closed.
-    pub fn shown(view: &EditorTextView) -> Vec<String> {
+    pub fn shown(view: &dyn Editor) -> Vec<String> {
         let Some(list) = super::open_for(view) else {
             return vec![];
         };
@@ -697,7 +694,7 @@ pub mod selftest {
     }
 
     /// Selects the first item whose label starts with `label` and accepts it as Return does.
-    pub fn accept(view: &EditorTextView, label: &str) -> bool {
+    pub fn accept(view: &dyn Editor, label: &str) -> bool {
         let Some(list) = super::open_for(view) else {
             return false;
         };
@@ -717,7 +714,7 @@ pub mod selftest {
     }
 
     /// Opens the list for `view` with items of `labels`, as an answer of its server would.
-    pub fn show(view: &EditorTextView, labels: &[&str]) {
+    pub fn show(view: &dyn Editor, labels: &[&str]) {
         let items = labels
             .iter()
             .map(|label| ide_lsp::lsp_types::CompletionItem {
@@ -735,8 +732,8 @@ pub mod selftest {
     }
 
     /// Starts filling in a snippet whose tab stops still to visit are `stops`, in UTF-16 code units.
-    pub fn snippet(view: &EditorTextView, stops: Vec<std::ops::Range<usize>>) {
-        view.ivars().lsp.borrow_mut().snippet = Some(super::Session { stops });
+    pub fn snippet(view: &dyn Editor, stops: Vec<std::ops::Range<usize>>) {
+        view.lsp().borrow_mut().snippet = Some(super::Session { stops });
     }
 
     /// The completion panel, for a picture.

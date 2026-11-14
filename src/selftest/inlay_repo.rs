@@ -48,7 +48,7 @@ pub fn run() {
                 return true;
             }
             if asked.get().elapsed() >= ASK_AGAIN {
-                crate::lsp::inlay::request(&view);
+                crate::lsp::inlay::request(&*view);
                 asked.set(Instant::now());
             }
             false

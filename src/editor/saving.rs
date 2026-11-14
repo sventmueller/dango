@@ -80,7 +80,7 @@ fn begin(view: &EditorTextView, target: Option<&Path>, overwrite: bool) -> Optio
 }
 
 fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     let (pending, kept) = (job.clone(), target.clone());
     let queued = ide_core::lane::DISK.ask(
         move || job.run(),

@@ -4,7 +4,7 @@
 use std::ops::Range;
 
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
+use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSEvent, NSLineBreakMode, NSPopover, NSPopoverBehavior, NSScrollView, NSTextField, NSTextInputClient, NSView,
     NSViewController,
@@ -12,8 +12,9 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSRectEdge, NSSize};
 
 use super::{server_of, text};
-use crate::editor::{self, EditorTextView};
-use crate::util::main_soon;
+use crate::lsp::editor::Editor;
+use crate::lsp::host as editor;
+use ide_ui_common::util::main_soon;
 
 /// How long the mouse rests before the server is asked.
 const REST: f64 = 0.6;
@@ -36,7 +37,7 @@ pub struct State {
 }
 
 /// The rectangle of `range`'s first line in `view`'s coordinates; TextKit 2 answers this for input methods.
-pub fn rect_of(view: &EditorTextView, range: Range<usize>) -> Option<NSRect> {
+pub fn rect_of(view: &dyn Editor, range: Range<usize>) -> Option<NSRect> {
     let window = view.window()?;
     // SAFETY: A range within the text; no actual range is asked for.
     let screen = unsafe {
@@ -50,7 +51,7 @@ pub fn rect_of(view: &EditorTextView, range: Range<usize>) -> Option<NSRect> {
 }
 
 /// The character under `point` of the view, if the point is on one.
-fn character_at(view: &EditorTextView, point: NSPoint) -> Option<usize> {
+fn character_at(view: &dyn Editor, point: NSPoint) -> Option<usize> {
     let length = view.document().text().len_utf16();
     let index = view.characterIndexForInsertionAtPoint(point);
     [index, index.wrapping_sub(1)].into_iter().find(|&candidate| {
@@ -65,10 +66,10 @@ fn character_at(view: &EditorTextView, point: NSPoint) -> Option<usize> {
 }
 
 /// The mouse moved over `view`: a popover it left closes, and a pause will ask the server.
-pub fn mouse_moved(view: &EditorTextView, event: &NSEvent) {
+pub fn mouse_moved(view: &dyn Editor, event: &NSEvent) {
     let point = view.convertPoint_fromView(event.locationInWindow(), None);
     let leave = {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         let moved = state
             .hover
             .rest
@@ -91,48 +92,41 @@ pub fn mouse_moved(view: &EditorTextView, event: &NSEvent) {
     if leave {
         dismiss(view);
     }
-    if server_of(view).is_some() || crate::debug::paused_in(view) {
+    if server_of(view).is_some() || view.debugger_paused() {
         view.later(sel!(ideHoverRest), REST);
     }
 }
 
 /// The mouse rested: asks about the character under it.
-pub fn hover_rest(view: &EditorTextView) {
-    let Some(point) = view.ivars().lsp.borrow().hover.rest else {
+pub fn hover_rest(view: &dyn Editor) {
+    let Some(point) = view.lsp().borrow().hover.rest else {
         return;
     };
-    let shown = view
-        .ivars()
-        .lsp
-        .borrow()
-        .hover
-        .popover
-        .as_ref()
-        .is_some_and(|p| p.isShown());
+    let shown = view.lsp().borrow().hover.popover.as_ref().is_some_and(|p| p.isShown());
     if shown {
         return;
     }
     if let Some(index) = character_at(view, point)
-        && !crate::debug::hover(view, index)
+        && !view.debugger_hover(index)
     {
         ask(view, index);
     }
 }
 
 /// Asks about the symbol at the cursor, as the menu command does.
-pub fn hover_at_cursor(view: &EditorTextView) {
+pub fn hover_at_cursor(view: &dyn Editor) {
     let index = view.selectedRange().location;
-    view.ivars().lsp.borrow_mut().hover.rest = None;
+    view.lsp().borrow_mut().hover.rest = None;
     ask(view, index);
 }
 
-fn ask(view: &EditorTextView, index: usize) {
+fn ask(view: &dyn Editor, index: usize) {
     let Some((server, uri)) = server_of(view) else { return };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
     let (serial, asked) = {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         state.hover.asked += 1;
         (state.serial, state.hover.asked)
     };
@@ -142,19 +136,19 @@ fn ask(view: &EditorTextView, index: usize) {
             let Some(view) = editor::find_editor(serial) else {
                 return;
             };
-            if view.ivars().lsp.borrow().hover.asked != asked || hover.markdown.trim().is_empty() {
+            if view.lsp().borrow().hover.asked != asked || hover.markdown.trim().is_empty() {
                 return;
             }
             let range = hover
                 .range
                 .map_or(index..index + 1, |r| text::range(view.document().text(), r));
-            show(&view, range, &hover.markdown);
+            show(&*view, range, &hover.markdown);
         });
     });
 }
 
 /// Shows `markdown` in a popover at `range`.
-pub fn show(view: &EditorTextView, range: Range<usize>, markdown: &str) {
+pub fn show(view: &dyn Editor, range: Range<usize>, markdown: &str) {
     dismiss(view);
     let Some(rect) = rect_of(view, range.start..range.end.max(range.start + 1)) else {
         return;
@@ -170,7 +164,7 @@ pub fn show(view: &EditorTextView, range: Range<usize>, markdown: &str) {
     popover.setContentViewController(Some(&controller));
     popover.setContentSize(size);
     popover.showRelativeToRect_ofView_preferredEdge(rect, view, NSRectEdge::MaxY);
-    let mut state = view.ivars().lsp.borrow_mut();
+    let mut state = view.lsp().borrow_mut();
     state.hover.popover = Some(popover);
     state.hover.about = Some(rect);
     markdown.clone_into(&mut state.hover.shown);
@@ -214,9 +208,9 @@ fn content(mtm: MainThreadMarker, markdown: &str) -> Retained<NSView> {
 }
 
 /// Closes the popover of `view`, if one is shown.
-pub fn dismiss(view: &EditorTextView) {
+pub fn dismiss(view: &dyn Editor) {
     let popover = {
-        let mut state = view.ivars().lsp.borrow_mut();
+        let mut state = view.lsp().borrow_mut();
         state.hover.about = None;
         state.hover.popover.take()
     };

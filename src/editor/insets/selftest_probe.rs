@@ -95,3 +95,11 @@ pub fn kerns(view: &EditorTextView) -> Vec<(Range<usize>, f64)> {
         })
         .collect()
 }
+
+/// The inlay hints `view` shows, as their offsets and texts and whether a click on one goes somewhere.
+pub fn inlay_shown(view: &EditorTextView) -> Vec<(usize, String, bool)> {
+    of(view, Layer::Inlay)
+        .into_iter()
+        .map(|inset| (inset.at, inset.text, inset.action.is_some()))
+        .collect()
+}

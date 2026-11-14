@@ -75,33 +75,33 @@ fn problems(waited: Waited) {
     let Some(view) = main_view() else { return done() };
     put_cursor(&view, 0);
     send(&view, sel!(ideNextProblem:), None);
-    let marks = crate::lsp::marks_of(&view);
+    let marks = crate::lsp::marks_of(&*view);
     let at_mark = |view: &EditorTextView| {
         let cursor = view.selectedRange().location;
         marks.iter().any(|(range, _)| range.start == cursor)
     };
-    let next = (at_mark(&view), crate::lsp::hover_text(&view));
+    let next = (at_mark(&view), crate::lsp::hover_text(&*view));
     send(&view, sel!(idePreviousProblem:), None);
     check(
         "the next and the previous problem put the cursor on one and show its message",
         waited.ok && next.0 && next.1.is_some() && at_mark(&view),
         format!("{waited}: {next:?} {marks:?}"),
     );
-    crate::lsp::dismiss_hover(&view);
+    crate::lsp::dismiss_hover(&*view);
     let (Some(at), Some(event)) = (twice(&view), mouse(&view, NSEventType::MouseMoved, twice(&view))) else {
         return done();
     };
     put_cursor(&view, at);
-    crate::lsp::mouse_moved(&view, &event);
+    crate::lsp::mouse_moved(&*view, &event);
     ask(
         || {
             if let Some(view) = main_view() {
-                crate::lsp::hover_rest(&view);
+                crate::lsp::hover_rest(&*view);
             }
         },
         || {
             main_view()
-                .and_then(|v| crate::lsp::hover_text(&v))
+                .and_then(|v| crate::lsp::hover_text(&*v))
                 .is_some_and(|t| t.contains("fn twice"))
         },
         hovered,
@@ -110,13 +110,13 @@ fn problems(waited: Waited) {
 
 fn hovered(waited: Waited) {
     let Some(view) = main_view() else { return done() };
-    let shown = crate::lsp::hover_text(&view);
+    let shown = crate::lsp::hover_text(&*view);
     if let Some(away) = mouse(&view, NSEventType::MouseMoved, None) {
-        crate::lsp::mouse_moved(&view, &away);
+        crate::lsp::mouse_moved(&*view, &away);
     }
     check(
         "the mouse resting on a name shows its signature, and leaving closes it",
-        waited.ok && crate::lsp::hover_text(&view).is_none(),
+        waited.ok && crate::lsp::hover_text(&*view).is_none(),
         format!("{waited}: {shown:?}"),
     );
     let menu = mouse(&view, NSEventType::RightMouseDown, twice(&view)).and_then(|event| view.menuForEvent(&event));
@@ -246,7 +246,7 @@ fn format_on_save() {
     let Some(view) = main_view() else { return done() };
     set_format_on_save(true);
     let end = view.document().text().len_utf16();
-    crate::lsp::apply_text_edits(&view, vec![(end..end, "fn  late( )  { }\n".to_string())]);
+    crate::lsp::apply_text_edits(&*view, vec![(end..end, "fn  late( )  { }\n".to_string())]);
     let late = || main_view().is_some_and(|v| v.document().text().to_string().contains("fn  late( )"));
     wait_until(late, |_| {
         ask(
@@ -286,7 +286,7 @@ fn saved(waited: Waited) {
         },
         || {
             main_view()
-                .and_then(|v| crate::lsp::code_action_menu::shown(&v))
+                .and_then(|v| crate::lsp::code_action_menu::shown(&*v))
                 .is_some_and(|titles| titles.first().is_some_and(|first| first != t("Keine Aktionen")))
         },
         bulb,
@@ -295,7 +295,7 @@ fn saved(waited: Waited) {
 
 /// The bulb on the line of the type error opens its fixes as well.
 fn bulb(waited: Waited) {
-    let menu = main_view().and_then(|v| crate::lsp::code_action_menu::shown(&v));
+    let menu = main_view().and_then(|v| crate::lsp::code_action_menu::shown(&*v));
     check(
         "Schnelle Lösung lists the fixes of a type error",
         waited.ok,
@@ -304,9 +304,9 @@ fn bulb(waited: Waited) {
     crate::lsp::code_action_menu::forget();
     poll(
         ANSWER,
-        || main_view().is_some_and(|v| crate::lsp::code_action_menu::bulb(&v).is_some()),
+        || main_view().is_some_and(|v| crate::lsp::code_action_menu::bulb(&*v).is_some()),
         |shown| {
-            let pressed = main_view().is_some_and(|v| crate::lsp::code_action_menu::press_bulb(&v));
+            let pressed = main_view().is_some_and(|v| crate::lsp::code_action_menu::press_bulb(&*v));
             check(
                 "the bulb shows on the line with fixes",
                 shown.ok && pressed,
@@ -316,7 +316,7 @@ fn bulb(waited: Waited) {
                 ANSWER,
                 || {
                     main_view()
-                        .and_then(|v| crate::lsp::code_action_menu::shown(&v))
+                        .and_then(|v| crate::lsp::code_action_menu::shown(&*v))
                         .is_some_and(|titles| titles.first().is_some_and(|first| first != t("Keine Aktionen")))
                 },
                 stale_action,
@@ -328,14 +328,14 @@ fn bulb(waited: Waited) {
 /// A code action chosen after the text changed is not applied, and the user is told.
 fn stale_action(waited: Waited) {
     let Some(view) = main_view() else { return done() };
-    let titles = crate::lsp::code_action_menu::shown(&view).unwrap_or_default();
+    let titles = crate::lsp::code_action_menu::shown(&*view).unwrap_or_default();
     let Some(first) = titles.first().cloned() else {
         check("the quick fixes of a type error are listed", false, waited.to_string());
         return done();
     };
     let before = view.document().text().to_string();
     let end = view.document().text().len_utf16();
-    crate::lsp::apply_text_edits(&view, vec![(end..end, "\n".to_string())]);
+    crate::lsp::apply_text_edits(&*view, vec![(end..end, "\n".to_string())]);
     let told = answer_alert_saying(
         SETTLE,
         t("Änderung nicht angewandt").to_string(),
@@ -372,7 +372,7 @@ fn commands() {
         at_main("thrice", 2, sel!(ideHover:)),
         || {
             main_view()
-                .and_then(|v| crate::lsp::hover_text(&v))
+                .and_then(|v| crate::lsp::hover_text(&*v))
                 .is_some_and(|t| t.contains("fn thrice"))
         },
         |hover| {
@@ -417,9 +417,9 @@ fn defined(waited: Waited) {
             );
             ask(
                 at_main("thrice(21", 7, sel!(ideSignatureHelp:)),
-                || main_view().is_some_and(|v| crate::lsp::signatures::shown(&v).is_some()),
+                || main_view().is_some_and(|v| crate::lsp::signatures::shown(&*v).is_some()),
                 |help| {
-                    let shown = main_view().and_then(|v| crate::lsp::signatures::shown(&v));
+                    let shown = main_view().and_then(|v| crate::lsp::signatures::shown(&*v));
                     check(
                         "Parameterhilfe shows the signature of the call around the cursor",
                         help.ok && shown.as_ref().is_some_and(|(label, _)| label.contains("thrice")),
@@ -437,9 +437,9 @@ fn refactor() {
     crate::lsp::code_action_menu::forget();
     ask(
         at_main("thrice(21", 2, sel!(ideRefactor:)),
-        || main_view().is_some_and(|v| crate::lsp::code_action_menu::shown(&v).is_some()),
+        || main_view().is_some_and(|v| crate::lsp::code_action_menu::shown(&*v).is_some()),
         |refactor| {
-            let titles = main_view().and_then(|v| crate::lsp::code_action_menu::shown(&v));
+            let titles = main_view().and_then(|v| crate::lsp::code_action_menu::shown(&*v));
             check(
                 "Refaktorisieren opens the refactorings at the cursor",
                 refactor.ok && titles.as_ref().is_some_and(|t| !t.is_empty()),
@@ -448,10 +448,10 @@ fn refactor() {
             crate::lsp::code_action_menu::forget();
             ask(
                 at_main("util::thrice(21", 6, sel!(ideComplete:)),
-                || main_view().is_some_and(|v| !crate::lsp::completion::shown(&v).is_empty()),
+                || main_view().is_some_and(|v| !crate::lsp::completion::shown(&*v).is_empty()),
                 |listed| {
                     let shown = main_view()
-                        .map(|v| crate::lsp::completion::shown(&v))
+                        .map(|v| crate::lsp::completion::shown(&*v))
                         .unwrap_or_default();
                     check(
                         "Vervollständigen lists what the module offers",
@@ -485,7 +485,7 @@ fn editor_of(file: &str) -> Option<Retained<EditorTextView>> {
 
 fn server_line(file: &str) -> String {
     editor_of(file)
-        .map(|v| crate::lsp::status::shown(&v).1)
+        .map(|v| crate::lsp::status::shown(&*v).1)
         .unwrap_or_default()
 }
 
@@ -509,7 +509,7 @@ fn custom_servers() {
         move |waited| {
             let crash = server_line("x.crash");
             if let Some(view) = editor_of("x.crash") {
-                crate::lsp::status_action(&view);
+                crate::lsp::status_action(&*view);
             }
             let restarted = server_line("x.crash");
             check(

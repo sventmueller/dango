@@ -250,7 +250,7 @@ impl Minimap {
         let first = index(rows.offset / ROW);
         let last = index(((rows.offset + size.height) / ROW).ceil());
         let paused = crate::debug::paused_line(&editor);
-        let diagnostics = crate::lsp::line_marks(&editor);
+        let diagnostics = crate::lsp::line_marks(&*editor);
         let lsp = editor.ivars().lsp.borrow();
         let painted = crate::lsp::painted(&lsp);
         let document = editor.document();

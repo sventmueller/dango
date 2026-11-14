@@ -170,7 +170,7 @@ fn data(view: &EditorTextView) -> Option<Rc<Loaded>> {
         return None;
     }
     view.ivars().blame.borrow_mut().reading = Some(head.clone());
-    read(view.ivars().lsp.borrow().serial, path, head);
+    read(view.ivars().serial, path, head);
     None
 }
 
@@ -637,7 +637,7 @@ fn read_message(view: &EditorTextView, hash: String) {
         return;
     };
     let root = loaded.repo_root.clone();
-    let serial = view.ivars().lsp.borrow().serial;
+    let serial = view.ivars().serial;
     let job = move || {
         let message = ide_ui_git::git()
             .and_then(|git| git.discover(&root).ok())

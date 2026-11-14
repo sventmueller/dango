@@ -88,7 +88,7 @@ fn gutter() {
         RUN,
         || state("TestFail") == Some(ide_test::State::Failed),
         move |failed| {
-            let marks = editor_view().map(|v| crate::lsp::marks_of(&v)).unwrap_or_default();
+            let marks = editor_view().map(|v| crate::lsp::marks_of(&*v)).unwrap_or_default();
             let marked = editor_view().is_some_and(|v| {
                 let start = v.line_start(11).unwrap_or(usize::MAX);
                 marks

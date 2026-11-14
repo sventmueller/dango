@@ -37,6 +37,8 @@ pub struct ViewIvars {
     pub(super) gutter: RefCell<Option<Weak<super::ruler::LineNumbers>>>,
     /// Its language server's diagnostics, colours, popovers and status.
     pub(crate) lsp: RefCell<crate::lsp::ViewState>,
+    /// Tells editors apart in callbacks from other threads, which cannot hold a view.
+    pub(crate) serial: u64,
     /// Names the copy of the unsaved text against a crash, the one a restored view came from.
     pub(super) recovery: RecoveryId,
     /// Where the text differs from its file's last commit.
@@ -804,6 +806,7 @@ impl EditorTextView {
         let container = NSTextContainer::initWithSize(NSTextContainer::alloc(), NSSize::new(1.0e7, 1.0e7));
         container.setWidthTracksTextView(false);
         layout.setTextContainer(Some(&container));
+        let serial = crate::lsp::new_serial();
         let ivars = ViewIvars {
             document: RefCell::new(document),
             _content: RefCell::new(Some(content)),
@@ -816,7 +819,8 @@ impl EditorTextView {
             recolor_from: Cell::new(None),
             styled: Cell::new(false),
             gutter: RefCell::new(None),
-            lsp: RefCell::new(crate::lsp::ViewState::new()),
+            lsp: RefCell::new(crate::lsp::ViewState::new(serial)),
+            serial,
             recovery,
             marks: RefCell::new(super::changes::Marks::default()),
             spacing: RefCell::new(super::indent::State::default()),

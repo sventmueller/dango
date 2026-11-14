@@ -268,7 +268,7 @@ fn ask_implementations() {
     let at = text[..byte].encode_utf16().count() + "trait Pos".len();
     view.setSelectedRange(NSRange::new(at, 0));
     if crate::lsp::listed().is_empty() {
-        crate::lsp::go_to(&view, crate::lsp::Goto::Implementation);
+        crate::lsp::go_to(&*view, crate::lsp::Goto::Implementation);
     }
 }
 
@@ -312,7 +312,7 @@ fn ask_calls() {
     let at = text[..byte].encode_utf16().count() + "fn stat".len();
     view.setSelectedRange(NSRange::new(at, 0));
     if rows().is_empty() {
-        crate::lsp::call_hierarchy(&view);
+        crate::lsp::call_hierarchy(&*view);
     }
 }
 
@@ -443,7 +443,7 @@ fn ask_callees() {
     let at = text[..byte].encode_utf16().count() + "pub(crate) fn ca".len();
     view.setSelectedRange(NSRange::new(at, 0));
     if !level(0, "call") {
-        crate::lsp::call_hierarchy(&view);
+        crate::lsp::call_hierarchy(&*view);
     }
 }
 
@@ -462,8 +462,8 @@ fn callees(ok: bool, took: Duration) {
         );
     }
     if let Some(view) = view(CALLS_FILE) {
-        let types = crate::lsp::validate(&view, Some(objc2::sel!(ideTypeHierarchy:)));
-        let declaration = crate::lsp::validate(&view, Some(objc2::sel!(ideDeclaration:)));
+        let types = crate::lsp::validate(&*view, Some(objc2::sel!(ideTypeHierarchy:)));
+        let declaration = crate::lsp::validate(&*view, Some(objc2::sel!(ideDeclaration:)));
         check(
             "commands the server does not offer are greyed out, not hidden",
             types.is_some() && declaration.is_some(),

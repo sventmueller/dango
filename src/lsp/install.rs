@@ -7,28 +7,27 @@ use std::sync::Arc;
 use ide_core::explain::Explained;
 use ide_lsp::{Cancel, NotFound, Status};
 use ide_process::Supervisor;
-use objc2::DefinedClass;
 use splat_i18n::{t, tf};
 
 use super::{Slot, State, find, language_of, refresh_slot, registry, slot, status, trusted_root};
-use crate::editor::EditorTextView;
-use crate::util::main_soon;
+use crate::lsp::editor::Editor;
+use ide_ui_common::util::main_soon;
 
 /// What the status bar of `view` says about its server, and the action its button offers.
-pub(crate) fn server_status(view: &EditorTextView) -> (String, status::Action) {
+pub(crate) fn server_status(view: &dyn Editor) -> (String, status::Action) {
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         return (String::new(), status::Action::None);
     };
     if language_of(&path).is_none() {
         return (String::new(), status::Action::None);
     }
-    let root = view.controller().and_then(|c| c.project_root());
+    let root = view.project_root();
     if let Some(slot) = root.as_deref().and_then(|root| shown_slot(view, root)) {
         return slot_status(&slot);
     }
     let text = match root {
         None => t("Sprachserver nur in einem Ordner"),
-        Some(root) if !crate::project::is_trusted(&root) => t("Sprachserver aus: Ordner nicht vertraut"),
+        Some(root) if !crate::lsp::host::is_trusted(&root) => t("Sprachserver aus: Ordner nicht vertraut"),
         Some(_) => "",
     };
     (text.to_string(), status::Action::None)
@@ -40,9 +39,9 @@ pub const DECLINED: ide_core::settings::Key<Vec<String>> =
 
 /// The slot whose state the status bar of `view` shows: a second server that wants attention, such as one missing,
 /// installing, failed or with a notice, else the main one (E140).
-fn shown_slot(view: &EditorTextView, root: &Path) -> Option<std::rc::Rc<Slot>> {
+fn shown_slot(view: &dyn Editor, root: &Path) -> Option<std::rc::Rc<Slot>> {
     let (main, companions) = {
-        let state = view.ivars().lsp.borrow();
+        let state = view.lsp().borrow();
         (
             state.slot,
             state.companions.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
@@ -117,7 +116,7 @@ pub(super) fn missing_text(missing: &NotFound) -> (String, status::Action) {
 }
 
 /// The button in the status bar of `view` was pressed: install, cancel, or start the server again.
-pub fn status_action(view: &EditorTextView) {
+pub fn status_action(view: &dyn Editor) {
     let Some(root) = trusted_root(view) else { return };
     let Some(slot) = shown_slot(view, &root) else { return };
     let id = slot.id;
@@ -149,24 +148,24 @@ pub fn status_action(view: &EditorTextView) {
 }
 
 /// Asks once for the app whether to install the second server `language`: install, never ask again, or not now.
-fn ask_companion(view: &EditorTextView, language: &ide_lsp::Language) -> bool {
+fn ask_companion(view: &dyn Editor, language: &ide_lsp::Language) -> bool {
     use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
-    let alert = NSAlert::new(objc2::MainThreadOnly::mtm(view));
-    alert.setMessageText(&crate::util::ns(&tf("{} installieren?", &[language.name()])));
-    alert.setInformativeText(&crate::util::ns(&tf(
+    let alert = NSAlert::new(crate::lsp::editor::marker(view));
+    alert.setMessageText(&ide_ui_common::util::ns(&tf("{} installieren?", &[language.name()])));
+    alert.setInformativeText(&ide_ui_common::util::ns(&tf(
         "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte.",
         &[language.name()],
     )));
-    alert.addButtonWithTitle(&crate::util::ns(t("Installieren")));
-    alert.addButtonWithTitle(&crate::util::ns(t("Nicht mehr fragen")));
-    alert.addButtonWithTitle(&crate::util::ns(t("Abbrechen")));
+    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Installieren")));
+    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Nicht mehr fragen")));
+    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Abbrechen")));
     let answer = alert.runModal();
     if answer == NSAlertSecondButtonReturn {
         let mut settings = ide_core::settings::Settings::load_user();
         let mut declined = settings.get(&DECLINED);
         declined.push(language.name().to_string());
         if let Err(error) = settings.set(&DECLINED, &declined) {
-            crate::diag::report("remembering a declined server", error);
+            ide_ui_common::diag::report("remembering a declined server", error);
         }
     }
     answer == NSAlertFirstButtonReturn
@@ -184,9 +183,9 @@ fn install(folder: &Path, slot: &Slot) {
     *slot.state.borrow_mut() = State::Installing(cancel.clone(), t("Installiere …").to_string());
     let (folder, id) = (folder.to_path_buf(), slot.id);
     let failed = folder.clone();
-    if let Err(why) = crate::util::spawn("lsp-install", move || {
+    if let Err(why) = ide_ui_common::util::spawn("lsp-install", move || {
         let registry = registry();
-        let environment = crate::environment::get().map(<[_]>::to_vec).unwrap_or_default();
+        let environment = ide_ui_common::window::environment(std::time::Duration::ZERO);
         let installer = ide_lsp::Installer::new(
             Supervisor::global(),
             environment,
@@ -250,7 +249,7 @@ fn installed(folder: &Path, id: u64, result: Result<(), Explained>) {
             find(folder, &slot);
         }
         Err(Explained(error)) => {
-            crate::diag::report("installing a language server", &error);
+            ide_ui_common::diag::report("installing a language server", &error);
             *slot.state.borrow_mut() = State::Failed(tf("Installation fehlgeschlagen: {}", &[&error]));
         }
     }

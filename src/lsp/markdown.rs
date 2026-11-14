@@ -7,7 +7,8 @@ use objc2::{AllocAnyThread, Message};
 use objc2_app_kit::{NSColor, NSFont, NSFontAttributeName, NSForegroundColorAttributeName};
 use objc2_foundation::{NSAttributedString, NSDictionary, NSMutableAttributedString, NSString};
 
-use crate::util::{constant, ns};
+use ide_ui_common::constant;
+use ide_ui_common::util::ns;
 
 /// How a piece of text looks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -125,7 +126,7 @@ pub fn attributed(markdown: &str, size: f64) -> Retained<NSAttributedString> {
     let result = NSMutableAttributedString::new();
     let text = attributes(&NSFont::systemFontOfSize(size), &NSColor::labelColor());
     let bold = attributes(&NSFont::boldSystemFontOfSize(size), &NSColor::labelColor());
-    let code = attributes(&crate::editor::code_font(size - 0.5), &NSColor::labelColor());
+    let code = attributes(&crate::lsp::host::code_font(size - 0.5), &NSColor::labelColor());
     for (piece, style) in pieces(markdown) {
         let attributes = match style {
             Style::Text => &text,
