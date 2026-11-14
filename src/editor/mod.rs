@@ -66,7 +66,7 @@ pub struct EditorState {
 /// The editors still open.
 fn open_editors() -> Vec<Retained<EditorTextView>> {
     let cx = crate::context::app();
-    let mut open = cx.editors.borrow_mut();
+    let mut open = cx.editors().borrow_mut();
     open.retain(|view| view.load().is_some());
     open.iter().filter_map(Weak::load).collect()
 }
@@ -260,13 +260,13 @@ pub fn settings_changed(names: &[String]) {
     let cx = crate::context::AppContext::get(mtm);
     for name in names {
         match name.as_str() {
-            "minimap" => cx.editor.minimap.forget(),
-            "stickyScrollLines" => cx.editor.sticky.forget(),
-            "diagnosticsAtLineEnd" => cx.editor.line_diagnostics.forget(),
+            "minimap" => cx.editor().minimap.forget(),
+            "stickyScrollLines" => cx.editor().sticky.forget(),
+            "diagnosticsAtLineEnd" => cx.editor().line_diagnostics.forget(),
             "showWhitespace" => whitespace::forget(),
             "blameAtLineEnd" => blame::forget(),
             "vimMode" => {
-                cx.editor.vim.forget();
+                cx.editor().vim.forget();
                 for view in open_editors() {
                     vim::attach(&view);
                 }
@@ -346,7 +346,7 @@ pub fn closing(controller: &WindowController, id: isize) {
         ide_ui_lsp::closed(&*view);
         crate::markdown::closing(&view);
         crate::context::app()
-            .editors
+            .editors()
             .borrow_mut()
             .retain(|w| w.load().is_some_and(|v| !std::ptr::eq(&*v, &*view)));
     }
@@ -574,7 +574,7 @@ fn add_tab(
     vim::attach(&view);
     overlay::attach(&view);
     insets::attach(&view);
-    crate::debug::attach_rotor(&view, &controller.context().debug_rotors);
+    crate::debug::attach_rotor(&view, controller.context().debug_rotors());
     *view.ivars().gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
     let id = if preview {
         controller.add_preview_tab(TabKind::Editor, key, title, container)
@@ -582,7 +582,7 @@ fn add_tab(
         controller.add_tab(TabKind::Editor, key, title, container)
     };
     view.ivars().tab.set(id);
-    crate::context::app().editors.borrow_mut().push(Weak::from(&*view));
+    crate::context::app().editors().borrow_mut().push(Weak::from(&*view));
     highlight::recolor_all(&view);
     ide_ui_lsp::opened(&*view);
     changes::reload(&view, true);

@@ -24,19 +24,19 @@ pub const SOURCE: u64 = u64::MAX;
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&TestsPanel)) {
     if let Some(mtm) = MainThreadMarker::new() {
-        crate::context::AppContext::get(mtm).tests_panels.with(id, f);
+        crate::context::AppContext::get(mtm).tests_panels().with(id, f);
     }
 }
 
 fn of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
-    controller.context().tests_panels.of(controller.handle())
+    controller.context().tests_panels().of(controller.handle())
 }
 
 /// The window shows a folder: its panel lists the tests, those of tools that list by building from the sources.
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
-    let panels = &controller.context().tests_panels;
+    let panels = &controller.context().tests_panels();
     let panel = TestsPanel::new(controller.mtm(), panels.next_id(), controller.id(), root);
     let (page, header) = panel.build();
     controller.set_panel_page(Panel::Tests, &page);
@@ -48,14 +48,14 @@ pub fn attach(controller: &WindowController) {
 /// The user trusts `root` now: its panels list their tests.
 pub fn trust_changed(root: &Path) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    for panel in crate::context::AppContext::get(mtm).tests_panels.for_root(root) {
+    for panel in crate::context::AppContext::get(mtm).tests_panels().for_root(root) {
         panel.list(false);
     }
 }
 
 /// The window's folder closes: its panel goes.
 pub fn window_closed(controller: &WindowController) {
-    controller.context().tests_panels.detach(controller.handle());
+    controller.context().tests_panels().detach(controller.handle());
 }
 
 /// The test at the caret of the focused editor of `controller`, with its tool.

@@ -5,7 +5,7 @@ use super::*;
 /// The running servers' folders, for the self-test.
 pub fn running(mtm: MainThreadMarker) -> Vec<(PathBuf, String, String)> {
     previews(mtm)
-        .site_previews
+        .site_previews()
         .sites
         .borrow()
         .iter()

@@ -44,7 +44,7 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// How many header lines editors hold at most, 0 while Sticky Scroll is off.
 pub fn lines() -> usize {
     let Some(cx) = context() else { return 0 };
-    let cell = &cx.editor.sticky.0;
+    let cell = &cx.editor().sticky.0;
     cell.get().unwrap_or_else(|| {
         let value = Settings::load_user().get(&keys::STICKY_SCROLL_LINES).min(MOST_LINES);
         cell.set(Some(value));
@@ -56,7 +56,7 @@ pub fn lines() -> usize {
 pub fn toggle() {
     let value = if lines() > 0 { 0 } else { DEFAULT_LINES };
     if let Some(cx) = context() {
-        cx.editor.sticky.0.set(Some(value));
+        cx.editor().sticky.0.set(Some(value));
     }
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::STICKY_SCROLL_LINES, &value) {

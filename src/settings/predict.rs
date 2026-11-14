@@ -104,7 +104,7 @@ pub struct PredictionShown {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<PredictionSettings>>>) -> R) -> R {
-    f(&crate::context::app().settings.prediction.shown)
+    f(&crate::context::app().settings().prediction.shown)
 }
 
 fn small(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {

@@ -185,7 +185,7 @@ fn open_markdown(
     editor_tab: isize,
     automatic: bool,
 ) {
-    let previews = &controller.context().previews;
+    let previews = &controller.context().previews();
     let key = previews.next_key.replace(previews.next_key.get() + 1);
     let preview = Preview::new(controller, view, path, key, automatic);
     let title = splat_i18n::tf("Vorschau: {}", &[&crate::editor::display_name(path)]);
@@ -225,7 +225,7 @@ pub fn edited(view: &EditorTextView) {
 /// The tab `id` of `controller` is about to close.
 pub fn closing(controller: &WindowController, id: isize) {
     let closed: Vec<Rc<Preview>> = {
-        let mut open = controller.context().previews.open.borrow_mut();
+        let mut open = controller.context().previews().open.borrow_mut();
         let (closed, kept) = open
             .drain(..)
             .partition(|p| p.tab() == id && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
@@ -263,7 +263,7 @@ fn with(key: u64, f: impl FnOnce(&Rc<Preview>)) {
 
 fn find(matches: impl Fn(&Preview) -> bool) -> Option<Rc<Preview>> {
     crate::context::app()
-        .previews
+        .previews()
         .open
         .borrow()
         .iter()
@@ -275,7 +275,7 @@ fn find(matches: impl Fn(&Preview) -> bool) -> Option<Rc<Preview>> {
 fn all() -> Vec<Rc<Preview>> {
     let cx = crate::context::app();
     let gone: Vec<Rc<Preview>> = {
-        let mut open = cx.previews.open.borrow_mut();
+        let mut open = cx.previews().open.borrow_mut();
         let (gone, kept) = open.drain(..).partition(|p| p.is_closed());
         *open = kept;
         gone
@@ -283,16 +283,16 @@ fn all() -> Vec<Rc<Preview>> {
     for preview in gone {
         preview.close();
     }
-    cx.previews.open.borrow().clone()
+    cx.previews().open.borrow().clone()
 }
 
 /// Compares the picture files of the open previews with what they show every two seconds, while any is open.
 fn look_at_images_later() {
-    if crate::context::app().previews.looking.replace(true) {
+    if crate::context::app().previews().looking.replace(true) {
         return;
     }
     main_after(LOOK_AT_IMAGES, || {
-        crate::context::app().previews.looking.set(false);
+        crate::context::app().previews().looking.set(false);
         let open = all();
         if open.is_empty() {
             return;

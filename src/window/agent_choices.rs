@@ -60,7 +60,7 @@ pub struct AgentChoicesCache {
 
 /// What the menus offer now: what was read last, or, before the first read came, a read right here.
 pub fn now(context: &AppContext) -> Rc<AgentChoices> {
-    let cache = &context.agent_choices;
+    let cache = &context.agent_choices();
     if let Some(last) = cache.last.borrow().as_ref() {
         return last.clone();
     }
@@ -71,7 +71,7 @@ pub fn now(context: &AppContext) -> Rc<AgentChoices> {
 
 /// Reads the agents again on a thread of its own, for the menus' next opening.
 pub fn refresh(context: &AppContext) {
-    let cache = &context.agent_choices;
+    let cache = &context.agent_choices();
     if cache.reading.replace(true) {
         cache.again.set(true);
         return;
@@ -82,7 +82,7 @@ pub fn refresh(context: &AppContext) {
         main_soon(move || {
             let Some(mtm) = MainThreadMarker::new() else { return };
             let context = AppContext::get(mtm);
-            let cache = &context.agent_choices;
+            let cache = &context.agent_choices();
             *cache.last.borrow_mut() = Some(Rc::new(read));
             cache.reading.set(false);
             if cache.again.replace(false) {

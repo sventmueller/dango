@@ -68,35 +68,35 @@ pub struct Saving {
 
 /// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
 pub fn quitting() {
-    app().session.quitting.set(true);
+    app().session().quitting.set(true);
 }
 
 /// Whether the app quits, after which nothing more is written down.
 pub fn is_quitting() -> bool {
-    app().session.quitting.get()
+    app().session().quitting.get()
 }
 
 /// The windows or their tabs changed; the record follows a moment later.
 pub fn changed() {
     let cx = app();
-    if cx.session.quitting.get() || cx.session.write_pending.replace(true) {
+    if cx.session().quitting.get() || cx.session().write_pending.replace(true) {
         return;
     }
     main_after(SETTLE, || {
         let cx = app();
-        cx.session.write_pending.set(false);
+        cx.session().write_pending.set(false);
         remember(&cx);
     });
 }
 
 /// Writes down what the windows show now, and each folder's panels.
 pub fn remember(cx: &crate::context::AppContext) {
-    if cx.session.quitting.get() {
+    if cx.session().quitting.get() {
         return;
     }
     crate::window::save_layouts();
     let windows = crate::window::records();
-    cx.session.write_soon("remembering the windows", move || {
+    cx.session().write_soon("remembering the windows", move || {
         State::load_user().set(&OPEN_WINDOWS, &windows)
     });
 }

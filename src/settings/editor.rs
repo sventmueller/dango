@@ -73,7 +73,7 @@ pub struct EditorSettingsShown {
 }
 
 fn with_tab<R>(f: impl FnOnce(&RefCell<Option<Retained<EditorSettings>>>) -> R) -> R {
-    f(&crate::context::app().settings.editor_settings.tab)
+    f(&crate::context::app().settings().editor_settings.tab)
 }
 
 fn state(on: bool) -> isize {

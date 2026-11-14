@@ -55,7 +55,7 @@ pub fn open(controller: &WindowController, page: &Path) {
     }
     let cx = previews(mtm);
     let started = {
-        let mut sites = cx.site_previews.sites.borrow_mut();
+        let mut sites = cx.site_previews().sites.borrow_mut();
         match sites
             .iter()
             .position(|site| root.canonicalize().is_ok_and(|r| site.root() == r))
@@ -72,7 +72,7 @@ pub fn open(controller: &WindowController, page: &Path) {
         Err(error) => return crate::diag::report("starting the page preview's server", error),
     };
     let (url, secret) = {
-        let sites = cx.site_previews.sites.borrow();
+        let sites = cx.site_previews().sites.borrow();
         let site = &sites[index];
         (site.url_of(page), site.secret().to_string())
     };
@@ -90,7 +90,7 @@ pub fn open(controller: &WindowController, page: &Path) {
 /// The page file a preview tab at `url` shows, for opening it again after a restart.
 pub fn page_of(mtm: MainThreadMarker, url: &str) -> Option<PathBuf> {
     previews(mtm)
-        .site_previews
+        .site_previews()
         .sites
         .borrow()
         .iter()
@@ -101,7 +101,7 @@ pub fn page_of(mtm: MainThreadMarker, url: &str) -> Option<PathBuf> {
 pub fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf]) {
     let cx = previews(mtm);
     let origins: Vec<String> = cx
-        .site_previews
+        .site_previews()
         .sites
         .borrow()
         .iter()
@@ -119,14 +119,14 @@ pub fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf]) {
     if origins.is_empty() {
         return;
     }
-    let generation = cx.site_previews.changes.get() + 1;
-    cx.site_previews.changes.set(generation);
+    let generation = cx.site_previews().changes.get() + 1;
+    cx.site_previews().changes.set(generation);
     crate::util::main_after(QUIET, move || {
         let Some(mtm) = MainThreadMarker::new() else { return };
-        if previews(mtm).site_previews.changes.get() != generation {
+        if previews(mtm).site_previews().changes.get() != generation {
             return;
         }
-        for controller in previews(mtm).windows.all() {
+        for controller in previews(mtm).windows().all() {
             for origin in &origins {
                 ide_ui_browser::reload_matching(controller.id(), origin);
             }
@@ -137,24 +137,24 @@ pub fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf]) {
 /// Ends the servers whose pages no tab shows, and looks again later while any runs.
 fn sweep_later(mtm: MainThreadMarker) {
     let cx = previews(mtm);
-    if cx.site_previews.sweeping.replace(true) {
+    if cx.site_previews().sweeping.replace(true) {
         return;
     }
     crate::util::main_after(SWEEP, || {
         let Some(mtm) = MainThreadMarker::new() else { return };
         let cx = previews(mtm);
-        cx.site_previews.sweeping.set(false);
+        cx.site_previews().sweeping.set(false);
         let shown: Vec<String> = previews(mtm)
-            .windows
+            .windows()
             .all()
             .iter()
             .flat_map(|controller| ide_ui_browser::urls(controller.id()))
             .collect();
-        cx.site_previews
+        cx.site_previews()
             .sites
             .borrow_mut()
             .retain(|site| shown.iter().any(|url| url.starts_with(&site.origin())));
-        if !cx.site_previews.sites.borrow().is_empty() {
+        if !cx.site_previews().sites.borrow().is_empty() {
             sweep_later(mtm);
         }
     });

@@ -325,7 +325,7 @@ impl ContainersPanel {
     /// Whether its window shows the panel now.
     fn shown_now(&self) -> bool {
         crate::context::AppContext::get(self.mtm())
-            .windows
+            .windows()
             .get(self.window())
             .is_some_and(|c| c.shown_panel() == Some(crate::window::Panel::Containers))
     }

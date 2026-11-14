@@ -56,11 +56,11 @@ impl Default for SearchPanels {
 }
 
 fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<SearchPanel>>>) -> R) -> R {
-    f(&crate::context::app().search_panels.panels)
+    f(&crate::context::app().search_panels().panels)
 }
 
 fn with_next_id<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
-    f(&crate::context::app().search_panels.next_id)
+    f(&crate::context::app().search_panels().next_id)
 }
 
 /// Files below `root` changed on disk: the searches of its folder that show matches run again.

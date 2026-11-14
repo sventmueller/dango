@@ -116,7 +116,7 @@ fn device_id() -> String {
 /// The sync's status now.
 pub fn status(mtm: MainThreadMarker) -> Status {
     let cx = context(mtm);
-    let status = cx.settings_sync.status.borrow().clone();
+    let status = cx.settings_sync().status.borrow().clone();
     if !Settings::load_user().get(&ENABLED) {
         return Status::Off;
     }
@@ -148,10 +148,10 @@ pub fn set_enabled(mtm: MainThreadMarker, on: bool) {
     if on {
         start(mtm);
     } else {
-        if let Some(presenter) = cx.settings_sync.presenter.borrow_mut().take() {
+        if let Some(presenter) = cx.settings_sync().presenter.borrow_mut().take() {
             NSFileCoordinator::removeFilePresenter(ProtocolObject::from_ref(&*presenter));
         }
-        *cx.settings_sync.status.borrow_mut() = Status::Off;
+        *cx.settings_sync().status.borrow_mut() = Status::Off;
     }
 }
 
@@ -168,17 +168,17 @@ pub fn use_folder(mtm: MainThreadMarker, picked: &Path) {
 
 fn start(mtm: MainThreadMarker) {
     let cx = context(mtm);
-    if cx.settings_sync.presenter.borrow().is_none() {
+    if cx.settings_sync().presenter.borrow().is_none() {
         let folder = folder();
         if let Err(error) = std::fs::create_dir_all(&folder) {
-            *cx.settings_sync.status.borrow_mut() = Status::Failed(error.explain());
+            *cx.settings_sync().status.borrow_mut() = Status::Failed(error.explain());
             return;
         }
         let presenter = Presenter::new(&folder);
         NSFileCoordinator::addFilePresenter(ProtocolObject::from_ref(&*presenter));
-        *cx.settings_sync.presenter.borrow_mut() = Some(presenter);
+        *cx.settings_sync().presenter.borrow_mut() = Some(presenter);
     }
-    *cx.settings_sync.status.borrow_mut() = Status::Running;
+    *cx.settings_sync().status.borrow_mut() = Status::Running;
     request(mtm);
 }
 
@@ -188,15 +188,15 @@ pub fn request(mtm: MainThreadMarker) {
         return;
     }
     let cx = context(mtm);
-    let asked = cx.settings_sync.asked.get() + 1;
-    cx.settings_sync.asked.set(asked);
+    let asked = cx.settings_sync().asked.get() + 1;
+    cx.settings_sync().asked.set(asked);
     crate::util::main_after(SETTLE, move || {
         let Some(mtm) = MainThreadMarker::new() else { return };
         let cx = context(mtm);
-        if cx.settings_sync.asked.get() != asked {
+        if cx.settings_sync().asked.get() != asked {
             return;
         }
-        if cx.settings_sync.running.replace(true) {
+        if cx.settings_sync().running.replace(true) {
             return crate::util::main_after(SETTLE, request_again);
         }
         run_round(folder(), device_id());
@@ -362,15 +362,15 @@ fn coordinated_write(path: &Path, bytes: &[u8]) -> Result<(), SyncError> {
 fn finished(outcome: Result<Round, SyncError>) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let cx = context(mtm);
-    cx.settings_sync.running.set(false);
+    cx.settings_sync().running.set(false);
     let round = match outcome {
         Ok(round) => round,
         Err(why) => {
-            *cx.settings_sync.status.borrow_mut() = Status::Failed(why.explain());
+            *cx.settings_sync().status.borrow_mut() = Status::Failed(why.explain());
             return;
         }
     };
-    *cx.settings_sync.status.borrow_mut() = if round.newer.is_empty() {
+    *cx.settings_sync().status.borrow_mut() = if round.newer.is_empty() {
         Status::Running
     } else {
         Status::Paused

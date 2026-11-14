@@ -40,7 +40,7 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// Whether editors show diagnostics at the end of their lines.
 pub fn shown() -> bool {
     let Some(cx) = context() else { return false };
-    let cell = &cx.editor.line_diagnostics.0;
+    let cell = &cx.editor().line_diagnostics.0;
     cell.get().unwrap_or_else(|| {
         let value = Settings::load_user().get(&keys::DIAGNOSTICS_AT_LINE_END);
         cell.set(Some(value));
@@ -52,7 +52,7 @@ pub fn shown() -> bool {
 pub fn toggle() {
     let value = !shown();
     if let Some(cx) = context() {
-        cx.editor.line_diagnostics.0.set(Some(value));
+        cx.editor().line_diagnostics.0.set(Some(value));
     }
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::DIAGNOSTICS_AT_LINE_END, &value) {

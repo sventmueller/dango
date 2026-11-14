@@ -89,7 +89,7 @@ fn arrives(folder: std::path::PathBuf) {
         move |arrived| {
             let shortcuts = std::fs::read_to_string(ide_core::keymap::Keymap::user_path()).unwrap_or_default();
             let shown = objc2::MainThreadMarker::new().is_some_and(|mtm| {
-                crate::context::AppContext::get(mtm).keymap.borrow().key("view.wrap") == Some("ctrl+alt+cmd+w")
+                crate::context::AppContext::get(mtm).keymap().borrow().key("view.wrap") == Some("ctrl+alt+cmd+w")
             });
             check(
                 "another Mac's newer change arrives on its own, the shortcut too, and the menus take it",

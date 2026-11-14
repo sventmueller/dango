@@ -22,11 +22,15 @@ impl CiPanel {
     pub fn attach(controller: &WindowController) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
-        controller.context().ci_panels.panels.detach(controller.handle());
+        controller.context().ci_panels().panels.detach(controller.handle());
         let panel = CiPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Ci, &panel.ui().page);
         controller.set_panel_accessory(Panel::Ci, &panel.ui().header);
-        controller.context().ci_panels.panels.insert(panel.id(), panel.clone());
+        controller
+            .context()
+            .ci_panels()
+            .panels
+            .insert(panel.id(), panel.clone());
         panel.refresh(true);
     }
 

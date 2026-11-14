@@ -16,17 +16,17 @@ pub struct AppHost;
 
 impl ide_ui_export::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_export::State> {
-        context().exports.clone()
+        context().exports().clone()
     }
 }
 
 impl ide_ui_terminal::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_terminal::State> {
-        context().terminal_views.clone()
+        context().terminal_views().clone()
     }
 
     fn try_state(&self) -> Option<Rc<ide_ui_terminal::State>> {
-        try_context().map(|cx| cx.terminal_views.clone())
+        try_context().map(|cx| cx.terminal_views().clone())
     }
 
     fn opened(&self, window: u64, what: ide_ui_terminal::Opened) {
@@ -45,7 +45,7 @@ impl ide_ui_terminal::Host for AppHost {
 #[cfg(feature = "dictation")]
 impl ide_ui_dictation::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_dictation::State> {
-        context().dictation.clone()
+        context().dictation().clone()
     }
 }
 
@@ -62,7 +62,7 @@ fn try_context() -> Option<Rc<crate::context::AppContext>> {
 /// The window controller with `id` until it is dropped from the open windows, which happens once AppKit is done
 /// closing its window, as a weak reference to it would load until then.
 pub(crate) fn window(id: u64) -> Option<Retained<WindowController>> {
-    try_context()?.windows.get(id)
+    try_context()?.windows().get(id)
 }
 
 impl window::IdentityHost for AppHost {
@@ -251,7 +251,7 @@ impl window::FilesHost for AppHost {
 
 impl window::AppEnvHost for AppHost {
     fn keymap(&self) -> ide_core::keymap::Keymap {
-        try_context().map(|cx| cx.keymap.borrow().clone()).unwrap_or_default()
+        try_context().map(|cx| cx.keymap().borrow().clone()).unwrap_or_default()
     }
 
     fn is_quitting(&self) -> bool {
@@ -271,7 +271,7 @@ impl ide_ui_common::window::AsWindow for WindowController {
 
 impl ide_ui_debug::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_debug::State> {
-        context().debug.clone()
+        context().debug().clone()
     }
 
     fn refresh_editors(&self, window: u64) {
@@ -335,7 +335,7 @@ impl ide_ui_debug::Host for AppHost {
 
 impl ide_ui_git::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_git::State> {
-        context().git.clone()
+        context().git().clone()
     }
 
     fn unsaved_below(&self, root: &Path) -> Vec<PathBuf> {
@@ -387,7 +387,7 @@ impl ide_ui_git::Host for AppHost {
 
 impl ide_ui_agent::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_agent::State> {
-        context().agent.clone()
+        context().agent().clone()
     }
 
     fn recent_output(&self, window: u64) -> Option<(String, String)> {
@@ -486,7 +486,7 @@ impl ide_ui_agent::Host for AppHost {
 
 impl ide_ui_lsp::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_lsp::LspState> {
-        crate::context::app().lsp.clone()
+        crate::context::app().lsp().clone()
     }
 
     fn find_editor(&self, serial: u64) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {

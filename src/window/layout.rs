@@ -51,7 +51,7 @@ pub fn save(controller: &WindowController) {
     }
     controller
         .context()
-        .session
+        .session()
         .write_soon("saving the window tabs", move || ide_core::layout::save(&root, &layout));
 }
 

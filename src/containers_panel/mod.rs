@@ -17,12 +17,12 @@ pub use panel::{ContainersPanel, Reach};
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&ContainersPanel)) {
     if let Some(mtm) = MainThreadMarker::new() {
-        crate::context::AppContext::get(mtm).containers_panels.with(id, f);
+        crate::context::AppContext::get(mtm).containers_panels().with(id, f);
     }
 }
 
 fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
-    controller.context().containers_panels.of(controller.handle())
+    controller.context().containers_panels().of(controller.handle())
 }
 
 /// The window shows a folder: its panel reads Docker, whether or not the folder is trusted, since nothing of the
@@ -30,7 +30,7 @@ fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
-    let panels = &controller.context().containers_panels;
+    let panels = &controller.context().containers_panels();
     let panel = ContainersPanel::new(controller.mtm(), panels.next_id(), controller.id(), root);
     let (page, header) = panel.build();
     controller.set_panel_page(Panel::Containers, &page);
@@ -56,7 +56,7 @@ pub fn shown(controller: &WindowController) {
 
 /// The window's folder closes: its panel stops watching Docker and goes.
 pub fn window_closed(controller: &WindowController) {
-    let panels = &controller.context().containers_panels;
+    let panels = &controller.context().containers_panels();
     let id = controller.id();
     for panel in panels.all().iter().filter(|p| p.window() == id) {
         panel.stop_watching();

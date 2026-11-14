@@ -45,7 +45,7 @@ pub struct Ticket {
 impl Ticket {
     fn new() -> Ticket {
         Ticket {
-            serial: crate::context::app().ci_panels.logins.next(),
+            serial: crate::context::app().ci_panels().logins.next(),
             cancel: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -121,7 +121,7 @@ fn under_selftest() -> bool {
 
 fn note(text: &str) {
     crate::context::app()
-        .ci_panels
+        .ci_panels()
         .noted
         .borrow_mut()
         .push(text.to_string());

@@ -31,15 +31,15 @@ pub struct NewTabMenu {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<NSMenu>>>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu.shown)
+    f(&crate::context::app().new_tab_menu().shown)
 }
 
 fn with_record_only<R>(f: impl FnOnce(&Cell<bool>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu.record_only)
+    f(&crate::context::app().new_tab_menu().record_only)
 }
 
 fn with_below_plus<R>(f: impl FnOnce(&Cell<Option<bool>>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu.below_plus)
+    f(&crate::context::app().new_tab_menu().below_plus)
 }
 
 /// Starts watching the presses on the "+" of the app's tab bars; once.
@@ -134,7 +134,7 @@ fn aim(menu: &NSMenu, controller: &WindowController) {
 
 fn controller_of(window: &NSWindow) -> Option<Retained<WindowController>> {
     crate::context::app()
-        .windows
+        .windows()
         .find(|controller| controller.tab_of_window(window).is_some())
 }
 

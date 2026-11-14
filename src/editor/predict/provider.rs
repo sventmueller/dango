@@ -97,7 +97,7 @@ pub struct Predictions {
 }
 
 fn with<R>(f: impl FnOnce(&Predictions) -> R) -> R {
-    f(&crate::context::app().predictions)
+    f(crate::context::app().predictions())
 }
 
 /// The settings as last read.

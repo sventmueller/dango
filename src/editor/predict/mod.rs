@@ -284,7 +284,7 @@ pub fn request(view: &EditorTextView) {
 fn checked(serial: u64, verdict: &guard::Verdict) {
     let Some(view) = super::find_editor(serial) else { return };
     let warning = match verdict {
-        guard::Verdict::NotInstalled if !crate::context::app().predictions.told_missing.replace(true) => Some(tf(
+        guard::Verdict::NotInstalled if !crate::context::app().predictions().told_missing.replace(true) => Some(tf(
             "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
             &[ide_ui_git::message::INSTALL_GITLEAKS],
         )),
@@ -443,7 +443,7 @@ fn take_word(view: &EditorTextView, proposal: &Proposal, provider: &Arc<dyn Prov
 /// Asks once per run, from the editor, whether the chosen provider outside the Mac may get text.
 fn ask_from_editor(view: &EditorTextView) {
     let predictions = crate::context::app();
-    if predictions.predictions.asked_consent.replace(true) {
+    if predictions.predictions().asked_consent.replace(true) {
         return;
     }
     let Some(window) = view.window() else { return };
@@ -521,7 +521,7 @@ fn status_pressed(view: &EditorTextView) {
     match gate(view) {
         Gate::Ready(..) | Gate::LanguageOff => toggle_language(&language(view).0),
         Gate::Blocked(Blocked::Consent, _) => {
-            crate::context::app().predictions.asked_consent.set(false);
+            crate::context::app().predictions().asked_consent.set(false);
             ask_from_editor(view);
         }
         Gate::Blocked(Blocked::Missing, root) => provider::install(&root),

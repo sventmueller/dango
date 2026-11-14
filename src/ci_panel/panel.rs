@@ -243,22 +243,22 @@ pub struct CiPanels {
 
 /// Runs `f` with the panel `id`, if its window is still open.
 pub fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
-    crate::context::app().ci_panels.panels.with(id, f);
+    crate::context::app().ci_panels().panels.with(id, f);
 }
 
 /// The panels of windows that show `root`.
 pub fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
-    crate::context::app().ci_panels.panels.for_root(root)
+    crate::context::app().ci_panels().panels.for_root(root)
 }
 
 /// The panels of all open windows.
 pub fn all() -> Vec<Retained<CiPanel>> {
-    crate::context::app().ci_panels.panels.live()
+    crate::context::app().ci_panels().panels.live()
 }
 
 /// The panel of `controller`'s window.
 pub fn of(controller: &WindowController) -> Option<Retained<CiPanel>> {
-    controller.context().ci_panels.panels.of(controller.handle())
+    controller.context().ci_panels().panels.of(controller.handle())
 }
 
 impl WindowPart for CiPanel {
@@ -274,7 +274,7 @@ impl WindowPart for CiPanel {
 impl CiPanel {
     pub(super) fn new(mtm: MainThreadMarker, controller: &WindowController, root: PathBuf) -> Retained<CiPanel> {
         let ivars = PanelIvars {
-            id: controller.context().ci_panels.panels.next_id(),
+            id: controller.context().ci_panels().panels.next_id(),
             controller: Weak::from(controller),
             root,
             ui: OnceCell::new(),

@@ -100,7 +100,7 @@ pub struct Activities {
 }
 
 fn with_activities<R>(f: impl FnOnce(&RefCell<Vec<Retained<Activity>>>) -> R) -> R {
-    f(&crate::context::app().activities.activities)
+    f(&crate::context::app().activities().activities)
 }
 
 fn of(controller: &WindowController) -> Option<Retained<Activity>> {
@@ -458,7 +458,7 @@ impl Activity {
                 return;
             };
             main_after(Duration::from_millis(300), move || {
-                let controller = crate::context::app().windows.get(window);
+                let controller = crate::context::app().windows().get(window);
                 if let Some(activity) = controller.and_then(|c| of(&c)) {
                     activity.ivars().scheduled.set(false);
                     activity.fill();
@@ -550,7 +550,7 @@ impl Activity {
             return;
         };
         main_after(Duration::from_secs(1), move || {
-            let controller = crate::context::app().windows.get(window);
+            let controller = crate::context::app().windows().get(window);
             if let Some(activity) = controller.and_then(|c| of(&c))
                 && activity.ivars().popover.borrow().as_ref().is_some_and(|p| p.isShown())
             {

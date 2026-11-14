@@ -56,7 +56,7 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// Whether editors use Vim's keys.
 pub fn enabled() -> bool {
     let Some(cx) = context() else { return false };
-    let cell = &cx.editor.vim.0;
+    let cell = &cx.editor().vim.0;
     cell.get().unwrap_or_else(|| {
         let value = Settings::load_user().get(&keys::VIM_MODE);
         cell.set(Some(value));
@@ -68,7 +68,7 @@ pub fn enabled() -> bool {
 pub fn toggle() {
     let value = !enabled();
     if let Some(cx) = context() {
-        cx.editor.vim.0.set(Some(value));
+        cx.editor().vim.0.set(Some(value));
     }
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::VIM_MODE, &value) {

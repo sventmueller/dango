@@ -85,11 +85,11 @@ pub struct LogTabs {
 }
 
 fn with_tab(id: u64, f: impl FnOnce(&LogTab)) {
-    crate::context::app().ci_log_tabs.tabs.with(id, f);
+    crate::context::app().ci_log_tabs().tabs.with(id, f);
 }
 
 fn live_tabs() -> Vec<Retained<LogTab>> {
-    crate::context::app().ci_log_tabs.tabs.live()
+    crate::context::app().ci_log_tabs().tabs.live()
 }
 
 /// The key of the log tab of `job` on `host`.
@@ -107,7 +107,7 @@ pub fn show(controller: &WindowController, window_root: &Path, client: Client, j
     let tab = LogTab::new(controller, window_root.to_path_buf(), client, job, run);
     controller
         .context()
-        .ci_log_tabs
+        .ci_log_tabs()
         .tabs
         .insert(tab.ivars().id, Weak::from(&*tab));
     tab.reload();
@@ -147,7 +147,7 @@ impl LogTab {
     ) -> Retained<LogTab> {
         let mtm: MainThreadMarker = controller.mtm();
         let ivars = LogIvars {
-            id: controller.context().ci_log_tabs.tabs.next_id(),
+            id: controller.context().ci_log_tabs().tabs.next_id(),
             controller: Weak::from(controller),
             window_root,
             client,

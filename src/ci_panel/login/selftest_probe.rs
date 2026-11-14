@@ -2,5 +2,5 @@
 
 /// What the self-test would have opened or copied, in order.
 pub fn opened() -> Vec<String> {
-    crate::context::app().ci_panels.noted.borrow().clone()
+    crate::context::app().ci_panels().noted.borrow().clone()
 }

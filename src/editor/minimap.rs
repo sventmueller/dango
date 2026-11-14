@@ -44,7 +44,7 @@ pub fn shown() -> bool {
         return false;
     };
     let cx = crate::context::AppContext::get(mtm);
-    let cell = &cx.editor.minimap.0;
+    let cell = &cx.editor().minimap.0;
     cell.get().unwrap_or_else(|| {
         let value = Settings::load_user().get(&keys::MINIMAP);
         cell.set(Some(value));
@@ -56,7 +56,7 @@ pub fn shown() -> bool {
 pub fn toggle() {
     let value = !shown();
     if let Some(mtm) = MainThreadMarker::new() {
-        crate::context::AppContext::get(mtm).editor.minimap.0.set(Some(value));
+        crate::context::AppContext::get(mtm).editor().minimap.0.set(Some(value));
     }
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::MINIMAP, &value) {

@@ -16,7 +16,7 @@ use crate::util::main_soon;
 /// in the meantime; the way back for answers from other threads (Review C11).
 pub fn deliver(id: u64, f: impl FnOnce(&WindowController) + Send + 'static) {
     main_soon(move || {
-        if let Some(controller) = crate::context::app().windows.get(id) {
+        if let Some(controller) = crate::context::app().windows().get(id) {
             f(&controller);
         }
     });
@@ -98,7 +98,7 @@ pub fn open_projects() -> Vec<PathBuf> {
 /// The project window in front: the main window, else the first on screen.
 pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
     let app = objc2_app_kit::NSApplication::sharedApplication(mtm);
-    let mut controllers = AppContext::get(mtm).windows.all();
+    let mut controllers = AppContext::get(mtm).windows().all();
     controllers.retain(|w| !w.ivars().closed.get());
     let mut order: Vec<Retained<NSWindow>> = app.mainWindow().into_iter().collect();
     order.extend(app.orderedWindows().iter());
@@ -110,7 +110,7 @@ pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
 /// The window that shows `root`.
 pub fn for_project(root: &Path) -> Option<Retained<WindowController>> {
     crate::context::app()
-        .windows
+        .windows()
         .find(|w| w.project_root().as_deref() == Some(root))
 }
 

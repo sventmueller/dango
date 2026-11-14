@@ -28,7 +28,7 @@ pub struct Comparisons {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<(String, Weak<NSTextView>)>>) -> R) -> R {
-    f(&crate::context::app().editor.comparisons.shown)
+    f(&crate::context::app().editor().comparisons.shown)
 }
 
 /// Shows the differences between `disk`, the file's version, and `buffer`, the editor's text, in a tab of

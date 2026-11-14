@@ -71,7 +71,7 @@ pub struct CommitMessageShown {
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<CommitMessageSettings>>>) -> R) -> R {
-    f(&crate::context::app().settings.commit_message_settings.shown)
+    f(&crate::context::app().settings().commit_message_settings.shown)
 }
 
 /// The heading, notes and controls of the part, for the Agent tab's column of views.

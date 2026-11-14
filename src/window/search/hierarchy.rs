@@ -44,11 +44,11 @@ impl Default for HierarchyPanels {
 }
 
 fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<HierarchyPanel>>>) -> R) -> R {
-    f(&crate::context::app().hierarchy_panels.panels)
+    f(&crate::context::app().hierarchy_panels().panels)
 }
 
 fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::context::app().hierarchy_panels.next_id)
+    f(&crate::context::app().hierarchy_panels().next_id)
 }
 
 fn next_id() -> u64 {

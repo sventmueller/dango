@@ -193,7 +193,7 @@ pub struct SettingsWindow {
 }
 
 fn with_window<R>(f: impl FnOnce(&RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>) -> R) -> R {
-    f(&crate::context::app().settings.settings_window.window)
+    f(&crate::context::app().settings().settings_window.window)
 }
 
 impl SettingsController {
@@ -584,7 +584,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
     rows.extend(editor::rows(mtm));
     rows.extend(sync::rows(
         mtm,
-        &crate::context::AppContext::get(mtm).settings.sync_target,
+        &crate::context::AppContext::get(mtm).settings().sync_target,
     ));
     for (path, locked) in settings.problems() {
         let reason = match locked {

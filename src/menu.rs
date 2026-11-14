@@ -23,7 +23,7 @@ pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarke
     for problem in problems {
         crate::diag::report("keybindings", problem);
     }
-    *delegate.context().keymap.borrow_mut() = keymap.clone();
+    *delegate.context().keymap().borrow_mut() = keymap.clone();
     let keys = Keys(keymap);
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);

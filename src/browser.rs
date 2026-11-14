@@ -48,7 +48,7 @@ pub fn validate(controller: &WindowController, action: objc2::runtime::Sel) -> b
 
 impl Host for crate::host::AppHost {
     fn state(&self) -> Rc<State> {
-        crate::host::context().browser.clone()
+        crate::host::context().browser().clone()
     }
 
     fn add_tab(&self, window: u64, key: String, title: &str, view: Retained<NSView>) -> Option<isize> {

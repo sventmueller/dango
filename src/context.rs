@@ -19,39 +19,39 @@ use crate::window::WindowController;
 /// The app's open objects, running work and state.
 #[derive(Default)]
 pub struct AppContext {
-    pub windows: Registry<Retained<WindowController>>,
-    pub session: crate::session::Saving,
-    pub navigation: crate::navigation::Navigation,
-    pub new_tab_menu: crate::window::NewTabMenu,
-    pub agent_choices: crate::window::AgentChoicesCache,
-    pub activities: crate::activity::Activities,
-    pub settings: crate::settings::SettingsState,
+    windows: Registry<Retained<WindowController>>,
+    session: crate::session::Saving,
+    navigation: crate::navigation::Navigation,
+    new_tab_menu: crate::window::NewTabMenu,
+    agent_choices: crate::window::AgentChoicesCache,
+    activities: crate::activity::Activities,
+    settings: crate::settings::SettingsState,
     /// The user's shortcuts as the menus were built with them.
-    pub keymap: RefCell<ide_core::keymap::Keymap>,
+    keymap: RefCell<ide_core::keymap::Keymap>,
     /// The editors of every window.
-    pub editors: RefCell<Vec<Weak<EditorTextView>>>,
-    pub editor: crate::editor::EditorState,
-    pub predictions: crate::editor::predict::Predictions,
-    pub previews: crate::preview::Previews,
-    pub site_previews: crate::site_preview::SitePreviews,
-    pub settings_sync: crate::settings_sync::SettingsSync,
-    pub tests_panels: Registry<Retained<crate::tests_panel::TestsPanel>>,
-    pub containers_panels: Registry<Retained<crate::containers_panel::ContainersPanel>>,
-    pub exports: Rc<ide_ui_export::State>,
-    pub search_panels: crate::window::SearchPanels,
-    pub hierarchy_panels: crate::window::HierarchyPanels,
-    pub terminal_views: Rc<ide_ui_terminal::State>,
-    pub lsp: Rc<ide_ui_lsp::LspState>,
-    pub agent: Rc<ide_ui_agent::State>,
-    pub git: Rc<ide_ui_git::State>,
-    pub ci_panels: crate::ci_panel::CiPanels,
-    pub ci_log_tabs: crate::ci_panel::LogTabs,
-    pub debug: Rc<ide_ui_debug::State>,
-    pub debug_rotors: crate::debug::Rotors,
-    pub browser: Rc<ide_ui_browser::State>,
-    pub secrets: Secrets,
+    editors: RefCell<Vec<Weak<EditorTextView>>>,
+    editor: crate::editor::EditorState,
+    predictions: crate::editor::predict::Predictions,
+    previews: crate::preview::Previews,
+    site_previews: crate::site_preview::SitePreviews,
+    settings_sync: crate::settings_sync::SettingsSync,
+    tests_panels: Registry<Retained<crate::tests_panel::TestsPanel>>,
+    containers_panels: Registry<Retained<crate::containers_panel::ContainersPanel>>,
+    exports: Rc<ide_ui_export::State>,
+    search_panels: crate::window::SearchPanels,
+    hierarchy_panels: crate::window::HierarchyPanels,
+    terminal_views: Rc<ide_ui_terminal::State>,
+    lsp: Rc<ide_ui_lsp::LspState>,
+    agent: Rc<ide_ui_agent::State>,
+    git: Rc<ide_ui_git::State>,
+    ci_panels: crate::ci_panel::CiPanels,
+    ci_log_tabs: crate::ci_panel::LogTabs,
+    debug: Rc<ide_ui_debug::State>,
+    debug_rotors: crate::debug::Rotors,
+    browser: Rc<ide_ui_browser::State>,
+    secrets: Secrets,
     #[cfg(feature = "dictation")]
-    pub dictation: Rc<ide_ui_dictation::State>,
+    dictation: Rc<ide_ui_dictation::State>,
 }
 
 impl AppContext {
@@ -65,6 +65,126 @@ impl AppContext {
         let delegate = NSApplication::sharedApplication(mtm).delegate()?;
         let object: &AnyObject = delegate.as_ref();
         Some(object.downcast_ref::<AppDelegate>()?.context())
+    }
+    pub fn windows(&self) -> &Registry<Retained<WindowController>> {
+        &self.windows
+    }
+
+    pub fn session(&self) -> &crate::session::Saving {
+        &self.session
+    }
+
+    pub fn navigation(&self) -> &crate::navigation::Navigation {
+        &self.navigation
+    }
+
+    pub fn new_tab_menu(&self) -> &crate::window::NewTabMenu {
+        &self.new_tab_menu
+    }
+
+    pub fn agent_choices(&self) -> &crate::window::AgentChoicesCache {
+        &self.agent_choices
+    }
+
+    pub fn activities(&self) -> &crate::activity::Activities {
+        &self.activities
+    }
+
+    pub fn settings(&self) -> &crate::settings::SettingsState {
+        &self.settings
+    }
+
+    pub fn keymap(&self) -> &RefCell<ide_core::keymap::Keymap> {
+        &self.keymap
+    }
+
+    pub fn editors(&self) -> &RefCell<Vec<Weak<EditorTextView>>> {
+        &self.editors
+    }
+
+    pub fn editor(&self) -> &crate::editor::EditorState {
+        &self.editor
+    }
+
+    pub fn predictions(&self) -> &crate::editor::predict::Predictions {
+        &self.predictions
+    }
+
+    pub fn previews(&self) -> &crate::preview::Previews {
+        &self.previews
+    }
+
+    pub fn site_previews(&self) -> &crate::site_preview::SitePreviews {
+        &self.site_previews
+    }
+
+    pub fn settings_sync(&self) -> &crate::settings_sync::SettingsSync {
+        &self.settings_sync
+    }
+
+    pub fn tests_panels(&self) -> &Registry<Retained<crate::tests_panel::TestsPanel>> {
+        &self.tests_panels
+    }
+
+    pub fn containers_panels(&self) -> &Registry<Retained<crate::containers_panel::ContainersPanel>> {
+        &self.containers_panels
+    }
+
+    pub fn exports(&self) -> &Rc<ide_ui_export::State> {
+        &self.exports
+    }
+
+    pub fn search_panels(&self) -> &crate::window::SearchPanels {
+        &self.search_panels
+    }
+
+    pub fn hierarchy_panels(&self) -> &crate::window::HierarchyPanels {
+        &self.hierarchy_panels
+    }
+
+    pub fn terminal_views(&self) -> &Rc<ide_ui_terminal::State> {
+        &self.terminal_views
+    }
+
+    pub fn lsp(&self) -> &Rc<ide_ui_lsp::LspState> {
+        &self.lsp
+    }
+
+    pub fn agent(&self) -> &Rc<ide_ui_agent::State> {
+        &self.agent
+    }
+
+    pub fn git(&self) -> &Rc<ide_ui_git::State> {
+        &self.git
+    }
+
+    pub fn ci_panels(&self) -> &crate::ci_panel::CiPanels {
+        &self.ci_panels
+    }
+
+    pub fn ci_log_tabs(&self) -> &crate::ci_panel::LogTabs {
+        &self.ci_log_tabs
+    }
+
+    pub fn debug(&self) -> &Rc<ide_ui_debug::State> {
+        &self.debug
+    }
+
+    pub fn debug_rotors(&self) -> &crate::debug::Rotors {
+        &self.debug_rotors
+    }
+
+    pub fn browser(&self) -> &Rc<ide_ui_browser::State> {
+        &self.browser
+    }
+
+    pub fn secrets(&self) -> &Secrets {
+        &self.secrets
+    }
+
+    #[cfg(feature = "dictation")]
+    pub fn dictation(&self) -> &Rc<ide_ui_dictation::State> {
+        &self.dictation
     }
 }
 

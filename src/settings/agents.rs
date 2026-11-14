@@ -56,15 +56,15 @@ pub struct AgentRegistryWindow {
 }
 
 fn with_progress<R>(f: impl FnOnce(&RefCell<HashMap<String, String>>) -> R) -> R {
-    f(&crate::context::app().settings.agent_registry.progress)
+    f(&crate::context::app().settings().agent_registry.progress)
 }
 
 fn with_window<R>(f: impl FnOnce(&RefCell<Option<Retained<NSPanel>>>) -> R) -> R {
-    f(&crate::context::app().settings.agent_registry.window)
+    f(&crate::context::app().settings().agent_registry.window)
 }
 
 fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<String>>) -> R) -> R {
-    f(&crate::context::app().settings.agent_registry.shown)
+    f(&crate::context::app().settings().agent_registry.shown)
 }
 
 /// A button of a line: its title, its action and its tag.

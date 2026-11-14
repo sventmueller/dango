@@ -187,8 +187,8 @@ define_class!(
 impl AppDelegate {
     pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
-        ide_ui_agent::own_agent::use_secrets(context.secrets.store());
-        crate::ci_panel::use_secrets(context.secrets.store());
+        ide_ui_agent::own_agent::use_secrets(context.secrets().store());
+        crate::ci_panel::use_secrets(context.secrets().store());
         let this = Self::alloc(mtm).set_ivars(context);
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
@@ -212,7 +212,7 @@ fn remember_open_projects(cx: &crate::context::AppContext) {
     let _ = State::load_user().set(&remembered::OPEN_PROJECTS, &open);
     crate::session::remember(cx);
     crate::session::quitting();
-    cx.session.wait_for_writes();
+    cx.session().wait_for_writes();
     ide_ui_agent::agent_panel::wait_for_writes(std::time::Duration::from_secs(5));
 }
 

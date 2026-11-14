@@ -19,7 +19,7 @@ pub struct ForcedContrast {
 }
 
 pub(super) fn with_forced_contrast<R>(f: impl FnOnce(&std::cell::Cell<bool>) -> R) -> R {
-    f(&crate::context::app().editor.forced_contrast.forced_contrast)
+    f(&crate::context::app().editor().forced_contrast.forced_contrast)
 }
 
 /// Draws as with increased contrast, which AppKit gives a window only through the system setting, for the self-test.

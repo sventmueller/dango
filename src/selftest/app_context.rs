@@ -34,7 +34,7 @@ pub fn run() {
         move || open_flag.load(Ordering::SeqCst),
         move |_| {
             super::helpers::after(WORK, move || {
-                let gone = crate::context::app().windows.get(closed_id).is_none();
+                let gone = crate::context::app().windows().get(closed_id).is_none();
                 check(
                     "a window that closed leaves the open ones",
                     gone,

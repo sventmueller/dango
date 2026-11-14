@@ -482,7 +482,7 @@ define_class!(
 /// Drops the window controller with `id` from the open windows once AppKit is done closing its window.
 fn main_soon_unregister(id: u64) {
     main_soon(move || {
-        crate::context::app().windows.remove(id);
+        crate::context::app().windows().remove(id);
         crate::session::changed();
     });
 }
@@ -510,7 +510,7 @@ impl WindowController {
 
 /// The open windows, in the order they opened.
 fn windows() -> Vec<Retained<WindowController>> {
-    crate::context::app().windows.all()
+    crate::context::app().windows().all()
 }
 
 /// `panel` unless its symbol is among `hidden`, else the first panel whose symbol shows.
@@ -543,7 +543,8 @@ fn browser_commands() -> [Sel; 4] {
 impl WindowController {
     /// Brings the window of `project` to the front, or puts it into an empty window, or opens a new one.
     pub fn open(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
-        let open = &AppContext::get(mtm).windows;
+        let cx = AppContext::get(mtm);
+        let open = cx.windows();
         let existing = match &project {
             Some(path) => open
                 .find(|w| w.project().as_deref() == Some(path))
@@ -580,7 +581,7 @@ impl WindowController {
     fn new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         let context = AppContext::get(mtm);
         let ivars = Ivars {
-            id: context.windows.next_id(),
+            id: context.windows().next_id(),
             context,
             project: RefCell::new(project),
             panel: Cell::default(),
@@ -618,7 +619,7 @@ impl WindowController {
         }
         this.open_welcome();
         // The window's parts reach it by id from the moment they attach to its folder, which `load_project` starts.
-        this.context().windows.insert(this.id(), this.clone());
+        this.context().windows().insert(this.id(), this.clone());
         this.load_project();
         this
     }
@@ -883,7 +884,7 @@ impl WindowController {
     /// The window's last tab closes: its layout is kept, and what runs for its folder ends.
     fn window_closes(&self) {
         layout::save(self);
-        self.context().session.wait_for_writes();
+        self.context().session().wait_for_writes();
         self.save_frame();
         self.ivars().closed.set(true);
         self.folder_closes();

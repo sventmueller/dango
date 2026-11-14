@@ -116,15 +116,15 @@ pub struct Navigation {
 }
 
 fn with_histories<R>(f: impl FnOnce(&RefCell<Vec<(Weak<WindowController>, History)>>) -> R) -> R {
-    f(&crate::context::app().navigation.histories)
+    f(&crate::context::app().navigation().histories)
 }
 
 fn with_navigator<R>(f: impl FnOnce(&OnceCell<Retained<Navigator>>) -> R) -> R {
-    f(&crate::context::app().navigation.navigator)
+    f(&crate::context::app().navigation().navigator)
 }
 
 fn with_groups<R>(f: impl FnOnce(&RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>) -> R) -> R {
-    f(&crate::context::app().navigation.groups)
+    f(&crate::context::app().navigation().groups)
 }
 
 fn with_history<R>(controller: &WindowController, f: impl FnOnce(&mut History) -> R) -> R {

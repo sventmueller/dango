@@ -38,7 +38,7 @@ impl Default for RecoveryCopies {
 }
 
 fn with_due<R>(f: impl FnOnce(&RefCell<Debounce>) -> R) -> R {
-    f(&crate::context::app().editor.recovery_copies.due)
+    f(&crate::context::app().editor().recovery_copies.due)
 }
 
 /// The view's text changed; its copy is written once the change is due.
@@ -53,7 +53,7 @@ fn arm() {
         return;
     };
     if crate::context::app()
-        .editor
+        .editor()
         .recovery_copies
         .timer
         .get()
@@ -61,12 +61,12 @@ fn arm() {
     {
         return;
     }
-    crate::context::app().editor.recovery_copies.timer.set(Some(next));
+    crate::context::app().editor().recovery_copies.timer.set(Some(next));
     main_after(next.saturating_duration_since(Instant::now()), fire);
 }
 
 fn fire() {
-    crate::context::app().editor.recovery_copies.timer.set(None);
+    crate::context::app().editor().recovery_copies.timer.set(None);
     let due = with_due(|due| due.borrow_mut().due(Instant::now()));
     if !due.is_empty() {
         for view in super::open_editors() {
