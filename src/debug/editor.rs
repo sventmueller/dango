@@ -99,7 +99,7 @@ pub fn paused_line(editor: &EditorTextView) -> Option<usize> {
 /// Draws the paused line's band in `editor`'s coordinates, under the overlay's other marks; the gutter's arrow says
 /// the same without colour.
 pub fn draw_paused_line(editor: &EditorTextView) {
-    let Some(rect) = paused_line(editor).and_then(|line| crate::editor::line_rect(editor, line)) else {
+    let Some(rect) = paused_line(editor).and_then(|line| crate::editor::laid_out_line_rect(editor, line)) else {
         return;
     };
     NSColor::systemGreenColor().colorWithAlphaComponent(0.16).setFill();

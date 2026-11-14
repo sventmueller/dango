@@ -30,8 +30,8 @@ impl Panel {
         Panel::Git,
         Panel::Tests,
         Panel::Debug,
-        Panel::Ci,
         Panel::Containers,
+        Panel::Ci,
     ];
 
     /// The tag of the menu items and buttons that show it; windows save it, so it stays when the order changes.

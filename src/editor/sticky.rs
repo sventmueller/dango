@@ -205,7 +205,7 @@ impl Sticky {
             return;
         };
         let most = lines();
-        let row = super::line_rect(&editor, 0).map_or(0.0, |r| r.size.height);
+        let row = row_height(&editor);
         self.ivars().row.set(row);
         let shown = if most == 0 || row <= 0.0 {
             Vec::new()
@@ -299,9 +299,23 @@ impl Sticky {
     }
 }
 
+/// The height of one line of `editor`, read from the line at the top of what it shows, which TextKit has laid out;
+/// a line elsewhere may have only its estimate, which a later edit trips over.
+fn row_height(editor: &EditorTextView) -> f64 {
+    let Some(layout) = editor.textLayoutManager() else {
+        return 0.0;
+    };
+    let top = NSPoint::new(0.0, editor.visibleRect().origin.y - editor.textContainerOrigin().y);
+    layout
+        .textLayoutFragmentForPosition(top)
+        .and_then(|fragment| super::insets::line_fragments(&fragment))
+        .and_then(|lines| lines.firstObject())
+        .map_or(0.0, |line| line.typographicBounds().size.height)
+}
+
 /// Scrolls `editor` so that `line` starts `above` points under the top of what it shows.
 fn scroll_line_to_top(editor: &EditorTextView, line: usize, above: f64) {
-    let Some(rect) = super::line_rect(editor, line) else {
+    let Some(rect) = super::laid_out_line_rect(editor, line) else {
         return;
     };
     let Some(scroll) = editor.enclosingScrollView() else {
@@ -323,7 +337,7 @@ pub fn keep_clear(editor: &EditorTextView, range: NSRange) {
     let Some(line) = editor_line_of(editor, range.location) else {
         return;
     };
-    let Some(rect) = super::line_rect(editor, line) else {
+    let Some(rect) = super::laid_out_line_rect(editor, line) else {
         return;
     };
     let visible = editor.visibleRect();

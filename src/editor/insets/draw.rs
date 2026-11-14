@@ -252,7 +252,11 @@ fn caret(view: &EditorTextView, at: usize) -> Option<NSRect> {
     let (layout, content) = (view.textLayoutManager()?, view.textContentStorage()?);
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
     let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).ok()?)?;
-    let fragment = layout.textLayoutFragmentForLocation(&location)?;
+    let mut fragment = layout.textLayoutFragmentForLocation(&location)?;
+    if line_fragments(&fragment).is_none() {
+        super::super::ensure_paragraph(&layout, &location);
+        fragment = layout.textLayoutFragmentForLocation(&location)?;
+    }
     let paragraph = content.offsetFromLocation_toLocation(&start, &fragment.rangeInElement().location());
     let local = isize::try_from(at).ok()? - paragraph;
     let frame = fragment.layoutFragmentFrame();

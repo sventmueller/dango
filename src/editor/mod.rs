@@ -133,7 +133,37 @@ pub fn redraw_gutter(view: &EditorTextView) {
     sticky::refresh(view);
 }
 
-/// The rectangle of line `line` across the whole width of `editor`, if TextKit has laid it out.
+/// Lays out the paragraph at `location`. A paragraph TextKit has not laid out yet answers with a fragment of its
+/// estimate, without line fragments, which a later edit trips over as one of no text
+/// ("NSTextLayoutManagerBreakOnNilContentManager").
+fn ensure_paragraph(
+    layout: &objc2_app_kit::NSTextLayoutManager,
+    location: &objc2::runtime::ProtocolObject<dyn objc2_app_kit::NSTextLocation>,
+) {
+    if let Some(range) = objc2_app_kit::NSTextRange::initWithLocation_endLocation(
+        <objc2_app_kit::NSTextRange as objc2::AllocAnyThread>::alloc(),
+        location,
+        Some(location),
+    ) {
+        layout.ensureLayoutForRange(&range);
+    }
+}
+
+/// `line_rect` of a line that may lie outside what TextKit laid out, such as the paused line of a debugger, laying
+/// its paragraph out first.
+pub fn laid_out_line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
+    let at = editor.line_start(line)?;
+    let (layout, content) = (editor.textLayoutManager()?, editor.textContentStorage()?);
+    let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
+    let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).ok()?)?;
+    let fragment = layout.textLayoutFragmentForLocation(&location)?;
+    if insets::line_fragments(&fragment).is_none() {
+        ensure_paragraph(&layout, &location);
+    }
+    line_rect(editor, line)
+}
+
+/// The rectangle of line `line` across the whole width of `editor`.
 pub fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
     let at = editor.line_start(line)?;
     let layout = editor.textLayoutManager()?;
