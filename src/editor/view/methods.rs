@@ -109,7 +109,12 @@ impl EditorTextView {
         if self.ivars().lsp.try_borrow_mut().is_ok() {
             ide_ui_lsp::paint(self);
         } else {
-            self.later(objc2::sel!(ideDecorate), 0.0);
+            let serial = self.ivars().serial;
+            crate::util::main_soon(move || {
+                if let Some(view) = crate::editor::find_editor(serial) {
+                    ide_ui_lsp::paint(&*view);
+                }
+            });
         }
     }
 

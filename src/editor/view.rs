@@ -583,7 +583,7 @@ define_class!(
 
         #[unsafe(method(ideDecorate))]
         fn decorate(&self) {
-            guarded((), || ide_ui_lsp::paint(self));
+            guarded((), || ide_ui_lsp::paint_due(self));
         }
 
         #[unsafe(method(ideActionsMoved))]

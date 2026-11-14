@@ -62,7 +62,9 @@ use ide_ui_common::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
-pub use decorate::{LineMarks, Painted, Severity, follow, line_marks, line_messages, paint, text_range};
+pub use decorate::{
+    LineMarks, Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, text_range,
+};
 pub use host::{Host, State as LspState, install};
 
 /// The semantic tokens of an editor's language server state, by position.
@@ -100,6 +102,9 @@ pub struct ViewState {
     uri: Option<Uri>,
     marks: Vec<decorate::Mark>,
     tokens: Vec<decorate::Painted>,
+    /// What edits since the last painting changed of the colours: the stretches to paint again, and whether the lines on
+    /// screen need it as a whole, after scrolling.
+    repaint: decorate::Repaint,
     snippet: Option<complete::Session>,
     status: Option<status::Bar>,
     hover: hover::State,
@@ -375,6 +380,7 @@ pub fn scrolled(view: &dyn Editor) {
         !state.marks.is_empty() || !state.tokens.is_empty()
     };
     if busy {
+        view.lsp().borrow_mut().repaint.screen = true;
         view.later(sel!(ideDecorate), 0.05);
     }
     hover::dismiss(view);

@@ -121,8 +121,9 @@ pub fn laid_out(editor: &EditorTextView) {
     follow(editor);
 }
 
-/// Moves the overlay of `editor` over the part on screen and draws it there.
+/// Moves the overlay of `editor` and that of its diagnostics over the part on screen and draws it there.
 pub fn follow(editor: &EditorTextView) {
+    ide_ui_lsp::follow_squiggles(editor);
     if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
         let seen = editor.visibleRect();
         if overlay.frame() != seen {

@@ -17,9 +17,9 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, Bool};
 use objc2::{AllocAnyThread, DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSBezierPath, NSColor, NSForegroundColorAttributeName, NSTextContainer,
-    NSTextContentStorage, NSTextElementProvider, NSTextLayoutManagerSegmentOptions, NSTextLayoutManagerSegmentType,
-    NSTextRange, NSView, NSWindowOrderingMode,
+    NSAccessibility, NSAffineTransformNSAppKitAdditions, NSBezierPath, NSColor, NSForegroundColorAttributeName,
+    NSTextContainer, NSTextContentStorage, NSTextElementProvider, NSTextLayoutManagerSegmentOptions,
+    NSTextLayoutManagerSegmentType, NSTextRange, NSView, NSWindowOrderingMode,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect};
 use splat_markdown::highlight::Token;
@@ -129,12 +129,49 @@ pub fn follow(range: &mut Range<usize>, change: &Change) -> bool {
     false
 }
 
+/// What of the colours on screen edits and scrolling left stale since they were last painted.
+#[derive(Debug, Default)]
+pub struct Repaint {
+    /// The text the edits touched, with the tokens they took from it. TextKit 2 moves the rendering attributes around
+    /// it with the text, so the rest stays right.
+    edited: Option<Range<usize>>,
+    /// Other lines came on screen.
+    pub screen: bool,
+}
+
+/// `a` and `b` together, with what lies between them.
+fn union(a: Option<Range<usize>>, b: Range<usize>) -> Range<usize> {
+    a.map_or_else(|| b.clone(), |a| a.start.min(b.start)..a.end.max(b.end))
+}
+
 /// Keeps diagnostics and colours on their text while the user types, until the server sends new ones.
 pub fn shift(state: &mut ViewState, change: &Change) {
     for mark in &mut state.marks {
         follow(&mut mark.range, change);
     }
-    state.tokens.retain_mut(|painted| follow(&mut painted.range, change));
+    let moved = state.repaint.edited.take().map(|mut range| {
+        follow(&mut range, change);
+        range
+    });
+    let mut edited = union(moved, change.utf16.start..change.utf16.start + change.text_utf16);
+    state.tokens.retain_mut(|painted| {
+        let kept = follow(&mut painted.range, change);
+        if !kept {
+            edited = union(Some(edited.clone()), painted.range.clone());
+        }
+        kept
+    });
+    state.repaint.edited = Some(edited);
+}
+
+/// The tokens of `tokens`, ordered by place and apart from each other, that reach into `range`.
+fn overlapping<'a>(tokens: &'a [Painted], range: &Range<usize>) -> &'a [Painted] {
+    let mut first = tokens.partition_point(|p| p.range.start < range.start);
+    while first > 0 && tokens[first - 1].range.end > range.start {
+        first -= 1;
+    }
+    let last = tokens.partition_point(|p| p.range.start < range.end).max(first);
+    &tokens[first..last]
 }
 
 /// Shows `diagnostics` of the server of slot `source` in `view`, in place of what that server sent before; the other
@@ -283,27 +320,63 @@ pub fn text_range(content: &NSTextContentStorage, range: &Range<usize>) -> Optio
 
 /// Sets the colours of the lines on screen from the view's tokens and redraws its diagnostics.
 pub fn paint(view: &dyn Editor) {
+    let visible = view.visible_utf16();
+    view.lsp().borrow_mut().repaint = Repaint::default();
+    paint_range(view, &visible);
+    finish_paint(view);
+}
+
+/// Paints what edits or scrolling left stale since the last painting: the lines on screen after scrolling, only the
+/// edited text on screen after typing.
+pub fn paint_due(view: &dyn Editor) {
+    let due = std::mem::take(&mut view.lsp().borrow_mut().repaint);
+    let visible = view.visible_utf16();
+    if due.screen {
+        paint_range(view, &visible);
+    } else if let Some(edited) = due.edited {
+        let range = edited.start.max(visible.start)..edited.end.min(visible.end);
+        if !range.is_empty() {
+            paint_range(view, &range);
+        }
+    }
+    finish_paint(view);
+}
+
+/// Sets the colours of `range` from the view's tokens.
+fn paint_range(view: &dyn Editor, range: &Range<usize>) {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return;
     };
-    let visible = view.visible_utf16();
-    let Some(whole) = text_range(&content, &visible) else {
+    let Some(whole) = text_range(&content, range) else {
         return;
     };
     let foreground = constant!(NSForegroundColorAttributeName);
     layout.removeRenderingAttribute_forTextRange(foreground, &whole);
     let state = view.lsp().borrow();
-    let inside = |range: &Range<usize>| range.end > visible.start && range.start < visible.end;
-    for painted in state.tokens.iter().filter(|p| inside(&p.range)) {
+    for painted in overlapping(&state.tokens, range) {
         if let Some(range) = text_range(&content, &painted.range) {
             let color: Retained<AnyObject> = crate::host::palette_color(painted.token).into();
             // SAFETY: The value of the foreground colour attribute is a colour.
             unsafe { layout.addRenderingAttribute_value_forTextRange(foreground, Some(&color), &range) };
         }
     }
-    drop(state);
+}
+
+fn finish_paint(view: &dyn Editor) {
     view.paint_found();
     if let Some(overlay) = view.lsp().borrow().squiggles.as_ref().and_then(Weak::load) {
+        overlay.setNeedsDisplay(true);
+    }
+}
+
+/// Moves the diagnostics' overlay of `view` over the part on screen.
+pub fn follow_squiggles(view: &dyn Editor) {
+    let Some(overlay) = view.lsp().borrow().squiggles.as_ref().and_then(Weak::load) else {
+        return;
+    };
+    let seen = view.visibleRect();
+    if overlay.frame() != seen {
+        overlay.setFrame(seen);
         overlay.setNeedsDisplay(true);
     }
 }
@@ -342,16 +415,13 @@ define_class!(
 );
 
 impl Squiggles {
-    /// The overlay of `editor`, covering it and following its size.
+    /// The overlay of `editor`, covering the part on screen, which keeps its layer small in a long text.
     pub fn attach(editor: &dyn Editor) {
         let this = Squiggles::alloc(crate::editor::marker(editor)).set_ivars(SquiggleIvars {
             editor: editor.serial(),
         });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
-        let this: Retained<Squiggles> = unsafe { msg_send![super(this), initWithFrame: editor.bounds()] };
-        this.setAutoresizingMask(
-            NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
-        );
+        let this: Retained<Squiggles> = unsafe { msg_send![super(this), initWithFrame: editor.visibleRect()] };
         this.setAccessibilityElement(false);
         editor.addSubview_positioned_relativeTo(&this, NSWindowOrderingMode::Above, None);
         editor.lsp().borrow_mut().squiggles = Some(Weak::from(&*this));
@@ -364,19 +434,28 @@ impl Squiggles {
         let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
             return;
         };
+        // What follows draws in the editor's coordinates, of which the overlay shows the part on screen.
+        let shift = self.frame().origin;
+        let transform = objc2_foundation::NSAffineTransform::transform();
+        transform.translateXBy_yBy(-shift.x, -shift.y);
+        transform.concat();
+        let dirty = NSRect::new(
+            NSPoint::new(dirty.origin.x + shift.x, dirty.origin.y + shift.y),
+            dirty.size,
+        );
         let origin = editor.textContainerOrigin();
         let visible = editor.visible_utf16();
         let length = editor.document().text().len_utf16();
-        let marks: Vec<(Range<usize>, Severity)> = editor
-            .lsp()
-            .borrow()
-            .marks
+        let state = editor.lsp().borrow();
+        let reaching = state.marks.partition_point(|m| m.range.start <= visible.end);
+        let marks: Vec<(Range<usize>, Severity)> = state.marks[..reaching]
             .iter()
             .filter(|m| m.severity >= Severity::Info)
             .map(|m| (shown_range(&m.range, length), m.severity))
             .filter(|(range, _)| range.end > visible.start && range.start < visible.end)
             .filter(|(range, _)| !editor.hidden_by_fold(range.start))
             .collect();
+        drop(state);
         for (range, severity) in marks {
             let Some(text_range) = text_range(&content, &range) else {
                 continue;
@@ -492,6 +571,48 @@ mod tests {
         let mut covered = 4..5;
         assert!(!follow(&mut covered, &change(text, 2..8, "zz")));
         assert_eq!(covered, 2..4);
+    }
+
+    fn painted(range: Range<usize>) -> Painted {
+        Painted {
+            range,
+            token: Token::Url,
+        }
+    }
+
+    #[test]
+    fn the_tokens_of_a_stretch_are_found_by_place() {
+        let tokens: Vec<Painted> = [0..2, 4..6, 8..12, 14..15].into_iter().map(painted).collect();
+        let found = |range: Range<usize>| -> Vec<Range<usize>> {
+            overlapping(&tokens, &range).iter().map(|p| p.range.clone()).collect()
+        };
+        assert_eq!(found(5..9), [4..6, 8..12]);
+        assert_eq!(found(6..8), Vec::<Range<usize>>::new());
+        assert_eq!(found(10..20), [8..12, 14..15]);
+        assert_eq!(found(0..1), [painted(0..2).range]);
+        assert_eq!(found(15..30), Vec::<Range<usize>>::new());
+    }
+
+    #[test]
+    fn an_edit_marks_its_text_and_the_tokens_it_took_for_painting_again() {
+        let mut state = ViewState {
+            tokens: [0..2, 4..6, 8..10].into_iter().map(painted).collect(),
+            ..ViewState::default()
+        };
+        shift(&mut state, &change("0123456789", 5..5, "ab"));
+        let kept: Vec<Range<usize>> = state.tokens.iter().map(|p| p.range.clone()).collect();
+        assert_eq!(kept, [0..2, 10..12]);
+        assert_eq!(
+            state.repaint.edited,
+            Some(4..8),
+            "the inserted text and the token it split"
+        );
+        shift(&mut state, &change("01234ab56789", 0..1, ""));
+        assert_eq!(
+            state.repaint.edited,
+            Some(0..7),
+            "the earlier stretch moves with the text"
+        );
     }
 
     #[test]
