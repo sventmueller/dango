@@ -227,9 +227,6 @@ impl AgentTab {
                         });
                     });
                 }
-                if elsewhere {
-                    notify::post(&self.tab_key(), &title, &tf("{} ist fertig.", &[self.agent.name()]));
-                }
                 self.send_queued();
             }
             Status::RequiresAction if elsewhere => {
@@ -242,6 +239,17 @@ impl AgentTab {
             _ => {}
         }
         self.refresh_tab_mark();
+    }
+
+    /// Tells the user who looks elsewhere that the session finished, once its turn and every subagent have ended.
+    pub(super) fn work_moved(&self, busy_before: bool, busy_now: bool) {
+        if busy_before && !busy_now && notify::user_looks_elsewhere(self.is_shown()) {
+            notify::post(
+                &self.tab_key(),
+                &self.title(),
+                &tf("{} ist fertig.", &[self.agent.name()]),
+            );
+        }
     }
 
     /// Advances running times every second while anything runs.
@@ -288,8 +296,41 @@ fn tick(key: u64) {
 #[cfg(test)]
 mod tests {
     use ide_acp::SessionError;
+    use ide_thread::{BackgroundItem, BackgroundKind, OutputTail, SubagentPatch, TaskStatus, Thread, ThreadId, Update};
 
     use super::*;
+    use crate::tab::delegates;
+
+    #[test]
+    fn a_running_subagent_or_workflow_keeps_the_session_working_but_a_background_shell_does_not() {
+        let mut thread = Thread::new(ThreadId::from("t"), "claude", "/work");
+        let item = |kind| BackgroundItem {
+            id: format!("{kind:?}"),
+            kind,
+            label: "work".into(),
+            status: TaskStatus::Running,
+            started: None,
+            ended: None,
+            tool_call: None,
+            parent: None,
+            output: OutputTail::default(),
+            is_backgrounded: true,
+            ambient: false,
+        };
+        thread.apply(Update::Background(vec![item(BackgroundKind::Shell)]));
+        assert!(!delegates(&thread));
+        thread.apply(Update::Background(vec![item(BackgroundKind::Workflow)]));
+        assert!(delegates(&thread));
+        thread.apply(Update::Background(Vec::new()));
+        let mut sub = SubagentPatch::new("toolu_1", SystemTime::UNIX_EPOCH);
+        sub.status = Some(TaskStatus::Running);
+        thread.apply(Update::Subagent(sub));
+        assert!(delegates(&thread));
+        let mut done = SubagentPatch::new("toolu_1", SystemTime::UNIX_EPOCH);
+        done.status = Some(TaskStatus::Completed);
+        thread.apply(Update::Subagent(done));
+        assert!(!delegates(&thread));
+    }
 
     #[test]
     fn a_sign_in_or_a_foreign_protocol_stops_the_tab_even_while_running() {

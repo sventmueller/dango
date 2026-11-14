@@ -451,6 +451,8 @@ impl AgentTab {
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status;
         let now = snapshot.status();
+        let delegated_before = delegates(&self.state.borrow().thread);
+        let delegated_now = delegates(&snapshot);
         let title_changed = snapshot.title() != self.state.borrow().thread.title();
         {
             let mut state = self.state.borrow_mut();
@@ -475,6 +477,13 @@ impl AgentTab {
         if before != now {
             self.status_moved(before, now);
         }
+        if delegated_before != delegated_now {
+            self.refresh_tab_mark();
+        }
+        self.work_moved(
+            before != Status::Idle || delegated_before,
+            now != Status::Idle || delegated_now,
+        );
         if title_changed || before != now {
             self.persist();
         }
@@ -558,11 +567,14 @@ impl AgentTab {
         controller.set_tab_status(self.tab_id.get(), self.tab_mark().as_deref());
     }
 
-    /// The colour of the dot on the tab: green while the agent works, red while it waits for the user, none when idle.
+    /// The colour of the dot on the tab: green while the agent or one of its subagents works, red while it waits for
+    /// the user, none when idle.
     pub fn tab_mark(&self) -> Option<Retained<NSColor>> {
-        match self.state.borrow().status {
+        let state = self.state.borrow();
+        match state.status {
             Status::Running => Some(NSColor::systemGreenColor()),
             Status::RequiresAction => Some(NSColor::systemRedColor()),
+            Status::Idle if delegates(&state.thread) => Some(NSColor::systemGreenColor()),
             Status::Idle => None,
         }
     }
@@ -619,6 +631,20 @@ impl AgentTab {
             self.offer_selection();
         }
     }
+}
+
+/// Whether a subagent or workflow of `thread` still runs; background shells and monitors are no part of the session's
+/// work, as a server may run in one for hours.
+pub(crate) fn delegates(thread: &Thread) -> bool {
+    thread.subagents().iter().any(|s| !s.status.is_final())
+        || thread.background().iter().any(|b| {
+            !b.status.is_final()
+                && !b.ambient
+                && matches!(
+                    b.kind,
+                    ide_thread::BackgroundKind::Subagent | ide_thread::BackgroundKind::Workflow
+                )
+        })
 }
 
 /// The composer and what stands above and below it at the foot of `column`: as wide as the column but for its inset,
