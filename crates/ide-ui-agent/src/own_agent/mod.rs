@@ -108,9 +108,15 @@ pub fn use_secrets(store: Arc<dyn SecretStore>) {
     let _ = STORE.set(store);
 }
 
-/// Where the keys are: the store the app handed over, or memory where it handed none, as in unit tests.
+/// Where the keys are: the store the app handed over; before that one that refuses, or memory in unit tests.
 pub fn secrets() -> Arc<dyn SecretStore> {
-    STORE.get_or_init(|| Arc::new(Memory::default())).clone()
+    if cfg!(test) {
+        return STORE.get_or_init(|| Arc::new(Memory::default())).clone();
+    }
+    STORE.get().cloned().unwrap_or_else(|| {
+        ide_ui_common::diag::report("reading an agent key", "the store of secrets was not handed over yet");
+        Arc::new(ide_agent::NotReady)
+    })
 }
 
 /// The key kept for `endpoint`.

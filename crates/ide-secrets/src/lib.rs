@@ -110,6 +110,33 @@ impl SecretStore for Keychain {
     }
 }
 
+/// A store that refuses everything, for code that reads secrets before the app handed its store over: a key then
+/// fails to save in the user's sight instead of vanishing with the process.
+pub struct NotReady;
+
+impl NotReady {
+    fn refused() -> SecretError {
+        SecretError {
+            status: 0,
+            message: "the app's store of secrets is not ready".to_string(),
+        }
+    }
+}
+
+impl SecretStore for NotReady {
+    fn get(&self, _account: &str) -> Result<Option<String>, SecretError> {
+        Err(NotReady::refused())
+    }
+
+    fn set(&self, _account: &str, _secret: &str) -> Result<(), SecretError> {
+        Err(NotReady::refused())
+    }
+
+    fn delete(&self, _account: &str) -> Result<(), SecretError> {
+        Err(NotReady::refused())
+    }
+}
+
 /// Secrets kept in memory, for tests and the self-test, which leave the keychain alone.
 #[derive(Default)]
 pub struct Memory {

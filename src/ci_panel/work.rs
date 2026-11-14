@@ -47,9 +47,15 @@ pub fn use_secrets(store: Arc<dyn SecretStore>) {
     let _ = STORE.set(store);
 }
 
-/// The store the app handed over, or memory where it handed none.
+/// The store the app handed over; before that one that refuses, or memory in unit tests.
 fn store() -> Arc<dyn SecretStore> {
-    STORE.get_or_init(|| Arc::new(Memory::default())).clone()
+    if cfg!(test) {
+        return STORE.get_or_init(|| Arc::new(Memory::default())).clone();
+    }
+    STORE.get().cloned().unwrap_or_else(|| {
+        crate::diag::report("reading a CI token", "the store of secrets was not handed over yet");
+        Arc::new(ide_agent::NotReady)
+    })
 }
 
 /// The host rules of the user's settings.

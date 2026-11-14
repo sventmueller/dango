@@ -1,6 +1,6 @@
 //! API keys, kept in the login keychain under the app's service and one account per endpoint; never in settings.
 
-pub use ide_secrets::{Keychain, Memory, SecretError, SecretStore};
+pub use ide_secrets::{Keychain, Memory, NotReady, SecretError, SecretStore};
 
 use crate::provider::Endpoint;
 
