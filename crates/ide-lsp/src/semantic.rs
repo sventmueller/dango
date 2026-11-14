@@ -68,7 +68,8 @@ impl SemanticTokens {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Previous {
     pub(crate) result_id: Option<String>,
-    pub(crate) data: Vec<u32>,
+    /// Shared, as each request takes it along to apply the answer to.
+    pub(crate) data: Arc<[u32]>,
 }
 
 #[derive(Deserialize)]
@@ -97,7 +98,7 @@ pub(crate) fn apply(previous: &Previous, answer: Value) -> Result<Previous, Erro
     let data = match (answer.data, answer.edits) {
         (Some(data), _) => data,
         (None, Some(mut edits)) => {
-            let mut data = previous.data.clone();
+            let mut data = previous.data.to_vec();
             // Every edit's offsets refer to the previous array, so applying from the back keeps them valid.
             edits.sort_by_key(|edit| std::cmp::Reverse(edit.start));
             for edit in edits {
@@ -113,7 +114,7 @@ pub(crate) fn apply(previous: &Previous, answer: Value) -> Result<Previous, Erro
     };
     Ok(Previous {
         result_id: answer.result_id,
-        data,
+        data: data.into(),
     })
 }
 
@@ -121,6 +122,8 @@ pub(crate) fn apply(previous: &Previous, answer: Value) -> Result<Previous, Erro
 pub(crate) fn decode(data: &[u32], legend: Arc<Legend>, text: Option<&Text>, encoding: Encoding) -> SemanticTokens {
     let mut tokens = Vec::with_capacity(data.len() / 5);
     let (mut line, mut start) = (0u32, 0u32);
+    let text = text.filter(|_| encoding != Encoding::Utf16);
+    let mut current = None;
     for &[delta_line, delta_start, length, kind, modifiers] in data.as_chunks::<5>().0 {
         if delta_line > 0 {
             line = line.saturating_add(delta_line);
@@ -128,9 +131,14 @@ pub(crate) fn decode(data: &[u32], legend: Arc<Legend>, text: Option<&Text>, enc
         } else {
             start = start.saturating_add(delta_start);
         }
-        let (first, length) = match (encoding, text.and_then(|t| t.line(line))) {
-            (Encoding::Utf16, _) | (_, None) => (start, length),
-            (_, Some(text)) => {
+        if let Some(text) = text
+            && current.as_ref().is_none_or(|(n, _)| *n != line)
+        {
+            current = Some((line, text.line(line)));
+        }
+        let (first, length) = match current.as_ref().and_then(|(_, content)| content.as_deref()) {
+            None => (start, length),
+            Some(text) => {
                 let first = crate::encoding::convert(text, start, encoding, Encoding::Utf16);
                 let end = crate::encoding::convert(text, start.saturating_add(length), encoding, Encoding::Utf16);
                 (first, end.saturating_sub(first))
@@ -191,8 +199,8 @@ mod tests {
         ]});
         let second = apply(&first, delta).unwrap();
         assert_eq!(second.result_id.as_deref(), Some("2"));
-        assert_eq!(second.data, [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 3, 1, 0]);
+        assert_eq!(&*second.data, &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 3, 1, 0]);
         assert!(apply(&first, json!({"edits": [{"start": 9, "deleteCount": 5}]})).is_err());
-        assert_eq!(apply(&first, Value::Null).unwrap().data, Vec::<u32>::new());
+        assert!(apply(&first, Value::Null).unwrap().data.is_empty());
     }
 }

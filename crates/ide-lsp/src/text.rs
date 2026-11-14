@@ -1,44 +1,51 @@
 //! The text of an open document as the server was told it: to recount positions and to reopen it after a restart.
 
+use std::borrow::Cow;
+
 use lsp_types::{Position, Range};
+use ropey::Rope;
 
 use crate::encoding::{self, Encoding};
 
-/// A document's text as lines that keep their line break, so edits touch only the lines they change.
+/// A document's text as a rope: an edit touches only the pieces it changes, and a copy shares them all, so an answer
+/// being recounted can hold the text while the next keystroke edits it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Text {
-    /// Never empty; every line but the last ends with `\n`, `\r\n` or `\r`, the protocol's line breaks.
-    lines: Vec<String>,
+    /// Its line breaks are `\n`, `\r\n` and `\r`, the protocol's three: ropey with `cr_lines` and without
+    /// `unicode_lines`.
+    rope: Rope,
 }
 
 impl Text {
     pub(crate) fn new(text: &str) -> Text {
-        Text { lines: split(text) }
+        Text {
+            rope: Rope::from_str(text),
+        }
     }
 
     /// Line `n` without its line break.
-    pub(crate) fn line(&self, n: u32) -> Option<&str> {
-        self.lines.get(usize::try_from(n).ok()?).map(|line| content(line))
+    pub(crate) fn line(&self, n: u32) -> Option<Cow<'_, str>> {
+        self.content(usize::try_from(n).ok()?)
     }
 
     pub(crate) fn text(&self) -> String {
-        self.lines.concat()
+        self.rope.to_string()
     }
 
     /// `position`, counted in `from`, recounted in `to`.
     pub(crate) fn convert(&self, position: Position, from: Encoding, to: Encoding) -> Position {
         let character = self.line(position.line).map_or(position.character, |line| {
-            encoding::convert(line, position.character, from, to)
+            encoding::convert(&line, position.character, from, to)
         });
         Position::new(position.line, character)
     }
 
     /// `position`, in UTF-16, moved onto the text: past a line means its end, past the text the text's end.
     pub(crate) fn clamp(&self, position: Position) -> Position {
-        let (line, byte) = self.locate(position, Encoding::Utf16);
+        let (line, content, byte) = self.locate(position, Encoding::Utf16);
         Position::new(
             u32::try_from(line).unwrap_or(u32::MAX),
-            encoding::column_at(content(&self.lines[line]), byte, Encoding::Utf16),
+            encoding::column_at(&content, byte, Encoding::Utf16),
         )
     }
 
@@ -49,68 +56,49 @@ impl Text {
         } else {
             (range.start, range.end)
         };
-        let last = self.lines.len() - 1;
-        let (a, a_byte) = self.locate(start, encoding);
-        let (b, b_byte) = self.locate(end, encoding);
-        // One line of context on each side: an edit can join a lone `\r` with a `\n` into one line break.
-        let first = a.saturating_sub(1);
-        let past = (b + 1).min(last);
-        let mut joined = String::new();
-        let (mut from, mut to) = (0, 0);
-        for i in first..=past {
-            if i == a {
-                from = joined.len() + a_byte;
-            }
-            if i == b {
-                to = joined.len() + b_byte;
-            }
-            joined.push_str(&self.lines[i]);
-        }
-        joined.replace_range(from..to, new);
-        let mut pieces = split(&joined);
-        if past < last {
-            pieces.pop();
-        }
-        self.lines.splice(first..=past, pieces);
+        let from = self.char_at(start, encoding);
+        let to = self.char_at(end, encoding).max(from);
+        self.rope.remove(from..to);
+        self.rope.insert(from, new);
     }
 
-    /// The line index and byte offset within it of `position`.
-    fn locate(&self, position: Position, encoding: Encoding) -> (usize, usize) {
-        let last = self.lines.len() - 1;
+    /// The character index of `position`.
+    fn char_at(&self, position: Position, encoding: Encoding) -> usize {
+        let (line, _, byte) = self.locate(position, encoding);
+        self.rope.byte_to_char(self.rope.line_to_byte(line) + byte)
+    }
+
+    /// The line index, its content and the byte offset within that of `position`.
+    fn locate(&self, position: Position, encoding: Encoding) -> (usize, Cow<'_, str>, usize) {
+        let last = self.rope.len_lines() - 1;
         match usize::try_from(position.line) {
-            Ok(n) if n <= last => (
-                n,
-                encoding::byte_at(content(&self.lines[n]), position.character, encoding),
-            ),
-            _ => (last, content(&self.lines[last]).len()),
+            Ok(n) if n <= last => {
+                let content = self.content(n).unwrap_or_default();
+                let byte = encoding::byte_at(&content, position.character, encoding);
+                (n, content, byte)
+            }
+            _ => {
+                let content = self.content(last).unwrap_or_default();
+                let byte = content.len();
+                (last, content, byte)
+            }
         }
     }
-}
 
-fn split(text: &str) -> Vec<String> {
-    let bytes = text.as_bytes();
-    let mut lines = Vec::new();
-    let mut start = 0;
-    let mut i = 0;
-    while i < bytes.len() {
-        let end = match bytes[i] {
-            b'\n' => i + 1,
-            b'\r' if bytes.get(i + 1) == Some(&b'\n') => i + 2,
-            b'\r' => i + 1,
-            _ => {
-                i += 1;
-                continue;
+    fn content(&self, n: usize) -> Option<Cow<'_, str>> {
+        let line = Cow::from(self.rope.get_line(n)?);
+        let kept = strip_break(&line).len();
+        Some(match line {
+            Cow::Borrowed(line) => Cow::Borrowed(&line[..kept]),
+            Cow::Owned(mut line) => {
+                line.truncate(kept);
+                Cow::Owned(line)
             }
-        };
-        lines.push(text[start..end].to_string());
-        start = end;
-        i = end;
+        })
     }
-    lines.push(text[start..].to_string());
-    lines
 }
 
-fn content(line: &str) -> &str {
+fn strip_break(line: &str) -> &str {
     line.strip_suffix("\r\n")
         .or_else(|| line.strip_suffix('\n'))
         .or_else(|| line.strip_suffix('\r'))
@@ -128,7 +116,6 @@ mod tests {
     fn edited(text: &str, r: Range, new: &str, encoding: Encoding) -> String {
         let mut t = Text::new(text);
         t.replace(r, new, encoding);
-        assert_eq!(t, Text::new(&t.text()), "the lines are split as a fresh text would be");
         t.text()
     }
 
@@ -153,10 +140,25 @@ mod tests {
     #[test]
     fn line_breaks_of_every_kind_are_kept_and_can_merge() {
         let text = "a\r\nb\rc\nd";
-        assert_eq!(Text::new(text).line(1), Some("b"));
+        assert_eq!(Text::new(text).line(1).as_deref(), Some("b"));
+        assert_eq!(Text::new(text).line(3).as_deref(), Some("d"));
         assert_eq!(Text::new(text).text(), text);
+        assert_eq!(Text::new("a\u{2028}b").line(0).as_deref(), Some("a\u{2028}b"));
         assert_eq!(edited("a\rb", range((1, 0), (1, 0)), "\n", Encoding::Utf16), "a\r\nb");
         assert_eq!(edited("a\r\nb", range((0, 1), (1, 0)), "", Encoding::Utf16), "ab");
+        let mut joined = Text::new("a\rb");
+        joined.replace(range((1, 0), (1, 0)), "\n", Encoding::Utf16);
+        assert_eq!(joined.line(1).as_deref(), Some("b"), "the joined break is one");
+    }
+
+    #[test]
+    fn a_line_across_the_rope_s_pieces_reads_whole() {
+        let long = format!("{}\n{}\n", "a".repeat(5000), "b".repeat(3));
+        let text = Text::new(&long);
+        assert_eq!(text.line(0).map(|l| l.len()), Some(5000));
+        assert_eq!(text.line(1).as_deref(), Some("bbb"));
+        assert_eq!(text.line(2).as_deref(), Some(""));
+        assert_eq!(text.line(3), None);
     }
 
     #[test]

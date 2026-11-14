@@ -1673,6 +1673,7 @@ dependencies = [
  "ide-project",
  "ide-rpc",
  "lsp-types",
+ "ropey",
  "serde",
  "serde_json",
  "sha2",

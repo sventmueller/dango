@@ -72,6 +72,22 @@ impl Connection {
         send(&self.transport, &notification(method, params))
     }
 
+    /// Sends a notification whose parameters `build` makes on the writer thread, in order with every other message.
+    pub(crate) fn notify_with(
+        &self,
+        method: &str,
+        build: impl FnOnce() -> Value + Send + 'static,
+    ) -> Result<(), Error> {
+        let method = method.to_string();
+        self.transport
+            .send_built(Box::new(move || {
+                encode(&notification(&method, build()))
+                    .inspect_err(|error| ide_core::diag::report("lsp: notification", error))
+                    .ok()
+            }))
+            .map_err(error_of)
+    }
+
     /// Ends request `id` with `why` and asks the other side to stop working on it.
     pub(crate) fn cancel(&self, id: i64, why: Error) {
         if let Some(waiting) = self.transport.take(id) {

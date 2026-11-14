@@ -63,8 +63,12 @@ struct Pending<C> {
     closed: bool,
 }
 
+/// A frame the writer builds itself, in its turn; `None` writes nothing.
+pub type Build = Box<dyn FnOnce() -> Option<Vec<u8>> + Send>;
+
 enum Out {
     Frame(Vec<u8>),
+    Built(Build),
     EndOfInput,
 }
 
@@ -156,10 +160,20 @@ impl<C: Call> Transport<C> {
 
     /// Queues `frame` without waiting for anything.
     pub fn send(&self, frame: Vec<u8>) -> Result<(), SendError> {
+        self.queue(Out::Frame(frame))
+    }
+
+    /// Queues a frame that `build` makes on the writer thread, in order with every other frame: for a large one,
+    /// such as a whole document, which the caller should not spend the time on.
+    pub fn send_built(&self, build: Build) -> Result<(), SendError> {
+        self.queue(Out::Built(build))
+    }
+
+    fn queue(&self, out: Out) -> Result<(), SendError> {
         if self.ending.load(Ordering::Acquire) {
             return Err(SendError::Closed);
         }
-        match self.out.try_send(Out::Frame(frame)) {
+        match self.out.try_send(out) {
             Ok(()) => Ok(()),
             Err(TrySendError::Full(_)) => Err(SendError::Congested),
             Err(TrySendError::Disconnected(_)) => Err(SendError::Closed),
@@ -256,19 +270,32 @@ fn read_all<C: Call>(input: impl Read, transport: &Arc<Transport<C>>, receiver: 
 }
 
 fn write_all(mut output: impl Write, queue: &std::sync::mpsc::Receiver<Out>, ending: &AtomicBool, name: &str) {
-    while let Ok(Out::Frame(bytes)) = queue.recv() {
-        if !write_frame(&mut output, &bytes, name) {
+    while let Ok(out) = queue.recv() {
+        if !write_out(&mut output, out, name) {
             return;
         }
         // The flag is set before `EndOfInput` is offered, so a queue that was full for it still holds this frame.
         if ending.load(Ordering::Acquire) {
-            while let Ok(Out::Frame(bytes)) = queue.try_recv() {
-                if !write_frame(&mut output, &bytes, name) {
+            while let Ok(out) = queue.try_recv() {
+                if !write_out(&mut output, out, name) {
                     return;
                 }
             }
             return;
         }
+    }
+}
+
+/// Writes one queued item; whether the writer goes on.
+fn write_out(output: &mut impl Write, out: Out, name: &str) -> bool {
+    match out {
+        Out::Frame(bytes) => write_frame(output, &bytes, name),
+        Out::Built(build) => {
+            let mut built = None;
+            contained(|| built = build());
+            built.is_none_or(|bytes| write_frame(output, &bytes, name))
+        }
+        Out::EndOfInput => false,
     }
 }
 
@@ -430,6 +457,20 @@ mod tests {
         let mut written = Vec::new();
         write_all(&mut written, &queue, &ending, "test");
         assert_eq!(written, b"ab");
+    }
+
+    #[test]
+    fn a_frame_built_by_the_writer_keeps_its_place_in_the_queue() {
+        let (transport, mut peer, _) = connect();
+        transport.send(framing::frame(b"first")).unwrap();
+        transport
+            .send_built(Box::new(|| Some(framing::frame(b"built"))))
+            .unwrap();
+        transport.send_built(Box::new(|| None)).unwrap();
+        transport.send(framing::frame(b"last")).unwrap();
+        assert_eq!(peer.next(), b"first");
+        assert_eq!(peer.next(), b"built");
+        assert_eq!(peer.next(), b"last");
     }
 
     #[test]

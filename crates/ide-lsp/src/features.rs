@@ -650,25 +650,16 @@ impl Server {
                     return reply(Err(Error::ServerGone));
                 };
                 let next = answer.and_then(|value| semantic::apply(&previous, value));
-                let mut state = inner.lock();
-                let encoding = state.encoding;
-                let doc = state.documents.get_mut(&uri);
-                let result = match (next, doc) {
-                    (Ok(next), Some(doc)) => {
-                        let tokens = semantic::decode(&next.data, legend, Some(&doc.text), encoding);
-                        doc.tokens = Some(next);
-                        Ok(tokens)
-                    }
-                    (Ok(next), None) => Ok(semantic::decode(&next.data, legend, None, encoding)),
-                    (Err(error), doc) => {
-                        if let Some(doc) = doc {
-                            doc.tokens = None;
-                        }
-                        Err(error)
-                    }
+                let (text, encoding) = {
+                    let mut state = inner.lock();
+                    let encoding = state.encoding;
+                    let text = state.documents.get_mut(&uri).map(|doc| {
+                        doc.tokens = next.as_ref().ok().cloned();
+                        doc.text.clone()
+                    });
+                    (text, encoding)
                 };
-                drop(state);
-                reply(result);
+                reply(next.map(|next| semantic::decode(&next.data, legend, text.as_ref(), encoding)));
             }),
         )
     }

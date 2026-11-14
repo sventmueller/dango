@@ -50,7 +50,7 @@ impl Inner {
 pub(crate) struct Mapper {
     encoding: Encoding,
     inner: Weak<Inner>,
-    texts: HashMap<Uri, Option<Arc<Text>>>,
+    texts: HashMap<Uri, Option<Text>>,
 }
 
 impl Mapper {
@@ -69,7 +69,7 @@ impl Mapper {
     }
 }
 
-fn load(inner: &Weak<Inner>, uri: &Uri) -> Option<Arc<Text>> {
+fn load(inner: &Weak<Inner>, uri: &Uri) -> Option<Text> {
     let key = uri::normalize(uri);
     if let Some(inner) = inner.upgrade()
         && let Some(doc) = inner.lock().documents.get(&key)
@@ -81,5 +81,5 @@ fn load(inner: &Weak<Inner>, uri: &Uri) -> Option<Arc<Text>> {
         return None;
     }
     let bytes = std::fs::read(path).ok()?;
-    Some(Arc::new(Text::new(&String::from_utf8_lossy(&bytes))))
+    Some(Text::new(&String::from_utf8_lossy(&bytes)))
 }

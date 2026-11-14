@@ -53,4 +53,4 @@ mod responder;
 mod transport;
 
 pub use responder::Responder;
-pub use transport::{Call, Receiver, SendError, Transport, contained};
+pub use transport::{Build, Call, Receiver, SendError, Transport, contained};

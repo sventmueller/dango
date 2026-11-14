@@ -71,9 +71,31 @@ impl State {
             .notify(method, params)
     }
 
+    /// Sends a notification whose parameters `build` makes on the connection's writer thread, in order with every
+    /// other message: for those that carry a whole document.
+    pub(super) fn notify_with(
+        &self,
+        method: &str,
+        build: impl FnOnce() -> Value + Send + 'static,
+    ) -> Result<(), Error> {
+        if self.status != Status::Running {
+            return Err(Error::NotRunning);
+        }
+        self.connection
+            .as_ref()
+            .ok_or(Error::NotRunning)?
+            .notify_with(method, build)
+    }
+
     pub(super) fn notify_document(&self, method: &str, params: Value) {
         if self.sync_options().open_close {
             let _ = self.notify(method, params);
+        }
+    }
+
+    pub(super) fn notify_document_with(&self, method: &str, build: impl FnOnce() -> Value + Send + 'static) {
+        if self.sync_options().open_close {
+            let _ = self.notify_with(method, build);
         }
     }
 
@@ -82,20 +104,22 @@ impl State {
         let Some(doc) = self.documents.get(uri) else {
             return;
         };
-        let changes = match options.change {
+        let document = json!({"uri": uri, "version": doc.version});
+        let sent = match options.change {
             0 => return,
-            1 => vec![TextDocumentContentChangeEvent {
-                range: None,
-                range_length: None,
-                text: doc.text.text(),
-            }],
-            _ => changes,
+            1 => {
+                let text = doc.text.clone();
+                self.notify_with(
+                    "textDocument/didChange",
+                    move || json!({"textDocument": document, "contentChanges": [{"text": text.text()}]}),
+                )
+            }
+            _ => self.notify(
+                "textDocument/didChange",
+                json!({"textDocument": document, "contentChanges": changes}),
+            ),
         };
-        let params = json!({
-            "textDocument": {"uri": uri, "version": doc.version},
-            "contentChanges": changes,
-        });
-        if self.notify("textDocument/didChange", params).is_err()
+        if sent.is_err()
             && let Some(doc) = self.documents.get_mut(uri)
         {
             doc.sync = Told::NeedsFullText;
@@ -115,18 +139,25 @@ impl State {
             Told::Synced => return,
             Told::NeedsOpen if !options.open_close => true,
             Told::NeedsOpen => {
-                let params = json!({"textDocument": {
-                    "uri": uri, "languageId": doc.language, "version": doc.version, "text": doc.text.text(),
-                }});
-                self.notify("textDocument/didOpen", params).is_ok()
+                let (document, text) = (
+                    json!({"uri": uri, "languageId": doc.language, "version": doc.version}),
+                    doc.text.clone(),
+                );
+                self.notify_with("textDocument/didOpen", move || {
+                    let mut document = document;
+                    document["text"] = Value::String(text.text());
+                    json!({"textDocument": document})
+                })
+                .is_ok()
             }
             Told::NeedsFullText if options.change == 0 => true,
             Told::NeedsFullText => {
-                let params = json!({
-                    "textDocument": {"uri": uri, "version": doc.version},
-                    "contentChanges": [{"text": doc.text.text()}],
-                });
-                self.notify("textDocument/didChange", params).is_ok()
+                let (document, text) = (json!({"uri": uri, "version": doc.version}), doc.text.clone());
+                self.notify_with(
+                    "textDocument/didChange",
+                    move || json!({"textDocument": document, "contentChanges": [{"text": text.text()}]}),
+                )
+                .is_ok()
             }
         };
         if sent && let Some(doc) = self.documents.get_mut(uri) {

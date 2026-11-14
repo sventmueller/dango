@@ -129,7 +129,7 @@ impl Inner {
                 return;
             }
             let raw = result.get("capabilities").cloned().unwrap_or(Value::Null);
-            state.capabilities = serde_json::from_value(raw.clone()).ok();
+            state.capabilities = serde_json::from_value(raw.clone()).ok().map(Arc::new);
             state.encoding = Encoding::from_kind(
                 raw.get("positionEncoding")
                     .and_then(Value::as_str)

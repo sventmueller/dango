@@ -75,8 +75,7 @@ pub(crate) enum Told {
 pub(crate) struct Doc {
     pub(crate) language: String,
     pub(crate) version: i32,
-    /// Shared with conversions in flight; an edit copies it only while one runs.
-    pub(crate) text: Arc<Text>,
+    pub(crate) text: Text,
     pub(crate) sync: Told,
     pub(crate) tokens: Option<Previous>,
     pub(crate) pulled: Option<(String, Vec<Diagnostic>)>,
@@ -89,7 +88,7 @@ pub(crate) struct State {
     process: Option<ProcessId>,
     pub(crate) connection: Option<Arc<Connection>>,
     stderr: Arc<Mutex<Tail>>,
-    pub(crate) capabilities: Option<ServerCapabilities>,
+    pub(crate) capabilities: Option<Arc<ServerCapabilities>>,
     /// The capabilities as sent, to look up what lsp-types does not model.
     pub(crate) raw: Value,
     pub(crate) encoding: Encoding,
@@ -214,8 +213,13 @@ impl Server {
         self.inner().lock().process
     }
 
-    /// What the server offers, once it is running.
+    /// What the server offers, once it is running; a copy, see [`Server::shared_capabilities`].
     pub fn capabilities(&self) -> Option<ServerCapabilities> {
+        self.shared_capabilities().map(|c| (*c).clone())
+    }
+
+    /// What the server offers, once it is running, without copying it: for checks on every keystroke.
+    pub fn shared_capabilities(&self) -> Option<Arc<ServerCapabilities>> {
         self.inner().lock().capabilities.clone()
     }
 
@@ -269,7 +273,7 @@ impl Server {
             Doc {
                 language: language_id.to_string(),
                 version,
-                text: Arc::new(Text::new(text)),
+                text: Text::new(text),
                 sync: Told::NeedsOpen,
                 tokens: None,
                 pulled: None,
@@ -285,7 +289,7 @@ impl Server {
         let mut state = self.inner().lock();
         let encoding = state.encoding;
         let doc = state.documents.get_mut(&uri).ok_or(Error::NotOpen)?;
-        let text = Arc::make_mut(&mut doc.text);
+        let text = &mut doc.text;
         let mut sent = Vec::with_capacity(changes.len());
         for change in changes {
             if let Some(range) = change.range {
@@ -325,11 +329,15 @@ impl Server {
         let Some(doc) = state.documents.get(&uri).filter(|doc| doc.sync == Told::Synced) else {
             return;
         };
-        let mut params = json!({"textDocument": {"uri": uri}});
         if include_text {
-            params["text"] = Value::String(doc.text.text());
+            let text = doc.text.clone();
+            state.notify_document_with(
+                "textDocument/didSave",
+                move || json!({"textDocument": {"uri": uri}, "text": text.text()}),
+            );
+        } else {
+            state.notify_document("textDocument/didSave", json!({"textDocument": {"uri": uri}}));
         }
-        state.notify_document("textDocument/didSave", params);
     }
 
     /// Closes `uri`.
