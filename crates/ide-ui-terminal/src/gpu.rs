@@ -1,5 +1,5 @@
 //! Drawing a terminal frame with Metal: the quads `sprites` collects, put together in one draw call into the view's
-//! `CAMetalLayer` and shown with the window's Core Animation transaction.
+//! `CAMetalLayer`, shown on its own or, while the view resizes, with the window's Core Animation transaction.
 
 use std::cell::OnceCell;
 use std::ptr::NonNull;
@@ -109,15 +109,17 @@ impl Gpu {
         })
     }
 
-    /// A command buffer that draws `quads` over `atlas` into `target`, `size` pixels large, cleared to `clear`.
+    /// A command buffer that copies the new sprites in and draws `quads` over them into `target`, `size` pixels large,
+    /// cleared to `clear`.
     fn encode(
         &self,
         target: &ProtocolObject<dyn MTLTexture>,
         size: CGSize,
         quads: &[Quad],
-        atlas: &ProtocolObject<dyn MTLTexture>,
+        sprites: &Sprites,
         clear: Rgb,
     ) -> Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
+        let atlas = sprites.texture();
         let pass = MTLRenderPassDescriptor::new();
         // SAFETY: Every render pass descriptor has colour attachment 0.
         let attachment = unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) };
@@ -132,6 +134,9 @@ impl Gpu {
             alpha: 1.0,
         });
         let buffer = self.queue.commandBuffer()?;
+        if !sprites.upload(&buffer) {
+            return None;
+        }
         let encoder = buffer.renderCommandEncoderWithDescriptor(&pass)?;
         if !quads.is_empty() {
             let bytes = NonNull::from(quads).cast();
@@ -173,8 +178,6 @@ fn metal_layer(device: &ProtocolObject<dyn MTLDevice>) -> Retained<CAMetalLayer>
     layer.setDevice(Some(device));
     layer.setPixelFormat(MTLPixelFormat::BGRA8Unorm);
     layer.setFramebufferOnly(true);
-    // Frames go out with the window's own drawing, so the grid and the view keep step while the window resizes.
-    layer.setPresentsWithTransaction(true);
     layer.setOpaque(true);
     // SAFETY: The name is one of Core Graphics' own colour spaces.
     let srgb = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }));
@@ -217,8 +220,9 @@ impl Surface {
         }
     }
 
-    /// Draws the frame `paint` makes into the layer, laid over `frame` of the view, and presents it with the current
-    /// transaction.
+    /// Draws the frame `paint` makes into the layer, laid over `frame` of the view, and presents it: when `frame`
+    /// moved or resized the layer, with the current transaction, so the grid and the view keep step, which waits
+    /// until the GPU has the frame; otherwise on its own, without waiting.
     pub fn present(&mut self, fonts: &Fonts, frame: CGRect, clear: Rgb, paint: &dyn Fn(&mut QuadCanvas)) {
         let scale = fonts.metrics.scale;
         let pixels = CGSize::new((frame.size.width * scale).round(), (frame.size.height * scale).round());
@@ -226,6 +230,7 @@ impl Surface {
             return;
         }
         let layer = self.layer.clone();
+        let resized = layer.frame() != frame;
         CATransaction::begin();
         CATransaction::setDisableActions(true);
         layer.setFrame(frame);
@@ -234,19 +239,27 @@ impl Surface {
         if layer.drawableSize() != pixels {
             layer.setDrawableSize(pixels);
         }
+        if layer.presentsWithTransaction() != resized {
+            layer.setPresentsWithTransaction(resized);
+        }
         let quads = self.quads(fonts, paint);
         let Some(drawable) = layer.nextDrawable() else {
             return;
         };
         let target = drawable.texture();
-        let Some(buffer) = self.gpu.encode(&target, pixels, &quads, self.sprites.texture(), clear) else {
+        let Some(buffer) = self.gpu.encode(&target, pixels, &quads, &self.sprites, clear) else {
             return;
         };
-        buffer.commit();
-        // With `presentsWithTransaction`, the drawable may only be presented once its commands are scheduled.
-        buffer.waitUntilScheduled();
-        drawable.present();
-        self.sprites.read_by(buffer);
+        if resized {
+            buffer.commit();
+            // With `presentsWithTransaction`, the drawable may only be presented once its commands are scheduled.
+            buffer.waitUntilScheduled();
+            drawable.present();
+        } else {
+            buffer.presentDrawable(ProtocolObject::from_ref(&*drawable));
+            buffer.commit();
+        }
+        self.sprites.uploaded();
     }
 
     /// The BGRA pixels of the frame `paint` makes, `width` × `height` pixels large; none on a GPU whose memory the
@@ -277,8 +290,9 @@ impl Surface {
         let target = self.gpu.device.newTextureWithDescriptor(&descriptor)?;
         let quads = self.quads(fonts, paint);
         let size = CGSize::new(width as f64, height as f64);
-        let buffer = self.gpu.encode(&target, size, &quads, self.sprites.texture(), clear)?;
+        let buffer = self.gpu.encode(&target, size, &quads, &self.sprites, clear)?;
         buffer.commit();
+        self.sprites.uploaded();
         buffer.waitUntilCompleted();
         let mut pixels = vec![0u8; width * height * 4];
         let region = MTLRegion {

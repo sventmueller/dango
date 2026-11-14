@@ -16,8 +16,8 @@ use objc2_core_graphics::{
 };
 use objc2_core_text::{CTFontOrientation, CTLineBoundsOptions};
 use objc2_metal::{
-    MTLCommandBuffer, MTLCommandBufferStatus, MTLDevice, MTLOrigin, MTLPixelFormat, MTLRegion, MTLSize, MTLTexture,
-    MTLTextureDescriptor, MTLTextureUsage,
+    MTLBlitCommandEncoder, MTLCommandBuffer, MTLCommandEncoder, MTLDevice, MTLOrigin, MTLPixelFormat,
+    MTLResourceOptions, MTLSize, MTLTexture, MTLTextureDescriptor, MTLTextureUsage,
 };
 
 use crate::boxdraw::{self, Pen};
@@ -94,6 +94,13 @@ struct Sprite {
     coloured: bool,
 }
 
+/// A sprite's pixels on their way into the texture.
+struct Upload {
+    origin: MTLOrigin,
+    size: MTLSize,
+    pixels: Vec<u8>,
+}
+
 /// A picture before it goes into the atlas: BGRA rows, premultiplied.
 struct Picture {
     width: usize,
@@ -159,8 +166,9 @@ impl Shelves {
 pub struct Sprites {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     texture: Retained<ProtocolObject<dyn MTLTexture>>,
-    /// The last frame committed that reads `texture`, until a new sprite waits for it to finish.
-    reading: Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>>,
+    /// Sprites placed but not yet in the texture: the next frame copies them in on the GPU, after the frames before
+    /// it read the texture, so the processor never waits for one.
+    uploads: Vec<Upload>,
     shelves: Shelves,
     entries: HashMap<Key, Option<Sprite>>,
     widths: HashMap<(String, Face), f64>,
@@ -174,7 +182,7 @@ impl Sprites {
         Some(Sprites {
             device: device.retain(),
             texture: atlas(device, FIRST_SIDE)?,
-            reading: None,
+            uploads: Vec::new(),
             shelves: Shelves::new(FIRST_SIDE),
             entries: HashMap::new(),
             widths: HashMap::new(),
@@ -187,19 +195,49 @@ impl Sprites {
         &self.texture
     }
 
-    /// Notes that `frame`, committed, reads the texture, so a sprite written later waits until it has finished.
-    pub fn read_by(&mut self, frame: Retained<ProtocolObject<dyn MTLCommandBuffer>>) {
-        self.reading = Some(frame);
+    /// Copies the sprites placed since the last committed frame into the texture, as the first pass of `frame`;
+    /// whether it could. They stay pending until [`Sprites::uploaded`].
+    pub fn upload(&self, frame: &ProtocolObject<dyn MTLCommandBuffer>) -> bool {
+        if self.uploads.is_empty() {
+            return true;
+        }
+        let pixels: Vec<u8> = self.uploads.iter().flat_map(|u| u.pixels.iter().copied()).collect();
+        let bytes = NonNull::from(pixels.as_slice()).cast();
+        // SAFETY: The pointer covers the pixels' bytes, which Metal copies into the new buffer.
+        let staging = unsafe {
+            self.device
+                .newBufferWithBytes_length_options(bytes, pixels.len(), MTLResourceOptions::StorageModeShared)
+        };
+        let (Some(staging), Some(blit)) = (staging, frame.blitCommandEncoder()) else {
+            return false;
+        };
+        let mut offset = 0;
+        for upload in &self.uploads {
+            let row = upload.size.width * 4;
+            // SAFETY: Each copy reads one sprite's rows of 4 bytes per pixel from where they lie in the staging
+            // buffer, which the command buffer retains, into a region inside the texture.
+            unsafe {
+                blit.copyFromBuffer_sourceOffset_sourceBytesPerRow_sourceBytesPerImage_sourceSize_toTexture_destinationSlice_destinationLevel_destinationOrigin(
+                    &staging,
+                    offset,
+                    row,
+                    row * upload.size.height,
+                    upload.size,
+                    &self.texture,
+                    0,
+                    0,
+                    upload.origin,
+                );
+            }
+            offset += upload.pixels.len();
+        }
+        blit.endEncoding();
+        true
     }
 
-    /// Waits until the frame that reads the texture has finished; Metal does not order the processor's
-    /// `replaceRegion` after the GPU's reads, and a font change writes over sprites the last frame still shows.
-    fn finish_reading(&mut self) {
-        if let Some(frame) = self.reading.take()
-            && frame.status() != MTLCommandBufferStatus::Completed
-        {
-            frame.waitUntilCompleted();
-        }
+    /// The frame that copied the pending sprites in was committed.
+    pub fn uploaded(&mut self) {
+        self.uploads.clear();
     }
 
     /// Readies the sprites for a frame drawn with `fonts`, forgetting those of other fonts.
@@ -208,6 +246,7 @@ impl Sprites {
             self.fonts = Some(fonts.id);
             self.entries.clear();
             self.widths.clear();
+            self.uploads.clear();
             self.shelves = Shelves::new(self.shelves.side);
         }
         self.full = false;
@@ -228,7 +267,7 @@ impl Sprites {
             return false;
         };
         self.texture = texture;
-        self.reading = None;
+        self.uploads.clear();
         self.shelves = Shelves::new(side);
         self.entries.clear();
         true
@@ -246,22 +285,15 @@ impl Sprites {
             self.full = true;
             return None;
         };
-        let region = MTLRegion {
+        self.uploads.push(Upload {
             origin: MTLOrigin { x, y, z: 0 },
             size: MTLSize {
                 width: picture.width,
                 height: picture.height,
                 depth: 1,
             },
-        };
-        self.finish_reading();
-        let bytes = NonNull::from(picture.pixels.as_slice()).cast();
-        // SAFETY: The region lies inside the texture, the pixels hold its rows of 4 bytes per pixel, and no frame
-        // reads the texture while it is written.
-        unsafe {
-            self.texture
-                .replaceRegion_mipmapLevel_withBytes_bytesPerRow(region, 0, bytes, picture.width * 4);
-        }
+            pixels: picture.pixels,
+        });
         let narrow = |v: usize| u32::try_from(v).unwrap_or(u32::MAX);
         let sprite = Sprite {
             x: narrow(x),
