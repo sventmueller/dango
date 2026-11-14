@@ -310,13 +310,38 @@ impl InspectorUi {
         set_action(&watch, panel, sel!(ideDebugAddWatch:));
         // SAFETY: The field holds its delegate weakly; the panel registry keeps the panel alive.
         unsafe { watch.setDelegate(Some(ProtocolObject::from_ref(panel))) };
+        // The list draws no grey of its own, so the inspector reads as one surface below the window's tab bar.
+        outline.setBackgroundColor(&NSColor::clearColor());
+        list.setDrawsBackground(false);
+        let title = label(mtm, t("Inspektor"));
+        title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::SMALL)));
+        title.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        // Nil target: the window controller in the responder chain answers it, as the menu item does.
+        let close = ide_ui_common::panel::header_button(mtm, "xmark", t("Schließen"), None, sel!(ideToggleInspector:));
+        page.addSubview(&title);
+        page.addSubview(&close);
         page.addSubview(&list);
         page.addSubview(&watch);
-        list.setTranslatesAutoresizingMaskIntoConstraints(false);
-        watch.setTranslatesAutoresizingMaskIntoConstraints(false);
+        for view in [&*title as &NSView, &close, &list, &watch] {
+            view.setTranslatesAutoresizingMaskIntoConstraints(false);
+        }
         let guide = page.safeAreaLayoutGuide();
         for constraint in [
-            list.topAnchor().constraintEqualToAnchor(&guide.topAnchor()),
+            title
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&guide.topAnchor(), MARGIN),
+            title
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&page.leadingAnchor(), MARGIN + 4.0),
+            title
+                .trailingAnchor()
+                .constraintLessThanOrEqualToAnchor_constant(&close.leadingAnchor(), -4.0),
+            close.centerYAnchor().constraintEqualToAnchor(&title.centerYAnchor()),
+            close
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&page.trailingAnchor(), -ide_ui_common::panel::ACCESSORY_INSET),
+            list.topAnchor()
+                .constraintEqualToAnchor_constant(&title.bottomAnchor(), 4.0),
             list.leadingAnchor().constraintEqualToAnchor(&page.leadingAnchor()),
             list.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
             list.bottomAnchor()
