@@ -4,41 +4,25 @@
 mod docker;
 mod panel;
 
-use std::cell::RefCell;
-
-use ide_docker::board::{Node, Row};
+use ide_docker::board::{Board, Node, Row};
 use ide_docker::{Action, Compose};
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSMenu, NSMenuItem};
 use splat_i18n::{t, tf};
 
 use crate::window::{Panel, WindowController};
 pub use panel::{ContainersPanel, Reach};
 
-/// The Containers panels of every window, by window id.
-#[derive(Default)]
-pub struct Panels(RefCell<Vec<Retained<ContainersPanel>>>);
-
-fn panels(mtm: MainThreadMarker) -> std::rc::Rc<crate::context::AppContext> {
-    crate::context::AppContext::get(mtm)
-}
-
-/// Calls `f` with the panel of window `window`, if it has one.
-pub fn with_panel<R>(window: u64, f: impl FnOnce(&ContainersPanel) -> R) -> Option<R> {
-    let mtm = MainThreadMarker::new()?;
-    let panel = panels(mtm)
-        .containers_panels
-        .0
-        .borrow()
-        .iter()
-        .find(|p| p.window() == window)
-        .cloned()?;
-    Some(f(&panel))
+/// Runs `f` with the panel `id`, if its window is still open.
+pub fn with_panel(id: u64, f: impl FnOnce(&ContainersPanel)) {
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::context::AppContext::get(mtm).containers_panels.with(id, f);
+    }
 }
 
 fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
-    with_panel(controller.id(), |panel| panel.retain())
+    controller.context().containers_panels.of(controller.handle())
 }
 
 /// The window shows a folder: its panel reads Docker, whether or not the folder is trusted, since nothing of the
@@ -46,15 +30,12 @@ fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
 pub fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
-    let panel = ContainersPanel::new(controller.mtm(), controller.id(), root);
+    let panels = &controller.context().containers_panels;
+    let panel = ContainersPanel::new(controller.mtm(), panels.next_id(), controller.id(), root);
     let (page, header) = panel.build();
     controller.set_panel_page(Panel::Containers, &page);
     controller.set_panel_accessory(Panel::Containers, &header);
-    panels(controller.mtm())
-        .containers_panels
-        .0
-        .borrow_mut()
-        .push(panel.clone());
+    panels.insert(panel.id(), panel.clone());
     if controller.shown_panel() == Some(Panel::Containers) {
         panel.start();
     }
@@ -70,13 +51,12 @@ pub fn shown(controller: &WindowController) {
 
 /// The window's folder closes: its panel stops watching Docker and goes.
 pub fn window_closed(controller: &WindowController) {
+    let panels = &controller.context().containers_panels;
     let id = controller.id();
-    let context = panels(controller.mtm());
-    let mut all = context.containers_panels.0.borrow_mut();
-    for panel in all.iter().filter(|p| p.window() == id) {
+    for panel in panels.all().iter().filter(|p| p.window() == id) {
         panel.stop_watching();
     }
-    all.retain(|p| p.window() != id);
+    panels.detach(controller.handle());
 }
 
 /// What the panel and the Containers menu can do.
@@ -144,18 +124,23 @@ impl Command {
     /// Whether it applies to `row` of `panel`, which may be no row.
     fn applies(self, panel: &ContainersPanel, row: Option<&Row>) -> bool {
         let reach = panel.ivars().reach.borrow().clone();
-        if reach == Reach::Missing {
+        let board = panel.ivars().board.borrow();
+        self.applies_to(&reach, &board, crate::project::is_trusted(panel.root()), row)
+    }
+
+    /// Whether it applies to `row`, which may be no row, while Docker answers as `reach` says and lists `board`, in
+    /// a folder that is `trusted` or not.
+    fn applies_to(self, reach: &Reach, board: &Board, trusted: bool, row: Option<&Row>) -> bool {
+        if *reach == Reach::Missing {
             return false;
         }
-        let ready = reach == Reach::Ready;
-        let board = panel.ivars().board.borrow();
+        let ready = *reach == Reach::Ready;
         let container = match row.map(|r| &r.node) {
             Some(Node::Container(id)) => board.container(id),
             _ => None,
         };
         let running = container.is_some_and(ide_docker::Container::running);
         let file = matches!(row.map(|r| &r.node), Some(Node::Project(_, Some(_))));
-        let trusted = crate::project::is_trusted(panel.root());
         match self {
             Command::Start => ready && container.is_some() && !running,
             Command::Stop | Command::Restart | Command::Shell => ready && running,
@@ -313,14 +298,14 @@ fn remove(controller: &WindowController, panel: &ContainersPanel, node: &Node) {
         ),
         Node::Section(_) | Node::Project(..) => return,
     };
-    let id = panel.window();
+    let id = panel.id();
     ide_ui_git::confirm_delete(
         &window,
         &tf("„{}“ löschen?", &[&name]),
         info,
         t("Löschen"),
         move || {
-            let _ = with_panel(id, |panel| panel.run(command));
+            with_panel(id, |panel| panel.run(command));
         },
     );
 }
@@ -329,7 +314,7 @@ fn remove(controller: &WindowController, panel: &ContainersPanel, node: &Node) {
 fn prune(controller: &WindowController, panel: &ContainersPanel) {
     let Some(window) = controller.window() else { return };
     let command = ide_docker::prune(&panel.context());
-    let id = panel.window();
+    let id = panel.id();
     ide_ui_git::confirm_delete(
         &window,
         &tf("Ungenutzte Docker-Daten in „{}“ aufräumen?", &[&panel.context()]),
@@ -338,7 +323,7 @@ fn prune(controller: &WindowController, panel: &ContainersPanel) {
         ),
         t("Aufräumen"),
         move || {
-            let _ = with_panel(id, |panel| panel.run(command));
+            with_panel(id, |panel| panel.run(command));
         },
     );
 }
@@ -372,6 +357,8 @@ pub fn enabled(controller: &WindowController, title: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use ide_docker::board::Look;
+
     use super::*;
 
     #[test]
@@ -381,5 +368,110 @@ mod tests {
         }
         assert_eq!(Command::from_tag(0), None);
         assert_eq!(Command::from_tag(13), None);
+    }
+
+    fn board(state: &str, published: bool) -> Board {
+        let ports = published.then(|| ide_docker::Port {
+            host_ip: "0.0.0.0".into(),
+            host_port: 8080,
+            container_port: 80,
+            protocol: "tcp".into(),
+        });
+        Board {
+            containers: vec![ide_docker::Container {
+                id: "c1".into(),
+                name: "web".into(),
+                image: "nginx".into(),
+                state: state.into(),
+                status: String::new(),
+                ports: ports.into_iter().collect(),
+                project: None,
+                service: None,
+            }],
+            ..Board::default()
+        }
+    }
+
+    fn row(node: Node) -> Row {
+        Row {
+            level: 1,
+            label: String::new(),
+            detail: String::new(),
+            look: Look::Plain,
+            node,
+        }
+    }
+
+    fn applying(reach: &Reach, board: &Board, trusted: bool, row: Option<&Row>) -> Vec<Command> {
+        COMMANDS
+            .into_iter()
+            .filter(|c| c.applies_to(reach, board, trusted, row))
+            .collect()
+    }
+
+    #[test]
+    fn a_stopped_container_starts_and_a_running_one_stops_shows_logs_and_opens_its_port() {
+        let container = row(Node::Container("c1".into()));
+        let stopped = applying(&Reach::Ready, &board("exited", true), true, Some(&container));
+        assert_eq!(
+            stopped,
+            [
+                Command::Start,
+                Command::Logs,
+                Command::Remove,
+                Command::Prune,
+                Command::Refresh
+            ]
+        );
+        let running = applying(&Reach::Ready, &board("running", true), true, Some(&container));
+        assert_eq!(
+            running,
+            [
+                Command::Stop,
+                Command::Restart,
+                Command::Logs,
+                Command::Shell,
+                Command::OpenPort,
+                Command::Remove,
+                Command::Prune,
+                Command::Refresh
+            ]
+        );
+        let unpublished = applying(&Reach::Ready, &board("running", false), true, Some(&container));
+        assert!(!unpublished.contains(&Command::OpenPort));
+    }
+
+    #[test]
+    fn compose_runs_only_for_a_file_in_a_trusted_folder() {
+        let project = row(Node::Project("app".into(), Some("compose.yaml".into())));
+        let compose = [Command::Up, Command::Down, Command::Pull];
+        let trusted = applying(&Reach::Ready, &Board::default(), true, Some(&project));
+        assert!(compose.iter().all(|c| trusted.contains(c)));
+        let untrusted = applying(&Reach::Ready, &Board::default(), false, Some(&project));
+        assert!(compose.iter().all(|c| !untrusted.contains(c)));
+        let without_file = row(Node::Project("app".into(), None));
+        let listed = applying(&Reach::Ready, &Board::default(), true, Some(&without_file));
+        assert!(compose.iter().all(|c| !listed.contains(c)));
+    }
+
+    #[test]
+    fn without_docker_nothing_applies_and_without_its_daemon_only_refresh() {
+        let container = row(Node::Container("c1".into()));
+        let board = board("running", true);
+        assert!(applying(&Reach::Missing, &board, true, Some(&container)).is_empty());
+        let not_running = Reach::NotRunning("no daemon".into());
+        assert_eq!(
+            applying(&not_running, &board, true, Some(&container)),
+            [Command::Refresh]
+        );
+        assert_eq!(
+            applying(&Reach::Ready, &board, true, None),
+            [Command::Prune, Command::Refresh]
+        );
+        let section = row(Node::Section(ide_docker::board::Section::Images));
+        assert_eq!(
+            applying(&Reach::Ready, &board, true, Some(&section)),
+            [Command::Prune, Command::Refresh]
+        );
     }
 }

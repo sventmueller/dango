@@ -3,14 +3,13 @@
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{MainThreadMarker, MainThreadOnly, sel};
+use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{
     NSAccessibility, NSAutoresizingMaskOptions, NSButton, NSButtonType, NSCellImagePosition, NSColor, NSControlSize,
     NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSScrollView, NSStackView, NSTableColumn, NSTableColumnResizingOptions, NSTableViewColumnAutoresizingStyle,
-    NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSScrollView, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
+use objc2_foundation::NSEdgeInsets;
 use splat_i18n::t;
 
 use super::{SearchOutlineView, SearchPanel, Toggle};
@@ -415,20 +414,9 @@ fn glob_field(mtm: MainThreadMarker, panel: &SearchPanel, placeholder: &str, nam
 }
 
 fn results(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSScrollView>, Retained<SearchOutlineView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-    let outline = SearchOutlineView::new(mtm, frame);
-    let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("match"));
-    column.setResizingMask(NSTableColumnResizingOptions::AutoresizingMask);
-    outline.addTableColumn(&column);
-    // SAFETY: The column was just added to this outline view, which keeps it.
-    unsafe { outline.setOutlineTableColumn(Some(&column)) };
-    outline.setHeaderView(None);
-    outline.setStyle(NSTableViewStyle::SourceList);
-    outline.setIndentationPerLevel(12.0);
+    let outline = SearchOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
+    let scroll = ide_ui_common::panel::source_list_outline(mtm, &outline, "match", t("Suchergebnisse"));
     outline.setRowHeight(22.0);
-    outline.setAutoresizesOutlineColumn(false);
-    outline.setColumnAutoresizingStyle(NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle);
-    outline.setAccessibilityLabel(Some(&ns(t("Suchergebnisse"))));
     // SAFETY: The outline view holds its data source and delegate weakly; the window controller keeps the panel alive.
     unsafe {
         outline.setDataSource(Some(ProtocolObject::from_ref(panel)));
@@ -441,11 +429,6 @@ fn results(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSScrollView
     unsafe { outline.setMenu(Some(&menu)) };
     // SAFETY: The panel answers the double action with a method that takes the sender; `set_action` checked the target.
     unsafe { outline.setDoubleAction(Some(sel!(ideSearchRowDoubleClicked:))) };
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setDrawsBackground(false);
-    scroll.setDocumentView(Some(&outline));
     outline.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
     (scroll, outline)
 }

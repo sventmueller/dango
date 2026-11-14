@@ -9,10 +9,8 @@ use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSAccessibility, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
     NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView, NSStackViewDistribution,
-    NSStackViewGravity, NSTableColumn, NSTableViewStyle, NSTextAlignment, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSStackViewGravity, NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::model::{Phase, Tab};
@@ -496,22 +494,8 @@ fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>
 }
 
 fn outline(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSScrollView>, Retained<objc2_app_kit::NSOutlineView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-    let view = super::rows::CiOutlineView::new(mtm, frame);
-    let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("ci"));
-    column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
-    column.setWidth(frame.size.width);
-    view.addTableColumn(&column);
-    // SAFETY: The column was just added to this outline view, which keeps it.
-    unsafe { view.setOutlineTableColumn(Some(&column)) };
-    view.setHeaderView(None);
-    view.setStyle(NSTableViewStyle::SourceList);
-    view.setIndentationPerLevel(10.0);
-    view.setAutoresizesOutlineColumn(false);
-    view.setColumnAutoresizingStyle(
-        objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
-    );
-    view.setAccessibilityLabel(Some(&ns(t("CI-Läufe"))));
+    let view = super::rows::CiOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
+    let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "ci", t("CI-Läufe"));
     // SAFETY: The outline view holds its data source and delegate weakly; the panel registry keeps the panel alive.
     unsafe {
         view.setDataSource(Some(ProtocolObject::from_ref(panel)));
@@ -526,11 +510,5 @@ fn outline(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSScrollView>, R
     menu.setDelegate(Some(ProtocolObject::from_ref(panel)));
     // SAFETY: The view keeps the menu; its delegate, the panel, outlives the view through the registry.
     unsafe { view.setMenu(Some(&menu)) };
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setDrawsBackground(false);
-    scroll.setDocumentView(Some(&view));
-    view.sizeLastColumnToFit();
     (scroll, view.into_super())
 }

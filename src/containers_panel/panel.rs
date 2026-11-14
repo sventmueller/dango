@@ -4,25 +4,27 @@
 //! menu, deleting only after a sheet whose destructive button is never the default.
 
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_core::explain::Explain;
 use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
+use ide_ui_common::registry::WindowPart;
+use ide_ui_common::window::Window;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSColor, NSControlTextEditingDelegate, NSImageView, NSMenu, NSMenuDelegate, NSPopUpButton,
-    NSScrollView, NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSColor, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSPopUpButton, NSStackView, NSStackViewGravity,
+    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::docker;
-use crate::util::{guarded, label, main_after, main_soon, ns, set_action, symbol};
+use crate::util::{guarded, label, main_after, main_soon, ns, set_action};
 
 /// How long a read waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
@@ -46,6 +48,7 @@ pub enum Reach {
 }
 
 pub struct PanelIvars {
+    id: u64,
     window: u64,
     root: PathBuf,
     context: RefCell<String>,
@@ -137,8 +140,10 @@ define_class!(
 );
 
 impl ContainersPanel {
-    pub fn new(mtm: MainThreadMarker, window: u64, root: PathBuf) -> Retained<ContainersPanel> {
+    /// The panel `id` of the window `window` for the folder `root`.
+    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<ContainersPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
+            id,
             window,
             root,
             context: RefCell::new(String::new()),
@@ -160,6 +165,10 @@ impl ContainersPanel {
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.ivars().id
     }
 
     pub fn window(&self) -> u64 {
@@ -193,16 +202,7 @@ impl ContainersPanel {
         );
         header.addArrangedSubview(&picker);
         header.addArrangedSubview(&refresh);
-        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-        let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("containers"));
-        column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
-        // The table scales its columns by their share of its width, so the one column starts as wide as the table.
-        column.setWidth(frame.size.width);
-        table.addTableColumn(&column);
-        table.setHeaderView(None);
-        table.setStyle(NSTableViewStyle::SourceList);
-        table.setAccessibilityLabel(Some(&ns(t("Container"))));
+        let (scroll, table) = ide_ui_common::panel::source_list_table(mtm, "containers", t("Container"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
             table.setDataSource(Some(ProtocolObject::from_ref(self)));
@@ -212,25 +212,13 @@ impl ContainersPanel {
         menu.setDelegate(Some(ProtocolObject::from_ref(self)));
         // SAFETY: The table keeps the menu; its delegate, the panel, outlives the table through the registry.
         unsafe { table.setMenu(Some(&menu)) };
-        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-        scroll.setHasVerticalScroller(true);
-        scroll.setAutohidesScrollers(true);
-        scroll.setDrawsBackground(false);
-        scroll.setDocumentView(Some(&table));
         let note = NSTextField::wrappingLabelWithString(&ns(""), mtm);
         note.setTextColor(Some(&NSColor::secondaryLabelColor()));
         note.setContentCompressionResistancePriority_forOrientation(
             objc2_app_kit::NSLayoutPriorityDefaultLow,
             objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
         );
-        let page = NSStackView::new(mtm);
-        page.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        page.setEdgeInsets(NSEdgeInsets {
-            top: 4.0,
-            left: 8.0,
-            bottom: 6.0,
-            right: 8.0,
-        });
+        let page = ide_ui_common::panel::panel_page(mtm);
         page.addView_inGravity(&note, NSStackViewGravity::Top);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         *self.ivars().table.borrow_mut() = Some(table);
@@ -259,7 +247,7 @@ impl ContainersPanel {
     /// events when it answers.
     pub fn refresh(&self) {
         let context = self.context();
-        let window = self.window();
+        let id = self.id();
         let asked = self.ivars().asked.get() + 1;
         self.ivars().asked.set(asked);
         let root = self.root().to_path_buf();
@@ -269,7 +257,7 @@ impl ContainersPanel {
             let env = environment(path, ENVIRONMENT_WAIT);
             let read = read_all(&env, &context, &root);
             main_soon(move || {
-                let _ = super::with_panel(window, |panel| panel.read_done(asked, read));
+                super::with_panel(id, |panel| panel.read_done(asked, read));
             });
         });
         if let Err(error) = spawned {
@@ -312,9 +300,9 @@ impl ContainersPanel {
         let attempt = self.ivars().failures.get();
         self.ivars().failures.set(attempt + 1);
         let asked = self.ivars().asked.get();
-        let window = self.window();
+        let id = self.id();
         main_after(ide_docker::backoff(attempt), move || {
-            let _ = super::with_panel(window, |panel| {
+            super::with_panel(id, |panel| {
                 if panel.ivars().asked.get() != asked {
                     return;
                 }
@@ -334,7 +322,7 @@ impl ContainersPanel {
             return;
         }
         let env = environment(self.path(), Duration::ZERO);
-        let window = self.window();
+        let id = self.id();
         let watch = self.ivars().watches.get() + 1;
         self.ivars().watches.set(watch);
         let started = docker::watch(
@@ -343,13 +331,13 @@ impl ContainersPanel {
             move |line| {
                 if ide_docker::event(line).is_some_and(|e| e.changes_listing()) {
                     main_soon(move || {
-                        let _ = super::with_panel(window, ContainersPanel::changed);
+                        super::with_panel(id, ContainersPanel::changed);
                     });
                 }
             },
             move |error| {
                 main_soon(move || {
-                    let _ = super::with_panel(window, |panel| panel.watch_ended(watch, error));
+                    super::with_panel(id, |panel| panel.watch_ended(watch, error));
                 });
             },
         );
@@ -364,9 +352,9 @@ impl ContainersPanel {
 
     fn changed(&self) {
         let asked = self.ivars().asked.get();
-        let window = self.window();
+        let id = self.id();
         main_after(SETTLE, move || {
-            let _ = super::with_panel(window, |panel| {
+            super::with_panel(id, |panel| {
                 if panel.ivars().asked.get() == asked {
                     panel.refresh();
                 }
@@ -496,7 +484,7 @@ impl ContainersPanel {
 
     /// Runs `command` and reads Docker again after it; an error shows in an alert.
     pub fn run(&self, command: ide_docker::Command) {
-        let window = self.window();
+        let id = self.id();
         let path = self.path();
         let spawned = crate::util::spawn("docker-action", move || {
             let env = environment(path, ENVIRONMENT_WAIT);
@@ -507,7 +495,7 @@ impl ContainersPanel {
                 {
                     crate::editor::show_alert(mtm, t("Docker-Befehl fehlgeschlagen"), &error.explain());
                 }
-                let _ = super::with_panel(window, ContainersPanel::refresh);
+                super::with_panel(id, ContainersPanel::refresh);
             });
         });
         if let Err(error) = spawned {
@@ -557,6 +545,16 @@ impl ContainersPanel {
             }
             _ => false,
         }
+    }
+}
+
+impl WindowPart for ContainersPanel {
+    fn window(&self) -> Option<Window> {
+        Window::open(self.ivars().window)
+    }
+
+    fn root(&self) -> &Path {
+        ContainersPanel::root(self)
     }
 }
 
@@ -663,21 +661,23 @@ fn section_title(section: Section) -> &'static str {
 }
 
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(ide_ui_common::style::space::S);
     if let Node::Section(section) = &row.node {
+        let stack = NSStackView::new(mtm);
+        stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
+        stack.setSpacing(ide_ui_common::style::space::S);
         let title = label(mtm, section_title(*section));
         title.setTextColor(Some(&NSColor::secondaryLabelColor()));
         stack.addView_inGravity(&title, NSStackViewGravity::Leading);
         return stack.into_super();
     }
     let (name, description, color) = look_symbol(row);
-    let icon = NSImageView::new(mtm);
-    icon.setImage(symbol(name, &description).as_deref());
-    icon.setContentTintColor(Some(&color));
-    let text = label(mtm, &row.label);
-    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
+    let spoken = if description.is_empty() {
+        format!("{}, {}", row.label, row.detail)
+    } else {
+        format!("{}, {description}, {}", row.label, row.detail)
+    };
+    let (stack, text) =
+        ide_ui_common::panel::icon_row(mtm, (name, &description, &color), &row.label, row.level, &spoken);
     text.setContentCompressionResistancePriority_forOrientation(
         objc2_app_kit::NSLayoutPriorityDefaultLow,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
@@ -692,24 +692,6 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     detail.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
         ide_ui_common::style::SMALL,
     )));
-    #[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
-    let indent = 2.0 + row.level as f64 * 12.0;
-    stack.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: indent,
-        bottom: 0.0,
-        right: 4.0,
-    });
-    stack.addView_inGravity(&icon, NSStackViewGravity::Leading);
-    stack.addView_inGravity(&text, NSStackViewGravity::Leading);
     stack.addView_inGravity(&detail, NSStackViewGravity::Trailing);
-    stack.setAccessibilityElement(true);
-    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-    let spoken = if description.is_empty() {
-        format!("{}, {}", row.label, row.detail)
-    } else {
-        format!("{}, {description}, {}", row.label, row.detail)
-    };
-    stack.setAccessibilityLabel(Some(&ns(&spoken)));
     stack.into_super()
 }

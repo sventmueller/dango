@@ -3,29 +3,31 @@
 //! show failed ones only and stop; a context menu to run, debug or show a test's output.
 
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
+use ide_ui_common::registry::WindowPart;
+use ide_ui_common::window::Window;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSImageView, NSMenu,
-    NSMenuDelegate, NSScrollView, NSStackView, NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSButton, NSColor, NSControlStateValueOn, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSStackView,
+    NSStackViewGravity, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::run::{self, Running};
-use crate::util::{guarded, label, main_after, ns, set_action, symbol};
+use crate::util::{guarded, label, main_after, ns, set_action};
 
 /// How often a running tool's output is read again.
 const POLL: Duration = Duration::from_millis(300);
 
 pub struct PanelIvars {
+    id: u64,
     window: u64,
     root: PathBuf,
     pub(super) board: RefCell<Board>,
@@ -131,9 +133,10 @@ define_class!(
 );
 
 impl TestsPanel {
-    /// The panel of the window `window` for the folder `root`.
-    pub fn new(mtm: MainThreadMarker, window: u64, root: PathBuf) -> Retained<TestsPanel> {
+    /// The panel `id` of the window `window` for the folder `root`.
+    pub fn new(mtm: MainThreadMarker, id: u64, window: u64, root: PathBuf) -> Retained<TestsPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
+            id,
             window,
             root,
             board: RefCell::new(Board::default()),
@@ -148,6 +151,10 @@ impl TestsPanel {
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.ivars().id
     }
 
     pub fn window(&self) -> u64 {
@@ -177,16 +184,7 @@ impl TestsPanel {
         for button in [&run, &find, &failed, &stop] {
             header.addArrangedSubview(button);
         }
-        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-        let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), frame);
-        let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("tests"));
-        column.setResizingMask(objc2_app_kit::NSTableColumnResizingOptions::AutoresizingMask);
-        // The table scales its columns by their share of its width, so the one column starts as wide as the table.
-        column.setWidth(frame.size.width);
-        table.addTableColumn(&column);
-        table.setHeaderView(None);
-        table.setStyle(NSTableViewStyle::SourceList);
-        table.setAccessibilityLabel(Some(&ns(t("Tests"))));
+        let (scroll, table) = ide_ui_common::panel::source_list_table(mtm, "tests", t("Tests"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
             table.setDataSource(Some(ProtocolObject::from_ref(self)));
@@ -201,24 +199,12 @@ impl TestsPanel {
         menu.setDelegate(Some(ProtocolObject::from_ref(self)));
         // SAFETY: The table keeps the menu; its delegate, the panel, outlives the table through the registry.
         unsafe { table.setMenu(Some(&menu)) };
-        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-        scroll.setHasVerticalScroller(true);
-        scroll.setAutohidesScrollers(true);
-        scroll.setDrawsBackground(false);
-        scroll.setDocumentView(Some(&table));
         let status = label(mtm, "");
         status.setTextColor(Some(&NSColor::secondaryLabelColor()));
         status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
             ide_ui_common::style::SMALL,
         )));
-        let page = NSStackView::new(mtm);
-        page.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        page.setEdgeInsets(NSEdgeInsets {
-            top: 4.0,
-            left: 8.0,
-            bottom: 6.0,
-            right: 8.0,
-        });
+        let page = ide_ui_common::panel::panel_page(mtm);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
         page.addView_inGravity(&status, NSStackViewGravity::Bottom);
         *self.ivars().table.borrow_mut() = Some(table);
@@ -312,9 +298,9 @@ impl TestsPanel {
         if self.ivars().polling.replace(true) {
             return;
         }
-        let window = self.window();
+        let id = self.id();
         main_after(POLL, move || {
-            let _ = super::with_panel(window, |panel| panel.poll(listing));
+            super::with_panel(id, |panel| panel.poll(listing));
         });
     }
 
@@ -378,19 +364,9 @@ impl TestsPanel {
         self.ivars().rows.borrow().get(usize::try_from(row).ok()?).cloned()
     }
 
-    /// The tool and scope of `row`.
-    fn scope_of(&self, row: &Row) -> Option<(Tool, Scope)> {
-        match &row.node {
-            Node::Package(tool, package) if package.is_empty() => Some((*tool, Scope::All)),
-            Node::Package(tool, package) => Some((*tool, Scope::Package(package.clone()))),
-            Node::File(tool, _, file) => Some((*tool, Scope::File(file.clone()))),
-            Node::Test(index) => self.ivars().board.borrow().scope_of(*index),
-        }
-    }
-
     fn on_row(&self, _sender: Option<&AnyObject>, debug: bool) {
         let Some(row) = self.clicked_row() else { return };
-        let Some((tool, scope)) = self.scope_of(&row) else {
+        let Some((tool, scope)) = scope_of(&self.ivars().board.borrow(), &row.node) else {
             return;
         };
         match (debug, scope) {
@@ -427,11 +403,9 @@ impl TestsPanel {
             crate::util::set_target(&entry, me);
             entry
         };
-        menu.addItem(&item(t("Ausführen"), sel!(ideTestsRunRow:)));
-        if matches!(row.node, Node::Test(_)) {
-            menu.addItem(&item(t("Debuggen"), sel!(ideTestsDebugRow:)));
+        for command in row_commands(&row.node) {
+            menu.addItem(&item(command.title(), command.action()));
         }
-        menu.addItem(&item(t("Ausgabe zeigen"), sel!(ideTestsShowOutput:)));
     }
 
     fn output_sheet(&self) {
@@ -464,6 +438,60 @@ impl TestsPanel {
     }
 }
 
+impl WindowPart for TestsPanel {
+    fn window(&self) -> Option<Window> {
+        Window::open(self.ivars().window)
+    }
+
+    fn root(&self) -> &Path {
+        TestsPanel::root(self)
+    }
+}
+
+/// What the context menu offers on a row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RowCommand {
+    Run,
+    Debug,
+    ShowOutput,
+}
+
+impl RowCommand {
+    fn title(self) -> &'static str {
+        match self {
+            RowCommand::Run => t("Ausführen"),
+            RowCommand::Debug => t("Debuggen"),
+            RowCommand::ShowOutput => t("Ausgabe zeigen"),
+        }
+    }
+
+    fn action(self) -> objc2::runtime::Sel {
+        match self {
+            RowCommand::Run => sel!(ideTestsRunRow:),
+            RowCommand::Debug => sel!(ideTestsDebugRow:),
+            RowCommand::ShowOutput => sel!(ideTestsShowOutput:),
+        }
+    }
+}
+
+/// What the context menu offers on a row of `node`; only a single test can be debugged.
+fn row_commands(node: &Node) -> Vec<RowCommand> {
+    match node {
+        Node::Test(_) => vec![RowCommand::Run, RowCommand::Debug, RowCommand::ShowOutput],
+        Node::Package(..) | Node::File(..) => vec![RowCommand::Run, RowCommand::ShowOutput],
+    }
+}
+
+/// The tool and scope that run the tests of `node`; a package without a name stands for all of its tool's tests.
+fn scope_of(board: &Board, node: &Node) -> Option<(Tool, Scope)> {
+    match node {
+        Node::Package(tool, package) if package.is_empty() => Some((*tool, Scope::All)),
+        Node::Package(tool, package) => Some((*tool, Scope::Package(package.clone()))),
+        Node::File(tool, _, file) => Some((*tool, Scope::File(file.clone()))),
+        Node::Test(index) => board.scope_of(*index),
+    }
+}
+
 /// Whether `running` lists rather than runs, which only a listing's command line says.
 fn listing_command(running: &Running) -> bool {
     running.listing
@@ -491,26 +519,43 @@ pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSCol
 
 fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
     let (name, description, color) = state_symbol(row.state);
-    let icon = NSImageView::new(mtm);
-    icon.setImage(symbol(name, description).as_deref());
-    icon.setContentTintColor(Some(&color));
-    let text = label(mtm, &row.label);
-    text.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
-    let stack = NSStackView::new(mtm);
-    stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(ide_ui_common::style::space::S);
-    #[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
-    let indent = 4.0 + row.level as f64 * 14.0;
-    stack.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: indent,
-        bottom: 0.0,
-        right: 4.0,
-    });
-    stack.addView_inGravity(&icon, NSStackViewGravity::Leading);
-    stack.addView_inGravity(&text, NSStackViewGravity::Leading);
-    stack.setAccessibilityElement(true);
-    stack.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-    stack.setAccessibilityLabel(Some(&ns(&format!("{}, {description}", row.label))));
-    stack.into_super()
+    let spoken = format!("{}, {description}", row.label);
+    let (view, _) = ide_ui_common::panel::icon_row(mtm, (name, description, &color), &row.label, row.level, &spoken);
+    view.into_super()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_single_test_offers_debugging() {
+        let file = Node::File(Tool::Cargo, "app".into(), "src/lib.rs".into());
+        assert_eq!(row_commands(&file), [RowCommand::Run, RowCommand::ShowOutput]);
+        assert_eq!(
+            row_commands(&Node::Test(0)),
+            [RowCommand::Run, RowCommand::Debug, RowCommand::ShowOutput]
+        );
+    }
+
+    #[test]
+    fn a_row_runs_its_package_its_file_or_every_test_of_its_tool() {
+        let board = Board::default();
+        assert_eq!(
+            scope_of(&board, &Node::Package(Tool::Go, String::new())),
+            Some((Tool::Go, Scope::All))
+        );
+        assert_eq!(
+            scope_of(&board, &Node::Package(Tool::Go, "pkg".into())),
+            Some((Tool::Go, Scope::Package("pkg".into())))
+        );
+        assert_eq!(
+            scope_of(
+                &board,
+                &Node::File(Tool::Pytest, "tests".into(), "tests/test_a.py".into())
+            ),
+            Some((Tool::Pytest, Scope::File("tests/test_a.py".into())))
+        );
+        assert_eq!(scope_of(&board, &Node::Test(3)), None);
+    }
 }

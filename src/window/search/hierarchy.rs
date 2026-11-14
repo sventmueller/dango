@@ -15,8 +15,7 @@ use objc2_app_kit::{
     NSAccessibility, NSAutoresizingMaskOptions, NSColor, NSControlSize, NSControlTextEditingDelegate, NSFont,
     NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSLineBreakMode, NSOutlineView,
     NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopUpButton, NSScrollView, NSSegmentSwitchTracking,
-    NSSegmentedControl, NSStackView, NSTableColumn, NSTableColumnResizingOptions, NSTableViewColumnAutoresizingStyle,
-    NSTableViewStyle, NSUserInterfaceLayoutOrientation, NSView,
+    NSSegmentedControl, NSStackView, NSTableColumn, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
@@ -640,29 +639,15 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
 }
 
 fn tree(mtm: MainThreadMarker, panel: &HierarchyPanel) -> (Retained<NSScrollView>, Retained<NSOutlineView>) {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
-    let outline = NSOutlineView::initWithFrame(NSOutlineView::alloc(mtm), frame);
-    let column = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &ns("symbol"));
-    column.setResizingMask(NSTableColumnResizingOptions::AutoresizingMask);
-    outline.addTableColumn(&column);
-    // SAFETY: The column was just added to this outline view, which keeps it.
-    unsafe { outline.setOutlineTableColumn(Some(&column)) };
-    outline.setHeaderView(None);
-    outline.setStyle(NSTableViewStyle::SourceList);
-    outline.setIndentationPerLevel(12.0);
+    let outline = NSOutlineView::initWithFrame(NSOutlineView::alloc(mtm), ide_ui_common::panel::LIST_FRAME);
+    let scroll = ide_ui_common::panel::source_list_outline(mtm, &outline, "symbol", t("Aufrufhierarchie"));
     outline.setRowHeight(22.0);
-    outline.setColumnAutoresizingStyle(NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle);
     // SAFETY: The outline view holds its data source and delegate weakly; the search panel keeps this panel alive.
     unsafe {
         outline.setDataSource(Some(ProtocolObject::from_ref(panel)));
         outline.setDelegate(Some(ProtocolObject::from_ref(panel)));
     }
     set_action(&outline, panel, sel!(ideHierarchyRowClicked:));
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setDrawsBackground(false);
-    scroll.setDocumentView(Some(&outline));
     outline.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
     (scroll, outline)
 }
