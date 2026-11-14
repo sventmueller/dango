@@ -25,7 +25,7 @@ use splat_i18n::t;
 use super::cards::{self, Ctx, Inputs, Live, Part};
 use super::row::TimelineRow;
 use super::target::AgentTarget;
-use ide_ui_common::util::{guarded, main_soon, ns};
+use ide_ui_common::util::{guarded, live, main_soon, ns};
 
 /// Room on the leading side for the line and its dots.
 const LEADING: f64 = 30.0;
@@ -153,6 +153,8 @@ pub struct Timeline {
     heights: RefCell<HashMap<u64, (f64, f64)>>,
     /// The width the rows were last laid out at.
     width: Cell<f64>,
+    /// A divider drag changed the width, and the rows are laid out anew once it ends.
+    after_drag: Cell<bool>,
     pub(super) expanded: RefCell<HashSet<(u64, Part)>>,
     pub(super) inputs: RefCell<Inputs>,
     live: RefCell<Vec<Live>>,
@@ -229,6 +231,7 @@ impl Timeline {
             list: RefCell::new(list),
             heights: RefCell::new(HashMap::new()),
             width: Cell::new(width),
+            after_drag: Cell::new(false),
             expanded: RefCell::new(HashSet::new()),
             inputs: RefCell::new(Inputs::default()),
             live: RefCell::new(Vec::new()),
@@ -792,6 +795,19 @@ impl Timeline {
         let width = self.table_width();
         // `record_height` drops measurements half a point off the committed width, so a smaller change must commit.
         if (width - self.width.get()).abs() < 0.5 || self.table.inLiveResize() {
+            return;
+        }
+        // The column follows the table by itself, so the rows in view take the width and only the heights wait.
+        if live::dragging(&self.table) {
+            if !self.after_drag.replace(true) {
+                let key = self.key;
+                live::after_drag(move || {
+                    if let Some(tab) = super::get(key) {
+                        tab.timeline().after_drag.set(false);
+                        tab.timeline().width_changed();
+                    }
+                });
+            }
             return;
         }
         let following = self.follows();

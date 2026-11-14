@@ -199,7 +199,12 @@ impl CardText {
         let Some(container) = containers.firstObject() else {
             return;
         };
-        container.setSize(NSSize::new(self.ivars().width.get(), 1.0e7));
+        let size = NSSize::new(self.ivars().width.get(), 1.0e7);
+        // A new size invalidates the layout of the whole text, so a streamed tail at the same width lays out only
+        // itself.
+        if container.size() != size {
+            container.setSize(size);
+        }
         layout.ensureLayoutForTextContainer(&container);
         let used = layout.usedRectForTextContainer(&container);
         self.ivars().height.set(used.size.height.ceil().max(1.0));
