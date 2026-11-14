@@ -892,24 +892,35 @@ impl EditorTextView {
 
     /// What follows an edit of the document, from the view or from the model.
     pub(super) fn changed(&self, change: &Change) {
-        super::highlight::edited(self, change);
+        self.changed_all(std::slice::from_ref(change));
+    }
+
+    /// What follows edits of the document: each moves what sits on the text and goes to the language servers, and the
+    /// work they cause runs once for all of them.
+    fn changed_all(&self, changes: &[Change]) {
+        if changes.is_empty() {
+            return;
+        }
+        let mut lines = false;
+        for change in changes {
+            super::highlight::edited(self, change);
+            super::fold::shift(self, change);
+            super::multi::shift(self, change);
+            super::insets::shift(self, change);
+            super::notify_change(self, change);
+            lines |= change.start.line != change.new_end.line || change.start.line != change.old_end.line;
+        }
         super::recovery::changed(self);
         super::conflict::text_changed(self);
         super::update_dirty(self);
-        super::fold::shift(self, change);
-        super::multi::shift(self, change);
-        super::insets::shift(self, change);
-        super::notify_change(self, change);
         super::changes::schedule(self);
         super::whitespace::redraw(self);
         super::minimap::redraw(self);
         // It reads the layout, which TextKit forbids while the edit is still under way.
         self.later(objc2::sel!(ideStickyRefresh), 0.0);
-        super::line_diagnostics::edited(self, change);
+        super::line_diagnostics::edited(self, changes);
         super::vim::changed(self);
-        if (change.start.line != change.new_end.line || change.start.line != change.old_end.line)
-            && let Some(gutter) = self.ivars().gutter.borrow().as_ref().and_then(Weak::load)
-        {
+        if lines && let Some(gutter) = self.ivars().gutter.borrow().as_ref().and_then(Weak::load) {
             gutter.fit();
             gutter.setNeedsDisplay(true);
         }
@@ -949,9 +960,7 @@ impl EditorTextView {
             }
         });
         self.ivars().applying.set(false);
-        for change in changes {
-            self.changed(change);
-        }
+        self.changed_all(changes);
     }
 
     pub fn document(&self) -> std::cell::Ref<'_, Document> {

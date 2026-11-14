@@ -76,16 +76,18 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
     Some(true)
 }
 
-/// An edit of `view`: its lines wait before they show a diagnostic again.
-pub fn edited(view: &EditorTextView, change: &Change) {
+/// Edits of `view`: their lines wait before they show a diagnostic again.
+pub fn edited(view: &EditorTextView, changes: &[Change]) {
     if !shown() {
         return;
     }
     let now = Instant::now();
     let mut edits = view.ivars().line_edits.borrow_mut();
     edits.0.retain(|(_, at)| now.duration_since(*at) < REST);
-    for line in change.start.line..=change.new_end.line {
-        edits.0.push((line, now));
+    for change in changes {
+        for line in change.start.line..=change.new_end.line {
+            edits.0.push((line, now));
+        }
     }
     drop(edits);
     view.later(objc2::sel!(ideDiagnosticsRested), REST.as_secs_f64() + 0.05);
