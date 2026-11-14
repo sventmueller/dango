@@ -13,6 +13,7 @@ mod highlight;
 mod indent;
 mod inset_fragment;
 pub mod insets;
+mod large;
 mod line_diagnostics;
 mod lsp_editor;
 mod minimap;
@@ -414,8 +415,21 @@ pub fn tab_title(path: &Path) -> String {
 
 /// Opens `path` in a new editor tab of `controller`, or in its preview tab; shows an alert when it cannot be read.
 pub fn open_tab(controller: &WindowController, path: &Path, font_size: f64, preview: bool) {
+    if large::is_large(path) && large::open(controller, path, font_size, preview) {
+        return;
+    }
+    opened(controller, path, Document::open(path), font_size, preview);
+}
+
+fn opened(
+    controller: &WindowController,
+    path: &Path,
+    document: std::io::Result<Document>,
+    font_size: f64,
+    preview: bool,
+) {
     let mtm = controller.mtm();
-    let document = match Document::open(path) {
+    let document = match document {
         Ok(document) => document,
         Err(error) => {
             alert(
@@ -481,25 +495,22 @@ pub fn open_recovered(controller: &WindowController, recovered: Recovered, font_
 /// counted from 1; `focus` selects them in the editor and gives it the keyboard focus.
 pub fn reveal(controller: &WindowController, path: &Path, line: u64, columns: std::ops::Range<usize>, focus: bool) {
     controller.open_file(path);
-    let view = open_editors()
-        .into_iter()
-        .find(|v| v.document().path() == Some(path) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
-    if let Some(view) = view {
+    large::with_opened(controller, path, move |view| {
         let line = usize::try_from(line.saturating_sub(1)).unwrap_or(usize::MAX);
         view.select_columns(line, columns, focus);
-    }
+    });
 }
 
 /// Opens `path` in an editor tab of `controller`, or brings its tab forward, with the cursor on line `line` at column
 /// `column`, both counted from 1 in characters as compilers print them; a column past the end means the line's end.
 pub fn reveal_position(controller: &WindowController, path: &Path, line: usize, column: usize) {
     controller.open_file(path);
-    let Some(view) = open_editors()
-        .into_iter()
-        .find(|v| v.document().path() == Some(path) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-    else {
-        return;
-    };
+    large::with_opened(controller, path, move |view| {
+        place_cursor(view, line, column);
+    });
+}
+
+fn place_cursor(view: &EditorTextView, line: usize, column: usize) {
     let at = {
         let document = view.document();
         let text = document.text();
@@ -515,7 +526,7 @@ pub fn reveal_position(controller: &WindowController, path: &Path, line: usize, 
         view.scrollRangeToVisible(objc2_foundation::NSRange::new(at, 0));
     }
     if let Some(window) = view.window() {
-        window.makeFirstResponder(Some(&view));
+        window.makeFirstResponder(Some(view));
     }
 }
 
