@@ -621,6 +621,11 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   Schließen und Beenden warten auf ihren Schreibvorgang. Keine Arbeit auf der Disk-Lane wartet auf den Haupt-Thread
   (Workspace-Edits haben eine eigene Lane). App und UI-Crates starten Threads nur über `util::spawn` oder eine Lane;
   `cargo xtask rules` prüft das.
+- **E143 Zustand wird übergeben, nicht nachgeschlagen:** Neuer Code bekommt den App-Kontext, das Objekt mit dem
+  Zustand oder eine Fenster-ID übergeben. Nachgeschlagen wird nur dort, wo AppKit oder ein Worker-Thread mit einer ID
+  zurückruft (E97). Zwei Ratchets in `cargo xtask rules` zählen die Zugriffe über `app()`/`try_app()` und über
+  `state()` der UI-Crates; die Zahl sinkt, steigt aber nie. Geheimnisse liest die App nur aus dem übergebenen Speicher;
+  vorher lehnt der Zugriff ab, statt still in den Arbeitsspeicher auszuweichen.
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen

@@ -39,6 +39,10 @@ const STATEFUL: [&str; 13] = [
 /// handed it or a window id (E97); a ratchet: lower it whenever the count drops, it never rises.
 const APP_LOOKUPS: usize = 73;
 
+/// How many times the UI crates may look their state up through their host's `state()` instead of being handed it, a
+/// ratchet like `APP_LOOKUPS` (E143).
+const STATE_LOOKUPS: usize = 61;
+
 /// A static by the file it is in, relative to the workspace, and its name.
 type Static = (String, String);
 
@@ -49,7 +53,7 @@ pub(crate) fn check() -> Result<(), String> {
     let mut found = BTreeSet::new();
     let mut problems = Vec::new();
     let mut files = 0;
-    let mut lookups = 0;
+    let (mut lookups, mut state_lookups) = (0, 0);
     for folder in WORKSPACE {
         for file in rust_files(&root.join(folder)) {
             let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
@@ -58,6 +62,9 @@ pub(crate) fn check() -> Result<(), String> {
             problems.extend(discarded_threads(&relative, &text));
             if relative.starts_with(&format!("{APP}/")) || relative.starts_with("crates/ide-ui-") {
                 lookups += app_lookups(&code_only(&text));
+            }
+            if relative.starts_with("crates/ide-ui-") {
+                state_lookups += state_lookups_in(&code_only(&text));
             }
             if in_app(&relative) {
                 problems.extend(file_problems(&relative, &text));
@@ -73,10 +80,12 @@ pub(crate) fn check() -> Result<(), String> {
     }
     problems.extend(unlisted(&allowed, &found));
     problems.extend(lookup_problem(lookups));
+    problems.extend(state_lookup_problem(state_lookups));
     if problems.is_empty() {
         println!(
             "{files} Rust files: {} stateful statics, all listed in {INVENTORY}; callbacks guarded, no leaks, sizes \
-             from style.rs, no thread that may fail unseen; {lookups} lookups of the app context",
+             from style.rs, no thread that may fail unseen; {lookups} lookups of the app context and {state_lookups} of \
+             the UI crates' state",
             found.len()
         );
         Ok(())
@@ -100,6 +109,33 @@ fn app_lookups(code: &str) -> usize {
         .filter(|&(_, at)| !is_ident(code[..at].chars().next_back().as_ref()))
         .filter(|&(_, at)| !code[..at].trim_end().ends_with("fn"))
         .count()
+}
+
+/// How often `code` of a UI crate calls its host's `state()`, leaving out its definition and methods of that name.
+fn state_lookups_in(code: &str) -> usize {
+    occurrences(code, "state()")
+        .into_iter()
+        .filter(|&at| {
+            let before = code[..at].chars().next_back();
+            !is_ident(before.as_ref()) && before != Some('.')
+        })
+        .filter(|&at| !code[..at].trim_end().ends_with("fn"))
+        .count()
+}
+
+/// The ratchet on the UI crates' lookups of their state, as `lookup_problem` is on the app context's.
+fn state_lookup_problem(lookups: usize) -> Option<String> {
+    match lookups.cmp(&STATE_LOOKUPS) {
+        std::cmp::Ordering::Greater => Some(format!(
+            "{lookups} lookups of a UI crate's state through state(), at most {STATE_LOOKUPS}: hand the state or the \
+             object that holds it along instead (E143)"
+        )),
+        std::cmp::Ordering::Less => Some(format!(
+            "{lookups} lookups of a UI crate's state through state(), fewer than {STATE_LOOKUPS}: lower \
+             STATE_LOOKUPS in xtask/src/rules.rs to {lookups}, so the count cannot rise again"
+        )),
+        std::cmp::Ordering::Equal => None,
+    }
 }
 
 /// The ratchet on the lookups of the app context: more than `APP_LOOKUPS` is a regression, fewer must lower it.
@@ -460,6 +496,10 @@ mod tests {
                     let b = try_app()?; let c = my_app(); let d = app();";
         assert_eq!(app_lookups(code), 3);
         assert_eq!(lookup_problem(APP_LOOKUPS), None);
+        let ui = "pub(crate) fn state() -> Rc<State> { host().state() }\nlet a = crate::host::state();\nlet b = state();\n\
+                  let c = tab.state();";
+        assert_eq!(state_lookups_in(ui), 2);
+        assert!(state_lookup_problem(STATE_LOOKUPS + 1).is_some());
         assert!(lookup_problem(APP_LOOKUPS + 1).is_some());
     }
 
