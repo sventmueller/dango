@@ -10,7 +10,7 @@ use objc2_app_kit::{NSColor, NSView, NSWindow, NSWindowOrderingMode};
 use objc2_foundation::NSNotification;
 
 use super::tabs::{Document, TabWindow};
-use super::{TabKind, WindowController, show_tab_bar};
+use super::{TabKind, WindowController, layout, show_tab_bar};
 
 impl WindowController {
     /// Shows `view` as a document of `kind` and brings it to the front: in a window tab of its own, or in the tab
@@ -463,6 +463,12 @@ impl WindowController {
         let last = self.ivars().tabs.borrow().len() == 1;
         if last {
             self.window_closes();
+        } else if !self.ivars().closing.get() {
+            // The close button closes a tab group's windows one by one in the same pass, so the layout is kept before
+            // the first goes; a single tab's close is written down again once the record follows.
+            layout::save(self);
+            self.ivars().closing.set(true);
+            self.later(|controller| controller.ivars().closing.set(false));
         }
         for document in tab.documents() {
             self.forget_document(tab, document.id);

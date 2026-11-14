@@ -154,6 +154,25 @@ pub fn symbol_button(
     button
 }
 
+/// Shows `name` with the tool tip `description` on `button` for a moment, as the answer to a click that changes
+/// nothing on screen, then puts its own picture and tool tip back.
+pub fn acknowledge(button: &NSButton, name: &str, description: &str) {
+    let mtm = button.mtm();
+    let before = (button.image(), button.toolTip());
+    if let Some(image) = symbol(name, description) {
+        button.setImage(Some(&image));
+    }
+    button.setToolTip(Some(&ns(description)));
+    let button = dispatch2::MainThreadBound::new((button.retain(), before), mtm);
+    super::main_after(std::time::Duration::from_millis(1500), move || {
+        // SAFETY: main_after runs its work on the main thread.
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        let (button, (image, tip)) = button.into_inner(mtm);
+        button.setImage(image.as_deref());
+        button.setToolTip(tip.as_deref());
+    });
+}
+
 /// Sets what VoiceOver calls `control`, or takes it back with `None`. VoiceOver reads a control through its cell, which
 /// does not see what is set on the control itself, so both get it.
 pub fn set_label(control: &NSControl, label: Option<&str>) {

@@ -331,6 +331,9 @@ define_class!(
         #[unsafe(method(ideAgentCopy:))]
         fn copy(&self, sender: Option<&AnyObject>) {
             self.on_entry(sender, |tab, id, _| tab.copy_entry(id));
+            if let Some(button) = sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSButton>()) {
+                ide_ui_common::util::acknowledge(button, "checkmark", splat_i18n::t("Kopiert"));
+            }
         }
 
         #[unsafe(method(ideAgentTrust:))]
