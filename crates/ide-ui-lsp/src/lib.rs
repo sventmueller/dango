@@ -809,17 +809,38 @@ fn end_if_unused(folder: &Path, id: u64) {
 
 /// Asks again, after a pause in typing, for what the server computes over the whole document.
 pub fn refresh(view: &dyn Editor) {
-    let serial = view.lsp().borrow().serial;
     if let Some((server, uri)) = server_of(view) {
-        refresh_main(view, &server, &uri);
+        outline::refresh(view, &server, &uri);
     }
-    pull_diagnostics(view, serial);
+    next(view, |view| {
+        if server_of(view).is_some() {
+            inlay::request(view);
+        }
+        next(view, |view| {
+            if let Some((server, uri)) = server_of(view) {
+                semantic_tokens(view, &server, &uri);
+            }
+            next(view, |view| pull_diagnostics(view, view.lsp().borrow().serial));
+        });
+    });
 }
 
-/// What only the main server computes over the whole document: outline, inlay hints and semantic tokens.
-fn refresh_main(view: &dyn Editor, server: &Server, uri: &Uri) {
-    outline::refresh(view, server, uri);
-    inlay::request(view);
+/// Runs `step` for `view` on a later turn of the run loop while its text stays as it is, so that the questions after
+/// a pause in typing each take a turn of their own instead of holding up the next keystroke together.
+fn next(view: &dyn Editor, step: fn(&dyn Editor)) {
+    let serial = view.lsp().borrow().serial;
+    let revision = view.document().revision();
+    main_soon(move || {
+        if let Some(view) = host::find_editor(serial)
+            && view.document().revision() == revision
+        {
+            step(&*view);
+        }
+    });
+}
+
+/// Asks the main server for the colours of the whole document.
+fn semantic_tokens(view: &dyn Editor, server: &Server, uri: &Uri) {
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let _ = server.semantic_tokens(uri, move |answer| {

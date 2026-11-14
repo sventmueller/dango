@@ -230,16 +230,16 @@ pub fn request(view: &EditorTextView) {
         }
         Gate::Blocked(..) | Gate::NotHere(_) | Gate::LanguageOff => return refresh_status(view),
     };
-    let request = {
+    let (request, snapshot) = {
         let document = view.document();
         let Some(path) = document.path().map(Path::to_path_buf) else {
             return;
         };
         let indent = view.ivars().indent.borrow().clone();
-        Request {
+        let request = Request {
             path,
             language: language(view).0,
-            text: document.text().to_string(),
+            text: String::new(),
             revision: document.revision(),
             selection: selection(view),
             indent: if indent.starts_with('\t') {
@@ -247,7 +247,8 @@ pub fn request(view: &EditorTextView) {
             } else {
                 Indent::Spaces(u8::try_from(indent.len()).unwrap_or(4))
             },
-        }
+        };
+        (request, document.text().clone())
     };
     let id = provider::next_question();
     let cancel = Cancel::new();
@@ -260,18 +261,22 @@ pub fn request(view: &EditorTextView) {
     let reply: ide_predict::Reply = Box::new(move |answer| {
         main_soon(move || arrived(serial, id, revision, asked, from, answer));
     });
-    if !provider::outside() {
-        provider.predict(request, cancel, reply);
-        return;
-    }
+    let outside = provider::outside();
     let (scans, scan) = (provider::scans(), provider::gitleaks());
-    let checking = crate::util::spawn("prediction-secrets", move || {
+    let checking = crate::util::spawn("prediction-request", move || {
+        let request = Request {
+            text: snapshot.to_string(),
+            ..request
+        };
+        if !outside {
+            return provider.predict(request, cancel, reply);
+        }
         if let Some(verdict) = guard::send(request, true, &scans, &scan, &*provider, cancel, reply) {
             main_soon(move || checked(serial, &verdict));
         }
     });
     if let Err(error) = checking {
-        crate::diag::report("checking a prediction request for secrets", error);
+        crate::diag::report("asking for a prediction", error);
     }
 }
 

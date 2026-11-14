@@ -140,8 +140,22 @@ pub fn tab_of(view: &EditorTextView) -> isize {
     view.ivars().tab.get()
 }
 
-/// Redraws the line number column of `view`, after its diagnostics changed.
+/// Redraws the line number column of `view`, after its diagnostics changed, once for any number of asks in a turn of
+/// the run loop.
 pub fn redraw_gutter(view: &EditorTextView) {
+    if view.ivars().gutter_due.replace(true) {
+        return;
+    }
+    let serial = view.ivars().serial;
+    crate::util::main_soon(move || {
+        if let Some(view) = find_editor(serial) {
+            redraw_gutter_now(&view);
+        }
+    });
+}
+
+fn redraw_gutter_now(view: &EditorTextView) {
+    view.ivars().gutter_due.set(false);
     if let Some(gutter) = view.ivars().gutter.borrow().as_ref().and_then(Weak::load) {
         gutter.setNeedsDisplay(true);
     }

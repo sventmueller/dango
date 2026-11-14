@@ -81,6 +81,8 @@ pub struct ViewIvars {
     pub(super) laid_out: Cell<Option<(u64, NSSize)>>,
     /// Counts the looks at the file on disk, so that only the answer to the latest is followed.
     pub(super) disk_asked: Cell<u64>,
+    /// The line number column, the minimap and the sticky headers draw again on the next turn of the run loop.
+    pub(super) gutter_due: Cell<bool>,
 }
 
 define_class!(
@@ -846,6 +848,7 @@ impl EditorTextView {
             watches: RefCell::new(Vec::new()),
             laid_out: Cell::new(None),
             disk_asked: Cell::new(0),
+            gutter_due: Cell::new(false),
         };
         let this = Self::alloc(mtm).set_ivars(ivars);
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));

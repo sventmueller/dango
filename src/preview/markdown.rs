@@ -53,7 +53,7 @@ pub struct Preview {
     path: PathBuf,
     pub views: Views,
     tab: Cell<isize>,
-    text: RefCell<String>,
+    text: RefCell<ide_document::Text>,
     images: RefCell<ImageStore>,
     viewer: OnceCell<Rc<dyn Viewer>>,
     owner: Cell<Option<Owner>>,
@@ -91,7 +91,7 @@ impl Preview {
             path: path.to_path_buf(),
             views,
             tab: Cell::new(-1),
-            text: RefCell::new(editor.document().text().to_string()),
+            text: RefCell::new(editor.document().text().clone()),
             images: RefCell::default(),
             viewer: OnceCell::new(),
             owner: Cell::new(None),
@@ -189,12 +189,13 @@ impl Preview {
     /// Lays the text out on a background lane; what is ready of its formulas and diagrams shows as pictures.
     pub fn lay_out(&self) {
         if let Some(editor) = self.editor() {
-            *self.text.borrow_mut() = editor.document().text().to_string();
+            *self.text.borrow_mut() = editor.document().text().clone();
         }
-        let text = self.text.borrow().clone();
+        let snapshot = self.text.borrow().clone();
         let dark = self.is_dark();
         let (key, edits) = (self.key, self.edits.get());
         js::background(move || {
+            let text = snapshot.to_string();
             let doc = splat_markdown::reader::parse(&text);
             let wanted = js::wanted(&doc, dark);
             let ready = Ready {
