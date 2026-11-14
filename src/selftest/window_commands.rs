@@ -752,5 +752,23 @@ fn full_screen(root: PathBuf) {
         format!("{kept} {back}"),
     );
     toolbar.close();
+    below_toolbar(&c, &window);
     finish(NAME);
+}
+
+/// A toolbar that reaches further down than the sidebar's safe area, as in full screen, pushes the sidebar's symbols
+/// and title below it, and they go back to the safe area once it no longer does.
+fn below_toolbar(c: &WindowController, window: &NSWindow) {
+    const REACH: f64 = 90.0;
+    let top = window.contentView().map_or(f64::NAN, |view| view.frame().size.height);
+    c.push_sidebar_below_toolbar(REACH);
+    let (_, _, pushed) = c.sidebar_top();
+    c.push_sidebar_below_toolbar(0.0);
+    let (_, safe, back) = c.sidebar_top();
+    check(
+        "a toolbar reaching below the sidebar's safe area pushes its symbols and title down, and they go back after",
+        (pushed - (top - REACH + crate::window::SIDEBAR_RAISE)).abs() < 0.5
+            && (back - (safe + crate::window::SIDEBAR_RAISE)).abs() < 0.5,
+        format!("window top {top:.1}, pushed to {pushed:.1}, back at {back:.1}, safe area at {safe:.1}"),
+    );
 }

@@ -451,6 +451,14 @@ impl WindowController {
         (tabs, safe, activity)
     }
 
+    /// Lays the sidebar out below a toolbar that reaches `toolbar` down from its top, as one in full screen does.
+    pub fn push_sidebar_below_toolbar(&self, toolbar: f64) {
+        self.keep_sidebar_below_toolbar(toolbar);
+        if let Some(sidebar) = self.ivars().sidebar.borrow().as_ref() {
+            sidebar.layoutSubtreeIfNeeded();
+        }
+    }
+
     /// The button of the files panel's header that sends `action`.
     pub fn files_header_button(&self, action: objc2::runtime::Sel) -> Option<Retained<objc2_app_kit::NSButton>> {
         fn find(view: &NSView, action: objc2::runtime::Sel) -> Option<Retained<objc2_app_kit::NSButton>> {

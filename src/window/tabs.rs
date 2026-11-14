@@ -649,9 +649,10 @@ impl TabWindow {
         self.picture.setHidden(false);
     }
 
-    /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.
-    pub fn clear_above_sidebar(&self, clear: bool) {
-        super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear);
+    /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false; answers
+    /// how far the toolbar reaches down over the sidebar.
+    pub fn clear_above_sidebar(&self, clear: bool) -> f64 {
+        super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear)
     }
 
     /// The width of the sidebar now.

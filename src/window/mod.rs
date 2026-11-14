@@ -36,8 +36,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSControl, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem, NSToolbarItemIdentifier,
-    NSView, NSWindow, NSWindowDelegate,
+    NSControl, NSLayoutConstraint, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem,
+    NSToolbarItemIdentifier, NSView, NSWindow, NSWindowDelegate,
 };
 use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
@@ -91,6 +91,8 @@ pub struct Ivars {
     inspector: inspector::State,
     /// The activity bar and the panel beside it, which the window tab in front shows.
     sidebar: RefCell<Option<Retained<NSView>>>,
+    /// Keeps the sidebar's top below the toolbar, which in full screen reaches further down than its safe area.
+    below_toolbar: RefCell<Option<Retained<NSLayoutConstraint>>>,
     /// The window tabs, in the order they opened.
     tabs: RefCell<Vec<Rc<TabWindow>>>,
     /// The window tab in front, which has the sidebar.
@@ -137,7 +139,7 @@ define_class!(
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
                     self.make_current(&tab);
-                    tab.clear_above_sidebar(true);
+                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(true));
                 }
                 ide_ui_agent::show_pending(self);
             });
@@ -147,7 +149,7 @@ define_class!(
         fn did_enter_full_screen(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
-                    tab.clear_above_sidebar(true);
+                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(true));
                 }
             });
         }
@@ -156,7 +158,7 @@ define_class!(
         fn will_exit_full_screen(&self, notification: &NSNotification) {
             guarded((), || {
                 if let Some(tab) = self.tab_of_notification(notification) {
-                    tab.clear_above_sidebar(false);
+                    self.keep_sidebar_below_toolbar(tab.clear_above_sidebar(false));
                 }
             });
         }
@@ -569,6 +571,7 @@ impl WindowController {
             panels: RefCell::default(),
             inspector: inspector::State::default(),
             sidebar: RefCell::default(),
+            below_toolbar: RefCell::default(),
             tabs: RefCell::default(),
             current: RefCell::default(),
             next_id: Cell::new(1),
@@ -617,15 +620,18 @@ impl WindowController {
         let guide = sidebar_view.safeAreaLayoutGuide();
         activity.view().setTranslatesAutoresizingMaskIntoConstraints(false);
         panels.view().setTranslatesAutoresizingMaskIntoConstraints(false);
+        let under_title_bar = activity
+            .view()
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE);
+        // Below required, so that the toolbar of full screen, which the safe area leaves out, pushes the sidebar down.
+        under_title_bar.setPriority(999.0);
         for constraint in [
             activity
                 .view()
                 .leadingAnchor()
                 .constraintEqualToAnchor(&sidebar_view.leadingAnchor()),
-            activity
-                .view()
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE),
+            under_title_bar,
             activity
                 .view()
                 .bottomAnchor()
@@ -642,7 +648,7 @@ impl WindowController {
             panels
                 .view()
                 .topAnchor()
-                .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE),
+                .constraintEqualToAnchor(&activity.view().topAnchor()),
             panels
                 .view()
                 .bottomAnchor()
@@ -650,10 +656,23 @@ impl WindowController {
         ] {
             constraint.setActive(true);
         }
+        let below_toolbar = activity
+            .view()
+            .topAnchor()
+            .constraintGreaterThanOrEqualToAnchor_constant(&sidebar_view.topAnchor(), -SIDEBAR_RAISE);
+        below_toolbar.setActive(true);
         let ivars = self.ivars();
+        *ivars.below_toolbar.borrow_mut() = Some(below_toolbar);
         *ivars.activity.borrow_mut() = Some(activity);
         *ivars.panels.borrow_mut() = Some(panels);
         *ivars.sidebar.borrow_mut() = Some(sidebar_view);
+    }
+
+    /// Keeps the sidebar's first symbol and title clear of a toolbar that reaches `toolbar` down from the sidebar's top.
+    fn keep_sidebar_below_toolbar(&self, toolbar: f64) {
+        if let Some(constraint) = self.ivars().below_toolbar.borrow().as_ref() {
+            constraint.setConstant(toolbar - SIDEBAR_RAISE);
+        }
     }
 
     /// Reads the folder, shows its tree and asks once whether the user trusts it.

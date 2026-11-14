@@ -19,15 +19,16 @@ use crate::util::{constant, guarded};
 const SLACK: f64 = 1.0;
 
 /// Clears the toolbar's background above `sidebar` while `window` is in full screen, or brings it back with `clear`
-/// false.
-pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) {
+/// false; answers how far the toolbar then reaches down over the sidebar's top, none outside full screen.
+pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) -> f64 {
     if clear && !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
-        return;
+        return 0.0;
     }
     let column = window.convertRectToScreen(sidebar.convertRect_toView(sidebar.bounds(), None));
     if column.size.width < SLACK {
-        return;
+        return 0.0;
     }
+    let mut reach = 0.0;
     let mtm = MainThreadMarker::from(window);
     for toolbar in NSApplication::sharedApplication(mtm).windows().iter() {
         // Key-value observing puts a prefix before the class's name.
@@ -46,8 +47,11 @@ pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) {
         };
         if let Some(background) = background_over(&frame, &toolbar, column) {
             background.setAlphaValue(if clear { 0.0 } else { 1.0 });
+            let below = toolbar.convertRectToScreen(background.convertRect_toView(background.bounds(), None));
+            reach = (column.origin.y + column.size.height - below.origin.y).max(0.0);
         }
     }
+    if clear { reach } else { 0.0 }
 }
 
 /// Clears the toolbar above `sidebar` again whenever `split` resizes it in full screen, where AppKit lays the toolbar's
