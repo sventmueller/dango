@@ -765,7 +765,13 @@ impl Document {
 
     /// Lexes what the lines `lines` need, visible ones first, and returns the lines whose colours changed.
     pub fn highlight(&mut self, lines: Range<usize>) -> Option<Range<usize>> {
-        self.syntax.highlight(&self.text, lines)
+        self.syntax.highlight(&self.text, lines, None)
+    }
+
+    /// `highlight`, catching up on the lines above `lines` for at most `budget`; the lines of `lines` it does not reach
+    /// are lexed from a guessed state, which `highlight_more` checks once it gets there.
+    pub fn highlight_within(&mut self, lines: Range<usize>, budget: Duration) -> Option<Range<usize>> {
+        self.syntax.highlight(&self.text, lines, Some(Instant::now() + budget))
     }
 
     /// Lexes on through the rest of the document for at most `budget`, and returns the lines whose colours changed.

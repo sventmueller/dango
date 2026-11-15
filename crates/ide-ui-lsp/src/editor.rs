@@ -32,6 +32,8 @@ pub trait Editor: Deref<Target = NSTextView> {
     fn apply_model_changes(&self, changes: &[Change]);
     /// Marks the match the search panel revealed again, which painting colours took off.
     fn paint_found(&self);
+    /// Gives the UTF-16 range `range` the editor's own colours again, which the server's then paint over.
+    fn paint_under_server(&self, range: &Range<usize>);
     /// Draws the line numbers anew, which show the diagnostics.
     fn redraw_gutter(&self);
     /// The diagnostics changed; the line ends show them anew.

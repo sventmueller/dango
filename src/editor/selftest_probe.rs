@@ -6,6 +6,7 @@
 )]
 use super::*;
 
+pub use super::highlight::colours_painted;
 pub use super::overlay::LAID_OUT;
 
 mod probe;

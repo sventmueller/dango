@@ -192,6 +192,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("snappy-tree", snappy::tree),
     plain("snappy-resize", snappy_input::resize),
     plain("snappy-tabs", snappy_input::tabs),
+    plain("snappy-recolor", snappy_recolor::run),
     limited("snappy-tests", snappy_input::tests, Duration::from_secs(400)),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),

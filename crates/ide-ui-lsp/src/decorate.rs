@@ -342,17 +342,21 @@ pub fn paint_due(view: &dyn Editor) {
     finish_paint(view);
 }
 
-/// Sets the colours of `range` from the view's tokens.
+/// Sets the colours of `range` from the editor's own colours and the view's tokens over them.
 fn paint_range(view: &dyn Editor, range: &Range<usize>) {
+    view.paint_under_server(range);
+    paint_tokens(view, range);
+}
+
+/// Paints the view's tokens over `range` again, after the editor painted its own colours there.
+pub fn paint_tokens(view: &dyn Editor, range: &Range<usize>) {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return;
     };
-    let Some(whole) = text_range(&content, range) else {
+    let Ok(state) = view.lsp().try_borrow() else {
         return;
     };
     let foreground = constant!(NSForegroundColorAttributeName);
-    layout.removeRenderingAttribute_forTextRange(foreground, &whole);
-    let state = view.lsp().borrow();
     for painted in overlapping(&state.tokens, range) {
         if let Some(range) = text_range(&content, &painted.range) {
             let color: Retained<AnyObject> = crate::host::palette_color(painted.token).into();

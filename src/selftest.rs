@@ -102,6 +102,7 @@ mod settings_sync;
 mod settings_toolbar;
 mod snappy;
 mod snappy_input;
+mod snappy_recolor;
 mod split;
 mod sticky;
 mod stored_rules;

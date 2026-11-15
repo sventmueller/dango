@@ -10,7 +10,7 @@ use super::{check, finish, helpers};
 use crate::window::{self, Panel};
 
 /// The longest a main thread step of a measured part may take.
-const BUDGET: Duration = Duration::from_millis(50);
+pub(super) const BUDGET: Duration = Duration::from_millis(50);
 /// How long a big folder may take to read on a busy Mac.
 const LISTING: Duration = Duration::from_secs(20);
 

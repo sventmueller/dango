@@ -73,6 +73,10 @@ impl Editor for EditorTextView {
         EditorTextView::paint_found(self);
     }
 
+    fn paint_under_server(&self, range: &Range<usize>) {
+        super::highlight::paint_under_server(self, range);
+    }
+
     fn redraw_gutter(&self) {
         super::redraw_gutter(self);
     }
@@ -197,6 +201,10 @@ impl Editor for Held {
 
     fn paint_found(&self) {
         self.0.paint_found();
+    }
+
+    fn paint_under_server(&self, range: &Range<usize>) {
+        Editor::paint_under_server(&*self.0, range);
     }
 
     fn redraw_gutter(&self) {

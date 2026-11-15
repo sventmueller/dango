@@ -29,8 +29,8 @@ pub struct ViewIvars {
     pub(crate) indent: RefCell<String>,
     /// The dirty state the tab shows, to update it only on a change.
     pub(super) shown_dirty: Cell<bool>,
-    /// Edits whose lines wait for colours.
-    pub(super) recolor_from: Cell<Option<usize>>,
+    /// The lines whose colours wait to be painted.
+    pub(super) unpainted: RefCell<super::highlight::Unpainted>,
     /// Markdown's font traits were painted into the storage, which another language takes out again.
     pub(super) styled: Cell<bool>,
     /// The line number column, redrawn when lines change.
@@ -304,7 +304,10 @@ define_class!(
         fn viewport_did_layout(&self, controller: &AnyObject) {
             // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
             let _: () = unsafe { msg_send![super(self), textViewportLayoutControllerDidLayout: controller] };
-            guarded((), || super::overlay::laid_out(self));
+            guarded((), || {
+                super::overlay::laid_out(self);
+                super::highlight::laid_out(self);
+            });
         }
 
         #[unsafe(method(mouseMoved:))]
@@ -822,7 +825,7 @@ impl EditorTextView {
             font_size: Cell::new(13.0),
             indent: RefCell::new("    ".into()),
             shown_dirty: Cell::new(false),
-            recolor_from: Cell::new(None),
+            unpainted: RefCell::default(),
             styled: Cell::new(false),
             gutter: RefCell::new(None),
             lsp: RefCell::new(ide_ui_lsp::ViewState::new(serial)),
@@ -903,12 +906,7 @@ impl EditorTextView {
         }
         let mut lines = false;
         for change in changes {
-            let from = self
-                .ivars()
-                .recolor_from
-                .get()
-                .map_or(change.start.line, |earlier| earlier.min(change.start.line));
-            self.ivars().recolor_from.set(Some(from));
+            super::highlight::edited(self, change);
             super::fold::shift(self, change);
             super::multi::shift(self, change);
             super::insets::shift(self, change);

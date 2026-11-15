@@ -389,6 +389,7 @@ fn header_line(editor: &EditorTextView, line: usize) -> Option<objc2_core_founda
     );
     let piece = storage.attributedSubstringFromRange(range);
     let copy = NSMutableAttributedString::initWithAttributedString(NSMutableAttributedString::alloc(), &piece);
+    super::highlight::paint_copy(editor, line, &copy);
     with_core_text_colors(&copy);
     Some(core_text_line(&copy))
 }

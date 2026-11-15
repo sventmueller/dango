@@ -63,7 +63,8 @@ use ide_ui_common::util::{main_after, main_soon};
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
 pub use agent::{AgentDiagnostics, agent_diagnostics};
 pub use decorate::{
-    LineMarks, Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, text_range,
+    LineMarks, Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, paint_tokens,
+    text_range,
 };
 pub use host::{Host, State as LspState, install};
 

@@ -5,7 +5,7 @@ use std::path::Path;
 use ide_document::recovery::RecoveryId;
 use objc2::DefinedClass;
 use objc2::rc::{Retained, Weak};
-use objc2_app_kit::{NSColor, NSFontAttributeName, NSForegroundColorAttributeName};
+use objc2_app_kit::{NSColor, NSFontAttributeName};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 
 use super::super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
@@ -139,28 +139,30 @@ pub fn click_change(view: &EditorTextView, line: usize) -> bool {
 /// Whether the first `fn` of `text` is shown in a keyword colour.
 pub fn keyword_coloured(view: &EditorTextView, text: &str) -> bool {
     let Some(at) = text.find("fn ") else { return false };
-    let Some(storage) = view.storage() else { return false };
-    let at = text[..at].encode_utf16().count();
-    let key = constant!(NSForegroundColorAttributeName);
-    // SAFETY: The index lies inside the text; no effective range is asked for.
-    let color = unsafe { storage.attribute_atIndex_effectiveRange(key, at, std::ptr::null_mut()) };
-    let expected: Retained<objc2::runtime::AnyObject> =
-        style::token_color(splat_markdown::code::CodeToken::Keyword).into();
-    color.is_some_and(|c| std::ptr::eq(&*c, &*expected))
+    coloured_as(
+        view,
+        text[..at].encode_utf16().count(),
+        splat_markdown::code::CodeToken::Keyword,
+    )
+}
+
+/// Whether the character at UTF-16 offset `at` is shown in the colour of `token`.
+pub fn coloured_as(view: &EditorTextView, at: usize, token: splat_markdown::code::CodeToken) -> bool {
+    if view.storage().is_none_or(|storage| at >= storage.length()) {
+        return false;
+    }
+    let expected: Retained<objc2::runtime::AnyObject> = style::token_color(token).into();
+    super::super::highlight::shown_color(view, at).is_some_and(|c| std::ptr::eq(&*c, &*expected))
 }
 
 /// The colour at UTF-16 offset `at` in sRGB as the view's appearance shows it, and whether the font there is bold.
 pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
     use objc2_app_kit::{NSAppearanceCustomization, NSColorSpace, NSFont, NSFontDescriptorSymbolicTraits};
     let storage = view.storage()?;
-    let (color_key, font_key) = (
-        constant!(NSForegroundColorAttributeName),
-        constant!(NSFontAttributeName),
-    );
-    // SAFETY: The index lies inside the text; no effective range is asked for.
-    let color = unsafe { storage.attribute_atIndex_effectiveRange(color_key, at, std::ptr::null_mut()) }?;
-    // SAFETY: The same index inside the text, and a null pointer for the effective range, which the method allows.
-    let font = unsafe { storage.attribute_atIndex_effectiveRange(font_key, at, std::ptr::null_mut()) }?;
+    let color = super::super::highlight::shown_color(view, at)?;
+    // SAFETY: The index lies inside the text, and a null pointer for the effective range, which the method allows.
+    let font =
+        unsafe { storage.attribute_atIndex_effectiveRange(constant!(NSFontAttributeName), at, std::ptr::null_mut()) }?;
     let color = color.downcast::<NSColor>().ok()?;
     let rgb = std::cell::Cell::new(None);
     view.effectiveAppearance()
