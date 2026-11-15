@@ -368,9 +368,23 @@ fn undo_and_redo_go_to_the_editor_and_ex_commands_to_the_app() {
     assert_eq!(vim.keys(":wq<Enter>").effects, [Effect::Save, Effect::Close(true)]);
     assert_eq!(vim.keys(":x<Enter>").effects, [Effect::Save, Effect::Close(true)]);
     assert_eq!(vim.keys(":noh<Enter>").effects, [Effect::Highlight(None)]);
+    assert_eq!(
+        vim.keys(":vsplit<Enter>").effects,
+        [Effect::Note(Note::UnsupportedCommand("vsplit".into()))]
+    );
+}
+
+#[test]
+fn a_search_that_fails_says_why_as_a_note() {
+    let mut vim = Vim::new("abc\n");
+    assert_eq!(vim.keys("/<Enter>").effects, [Effect::Note(Note::NoPreviousPattern)]);
+    assert_eq!(
+        vim.keys("/zz<Enter>").effects,
+        [Effect::Note(Note::PatternNotFound("zz".into()))]
+    );
     assert!(matches!(
-        vim.keys(":vsplit<Enter>").effects.as_slice(),
-        [Effect::Message(_)]
+        vim.keys(":s/(/x/<Enter>").effects.as_slice(),
+        [Effect::Note(Note::InvalidPattern { pattern, .. })] if pattern == "("
     ));
 }
 

@@ -9,13 +9,13 @@ use std::cell::Cell;
 
 use ide_core::settings::{Settings, keys};
 use ide_document::{Edit, Unit};
-use ide_vim::{Effect, Mode, Outcome, Vim};
+use ide_vim::{Effect, Mode, Note, Outcome, Vim};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSColor, NSEvent, NSEventModifierFlags, NSMenuItem, NSTextField};
 use objc2_foundation::{NSRange, NSString};
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use super::view::EditorTextView;
 use crate::util::OnDrop;
@@ -390,7 +390,7 @@ fn perform(view: &EditorTextView, effect: Effect) {
             // SAFETY: The window's close command with no sender, as the menu item sends it to the first responder.
             unsafe { app.sendAction_to_from(sel!(performClose:), None, None) };
         }
-        Effect::Message(text) => ide_ui_lsp::status::note(view, &text),
+        Effect::Note(note) => ide_ui_lsp::status::note(view, &say(&note)),
         Effect::Copy(text) => {
             let pasteboard = objc2_app_kit::NSPasteboard::generalPasteboard();
             pasteboard.clearContents();
@@ -401,6 +401,31 @@ fn perform(view: &EditorTextView, effect: Effect) {
         }
         Effect::Highlight(pattern) => highlight(view, pattern.as_deref()),
         Effect::Indent(lines, levels) => super::indent::shift_lines(view, lines, levels),
+    }
+}
+
+/// What `note` says in the user's language: Vim's words, with Vim's error number where Vim has the message so that
+/// `:help` finds it.
+fn say(note: &Note) -> String {
+    match note {
+        Note::PatternNotFound(pattern) => tf("E486: Muster nicht gefunden: {}", &[pattern.as_str()]),
+        Note::NoPreviousPattern => t("E35: Kein vorheriger regulärer Ausdruck").to_string(),
+        Note::InvalidPattern { pattern, detail } => {
+            crate::diag::report("a Vim pattern", detail);
+            tf("E383: Unzulässiges Suchmuster: {}", &[pattern.as_str()])
+        }
+        Note::UnsupportedCommand(command) => tf("Befehl nicht unterstützt: {}", &[command.as_str()]),
+        Note::NoWordUnderCursor => t("E348: Keine Zeichenkette unter dem Cursor").to_string(),
+        Note::NoSelection => t("Keine Auswahl").to_string(),
+        Note::MarkNotSet => t("E20: Markierung nicht gesetzt").to_string(),
+        Note::ReadOnly => t("E21: Kann keine Änderungen machen").to_string(),
+        Note::NoPreviousMacro => t("E748: Kein bereits verwendetes Register").to_string(),
+        Note::UnsupportedRegister => t("E354: Ungültiger Registername").to_string(),
+        Note::InvalidDigraph(first, second) => tf("Unbekannter Digraph: {}", &[&format!("{first}{second}")]),
+        Note::Other(detail) => {
+            crate::diag::report("a Vim command", detail);
+            t("Das kann der Vim-Modus nicht").to_string()
+        }
     }
 }
 

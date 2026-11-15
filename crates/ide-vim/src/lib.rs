@@ -19,6 +19,7 @@
 
 #![warn(missing_docs)]
 
+mod note;
 mod search;
 
 use std::str::FromStr;
@@ -36,6 +37,7 @@ use modalkit::key::TerminalKey;
 use modalkit::keybindings::BindingMachine;
 use modalkit::prelude::{EditTarget, IndentChange, RepeatType, ViewportContext};
 
+pub use note::Note;
 use search::Search;
 
 /// The mode the keys are in, as the status bar shows it.
@@ -81,7 +83,7 @@ pub enum Effect {
     /// Close the editor, as `:q` asks; with `true` after saving it, as `:wq` and `:x` ask.
     Close(bool),
     /// Say this in the status bar, such as a command Vim does not support here.
-    Message(String),
+    Note(Note),
     /// Mark the matches of this pattern, or none for `:noh`.
     Highlight(Option<String>),
     /// Put this text on the system clipboard, which a command wrote into `"+` or `"*`, or into the unnamed register
@@ -224,7 +226,7 @@ impl Vim {
                     effects.push(Effect::Highlight(Some(pattern)));
                 }
                 search::Step::Command(command) => effects.extend(self.ex(&command)),
-                search::Step::Failed(miss) => effects.push(Effect::Message(miss.to_string())),
+                search::Step::Failed(note) => effects.push(Effect::Note(note)),
             }
             return Outcome {
                 replacements: Vec::new(),
@@ -315,11 +317,11 @@ impl Vim {
             }
             Action::Editor(editor) => match self.buffer.editor_command(editor, &ctx, &mut self.store) {
                 Ok(_) => Vec::new(),
-                Err(error) => vec![Effect::Message(error.to_string())],
+                Err(error) => vec![Effect::Note(Note::of_edit(&error))],
             },
             Action::Macro(act) => match self.keys.macro_command(act, context, &mut self.store) {
                 Ok(_) => Vec::new(),
-                Err(error) => vec![Effect::Message(error.to_string())],
+                Err(error) => vec![Effect::Note(Note::of_edit(&error))],
             },
             Action::Repeat(kind) => {
                 self.keys.repeat(kind.clone(), Some(context.clone()));
@@ -327,7 +329,7 @@ impl Vim {
             }
             Action::Jump(list, dir, count) => match self.buffer.jump(*list, *dir, context.resolve(count), &ctx) {
                 Ok(_) => Vec::new(),
-                Err(error) => vec![Effect::Message(error.to_string())],
+                Err(error) => vec![Effect::Note(Note::of_ui(&error))],
             },
             _ => Vec::new(),
         }
@@ -370,8 +372,8 @@ impl Vim {
                     self.set_cursor(cursor.0, 0);
                     Vec::new()
                 }
-                Some(Err(miss)) => vec![Effect::Message(miss.to_string())],
-                None => vec![Effect::Message(format!("unsupported: :{command}"))],
+                Some(Err(note)) => vec![Effect::Note(note)],
+                None => vec![Effect::Note(Note::UnsupportedCommand(command.to_string()))],
             },
         }
     }

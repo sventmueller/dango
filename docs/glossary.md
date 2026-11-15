@@ -84,6 +84,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | diagnostics at line end | a line's most serious diagnostic shown after its end (E130) |
 | Vim-Modus | Vim mode | the editor's modal editing after Vim, switched on in the Editor menu (E104–E106) |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK | Vim's mode in the status bar, in capitals and short as Vim shows it; a language whose Vim has its own message catalog takes the names from there (for Normal, which Vim leaves blank, the word the catalog uses for that mode), the others keep Vim's English names |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Pattern not found: {} … | Vim's messages in the status bar, with Vim's error number in front so that `:help E486` finds it; a language whose Vim has its own message catalog takes the wording from there, the others translate Vim's English; what names an option or a value Dango has not (`'modifiable'`, the register's name) is left out, and a message Vim does not have (no selection, unknown digraph, what the Vim mode cannot do) has no number, nor has Befehl nicht unterstützt: {}, which docs/phase-12.md words for every Ex command beyond the few the Vim mode knows |
 | Vorschlag | suggestion | what edit prediction proposes to write next, in grey until Tab takes it (E92) |
 | Vorhersage | Prediction | edit prediction: making suggestions while typing, and its settings tab |
 | Ausschlussliste | exclusion list | patterns of file names that never go to a provider |
@@ -252,6 +253,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | التشخيصات في نهاية السطر |
 | Vim-Modus | وضع Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: لم يُعثر على النمط: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | اقتراح |
 | Vorhersage | التنبؤ |
 | Ausschlussliste | قائمة الاستبعاد |
@@ -412,6 +414,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnòstics al final de la línia |
 | Vim-Modus | Mode Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERIR / SUBSTITUIR / VISUAL / VISUAL LÍNIA / VISUAL BLOC (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: No s’ha trobat el patró: {} … (as this language's Vim says them) |
 | Vorschlag | suggeriment |
 | Vorhersage | Predicció |
 | Ausschlussliste | llista d’exclusió |
@@ -571,6 +574,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostika na konci řádku |
 | Vim-Modus | Režim Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Vzor nenalezen: {} … (as this language's Vim says them; E748 translated, which the old catalog lacks, and E20 given the noun it drops) |
 | Vorschlag | návrh |
 | Vorhersage | Předpověď |
 | Ausschlussliste | seznam vyloučení |
@@ -728,6 +732,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnoser ved linjeslut |
 | Vim-Modus | Vim-tilstand |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INDSÆT / ERSTAT / VISUEL / VISUEL LINJE / VISUEL BLOK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Mønster ikke fundet: {} … (as this language's Vim says them) |
 | Vorschlag | forslag |
 | Vorhersage | Forudsigelse |
 | Ausschlussliste | udelukkelsesliste |
@@ -888,6 +893,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Διαγνωστικά στο τέλος γραμμής |
 | Vim-Modus | Λειτουργία Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Δεν βρέθηκε το μοτίβο: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | πρόταση |
 | Vorhersage | Πρόβλεψη |
 | Ausschlussliste | λίστα εξαιρέσεων |
@@ -1048,6 +1054,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnósticos al final de la línea |
 | Vim-Modus | Modo Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERTAR / REEMPLAZAR / VISUAL / LÍNEA VISUAL / BLOQUE VISUAL (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Patrón no encontrado: {} … (as this language's Vim says them) |
 | Vorschlag | propuesta |
 | Vorhersage | Predicción |
 | Ausschlussliste | lista de exclusión |
@@ -1209,6 +1216,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostiikka rivin lopussa |
 | Vim-Modus | Vim-tila |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAALI / SYÖTTÖ / KORVAUS / VALINTA / VALINTARIVI / VALINTALOHKO (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Kuviota ei löydy: {} … (as this language's Vim says them) |
 | Vorschlag | ehdotus |
 | Vorhersage | Ennustus |
 | Ausschlussliste | poissulkemisluettelo |
@@ -1367,6 +1375,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostics en fin de ligne |
 | Vim-Modus | Mode Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERTION / REMPLACEMENT / VISUEL / VISUEL LIGNE / VISUEL BLOC (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Motif introuvable : {} … (as this language's Vim says them) |
 | Vorschlag | suggestion |
 | Vorhersage | Prédiction |
 | Ausschlussliste | liste d’exclusion |
@@ -1529,6 +1538,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | אבחונים בסוף השורה |
 | Vim-Modus | מצב Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: התבנית לא נמצאה: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | הצעה |
 | Vorhersage | חיזוי |
 | Ausschlussliste | רשימת החרגה |
@@ -1687,6 +1697,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | पंक्ति के अंत में डायग्नॉस्टिक्स |
 | Vim-Modus | Vim मोड |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: पैटर्न नहीं मिला: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | सुझाव |
 | Vorhersage | पूर्वानुमान |
 | Ausschlussliste | बहिष्करण सूची |
@@ -1846,6 +1857,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Dijagnostika na kraju retka |
 | Vim-Modus | Način rada Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Uzorak nije pronađen: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | prijedlog |
 | Vorhersage | Predviđanje |
 | Ausschlussliste | popis izuzeća |
@@ -2007,6 +2019,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnosztika a sor végén |
 | Vim-Modus | Vim mód |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMÁL / BESZÚR / CSERE / VIZUÁLIS / VIZUÁLIS SOR / VIZUÁLIS BLOKK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Nincs találat: {} … (as this language's Vim says them) |
 | Vorschlag | javaslat |
 | Vorhersage | Előrejelzés |
 | Ausschlussliste | kizárási lista |
@@ -2166,6 +2179,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostik di Akhir Baris |
 | Vim-Modus | Mode Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Pola tidak ditemukan: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | saran |
 | Vorhersage | Prediksi |
 | Ausschlussliste | daftar pengecualian |
@@ -2325,6 +2339,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostica a fine riga |
 | Vim-Modus | Modalità Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMALE / INSERISCI / SOSTITUISCI / VISUALE / VISUALE RIGA / VISUALE BLOCCO (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Espressione non trovata: {} … (as this language's Vim says them) |
 | Vorschlag | proposta |
 | Vorhersage | Previsione |
 | Ausschlussliste | elenco di esclusione |
@@ -2485,6 +2500,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | 行末に診断を表示 |
 | Vim-Modus | Vimモード |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | ノーマル / 挿入 / 置換 / ビジュアル / ビジュアル 行 / ビジュアル 矩形 (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: パターンは見つかりませんでした: {} … (as this language's Vim says them) |
 | Vorschlag | 提案 |
 | Vorhersage | 予測 |
 | Ausschlussliste | 除外リスト |
@@ -2644,6 +2660,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | 줄 끝에 진단 표시 |
 | Vim-Modus | Vim 모드 |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names; Korean Vim's 끼워넣기 is not the word macOS uses for insert) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: 패턴을 찾을 수 없습니다: {} … (as this language's Vim says them; E748 translated, which the catalog leaves open) |
 | Vorschlag | 제안 |
 | Vorhersage | 예측 |
 | Ausschlussliste | 제외 목록 |
@@ -2802,6 +2819,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostik di Hujung Baris |
 | Vim-Modus | Mod Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Corak tidak ditemui: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | cadangan |
 | Vorhersage | Ramalan |
 | Ausschlussliste | senarai pengecualian |
@@ -2961,6 +2979,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnoses aan regeleinde |
 | Vim-Modus | Vim-modus |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAAL / INVOEGEN / VERVANGEN / VISUEEL / VISUELE REGEL / VISUEEL BLOK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: patroon niet gevonden: {} … (as this language's Vim says them; E348, E748 and E354 translated, which the catalog leaves open) |
 | Vorschlag | voorstel |
 | Vorhersage | Voorspelling |
 | Ausschlussliste | uitsluitingslijst |
@@ -3120,6 +3139,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostikk på linjeslutt |
 | Vim-Modus | Vim-modus |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / SETT INN / ERSTATT / VISUELL / VISUELL LINJE / VISUELL BLOKK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Fant ikke søketeksten: {} … (as this language's Vim says them) |
 | Vorschlag | forslag |
 | Vorhersage | Forutsigelse |
 | Ausschlussliste | utelatelsesliste |
@@ -3279,6 +3299,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostyka na końcu wiersza |
 | Vim-Modus | Tryb Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMALNY / WPROWADZANIE / ZAMIANA / WIZUALNY / WIZUALNY LINIOWY / WIZUALNY BLOKOWY (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Nie znaleziono wzorca: {} … (as this language's Vim says them) |
 | Vorschlag | propozycja |
 | Vorhersage | Przewidywanie |
 | Ausschlussliste | lista wykluczeń |
@@ -3439,6 +3460,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnósticos no Fim da Linha |
 | Vim-Modus | Modo Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERÇÃO / SUBSTITUIÇÃO / VISUAL / VISUAL/LINHA / VISUAL/BLOCO (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Padrão não encontrado: {} … (as this language's Vim says them) |
 | Vorschlag | sugestão |
 | Vorhersage | Previsão |
 | Ausschlussliste | lista de exclusão |
@@ -3599,6 +3621,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnósticos no fim da linha |
 | Vim-Modus | Modo Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Padrão não encontrado: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | proposta |
 | Vorhersage | Previsão |
 | Ausschlussliste | lista de exclusão |
@@ -3759,6 +3782,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostice la sfârșitul rândului |
 | Vim-Modus | Mod Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Modelul nu a fost găsit: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | propunere |
 | Vorhersage | Predicție |
 | Ausschlussliste | listă de excludere |
@@ -3919,6 +3943,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Диагностика в конце строки |
 | Vim-Modus | Режим Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names; Russian Vim's names run to three words) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Не найдены совпадения с образцом {} … (as this language's Vim says them) |
 | Vorschlag | предложение |
 | Vorhersage | Предсказание |
 | Ausschlussliste | список исключений |
@@ -4079,6 +4104,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostika na konci riadka |
 | Vim-Modus | Režim Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMÁLNY / VLOŽIŤ / NAHRADIŤ / VIZUÁLNY / VIZUÁLNY RIADOK / VIZUÁLNY BLOK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Vzor nenájdený: {} … (as this language's Vim says them) |
 | Vorschlag | návrh |
 | Vorhersage | Predpoveď |
 | Ausschlussliste | zoznam vylúčení |
@@ -4240,6 +4266,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostika na koncu vrstice |
 | Vim-Modus | Način Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Vzorca ni mogoče najti: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | predlog |
 | Vorhersage | Napovedovanje |
 | Ausschlussliste | seznam izključitev |
@@ -4399,6 +4426,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Diagnostik vid radslut |
 | Vim-Modus | Vim-läge |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INFOGA / ERSÄTT / VISUELL / VISUELL RAD / VISUELLT BLOCK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Mönster hittades inte: {} … (as this language's Vim says them) |
 | Vorschlag | förslag |
 | Vorhersage | Förutsägelse |
 | Ausschlussliste | undantagslista |
@@ -4559,6 +4587,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | การวินิจฉัยที่ท้ายบรรทัด |
 | Vim-Modus | โหมด Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / INSERT / REPLACE / VISUAL / VISUAL LINE / VISUAL BLOCK (Vim's English names) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: ไม่พบรูปแบบ: {} … (translated from Vim's English, Vim's numbers kept) |
 | Vorschlag | ข้อเสนอ |
 | Vorhersage | การคาดการณ์ |
 | Ausschlussliste | รายการยกเว้น |
@@ -4720,6 +4749,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Satır Sonunda Tanılamalar |
 | Vim-Modus | Vim Modu |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / EKLE / DEĞİŞTİR / GÖRSEL / GÖRSEL SATIR / GÖRSEL BLOK (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Dizgi bulunamadı: {} … (as this language's Vim says them) |
 | Vorschlag | öneri |
 | Vorhersage | Tahmin |
 | Ausschlussliste | hariç tutma listesi |
@@ -4879,6 +4909,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Діагностика в кінці рядка |
 | Vim-Modus | Режим Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | НОРМАЛЬНИЙ / ВСТАВИТИ / ЗАМІНА / ВИБІР / ВИБІР РЯДКІВ / ВИБІР БЛОКУ (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Зразок не знайдено: {} … (as this language's Vim says them) |
 | Vorschlag | пропозиція |
 | Vorhersage | Передбачення |
 | Ausschlussliste | список винятків |
@@ -5038,6 +5069,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | Chẩn đoán ở cuối dòng |
 | Vim-Modus | Chế độ Vim |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | NORMAL / CHÈN / THAY THẾ / VISUAL / DÒNG VISUAL / KHỐI VISUAL (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: Không tìm thấy mẫu (pattern): {} … (as this language's Vim says them; E748 translated, which the catalog leaves open) |
 | Vorschlag | đề xuất |
 | Vorhersage | Dự đoán |
 | Ausschlussliste | danh sách loại trừ |
@@ -5196,6 +5228,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | 在行尾显示诊断 |
 | Vim-Modus | Vim 模式 |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | 正常 / 插入 / 替换 / 可视 / 可视 行 / 可视 块 (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: 找不到模式：{} … (as this language's Vim says them) |
 | Vorschlag | 建议 |
 | Vorhersage | 预测 |
 | Ausschlussliste | 排除列表 |
@@ -5355,6 +5388,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Diagnosen am Zeilenende | 在行尾顯示診斷 |
 | Vim-Modus | Vim 模式 |
 | NORMAL / EINFÜGEN / ERSETZEN / VISUELL / VISUELL ZEILE / VISUELL BLOCK | 一般 / 插入 / 取代 / 選取 / 選取 行 / 選取 區塊 (as this language's Vim shows them) |
+| E486: Muster nicht gefunden: {} … (Vim's messages) | E486: 找不到 {} … (as this language's Vim says them; E748 translated, which the catalog leaves open) |
 | Vorschlag | 建議 |
 | Vorhersage | 預測 |
 | Ausschlussliste | 排除列表 |
