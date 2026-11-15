@@ -23,7 +23,7 @@ const ASK_AGAIN: Duration = Duration::from_secs(2);
 const WAIT: Duration = Duration::from_secs(150);
 /// How long the overlay may take to draw hints that arrived.
 const DRAWN: Duration = Duration::from_secs(5);
-/// The whole scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`.
+/// The whole scenario's time, below its limit in `src/selftest/scenarios.rs`.
 const BUDGET: Duration = Duration::from_secs(560);
 
 static END: helpers::Deadline = helpers::Deadline::new();

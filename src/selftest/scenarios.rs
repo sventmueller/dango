@@ -164,7 +164,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("editor-commands", editor_commands::run),
     plain("edit-prediction", predict::run),
     plain("editor-insets", insets::run),
-    plain("inlay-hints", inlay::run),
+    limited("inlay-hints", inlay::run, Duration::from_secs(600)),
     limited("inlay-repo", inlay_repo::run, LANGUAGE_SERVER),
     plain("editor-blame", blame::run),
     plain("editor-minimap", minimap::run),
