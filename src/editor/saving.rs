@@ -154,7 +154,9 @@ fn saved(view: &EditorTextView, new_path: Option<&Path>) {
         crate::session::changed();
     }
     if let (Some(path), Some(controller)) = (new_path, view.controller()) {
-        controller.set_tab_title(view.ivars().tab.get(), &super::tab_title(path));
+        if let Some(tab) = view.ivars().tab.get() {
+            controller.set_tab_title(tab, &super::tab_title(path));
+        }
         let language = ide_document::syntax::Language::detect(Some(path), "");
         view.document_mut().set_language(language);
         super::highlight::recolor_all(view);

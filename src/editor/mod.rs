@@ -47,7 +47,7 @@ use objc2_foundation::{NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
 
 use crate::util::{FlagGuard, constant, ns};
-use crate::window::{TabKind, WindowController};
+use crate::window::{TabId, TabKind, WindowController};
 pub use view::EditorTextView;
 
 /// The state of the editors beside the list of them.
@@ -137,7 +137,7 @@ fn lay_out_whole(
 }
 
 /// The tab that shows `view`.
-pub fn tab_of(view: &EditorTextView) -> isize {
+pub fn tab_of(view: &EditorTextView) -> Option<TabId> {
     view.ivars().tab.get()
 }
 
@@ -228,8 +228,12 @@ pub fn set_server_folds(view: &EditorTextView, ranges: Option<Vec<(usize, usize)
 
 /// The file of `view` got a new name, as a server's rename of a file did: the tab follows.
 pub fn path_changed(view: &EditorTextView) {
-    if let (Some(path), Some(controller)) = (view.document().path().map(Path::to_path_buf), view.controller()) {
-        controller.set_tab_title(view.ivars().tab.get(), &tab_title(&path));
+    if let (Some(path), Some(controller), Some(tab)) = (
+        view.document().path().map(Path::to_path_buf),
+        view.controller(),
+        view.ivars().tab.get(),
+    ) {
+        controller.set_tab_title(tab, &tab_title(&path));
     }
     ide_ui_lsp::opened(view);
     changes::reload(view, true);
@@ -338,10 +342,10 @@ pub fn formatting_options(view: &EditorTextView) -> (u32, bool) {
 }
 
 /// The editor in tab `id` of `controller` is about to close.
-pub fn closing(controller: &WindowController, id: isize) {
+pub fn closing(controller: &WindowController, id: TabId) {
     let view = open_editors()
         .into_iter()
-        .find(|v| v.ivars().tab.get() == id && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
+        .find(|v| v.ivars().tab.get() == Some(id) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
     if let Some(view) = view {
         ide_ui_lsp::closed(&*view);
         crate::markdown::closing(&view);
@@ -581,7 +585,7 @@ fn add_tab(
     } else {
         controller.add_tab(TabKind::Editor, key, title, container)
     };
-    view.ivars().tab.set(id);
+    view.ivars().tab.set(Some(id));
     crate::context::app().editors().borrow_mut().push(Weak::from(&*view));
     highlight::recolor_all(&view);
     ide_ui_lsp::opened(&*view);
@@ -653,8 +657,8 @@ pub(crate) fn update_dirty(view: &EditorTextView) {
         return;
     }
     view.ivars().shown_dirty.set(dirty);
-    if let Some(controller) = view.controller() {
-        controller.set_tab_dirty(view.ivars().tab.get(), dirty);
+    if let (Some(controller), Some(tab)) = (view.controller(), view.ivars().tab.get()) {
+        controller.set_tab_dirty(tab, dirty);
     }
 }
 
@@ -773,14 +777,14 @@ pub fn check_recovered(ids: &[RecoveryId]) {
     }
 }
 
-fn editor_in(controller: &WindowController, id: isize) -> Option<Retained<EditorTextView>> {
+fn editor_in(controller: &WindowController, id: TabId) -> Option<Retained<EditorTextView>> {
     open_editors()
         .into_iter()
-        .find(|v| v.ivars().tab.get() == id && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .find(|v| v.ivars().tab.get() == Some(id) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
 }
 
 /// The file and the copy against a crash of the editor in tab `id` of `controller`, if that tab is an editor.
-pub fn tab_document(controller: &WindowController, id: isize) -> Option<(Option<PathBuf>, RecoveryId)> {
+pub fn tab_document(controller: &WindowController, id: TabId) -> Option<(Option<PathBuf>, RecoveryId)> {
     let view = editor_in(controller, id)?;
     let path = view.document().path().map(Path::to_path_buf);
     Some((path, view.ivars().recovery.clone()))
@@ -796,7 +800,7 @@ pub fn store_copies(controller: &WindowController) {
 }
 
 /// Whether the editor in tab `id` of `controller` may close: saved, or the user said so.
-pub fn may_close(controller: &WindowController, id: isize) -> bool {
+pub fn may_close(controller: &WindowController, id: TabId) -> bool {
     let Some(view) = editor_in(controller, id) else {
         return true;
     };
@@ -873,10 +877,10 @@ fn unsaved_may_go(mtm: MainThreadMarker) -> bool {
 }
 
 /// The editor of the document `tab` in `controller`'s window.
-pub fn editor_of_tab(controller: &WindowController, tab: isize) -> Option<Retained<EditorTextView>> {
+pub fn editor_of_tab(controller: &WindowController, tab: TabId) -> Option<Retained<EditorTextView>> {
     editors_in(controller)
         .into_iter()
-        .find(|view| view.ivars().tab.get() == tab)
+        .find(|view| view.ivars().tab.get() == Some(tab))
 }
 
 /// The editors of `controller`'s window.

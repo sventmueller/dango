@@ -106,7 +106,7 @@ fn open_preview(root: PathBuf) {
     check(
         "a Markdown file opens with its preview right of the editor in its tab, and the editor stays the focused one",
         tabs.iter().any(|docs| docs == &["doc.md", "Vorschau: doc.md"])
-            && controller.selected_tab() == Some(crate::editor::tab_of(&view)),
+            && crate::editor::tab_of(&view).is_some_and(|editor| controller.selected_tab() == Some(editor)),
         format!("{tabs:?}, focused {:?}", controller.selected_tab()),
     );
     let path = root.join("doc.md");

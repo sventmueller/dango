@@ -8,8 +8,8 @@ use objc2_app_kit::{NSView, NSWindow};
 use splat_i18n::t;
 
 use super::{
-    ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, SearchPanel, WindowController, activity_bar::ActivityBar,
-    files::FileTree, new_tab_button, panels, panels::Panels, tabs,
+    ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, SearchPanel, TabId, WindowController,
+    activity_bar::ActivityBar, files::FileTree, new_tab_button, panels, panels::Panels, tabs,
 };
 use crate::util::ns;
 
@@ -131,7 +131,7 @@ impl WindowController {
     }
 
     /// The numbers of each window tab's documents.
-    pub fn window_tab_ids(&self) -> Vec<Vec<isize>> {
+    pub fn window_tab_ids(&self) -> Vec<Vec<TabId>> {
         self.ordered_tabs()
             .iter()
             .map(|tab| tab.documents().iter().map(|doc| doc.id).collect())
@@ -225,7 +225,7 @@ impl WindowController {
     }
 
     /// Sets the left document's share of the tab that shows the document `id` beside another.
-    pub fn set_share_of(&self, id: isize, share: f64) {
+    pub fn set_share_of(&self, id: TabId, share: f64) {
         if let Some(tab) = self.tab_of_document(id) {
             tab.set_share(share);
         }
@@ -293,7 +293,7 @@ impl WindowController {
     }
 
     /// The narrowest and widest the user may drag the sidebar of the window tab of document `id` to now.
-    pub fn sidebar_range_of(&self, id: isize) -> Option<(f64, f64)> {
+    pub fn sidebar_range_of(&self, id: TabId) -> Option<(f64, f64)> {
         self.tab_of_document(id).map(|tab| tab.sidebar_range())
     }
 
@@ -385,24 +385,24 @@ impl WindowController {
     }
 
     /// The left document's share of the tab that shows the document `id` beside another.
-    pub fn share_of(&self, id: isize) -> Option<f64> {
+    pub fn share_of(&self, id: TabId) -> Option<f64> {
         self.tab_of_document(id)?.share()
     }
 
     /// What the badges in the tab of the document `id` say, left to right.
-    pub fn badges_of(&self, id: isize) -> Vec<Option<(String, String)>> {
+    pub fn badges_of(&self, id: TabId) -> Vec<Option<(String, String)>> {
         self.tab_of_document(id).map(|tab| tab.badges()).unwrap_or_default()
     }
 
     /// Moves the divider of the tab of the document `id` to `share`, as a drag does.
-    pub fn drag_share_of(&self, id: isize, share: f64) {
+    pub fn drag_share_of(&self, id: TabId, share: f64) {
         if let Some(tab) = self.tab_of_document(id) {
             tab.drag_share(share);
         }
     }
 
     /// The close button on the badge of the document `id`.
-    pub fn badge_close(&self, id: isize) -> Option<Retained<objc2_app_kit::NSButton>> {
+    pub fn badge_close(&self, id: TabId) -> Option<Retained<objc2_app_kit::NSButton>> {
         self.tab_of_document(id)?.badge_close(id)
     }
 

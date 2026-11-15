@@ -48,6 +48,7 @@ use crate::util::{FlagGuard, guarded, main_soon, ns};
 use activity_bar::ActivityBar;
 pub use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
 use files::FileTree;
+pub use ide_ui_common::window::TabId;
 use ide_ui_common::window::WindowId;
 pub use new_tab_button::NewTabMenu;
 pub use notice::announce;
@@ -103,7 +104,7 @@ pub struct Ivars {
     /// The number of the next document.
     next_id: Cell<isize>,
     /// The document a document about to open goes beside, instead of into a window tab of its own.
-    beside: Cell<Option<isize>>,
+    beside: Cell<Option<TabId>>,
     workspace: RefCell<Option<Rc<crate::project::Project>>>,
     files: RefCell<Option<FileTree>>,
     search: RefCell<Option<Retained<SearchPanel>>>,
@@ -335,7 +336,7 @@ define_class!(
 
         #[unsafe(method(ideCloseTabButton:))]
         fn close_tab_button_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || self.close_tab(tag_of(sender)));
+            guarded((), || self.close_tab(TabId::new(tag_of(sender))));
         }
 
         #[unsafe(method(ideBrowserFocusAddress:))]
@@ -937,7 +938,7 @@ impl WindowController {
     }
 
     /// Brings the welcome page to the front, or opens it; its number.
-    pub(crate) fn open_welcome(&self) -> isize {
+    pub(crate) fn open_welcome(&self) -> TabId {
         let open = self
             .documents()
             .into_iter()

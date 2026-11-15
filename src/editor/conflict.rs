@@ -304,8 +304,8 @@ pub fn save(view: &EditorTextView) {
 
 /// Closes the editor of a gone file once the user agreed.
 pub fn close(view: &EditorTextView) {
-    if let Some(controller) = view.controller() {
-        controller.close_tab(view.ivars().tab.get());
+    if let (Some(controller), Some(tab)) = (view.controller(), view.ivars().tab.get()) {
+        controller.close_tab(tab);
     }
 }
 

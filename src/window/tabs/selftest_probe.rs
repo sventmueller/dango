@@ -33,7 +33,7 @@ impl TabWindow {
     }
 
     /// The close button on the badge of the document `id`.
-    pub fn badge_close(&self, id: isize) -> Option<Retained<NSButton>> {
+    pub fn badge_close(&self, id: super::TabId) -> Option<Retained<NSButton>> {
         self.document(id).map(|doc| doc.close.clone())
     }
 

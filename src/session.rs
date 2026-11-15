@@ -21,8 +21,8 @@ use splat_i18n::{t, tf};
 
 use crate::context::app;
 use crate::util::{main_after, main_on_run_loop};
-use crate::window::WindowController;
 use crate::window::layout::Document;
+use crate::window::{TabId, WindowController};
 
 /// How long the record waits after a change, so that a burst of changes writes it once.
 const SETTLE: Duration = Duration::from_secs(1);
@@ -297,7 +297,7 @@ impl Restore {
         }
     }
 
-    fn reopen(&self, controller: &WindowController, path: Option<&Path>) -> Option<isize> {
+    fn reopen(&self, controller: &WindowController, path: Option<&Path>) -> Option<TabId> {
         let path = path.filter(|path| path.is_file())?;
         crate::editor::open_quietly(controller, path, self.font_size).then(|| controller.selected_tab())?
     }

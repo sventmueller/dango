@@ -11,7 +11,7 @@ use objc2_app_kit::NSApplication;
 
 use super::snappy::{measure, measured};
 use super::{check, finish, helpers};
-use crate::window::{self, Panel, WindowController};
+use crate::window::{self, Panel, TabId, WindowController};
 
 /// The pause between two steps, about a frame.
 const STEP: Duration = Duration::from_millis(16);
@@ -98,7 +98,7 @@ pub fn resize() {
     });
 }
 
-fn drag_beside_preview(root: PathBuf, agent: Option<isize>) {
+fn drag_beside_preview(root: PathBuf, agent: Option<TabId>) {
     let Some(controller) = window::for_project(&root) else {
         return finish(RESIZE);
     };
@@ -134,7 +134,7 @@ fn drag_beside_preview(root: PathBuf, agent: Option<isize>) {
 
 /// Drags the sidebar, the inspector and the divider of the tab of document `id` of `controller`'s window, `DRAG`
 /// steps each, then folds the inspector away again.
-fn drags(controller: &WindowController, id: Option<isize>, then: impl FnOnce(Vec<Duration>) + 'static) {
+fn drags(controller: &WindowController, id: Option<TabId>, then: impl FnOnce(Vec<Duration>) + 'static) {
     let window = controller.id();
     let with = move |f: &dyn Fn(&WindowController)| {
         if let Some(controller) = crate::host::window(window) {
@@ -235,8 +235,8 @@ fn switch_tabs(root: PathBuf) {
                         .unwrap_or_default();
                     let (mut old, mut new) = (before.concat(), after.concat());
                     let moved = old != new;
-                    old.sort_unstable();
-                    new.sort_unstable();
+                    old.sort_unstable_by_key(|id| id.get());
+                    new.sort_unstable_by_key(|id| id.get());
                     check(
                         "moving tabs changes their order and keeps every one",
                         moved && old == new,

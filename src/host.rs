@@ -116,7 +116,7 @@ impl window::TabsHost for AppHost {
         title: &str,
         view: Retained<NSView>,
     ) -> Option<TabId> {
-        Some(TabId::new(self::window(window)?.add_tab(kind, key, title, view)))
+        Some(self::window(window)?.add_tab(kind, key, title, view))
     }
 
     fn add_preview_tab(
@@ -127,14 +127,12 @@ impl window::TabsHost for AppHost {
         title: &str,
         view: Retained<NSView>,
     ) -> Option<TabId> {
-        Some(TabId::new(
-            self::window(window)?.add_preview_tab(kind, key, title, view),
-        ))
+        Some(self::window(window)?.add_preview_tab(kind, key, title, view))
     }
 
     fn keep_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.keep_tab(tab.get());
+            c.keep_tab(tab);
         }
     }
 
@@ -144,47 +142,47 @@ impl window::TabsHost for AppHost {
 
     fn set_tab_title(&self, window: WindowId, tab: TabId, title: &str) {
         if let Some(c) = self::window(window) {
-            c.set_tab_title(tab.get(), title);
+            c.set_tab_title(tab, title);
         }
     }
 
     fn select_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.select_tab_by_id(tab.get());
+            c.select_tab_by_id(tab);
         }
     }
 
     fn close_tab(&self, window: WindowId, tab: TabId) {
         if let Some(c) = self::window(window) {
-            c.close_tab(tab.get());
+            c.close_tab(tab);
         }
     }
 
     fn selected_tab(&self, window: WindowId) -> Option<TabId> {
-        self::window(window)?.selected_tab().map(TabId::new)
+        self::window(window)?.selected_tab()
     }
 
     fn tab_with_key(&self, window: WindowId, key: &str) -> Option<TabId> {
-        self::window(window)?.tab_with_key(key).map(TabId::new)
+        self::window(window)?.tab_with_key(key)
     }
 }
 
 impl window::TabDecorHost for AppHost {
     fn set_tab_status(&self, window: WindowId, tab: TabId, color: Option<&NSColor>) {
         if let Some(c) = self::window(window) {
-            c.set_tab_status(tab.get(), color);
+            c.set_tab_status(tab, color);
         }
     }
 
     fn set_tab_tint(&self, window: WindowId, tab: TabId, color: &NSColor) {
         if let Some(c) = self::window(window) {
-            c.set_tab_tint(tab.get(), color);
+            c.set_tab_tint(tab, color);
         }
     }
 
     fn set_tab_four_colours(&self, window: WindowId, tab: TabId, colors: [Retained<NSColor>; 4]) {
         if let Some(c) = self::window(window) {
-            c.set_tab_four_colours(tab.get(), colors);
+            c.set_tab_four_colours(tab, colors);
         }
     }
 }

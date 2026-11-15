@@ -25,7 +25,7 @@ use splat_render::render::{Drawn, RenderCtx};
 use super::page::Views;
 use crate::editor::EditorTextView;
 use crate::util::{main_after, main_soon};
-use crate::window::WindowController;
+use crate::window::{TabId, WindowController};
 
 /// The pause in typing after which the preview lays the text out again.
 const LAYOUT_PAUSE: Duration = Duration::from_millis(120);
@@ -52,7 +52,7 @@ pub struct Preview {
     editor: RefCell<objc2::rc::Weak<EditorTextView>>,
     path: PathBuf,
     pub views: Views,
-    tab: Cell<isize>,
+    tab: Cell<Option<TabId>>,
     text: RefCell<ide_document::Text>,
     images: RefCell<ImageStore>,
     viewer: OnceCell<Rc<dyn Viewer>>,
@@ -90,7 +90,7 @@ impl Preview {
             editor: RefCell::new(objc2::rc::Weak::from(editor)),
             path: path.to_path_buf(),
             views,
-            tab: Cell::new(-1),
+            tab: Cell::new(None),
             text: RefCell::new(editor.document().text().clone()),
             images: RefCell::default(),
             viewer: OnceCell::new(),
@@ -112,12 +112,12 @@ impl Preview {
         self.automatic
     }
 
-    pub fn tab(&self) -> isize {
+    pub fn tab(&self) -> Option<TabId> {
         self.tab.get()
     }
 
-    pub fn set_tab(&self, id: isize) {
-        self.tab.set(id);
+    pub fn set_tab(&self, id: TabId) {
+        self.tab.set(Some(id));
     }
 
     pub fn controller(&self) -> Option<Retained<WindowController>> {

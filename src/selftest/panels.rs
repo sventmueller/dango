@@ -12,7 +12,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 
 use super::{check, finish, helpers, snapshot};
-use crate::window::{self, WindowController};
+use crate::window::{self, TabId, WindowController};
 
 const SCENARIO: &str = "panels";
 const FILES: [&str; 4] = ["a.rs", "b.rs", "c.rs", "d.rs"];
@@ -75,10 +75,14 @@ fn shown(controller: &WindowController) -> String {
         .join(" ")
 }
 
-fn tab_of(controller: &WindowController, root: &Path, name: &str) -> isize {
-    controller
-        .tab_with_key(&root.join(name).to_string_lossy())
-        .unwrap_or(-1)
+fn tab_of(controller: &WindowController, root: &Path, name: &str) -> Option<TabId> {
+    controller.tab_with_key(&root.join(name).to_string_lossy())
+}
+
+fn select(controller: &WindowController, tab: Option<TabId>) {
+    if let Some(tab) = tab {
+        controller.select_tab_by_id(tab);
+    }
 }
 
 /// Whether the sidebar is in the window of the tab in front.
@@ -108,7 +112,7 @@ fn opened(root: PathBuf) {
         controller.close_tab(welcome);
     }
     crate::terminal::open_tab(&controller, None);
-    TERMINAL_TAB.store(controller.selected_tab().unwrap_or(-1), Ordering::SeqCst);
+    TERMINAL_TAB.store(controller.selected_tab().map_or(-1, TabId::get), Ordering::SeqCst);
     if let Some((id, _)) = crate::terminal::inspect::latest() {
         TERMINAL.store(id, Ordering::SeqCst);
     }
@@ -143,7 +147,7 @@ fn switching(root: PathBuf) {
     SHELL.store(shell.unwrap_or(0), Ordering::SeqCst);
     let before = controller.inspect();
     let rows = controller.tree_rows();
-    controller.select_tab_by_id(tab_of(&controller, &root, "a.rs"));
+    select(&controller, tab_of(&controller, &root, "a.rs"));
     let after = controller.inspect();
     check(
         "another tab in front gets the sidebar as it was: same panel, width and rows",
@@ -164,7 +168,7 @@ fn switching(root: PathBuf) {
     let a = tab_of(&controller, &root, "a.rs");
     let next = ids
         .iter()
-        .position(|docs| docs.contains(&a))
+        .position(|docs| a.is_some_and(|a| docs.contains(&a)))
         .and_then(|index| ids.get((index + 1) % ids.len()))
         .and_then(|docs| docs.first().copied());
     controller.select_next_tab();
@@ -174,7 +178,7 @@ fn switching(root: PathBuf) {
         format!("{:?} after {ids:?}", controller.selected_tab()),
     );
     dragged_out(&controller, &root);
-    controller.select_tab_by_id(tab_of(&controller, &root, "a.rs"));
+    select(&controller, tab_of(&controller, &root, "a.rs"));
     helpers::after(PAUSE, move || beside(root));
 }
 
@@ -182,23 +186,23 @@ fn switching(root: PathBuf) {
 /// sidebar back in front, and joins again with "Merge All Windows".
 fn dragged_out(controller: &WindowController, root: &Path) {
     let c = tab_of(controller, root, "c.rs");
-    controller.select_tab_by_id(c);
+    select(controller, c);
     let Some(window) = controller.window() else { return };
     window.moveTabToNewWindow(None);
     let alone = window.tabbedWindows().is_none_or(|tabbed| tabbed.count() == 1);
     let a = tab_of(controller, root, "a.rs");
-    controller.select_tab_by_id(a);
+    select(controller, a);
     let pictures = controller.sidebar_pictures();
     // Only a window on screen beside the one in front needs the picture; the tabs behind the one in front show none.
     let order = controller.window_tab_ids();
-    let picture_of = |id| {
+    let picture_of = |id: Option<TabId>| {
         order
             .iter()
-            .position(|docs| docs.contains(&id))
+            .position(|docs| id.is_some_and(|id| docs.contains(&id)))
             .and_then(|at| pictures.get(at).copied())
     };
     let apart_ok = alone && sidebar_in_front(controller) && picture_of(c) == Some(true) && picture_of(a) == Some(false);
-    controller.select_tab_by_id(c);
+    select(controller, c);
     check(
         "a tab moved to a window of its own keeps a picture of the sidebar and gets the sidebar in front",
         apart_ok && sidebar_in_front(controller) && controller.tab_windows().len() == 4,
@@ -229,14 +233,16 @@ fn beside(root: PathBuf) {
             && controller.tab_windows().len() == windows,
         shown(&controller),
     );
-    controller.select_tab_by_id(a);
+    select(&controller, a);
     controller.focus_next_panel();
     check(
         "the focus moves on to the other document of the tab",
-        controller.selected_tab() == Some(d),
+        d.is_some() && controller.selected_tab() == d,
         format!("{:?}", controller.selected_tab()),
     );
-    controller.set_share_of(a, SHARE);
+    if let Some(a) = a {
+        controller.set_share_of(a, SHARE);
+    }
     let alive = crate::terminal::inspect::view(TERMINAL.load(Ordering::SeqCst)).is_some_and(|view| !view.has_exited());
     check(
         "the terminal keeps its shell while other tabs come to the front",
@@ -253,25 +259,29 @@ fn closing_side(root: PathBuf) {
         snapshot(&window, "panels-beside");
     }
     let windows = controller.tab_windows().len();
-    let b = tab_of(&controller, &root, "b.rs");
-    controller.close_tab(b);
+    if let Some(b) = tab_of(&controller, &root, "b.rs") {
+        controller.close_tab(b);
+    }
     check(
         "closing a tab's only document closes the tab",
-        controller.tab_windows().len() == windows - 1 && tab_of(&controller, &root, "b.rs") == -1,
+        controller.tab_windows().len() == windows - 1 && tab_of(&controller, &root, "b.rs").is_none(),
         shown(&controller),
     );
     let windows = controller.tab_windows().len();
-    let d = tab_of(&controller, &root, "d.rs");
-    controller.close_tab(d);
+    if let Some(d) = tab_of(&controller, &root, "d.rs") {
+        controller.close_tab(d);
+    }
     check(
         "closing one of two documents leaves the other alone in the tab",
         controller.window_tabs().iter().any(|docs| docs == &["a.rs"]) && controller.tab_windows().len() == windows,
         shown(&controller),
     );
     let a = tab_of(&controller, &root, "a.rs");
-    controller.select_tab_by_id(a);
+    select(&controller, a);
     controller.open_file_beside(&root.join("d.rs"));
-    controller.set_share_of(a, SHARE);
+    if let Some(a) = a {
+        controller.set_share_of(a, SHARE);
+    }
     let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
     check("an AI thread opens in a tab of its own", replayed, shown(&controller));
     helpers::after(PAUSE, move || closing(root));

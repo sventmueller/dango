@@ -8,10 +8,10 @@ use splat_i18n::{t, tf};
 
 use super::helpers::{tab, window_of};
 use super::{check, snapshot};
-use crate::window::WindowController;
+use crate::window::{TabId, WindowController};
 
 /// The share of the tab of `id` after the window took `narrower` points off its width; the window gets its width back.
-fn share_when_narrower(controller: &WindowController, id: isize, narrower: f64) -> Option<f64> {
+fn share_when_narrower(controller: &WindowController, id: TabId, narrower: f64) -> Option<f64> {
     let window = controller.window()?;
     let frame = window.frame();
     let smaller = NSRect::new(

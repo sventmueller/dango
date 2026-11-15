@@ -16,7 +16,7 @@ use objc2_foundation::{NSPoint, NSRange, NSRunLoop, NSRunLoopCommonModes, NSTime
 
 use crate::editor::EditorTextView;
 use crate::util::main_after;
-use crate::window::{self, WindowController};
+use crate::window::{self, TabId, WindowController};
 
 /// How long a condition wait gives up after.
 pub const WAIT: Duration = Duration::from_secs(20);
@@ -239,7 +239,7 @@ pub fn editor(controller: &WindowController, title: &str) -> Option<Retained<Edi
 }
 
 /// The id of the tab titled `title`.
-pub fn tab(controller: &WindowController, title: &str) -> Option<isize> {
+pub fn tab(controller: &WindowController, title: &str) -> Option<TabId> {
     let titles = controller.tab_titles();
     let index = titles.iter().position(|t| t == title)?;
     controller.tab_ids().get(index).copied()

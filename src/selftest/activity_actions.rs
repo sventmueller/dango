@@ -14,7 +14,7 @@ use objc2_app_kit::{NSAccessibility, NSApplication, NSButton, NSToolbarItem, NSV
 
 use super::agent::tab_of;
 use super::{check, finish, helpers};
-use crate::window::WindowController;
+use crate::window::{TabId, WindowController};
 
 const NAME: &str = "activity-actions";
 const SUBAGENT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_subagent_background.ndjson");
@@ -91,7 +91,7 @@ fn typed(root: PathBuf, key: u64) {
     );
 }
 
-fn popover(root: PathBuf, key: u64, terminal: Option<isize>) {
+fn popover(root: PathBuf, key: u64, terminal: Option<TabId>) {
     let Some(controller) = helpers::window_of(&root) else {
         return finish(NAME);
     };
@@ -124,13 +124,13 @@ fn popover(root: PathBuf, key: u64, terminal: Option<isize>) {
     check(
         "Show of a terminal's process selects its tab",
         controller.selected_tab() == Some(terminal),
-        format!("{:?}, terminal {terminal}", controller.selected_tab()),
+        format!("{:?}, terminal {terminal:?}", controller.selected_tab()),
     );
     press(&controller, |label| label == format!("{show}: {session}"));
     check(
         "Show of a session selects its AI tab",
         controller.selected_tab() == Some(ai),
-        format!("{:?}, AI tab {ai}", controller.selected_tab()),
+        format!("{:?}, AI tab {ai:?}", controller.selected_tab()),
     );
     controller.select_tab_by_id(terminal);
     press(&controller, |label| {
@@ -139,7 +139,7 @@ fn popover(root: PathBuf, key: u64, terminal: Option<isize>) {
     check(
         "Show of a subagent brings its AI tab to the front",
         controller.selected_tab() == Some(ai),
-        format!("{:?}, AI tab {ai}", controller.selected_tab()),
+        format!("{:?}, AI tab {ai:?}", controller.selected_tab()),
     );
     let (probe, wanted) = (root.clone(), format!("{}: {shell}", splat_i18n::t("Stopp")));
     helpers::wait_until(

@@ -381,7 +381,7 @@ fn close(runs: &[Run], root: &Path) {
             let Some(view) = inspect::view(run.id) else { continue };
             pids.extend(view.shell());
             if let Some(tab) = view.tab() {
-                controller.close_tab(tab.get());
+                controller.close_tab(tab);
             }
         }
     }

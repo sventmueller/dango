@@ -11,13 +11,13 @@ use objc2_app_kit::{NSColor, NSView, NSWindow, NSWindowOrderingMode, NSWindowTab
 use objc2_foundation::NSNotification;
 
 use super::tabs::{Document, TabWindow};
-use super::{TabKind, WindowController, layout, show_tab_bar};
+use super::{TabId, TabKind, WindowController, layout, show_tab_bar};
 
 impl WindowController {
     /// Shows `view` as a document of `kind` and brings it to the front: in a window tab of its own, or in the tab
     /// in front if that one is empty, or beside a document for `open_beside`. `key` names
     /// what it shows, so `select_tab` finds it again. The document's number.
-    pub fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
+    pub fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> TabId {
         let document = self.new_document(kind, key, title, view);
         let id = document.id;
         self.place(document);
@@ -26,7 +26,7 @@ impl WindowController {
 
     /// Shows `view` as the preview document, which takes the place of the one before, as a single click opens a
     /// file; an ordinary document when the user turned preview tabs off.
-    pub fn add_preview_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> isize {
+    pub fn add_preview_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> TabId {
         if !ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::PREVIEW_TABS) {
             return self.add_tab(kind, key, title, view);
         }
@@ -57,7 +57,7 @@ impl WindowController {
     }
 
     /// Makes the document `id` an ordinary one if it is the preview document.
-    pub fn keep_tab(&self, id: isize) {
+    pub fn keep_tab(&self, id: TabId) {
         if let Some((tab, document)) = self.find_document(id)
             && document.is_preview()
         {
@@ -67,7 +67,7 @@ impl WindowController {
     }
 
     /// The document showing `key`.
-    pub fn tab_with_key(&self, key: &str) -> Option<isize> {
+    pub fn tab_with_key(&self, key: &str) -> Option<TabId> {
         self.documents()
             .into_iter()
             .find(|doc| doc.key.as_deref() == Some(key))
@@ -85,7 +85,7 @@ impl WindowController {
         }
     }
 
-    pub fn set_tab_title(&self, id: isize, title: &str) {
+    pub fn set_tab_title(&self, id: TabId, title: &str) {
         if let Some((tab, document)) = self.find_document(id) {
             document.set_title(title);
             tab.refresh();
@@ -93,7 +93,7 @@ impl WindowController {
     }
 
     /// Shows a dot of `color` on the tab of the document `id`, or none.
-    pub fn set_tab_status(&self, id: isize, color: Option<&NSColor>) {
+    pub fn set_tab_status(&self, id: TabId, color: Option<&NSColor>) {
         if let Some((tab, document)) = self.find_document(id) {
             document.set_status(color);
             tab.refresh();
@@ -101,7 +101,7 @@ impl WindowController {
     }
 
     /// Tints the symbol of the document `id`.
-    pub fn set_tab_tint(&self, id: isize, color: &NSColor) {
+    pub fn set_tab_tint(&self, id: TabId, color: &NSColor) {
         if let Some((tab, document)) = self.find_document(id) {
             document.set_tint(color);
             tab.refresh();
@@ -109,7 +109,7 @@ impl WindowController {
     }
 
     /// Shows the symbol of the document `id` in four colours, `colors` at its left, top, right and bottom point.
-    pub fn set_tab_four_colours(&self, id: isize, colors: [Retained<NSColor>; 4]) {
+    pub fn set_tab_four_colours(&self, id: TabId, colors: [Retained<NSColor>; 4]) {
         if let Some((tab, document)) = self.find_document(id) {
             document.set_four_colours(colors);
             tab.refresh();
@@ -117,7 +117,7 @@ impl WindowController {
     }
 
     /// Runs `open`, which opens a document, so that the document shows beside the document `anchor` in its tab.
-    pub fn open_beside(&self, anchor: isize, open: impl FnOnce()) {
+    pub fn open_beside(&self, anchor: TabId, open: impl FnOnce()) {
         let before = self.ivars().beside.replace(Some(anchor));
         open();
         self.ivars().beside.set(before);
@@ -164,7 +164,7 @@ impl WindowController {
     }
 
     /// Marks the document `id` as having unsaved changes, or not; the first change keeps a preview document.
-    pub fn set_tab_dirty(&self, id: isize, dirty: bool) {
+    pub fn set_tab_dirty(&self, id: TabId, dirty: bool) {
         if let Some((tab, document)) = self.find_document(id) {
             document.set_dirty(dirty);
             if dirty {
@@ -176,7 +176,7 @@ impl WindowController {
 
     /// Closes the document `id` once it agrees, such as an editor with unsaved changes or a pop-up whose page closed
     /// itself; a window tab left without documents closes with it.
-    pub fn close_tab(&self, id: isize) {
+    pub fn close_tab(&self, id: TabId) {
         if crate::editor::may_close(self, id) {
             self.close_tab_now(id);
         }
@@ -184,7 +184,7 @@ impl WindowController {
 
     /// Closes the document `id` without asking; its window tab goes with it when it was the tab's only one, and the
     /// window with its last tab.
-    fn close_tab_now(&self, id: isize) {
+    fn close_tab_now(&self, id: TabId) {
         let Some(tab) = self.tab_of_document(id) else { return };
         self.forget_document(&tab, id);
         if tab.is_empty() {
@@ -200,7 +200,7 @@ impl WindowController {
     }
 
     /// Takes the document `id` out of `tab` and tells what showed it that it closes.
-    fn forget_document(&self, tab: &TabWindow, id: isize) {
+    fn forget_document(&self, tab: &TabWindow, id: TabId) {
         crate::editor::closing(self, id);
         crate::preview::closing(self, id);
         crate::debug::closing(self, id);
@@ -208,7 +208,7 @@ impl WindowController {
     }
 
     /// Brings the document `id` to the front; the keyboard focus stays where it is in its tab.
-    pub(crate) fn select_tab_by_id(&self, id: isize) {
+    pub(crate) fn select_tab_by_id(&self, id: TabId) {
         if let Some(tab) = self.tab_of_document(id) {
             tab.mark_focused(id);
             self.select(&tab);
@@ -217,7 +217,7 @@ impl WindowController {
     }
 
     /// The documents' numbers, tab by tab in the order of the tab bar, left to right in a tab.
-    pub fn tab_ids(&self) -> Vec<isize> {
+    pub fn tab_ids(&self) -> Vec<TabId> {
         self.documents().iter().map(|doc| doc.id).collect()
     }
 
@@ -251,7 +251,7 @@ impl WindowController {
     }
 
     /// The document commands act on: the focused one of the tab in front.
-    pub fn selected_tab(&self) -> Option<isize> {
+    pub fn selected_tab(&self) -> Option<TabId> {
         self.current_tab()?.focused().map(|doc| doc.id)
     }
 
@@ -292,11 +292,11 @@ impl WindowController {
         self.tab_of_window(window)
     }
 
-    pub(super) fn tab_of_document(&self, id: isize) -> Option<Rc<TabWindow>> {
+    pub(super) fn tab_of_document(&self, id: TabId) -> Option<Rc<TabWindow>> {
         self.ivars().tabs.borrow().iter().find(|tab| tab.holds(id)).cloned()
     }
 
-    fn find_document(&self, id: isize) -> Option<(Rc<TabWindow>, Rc<Document>)> {
+    fn find_document(&self, id: TabId) -> Option<(Rc<TabWindow>, Rc<Document>)> {
         let tab = self.tab_of_document(id)?;
         let document = tab.document(id)?;
         Some((tab, document))
@@ -341,7 +341,7 @@ impl WindowController {
     fn new_document(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> Rc<Document> {
         let id = self.ivars().next_id.get();
         self.ivars().next_id.set(id + 1);
-        Document::new(self, id, kind, key, title, view)
+        Document::new(self, TabId::new(id), kind, key, title, view)
     }
 
     /// A new window tab of this window, not yet in its tab group.
@@ -355,8 +355,10 @@ impl WindowController {
     /// Shows `document` where `add_tab` says.
     fn place(&self, document: Rc<Document>) {
         let anchor = self.ivars().beside.get();
-        if let Some((tab, _)) = anchor.and_then(|anchor| self.find_document(anchor)) {
-            self.put_beside(&tab, anchor.unwrap_or_default(), document);
+        if let Some(anchor) = anchor
+            && let Some((tab, _)) = self.find_document(anchor)
+        {
+            self.put_beside(&tab, anchor, document);
             crate::session::changed();
             return;
         }
@@ -381,7 +383,7 @@ impl WindowController {
     }
 
     /// Puts `document` right of the document `anchor` in `tab`; a document there before gets a tab of its own.
-    fn put_beside(&self, tab: &Rc<TabWindow>, anchor: isize, document: Rc<Document>) {
+    fn put_beside(&self, tab: &Rc<TabWindow>, anchor: TabId, document: Rc<Document>) {
         let others: Vec<Rc<Document>> = tab.documents().into_iter().filter(|doc| doc.id != anchor).collect();
         for other in others {
             tab.remove(other.id);

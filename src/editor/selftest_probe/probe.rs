@@ -10,7 +10,7 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 
 use super::super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
 use crate::util::{constant, ns};
-use crate::window::WindowController;
+use crate::window::{TabId, WindowController};
 
 pub use super::super::line_diagnostics::busy_lines;
 pub use super::super::minimap::{click as click_minimap, probe as minimap};
@@ -27,11 +27,11 @@ pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
 }
 
 /// The editors of `controller` with their tab ids, for the self-test.
-pub fn editors_of(controller: &WindowController) -> Vec<(isize, Retained<EditorTextView>)> {
+pub fn editors_of(controller: &WindowController) -> Vec<(TabId, Retained<EditorTextView>)> {
     open_editors()
         .into_iter()
         .filter(|v| v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-        .map(|v| (v.ivars().tab.get(), v))
+        .filter_map(|v| Some((v.ivars().tab.get()?, v)))
         .collect()
 }
 

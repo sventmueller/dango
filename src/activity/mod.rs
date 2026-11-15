@@ -44,7 +44,7 @@ enum Action {
     ShowOutput(u64, String),
     StopProcess(ProcessId),
     /// Selects the terminal tab with this number.
-    ShowTerminal(isize),
+    ShowTerminal(crate::window::TabId),
     /// Shows the debug panel, from the line of the session with this number.
     ShowDebug(u64),
     /// Stops the debug session with this number.

@@ -410,7 +410,7 @@ fn dialogs() {
     });
 }
 
-fn tab_ids() -> Vec<isize> {
+fn tab_ids() -> Vec<crate::window::TabId> {
     first_window()
         .map(|controller| controller.tab_ids())
         .unwrap_or_default()

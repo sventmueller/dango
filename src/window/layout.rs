@@ -12,7 +12,7 @@ use ide_core::layout::{Layout, Tab, WindowTab};
 
 use objc2::DefinedClass;
 
-use super::{TabKind, WindowController};
+use super::{TabId, TabKind, WindowController};
 
 /// A document an editor of a layout shows.
 pub enum Document<'a> {
@@ -56,7 +56,7 @@ pub fn save(controller: &WindowController) {
 }
 
 /// How the document `id` opens again, if it can.
-fn reopenable(controller: &WindowController, id: isize, kind: TabKind, key: Option<&str>) -> Option<Tab> {
+fn reopenable(controller: &WindowController, id: TabId, kind: TabKind, key: Option<&str>) -> Option<Tab> {
     match kind {
         TabKind::Editor => match key {
             Some(path) => Some(Tab::Editor { path: path.into() }),
@@ -107,7 +107,7 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
     let mut firsts = Vec::with_capacity(layout.tabs.len());
     let mut shares = Vec::new();
     for window_tab in &layout.tabs {
-        let mut anchor: Option<isize> = None;
+        let mut anchor: Option<TabId> = None;
         for document in &window_tab.documents {
             match anchor {
                 None => {
@@ -162,7 +162,10 @@ impl Documents<'_, '_> {
     fn open(&self, controller: &WindowController, tab: &Tab) -> bool {
         let (root, trusted) = (self.root, self.trusted);
         match tab {
-            Tab::Welcome => controller.open_welcome() >= 0,
+            Tab::Welcome => {
+                controller.open_welcome();
+                true
+            }
             Tab::Editor { path } => (self.editor.borrow_mut())(controller, Document::File(path)),
             Tab::Untitled { recovery } => (self.editor.borrow_mut())(controller, Document::Untitled(recovery)),
             Tab::Terminal { folder } if trusted => {

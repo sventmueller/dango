@@ -21,7 +21,7 @@ use objc2_foundation::NSURL;
 
 use crate::editor::EditorTextView;
 use crate::util::{main_after, ns};
-use crate::window::{TabKind, WindowController};
+use crate::window::{TabId, TabKind, WindowController};
 use markdown::Preview;
 
 /// The open Markdown previews of all windows.
@@ -170,7 +170,9 @@ pub fn close_beside(view: &EditorTextView, automatic: bool) -> bool {
     let Some(preview) = shown_for(view, &controller).filter(|p| !automatic || p.automatic()) else {
         return false;
     };
-    controller.close_tab(preview.tab());
+    if let Some(tab) = preview.tab() {
+        controller.close_tab(tab);
+    }
     true
 }
 
@@ -182,7 +184,7 @@ fn open_markdown(
     controller: &WindowController,
     view: &EditorTextView,
     path: &Path,
-    editor_tab: isize,
+    editor_tab: Option<TabId>,
     automatic: bool,
 ) {
     let previews = &controller.context().previews();
@@ -190,11 +192,13 @@ fn open_markdown(
     let preview = Preview::new(controller, view, path, key, automatic);
     let title = splat_i18n::tf("Vorschau: {}", &[&crate::editor::display_name(path)]);
     let page: Retained<objc2_app_kit::NSView> = Retained::into_super(preview.views.page.clone());
-    let mut id = -1;
-    controller.open_beside(editor_tab, || {
-        id = controller.add_tab(TabKind::Preview, None, &title, page)
+    let mut id = None;
+    beside(controller, editor_tab, || {
+        id = Some(controller.add_tab(TabKind::Preview, None, &title, page))
     });
-    preview.set_tab(id);
+    if let Some(id) = id {
+        preview.set_tab(id);
+    }
     previews.open.borrow_mut().push(preview.clone());
     sync::attach(&preview, view);
     preview.lay_out();
@@ -202,13 +206,21 @@ fn open_markdown(
 }
 
 /// Opens an HTML file in a browser beside the editor; the browser shows only files of the window's folder.
-fn open_html(controller: &WindowController, path: &Path, editor_tab: isize) {
+fn open_html(controller: &WindowController, path: &Path, editor_tab: Option<TabId>) {
     let Some(url) = NSURL::fileURLWithPath(&ns(&path.to_string_lossy())).absoluteString() else {
         return;
     };
-    controller.open_beside(editor_tab, || {
+    beside(controller, editor_tab, || {
         crate::browser::open_tab(controller, Some(&url.to_string()))
     });
+}
+
+/// Runs `open` beside the editor's tab, or where documents open by default for an editor not in a tab yet.
+fn beside(controller: &WindowController, editor_tab: Option<TabId>, open: impl FnOnce()) {
+    match editor_tab {
+        Some(tab) => controller.open_beside(tab, open),
+        None => open(),
+    }
 }
 
 /// The text of `view` changed: the previews that follow it lay it out again.
@@ -223,12 +235,12 @@ pub fn edited(view: &EditorTextView) {
 }
 
 /// The tab `id` of `controller` is about to close.
-pub fn closing(controller: &WindowController, id: isize) {
+pub fn closing(controller: &WindowController, id: TabId) {
     let closed: Vec<Rc<Preview>> = {
         let mut open = controller.context().previews().open.borrow_mut();
         let (closed, kept) = open
             .drain(..)
-            .partition(|p| p.tab() == id && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
+            .partition(|p| p.tab() == Some(id) && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
         *open = kept;
         closed
     };

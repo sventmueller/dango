@@ -15,7 +15,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSValue};
 
 use crate::util::{FlagGuard, guarded, ns};
-use crate::window::WindowController;
+use crate::window::{TabId, WindowController};
 
 pub struct ViewIvars {
     pub(super) document: RefCell<Document>,
@@ -24,7 +24,7 @@ pub struct ViewIvars {
     /// Set while the model changes the view's text, so the change is not fed back into the model.
     pub(super) applying: Cell<bool>,
     pub(super) controller: RefCell<Weak<WindowController>>,
-    pub(super) tab: Cell<isize>,
+    pub(super) tab: Cell<Option<TabId>>,
     pub(super) font_size: Cell<f64>,
     pub(crate) indent: RefCell<String>,
     /// The dirty state the tab shows, to update it only on a change.
@@ -823,7 +823,7 @@ impl EditorTextView {
             _content: RefCell::new(Some(content)),
             applying: Cell::new(false),
             controller: RefCell::new(Weak::from(controller)),
-            tab: Cell::new(-1),
+            tab: Cell::new(None),
             font_size: Cell::new(13.0),
             indent: RefCell::new("    ".into()),
             shown_dirty: Cell::new(false),

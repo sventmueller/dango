@@ -38,13 +38,13 @@ const SHARE_PRIORITY: f32 = 260.0;
 /// The narrowest a document gets beside another.
 const MIN_SIDE: f64 = 220.0;
 
-pub use ide_ui_common::window::TabKind;
+pub use ide_ui_common::window::{TabId, TabKind};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// A document of a window tab: its view and what its tab and badge say about it.
 pub struct Document {
-    pub id: isize,
+    pub id: TabId,
     pub kind: TabKind,
     /// What the document shows, such as a file's path, so it opens once.
     pub key: Option<String>,
@@ -69,7 +69,7 @@ pub struct Document {
 impl Document {
     pub fn new(
         controller: &WindowController,
-        id: isize,
+        id: TabId,
         kind: TabKind,
         key: Option<String>,
         title: &str,
@@ -85,7 +85,7 @@ impl Document {
             Some(controller),
             sel!(ideCloseTabButton:),
         );
-        close.setTag(id);
+        close.setTag(id.get());
         close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         let (badge, badge_title, badge_icon) = badge(mtm, &close);
         host.addSubview(&view);
@@ -439,11 +439,11 @@ impl TabWindow {
         self.documents.borrow().is_empty()
     }
 
-    pub fn holds(&self, id: isize) -> bool {
+    pub fn holds(&self, id: TabId) -> bool {
         self.documents.borrow().iter().any(|doc| doc.id == id)
     }
 
-    pub fn document(&self, id: isize) -> Option<Rc<Document>> {
+    pub fn document(&self, id: TabId) -> Option<Rc<Document>> {
         self.documents.borrow().iter().find(|doc| doc.id == id).cloned()
     }
 
@@ -480,7 +480,7 @@ impl TabWindow {
     }
 
     /// Takes the document `id` out of the window tab.
-    pub fn remove(&self, id: isize) -> Option<Rc<Document>> {
+    pub fn remove(&self, id: TabId) -> Option<Rc<Document>> {
         let index = self.documents.borrow().iter().position(|doc| doc.id == id)?;
         let document = self.documents.borrow_mut().remove(index);
         document.host.removeFromSuperview();
@@ -572,7 +572,7 @@ impl TabWindow {
     }
 
     /// Makes the document `id` the one commands act on, without moving the keyboard focus.
-    pub fn mark_focused(&self, id: isize) {
+    pub fn mark_focused(&self, id: TabId) {
         let found = self.documents.borrow().iter().position(|doc| doc.id == id);
         if let Some(index) = found {
             self.set_focused(index);
@@ -580,7 +580,7 @@ impl TabWindow {
     }
 
     /// Gives the keyboard focus to the document `id`.
-    pub fn activate(&self, id: isize) {
+    pub fn activate(&self, id: TabId) {
         let found = self.documents.borrow().iter().position(|doc| doc.id == id);
         let Some(index) = found else { return };
         self.set_focused(index);
