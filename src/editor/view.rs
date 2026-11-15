@@ -31,6 +31,8 @@ pub struct ViewIvars {
     pub(super) shown_dirty: Cell<bool>,
     /// The lines whose colours wait to be painted.
     pub(super) unpainted: RefCell<super::highlight::Unpainted>,
+    /// The lines whose Markdown font traits wait to be painted into the storage.
+    pub(super) unstyled: RefCell<super::highlight::Unpainted>,
     /// Markdown's font traits were painted into the storage, which another language takes out again.
     pub(super) styled: Cell<bool>,
     /// The line number column, redrawn when lines change.
@@ -826,6 +828,7 @@ impl EditorTextView {
             indent: RefCell::new("    ".into()),
             shown_dirty: Cell::new(false),
             unpainted: RefCell::default(),
+            unstyled: RefCell::default(),
             styled: Cell::new(false),
             gutter: RefCell::new(None),
             lsp: RefCell::new(ide_ui_lsp::ViewState::new(serial)),

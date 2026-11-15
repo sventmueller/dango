@@ -60,7 +60,7 @@ fn settled(view: &EditorTextView) -> bool {
     view.document().is_highlighted() && editor::colours_painted(view)
 }
 
-fn delete(view: &EditorTextView, range: NSRange) {
+pub(super) fn delete(view: &EditorTextView, range: NSRange) {
     use objc2_app_kit::NSStandardKeyBindingResponding;
     view.setSelectedRange(range);
     let text_view: &objc2_app_kit::NSTextView = view;
@@ -69,7 +69,7 @@ fn delete(view: &EditorTextView, range: NSRange) {
 }
 
 /// Checks that the longest main thread step since `measure` took at most `EXTRA` more than a plain keystroke's.
-fn no_longer(name: &'static str, done: bool, plain: Duration) {
+pub(super) fn no_longer(name: &'static str, done: bool, plain: Duration) {
     let worst = stall::take_worst();
     check(
         name,

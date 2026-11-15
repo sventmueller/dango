@@ -103,6 +103,7 @@ mod settings_toolbar;
 mod snappy;
 mod snappy_input;
 mod snappy_recolor;
+mod snappy_recolor_markdown;
 mod split;
 mod sticky;
 mod stored_rules;

@@ -5,14 +5,17 @@
 //!
 //! The first parse of a long text takes longer than a frame, so it runs on a thread of its own; until it is done, the
 //! lines asked for are cut from a parse of the text's start, and edits made meanwhile are parsed into it once it is.
+//! An edit that makes a long text be parsed anew as a whole, such as a code fence opened or closed above most of it,
+//! is parsed on such a thread as well, and the lines keep their stretches until it is done.
 
 use ide_core::LockIgnoringPoison;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use splat_markdown::doc::Doc;
 pub use splat_markdown::highlight::{Style, Token};
-use splat_markdown::incremental::{Parsed, parse_and_color, parse_shared_and_color, reparse_and_color};
+use splat_markdown::incremental::{Parsed, parse_and_color, parse_shared_and_color, reparse_part_and_color};
 
 use super::{Changed, Columns, LINES_PER_STEP};
 use crate::text::Text;
@@ -38,7 +41,7 @@ struct Cut {
     fresh: bool,
 }
 
-/// The first parse of a long text, under way on a thread of its own.
+/// A parse of the whole of a long text, under way on a thread of its own.
 struct Opening {
     result: Arc<Mutex<Option<Parsed>>>,
     /// The text changed since the parse began.
@@ -49,7 +52,8 @@ struct Opening {
 pub(crate) struct Markdown {
     parsed: Option<Parsed>,
     opening: Option<Opening>,
-    /// While the first parse is under way: a parse of the start of the text as it is now, and the lines it covers.
+    /// While the first parse is under way: a parse of the start of the text as it is now, and the lines it covers;
+    /// while a later one is, none.
     interim: Option<Parsed>,
     interim_lines: usize,
     /// The text changed since it was parsed.
@@ -175,7 +179,17 @@ impl Markdown {
         let mut whole = String::with_capacity(text.len_bytes());
         text.chunks().for_each(|chunk| whole.push_str(chunk));
         let parsed = match self.parsed.take() {
-            Some(old) => reparse_and_color(old.doc, &old.spans, &whole),
+            Some(old) => match reparse_part_and_color(old.doc, &old.spans, &whole) {
+                Ok(parsed) => parsed,
+                Err(old) if whole.len() > PARSED_AT_ONCE => {
+                    let whole: Arc<str> = whole.into();
+                    if self.parse_aside(whole.clone(), Some(old)) {
+                        return;
+                    }
+                    parse_shared_and_color(whole)
+                }
+                Err(_) => parse_and_color(&whole),
+            },
             None if whole.len() <= PARSED_AT_ONCE => parse_and_color(&whole),
             None => return self.open(whole.into(), text),
         };
@@ -192,21 +206,33 @@ impl Markdown {
 
     /// Starts the first parse of `whole` on a thread of its own, and parses the start of the text meanwhile.
     fn open(&mut self, whole: Arc<str>, text: &Text) {
-        let result = Arc::new(Mutex::new(None));
-        let (slot, copy) = (result.clone(), whole.clone());
-        let started = std::thread::Builder::new()
-            .name("markdown-parse".into())
-            .spawn(move || {
-                let parsed = parse_shared_and_color(copy);
-                *slot.lock_ignoring_poison() = Some(parsed);
-            });
-        if started.is_err() {
+        if !self.parse_aside(whole.clone(), None) {
             self.parsed = Some(parse_shared_and_color(whole));
             self.recut(0..self.lines.len());
             return;
         }
-        self.opening = Some(Opening { result, edited: false });
         self.parse_start(text);
+    }
+
+    /// Parses `whole` on a thread of its own, which also drops the tree `old` of the text before; whether the thread
+    /// started.
+    fn parse_aside(&mut self, whole: Arc<str>, old: Option<Box<Doc>>) -> bool {
+        let result = Arc::new(Mutex::new(None));
+        let slot = result.clone();
+        let started = std::thread::Builder::new()
+            .name("markdown-parse".into())
+            .spawn(move || {
+                drop(old);
+                let parsed = parse_shared_and_color(whole);
+                *slot.lock_ignoring_poison() = Some(parsed);
+            });
+        if started.is_err() {
+            return false;
+        }
+        self.opening = Some(Opening { result, edited: false });
+        self.interim = None;
+        self.interim_lines = 0;
+        true
     }
 
     fn parse_start(&mut self, text: &Text) {
@@ -244,9 +270,10 @@ impl Markdown {
     }
 
     /// Cuts line `n` from the parse unless it is cut already; while the first parse is under way from the parse of
-    /// the text's start, to be cut again once it is done.
+    /// the text's start, to be cut again once it is done, and while a later one is not at all where it was cut before.
     fn cut(&mut self, text: &Text, n: usize, changed: &mut Changed) {
-        if self.lines[n].as_ref().is_some_and(|c| c.fresh) {
+        let aside = self.opening.is_some() && self.interim.is_none();
+        if self.lines[n].as_ref().is_some_and(|c| c.fresh || aside) {
             return;
         }
         let (parsed, fresh) = match &self.opening {

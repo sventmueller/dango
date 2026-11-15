@@ -59,11 +59,6 @@ impl Unpainted {
         taken
     }
 
-    /// The stretch from the first line that waits to the last.
-    pub(super) fn span(&self) -> Option<Range<usize>> {
-        Some(self.0.first()?.start..self.0.last()?.end)
-    }
-
     /// Whether any of `lines` waits.
     pub(super) fn meets(&self, lines: &Range<usize>) -> bool {
         let at = self.0.partition_point(|r| r.end <= lines.start);

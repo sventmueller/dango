@@ -4,7 +4,9 @@ use super::*;
 
 /// Whether the lines on screen show the colours the document has for them, for the self-test.
 pub fn colours_painted(view: &EditorTextView) -> bool {
-    !view.ivars().unpainted.borrow().meets(&visible_lines(view))
+    let visible = visible_lines(view);
+    !view.ivars().unpainted.borrow().meets(&visible)
+        && !view.ivars().unstyled.borrow().meets(&on_screen(view, &visible))
 }
 
 /// The colour shown at UTF-16 offset `at`: the lexing's or the server's where one paints it, else the storage's.

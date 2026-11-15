@@ -1,9 +1,10 @@
-//! Colours of the text, lexed in slices that leave the main thread free. Code gets its colours as rendering
-//! attributes of the layout manager, painted for the lines on screen and the rest once they come into view: an
-//! attribute of the storage would make TextKit 2 lay its paragraph out again from estimated heights, which moves the
-//! lines on screen and the places a jump lands on. The language server's colours paint over them. Markdown, whose
-//! bold and italic text changes the layout anyway, keeps its colours and font traits in the storage.
+//! Colours of the text, lexed in slices that leave the main thread free. They are rendering attributes of the layout
+//! manager, painted for the lines on screen and the rest once they come into view: an attribute of the storage would
+//! make TextKit 2 lay its paragraph out again from estimated heights, which moves the lines on screen and the places a
+//! jump lands on. The language server's colours paint over them. Markdown's font traits change the layout and so go
+//! into the storage, but only for the lines on screen (`traits`).
 
+mod traits;
 mod unpainted;
 
 use objc2::DefinedClass;
@@ -13,17 +14,14 @@ use objc2_app_kit::NSTextElementProvider;
 use std::ops::Range;
 use std::time::{Duration, Instant};
 
-use ide_document::syntax::{Language, Styled};
+use ide_document::syntax::Language;
 use ide_document::{Change, Document, Text, Unit};
 use objc2::sel;
-use objc2_app_kit::{
-    NSColor, NSFontAttributeName, NSForegroundColorAttributeName, NSStrikethroughStyleAttributeName,
-    NSTextContentStorage, NSTextLayoutManager,
-};
-use objc2_foundation::{NSMutableAttributedString, NSNumber, NSPoint, NSRange};
+use objc2_app_kit::{NSColor, NSForegroundColorAttributeName, NSTextContentStorage, NSTextLayoutManager};
+use objc2_foundation::{NSMutableAttributedString, NSPoint, NSRange};
 
 pub use self::unpainted::Unpainted;
-use super::style::{palette_color, styled_code_font, token_color};
+use super::style::{palette_color, token_color};
 use super::view::EditorTextView;
 use crate::util::{constant, with_editing};
 
@@ -35,10 +33,19 @@ const MARGIN: usize = 40;
 
 /// Marks the lines `change` touched for painting, which `schedule` then does.
 pub fn edited(view: &EditorTextView, change: &Change) {
-    view.ivars()
-        .unpainted
-        .borrow_mut()
-        .edited(change.start.line, change.old_end.line, change.new_end.line);
+    let (first, old_end, new_end) = (change.start.line, change.old_end.line, change.new_end.line);
+    view.ivars().unpainted.borrow_mut().edited(first, old_end, new_end);
+    if is_markdown(view) {
+        view.ivars().unstyled.borrow_mut().edited(first, old_end, new_end);
+    }
+}
+
+/// Marks `lines`, whose colours changed, for painting.
+fn changed(view: &EditorTextView, lines: Range<usize>) {
+    if is_markdown(view) {
+        view.ivars().unstyled.borrow_mut().add(lines.clone());
+    }
+    view.ivars().unpainted.borrow_mut().add(lines);
 }
 
 /// Colours what an edit changed once the run loop comes round.
@@ -56,12 +63,21 @@ fn is_markdown(view: &EditorTextView) -> bool {
 pub fn step(view: &EditorTextView) {
     let start = Instant::now();
     let visible = visible_lines(view);
-    let changed = view.document_mut().highlight_within(visible.clone(), SLICE);
-    let lexed = if is_markdown(view) {
-        step_markdown(view, start, changed)
-    } else {
-        step_code(view, start, &visible, changed)
-    };
+    let lines = view.document_mut().highlight_within(visible.clone(), SLICE);
+    let mut lexed = lines.is_some();
+    if let Some(lines) = lines {
+        changed(view, lines);
+    }
+    if !paint_due(view, &visible) {
+        let more = view
+            .document_mut()
+            .highlight_more(SLICE.saturating_sub(start.elapsed()));
+        lexed |= more.is_some();
+        if let Some(lines) = more {
+            changed(view, lines);
+            paint_due(view, &visible);
+        }
+    }
     if !view.document().is_highlighted() {
         view.later(sel!(ideColorStep), 0.01);
     }
@@ -70,56 +86,15 @@ pub fn step(view: &EditorTextView) {
     }
 }
 
-/// The rest of `step` for code; whether lexing changed colours.
-fn step_code(view: &EditorTextView, start: Instant, visible: &Range<usize>, changed: Option<Range<usize>>) -> bool {
-    let mut lexed = changed.is_some();
-    if let Some(lines) = changed {
-        view.ivars().unpainted.borrow_mut().add(lines);
-    }
-    if !paint_due(view, visible) {
-        let more = view
-            .document_mut()
-            .highlight_more(SLICE.saturating_sub(start.elapsed()));
-        lexed |= more.is_some();
-        if let Some(lines) = more {
-            view.ivars().unpainted.borrow_mut().add(lines);
-            paint_due(view, visible);
-        }
-    }
-    lexed
-}
-
-/// The rest of `step` for Markdown, which paints every line whose colours changed at once; whether lexing changed
-/// colours.
-fn step_markdown(view: &EditorTextView, start: Instant, changed: Option<Range<usize>>) -> bool {
-    let edited = view.ivars().unpainted.take().span();
-    let lexed = changed.is_some();
-    if let Some(lines) = union(changed, edited) {
-        paint_storage(view, lines);
-    }
-    let more = view
-        .document_mut()
-        .highlight_more(SLICE.saturating_sub(start.elapsed()));
-    if let Some(lines) = more.clone() {
-        paint_storage(view, lines);
-    }
-    lexed || more.is_some()
-}
-
-fn union(a: Option<Range<usize>>, b: Option<Range<usize>>) -> Option<Range<usize>> {
-    match (a, b) {
-        (Some(a), Some(b)) => Some(a.start.min(b.start)..a.end.max(b.end)),
-        (a, b) => a.or(b),
-    }
-}
-
 /// After TextKit laid out the lines on screen: those whose colours wait get them before they are drawn.
 pub fn laid_out(view: &EditorTextView) {
-    if view.ivars().unpainted.borrow().is_empty() || is_markdown(view) {
+    if view.ivars().unpainted.borrow().is_empty() && view.ivars().unstyled.borrow().is_empty() {
         return;
     }
     let visible = visible_lines(view);
-    if view.ivars().unpainted.borrow().meets(&visible) {
+    if view.ivars().unpainted.borrow().meets(&visible)
+        || view.ivars().unstyled.borrow().meets(&on_screen(view, &visible))
+    {
         paint_due(view, &visible);
     }
 }
@@ -131,38 +106,38 @@ pub fn recolor_all(view: &EditorTextView) {
         view.ivars().styled.set(false);
         if let Some(storage) = view.storage() {
             let whole = NSRange::new(0, storage.length());
-            with_editing(&storage, || plain_traits(&storage, whole, view.ivars().font_size.get()));
+            with_editing(&storage, || {
+                traits::plain(&storage, whole, view.ivars().font_size.get())
+            });
         }
     }
     let lines = view.document().text().line_count();
     let visible = visible_lines(view);
     let _ = view.document_mut().highlight_within(visible.clone(), SLICE);
-    {
-        let mut unpainted = view.ivars().unpainted.borrow_mut();
-        *unpainted = Unpainted::default();
-        if !markdown {
-            unpainted.add(0..lines.max(1));
-        }
-    }
-    if markdown {
-        if let Some((layout, content)) = layout_of(view) {
-            layout.removeRenderingAttribute_forTextRange(
-                constant!(NSForegroundColorAttributeName),
-                &content.documentRange(),
-            );
-            view.paint_found();
-        }
-        paint_storage(view, 0..lines.min(visible.end.max(1)));
-    } else {
-        paint_due(view, &visible);
-    }
+    *view.ivars().unpainted.borrow_mut() = Unpainted::default();
+    *view.ivars().unstyled.borrow_mut() = Unpainted::default();
+    changed(view, 0..lines.max(1));
+    paint_due(view, &visible);
     schedule(view);
+}
+
+/// The lines of `visible` from the top of the screen down: the font traits of a line above it would make TextKit lay
+/// it out from an estimated height, which moves the lines below.
+fn on_screen(view: &EditorTextView, visible: &Range<usize>) -> Range<usize> {
+    let top = line_at(view, NSPoint::new(0.0, view.visibleRect().origin.y)).unwrap_or(visible.start);
+    top.clamp(visible.start, visible.end)..visible.end
 }
 
 /// Paints the lines of `lines` whose colours wait; whether there were any.
 fn paint_due(view: &EditorTextView, lines: &Range<usize>) -> bool {
     let due = view.ivars().unpainted.borrow_mut().take_in(lines);
-    let Some(due) = due else { return false };
+    let restyle = view.ivars().unstyled.borrow_mut().take_in(&on_screen(view, lines));
+    if let Some(restyle) = restyle.clone()
+        && !traits::paint(view, restyle.clone())
+    {
+        view.ivars().unstyled.borrow_mut().add(restyle);
+    }
+    let Some(due) = due else { return restyle.is_some() };
     if let Some(utf16) = paint_shown(view, due.clone()) {
         ide_ui_lsp::paint_tokens(view, &utf16);
         view.paint_found();
@@ -174,14 +149,6 @@ fn paint_due(view: &EditorTextView, lines: &Range<usize>) -> bool {
 
 /// Gives the UTF-16 range `range` the colours of the lexing again, which the language server's then paint over.
 pub(super) fn paint_under_server(view: &EditorTextView, range: &Range<usize>) {
-    if is_markdown(view) {
-        if let Some((layout, content)) = layout_of(view)
-            && let Some(range) = ide_ui_lsp::text_range(&content, range)
-        {
-            layout.removeRenderingAttribute_forTextRange(constant!(NSForegroundColorAttributeName), &range);
-        }
-        return;
-    }
     let lines = {
         let document = view.document();
         let text = document.text();
@@ -230,31 +197,15 @@ fn paint_shown(view: &EditorTextView, lines: Range<usize>) -> Option<Range<usize
                 set(&(part.location..part.location + part.length), &color);
             }
         }
+        for styled in document.styles(line) {
+            if let (Some(token), Some(part)) = (styled.style.token, part(whole, styled.start, styled.end)) {
+                let color: Retained<AnyObject> = palette_color(token).into();
+                set(&(part.location..part.location + part.length), &color);
+            }
+        }
         painted = Some(painted.map_or(utf16.start, |p| p.start)..utf16.end);
     }
     painted
-}
-
-/// Sets the colours of `lines` in the view's storage from the document's spans, and Markdown's font traits.
-fn paint_storage(view: &EditorTextView, lines: Range<usize>) {
-    let Some(storage) = view.storage() else { return };
-    let document = view.document();
-    let text = document.text();
-    let length = text.len_utf16();
-    if storage.length() != length {
-        return;
-    }
-    let markdown = document.language().is_some_and(Language::is_markdown);
-    view.ivars().styled.set(view.ivars().styled.get() || markdown);
-    let size = view.ivars().font_size.get();
-    with_editing(&storage, || {
-        for line in lines {
-            let Some(whole) = line_range(text, line, length) else {
-                break;
-            };
-            paint_line(&storage, whole, &document, line, markdown, size);
-        }
-    });
 }
 
 /// Gives `string`, which holds line `line` of `view` from its start, the colours and Markdown's font traits the
@@ -285,7 +236,14 @@ fn paint_line(
         }
     }
     if markdown {
-        paint_styles(string, whole, document.styles(line), size);
+        let styles = document.styles(line);
+        traits::set(string, whole, styles, size);
+        for styled in styles {
+            if let (Some(token), Some(range)) = (styled.style.token, part(whole, styled.start, styled.end)) {
+                // SAFETY: AppKit's foreground colour key with a colour value, over a range inside the string.
+                unsafe { string.addAttribute_value_range(key, &palette_color(token), range) };
+            }
+        }
     }
 }
 
@@ -332,47 +290,6 @@ fn part(line: NSRange, start: u32, end: u32) -> Option<NSRange> {
     let from = line.location + start as usize;
     let to = (line.location + end as usize).min(line.location + line.length);
     (from < to).then(|| NSRange::new(from, to - from))
-}
-
-/// The plain code font and no strike-through over `range`.
-fn plain_traits(string: &NSMutableAttributedString, range: NSRange, size: f64) {
-    let (font, strike) = (
-        constant!(NSFontAttributeName),
-        constant!(NSStrikethroughStyleAttributeName),
-    );
-    // SAFETY: AppKit's font and strike-through keys, with a font as the value of the first.
-    unsafe {
-        string.addAttribute_value_range(font, &styled_code_font(size, false, false), range);
-        string.removeAttribute_range(strike, range);
-    }
-}
-
-/// Markdown's colours and font traits of the line laid out at `line`.
-fn paint_styles(string: &NSMutableAttributedString, line: NSRange, styles: &[Styled], size: f64) {
-    plain_traits(string, line, size);
-    let (color, font, strike) = (
-        constant!(NSForegroundColorAttributeName),
-        constant!(NSFontAttributeName),
-        constant!(NSStrikethroughStyleAttributeName),
-    );
-    for styled in styles {
-        let Some(range) = part(line, styled.start, styled.end) else {
-            continue;
-        };
-        let style = styled.style;
-        // SAFETY: AppKit's colour, font and strike-through keys, with a colour, a font and a number as their values.
-        unsafe {
-            if let Some(token) = style.token {
-                string.addAttribute_value_range(color, &palette_color(token), range);
-            }
-            if style.bold || style.italic {
-                string.addAttribute_value_range(font, &styled_code_font(size, style.bold, style.italic), range);
-            }
-            if style.strike {
-                string.addAttribute_value_range(strike, &NSNumber::new_isize(1), range);
-            }
-        }
-    }
 }
 
 #[cfg(feature = "selftest")]

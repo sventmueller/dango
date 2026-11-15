@@ -204,11 +204,41 @@ fn a_long_text_is_parsed_on_a_thread_and_its_start_meanwhile() {
     );
     assert!(!document.is_highlighted());
     document.highlight(far..far + 5);
+    highlight_through(&mut document);
+    assert_eq!(all_styles(&document), whole_text(&document.text().to_string()));
+}
+
+fn highlight_through(document: &mut Document) {
     let deadline = std::time::Instant::now() + Duration::from_secs(20);
     while !document.is_highlighted() {
         assert!(std::time::Instant::now() < deadline, "the parse never arrived");
         document.highlight_more(Duration::from_millis(4));
         std::thread::sleep(Duration::from_millis(2));
     }
+}
+
+#[test]
+fn a_fence_that_restyles_a_long_text_is_parsed_on_a_thread_and_the_lines_keep_their_styles_meanwhile() {
+    let text: String = (0..4000)
+        .map(|n| format!("## Part {n}\n\nText with **bold** and `code`.\n\n"))
+        .collect();
+    assert!(text.len() > PARSED_AT_ONCE);
+    let mut document = Document::untitled(&text);
+    document.set_language(Some(Language::MARKDOWN));
+    document.highlight(0..60);
+    highlight_through(&mut document);
+    let far = document.text().line_count() - 9;
+    let before = document.styles(far).to_vec();
+    assert!(before.iter().any(|s| s.style.bold), "{before:?}");
+    insert(&mut document, 0, 0, "```\n");
+    document.highlight(far..far + 5);
+    assert_eq!(
+        document.styles(far + 1),
+        &before[..],
+        "the old styles stay while the parse runs"
+    );
+    assert!(!document.is_highlighted());
+    highlight_through(&mut document);
+    assert!(tokens(&document, far + 1).iter().all(|t| *t == Token::Code));
     assert_eq!(all_styles(&document), whole_text(&document.text().to_string()));
 }
